@@ -1,6 +1,5 @@
 package net.corda.tools.shell
 
-import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
@@ -25,7 +24,7 @@ class CordaAuthenticationPlugin(private val rpcOps: (username: String, credentia
         }
         try {
             val ops = rpcOps(username, credential)
-            return CordaSSHAuthInfo(true, ops)
+            return CordaSSHAuthInfo(true, ops, isSsh = true)
         } catch (e: ActiveMQSecurityException) {
             logger.warn(e.message)
         } catch (e: Exception) {

@@ -34,7 +34,7 @@ public class RunShellCommand extends InteractiveShellCommand {
             emitHelp(context, parser);
             return null;
         }
-        return InteractiveShell.runRPCFromString(command, out, context, ops(), objectMapper());
+        return InteractiveShell.runRPCFromString(command, out, context, ops(), objectMapper(), isSsh());
     }
 
     private void emitHelp(InvocationContext<Map> context, StringToMethodCallParser<CordaRPCOps> parser) {

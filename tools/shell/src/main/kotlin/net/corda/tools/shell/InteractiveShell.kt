@@ -415,7 +415,7 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper): Any? {
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper, isSsh: Boolean = false): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.startsWith("startflow", ignoreCase = true)) {
             // The flow command provides better support and startFlow requires special handling anyway due to
@@ -423,9 +423,8 @@ object InteractiveShell {
             // string form of the command.
             out.println("Please use the 'flow' command to interact with flows rather than the 'run' command.", Color.yellow)
             return null
-        } else if (cmd.substringAfter(" ").trim().equals("shutdowngracefully", ignoreCase = true)) {
-            out.println("Shutting node down...")
-            return InteractiveShell.shutdownGracefully(input, out, context, cordaRPCOps, om)
+        } else if (cmd.substringAfter(" ").trim().equals("gracefulShutdown", ignoreCase = true)) {
+            return InteractiveShell.gracefulShutdown(out, cordaRPCOps, isSsh)
         }
 
         var result: Any? = null
@@ -466,7 +465,7 @@ object InteractiveShell {
 
 
     @JvmStatic
-    fun shutdownGracefully(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper): Any? {
+    fun gracefulShutdown(out: RenderPrintWriter, cordaRPCOps: CordaRPCOps, isSsh: Boolean = false): Any? {
 
         var result: Any? = null
         try {
@@ -486,14 +485,21 @@ object InteractiveShell {
                         out.flush()
                     }
                     .doOnCompleted {
-                        out.println("...shutting down the node")
+                        if (isSsh) {
+                            // print in the original Shell process
+                            println("Shutting down the node via remote SSH session (it may take a while) ...")
+                        }
+                        out.println("...shutting down the node (it may take a while)")
                         out.flush()
                         cordaRPCOps.shutdown()
                         connection.forceClose()
-                        //System.exit(0)
                         out.println("...done, quitting standalone shell now.")
                         out.flush()
-                        onExit?.invoke()
+//                        if (isSsh) {
+//                            // print in the original Shell process
+//                            println("...done, quitting standalone shell now.")
+//                        }
+                        onExit.invoke()
                     }.toBlocking().single()
 
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
