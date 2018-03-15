@@ -8,6 +8,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.io.Closeables
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
@@ -135,8 +136,12 @@ object InteractiveShell {
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
         shellConfiguration = configuration
         rpcOps = { username: String, credentials: String ->
-             val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
-                    sslConfiguration = configuration.ssl, classLoader = classLoader)
+            val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
+                    configuration = object : CordaRPCClientConfiguration {
+                        override val maxReconnectAttempts = 1
+                    },
+                    sslConfiguration = configuration.ssl,
+                    classLoader = classLoader)
             this.connection = client.start(username, credentials)
             connection.proxy
         }
