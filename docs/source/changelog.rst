@@ -7,7 +7,7 @@ Unreleased
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
-* Node can be ``shutdown`` (instantly) and ``gracefulShutdown`` (waiting for flows to be completed) through shell.
+* Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows) through ``gracefulShutdown`` command from shell.
 
 * Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
 

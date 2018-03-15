@@ -1,6 +1,7 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.client.rpc.internal.drainAndShutdown
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
@@ -15,7 +16,6 @@ import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.drainAndShutdown
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.junit.After
 import org.junit.Before
@@ -92,7 +92,7 @@ class P2PFlowsDrainingModeTest {
             nodeB.rpc.setFlowsDrainingModeEnabled(true)
             IntRange(1, 10).forEach { nodeA.rpc.startFlow(::InitiateSessionFlow, nodeB.nodeInfo.chooseIdentity()) }
 
-            nodeA.drainAndShutdown()
+            nodeA.rpc.drainAndShutdown()
                     .doOnError { error ->
                         error.printStackTrace()
                         successful = false
