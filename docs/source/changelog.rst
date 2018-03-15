@@ -7,6 +7,8 @@ Unreleased
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
+* Node can be ``shutdown`` (instantly) and ``gracefulShutdown`` (waiting for flows to be completed) through shell.
+
 * Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
 
 * The web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
