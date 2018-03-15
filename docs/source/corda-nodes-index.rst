@@ -13,3 +13,4 @@ Corda nodes
    node-database
    node-administration
    out-of-process-verification
+   high-availability
