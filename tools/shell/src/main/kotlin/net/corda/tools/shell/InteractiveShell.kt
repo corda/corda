@@ -478,7 +478,7 @@ object InteractiveShell {
             out.flush()
             cordaRPCOps.pendingFlowsCount().updates
                     .doOnError { error ->
-                        // TODO Szymon log this
+                        log.error(error.message)
                         throw error
                     }
                     .doOnNext { remaining ->
@@ -496,24 +496,6 @@ object InteractiveShell {
                         onExit?.invoke()
                     }.toBlocking().single()
 
-//            if (result !is kotlin.Unit && result !is Void) {
-//                result = printAndFollowRPCResponse(result, out)
-//            }
-//            if (result is Future<*>) {
-//                if (!result.isDone) {
-//                    out.println("Waiting for completion or Ctrl-C ... ")
-//                    out.flush()
-//                }
-//                try {
-//                    result = result.get()
-//                } catch (e: InterruptedException) {
-//                    Thread.currentThread().interrupt()
-//                } catch (e: ExecutionException) {
-//                    throw e.rootCause
-//                } catch (e: InvocationTargetException) {
-//                    throw e.rootCause
-//                }
-//            }
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
             out.println(e.message, Color.red)
             out.println("Please try 'man run' to learn what syntax is acceptable")
@@ -654,7 +636,7 @@ object InteractiveShell {
             } finally {
                 try {
                     value.close()
-                } catch (e: IOException) {
+                } catch (ignored: IOException) {
                     // Ignore.
                 }
             }
