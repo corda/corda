@@ -84,7 +84,8 @@ class Node(
         log.info("Configuring {} ...", this)
         serviceDependencies.addAll(config.database.type.dependencies(config))
         config.distribution.ensureAvailable()
-        config.writeToFile(rootDirectory / "${config.name}.conf")
+//        config.writeToFile(rootDirectory / "${config.name}.conf")
+        config.writeToFile(rootDirectory / "${config.name}"/ "node.conf")
         installApps()
     }
 

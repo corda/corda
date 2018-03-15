@@ -26,7 +26,7 @@ class DockerContainerServiceTests {
             localhost:5000/r3/notary                      3.0-snapshot        6e98046ee9da        2 days ago          82 MB
          */
         val network = Network
-                .new(CORDA_V3_SNAPSHOT)
+                .new()
 //                .addNode("Doorman", DOORMAN_V3_SNAPSHOT)
 //                .addNode("Notary", NOTARY_V3_SNAPSHOT, notaryType = NotaryType.NON_VALIDATING)
                 .addNode("Corda", CORDA_V3_SNAPSHOT)

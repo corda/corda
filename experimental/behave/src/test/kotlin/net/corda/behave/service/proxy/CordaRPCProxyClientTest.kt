@@ -19,7 +19,7 @@ class CordaRPCProxyClientTest {
         private lateinit var network : Network
 
         @BeforeClass @JvmStatic fun setUp() {
-            network = Network.new(Distribution.MASTER).addNode(name = "Foo", notaryType = NotaryType.NON_VALIDATING, withRPCProxy = true).generate()
+            network = Network.new().addNode(name = "Foo", notaryType = NotaryType.NON_VALIDATING, withRPCProxy = true).generate()
             network.start()
             network.waitUntilRunning()
         }

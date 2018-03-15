@@ -30,8 +30,8 @@ data class NetworkInterface(
             |    address = "$host:$rpcPort"
             |    adminAddress = "$host:$rpcAdminPort"
             |}
-            |webAddress="$host:$webPort"
             """
+//            |webAddress="$host:$webPort"
         }
 
     companion object {

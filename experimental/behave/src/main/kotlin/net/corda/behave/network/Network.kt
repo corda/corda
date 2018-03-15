@@ -1,18 +1,24 @@
 package net.corda.behave.network
 
 import net.corda.behave.database.DatabaseType
-import net.corda.behave.file.*
+import net.corda.behave.file.LogSource
+import net.corda.behave.file.currentDirectory
+import net.corda.behave.file.div
+import net.corda.behave.file.doormanConfigDirectory
 import net.corda.behave.logging.getLogger
 import net.corda.behave.minutes
 import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
-import net.corda.behave.node.configuration.NetworkInterface
 import net.corda.behave.node.configuration.NotaryType
 import net.corda.behave.process.Command
 import net.corda.behave.process.JarCommand
+import net.corda.behave.seconds
+import net.corda.core.CordaException
+import net.corda.core.CordaRuntimeException
 import org.apache.commons.io.FileUtils
 import java.io.Closeable
 import java.io.File
+import java.lang.Thread.sleep
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
@@ -48,8 +54,7 @@ class Network private constructor(
     }
 
     class Builder internal constructor(
-            private val timeout: Duration,
-            private val distribution: Distribution
+            private val timeout: Duration
     ) {
 
         private val nodes = mutableMapOf<String, Node>()
@@ -86,6 +91,7 @@ class Network private constructor(
             nodeBuilder
                     .withDirectory(directory)
                     .withTimeout(timeout)
+                    .withNetworkMap("\"http://localhost:1300\"")
             val node = nodeBuilder.build()
             nodes[node.config.name] = node
             return this
@@ -93,16 +99,27 @@ class Network private constructor(
 
         fun generate(): Network {
             val network = Network(nodes, directory, timeout)
+
+            network.copyDatabaseDrivers()
+            if (!network.configureNodes()) {
+                throw CordaException("Unable to configure nodes in Corda network")
+//                hasError = true
+//                return
+            }
+
+            // Corda distribution (OS or R3 Corda) will be determined by the type the first node
+            val distribution = network.nodes.values.first().config.distribution
+            network.log.info("Corda network distribution: $distribution")
+
             if (distribution.type == Distribution.Type.R3_CORDA)
                 network.bootstrapDoorman(distribution)
             else
                 network.bootstrapLocalNetwork()
             return network
         }
-
     }
 
-    private fun copyDatabaseDrivers() {
+    fun copyDatabaseDrivers() {
         val driverDirectory = targetDirectory / "libs"
         FileUtils.forceMkdir(driverDirectory)
         FileUtils.copyDirectory(
@@ -111,7 +128,7 @@ class Network private constructor(
         )
     }
 
-    private fun configureNodes(): Boolean {
+    fun configureNodes(): Boolean {
         var allDependenciesStarted = true
         log.info("Configuring nodes ...")
         for (node in nodes.values) {
@@ -136,57 +153,98 @@ class Network private constructor(
      */
     private fun bootstrapDoorman(distribution: Distribution) {
 
-        // Copy over reference configuration files used in bootstapping
+        // Copy over reference configuration files used in bootstrapping
         val source = doormanConfigDirectory
-        val destination = currentDirectory / "build/runs/doorman"
-        source.copyRecursively(destination, true)
+        val doormanTargetDirectory = targetDirectory/"doorman"
+        source.copyRecursively(doormanTargetDirectory, true)
 
         // 1. Create key stores for local signer
 
         //  java -jar doorman-<version>.jar --mode ROOT_KEYGEN
+        log.info("Doorman target directory: $doormanTargetDirectory")
         runCommand(JarCommand(distribution.doormanJar,
-                              arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf", "--mode", "ROOT_KEYGEN"),
-                              targetDirectory, timeout))
+                              arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf", "--mode", "ROOT_KEYGEN", "--trust-store-password", "password"),
+                              doormanTargetDirectory, timeout))
 
         //  java -jar doorman-<version>.jar --mode CA_KEYGEN
         runCommand(JarCommand(distribution.doormanJar,
                               arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf", "--mode", "CA_KEYGEN"),
-                              targetDirectory, timeout))
+                              doormanTargetDirectory, timeout))
 
         // 2. Start the doorman service for notary registration
-        runCommand(JarCommand(distribution.doormanJar,
-                              arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf"),
-                              targetDirectory, timeout))
+        val doormanCommand = JarCommand(distribution.doormanJar,
+                                        arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf"),
+                                        doormanTargetDirectory, timeout)
+        runCommand(doormanCommand, noWait = true)
+        // give time for process to be ready
+        sleep(10.seconds.toMillis())
 
-        // 3. Create notary node and register with the doorman
-        runCommand(JarCommand(distribution.cordaJar,
-                              arrayOf("--initial-registration",
-                                      "--base-directory", "$targetDirectory/Notary",
-                                      "--network-root-truststore", "truststore/network-root-truststore.jks",
-                                      "--network-root-truststore-password", ""),
-                              targetDirectory, timeout))
+        // Notary Nodes
+        val notaryNodes = nodes.values.filter { it.config.notary.notaryType != NotaryType.NONE }
+        notaryNodes.forEach { notaryNode ->
+            val notaryTargetDirectory = targetDirectory / notaryNode.config.name
+            log.info("Notary target directory: $notaryTargetDirectory")
 
-        // 4. Generate node info files for notary nodes
-        runCommand(JarCommand(distribution.cordaJar,
-                              arrayOf("--just-generate-node-info",
-                                      "--base-directory", "$targetDirectory/Notary"),
-                              targetDirectory, timeout))
-        // cp (or ln -s) nodeInfo* notary-node-info
+            // 3. Create notary node and register with the doorman
+            runCommand(JarCommand(distribution.cordaJar,
+                    arrayOf("--initial-registration",
+                            "--base-directory", "$notaryTargetDirectory",
+                            "--network-root-truststore", "../doorman/certificates/distribute-nodes/network-root-truststore.jks",
+                            "--network-root-truststore-password", "password"),
+                    notaryTargetDirectory, timeout))
+
+            // 4. Generate node info files for notary nodes
+            runCommand(JarCommand(distribution.cordaJar,
+                    arrayOf("--just-generate-node-info",
+                            "--base-directory", "$notaryTargetDirectory"),
+                    notaryTargetDirectory, timeout))
+
+            // cp (or ln -s) nodeInfo* notary-node-info
+            val nodeInfoFile = notaryTargetDirectory.listFiles { _, filename -> filename.matches("nodeInfo-.+".toRegex()) }.firstOrNull() ?: throw CordaRuntimeException("Missing notary nodeInfo file")
+            FileUtils.copyFile(nodeInfoFile, notaryTargetDirectory / "notary-node-info")
+        }
+
+        // exit Doorman process
+        doormanCommand.interrupt()
+        doormanCommand.waitFor()
 
         // 5. Add notary identities to the network parameters
 
         // 6. Load initial network parameters file for network map service
-        runCommand(JarCommand(distribution.doormanJar,
-                              arrayOf("--config-file", "$doormanConfigDirectory/node.conf", "--update-network-parameters", "$doormanScriptsDirectory/network-parameters.conf"),
-                              targetDirectory, timeout))
+        val updateNetworkParams = JarCommand(distribution.doormanJar,
+                                             arrayOf("--config-file", "$doormanTargetDirectory/node.conf", "--update-network-parameters", "$doormanTargetDirectory/network-parameters.conf"),
+                                             doormanTargetDirectory, timeout)
+        runCommand(updateNetworkParams, noWait = true)
+        // WAIT 15 SECS and then interrupt command to gracefully terminate
+        sleep(15.seconds.toMillis())
+        updateNetworkParams.interrupt()
+        updateNetworkParams.waitFor()
 
         // 7. Start a fully configured Doorman / NMS
-        runCommand(JarCommand(distribution.doormanJar,
-                              arrayOf("--config-file", "$doormanConfigDirectory/node.conf"),
-                              targetDirectory, timeout))
+        val doormanNMS = JarCommand(distribution.doormanJar,
+                            arrayOf("--config-file", "$doormanConfigDirectory/node.conf"),
+                            doormanTargetDirectory, timeout)
+        runCommand(doormanNMS, noWait = true)
+        // give time for process to be ready
+        sleep(10.seconds.toMillis())
+
+        // 8. Register other participant nodes
+        val partyNodes = nodes.values.filter { it.config.notary.notaryType == NotaryType.NONE }
+        partyNodes.forEach { partyNode ->
+            val partyTargetDirectory = targetDirectory / partyNode.config.name
+            log.info("Party target directory: $partyTargetDirectory")
+
+            // 3. Create notary node and register with the doorman
+            runCommand(JarCommand(distribution.cordaJar,
+                    arrayOf("--initial-registration",
+                            "--network-root-truststore", "../doorman/certificates/distribute-nodes/network-root-truststore.jks",
+                            "--network-root-truststore-password", "password",
+                            "--base-directory", "$partyTargetDirectory"),
+                            partyTargetDirectory, timeout))
+        }
     }
 
-    private fun runCommand(command: JarCommand) {
+    private fun runCommand(command: JarCommand, noWait: Boolean = false) {
         if (!command.jarFile.exists()) {
             log.warn("Jar file does not exist: ${command.jarFile}")
             return
@@ -199,27 +257,24 @@ class Network private constructor(
             }
         }
         command.start()
-        if (!command.waitFor()) {
-            hasError = true
-            error("Failed to execute command") {
-                val matches = LogSource(targetDirectory)
-                        .find(".*[Ee]xception.*")
-                        .groupBy { it.filename.absolutePath }
-                for (match in matches) {
-                    log.info("Log(${match.key}):\n${match.value.joinToString("\n") { it.contents }}")
+        if (!noWait) {
+            if (!command.waitFor()) {
+                hasError = true
+                error("Failed to execute command") {
+                    val matches = LogSource(targetDirectory)
+                            .find(".*[Ee]xception.*")
+                            .groupBy { it.filename.absolutePath }
+                    for (match in matches) {
+                        log.info("Log(${match.key}):\n${match.value.joinToString("\n") { it.contents }}")
+                    }
                 }
+            } else {
+                log.info("Command executed successfully")
             }
-        } else {
-            log.info("Command executed successfully")
         }
     }
 
     private fun bootstrapLocalNetwork() {
-        copyDatabaseDrivers()
-        if (!configureNodes()) {
-            hasError = true
-            return
-        }
         // WARNING!! Need to use the correct bootstrapper
         // only if using OS nodes (need to choose the latest version)
         val bootstrapper = nodes.values
@@ -451,9 +506,7 @@ class Network private constructor(
 
         const val CLEANUP_ON_ERROR = false
 
-        fun new(
-                distribution: Distribution,
-                timeout: Duration = 2.minutes
-        ): Builder = Builder(timeout, distribution)
+        fun new(timeout: Duration = 2.minutes
+        ): Builder = Builder(timeout)
     }
 }
