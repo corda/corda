@@ -129,7 +129,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         // have the convenient copy() method that'd let us make small adjustments. Instead they're partly mutable.
         // TODO: We should revisit this in post-Excalibur cleanup and fix, e.g. by introducing an interface.
 
-        val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResourceAsStream("net/corda/irs/web/simulation/trade.json")
+        val resourceAsStream = javaClass.classLoader.getResourceAsStream("net/corda/irs/web/simulation/trade.json")
+                ?: error("Trade representation cannot be loaded.")
+        val irs = om.readValue<InterestRateSwap.State>(resourceAsStream
                 .reader()
                 .readText()
                 .replace("oracleXXX", RatesOracleNode.RATES_SERVICE_NAME.toString()))
