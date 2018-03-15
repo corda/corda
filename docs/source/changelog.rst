@@ -13,6 +13,10 @@ UNRELEASED
 
 * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
 
+* java.math.BigInteger serialization support added.
+
+* java.security.cert.CRLReason added to the default Whitelist.
+
 * Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
   where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
   one node with the legal name is found.

@@ -50,6 +50,7 @@ import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.NotSerializableException
 import java.math.BigDecimal
+import java.math.BigInteger
 import java.time.*
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -982,6 +983,21 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
 
         val obj = BigDecimals(BigDecimal.TEN, BigDecimal.TEN)
+        val objCopy = serdes(obj, factory, factory2)
+        assertEquals(objCopy.a, objCopy.b)
+    }
+
+    data class BigIntegers(val a: BigInteger, val b: BigInteger)
+
+    @Test
+    fun `test BigInteger custom serializer`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigIntegerSerializer)
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigIntegerSerializer)
+
+        val obj = BigIntegers(BigInteger.TEN, BigInteger.TEN)
         val objCopy = serdes(obj, factory, factory2)
         assertEquals(objCopy.a, objCopy.b)
     }

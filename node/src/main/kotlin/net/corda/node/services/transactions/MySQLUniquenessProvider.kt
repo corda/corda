@@ -18,6 +18,7 @@ import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryInternalException
 import net.corda.core.flows.StateConsumptionDetails
@@ -42,6 +43,7 @@ class MySQLUniquenessProvider(
         metrics: MetricRegistry,
         configuration: MySQLConfiguration
 ) : UniquenessProvider, SingletonSerializeAsToken() {
+
     companion object {
         private val log = loggerFor<MySQLUniquenessProvider>()
 
@@ -108,7 +110,7 @@ class MySQLUniquenessProvider(
         dataSource.close()
     }
 
-    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature) {
         val s = Stopwatch.createStarted()
         try {
             retryTransaction(CommitAll(states, txId, callerIdentity))

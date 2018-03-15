@@ -407,10 +407,9 @@ fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoade
 }
 
 /** Verifies that the correct notarisation request was signed by the counterparty. */
-fun NotaryFlow.Service.validateRequest(request: NotarisationRequest, signature: NotarisationRequestSignature) {
+fun NotaryFlow.Service.validateRequestSignature(request: NotarisationRequest, signature: NotarisationRequestSignature) {
     val requestingParty = otherSideSession.counterparty
     request.verifySignature(signature, requestingParty)
-    // TODO: persist the signature for traceability. Do we need to persist the request as well?
 }
 
 /** Creates a signature over the notarisation request using the legal identity key. */

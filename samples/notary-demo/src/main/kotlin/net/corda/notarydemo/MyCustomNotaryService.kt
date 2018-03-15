@@ -15,14 +15,13 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.*
 import net.corda.core.internal.ResolveTransactionsFlow
-import net.corda.core.internal.validateRequest
+import net.corda.core.internal.validateRequestSignature
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionWithSignatures
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.unwrap
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import java.security.PublicKey
 import java.security.SignatureException
@@ -36,7 +35,7 @@ import java.security.SignatureException
 // START 1
 @CordaService
 class MyCustomValidatingNotaryService(override val services: AppServiceHub, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
-    override val uniquenessProvider = PersistentUniquenessProvider()
+    override val uniquenessProvider = PersistentUniquenessProvider(services.clock)
 
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = MyValidatingNotaryFlow(otherPartySession, this)
 
@@ -53,9 +52,10 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
      * transaction dependency chain.
      */
     @Suspendable
-    override fun receiveAndVerifyTx(): TransactionParts {
+    override fun validateRequest(requestPayload: NotarisationPayload): TransactionParts {
         try {
-            val stx = receiveTransaction()
+            val stx = requestPayload.signedTransaction
+            validateRequestSignature(NotarisationRequest(stx.inputs, stx.id), requestPayload.requestSignature)
             val notary = stx.notary
             checkNotary(notary)
             verifySignatures(stx)
@@ -68,15 +68,6 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
                 is SignatureException -> NotaryInternalException(NotaryError.TransactionInvalid(e))
                 else -> e
             }
-        }
-    }
-
-    @Suspendable
-    private fun receiveTransaction(): SignedTransaction {
-        return otherSideSession.receive<NotarisationPayload>().unwrap {
-            val stx = it.signedTransaction
-            validateRequest(NotarisationRequest(stx.inputs, stx.id), it.requestSignature)
-            stx
         }
     }
 
