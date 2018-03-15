@@ -165,7 +165,7 @@ class Distribution private constructor(
         fun fromVersionString(version: String): Distribution = when (version) {
             "master"  -> LATEST_MASTER
             "r3-master"  -> LATEST_R3_MASTER
-            "corda-3.0" -> V3
+            "corda-3.0" -> fromArtifactory(Type.CORDA, version)
             "corda-3.0-HC02" -> fromArtifactory(Type.CORDA, version)
             "corda-3.0-RC01" -> fromArtifactory(Type.CORDA, version)
             "corda-3.0-RC02" -> fromArtifactory(Type.CORDA, version)

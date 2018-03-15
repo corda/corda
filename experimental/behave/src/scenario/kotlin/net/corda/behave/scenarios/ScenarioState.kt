@@ -42,8 +42,7 @@ class ScenarioState {
             // Network is already running
             return
         }
-        // TODO: make this configurable
-        val networkBuilder = Network.new(Distribution.MASTER)
+        val networkBuilder = Network.new()
         for (node in nodes) {
             networkBuilder.addNode(node)
         }

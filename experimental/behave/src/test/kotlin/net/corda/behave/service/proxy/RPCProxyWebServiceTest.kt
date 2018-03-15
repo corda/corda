@@ -34,7 +34,7 @@ class RPCProxyWebServiceTest {
 //    @JvmField
 //    val testSerialization = SerializationEnvironmentRule(true)
 
-    private val hostAndPort = NetworkHostAndPort("localhost", 13002)
+    private val hostAndPort = NetworkHostAndPort("localhost", 13000)
     private val rpcProxyClient = CordaRPCProxyClient(hostAndPort)
 
     private val hostAndPortB = NetworkHostAndPort("localhost", 13007)

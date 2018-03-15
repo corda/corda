@@ -8,7 +8,7 @@ Feature: Compatibility - Node versions
 
     Examples:
       | Corda-Node-Version    |
-      | corda-3.0             |
+      | corda-3.0-RC03        |
 
   Scenario Outline: Startup a Corda (OS) Node from Artifactory
     Given a node PartyA of version <Corda-Node-Version>

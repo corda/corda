@@ -16,7 +16,7 @@ class NetworkTests {
     fun `OS Corda network of single node with RPC proxy can be spun up`() {
         val distribution = Distribution.LATEST_MASTER
         val network = Network
-                .new(distribution)
+                .new()
                 .addNode(name = "Foo", distribution = distribution, notaryType = NotaryType.NON_VALIDATING, withRPCProxy = true)
                 .generate()
         network.use {
@@ -30,7 +30,7 @@ class NetworkTests {
     @Test
     fun `R3 Corda network of single node with RPC proxy can be spun up`() {
         val network = Network
-                .new(Distribution.R3_MASTER)
+                .new()
                 .addNode(name = "Foo", distribution = Distribution.R3_MASTER, notaryType = NotaryType.NON_VALIDATING, withRPCProxy = true)
                 .generate()
         network.use {
@@ -46,7 +46,7 @@ class NetworkTests {
         // Note: this test exercises the NetworkBootstrapper to setup a local network
         val distribution = Distribution.LATEST_MASTER
         val network = Network
-                .new(distribution)
+                .new()
                 .addNode(name = "EntityA", distribution = Distribution.LATEST_MASTER, withRPCProxy = true)
                 .addNode(name = "EntityB", distribution = Distribution.LATEST_R3_MASTER, withRPCProxy = true)
                 .addNode(name = "Notary", distribution = distribution, notaryType = NotaryType.NON_VALIDATING)
@@ -63,7 +63,7 @@ class NetworkTests {
         // Note: this test exercises the Doorman / Notary / NMS setup sequence
         val distribution = Distribution.LATEST_R3_MASTER
         val network = Network
-                .new(distribution)
+                .new()
                 .addNode(name = "EntityA", distribution = Distribution.LATEST_R3_MASTER, withRPCProxy = true)
                 .addNode(name = "EntityB", distribution = Distribution.LATEST_MASTER, withRPCProxy = true)
                 .addNode(name = "Notary", distribution = distribution, notaryType = NotaryType.NON_VALIDATING)
@@ -78,7 +78,7 @@ class NetworkTests {
     @Test
     fun `network of two nodes can be spun up`() {
         val network = Network
-                .new(Distribution.MASTER)
+                .new()
                 .addNode("Foo")
                 .addNode("Bar")
                 .generate()
@@ -93,7 +93,7 @@ class NetworkTests {
     @Test
     fun `network of three nodes and mixed databases can be spun up`() {
         val network = Network
-                .new(Distribution.MASTER)
+                .new()
                 .addNode("Foo")
                 .addNode("Bar", databaseType = DatabaseType.SQL_SERVER)
                 .addNode("Baz", notaryType = NotaryType.NON_VALIDATING)
