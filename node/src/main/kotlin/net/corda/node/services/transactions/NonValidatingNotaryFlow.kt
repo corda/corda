@@ -12,18 +12,13 @@ package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ComponentGroupEnum
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.NotaryFlow
-import net.corda.core.flows.TransactionParts
-import net.corda.core.flows.NotarisationPayload
-import net.corda.core.flows.NotarisationRequest
-import net.corda.core.internal.validateRequest
+import net.corda.core.flows.*
+import net.corda.core.internal.validateRequestSignature
 import net.corda.core.node.services.TrustedAuthorityNotaryService
-import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.ContractUpgradeFilteredTransaction
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.utilities.unwrap
 
 class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthorityNotaryService) : NotaryFlow.Service(otherSideSession, service) {
     /**
@@ -35,13 +30,11 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAut
      * undo the commit of the input states (the exact mechanism still needs to be worked out).
      */
     @Suspendable
-    override fun receiveAndVerifyTx(): TransactionParts {
-        return otherSideSession.receive<NotarisationPayload>().unwrap { payload ->
-            val transaction = payload.coreTransaction
-            val request = NotarisationRequest(transaction.inputs, transaction.id)
-            validateRequest(request, payload.requestSignature)
-            extractParts(transaction)
-        }
+    override fun validateRequest(requestPayload: NotarisationPayload): TransactionParts {
+        val transaction = requestPayload.coreTransaction
+        val request = NotarisationRequest(transaction.inputs, transaction.id)
+        validateRequestSignature(request, requestPayload.requestSignature)
+        return extractParts(transaction)
     }
 
     private fun extractParts(tx: CoreTransaction): TransactionParts {

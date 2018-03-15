@@ -22,7 +22,7 @@ class IRSDemoClientApi(hostAndPort: NetworkHostAndPort) {
     private val api = HttpApi.fromHostAndPort(hostAndPort, apiRoot)
 
     fun runTrade(tradeId: String, oracleName: CordaX500Name) {
-        val fileContents = IOUtils.toString(javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example-irs-trade.json"), Charsets.UTF_8.name())
+        val fileContents = IOUtils.toString(javaClass.classLoader.getResourceAsStream("net/corda/irs/web/simulation/example-irs-trade.json"), Charsets.UTF_8.name())
         val tradeFile = fileContents.replace("tradeXXX", tradeId).replace("oracleXXX", oracleName.toString())
         api.postJson("deals", tradeFile)
     }

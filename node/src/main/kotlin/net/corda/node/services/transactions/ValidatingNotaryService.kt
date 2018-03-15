@@ -18,7 +18,7 @@ import java.security.PublicKey
 
 /** A Notary service that validates the transaction chain of the submitted transaction before committing it */
 class ValidatingNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
-    override val uniquenessProvider = PersistentUniquenessProvider()
+    override val uniquenessProvider = PersistentUniquenessProvider(services.clock)
 
     override fun createServiceFlow(otherPartySession: FlowSession): NotaryFlow.Service = ValidatingNotaryFlow(otherPartySession, this)
 

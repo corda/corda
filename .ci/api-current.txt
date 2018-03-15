@@ -1469,7 +1469,7 @@ public abstract static class net.corda.core.flows.NotaryFlow$Service extends net
   @co.paralleluniverse.fibers.Suspendable protected final void checkNotary(net.corda.core.identity.Party)
   @org.jetbrains.annotations.NotNull public final net.corda.core.flows.FlowSession getOtherSideSession()
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.TrustedAuthorityNotaryService getService()
-  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull public abstract net.corda.core.flows.TransactionParts receiveAndVerifyTx()
+  @co.paralleluniverse.fibers.Suspendable @org.jetbrains.annotations.NotNull protected abstract net.corda.core.flows.TransactionParts validateRequest(net.corda.core.flows.NotarisationPayload)
 ##
 public final class net.corda.core.flows.ReceiveStateAndRefFlow extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.flows.FlowSession)
@@ -2078,7 +2078,7 @@ public final class net.corda.core.node.services.TimeWindowChecker extends java.l
 ##
 @net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.node.services.TrustedAuthorityNotaryService extends net.corda.core.node.services.NotaryService
   public <init>()
-  public final void commitInputStates(List, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party)
+  public final void commitInputStates(List, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party, net.corda.core.flows.NotarisationRequestSignature)
   @org.jetbrains.annotations.NotNull protected org.slf4j.Logger getLog()
   @org.jetbrains.annotations.NotNull protected net.corda.core.node.services.TimeWindowChecker getTimeWindowChecker()
   @org.jetbrains.annotations.NotNull protected abstract net.corda.core.node.services.UniquenessProvider getUniquenessProvider()
@@ -2094,7 +2094,7 @@ public static final class net.corda.core.node.services.TrustedAuthorityNotarySer
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.UniquenessProvider$Conflict getError()
 ##
 public interface net.corda.core.node.services.UniquenessProvider
-  public abstract void commit(List, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party)
+  public abstract void commit(List, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party, net.corda.core.flows.NotarisationRequestSignature)
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.UniquenessProvider$Conflict extends java.lang.Object
   public <init>(Map)

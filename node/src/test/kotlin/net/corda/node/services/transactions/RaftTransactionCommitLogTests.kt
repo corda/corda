@@ -16,6 +16,8 @@ import io.atomix.copycat.client.CopycatClient
 import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
+import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.concurrent.asCordaFuture
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.NetworkHostAndPort
@@ -24,20 +26,22 @@ import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.internal.LogHelper
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.freeLocalHostAndPort
-import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.time.Clock
 import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class DistributedImmutableMapTests {
+class RaftTransactionCommitLogTests {
     data class Member(val client: CopycatClient, val server: CopycatServer)
 
     @Rule
@@ -50,12 +54,13 @@ class DistributedImmutableMapTests {
     @Before
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
+        LogHelper.setLevel("+io.atomix")
         cluster = setUpCluster()
     }
 
     @After
     fun tearDown() {
-        LogHelper.reset("org.apache.activemq")
+        LogHelper.reset("org.apache.activemq", "io.atomix")
         cluster.map { it.client.close().asCordaFuture() }.transpose().getOrThrow()
         cluster.map { it.server.shutdown().asCordaFuture() }.transpose().getOrThrow()
         databases.forEach { it.close() }
@@ -65,28 +70,38 @@ class DistributedImmutableMapTests {
     fun `stores entries correctly`() {
         val client = cluster.last().client
 
-        val entries = mapOf("key1" to "value1", "key2" to "value2")
+        val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
+        val txId: SecureHash = SecureHash.randomSHA256()
+        val requestingPartyName = ALICE_NAME
+        val requestSignature = ByteArray(1024)
 
-        val conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).getOrThrow()
+        val commitCommand = RaftTransactionCommitLog.Commands.CommitTransaction(states, txId, requestingPartyName.toString(), requestSignature)
+        val conflict = client.submit(commitCommand).getOrThrow()
         assertTrue { conflict.isEmpty() }
 
-        val value1 = client.submit(DistributedImmutableMap.Commands.Get<String, String>("key1"))
-        val value2 = client.submit(DistributedImmutableMap.Commands.Get<String, String>("key2"))
+        val value1 = client.submit(RaftTransactionCommitLog.Commands.Get(states[0]))
+        val value2 = client.submit(RaftTransactionCommitLog.Commands.Get(states[1]))
 
-        assertEquals(value1.getOrThrow(), "value1")
-        assertEquals(value2.getOrThrow(), "value2")
+        assertEquals(value1.getOrThrow(), txId)
+        assertEquals(value2.getOrThrow(), txId)
     }
 
     @Test
     fun `returns conflict for duplicate entries`() {
         val client = cluster.last().client
 
-        val entries = mapOf("key1" to "value1", "key2" to "value2")
+        val states = listOf(StateRef(SecureHash.randomSHA256(), 0), StateRef(SecureHash.randomSHA256(), 0))
+        val txId: SecureHash = SecureHash.randomSHA256()
+        val requestingPartyName = ALICE_NAME
+        val requestSignature = ByteArray(1024)
 
-        var conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).getOrThrow()
+        val commitCommand = RaftTransactionCommitLog.Commands.CommitTransaction(states, txId, requestingPartyName.toString(), requestSignature)
+        var conflict = client.submit(commitCommand).getOrThrow()
         assertTrue { conflict.isEmpty() }
-        conflict = client.submit(DistributedImmutableMap.Commands.PutAll(entries)).getOrThrow()
-        assertTrue { conflict == entries }
+
+        conflict = client.submit(commitCommand).getOrThrow()
+        assertEquals(conflict.keys, states.toSet())
+        conflict.forEach { assertEquals(it.value, txId) }
     }
 
     private fun setUpCluster(nodeCount: Int = 3): List<Member> {
@@ -101,11 +116,12 @@ class DistributedImmutableMapTests {
         val address = Address(myAddress.host, myAddress.port)
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), rigorousMock(), NodeSchemaService(includeNotarySchemas = true))
         databases.add(database)
-        val stateMachineFactory = { DistributedImmutableMap(database, RaftUniquenessProvider.Companion::createMap) }
+        val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC(), RaftUniquenessProvider.Companion::createMap) }
 
         val server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)
                 .withStorage(storage)
+                .withSerializer(RaftTransactionCommitLog.serializer)
                 .build()
 
         val serverInitFuture = if (clusterAddress != null) {
@@ -117,6 +133,7 @@ class DistributedImmutableMapTests {
 
         val client = CopycatClient.builder(address)
                 .withConnectionStrategy(ConnectionStrategies.EXPONENTIAL_BACKOFF)
+                .withSerializer(RaftTransactionCommitLog.serializer)
                 .build()
         return serverInitFuture.thenCompose { client.connect(address) }.thenApply { Member(it, server) }
     }
