@@ -27,7 +27,6 @@ abstract class MySQLNotaryService(
         /** Database table will be automatically created in dev mode */
         val devMode: Boolean) : TrustedAuthorityNotaryService() {
 
-    override val timeWindowChecker = TimeWindowChecker(services.clock)
     override val uniquenessProvider = MySQLUniquenessProvider(
             services.monitoringService.metrics,
             configuration
