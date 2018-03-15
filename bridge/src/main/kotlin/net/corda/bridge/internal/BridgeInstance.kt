@@ -8,7 +8,6 @@ import net.corda.bridge.services.supervisors.FloatSupervisorServiceImpl
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -22,6 +21,7 @@ import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.AMQP_STORAGE_CONTEXT
@@ -105,7 +105,7 @@ class BridgeInstance(val conf: BridgeConfiguration,
         val trustRoot = conf.loadTrustStore().getCertificate(X509Utilities.CORDA_ROOT_CA)
         val networkParamsFile = conf.baseDirectory / NETWORK_PARAMS_FILE_NAME
         require(networkParamsFile.exists()) { "No network-parameters file found." }
-        networkParameters = networkParamsFile.readObject<SignedDataWithCert<NetworkParameters>>().verifiedNetworkMapCert(trustRoot)
+        networkParameters = networkParamsFile.readObject<SignedNetworkParameters>().verifiedNetworkMapCert(trustRoot)
         log.info("Loaded network parameters: $networkParameters")
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"

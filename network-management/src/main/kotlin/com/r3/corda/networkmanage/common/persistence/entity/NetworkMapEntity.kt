@@ -10,12 +10,12 @@
 
 package com.r3.corda.networkmanage.common.persistence.entity
 
-import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 import javax.persistence.*
 
 @Entity

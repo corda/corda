@@ -10,13 +10,12 @@
 
 package com.r3.corda.networkmanage.common.persistence.entity
 
-import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
 import net.corda.core.internal.DigitalSignatureWithCert
-import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import org.hibernate.annotations.CreationTimestamp
 import java.time.Instant
 import javax.persistence.*
@@ -51,7 +50,7 @@ class NetworkParametersEntity(
 
     fun toSignedNetworkParameters(): SignedNetworkParameters {
         if (certificate == null || signature == null) throw IllegalStateException("Network parameters entity is not signed: $parametersHash")
-        return SignedDataWithCert(
+        return SignedNetworkParameters(
                 SerializedBytes(parametersBytes),
                 DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), signature)
         )

@@ -13,17 +13,17 @@ package com.r3.corda.networkmanage.common.signer
 import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
-import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.DigitalSignatureWithCert
-import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.internal.signWithCert
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.createDevIntermediateCaCertPath
@@ -68,7 +68,7 @@ class NetworkMapSignerTest : TestBase() {
         }
         whenever(signer.signObject(latestNetworkParameters)).then {
             val serialised = latestNetworkParameters.serialize()
-            SignedDataWithCert(serialised, signer.signBytes(serialised.bytes))
+            SignedNetworkParameters(serialised, signer.signBytes(serialised.bytes))
         }
 
         // when
@@ -120,7 +120,7 @@ class NetworkMapSignerTest : TestBase() {
         }
         whenever(signer.signObject(networkParameters)).then {
             val serialised = networkParameters.serialize()
-            SignedDataWithCert(serialised, signer.signBytes(serialised.bytes))
+            SignedNetworkParameters(serialised, signer.signBytes(serialised.bytes))
         }
         // when
         networkMapSigner.signNetworkMap()

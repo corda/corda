@@ -11,13 +11,13 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.common.persistence.entity.*
-import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
-import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
+import net.corda.nodeapi.internal.network.SignedNetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 
 /**

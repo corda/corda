@@ -11,11 +11,11 @@
 package com.r3.corda.networkmanage.common.signer
 
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
-import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 
 class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private val signer: Signer) {
     private companion object {
@@ -51,7 +51,7 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private
         if (serialisedNetworkMap != currentSignedNetworkMap?.raw) {
             logger.info("Signing a new network map: $newNetworkMap")
             logger.debug("Creating a new signed network map: ${serialisedNetworkMap.hash}")
-            val newSignedNetworkMap = SignedDataWithCert(serialisedNetworkMap, signer.signBytes(serialisedNetworkMap.bytes))
+            val newSignedNetworkMap = SignedNetworkMap(serialisedNetworkMap, signer.signBytes(serialisedNetworkMap.bytes))
             networkMapStorage.saveNetworkMap(newSignedNetworkMap)
             logger.debug("Signed network map saved")
         } else {

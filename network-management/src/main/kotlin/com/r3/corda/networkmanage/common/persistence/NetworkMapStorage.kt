@@ -10,11 +10,12 @@
 
 package com.r3.corda.networkmanage.common.persistence
 
-import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
-import com.r3.corda.networkmanage.common.utils.SignedNetworkParameters
+import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NetworkParameters
+import net.corda.nodeapi.internal.network.SignedNetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
 
 /**
  * Data access object interface for NetworkMap persistence layer
@@ -27,7 +28,7 @@ interface NetworkMapStorage {
     fun getCurrentNetworkMap(): SignedNetworkMap?
 
     /**
-     * Retrieves node info hashes where [isCurrent] is true and the certificate status is [CertificateStatus.VALID]
+     * Retrieves node info hashes where [NodeInfoEntity.isCurrent] is true and the certificate status is [CertificateStatus.VALID]
      *
      * @return list of current and valid node info hashes.
      */

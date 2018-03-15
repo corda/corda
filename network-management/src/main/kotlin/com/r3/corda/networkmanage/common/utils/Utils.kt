@@ -17,14 +17,11 @@ import joptsimple.OptionParser
 import net.corda.core.CordaOID
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.CertRole
-import net.corda.core.internal.SignedDataWithCert
-import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
@@ -44,10 +41,6 @@ import java.security.cert.X509Certificate
 const val CORDA_NETWORK_MAP = "cordanetworkmap"
 
 val logger: Logger = LoggerFactory.getLogger("com.r3.corda.networkmanage.common.utils")
-
-// TODO These should be defined in node-api
-typealias SignedNetworkParameters = SignedDataWithCert<NetworkParameters>
-typealias SignedNetworkMap = SignedDataWithCert<NetworkMap>
 
 data class CertPathAndKey(val certPath: List<X509Certificate>, val key: PrivateKey) {
     fun toKeyPair(): KeyPair = KeyPair(certPath[0].publicKey, key)

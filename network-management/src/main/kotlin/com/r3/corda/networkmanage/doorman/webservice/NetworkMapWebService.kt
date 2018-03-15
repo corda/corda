@@ -14,7 +14,6 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
-import com.r3.corda.networkmanage.common.utils.SignedNetworkMap
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
 import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService.Companion.NETWORK_MAP_PATH
 import net.corda.core.crypto.SecureHash
@@ -27,6 +26,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.network.SignedNetworkMap
 import java.io.InputStream
 import java.security.InvalidKeyException
 import java.security.SignatureException
@@ -52,18 +52,18 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     private val networkMapCache: LoadingCache<Boolean, CachedData> = Caffeine.newBuilder()
             .expireAfterWrite(config.cacheTimeout, TimeUnit.MILLISECONDS)
-            .build({ _ ->
+            .build { _ ->
                 networkMapStorage.getCurrentNetworkMap()?.let {
                     val networkMap = it.verified()
-                    CachedData(it, networkMap.nodeInfoHashes.toSet(), networkMapStorage.getSignedNetworkParameters(networkMap.networkParameterHash)?.verified()) }
-            })
+                    val networkParameters = networkMapStorage.getSignedNetworkParameters(networkMap.networkParameterHash)?.verified()
+                    CachedData(it, networkMap.nodeInfoHashes.toSet(), networkParameters)
+                }
+            }
 
     private val nodeInfoCache: LoadingCache<SecureHash, SignedNodeInfo> = Caffeine.newBuilder()
             // TODO: Define cache retention policy.
             .softValues()
-            .build({ key ->
-                key?.let { nodeInfoStorage.getNodeInfo(it) }
-            })
+            .build(nodeInfoStorage::getNodeInfo)
 
     private val currentSignedNetworkMap: SignedNetworkMap? get() = networkMapCache.get(true)?.signedNetworkMap
     private val currentNodeInfoHashes: Set<SecureHash> get() = networkMapCache.get(true)?.nodeInfoHashes ?: emptySet()
