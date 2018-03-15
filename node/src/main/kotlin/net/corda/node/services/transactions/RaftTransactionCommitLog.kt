@@ -22,6 +22,7 @@ import net.corda.node.services.transactions.RaftUniquenessProvider.Companion.par
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import java.time.Clock
 
 /**
  * Notarised contract state commit log, replicated across a Copycat Raft cluster.
@@ -31,6 +32,7 @@ import net.corda.nodeapi.internal.persistence.currentDBSession
  */
 class RaftTransactionCommitLog<E, EK>(
         val db: CordaPersistence,
+        val nodeClock: Clock,
         createMap: () -> AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, E, EK>
 ) : StateMachine(), Snapshottable {
     object Commands {
@@ -86,7 +88,8 @@ class RaftTransactionCommitLog<E, EK>(
         val request = PersistentUniquenessProvider.Request(
                 consumingTxHash = commitCommand.txId.toString(),
                 partyName = commitCommand.requestingParty,
-                requestSignature = commitCommand.requestSignature
+                requestSignature = commitCommand.requestSignature,
+                requestDate = nodeClock.instant()
         )
         val session = currentDBSession()
         session.persist(request)

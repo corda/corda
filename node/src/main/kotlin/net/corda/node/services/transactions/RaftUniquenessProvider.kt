@@ -33,6 +33,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.nio.file.Path
+import java.time.Clock
 import java.util.concurrent.CompletableFuture
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
@@ -52,6 +53,7 @@ import javax.persistence.Table
 class RaftUniquenessProvider(
         private val transportConfiguration: NodeSSLConfiguration,
         private val db: CordaPersistence,
+        private val clock: Clock,
         private val metrics: MetricRegistry,
         private val raftConfig: RaftConfig
 ) : UniquenessProvider, SingletonSerializeAsToken() {
@@ -109,7 +111,7 @@ class RaftUniquenessProvider(
     fun start() {
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
         val stateMachineFactory = {
-            RaftTransactionCommitLog(db, RaftUniquenessProvider.Companion::createMap)
+            RaftTransactionCommitLog(db, clock, RaftUniquenessProvider.Companion::createMap)
         }
         val address = raftConfig.nodeAddress.let { Address(it.host, it.port) }
         val storage = buildStorage(storagePath)

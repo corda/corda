@@ -18,14 +18,15 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
-import org.hibernate.annotations.CreationTimestamp
+import java.time.Clock
+import java.time.Instant
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
 
 /** A RDBMS backed Uniqueness provider */
 @ThreadSafe
-class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsToken() {
+class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, SingletonSerializeAsToken() {
     @MappedSuperclass
     open class BaseComittedState(
             @EmbeddedId
@@ -54,10 +55,8 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
             @Column(name = "request_signature")
             val requestSignature: ByteArray,
 
-            @CreationTimestamp
-            @Temporal(TemporalType.TIMESTAMP)
-            @Column(name = "request_date")
-            var requestDate: Date? = null
+            @Column(name = "request_timestamp")
+            var requestDate: Instant
     )
 
     @Entity
@@ -106,7 +105,8 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
         val request = Request(
                 consumingTxHash = txId.toString(),
                 partyName = callerIdentity.name.toString(),
-                requestSignature = requestSignature.serialize().bytes
+                requestSignature = requestSignature.serialize().bytes,
+                requestDate = clock.instant()
         )
         val session = currentDBSession()
         session.persist(request)

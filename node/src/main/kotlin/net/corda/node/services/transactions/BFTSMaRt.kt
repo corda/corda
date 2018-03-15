@@ -243,7 +243,8 @@ object BFTSMaRt {
             val request = PersistentUniquenessProvider.Request(
                     consumingTxHash = txId.toString(),
                     partyName = callerName.toString(),
-                    requestSignature = requestSignature.serialize().bytes
+                    requestSignature = requestSignature.serialize().bytes,
+                    requestDate = services.clock.instant()
             )
             val session = currentDBSession()
             session.persist(request)
