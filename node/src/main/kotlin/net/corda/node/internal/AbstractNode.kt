@@ -673,7 +673,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
         return notaryConfig.run {
             if (raft != null) {
-                val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.monitoringService.metrics, raft)
+                val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.clock, services.monitoringService.metrics, raft)
                 (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
             } else if (bftSMaRt != null) {
                 if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")

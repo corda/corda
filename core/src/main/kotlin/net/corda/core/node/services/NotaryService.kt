@@ -79,9 +79,9 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
      * A NotaryException is thrown if any of the states have been consumed by a different transaction. Note that
      * this method does not throw an exception when input states are present multiple times within the transaction.
      */
-    fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party) {
+    fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party, requestSignature: NotarisationRequestSignature) {
         try {
-            uniquenessProvider.commit(inputs, txId, caller)
+            uniquenessProvider.commit(inputs, txId, caller, requestSignature)
         } catch (e: NotaryInternalException) {
             if (e.error is NotaryError.Conflict) {
                 val conflicts = inputs.filterIndexed { _, stateRef ->

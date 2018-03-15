@@ -127,7 +127,7 @@ class NotaryFlow {
      * It checks that the time-window command is valid (if present) and commits the input state, or returns a conflict
      * if any of the input states have been previously committed.
      *
-     * Additional transaction validation logic can be added when implementing [receiveAndVerifyTx].
+     * Additional transaction validation logic can be added when implementing [validateRequest].
      */
     // See AbstractStateReplacementFlow.Acceptor for why it's Void?
     abstract class Service(val otherSideSession: FlowSession, val service: TrustedAuthorityNotaryService) : FlowLogic<Void?>() {
@@ -137,13 +137,15 @@ class NotaryFlow {
             check(serviceHub.myInfo.legalIdentities.any { serviceHub.networkMapCache.isNotary(it) }) {
                 "We are not a notary on the network"
             }
+
+            val requestPayload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
             var txId: SecureHash? = null
             try {
-                val parts = receiveAndVerifyTx()
+                val parts = validateRequest(requestPayload)
                 txId = parts.id
                 checkNotary(parts.notary)
                 service.validateTimeWindow(parts.timestamp)
-                service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty)
+                service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature)
                 signTransactionAndSendResponse(txId)
             } catch (e: NotaryInternalException) {
                 throw NotaryException(e.error, txId)
@@ -152,11 +154,10 @@ class NotaryFlow {
         }
 
         /**
-         * Implement custom logic to receive the transaction to notarise, and perform verification based on validity and
-         * privacy requirements.
+         * Implement custom logic to perform transaction verification based on validity and privacy requirements.
          */
         @Suspendable
-        abstract fun receiveAndVerifyTx(): TransactionParts
+        protected abstract fun validateRequest(requestPayload: NotarisationPayload): TransactionParts
 
         /** Check if transaction is intended to be signed by this notary. */
         @Suspendable
