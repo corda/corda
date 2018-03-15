@@ -345,7 +345,7 @@ class RPCClientProxyHandler(
      * @param notify whether to notify observables or not.
      */
     private fun close(notify: Boolean = true) {
-//        sessionFactory?.close()
+        sessionFactory?.close()
         reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
         reapObservables(notify)

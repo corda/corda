@@ -8,8 +8,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.io.Closeables
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
-import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
@@ -129,7 +127,7 @@ object InteractiveShell {
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
     private lateinit var shellConfiguration: ShellConfiguration
-    private lateinit var client: CordaRPCClient
+    private var  onExit: () -> Unit = {}
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
@@ -137,9 +135,8 @@ object InteractiveShell {
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
         shellConfiguration = configuration
         rpcOps = { username: String, credentials: String ->
-             client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
+             val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
                     sslConfiguration = configuration.ssl, classLoader = classLoader)
-
             this.connection = client.start(username, credentials)
             connection.proxy
         }
@@ -166,6 +163,7 @@ object InteractiveShell {
     }
 
     fun runLocalShell(onExit: () -> Unit = {}) {
+        this.onExit = onExit
         val terminal = TerminalFactory.create()
         val consoleReader = ConsoleReader("Corda", FileInputStream(FileDescriptor.`in`), System.out, terminal)
         val jlineProcessor = JLineProcessor(terminal.isAnsiSupported, shell, consoleReader, System.out)
@@ -492,9 +490,10 @@ object InteractiveShell {
                         out.flush()
                         cordaRPCOps.shutdown()
                         connection.forceClose()
+                        //System.exit(0)
                         out.println("...done, quitting standalone shell now.")
                         out.flush()
-                        System.exit(0)
+                        onExit?.invoke()
                     }.toBlocking().single()
 
 //            if (result !is kotlin.Unit && result !is Void) {
