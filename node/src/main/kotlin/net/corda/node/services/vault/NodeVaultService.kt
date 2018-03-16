@@ -48,7 +48,7 @@ class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
         private val servicesForResolution: ServicesForResolution,
-        hibernateConfig: HibernateConfiguration
+        private val hibernateConfig: HibernateConfiguration
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
         private val log = contextLogger()
@@ -481,8 +481,12 @@ class NodeVaultService(
         val distinctTypes = results.map { it }
 
         val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
+
+        // Use classloader used to configure hibernate if present
+        // TODO: use proper classloader resolver
+        val contractClassLoader = hibernateConfig.cordappClassLoader ?: javaClass.classLoader
         distinctTypes.forEach { type ->
-            val concreteType: Class<ContractState> = uncheckedCast(Class.forName(type))
+            val concreteType: Class<ContractState> = uncheckedCast(contractClassLoader.loadClass(type))
             val contractInterfaces = deriveContractInterfaces(concreteType)
             contractInterfaces.map {
                 val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
