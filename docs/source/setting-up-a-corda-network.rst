@@ -61,7 +61,7 @@ be done with the network bootstrapper. This is a tool that scans all the node co
 generate the network parameters file which is copied to the nodes' directories. It also copies each node's node-info file
 to every other node so that they can all transact with each other.
 
-The bootstrapper tool can be downloaded from http://downloads.corda.net/NetworkBootstrapper-corda-X.Y.jar, where ``X`` is the major Corda version and ``Y`` is the minor Corda version.
+The bootstrapper tool can be downloaded from http://downloads.corda.net/network-bootstrapper-corda-X.Y.jar, where ``X`` is the major Corda version and ``Y`` is the minor Corda version.
 
 To use it, create a directory containing a ``node.conf`` file for each node you want to create. Then run the following command:
 
