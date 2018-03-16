@@ -52,3 +52,45 @@ trustStorePassword = "password"
 ##Running the registration tool
 
 ``java -jar registration-tool-<<version>>.jar --config-file <<config file path>>``
+
+# Private key copy tool
+
+The key copy tool copies the private key from the source keystore to the destination keystore, it's similar to the ``importkeystore`` option in Java keytool with extra support for Corda's key algorithms.  
+**This is useful for provisioning keystores for distributed notaries.**
+
+### Command line option
+
+```
+Argument                        Description
+---------                       -----------
+srckeystore                     Path to the source keystore containing the private key.
+
+destkeystore                    Path to the destination keystore which the private key should copy to.
+
+srcstorepass                    Source keystore password.
+
+deststorepass                   Destination keystore password.
+
+srcalias                        The alias of the private key the tool is copying.
+
+destalias                       Optional: The private key will be stored using this alias if provided, otherwise [srcalias] will be used.
+
+```
+
+### Usage
+
+``java -jar registration-tool-<<version>>.jar --importkeystore [options]``
+
+### Example
+
+Copy ``distributed-notary-private-key`` from distributed notaries keystore to node's keystore.
+
+```
+java -jar registration-tool-<<version>>.jar \
+--importkeystore \
+--srckeystore notaryKeystore.jks \
+--destkeystore node.jks \
+--srcstorepass notaryPassword \
+--deststorepass nodepassword \
+--srcalias distributed-notary-private-key
+```
