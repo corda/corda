@@ -1,11 +1,9 @@
 package net.corda.tools.shell
 
 import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.google.common.io.Closeables
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClientConfiguration
@@ -23,7 +21,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -52,9 +49,7 @@ import rx.Subscriber
 import java.io.*
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.UndeclaredThrowableException
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
@@ -422,49 +417,50 @@ object InteractiveShell {
 
 
     @JvmStatic
-    fun gracefulShutdown(out: RenderPrintWriter, cordaRPCOps: CordaRPCOps, isSsh: Boolean = false) {
+    fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps, isSsh: Boolean = false) {
 
         var isShuttingDown = false
         try {
-            out.println("Orchestrating a clean shutdown...")
-            out.println("...enabling draining mode")
-            out.flush()
+            userSessionOut.println("Orchestrating a clean shutdown...")
+            userSessionOut.println("...enabling draining mode")
+            userSessionOut.flush()
             cordaRPCOps.setFlowsDrainingModeEnabled(true)
-            out.println("...waiting for in-flight flows to be completed")
-            out.flush()
+            userSessionOut.println("...waiting for in-flight flows to be completed")
+            userSessionOut.flush()
             cordaRPCOps.pendingFlowsCount().updates
                     .doOnError { error ->
                         log.error(error.message)
                         throw error
                     }
                     .doOnNext { remaining ->
-                        out.println("...remaining: ${remaining.first}/${remaining.second}")
-                        out.flush()
+                        userSessionOut.println("...remaining: ${remaining.first}/${remaining.second}")
+                        userSessionOut.flush()
                     }
                     .doOnCompleted {
                         if (isSsh) {
                             // print in the original Shell process
-                            println("Shutting down the node via remote SSH session (it may take a while)")
+                            val hostShellOut = System.out
+                            hostShellOut.println("Shutting down the node via remote SSH session (it may take a while)")
                         }
-                        out.println("Shutting down the node (it may take a while)")
-                        out.flush()
+                        userSessionOut.println("Shutting down the node (it may take a while)")
+                        userSessionOut.flush()
                         cordaRPCOps.shutdown()
                         isShuttingDown = true
                         connection.forceClose()
-                        out.println("...done, quitting standalone shell now.")
-                        out.flush()
+                        userSessionOut.println("...done, quitting standalone shell now.")
+                        userSessionOut.flush()
                         onExit.invoke()
                     }.toBlocking().single()
 
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
-            out.println(e.message, Color.red)
-            out.println("Please try 'man run' to learn what syntax is acceptable")
+            userSessionOut.println(e.message, Color.red)
+            userSessionOut.println("Please try 'man run' to learn what syntax is acceptable")
         } catch (e: Exception) {
             if (!isShuttingDown) {
-                out.println("RPC failed: ${e.rootCause}", Color.red)
+                userSessionOut.println("RPC failed: ${e.rootCause}", Color.red)
             }
         } finally {
-            out.flush()
+            userSessionOut.flush()
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()
         }
