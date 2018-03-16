@@ -47,3 +47,5 @@ include 'samples:simm-valuation-demo'
 include 'samples:notary-demo'
 include 'samples:bank-of-corda-demo'
 include 'samples:cordapp-configuration'
+// TODO: Remove this "project" once https://youtrack.jetbrains.com/issue/IDEA-187904 is fixed.
+include 'buildSrc'
