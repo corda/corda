@@ -470,9 +470,8 @@ object InteractiveShell {
 
 
     @JvmStatic
-    fun gracefulShutdown(out: RenderPrintWriter, cordaRPCOps: CordaRPCOps, isSsh: Boolean = false): Any? {
+    fun gracefulShutdown(out: RenderPrintWriter, cordaRPCOps: CordaRPCOps, isSsh: Boolean = false) {
 
-        var result: Any? = null
         var isShuttingDown = false
         try {
             out.println("Orchestrating a clean shutdown...")
@@ -517,8 +516,6 @@ object InteractiveShell {
             InputStreamSerializer.invokeContext = null
             InputStreamDeserializer.closeAll()
         }
-
-        return result
     }
 
     private fun printAndFollowRPCResponse(response: Any?, out: PrintWriter): CordaFuture<Unit> {
