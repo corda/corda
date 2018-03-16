@@ -59,9 +59,9 @@ class NetworkManagementServer : Closeable {
         val localNetworkMapSigner = signer?.let { NetworkMapSigner(networkMapStorage, it) }
 
         newNetworkParameters?.let {
-            val netParamsOfNetworkMap = networkMapStorage.getNetworkParametersOfNetworkMap()
+            val netParamsOfNetworkMap = networkMapStorage.getActiveNetworkMap()?.networkParameters
             if (netParamsOfNetworkMap == null) {
-                localNetworkMapSigner?.persistSignedNetworkParameters(it) ?: networkMapStorage.saveNetworkParameters(it, null)
+                localNetworkMapSigner?.signAndPersistNetworkParameters(it) ?: networkMapStorage.saveNetworkParameters(it, null)
             } else {
                 throw UnsupportedOperationException("Network parameters already exist. Updating them is not supported yet.")
             }

@@ -165,9 +165,7 @@ class HsmSigningServiceTest : HsmBaseTest() {
         networkMapSigner.signNetworkMap()
 
         // then
-        val signedNetworkMap = networkMapStorage.getCurrentNetworkMap()
-        assertNotNull(signedNetworkMap)
-        val persistedNetworkMap = signedNetworkMap!!.verified()
+        val persistedNetworkMap = networkMapStorage.getActiveNetworkMap()!!.toSignedNetworkMap().verified()
         assertEquals(networkMapParameters.serialize().hash, persistedNetworkMap.networkParameterHash)
         assertThat(persistedNetworkMap.nodeInfoHashes).isEmpty()
     }

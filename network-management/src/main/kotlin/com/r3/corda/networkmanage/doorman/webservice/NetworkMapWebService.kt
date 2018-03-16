@@ -52,11 +52,12 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     private val networkMapCache: LoadingCache<Boolean, CachedData> = Caffeine.newBuilder()
             .expireAfterWrite(config.cacheTimeout, TimeUnit.MILLISECONDS)
-            .build { _ ->
-                networkMapStorage.getCurrentNetworkMap()?.let {
-                    val networkMap = it.verified()
-                    val networkParameters = networkMapStorage.getSignedNetworkParameters(networkMap.networkParameterHash)?.verified()
-                    CachedData(it, networkMap.nodeInfoHashes.toSet(), networkParameters)
+            .build {
+                networkMapStorage.getActiveNetworkMap()?.let {
+                    logger.info("Re-publishing network map")
+                    val networkMap = it.toNetworkMap()
+                    val signedNetworkMap = it.toSignedNetworkMap()
+                    CachedData(signedNetworkMap, networkMap.nodeInfoHashes.toSet(), it.networkParameters.toNetworkParameters())
                 }
             }
 
@@ -67,7 +68,7 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     private val currentSignedNetworkMap: SignedNetworkMap? get() = networkMapCache.get(true)?.signedNetworkMap
     private val currentNodeInfoHashes: Set<SecureHash> get() = networkMapCache.get(true)?.nodeInfoHashes ?: emptySet()
-    private val currentNetworkParameters: NetworkParameters? get() = networkMapCache.get(true)?.currentNetworkParameter
+    private val currentNetworkParameters: NetworkParameters? get() = networkMapCache.get(true)?.networkParameters
 
     @POST
     @Path("publish")
@@ -153,6 +154,7 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     class NetworkMapNotInitialisedException(message: String?) : Exception(message)
     class InvalidPlatformVersionException(message: String?) : Exception(message)
 
-    private data class CachedData(val signedNetworkMap: SignedNetworkMap, val nodeInfoHashes: Set<SecureHash>, val currentNetworkParameter: NetworkParameters?)
-
+    private data class CachedData(val signedNetworkMap: SignedNetworkMap,
+                                  val nodeInfoHashes: Set<SecureHash>,
+                                  val networkParameters: NetworkParameters)
 }

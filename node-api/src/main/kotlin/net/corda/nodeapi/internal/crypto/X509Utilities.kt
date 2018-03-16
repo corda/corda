@@ -14,10 +14,7 @@ import net.corda.core.CordaOID
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.CertRole
-import net.corda.core.internal.reader
-import net.corda.core.internal.uncheckedCast
-import net.corda.core.internal.writer
+import net.corda.core.internal.*
 import net.corda.core.utilities.days
 import net.corda.core.utilities.millis
 import org.bouncycastle.asn1.*
@@ -425,4 +422,6 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
     )
 }
 
-data class CertificateAndKeyPair(val certificate: X509Certificate, val keyPair: KeyPair)
+data class CertificateAndKeyPair(val certificate: X509Certificate, val keyPair: KeyPair) {
+    fun <T : Any> sign(obj: T): SignedDataWithCert<T> = obj.signWithCert(keyPair.private, certificate)
+}

@@ -43,12 +43,13 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
             }
 
             // Update any [NodeInfoEntity] instance for this CSR as not current.
-            val existingNodeInfo = getEntitiesWhere<NodeInfoEntity> { builder, path ->
+            entitiesWhere<NodeInfoEntity> { builder, path ->
                 val requestEq = builder.equal(path.get<CertificateSigningRequestEntity>(NodeInfoEntity::certificateSigningRequest.name), request)
                 val isCurrent = builder.isTrue(path.get<Boolean>(NodeInfoEntity::isCurrent.name))
                 builder.and(requestEq, isCurrent)
+            }.resultStream.use { existingNodeInfos ->
+                existingNodeInfos.forEach { session.merge(it.copy(isCurrent = false)) }
             }
-            existingNodeInfo.forEach { session.merge(it.copy(isCurrent = false)) }
 
             val hash = signedNodeInfo.raw.hash
             val hashedNodeInfo = NodeInfoEntity(
@@ -75,7 +76,7 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
     }
 
     private fun DatabaseTransaction.getSignedRequestByPublicHash(publicKeyHash: SecureHash): CertificateSigningRequestEntity? {
-        return singleEntityWhere { builder, path ->
+        return uniqueEntityWhere { builder, path ->
             val publicKeyEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::publicKeyHash.name), publicKeyHash.toString())
             val statusEq = builder.equal(path.get<RequestStatus>(CertificateSigningRequestEntity::status.name), RequestStatus.DONE)
             builder.and(publicKeyEq, statusEq)

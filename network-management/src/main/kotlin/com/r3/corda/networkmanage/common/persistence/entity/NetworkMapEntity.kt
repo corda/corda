@@ -26,22 +26,26 @@ class NetworkMapEntity(
         val version: Long? = null,
 
         @Lob
-        @Column(name = "serialized_network_map")
-        val networkMap: ByteArray,
+        @Column(name = "serialized_network_map", nullable = false)
+        val networkMapBytes: ByteArray,
 
         @Lob
-        @Column(name = "signature")
+        @Column(name = "signature", nullable = false)
         val signature: ByteArray,
 
         @Lob
-        @Column(name = "certificate")
-        val certificate: ByteArray
+        @Column(name = "certificate", nullable = false)
+        val certificate: ByteArray,
+
+        @ManyToOne(optional = false, fetch = FetchType.EAGER)
+        @JoinColumn(name = "network_parameters")
+        val networkParameters: NetworkParametersEntity
 ) {
-    fun toNetworkMap(): NetworkMap = networkMap.deserialize()
+    fun toNetworkMap(): NetworkMap = networkMapBytes.deserialize()
 
     fun toSignedNetworkMap(): SignedNetworkMap {
         return SignedNetworkMap(
-                SerializedBytes(networkMap),
+                SerializedBytes(networkMapBytes),
                 DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), signature)
         )
     }

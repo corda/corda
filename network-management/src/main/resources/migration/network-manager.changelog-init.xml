@@ -80,9 +80,18 @@
             <column name="version" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="certificate" type="BLOB"/>
-            <column name="serialized_network_map" type="BLOB"/>
-            <column name="signature" type="BLOB"/>
+            <column name="certificate" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="serialized_network_map" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="signature" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_parameters" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="1520338500424-6">
@@ -92,7 +101,9 @@
             </column>
             <column name="certificate" type="BLOB"/>
             <column name="created" type="TIMESTAMP"/>
-            <column name="parameters_bytes" type="BLOB"/>
+            <column name="parameters_bytes" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
             <column name="signature" type="BLOB"/>
         </createTable>
     </changeSet>
@@ -298,5 +309,10 @@
         <addForeignKeyConstraint baseColumnNames="private_network" baseTableName="certificate_signing_request"
                                  constraintName="FK_CSR_PN"
                                  referencedColumnNames="id" referencedTableName="private_network"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1520338500424-38">
+        <addForeignKeyConstraint baseColumnNames="network_parameters" baseTableName="network_map"
+                                 constraintName="FK_NM_NP"
+                                 referencedColumnNames="hash" referencedTableName="network_parameters"/>
     </changeSet>
 </databaseChangeLog>

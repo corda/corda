@@ -11,10 +11,12 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.TestBase
-import net.corda.core.internal.signWithCert
+import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
+import net.corda.core.crypto.SecureHash
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.NetworkMapAndSigned
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -26,7 +28,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.security.cert.X509Certificate
-import kotlin.test.assertEquals
 
 class PersistentNetworkMapStorageTest : TestBase() {
     private lateinit var persistence: CordaPersistence
@@ -35,13 +36,13 @@ class PersistentNetworkMapStorageTest : TestBase() {
     private lateinit var requestStorage: PersistentCertificateSigningRequestStorage
 
     private lateinit var rootCaCert: X509Certificate
-    private lateinit var networkMapCa: CertificateAndKeyPair
+    private lateinit var networkMapCertAndKeyPair: CertificateAndKeyPair
 
     @Before
     fun startDb() {
         val (rootCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
-        networkMapCa = createDevNetworkMapCa(rootCa)
+        networkMapCertAndKeyPair = createDevNetworkMapCa(rootCa)
         persistence = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
         networkMapStorage = PersistentNetworkMapStorage(persistence)
         nodeInfoStorage = PersistentNodeInfoStorage(persistence)
@@ -54,74 +55,52 @@ class PersistentNetworkMapStorageTest : TestBase() {
     }
 
     @Test
-    fun `saveNetworkMap and saveNetworkParameters create current network map and parameters`() {
+    fun `saveNetworkParameters and then saveNewActiveNetworkMap creates the active network map`() {
         // given
         // Create node info.
         val (signedNodeInfo) = createValidSignedNodeInfo("Test", requestStorage)
         val nodeInfoHash = nodeInfoStorage.putNodeInfo(signedNodeInfo)
 
-        val networkParameters = testNetworkParameters(emptyList())
-        val parametersSignature = networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate).sig
         // Create network parameters
-        val networkParametersHash = networkMapStorage.saveNetworkParameters(networkParameters, parametersSignature)
+        val networkParameters = testNetworkParameters(maxTransactionSize = 1234567)
+        val networkParametersSig = networkMapCertAndKeyPair.sign(networkParameters).sig
+        val networkParametersHash = networkMapStorage.saveNetworkParameters(networkParameters, networkParametersSig)
         val networkMap = NetworkMap(listOf(nodeInfoHash), networkParametersHash, null)
-        val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
+        val networkMapAndSigned = NetworkMapAndSigned(networkMap) { networkMapCertAndKeyPair.sign(networkMap).sig }
 
         // when
-        networkMapStorage.saveNetworkMap(signedNetworkMap)
+        networkMapStorage.saveNewActiveNetworkMap(networkMapAndSigned)
 
         // then
-        val persistedSignedNetworkMap = networkMapStorage.getCurrentNetworkMap()
-        val persistedSignedParameters = networkMapStorage.getNetworkParametersOfNetworkMap()
+        val activeNetworkMapEntity = networkMapStorage.getActiveNetworkMap()!!
+        val activeSignedNetworkMap = activeNetworkMapEntity.toSignedNetworkMap()
+        val activeNetworkMap = activeSignedNetworkMap.verifiedNetworkMapCert(rootCaCert)
+        val activeNetworkParametersEntity = activeNetworkMapEntity.networkParameters
+        val activeSignedNetworkParameters = activeNetworkParametersEntity.toSignedNetworkParameters()
+        val activeNetworkParameters = activeSignedNetworkParameters.verifiedNetworkMapCert(rootCaCert)
 
-        assertEquals(networkParameters, persistedSignedParameters?.verifiedNetworkMapCert(rootCaCert))
-        assertEquals(parametersSignature, persistedSignedParameters?.sig)
-        assertEquals(signedNetworkMap.sig, persistedSignedNetworkMap?.sig)
-        assertEquals(signedNetworkMap.verifiedNetworkMapCert(rootCaCert), persistedSignedNetworkMap?.verifiedNetworkMapCert(rootCaCert))
-        assertEquals(signedNetworkMap.verifiedNetworkMapCert(rootCaCert).networkParameterHash, persistedSignedParameters?.raw?.hash)
+        assertThat(activeNetworkMap).isEqualTo(networkMap)
+        assertThat(activeSignedNetworkMap.sig).isEqualTo(networkMapAndSigned.signed.sig)
+        assertThat(activeNetworkParameters).isEqualTo(networkParameters)
+        assertThat(activeSignedNetworkParameters.sig).isEqualTo(networkParametersSig)
+        assertThat(SecureHash.parse(activeNetworkParametersEntity.parametersHash))
+                .isEqualTo(activeNetworkMap.networkParameterHash)
+                .isEqualTo(networkParametersHash)
     }
 
     @Test
     fun `getLatestNetworkParameters returns last inserted`() {
-        val params1 = testNetworkParameters(emptyList(), minimumPlatformVersion = 1)
-        val params2 = testNetworkParameters(emptyList(), minimumPlatformVersion = 2)
-        // given
-        networkMapStorage.saveNetworkParameters(params1, params1.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate).sig)
+        val params1 = testNetworkParameters(minimumPlatformVersion = 1)
+        val params2 = testNetworkParameters(minimumPlatformVersion = 2)
+        networkMapStorage.saveNetworkParameters(params1, networkMapCertAndKeyPair.sign(params1).sig)
         // We may have not signed them yet.
         networkMapStorage.saveNetworkParameters(params2, null)
 
-        // when
-        val latest = networkMapStorage.getLatestNetworkParameters()?.minimumPlatformVersion
-        // then
-        assertEquals(2, latest)
+        assertThat(networkMapStorage.getLatestNetworkParameters()?.toNetworkParameters()).isEqualTo(params2)
     }
 
     @Test
-    fun `getNetworkParametersOfNetworkMap returns current network map parameters`() {
-        // given
-        // Create network parameters
-        val testParameters1 = testNetworkParameters(emptyList())
-        val networkParametersHash = networkMapStorage.saveNetworkParameters(testParameters1, testParameters1.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate).sig)
-        // Create empty network map
-
-        // Sign network map making it current network map
-        val networkMap = NetworkMap(emptyList(), networkParametersHash, null)
-        val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
-        networkMapStorage.saveNetworkMap(signedNetworkMap)
-
-        // Create new network parameters
-        val testParameters2 = testNetworkParameters(emptyList(), minimumPlatformVersion = 2)
-        networkMapStorage.saveNetworkParameters(testParameters2, testParameters2.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate).sig)
-
-        // when
-        val result = networkMapStorage.getNetworkParametersOfNetworkMap()?.verifiedNetworkMapCert(rootCaCert)
-
-        // then
-        assertEquals(1, result?.minimumPlatformVersion)
-    }
-
-    @Test
-    fun `getValidNodeInfoHashes returns only valid and signed node info hashes`() {
+    fun `getValidNodeInfoHashes returns only for current node-infos`() {
         // given
         // Create node infos.
         val (signedNodeInfoA) = createValidSignedNodeInfo("TestA", requestStorage)
@@ -131,19 +110,15 @@ class PersistentNetworkMapStorageTest : TestBase() {
         val nodeInfoHashA = nodeInfoStorage.putNodeInfo(signedNodeInfoA)
         val nodeInfoHashB = nodeInfoStorage.putNodeInfo(signedNodeInfoB)
 
-        // Create network parameters
-        val testParameters = testNetworkParameters(emptyList())
-        val networkParametersHash = networkMapStorage.saveNetworkParameters(testParameters, testParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate).sig)
-        val networkMap = NetworkMap(listOf(nodeInfoHashA), networkParametersHash, null)
-        val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
-
-        // Sign network map
-        networkMapStorage.saveNetworkMap(signedNetworkMap)
+        persistence.transaction {
+            val entity = session.find(NodeInfoEntity::class.java, nodeInfoHashA.toString())
+            session.merge(entity.copy(isCurrent = false))
+        }
 
         // when
-        val validNodeInfoHash = networkMapStorage.getActiveNodeInfoHashes()
+        val validNodeInfoHashes = networkMapStorage.getActiveNodeInfoHashes()
 
         // then
-        assertThat(validNodeInfoHash).containsOnly(nodeInfoHashA, nodeInfoHashB)
+        assertThat(validNodeInfoHashes).containsOnly(nodeInfoHashB)
     }
 }

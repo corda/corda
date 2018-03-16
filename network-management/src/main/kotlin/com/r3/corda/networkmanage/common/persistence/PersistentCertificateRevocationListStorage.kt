@@ -40,7 +40,7 @@ class PersistentCertificateRevocationListStorage(private val database: CordaPers
     }
 
     private fun revokeCertificate(certificateSerialNumber: BigInteger, time: Instant, transaction: DatabaseTransaction) {
-        val revocation = transaction.singleEntityWhere<CertificateRevocationRequestEntity> { builder, path ->
+        val revocation = transaction.uniqueEntityWhere<CertificateRevocationRequestEntity> { builder, path ->
             builder.equal(path.get<BigInteger>(CertificateRevocationRequestEntity::certificateSerialNumber.name), certificateSerialNumber)
         }
         revocation ?: throw IllegalStateException("The certificate revocation request for $certificateSerialNumber does not exist")

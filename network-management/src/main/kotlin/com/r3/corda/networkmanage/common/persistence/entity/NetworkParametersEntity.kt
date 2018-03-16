@@ -31,7 +31,7 @@ class NetworkParametersEntity(
         val created: Instant = Instant.now(),
 
         @Lob
-        @Column(name = "parameters_bytes")
+        @Column(name = "parameters_bytes", nullable = false)
         val parametersBytes: ByteArray,
 
         // Both of the fields below are nullable, because of the way we sign network map data. NetworkParameters can be

@@ -11,11 +11,12 @@
 package com.r3.corda.networkmanage.common.signer
 
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
+import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.network.NetworkMap
-import net.corda.nodeapi.internal.network.SignedNetworkMap
+import net.corda.nodeapi.internal.network.NetworkMapAndSigned
 
 class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private val signer: Signer) {
     private companion object {
@@ -28,41 +29,45 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private
     fun signNetworkMap() {
         // TODO There is no network parameters update process in place yet. We assume that latest parameters are to be used
         // in current network map.
-        val latestNetworkParameters = networkMapStorage.getLatestNetworkParameters()
-        if (latestNetworkParameters == null) {
-            logger.debug("No network parameters present")
+        val latestNetParamsEntity = networkMapStorage.getLatestNetworkParameters()
+        if (latestNetParamsEntity == null) {
+            logger.warn("No network parameters present")
             return
         }
-        logger.debug("Fetching current network map parameters...")
-        val currentNetworkParameters = networkMapStorage.getNetworkParametersOfNetworkMap()
-        logger.debug("Retrieved network map parameters: $currentNetworkParameters")
-        if (currentNetworkParameters?.verified() != latestNetworkParameters) {
-            persistSignedNetworkParameters(latestNetworkParameters)
+
+        val latestNetParams = latestNetParamsEntity.toNetworkParameters()
+        logger.debug { "Latest network parameters: $latestNetParams" }
+
+        if (!latestNetParamsEntity.isSigned) {
+            signAndPersistNetworkParameters(latestNetParams)
         } else {
-            logger.debug("Network map parameters up-to-date. Skipping signing.")
+            logger.debug("Network parameters are already signed")
         }
-        logger.debug("Fetching current network map...")
-        val currentSignedNetworkMap = networkMapStorage.getCurrentNetworkMap()
-        logger.debug("Fetching node info hashes with VALID certificates...")
+
         val nodeInfoHashes = networkMapStorage.getActiveNodeInfoHashes()
-        logger.debug("Retrieved node info hashes: $nodeInfoHashes")
-        val newNetworkMap = NetworkMap(nodeInfoHashes, latestNetworkParameters.serialize().hash, null)
-        val serialisedNetworkMap = newNetworkMap.serialize()
-        if (serialisedNetworkMap != currentSignedNetworkMap?.raw) {
-            logger.info("Signing a new network map: $newNetworkMap")
-            logger.debug("Creating a new signed network map: ${serialisedNetworkMap.hash}")
-            val newSignedNetworkMap = SignedNetworkMap(serialisedNetworkMap, signer.signBytes(serialisedNetworkMap.bytes))
-            networkMapStorage.saveNetworkMap(newSignedNetworkMap)
-            logger.debug("Signed network map saved")
+        logger.debug { "Active node-info hashes:\n${nodeInfoHashes.joinToString("\n")}" }
+
+        val currentNetworkMap = networkMapStorage.getActiveNetworkMap()?.toNetworkMap()
+        if (currentNetworkMap != null) {
+            logger.debug { "Current network map: $currentNetworkMap" }
         } else {
-            logger.debug("Current network map is up-to-date. Skipping signing.")
+            logger.info("There is currently no network map")
+        }
+
+        val newNetworkMap = NetworkMap(nodeInfoHashes, SecureHash.parse(latestNetParamsEntity.parametersHash), null)
+        logger.debug { "Potential new network map: $newNetworkMap" }
+
+        if (currentNetworkMap != newNetworkMap) {
+            val netNetworkMapAndSigned = NetworkMapAndSigned(newNetworkMap) { signer.signBytes(it.bytes) }
+            networkMapStorage.saveNewActiveNetworkMap(netNetworkMapAndSigned)
+            logger.info("Signed new network map: $newNetworkMap")
+        } else {
+            logger.debug("Current network map is up-to-date")
         }
     }
 
-    fun persistSignedNetworkParameters(networkParameters: NetworkParameters) {
-        logger.info("Signing and persisting network parameters: $networkParameters")
-        val digitalSignature = signer.signObject(networkParameters).sig
-        networkMapStorage.saveNetworkParameters(networkParameters, digitalSignature)
-        logger.info("Signed network map parameters saved.")
+    fun signAndPersistNetworkParameters(networkParameters: NetworkParameters) {
+        networkMapStorage.saveNetworkParameters(networkParameters, signer.signObject(networkParameters).sig)
+        logger.info("Signed network parameters: $networkParameters")
     }
 }

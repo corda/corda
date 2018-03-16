@@ -18,23 +18,24 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.SchemaMigration
+import org.hibernate.query.Query
 import java.util.*
 import javax.persistence.LockModeType
 import javax.persistence.criteria.CriteriaBuilder
 import javax.persistence.criteria.Path
 import javax.persistence.criteria.Predicate
 
-inline fun <reified T> DatabaseTransaction.singleEntityWhere(predicate: (CriteriaBuilder, Path<T>) -> Predicate): T? {
-    return getEntitiesWhere(predicate).firstOrNull()
+inline fun <reified T> DatabaseTransaction.uniqueEntityWhere(predicate: (CriteriaBuilder, Path<T>) -> Predicate): T? {
+    return entitiesWhere(predicate).setMaxResults(1).uniqueResult()
 }
 
-inline fun <reified T> DatabaseTransaction.getEntitiesWhere(predicate: (CriteriaBuilder, Path<T>) -> Predicate): List<T> {
+inline fun <reified T> DatabaseTransaction.entitiesWhere(predicate: (CriteriaBuilder, Path<T>) -> Predicate): Query<T> {
     val builder = session.criteriaBuilder
     val criteriaQuery = builder.createQuery(T::class.java)
     val query = criteriaQuery.from(T::class.java).run {
         criteriaQuery.where(predicate(builder, this))
     }
-    return session.createQuery(query).setLockMode(LockModeType.PESSIMISTIC_WRITE).resultList
+    return session.createQuery(query).setLockMode(LockModeType.PESSIMISTIC_WRITE)
 }
 
 inline fun <reified T> DatabaseTransaction.deleteEntity(predicate: (CriteriaBuilder, Path<T>) -> Predicate): Int {
