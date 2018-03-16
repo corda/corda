@@ -61,7 +61,6 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     private companion object {
-        @JvmStatic
         private fun createContractFor(className: ContractClassName, classLoader: ClassLoader?): Try<Contract> {
             return Try.on {
                 (classLoader ?: this::class.java.classLoader)
