@@ -17,7 +17,7 @@ If you want to start coding on Corda, then familiarise yourself with the :doc:`k
 our :doc:`Hello, World! tutorial </hello-world-introduction>`. For the background behind Corda, read the non-technical
 `introductory white paper`_ or for more detail, the `technical white paper`_.
 
-If you have questions or comments, then get in touch on `Slack <https://slack.corda.net/>`_ or write a question on
+If you have questions or comments, then get in touch on `Slack <https://slack.corda.net/>`_ or ask a question on
 `Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ .
 
 We look forward to seeing what you can do with Corda!
@@ -38,7 +38,5 @@ We look forward to seeing what you can do with Corda!
    node-internals-index.rst
    component-library-index.rst
    release-process-index.rst
-   faq.rst
    troubleshooting.rst
    other-index.rst
-   glossary.rst
