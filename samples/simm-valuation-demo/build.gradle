@@ -69,7 +69,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         notary = [validating : true]
         p2pPort 10002
         cordapp project(':finance')
-        rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10014"
             adminAddress "localhost:10015"
