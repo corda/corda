@@ -78,12 +78,12 @@ class UnstartedFlowTransition(
         actions.addAll(arrayOf(
                 Action.CreateTransaction,
                 Action.PersistCheckpoint(context.id, currentState.checkpoint),
-                Action.PersistDeduplicationIds(currentState.unacknowledgedMessages),
+                Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
                 Action.CommitTransaction,
-                Action.AcknowledgeMessages(currentState.unacknowledgedMessages)
+                Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers)
         ))
         currentState = currentState.copy(
-                unacknowledgedMessages = emptyList(),
+                pendingDeduplicationHandlers = emptyList(),
                 isAnyCheckpointPersisted = true
         )
     }

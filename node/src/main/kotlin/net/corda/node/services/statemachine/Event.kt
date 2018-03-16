@@ -15,7 +15,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.node.services.messaging.AcknowledgeHandle
+import net.corda.node.services.messaging.DeduplicationHandler
 
 /**
  * Transitions in the flow state machine are triggered by [Event]s that may originate from the flow itself or from
@@ -33,12 +33,12 @@ sealed class Event {
     /**
      * Deliver a session message.
      * @param sessionMessage the message itself.
-     * @param acknowledgeHandle the handle to acknowledge the message after checkpointing.
+     * @param deduplicationHandler the handle to acknowledge the message after checkpointing.
      * @param sender the sender [Party].
      */
     data class DeliverSessionMessage(
             val sessionMessage: ExistingSessionMessage,
-            val acknowledgeHandle: AcknowledgeHandle,
+            val deduplicationHandler: DeduplicationHandler,
             val sender: Party
     ) : Event()
 

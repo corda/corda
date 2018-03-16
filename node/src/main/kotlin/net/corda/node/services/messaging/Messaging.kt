@@ -163,19 +163,29 @@ object TopicStringValidator {
 }
 
 /**
- * Represents a to-be-acknowledged message. It has an associated deduplication ID.
+ * This handler is used to implement exactly-once delivery of an event on top of a possibly duplicated one. This is done
+ * using two hooks that are called from the event processor, one called from the database transaction committing the
+ * side-effect caused by the event, and another one called after the transaction has committed successfully.
+ *
+ * For example for messaging we can use [insideDatabaseTransaction] to store the message's unique ID for later
+ * deduplication, and [afterDatabaseTransaction] to acknowledge the message and stop retries.
+ *
+ * We also use this for exactly-once start of a scheduled flow, [insideDatabaseTransaction] is used to remove the
+ * to-be-scheduled state of the flow, [afterDatabaseTransaction] is used for cleanup of in-memory bookkeeping.
  */
-interface AcknowledgeHandle {
+interface DeduplicationHandler {
     /**
-     * Acknowledge the message.
+     * This will be run inside a database transaction that commits the side-effect of the event, allowing the
+     * implementor to persist the event delivery fact atomically with the side-effect.
      */
-    fun acknowledge()
+    fun insideDatabaseTransaction()
 
     /**
-     * Store the deduplication ID. TODO this should be moved into the flow state machine completely.
+     * This will be run strictly after the side-effect has been committed successfully and may be used for
+     * cleanup/acknowledgement/stopping of retries.
      */
-    fun persistDeduplicationId()
+    fun afterDatabaseTransaction()
 }
 
-typealias MessageHandler = (ReceivedMessage, MessageHandlerRegistration, AcknowledgeHandle) -> Unit
+typealias MessageHandler = (ReceivedMessage, MessageHandlerRegistration, DeduplicationHandler) -> Unit
 

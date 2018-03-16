@@ -48,7 +48,7 @@ class NodeSchedulerServiceTest {
         }.whenever(it).transaction(any())
     }
     private val flowStarter = rigorousMock<FlowStarter>().also {
-        doReturn(openFuture<FlowStateMachine<*>>()).whenever(it).startFlow(any<FlowLogic<*>>(), any())
+        doReturn(openFuture<FlowStateMachine<*>>()).whenever(it).startFlow(any<FlowLogic<*>>(), any(), any())
     }
     private val flowsDraingMode = rigorousMock<NodePropertiesStore.FlowsDrainingModeOperations>().also {
         doReturn(false).whenever(it).isEnabled()
@@ -111,7 +111,7 @@ class NodeSchedulerServiceTest {
 
     private fun assertStarted(event: Event) {
         // Like in assertWaitingFor, use timeout to make verify wait as we often race the call to startFlow:
-        verify(flowStarter, timeout(5000)).startFlow(same(event.flowLogic)!!, any())
+        verify(flowStarter, timeout(5000)).startFlow(same(event.flowLogic)!!, any(), any())
     }
 
     @Test

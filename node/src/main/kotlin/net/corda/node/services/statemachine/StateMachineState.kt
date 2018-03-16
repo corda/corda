@@ -17,7 +17,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.Try
-import net.corda.node.services.messaging.AcknowledgeHandle
+import net.corda.node.services.messaging.DeduplicationHandler
 
 /**
  * The state of the state machine, capturing the state of a flow. It consists of two parts, an *immutable* part that is
@@ -25,7 +25,7 @@ import net.corda.node.services.messaging.AcknowledgeHandle
  *
  * @param checkpoint the persisted part of the state.
  * @param flowLogic the [FlowLogic] associated with the flow. Note that this is mutable by the user.
- * @param unacknowledgedMessages the list of currently unacknowledged messages.
+ * @param pendingDeduplicationHandlers the list of incomplete deduplication handlers.
  * @param isFlowResumed true if the control is returned (or being returned) to "user-space" flow code. This is used
  *   to make [Event.DoRemainingWork] idempotent.
  * @param isTransactionTracked true if a ledger transaction has been tracked as part of a
@@ -42,7 +42,7 @@ import net.corda.node.services.messaging.AcknowledgeHandle
 data class StateMachineState(
         val checkpoint: Checkpoint,
         val flowLogic: FlowLogic<*>,
-        val unacknowledgedMessages: List<AcknowledgeHandle>,
+        val pendingDeduplicationHandlers: List<DeduplicationHandler>,
         val isFlowResumed: Boolean,
         val isTransactionTracked: Boolean,
         val isAnyCheckpointPersisted: Boolean,

@@ -3996,10 +3996,6 @@ public static final class net.corda.testing.node.InMemoryMessagingNetwork$Compan
   public int hashCode()
   @org.jetbrains.annotations.NotNull public String toString()
 ##
-public static final class net.corda.testing.node.InMemoryMessagingNetwork$InMemoryMessaging$pumpReceiveInternal$1$1$acknowledgeHandle$1 extends java.lang.Object implements net.corda.node.services.messaging.AcknowledgeHandle
-  public void acknowledge()
-  public void persistDeduplicationId()
-##
 public static interface net.corda.testing.node.InMemoryMessagingNetwork$LatencyCalculator
   @org.jetbrains.annotations.NotNull public abstract java.time.Duration between(net.corda.core.messaging.SingleMessageRecipient, net.corda.core.messaging.SingleMessageRecipient)
 ##

@@ -151,14 +151,14 @@ class TopLevelTransition(
             } else {
                 actions.addAll(arrayOf(
                         Action.PersistCheckpoint(context.id, newCheckpoint),
-                        Action.PersistDeduplicationIds(currentState.unacknowledgedMessages),
+                        Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
                         Action.CommitTransaction,
-                        Action.AcknowledgeMessages(currentState.unacknowledgedMessages),
+                        Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
                         Action.ScheduleEvent(Event.DoRemainingWork)
                 ))
                 currentState = currentState.copy(
                         checkpoint = newCheckpoint,
-                        unacknowledgedMessages = emptyList(),
+                        pendingDeduplicationHandlers = emptyList(),
                         isFlowResumed = false,
                         isAnyCheckpointPersisted = true
                 )
@@ -172,12 +172,12 @@ class TopLevelTransition(
             val checkpoint = currentState.checkpoint
             when (checkpoint.errorState) {
                 ErrorState.Clean -> {
-                    val unacknowledgedMessages = currentState.unacknowledgedMessages
+                    val pendingDeduplicationHandlers = currentState.pendingDeduplicationHandlers
                     currentState = currentState.copy(
                             checkpoint = checkpoint.copy(
                                     numberOfSuspends = checkpoint.numberOfSuspends + 1
                             ),
-                            unacknowledgedMessages = emptyList(),
+                            pendingDeduplicationHandlers = emptyList(),
                             isFlowResumed = false,
                             isRemoved = true
                     )
@@ -186,9 +186,9 @@ class TopLevelTransition(
                         actions.add(Action.RemoveCheckpoint(context.id))
                     }
                     actions.addAll(arrayOf(
-                            Action.PersistDeduplicationIds(unacknowledgedMessages),
+                            Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
                             Action.CommitTransaction,
-                            Action.AcknowledgeMessages(unacknowledgedMessages),
+                            Action.AcknowledgeMessages(pendingDeduplicationHandlers),
                             Action.RemoveSessionBindings(allSourceSessionIds),
                             Action.RemoveFlow(context.id, FlowRemovalReason.OrderlyFinish(event.returnValue), currentState)
                     ))

@@ -36,10 +36,12 @@ import net.corda.node.MutableClock
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchedulerService
+import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.apache.mina.util.ConcurrentHashSet
 import org.slf4j.Logger
 import java.time.Duration
 import java.time.Instant
@@ -172,6 +174,10 @@ class NodeSchedulerService(private val clock: CordaClock,
         var rescheduled: GuavaSettableFuture<Boolean>? = null
     }
 
+    // Used to de-duplicate flow starts in case a flow is starting but the corresponding entry hasn't been removed yet
+    // from the database
+    private val startingStateRefs = ConcurrentHashSet<ScheduledStateRef>()
+
     private val mutex = ThreadBox(InnerState())
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
@@ -212,7 +218,7 @@ class NodeSchedulerService(private val clock: CordaClock,
             val previousEarliest = scheduledStatesQueue.peek()
             scheduledStatesQueue.remove(previousState)
             scheduledStatesQueue.add(action)
-            if (previousState == null) {
+            if (previousState == null && action !in startingStateRefs) {
                 unfinishedSchedules.countUp()
             }
 
@@ -279,16 +285,34 @@ class NodeSchedulerService(private val clock: CordaClock,
         schedulerTimerExecutor.join()
     }
 
+    private inner class FlowStartDeduplicationHandler(val scheduledState: ScheduledStateRef) : DeduplicationHandler {
+        override fun insideDatabaseTransaction() {
+            scheduledStates.remove(scheduledState.ref)
+        }
+
+        override fun afterDatabaseTransaction() {
+            startingStateRefs.remove(scheduledState)
+        }
+
+        override fun toString(): String {
+            return "${javaClass.simpleName}($scheduledState)"
+        }
+    }
+
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
         var flowName: String? = "(unknown)"
         try {
-            database.transaction {
-                val scheduledFlow = getScheduledFlow(scheduledState)
+            // We need to check this before the database transaction, otherwise there is a subtle race between a
+            // doubly-reached deadline and the removal from [startingStateRefs].
+            if (scheduledState !in startingStateRefs) {
+                val scheduledFlow = database.transaction { getScheduledFlow(scheduledState) }
                 if (scheduledFlow != null) {
+                    startingStateRefs.add(scheduledState)
                     flowName = scheduledFlow.javaClass.name
                     // TODO refactor the scheduler to store and propagate the original invocation context
                     val context = InvocationContext.newInstance(InvocationOrigin.Scheduled(scheduledState))
-                    val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
+                    val deduplicationHandler = FlowStartDeduplicationHandler(scheduledState)
+                    val future = flowStarter.startFlow(scheduledFlow, context, deduplicationHandler).flatMap { it.resultFuture }
                     future.then {
                         unfinishedSchedules.countDown()
                     }
@@ -327,7 +351,6 @@ class NodeSchedulerService(private val clock: CordaClock,
                         }
                         else -> {
                             log.trace { "Scheduler starting FlowLogic $flowLogic" }
-                            scheduledStates.remove(scheduledState.ref)
                             scheduledStatesQueue.remove(scheduledState)
                             flowLogic
                         }
