@@ -47,10 +47,10 @@ class RPCStabilityTests {
         override val protocolVersion = 0
     }
 
-    private fun waitUntilNumberOfThreadsStable(executorService: ScheduledExecutorService): Map<Thread, Array<StackTraceElement>> {
-        val values = ConcurrentLinkedQueue<Map<Thread, Array<StackTraceElement>>>()
+    private fun waitUntilNumberOfThreadsStable(executorService: ScheduledExecutorService): Map<Thread, List<StackTraceElement>> {
+        val values = ConcurrentLinkedQueue<Map<Thread, List<StackTraceElement>>>()
         return poll(executorService, "number of threads to become stable", 250.millis) {
-            values.add(Thread.getAllStackTraces())
+            values.add(Thread.getAllStackTraces().mapValues { it.value.toList() })
             if (values.size > 5) {
                 values.poll()
             }
@@ -78,19 +78,22 @@ class RPCStabilityTests {
     private fun runBlockAndCheckThreads(block: () -> Unit) {
         val executor = Executors.newScheduledThreadPool(1)
 
-        // Warm-up so that all the thread pools & co. created
-        block()
-
-        val threadsBefore = waitUntilNumberOfThreadsStable(executor)
-        repeat(5) {
+        try {
+            // Warm-up so that all the thread pools & co. created
             block()
+
+            val threadsBefore = waitUntilNumberOfThreadsStable(executor)
+            repeat(5) {
+                block()
+            }
+            val threadsAfter = waitUntilNumberOfThreadsStable(executor)
+            // This is a less than check because threads from other tests may be shutting down while this test is running.
+            // This is therefore a "best effort" check. When this test is run on its own this should be a strict equality.
+            // In case of failure we output the threads along with their stacktraces to get an idea what was running at a time.
+            assert(threadsBefore.keys.size >= threadsAfter.keys.size, { "threadsBefore: $threadsBefore\nthreadsAfter: $threadsAfter" })
+        } finally {
+            executor.shutdownNow()
         }
-        val threadsAfter = waitUntilNumberOfThreadsStable(executor)
-        // This is a less than check because threads from other tests may be shutting down while this test is running.
-        // This is therefore a "best effort" check. When this test is run on its own this should be a strict equality.
-        // In case of failure we output the threads along with their stacktraces to get an idea what was running at a time.
-        assert(threadsBefore.keys.size >= threadsAfter.keys.size, {"threadsBefore: $threadsBefore\nthreadsAfter: $threadsAfter"})
-        executor.shutdownNow()
     }
 
     @Test
@@ -388,7 +391,7 @@ class RPCStabilityTests {
             // Construct an RPC session manually so that we can hang in the message handler
             val myQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.test.${random63BitValue()}"
             val session = startArtemisSession(server.broker.hostAndPort!!)
-            session.createTemporaryQueue(myQueue, ActiveMQDefaultConfiguration.getDefaultRoutingType(),  myQueue)
+            session.createTemporaryQueue(myQueue, ActiveMQDefaultConfiguration.getDefaultRoutingType(), myQueue)
             val consumer = session.createConsumer(myQueue, null, -1, -1, false)
             consumer.setMessageHandler {
                 Thread.sleep(50) // 5x slower than the server producer
