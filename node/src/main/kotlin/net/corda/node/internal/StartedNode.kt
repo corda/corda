@@ -41,3 +41,22 @@ interface StartedNode<out N : AbstractNode> {
         return internals.internalRegisterFlowFactory(smm, initiatingFlowClass, flowFactory, initiatedFlowClass, track)
     }
 }
+
+class RunOnStop {
+    private val runOnStop = ArrayList<() -> Any?>()
+    operator fun plusAssign(toRun: () -> Any?) {
+        runOnStop += toRun
+    }
+
+    operator fun minusAssign(toRemove: () -> Any?) {
+        runOnStop -= toRemove
+    }
+
+    fun flush() {
+        // Run shutdown hooks in opposite order to starting
+        for (toRun in runOnStop.reversed()) {
+            toRun()
+        }
+        runOnStop.clear()
+    }
+}

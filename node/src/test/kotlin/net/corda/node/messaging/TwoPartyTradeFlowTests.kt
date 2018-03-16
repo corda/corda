@@ -120,10 +120,8 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val notary = mockNet.defaultNotaryIdentity
             val cashIssuer = bank.ref(1)
             val cpIssuer = bank.ref(1, 2, 3)
-
-            aliceNode.internals.disableDBCloseOnStop()
-            bobNode.internals.disableDBCloseOnStop()
-
+            aliceNode.disableDBCloseOnStop()
+            bobNode.disableDBCloseOnStop()
             bobNode.database.transaction {
                 VaultFiller(bobNode.services, dummyNotary, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, 10, cashIssuer)
             }
@@ -148,11 +146,11 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             aliceNode.database.transaction {
                 assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            aliceNode.internals.manuallyCloseDB()
+            aliceNode.manuallyCloseDB()
             bobNode.database.transaction {
                 assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            bobNode.internals.manuallyCloseDB()
+            bobNode.manuallyCloseDB()
         }
     }
 
@@ -171,10 +169,8 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val bob = bobNode.info.singleIdentity()
             val issuer = bank.ref(1)
             val notary = mockNet.defaultNotaryIdentity
-
-            aliceNode.internals.disableDBCloseOnStop()
-            bobNode.internals.disableDBCloseOnStop()
-
+            aliceNode.disableDBCloseOnStop()
+            bobNode.disableDBCloseOnStop()
             val cashStates = bobNode.database.transaction {
                 VaultFiller(bobNode.services, dummyNotary, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, issuer)
             }
@@ -206,11 +202,11 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             aliceNode.database.transaction {
                 assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            aliceNode.internals.manuallyCloseDB()
+            aliceNode.manuallyCloseDB()
             bobNode.database.transaction {
                 assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            bobNode.internals.manuallyCloseDB()
+            bobNode.manuallyCloseDB()
         }
     }
 
@@ -223,9 +219,8 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             val aliceNode = mockNet.createPartyNode(ALICE_NAME)
             var bobNode = mockNet.createPartyNode(BOB_NAME)
             val bankNode = mockNet.createPartyNode(BOC_NAME)
-            aliceNode.internals.disableDBCloseOnStop()
-            bobNode.internals.disableDBCloseOnStop()
-
+            aliceNode.disableDBCloseOnStop()
+            bobNode.disableDBCloseOnStop()
             val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
             mockNet.runNetwork() // Clear network map registration messages
 
@@ -305,9 +300,8 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 }
                 assertThat(restoredBobTransactions).containsAll(bobTransactionsBeforeCrash)
             }
-
-            aliceNode.internals.manuallyCloseDB()
-            bobNode.internals.manuallyCloseDB()
+            aliceNode.manuallyCloseDB()
+            bobNode.manuallyCloseDB()
         }
     }
 

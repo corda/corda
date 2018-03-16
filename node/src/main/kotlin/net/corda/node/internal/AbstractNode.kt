@@ -139,7 +139,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private lateinit var tokenizableServices: List<Any>
     protected lateinit var attachments: NodeAttachmentService
     protected lateinit var network: MessagingService
-    protected val runOnStop = ArrayList<() -> Any?>()
+    protected val runOnStop = RunOnStop()
     private val _nodeReadyFuture = openFuture<Unit>()
     protected var networkMapClient: NetworkMapClient? = null
     protected lateinit var networkMapUpdater: NetworkMapUpdater
@@ -260,7 +260,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             startShell()
-            Pair(StartedNodeImpl(this@AbstractNode, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
+            Pair(makeStartedNode(nodeInfo, smm, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
@@ -289,6 +289,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             }
             _started = this
         }
+    }
+
+    protected open fun makeStartedNode(nodeInfo: NodeInfo, smm: StateMachineManager, database: CordaPersistence, rpcOps: CordaRPCOps, flowStarter: FlowStarter, notaryService: NotaryService?): StartedNode<AbstractNode> {
+        return StartedNodeImpl(this, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService)
     }
 
     /**
@@ -706,12 +710,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // to indicate "Please shut down gracefully" vs "Shut down now".
         // Meanwhile, we let the remote service send us updates until the acknowledgment buffer overflows and it
         // unsubscribes us forcibly, rather than blocking the shutdown process.
-
-        // Run shutdown hooks in opposite order to starting
-        for (toRun in runOnStop.reversed()) {
-            toRun()
-        }
-        runOnStop.clear()
+        runOnStop.flush()
         _started = null
     }
 

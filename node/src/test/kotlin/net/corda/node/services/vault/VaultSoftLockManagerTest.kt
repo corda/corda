@@ -61,7 +61,7 @@ class NodePair(private val mockNet: InternalMockNetwork) {
     private val serverRunning = AtomicBoolean()
     val server = mockNet.createNode()
     var client = mockNet.createNode().apply {
-        internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
+        disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
     }
         private set
 
