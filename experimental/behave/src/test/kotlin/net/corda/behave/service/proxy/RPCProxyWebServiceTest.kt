@@ -1,7 +1,6 @@
 package net.corda.behave.service.proxy
 
 import com.opengamma.strata.product.common.BuySell
-import net.corda.core.CordaException
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.internal.openHttpConnection
@@ -15,26 +14,20 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.option.base.OptionType
-import net.corda.option.base.state.OptionState
-import net.corda.option.client.flow.OptionIssueFlow
-import net.corda.option.client.flow.OptionTradeFlow
-import net.corda.option.client.flow.SelfIssueCashFlow
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.flows.IRSTradeFlow
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
-import java.time.ZoneOffset
 
 class RPCProxyWebServiceTest {
 
-//    @Rule
-//    @JvmField
-//    val testSerialization = SerializationEnvironmentRule(true)
+    init {
+        initialiseSerialization()
+    }
 
-    private val hostAndPort = NetworkHostAndPort("localhost", 13000)
+    private val hostAndPort = NetworkHostAndPort("localhost", 13002)
     private val rpcProxyClient = CordaRPCProxyClient(hostAndPort)
 
     private val hostAndPortB = NetworkHostAndPort("localhost", 13007)
@@ -84,17 +77,33 @@ class RPCProxyWebServiceTest {
     }
 
     @Test
-    fun startFlowCashIssue() {
+    fun startFlowCashIssuePartyA() {
         val notary = rpcProxyClient.notaryIdentities()[0]
-        val response = rpcProxyClient.startFlow(::CashIssueFlow, POUNDS(1000), OpaqueBytes.of(1), notary)
+        val response = rpcProxyClient.startFlow(::CashIssueFlow, POUNDS(5000), OpaqueBytes.of(1), notary)
         val result = response.returnValue.getOrThrow().stx
         println(result)
     }
 
     @Test
-    fun startFlowCashPayment() {
+    fun startFlowCashIssuePartyB() {
+        val notary = rpcProxyClientB.notaryIdentities()[0]
+        val response = rpcProxyClientB.startFlow(::CashIssueFlow, POUNDS(5000), OpaqueBytes.of(1), notary)
+        val result = response.returnValue.getOrThrow().stx
+        println(result)
+    }
+
+    @Test
+    fun startFlowCashPaymentToPartyB() {
         val recipient = rpcProxyClient.partiesFromName("PartyB", false).first()
-        val response = rpcProxyClient.startFlow(::CashPaymentFlow, POUNDS(100), recipient)
+        val response = rpcProxyClient.startFlow(::CashPaymentFlow, POUNDS(200), recipient)
+        val result = response.returnValue.getOrThrow().stx
+        println(result)
+    }
+
+    @Test
+    fun startFlowCashPaymentToPartyA() {
+        val recipient = rpcProxyClient.partiesFromName("PartyA", false).first()
+        val response = rpcProxyClient.startFlow(::CashPaymentFlow, POUNDS(200), recipient)
         val result = response.returnValue.getOrThrow().stx
         println(result)
     }
@@ -123,39 +132,39 @@ class RPCProxyWebServiceTest {
         println(response)
     }
 
-    @Test
-    fun startFlowOptionsCash() {
-        val response = rpcProxyClient.startFlow(::SelfIssueCashFlow, 50000.POUNDS).returnValue.getOrThrow()
-        println(response)
-    }
-
-    @Test
-    fun startFlowOptionsIssue() {
-        val ownParty = rpcProxyClient.partiesFromName("PartyA", false).first()
-        val issuerParty = rpcProxyClient.partiesFromName("Issuer", false).firstOrNull() ?: throw IllegalArgumentException("Unknown issuer")
-        val expiryDate = LocalDate.parse("2022-04-12").atStartOfDay().toInstant(ZoneOffset.UTC)
-        val type =OptionType.CALL
-        val strikePrice = 95.POUNDS
-        val underlying = "Wilburton State Bank"
-        val optionToIssue = OptionState(
-                strikePrice = strikePrice,
-                expiryDate = expiryDate,
-                underlyingStock = underlying,
-                issuer = issuerParty,
-                owner = ownParty,
-                optionType = type)
-        val response = rpcProxyClient.startFlow(OptionIssueFlow::Initiator, optionToIssue).returnValue.getOrThrow()
-        println(response)
-    }
-
-    @Test
-    fun startFlowOptionsTrade() {
-        val trade = rpcProxyClient.vaultQuery(OptionState::class.java).states.firstOrNull() ?: throw CordaException("No states in vault")
-        val counterparty = rpcProxyClient.partiesFromName("PartyB", false).firstOrNull() ?: throw IllegalArgumentException("Unknown counterparty")
-        println("Trading ${trade.state.data} with counterparty $counterparty")
-        val response = rpcProxyClient.startFlow(OptionTradeFlow::Initiator, trade.state.data.linearId, counterparty).returnValue.getOrThrow()
-        println(response)
-    }
+//    @Test
+//    fun startFlowOptionsCash() {
+//        val response = rpcProxyClient.startFlow(::SelfIssueCashFlow, 50000.POUNDS).returnValue.getOrThrow()
+//        println(response)
+//    }
+//
+//    @Test
+//    fun startFlowOptionsIssue() {
+//        val ownParty = rpcProxyClient.partiesFromName("PartyA", false).first()
+//        val issuerParty = rpcProxyClient.partiesFromName("Issuer", false).firstOrNull() ?: throw IllegalArgumentException("Unknown issuer")
+//        val expiryDate = LocalDate.parse("2022-04-12").atStartOfDay().toInstant(ZoneOffset.UTC)
+//        val type =OptionType.CALL
+//        val strikePrice = 95.POUNDS
+//        val underlying = "Wilburton State Bank"
+//        val optionToIssue = OptionState(
+//                strikePrice = strikePrice,
+//                expiryDate = expiryDate,
+//                underlyingStock = underlying,
+//                issuer = issuerParty,
+//                owner = ownParty,
+//                optionType = type)
+//        val response = rpcProxyClient.startFlow(OptionIssueFlow::Initiator, optionToIssue).returnValue.getOrThrow()
+//        println(response)
+//    }
+//
+//    @Test
+//    fun startFlowOptionsTrade() {
+//        val trade = rpcProxyClient.vaultQuery(OptionState::class.java).states.firstOrNull() ?: throw CordaException("No states in vault")
+//        val counterparty = rpcProxyClient.partiesFromName("PartyB", false).firstOrNull() ?: throw IllegalArgumentException("Unknown counterparty")
+//        println("Trading ${trade.state.data} with counterparty $counterparty")
+//        val response = rpcProxyClient.startFlow(OptionTradeFlow::Initiator, trade.state.data.linearId, counterparty).returnValue.getOrThrow()
+//        println(response)
+//    }
 
     @Test
     fun vaultQueryCash() {
@@ -167,7 +176,7 @@ class RPCProxyWebServiceTest {
 
             val responseB = rpcProxyClientB.vaultQuery(Cash.State::class.java)
             responseB.states.forEach { state ->
-                println("Party B: ${state.state.data.amount}")
+                println("PartyB: ${state.state.data.amount}")
             }
         }
         catch (e: Exception) {

@@ -16,7 +16,7 @@ fun startupSteps(steps: StepsBlock) = steps {
         }
     }
 
-    Then<String, String>("^node (\\w+) is on version ([^ ]+)$") { name, version ->
+    Then<String, String>("^node (\\w+) is on release version ([^ ]+)$") { name, version ->
         withNetwork {
             startup.hasVersion(name, version)
         }

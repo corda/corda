@@ -76,7 +76,7 @@ class Startup(state: ScenarioState) : Substeps(state) {
                 if (match == null) {
                     fail("Unable to find version for node '$nodeName'")
                 } else {
-                    val foundVersion = Regex("Version: ([^ ]+) ")
+                    val foundVersion = Regex("Release: ([^ ]+) ")
                             .find(match.contents)
                             ?.groups?.last()?.value
                     fail("Expected version $version for node '$nodeName', " +

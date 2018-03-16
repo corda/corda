@@ -1,6 +1,5 @@
 package net.corda.behave.service.proxy
 
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
@@ -18,29 +17,14 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
-import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.finance.flows.AbstractCashFlow
 import java.io.InputStream
 import java.security.PublicKey
 import java.time.Instant
 
 class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : CordaRPCOps {
-
-    // TODO: review whether this is the correct way of initialising Serialization
-    init {
-        try {
-            effectiveSerializationEnv
-        } catch (e: IllegalStateException) {
-            try {
-                KryoClientSerializationScheme.initialiseSerialization()
-            } catch (e: IllegalStateException) {
-                // Race e.g. two of these constructed in parallel, ignore.
-            }
-        }
-    }
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.

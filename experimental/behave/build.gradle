@@ -39,11 +39,21 @@ sourceSets {
         }
         resources.srcDir file('src/scenario/resources')
     }
+    rpcProxy {
+        java {
+            srcDir "src/main/kotlin"
+        }
+        resources {
+            srcDir "config/dev"
+        }
+    }
 }
 
 configurations {
     scenarioCompile.extendsFrom testCompile
     scenarioRuntime.extendsFrom testRuntime
+
+    rpcProxyRuntime.extendsFrom runTime
 }
 
 dependencies {
@@ -81,8 +91,9 @@ dependencies {
     testCompile project(':test-utils')
 
     // CorDapps (TODO: move to separate repo)
-    compileOnly project(':samples:simm-valuation-demo')
-    compileOnly files('/Users/josecoll/.m2/repository/net/corda/option/cordapp-option/0.1/cordapp-option-0.1.jar')
+    compile project(':samples:simm-valuation-demo')
+    // TODO: introduce a plugin mechanism to classload 3rd party apps.
+//    compile files('/Users/josecoll/.m2/repository/net/corda/option/cordapp-option/0.3/cordapp-option-0.3.jar')
 //    compileOnly "net.corda.option:cordapp-option:0.1"
 
     // Unit Tests
@@ -97,14 +108,14 @@ dependencies {
     scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
 
     // Jetty http server
-    compile "org.eclipse.jetty:jetty-servlet:$jetty_version"
-    compile "org.eclipse.jetty:jetty-webapp:$jetty_version"
-    compile "javax.servlet:javax.servlet-api:3.1.0"
+    rpcProxyRuntime "org.eclipse.jetty:jetty-servlet:$jetty_version"
+    rpcProxyRuntime "org.eclipse.jetty:jetty-webapp:$jetty_version"
+    rpcProxyRuntime "javax.servlet:javax.servlet-api:3.1.0"
 
     // Jersey for JAX-RS implementation for use in Jetty
-    compile "org.glassfish.jersey.core:jersey-server:$jersey_version"
-    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:$jersey_version"
-    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:$jersey_version"
+    rpcProxyRuntime "org.glassfish.jersey.core:jersey-server:$jersey_version"
+    rpcProxyRuntime "org.glassfish.jersey.containers:jersey-container-servlet-core:$jersey_version"
+    rpcProxyRuntime "org.glassfish.jersey.containers:jersey-container-jetty-http:$jersey_version"
 
 }
 
@@ -137,11 +148,10 @@ task scenarios(type: Test) {
 
 task rpcProxyJar(type: Jar) {
     from {
-        configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
+        configurations.rpcProxyRuntime.collect { it.isDirectory() ? it : zipTree(it) }
     }
 //    zip64 true
     with jar
-//    exclude("test/**")
     exclude("META-INF/*.DSA")
     exclude("META-INF/*.RSA")
     exclude("META-INF/*.SF")

@@ -4,7 +4,6 @@ import net.corda.behave.file.currentDirectory
 import net.corda.behave.file.div
 import net.corda.behave.file.doormanConfigDirectory
 import net.corda.behave.node.Distribution
-import net.corda.core.CordaRuntimeException
 import net.corda.core.utilities.minutes
 import org.apache.commons.io.FileUtils
 import org.assertj.core.api.Assertions.*
@@ -17,10 +16,6 @@ class CommandTests {
 
     @Test
     fun `successful command returns zero`() {
-
-        val all = doormanConfigDirectory.listFiles()
-        val nodeInfoFile = doormanConfigDirectory.listFiles { _, filename -> filename.matches("nodeInfo-*".toRegex()) }.firstOrNull() ?: throw CordaRuntimeException("Missing notary nodeInfo file")
-
         val exitCode = Command(listOf("ls", "/")).run()
         assertThat(exitCode).isEqualTo(0)
     }

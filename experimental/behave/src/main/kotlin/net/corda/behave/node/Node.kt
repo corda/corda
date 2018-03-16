@@ -21,6 +21,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.commons.io.FileUtils
 import java.io.File
+import java.net.InetAddress
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 
@@ -138,7 +139,8 @@ class Node(
     }
 
     val logOutput: LogSource by lazy {
-        LogSource(logDirectory, "node-Jose.*.log", filePatternUsedForExclusion = true)
+        val hostname = InetAddress.getLocalHost().hostName
+        LogSource(logDirectory, "node-$hostname.*.log", filePatternUsedForExclusion = true)
     }
 
     val database: DatabaseConnection by lazy {

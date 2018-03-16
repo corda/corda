@@ -2,7 +2,14 @@ package net.corda.behave.service.proxy
 
 import net.corda.behave.service.Service
 import net.corda.behave.service.ServiceSettings
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
+import net.corda.core.serialization.internal.SerializationEnvironmentImpl
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
+import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -73,7 +80,21 @@ class RPCProxyServer(hostAndPort: NetworkHostAndPort,
     }
 }
 
+fun initialiseSerialization() {
+    nodeSerializationEnv =
+    SerializationEnvironmentImpl(
+            SerializationFactoryImpl().apply {
+                registerScheme(KryoClientSerializationScheme())
+                registerScheme(AMQPClientSerializationScheme(emptyList()))
+            },
+            AMQP_P2P_CONTEXT,
+
+
+            rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)
+}
+
 fun main(args: Array<String>) {
+    initialiseSerialization()
     val portNo = args.singleOrNull() ?: throw IllegalArgumentException("Please specify a port number")
     val hostAndPort = NetworkHostAndPort("localhost", portNo.toIntOrNull() ?: 13000)
     println("Starting RPC Proxy Server on [$hostAndPort] ...")

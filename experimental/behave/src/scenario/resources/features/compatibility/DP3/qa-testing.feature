@@ -2,7 +2,30 @@
 Feature: Compatibility - Node versions
   To support an interoperable Corda network, a Corda (OS) node must have the ability to transact with an R3 Corda (Enterprise) node for the same version.
 
-  Scenario Outline: Corda (OS) Node can transact with R3 Corda (Enterprise) node, in an R3 Corda configured network.
+  Scenario Outline: QA: Stand up a basic R3 Corda Network with one node that can verify its identity
+    Given a node PartyA of version <R3-Corda-Node-Version> with proxy
+    And node PartyA has the finance app installed
+    When the network is ready
+    Then node PartyA is on platform version 4
+    And node PartyA is on release version R3.CORDA-3.0-SNAPSHOT
+#    And user can retrieve node identity information for node PartyA
+
+    Examples:
+      | R3-Corda-Node-Version   | Currency |
+      | r3-master               | GBP      |
+
+  Scenario Outline: QA: Stand up a basic R3 Corda Network with one node and a notary; node can issue cash to itself
+    Given a node PartyA of version <R3-Corda-Node-Version> with proxy
+    And a nonvalidating notary Notary of version <R3-Corda-Node-Version>
+    And node PartyA has the finance app installed
+    When the network is ready
+    Then node PartyA can issue 1000 <Currency>
+
+    Examples:
+      | R3-Corda-Node-Version   | Currency |
+      | r3-master               | GBP      |
+
+  Scenario Outline: QA: Corda (OS) Node can transact with R3 Corda (Enterprise) node, in an R3 Corda configured network.
     Given a node PartyA of version <R3-Corda-Node-Version> with proxy
     And node PartyA has the finance app installed
     And a node PartyB of version <Corda-Node-Version>

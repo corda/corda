@@ -45,9 +45,9 @@ class Network private constructor(
 
     private var hasError = false
 
-    private var isRpcProxyRunning = false
+    private var isDoormanNMSRunning = false
 
-    private lateinit var rpcProxyCommand: Command
+    private lateinit var doormanNMS: JarCommand
 
     init {
         FileUtils.forceMkdir(targetDirectory)
@@ -211,8 +211,9 @@ class Network private constructor(
         // 5. Add notary identities to the network parameters
 
         // 6. Load initial network parameters file for network map service
+        val networkParamsConfig = if (notaryNodes.isEmpty()) "network-parameters-without-notary.conf" else "network-parameters.conf"
         val updateNetworkParams = JarCommand(distribution.doormanJar,
-                                             arrayOf("--config-file", "$doormanTargetDirectory/node.conf", "--update-network-parameters", "$doormanTargetDirectory/network-parameters.conf"),
+                                             arrayOf("--config-file", "$doormanTargetDirectory/node.conf", "--update-network-parameters", "$doormanTargetDirectory/$networkParamsConfig"),
                                              doormanTargetDirectory, timeout)
         runCommand(updateNetworkParams, noWait = true)
         // WAIT 15 SECS and then interrupt command to gracefully terminate
@@ -221,7 +222,7 @@ class Network private constructor(
         updateNetworkParams.waitFor()
 
         // 7. Start a fully configured Doorman / NMS
-        val doormanNMS = JarCommand(distribution.doormanJar,
+        doormanNMS = JarCommand(distribution.doormanJar,
                             arrayOf("--config-file", "$doormanConfigDirectory/node.conf"),
                             doormanTargetDirectory, timeout)
         runCommand(doormanNMS, noWait = true)
@@ -242,6 +243,8 @@ class Network private constructor(
                             "--base-directory", "$partyTargetDirectory"),
                             partyTargetDirectory, timeout))
         }
+
+        isDoormanNMSRunning = true
     }
 
     private fun runCommand(command: JarCommand, noWait: Boolean = false) {
@@ -318,16 +321,16 @@ class Network private constructor(
         }
     }
 
-    private fun bootstrapRPCProxy() {
-        val cordaDistribution = nodes.values.first().config.distribution.path
-        val rpcProxyPortNo = nodes.values.first().config.nodeInterface.rpcProxy
+    private fun bootstrapRPCProxy(node: Node) {
+        val cordaDistribution = node.config.distribution.path
+        val rpcProxyPortNo = node.config.nodeInterface.rpcProxy
 
         val fromPath = Paths.get(currentDirectory.toString()+"/startRPCproxy.sh")
         val toPath = Paths.get(cordaDistribution.toString()+"/startRPCproxy.sh")
         Files.copy(fromPath, toPath, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
 
         log.info("Bootstrapping RPC proxy, please wait ...")
-        rpcProxyCommand = Command(listOf("./startRPCproxy.sh", "$cordaDistribution", "$rpcProxyPortNo", ">>startRPCproxy.log","2>&1"),
+        val rpcProxyCommand = Command(listOf("./startRPCproxy.sh", "$cordaDistribution", "$rpcProxyPortNo", ">>startRPCproxy.log","2>&1"),
                 cordaDistribution,
                 timeout
         )
@@ -352,23 +355,11 @@ class Network private constructor(
             }
         } else {
             log.info("RPC Proxy set-up completed")
-            isRpcProxyRunning = true
         }
     }
 
     private fun cleanup() {
         try {
-            if (isRpcProxyRunning) {
-                rpcProxyCommand.kill()
-                try {
-                    val pid = Files.lines(Paths.get("/tmp/rpcProxy-pid")).findFirst().get()
-                    Command(listOf("kill", "-9", "$pid")).run()
-                    FileUtils.deleteQuietly(Paths.get("/tmp/rpcProxy-pid").toFile())
-                }
-                catch (e: Exception) {
-                    log.warn("Unable to locate PID file: ${e.message}")
-                }
-            }
             if (!hasError || CLEANUP_ON_ERROR) {
                 log.info("Cleaning up runtime ...")
                 FileUtils.deleteDirectory(targetDirectory)
@@ -419,7 +410,7 @@ class Network private constructor(
         for (node in nodes.values) {
             node.start()
             if (node.rpcProxy)
-                bootstrapRPCProxy()
+                bootstrapRPCProxy(node)
         }
     }
 
@@ -478,9 +469,28 @@ class Network private constructor(
         }
         log.info("Shutting down network ...")
         isStopped = true
+        log.info("Shutting down nodes ...")
         for (node in nodes.values) {
             node.shutDown()
+            if (node.rpcProxy) {
+                log.info("Shutting down RPC proxy ...")
+                try {
+                    val rpcProxyPortNo = node.config.nodeInterface.rpcProxy
+                    val pid = Files.lines(Paths.get("/tmp/rpcProxy-pid-$rpcProxyPortNo")).findFirst().get()
+                    Command(listOf("kill", "-9", "$pid")).run()
+                    FileUtils.deleteQuietly(Paths.get("/tmp/rpcProxy-pid-$rpcProxyPortNo").toFile())
+                }
+                catch (e: Exception) {
+                    log.warn("Unable to locate PID file: ${e.message}")
+                }
+            }
         }
+
+        if (isDoormanNMSRunning) {
+            log.info("Shutting down R3 Corda NMS server ...")
+            doormanNMS.kill()
+        }
+
 //        cleanup()
     }
 
