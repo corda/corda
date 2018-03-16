@@ -11,6 +11,7 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.cert.CertPath
 
@@ -89,6 +90,7 @@ sealed class CertificateResponse {
     data class Unauthorised(val message: String) : CertificateResponse()
 }
 
+@CordaSerializable
 enum class RequestStatus {
     /**
      * The request has been received, this is the initial state in which a request has been created.

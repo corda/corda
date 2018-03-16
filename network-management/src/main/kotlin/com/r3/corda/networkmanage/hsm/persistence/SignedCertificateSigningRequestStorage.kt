@@ -13,7 +13,7 @@ package com.r3.corda.networkmanage.hsm.persistence
 /**
  * Provides an API for storing signed CSRs (Certificate Signing Requests).
  */
-interface SignedCertificateRequestStorage {
+interface SignedCertificateSigningRequestStorage {
 
     /**
      * Returns all certificate signing requests that have been approved for signing.

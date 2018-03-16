@@ -1,13 +1,20 @@
 package com.r3.corda.networkmanage.common.persistence
 
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.serialization.CordaSerializable
+import net.corda.nodeapi.internal.network.CertificateRevocationRequest
 import java.math.BigInteger
 import java.security.cert.CRLReason
 import java.time.Instant
 
+/**
+ * This data class is intended to be used internally certificate revocation request service.
+ */
+@CordaSerializable
 data class CertificateRevocationRequestData(val requestId: String, // This is a uniquely generated string
                                             val certificateSerialNumber: BigInteger,
-                                            val revocationTime: Instant?,
-                                            val legalName: String,
+                                            val modifiedAt: Instant,
+                                            val legalName: CordaX500Name,
                                             val status: RequestStatus,
                                             val reason: CRLReason,
                                             val reporter: String) // Username of the reporter
@@ -24,13 +31,11 @@ interface CertificateRevocationRequestStorage {
      * [RequestStatus.NEW], [RequestStatus.APPROVED] or [RequestStatus.REVOKED]
      * then nothing is persisted and the existing revocation request identifier is returned.
      *
-     * @param certificateSerialNumber serial number of the certificate to be revoked.
-     * @param reason reason for revocation. See [java.security.cert.CRLReason]
-     * @param reporter who is requesting this revocation
+     * @param request certificate revocation request to be stored.
      *
      * @return identifier of the newly created (or existing) revocation request.
      */
-    fun saveRevocationRequest(certificateSerialNumber: BigInteger, reason: CRLReason, reporter: String): String
+    fun saveRevocationRequest(request: CertificateRevocationRequest): String
 
     /**
      * Retrieves the revocation request with the given [requestId]

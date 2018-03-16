@@ -56,7 +56,7 @@ class HsmPermissionTest : HsmBaseTest() {
         val userInput = givenHsmUserAuthenticationInput(HSM_USERNAME_OPS_CERT_)
 
         // given HSM CSR signer
-        val hsmSigningServiceConfig = createHsmSigningServiceConfig()
+        val hsmSigningServiceConfig = createHsmSigningServiceConfig(createDoormanCertificateConfig(), null)
         val signer = HsmCsrSigner(
                 mock(),
                 hsmSigningServiceConfig.doorman!!.loadRootKeyStore(),
@@ -112,7 +112,7 @@ class HsmPermissionTest : HsmBaseTest() {
         val userInput = givenHsmUserAuthenticationInput(HSM_USERNAME_OPS_CERT)
 
         // given HSM CSR signer
-        val hsmSigningServiceConfig = createHsmSigningServiceConfig()
+        val hsmSigningServiceConfig = createHsmSigningServiceConfig(createDoormanCertificateConfig(), null)
         val signer = HsmCsrSigner(
                 mock(),
                 hsmSigningServiceConfig.doorman!!.loadRootKeyStore(),

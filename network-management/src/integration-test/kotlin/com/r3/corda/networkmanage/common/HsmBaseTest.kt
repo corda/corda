@@ -28,6 +28,7 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import org.junit.Before
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import java.net.URL
 import java.nio.file.Path
 import java.util.*
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode as SigningServiceAuthMode
@@ -127,32 +128,43 @@ abstract class HsmBaseTest {
         ), hsmUserConfigs)
     }
 
-    protected fun createHsmSigningServiceConfig(): SigningServiceConfig {
+    protected fun createHsmSigningServiceConfig(doormanCertConfig: DoormanCertificateConfig?,
+                                                networkMapCertificateConfig: NetworkMapCertificateConfig?): SigningServiceConfig {
         return SigningServiceConfig(
                 dataSourceProperties = mock(),
                 device = "${hsmSimulator.port}@${hsmSimulator.host}",
                 keySpecifier = 1,
-                doorman = DoormanCertificateConfig(
-                        rootKeyStoreFile = rootKeyStoreFile,
-                        keyGroup = DOORMAN_CERT_KEY_GROUP,
-                        validDays = 3650,
-                        rootKeyStorePassword = TRUSTSTORE_PASSWORD,
-                        crlDistributionPoint = "http://test.com/revoked.crl",
-                        authParameters = AuthParametersConfig(
-                                mode = SigningServiceAuthMode.PASSWORD,
-                                threshold = 2
-                        )
-                ),
-                networkMap = NetworkMapCertificateConfig(
-                        username = "INTEGRATION_TEST",
-                        keyGroup = NETWORK_MAP_CERT_KEY_GROUP,
-                        authParameters = AuthParametersConfig(
-                                mode = SigningServiceAuthMode.PASSWORD,
-                                password = "INTEGRATION_TEST",
-                                threshold = 2
-                        )
+                doorman = doormanCertConfig,
+                networkMap = networkMapCertificateConfig
+        )
+    }
 
+    protected fun createDoormanCertificateConfig(): DoormanCertificateConfig {
+        return DoormanCertificateConfig(
+                rootKeyStoreFile = rootKeyStoreFile,
+                keyGroup = DOORMAN_CERT_KEY_GROUP,
+                validDays = 3650,
+                rootKeyStorePassword = TRUSTSTORE_PASSWORD,
+                crlDistributionPoint = URL("http://test.com/revoked.crl"),
+                compatibilityZoneURL = URL("http://test.com/api"),
+                crlUpdatePeriod = 1000,
+                authParameters = AuthParametersConfig(
+                        mode = SigningServiceAuthMode.PASSWORD,
+                        threshold = 2
                 )
+        )
+    }
+
+    protected fun createNetworkMapCertificateConfig(): NetworkMapCertificateConfig {
+        return NetworkMapCertificateConfig(
+                username = "INTEGRATION_TEST",
+                keyGroup = NETWORK_MAP_CERT_KEY_GROUP,
+                authParameters = AuthParametersConfig(
+                        mode = SigningServiceAuthMode.PASSWORD,
+                        password = "INTEGRATION_TEST",
+                        threshold = 2
+                )
+
         )
     }
 

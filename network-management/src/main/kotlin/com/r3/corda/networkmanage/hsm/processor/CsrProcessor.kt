@@ -16,81 +16,84 @@ import com.r3.corda.networkmanage.hsm.configuration.DoormanCertificateConfig
 import com.r3.corda.networkmanage.hsm.menu.Menu
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStorage
+import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateSigningRequestStorage
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
-import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 
 class CsrProcessor(private val config: DoormanCertificateConfig,
                    private val device: String,
                    private val keySpecifier: Int,
-                   private val database: CordaPersistence) {
-    companion object {
-        val logger = contextLogger()
+                   private val database: CordaPersistence) : Processor() {
+    private companion object {
+        private val logger = contextLogger()
     }
 
     private val auth = config.authParameters
 
     fun showMenu() {
         val csrStorage = DBSignedCertificateRequestStorage(database)
-        val sign: (List<ApprovedCertificateRequestData>) -> Unit = {
-            val signer = config.run {
+        val authenticator = Authenticator(
+                provider = createProvider(config.keyGroup, keySpecifier, device),
+                mode = auth.mode,
+                authStrengthThreshold = auth.threshold)
+        val signCsr: (List<ApprovedCertificateRequestData>) -> Unit = {
+            val csrSigner = config.run {
                 HsmCsrSigner(
                         csrStorage,
                         loadRootKeyStore(),
-                        crlDistributionPoint,
+                        crlDistributionPoint.toString(),
                         null,
                         validDays,
-                        Authenticator(
-                                provider = createProvider(config.keyGroup, keySpecifier, device),
-                                mode = auth.mode,
-                                authStrengthThreshold = auth.threshold))
+                        authenticator)
             }
             logger.debug("Signing requests: $it")
-            signer.sign(it)
+            csrSigner.sign(it)
         }
-        Menu().withExceptionHandler(this::processError).setExitOption("3", "Quit").addItem("1", "Sign all approved and unsigned CSRs",
-                {
-                    logger.debug("Fetching approved requests...")
-                    val approved = csrStorage.getApprovedRequests()
-                    logger.debug("Approved requests fetched: $approved")
-                    if (approved.isNotEmpty()) {
-                        if (confirmedSign(approved)) {
-                            sign(approved)
-                        }
-                    } else {
-                        println("There is no approved CSR")
-                    }
-                }).addItem("2", "List all approved and unsigned CSRs",
-                {
-                    logger.debug("Fetching approved requests...")
-                    val approved = csrStorage.getApprovedRequests()
-                    logger.debug("Approved requests fetched: $approved")
-                    if (approved.isNotEmpty()) {
-                        println("Approved CSRs:")
-                        approved.forEachIndexed { index, item -> println("${index + 1}. ${item.request.subject}") }
-                        Menu().withExceptionHandler(this::processError).setExitOption("3", "Go back").
-                                addItem("1", "Sign all listed CSRs", {
-                                    if (confirmedSign(approved)) {
-                                        sign(approved)
-                                    }
-                                }, isTerminating = true).
-                                addItem("2", "Select and sign CSRs", {
-                                    val selectedItems = getSelection(approved)
-                                    if (confirmedSign(selectedItems)) {
-                                        sign(selectedItems)
-                                    }
-                                }, isTerminating = true).showMenu()
-                    } else {
-                        println("There is no approved and unsigned CSR")
-                    }
-                }).showMenu()
+        showMenu(csrStorage, signCsr)
+    }
+
+    private fun showMenu(csrStorage: SignedCertificateSigningRequestStorage, signCsr: (List<ApprovedCertificateRequestData>) -> Unit) {
+        Menu().withExceptionHandler(this::processError).setExitOption("3", "Quit").addItem("1", "Sign all approved and unsigned CSRs", {
+            logger.debug("Fetching approved requests...")
+            val approved = csrStorage.getApprovedRequests()
+            logger.debug("Approved requests fetched: $approved")
+            if (approved.isNotEmpty()) {
+                if (confirmedSign(approved)) {
+                    signCsr(approved)
+                }
+            } else {
+                printlnColor("There are no approved CSRs")
+            }
+        }).addItem("2", "List all approved and unsigned CSRs", {
+            logger.debug("Fetching approved requests...")
+            val approved = csrStorage.getApprovedRequests()
+            logger.debug("Approved requests fetched: $approved")
+            if (approved.isNotEmpty()) {
+                printlnColor("Approved CSRs:")
+                approved.forEachIndexed { index, item -> printlnColor("${index + 1}. ${item.request.subject}") }
+                Menu().withExceptionHandler(this::processError).setExitOption("3", "Go back").
+                        addItem("1", "Sign all listed CSRs", {
+                            if (confirmedSign(approved)) {
+                                signCsr(approved)
+                            }
+                        }, isTerminating = true).
+                        addItem("2", "Select and sign CSRs", {
+                            val selectedItems = getSelection(approved)
+                            if (confirmedSign(selectedItems)) {
+                                signCsr(selectedItems)
+                            }
+                        }, isTerminating = true).showMenu()
+            } else {
+                printlnColor("There is no approved and unsigned CSR")
+            }
+        }).showMenu()
     }
 
     private fun confirmedSign(selectedItems: List<ApprovedCertificateRequestData>): Boolean {
-        println("Are you sure you want to sign the following requests:")
+        printlnColor("Are you sure you want to sign the following requests:")
         selectedItems.forEachIndexed { index, data ->
-            println("${index + 1} ${data.request.subject}")
+            printlnColor("${index + 1} ${data.request.subject}")
         }
         var result = false
         Menu().addItem("Y", "Yes", { result = true }, true).setExitOption("N", "No").showMenu()
@@ -101,7 +104,7 @@ class CsrProcessor(private val config: DoormanCertificateConfig,
         print("CSRs to be signed (comma separated list): ")
         val line = readLine()
         if (line == null) {
-            println("EOF reached")
+            printlnColor("EOF reached")
             return emptyList()
         }
         return try {
@@ -114,14 +117,8 @@ class CsrProcessor(private val config: DoormanCertificateConfig,
                 }
             }
         } catch (exception: Exception) {
-            println(exception.message)
+            printlnColor(exception.message)
             emptyList()
         }
-    }
-
-    fun processError(exception: Exception) {
-        val processed = mapCryptoServerException(exception)
-        System.err.println("An error occurred:")
-        processed.printStackTrace()
     }
 }

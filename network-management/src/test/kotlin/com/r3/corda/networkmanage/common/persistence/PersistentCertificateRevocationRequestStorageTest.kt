@@ -1,6 +1,7 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.TestBase
+import net.corda.nodeapi.internal.network.CertificateRevocationRequest
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.node.MockServices
@@ -41,7 +42,10 @@ class PersistentCertificateRevocationRequestStorageTest : TestBase() {
         val certificate = createNodeCertificate(csrStorage)
 
         // when
-        val requestId = crrStorage.saveRevocationRequest(certificate.serialNumber, REVOCATION_REASON, REPORTER)
+        val requestId = crrStorage.saveRevocationRequest(CertificateRevocationRequest(
+                certificateSerialNumber = certificate.serialNumber,
+                reason = REVOCATION_REASON,
+                reporter = REPORTER))
 
         // then
         assertNotNull(crrStorage.getRevocationRequest(requestId)).apply {
@@ -55,7 +59,10 @@ class PersistentCertificateRevocationRequestStorageTest : TestBase() {
     fun `Retrieving a certificate revocation request succeeds`() {
         // given
         val certificate = createNodeCertificate(csrStorage)
-        val requestId = crrStorage.saveRevocationRequest(certificate.serialNumber, REVOCATION_REASON, REPORTER)
+        val requestId = crrStorage.saveRevocationRequest(CertificateRevocationRequest(
+                certificateSerialNumber = certificate.serialNumber,
+                reason = REVOCATION_REASON,
+                reporter = REPORTER))
 
         // when
         val request = crrStorage.getRevocationRequest(requestId)
@@ -68,10 +75,16 @@ class PersistentCertificateRevocationRequestStorageTest : TestBase() {
     fun `Retrieving a certificate revocation requests by status returns correct data`() {
         // given
         (1..10).forEach {
-            crrStorage.saveRevocationRequest(createNodeCertificate(csrStorage, "LegalName" + it.toString()).serialNumber, REVOCATION_REASON, REPORTER)
+            crrStorage.saveRevocationRequest(CertificateRevocationRequest(
+                    certificateSerialNumber = createNodeCertificate(csrStorage, "LegalName" + it.toString()).serialNumber,
+                    reason = REVOCATION_REASON,
+                    reporter = REPORTER))
         }
         (11..15).forEach {
-            val requestId = crrStorage.saveRevocationRequest(createNodeCertificate(csrStorage, "LegalName" + it.toString()).serialNumber, REVOCATION_REASON, REPORTER)
+            val requestId = crrStorage.saveRevocationRequest(CertificateRevocationRequest(
+                    certificateSerialNumber = createNodeCertificate(csrStorage, "LegalName" + it.toString()).serialNumber,
+                    reason = REVOCATION_REASON,
+                    reporter = REPORTER))
             crrStorage.approveRevocationRequest(requestId, "Approver")
         }
 
@@ -89,7 +102,10 @@ class PersistentCertificateRevocationRequestStorageTest : TestBase() {
         // then
         assertFailsWith(IllegalArgumentException::class) {
             // when
-            crrStorage.saveRevocationRequest(BigInteger.TEN, REVOCATION_REASON, REPORTER)
+            crrStorage.saveRevocationRequest(CertificateRevocationRequest(
+                    certificateSerialNumber = BigInteger.TEN,
+                    reason = REVOCATION_REASON,
+                    reporter = REPORTER))
         }
     }
 
@@ -97,7 +113,10 @@ class PersistentCertificateRevocationRequestStorageTest : TestBase() {
     fun `Approving a certificate revocation request changes its status`() {
         // given
         val certificate = createNodeCertificate(csrStorage)
-        val requestId = crrStorage.saveRevocationRequest(certificate.serialNumber, REVOCATION_REASON, REPORTER)
+        val requestId = crrStorage.saveRevocationRequest(CertificateRevocationRequest(
+                certificateSerialNumber = certificate.serialNumber,
+                reason = REVOCATION_REASON,
+                reporter = REPORTER))
 
         // when
         crrStorage.approveRevocationRequest(requestId, "Approver")
@@ -112,7 +131,10 @@ class PersistentCertificateRevocationRequestStorageTest : TestBase() {
     fun `Rejecting a certificate revocation request changes its status`() {
         // given
         val certificate = createNodeCertificate(csrStorage)
-        val requestId = crrStorage.saveRevocationRequest(certificate.serialNumber, REVOCATION_REASON, REPORTER)
+        val requestId = crrStorage.saveRevocationRequest(CertificateRevocationRequest(
+                certificateSerialNumber = certificate.serialNumber,
+                reason = REVOCATION_REASON,
+                reporter = REPORTER))
 
         // when
         crrStorage.rejectRevocationRequest(requestId, "Rejector", "No reason")

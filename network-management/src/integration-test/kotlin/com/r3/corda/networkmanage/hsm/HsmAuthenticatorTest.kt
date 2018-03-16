@@ -23,7 +23,7 @@ class HsmAuthenticatorTest : HsmBaseTest() {
     fun `Authenticator executes the block once user is successfully authenticated`() {
         // given
         val userInput = givenHsmUserAuthenticationInput()
-        val hsmSigningServiceConfig = createHsmSigningServiceConfig()
+        val hsmSigningServiceConfig = createHsmSigningServiceConfig(createDoormanCertificateConfig(), null)
         val doormanCertificateConfig = hsmSigningServiceConfig.doorman!!
         val authenticator = Authenticator(provider = createProvider(
                 doormanCertificateConfig.keyGroup,

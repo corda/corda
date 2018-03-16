@@ -17,6 +17,7 @@ import com.r3.corda.networkmanage.common.utils.initialiseSerialization
 import com.r3.corda.networkmanage.common.utils.parseConfig
 import com.r3.corda.networkmanage.hsm.configuration.SigningServiceArgsParser
 import com.r3.corda.networkmanage.hsm.configuration.SigningServiceConfig
+import com.r3.corda.networkmanage.hsm.processor.CrrProcessor
 import com.r3.corda.networkmanage.hsm.processor.CsrProcessor
 import com.r3.corda.networkmanage.hsm.processor.NetworkMapProcessor
 import org.apache.logging.log4j.LogManager
@@ -54,12 +55,13 @@ fun main(args: Array<String>) {
     }
 
     initialiseSerialization()
-
     // Create DB connection.
     val persistence = configureDatabase(config.dataSourceProperties, config.database)
     if (config.networkMap != null) {
         NetworkMapProcessor(config.networkMap, config.device, config.keySpecifier, persistence).run()
-    } else {
-        CsrProcessor(config.doorman!!, config.device, config.keySpecifier, persistence).showMenu()
+    } else if (config.doorman != null) {
+        CsrProcessor(config.doorman, config.device, config.keySpecifier, persistence).showMenu()
+    } else if (config.doorman != null) {
+        CrrProcessor(config.doorman, config.device, config.keySpecifier, persistence).showMenu()
     }
 }

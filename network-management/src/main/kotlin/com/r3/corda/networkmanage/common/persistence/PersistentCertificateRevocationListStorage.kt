@@ -11,7 +11,7 @@ import java.security.cert.X509CRL
 import java.time.Instant
 
 class PersistentCertificateRevocationListStorage(private val database: CordaPersistence) : CertificateRevocationListStorage {
-    override fun getCertificateRevocationList(crlIssuer: CrlIssuer): X509CRL {
+    override fun getCertificateRevocationList(crlIssuer: CrlIssuer): X509CRL? {
         return database.transaction {
             val builder = session.criteriaBuilder
             val query = builder.createQuery(CertificateRevocationListEntity::class.java).run {
@@ -21,7 +21,10 @@ class PersistentCertificateRevocationListStorage(private val database: CordaPers
                 }
             }
             // We just want the last signed entry
-            X509CertificateFactory().delegate.generateCRL(session.createQuery(query).setMaxResults(1).singleResult.crlBytes.inputStream()) as X509CRL
+            val crlEntity = session.createQuery(query).setMaxResults(1).uniqueResult()
+            crlEntity?.let {
+                X509CertificateFactory().delegate.generateCRL(crlEntity.crlBytes.inputStream()) as X509CRL
+            }
         }
     }
 
@@ -41,7 +44,10 @@ class PersistentCertificateRevocationListStorage(private val database: CordaPers
 
     private fun revokeCertificate(certificateSerialNumber: BigInteger, time: Instant, transaction: DatabaseTransaction) {
         val revocation = transaction.uniqueEntityWhere<CertificateRevocationRequestEntity> { builder, path ->
-            builder.equal(path.get<BigInteger>(CertificateRevocationRequestEntity::certificateSerialNumber.name), certificateSerialNumber)
+            builder.and(
+                    builder.equal(path.get<BigInteger>(CertificateRevocationRequestEntity::certificateSerialNumber.name), certificateSerialNumber),
+                    builder.notEqual(path.get<RequestStatus>(CertificateRevocationRequestEntity::status.name), RequestStatus.REJECTED)
+            )
         }
         revocation ?: throw IllegalStateException("The certificate revocation request for $certificateSerialNumber does not exist")
         check(revocation.status in arrayOf(RequestStatus.APPROVED, RequestStatus.DONE)) {

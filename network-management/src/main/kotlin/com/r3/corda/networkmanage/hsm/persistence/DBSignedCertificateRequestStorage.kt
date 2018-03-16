@@ -19,7 +19,7 @@ import java.security.cert.CertPath
 
 data class ApprovedCertificateRequestData(val requestId: String, val request: PKCS10CertificationRequest, var certPath: CertPath? = null)
 
-class DBSignedCertificateRequestStorage(database: CordaPersistence) : SignedCertificateRequestStorage {
+class DBSignedCertificateRequestStorage(database: CordaPersistence) : SignedCertificateSigningRequestStorage {
 
     private val storage = PersistentCertificateSigningRequestStorage(database)
 

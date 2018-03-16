@@ -2,6 +2,7 @@ package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.TestBase
 import net.corda.core.utilities.minutes
+import net.corda.nodeapi.internal.network.CertificateRevocationRequest
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
@@ -52,7 +53,10 @@ class PersistentCertificateRevocationListStorageTest : TestBase() {
     fun `Saving CRL persists it in the DB and changes the status of the certificate revocation requests to DONE`() {
         // given
         val certificate = createNodeCertificate(csrStorage)
-        val requestId = crrStorage.saveRevocationRequest(certificate.serialNumber, REVOCATION_REASON, REPORTER)
+        val requestId = crrStorage.saveRevocationRequest(CertificateRevocationRequest(
+                certificateSerialNumber = certificate.serialNumber,
+                reason = REVOCATION_REASON,
+                reporter = REPORTER))
         crrStorage.approveRevocationRequest(requestId, "Approver")
         val revocationRequest = crrStorage.getRevocationRequest(requestId)!!
         val crl = createDummyCertificateRevocationList(listOf(revocationRequest.certificateSerialNumber))
@@ -72,16 +76,25 @@ class PersistentCertificateRevocationListStorageTest : TestBase() {
     @Test
     fun `Saving CRL does not change the status of other requests`() {
         // given
-        val done = crrStorage.saveRevocationRequest(createNodeCertificate(csrStorage, legalName = "Bank A").serialNumber, REVOCATION_REASON, REPORTER)
+        val done = crrStorage.saveRevocationRequest(CertificateRevocationRequest(
+                certificateSerialNumber = createNodeCertificate(csrStorage, legalName = "Bank A").serialNumber,
+                reason = REVOCATION_REASON,
+                reporter = REPORTER))
         crrStorage.approveRevocationRequest(done, "Approver")
         val doneRevocationRequest = crrStorage.getRevocationRequest(done)!!
 
-        val new = crrStorage.saveRevocationRequest(createNodeCertificate(csrStorage, legalName = "Bank B").serialNumber, REVOCATION_REASON, REPORTER)
+        val new = crrStorage.saveRevocationRequest(CertificateRevocationRequest(
+                certificateSerialNumber = createNodeCertificate(csrStorage, legalName = "Bank B").serialNumber,
+                reason = REVOCATION_REASON,
+                reporter = REPORTER))
 
         val crl = createDummyCertificateRevocationList(listOf(doneRevocationRequest.certificateSerialNumber))
         crlStorage.saveCertificateRevocationList(crl, CrlIssuer.DOORMAN, "TestSigner", Instant.now())
 
-        val approved = crrStorage.saveRevocationRequest(createNodeCertificate(csrStorage, legalName = "Bank C").serialNumber, REVOCATION_REASON, REPORTER)
+        val approved = crrStorage.saveRevocationRequest(CertificateRevocationRequest(
+                certificateSerialNumber = createNodeCertificate(csrStorage, legalName = "Bank C").serialNumber,
+                reason = REVOCATION_REASON,
+                reporter = REPORTER))
         crrStorage.approveRevocationRequest(approved, "Approver")
         val approvedRevocationRequest = crrStorage.getRevocationRequest(approved)!!
 

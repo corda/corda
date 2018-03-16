@@ -12,6 +12,7 @@ package com.r3.corda.networkmanage.hsm.processor
 
 import com.r3.corda.networkmanage.common.persistence.PersistentNetworkMapStorage
 import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
+import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
@@ -49,7 +50,8 @@ class NetworkMapProcessor(private val config: NetworkMapCertificateConfig,
                             authParameters.keyFilePath,
                             authParameters.password,
                             authParameters.threshold,
-                            provider = createProvider(keyGroup, keySpecifier, device)))
+                            provider = createProvider(keyGroup, keySpecifier, device)),
+                    keyName = CORDA_NETWORK_MAP)
             val networkMapSigner = NetworkMapSigner(networkMapStorage, signer)
             try {
                 logger.info("Executing network map signing...")

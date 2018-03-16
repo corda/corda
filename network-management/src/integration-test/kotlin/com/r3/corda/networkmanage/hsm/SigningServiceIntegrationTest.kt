@@ -18,7 +18,7 @@ import com.r3.corda.networkmanage.doorman.DoormanConfig
 import com.r3.corda.networkmanage.doorman.NetworkManagementServer
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.persistence.DBSignedCertificateRequestStorage
-import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorage
+import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateSigningRequestStorage
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
@@ -77,7 +77,7 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
         timer.cancel()
     }
 
-    private fun givenSignerSigningAllRequests(storage: SignedCertificateRequestStorage): HsmCsrSigner {
+    private fun givenSignerSigningAllRequests(storage: SignedCertificateSigningRequestStorage): HsmCsrSigner {
         // Mock signing logic but keep certificate persistence
         return mock {
             on { sign(any()) }.then {

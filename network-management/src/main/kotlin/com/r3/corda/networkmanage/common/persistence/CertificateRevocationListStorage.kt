@@ -13,7 +13,7 @@ interface CertificateRevocationListStorage {
      * @param crlIssuer CRL issuer CA type.
      * @return latest revocation list.
      */
-    fun getCertificateRevocationList(crlIssuer: CrlIssuer): X509CRL
+    fun getCertificateRevocationList(crlIssuer: CrlIssuer): X509CRL?
 
     /**
      * Persists a new revocation list. Upon saving, statuses

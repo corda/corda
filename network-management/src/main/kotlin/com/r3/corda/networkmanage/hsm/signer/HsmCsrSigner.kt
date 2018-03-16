@@ -13,13 +13,11 @@ package com.r3.corda.networkmanage.hsm.signer
 import com.r3.corda.networkmanage.common.utils.getCertRole
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
-import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateRequestStorage
+import com.r3.corda.networkmanage.hsm.persistence.SignedCertificateSigningRequestStorage
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createClientCertificate
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.getAndInitializeKeyStore
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.retrieveCertAndKeyPair
-import net.corda.core.internal.CertRole
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
@@ -31,7 +29,7 @@ import java.io.PrintStream
 /**
  * Encapsulates certificate signing logic
  */
-class HsmCsrSigner(private val storage: SignedCertificateRequestStorage,
+class HsmCsrSigner(private val storage: SignedCertificateSigningRequestStorage,
                    private val rootKeyStore: X509KeyStore,
                    private val csrCertCrlDistPoint: String,
                    private val csrCertCrlIssuer: String?,

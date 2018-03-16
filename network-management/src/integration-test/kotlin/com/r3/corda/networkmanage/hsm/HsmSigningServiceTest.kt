@@ -15,6 +15,7 @@ import com.r3.corda.networkmanage.common.HsmBaseTest
 import com.r3.corda.networkmanage.common.persistence.PersistentNetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
+import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
 import com.r3.corda.networkmanage.common.utils.initialiseSerialization
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
@@ -54,7 +55,7 @@ class HsmSigningServiceTest : HsmBaseTest() {
         val userInput = givenHsmUserAuthenticationInput()
 
         // given HSM CSR signer
-        val hsmSigningServiceConfig = createHsmSigningServiceConfig()
+        val hsmSigningServiceConfig = createHsmSigningServiceConfig(createDoormanCertificateConfig(), null)
         val doormanCertificateConfig = hsmSigningServiceConfig.doorman!!
         val signer = HsmCsrSigner(
                 mock(),
@@ -98,7 +99,7 @@ class HsmSigningServiceTest : HsmBaseTest() {
         val userInput = givenHsmUserAuthenticationInput()
 
         // given HSM CSR signer
-        val hsmSigningServiceConfig = createHsmSigningServiceConfig()
+        val hsmSigningServiceConfig = createHsmSigningServiceConfig(createDoormanCertificateConfig(), null)
         val doormanCertificateConfig = hsmSigningServiceConfig.doorman!!
         val signer = HsmCsrSigner(
                 mock(),
@@ -143,14 +144,15 @@ class HsmSigningServiceTest : HsmBaseTest() {
         val userInput = givenHsmUserAuthenticationInput()
 
         // given HSM network map signer
-        val hsmSigningServiceConfig = createHsmSigningServiceConfig()
+        val hsmSigningServiceConfig = createHsmSigningServiceConfig(null, createNetworkMapCertificateConfig())
         val networkMapCertificateConfig = hsmSigningServiceConfig.networkMap!!
         val hsmDataSigner = HsmSigner(Authenticator(
                 provider = createProvider(
                         networkMapCertificateConfig.keyGroup,
                         hsmSigningServiceConfig.keySpecifier,
                         hsmSigningServiceConfig.device),
-                inputReader = userInput))
+                inputReader = userInput),
+                keyName = CORDA_NETWORK_MAP)
 
         val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
         val networkMapStorage = PersistentNetworkMapStorage(database)
@@ -170,7 +172,7 @@ class HsmSigningServiceTest : HsmBaseTest() {
         assertThat(persistedNetworkMap.nodeInfoHashes).isEmpty()
     }
 
-    private fun setupCertificates(){
+    private fun setupCertificates() {
         // when root cert is created
         run(createGeneratorParameters(
                 keyGroup = ROOT_CERT_KEY_GROUP,

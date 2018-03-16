@@ -1,7 +1,6 @@
 package com.r3.corda.networkmanage.common.persistence.entity
 
 import com.r3.corda.networkmanage.common.persistence.CrlIssuer
-import org.hibernate.envers.Audited
 import java.time.Instant
 import javax.persistence.*
 
@@ -19,11 +18,9 @@ class CertificateRevocationListEntity(
         @Column(name = "crl_bytes", nullable = false)
         val crlBytes: ByteArray,
 
-        @Audited
         @Column(name = "signed_by", length = 512)
         val signedBy: String,
 
-        @Audited
         @Column(name = "modified_at", nullable = false)
         val modifiedAt: Instant = Instant.now()
 )

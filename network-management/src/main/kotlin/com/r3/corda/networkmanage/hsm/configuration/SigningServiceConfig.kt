@@ -23,6 +23,7 @@ import net.corda.core.internal.div
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
@@ -54,7 +55,9 @@ data class NetworkMapCertificateConfig(val username: String,
 /**
  * Certificate signing requests process specific parameters.
  */
-data class DoormanCertificateConfig(val crlDistributionPoint: String,
+data class DoormanCertificateConfig(val crlDistributionPoint: URL,
+                                    val compatibilityZoneURL: URL,
+                                    val crlUpdatePeriod: Long,
                                     val keyGroup:String,
                                     val validDays: Int,
                                     val rootKeyStoreFile: Path,
