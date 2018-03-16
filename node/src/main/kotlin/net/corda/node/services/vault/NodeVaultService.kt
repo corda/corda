@@ -482,7 +482,7 @@ class NodeVaultService(
 
         val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
 
-        // Use classloader used to configure hibernate if present
+        // Reuse classloader used to configure hibernate if present
         val contractStateLoader = hibernateConfig.cordappClassLoader ?: javaClass.classLoader
         distinctTypes.forEach { type ->
             val concreteType: Class<ContractState> = uncheckedCast(contractStateLoader.loadClass(type))
