@@ -2,15 +2,17 @@ package net.corda.tools.shell;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import net.corda.core.messaging.*;
-import net.corda.client.jackson.*;
-import org.crsh.cli.*;
-import org.crsh.command.*;
+import net.corda.client.jackson.StringToMethodCallParser;
+import net.corda.core.messaging.CordaRPCOps;
+import org.crsh.cli.Argument;
+import org.crsh.cli.Command;
+import org.crsh.cli.Man;
+import org.crsh.cli.Usage;
+import org.crsh.command.InvocationContext;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
-
-import static com.google.common.collect.Maps.newHashMap;
+import java.util.List;
+import java.util.Map;
 
 // Note that this class cannot be converted to Kotlin because CRaSH does not understand InvocationContext<Map<?, ?>> which
 // is the closest you can get in Kotlin to raw types.
