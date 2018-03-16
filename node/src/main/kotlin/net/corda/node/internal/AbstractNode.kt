@@ -306,7 +306,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             if (configuration.rpcOptions.address == null) {
                 throw ConfigurationException("Cannot init CrashShell because node RPC address is not set (via 'rpcSettings' option).")
             }
-            InteractiveShell.startShell(configuration.toShellConfig())
+            InteractiveShell.startShell(configuration.toShellConfig(), cordappLoader.appClassLoader)
         }
     }
 

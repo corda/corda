@@ -47,7 +47,6 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
             @Column(name = "consuming_transaction_id")
             val consumingTxHash: String,
 
-            @Embedded
             @Column(name = "requesting_party_name")
             var partyName: String,
 
