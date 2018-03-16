@@ -72,54 +72,6 @@ import kotlin.concurrent.thread
 // TODO: Resurrect or reimplement the mail plugin.
 // TODO: Make it notice new shell commands added after the node started.
 
-data class SSHDConfiguration(val port: Int) {
-    companion object {
-        internal const val INVALID_PORT_FORMAT = "Invalid port: %s"
-        private const val MISSING_PORT_FORMAT = "Missing port: %s"
-
-        /**
-         * Parses a string of the form port into a [SSHDConfiguration].
-         * @throws IllegalArgumentException if the port is missing or the string is garbage.
-         */
-        @JvmStatic
-        fun parse(str: String): SSHDConfiguration {
-            require(!str.isNullOrBlank()) { SSHDConfiguration.MISSING_PORT_FORMAT.format(str) }
-            val port = try {
-                str.toInt()
-            } catch (ex: NumberFormatException) {
-                throw IllegalArgumentException("Port syntax is invalid, expected port")
-            }
-            return SSHDConfiguration(port)
-        }
-    }
-
-    init {
-        require(port in (0..0xffff)) { INVALID_PORT_FORMAT.format(port) }
-    }
-}
-
-data class ShellSslOptions(override val sslKeystore: Path, override val keyStorePassword: String, override val trustStoreFile:Path, override val trustStorePassword: String) : SSLConfiguration {
-    override val certificatesDirectory: Path get() = Paths.get("")
-}
-
-data class ShellConfiguration(
-        val commandsDirectory: Path,
-        val cordappsDirectory: Path? = null,
-        var user: String = "",
-        var password: String = "",
-        val hostAndPort: NetworkHostAndPort,
-        val ssl: ShellSslOptions? = null,
-        val sshdPort: Int? = null,
-        val sshHostKeyDirectory: Path? = null,
-        val noLocalShell: Boolean = false) {
-    companion object {
-        const val SSH_PORT = 2222
-        const val COMMANDS_DIR = "shell-commands"
-        const val CORDAPPS_DIR = "cordapps"
-        const val SSHD_HOSTKEY_DIR = "ssh"
-    }
-}
-
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
     private lateinit var rpcOps: (username: String, credentials: String) -> CordaRPCOps
@@ -492,9 +444,9 @@ object InteractiveShell {
                     .doOnCompleted {
                         if (isSsh) {
                             // print in the original Shell process
-                            println("Shutting down the node via remote SSH session (it may take a while) ...")
+                            println("Shutting down the node via remote SSH session (it may take a while)")
                         }
-                        out.println("...shutting down the node (it may take a while)")
+                        out.println("Shutting down the node (it may take a while)")
                         out.flush()
                         cordaRPCOps.shutdown()
                         isShuttingDown = true
