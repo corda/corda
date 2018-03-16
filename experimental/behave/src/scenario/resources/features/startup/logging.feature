@@ -18,4 +18,4 @@ Feature: Startup Information - Logging
   Scenario: Node shows version information on startup
     Given a node A of version MASTER
     Then node A is on platform version 2
-    And node A is on version 3.0-SNAPSHOT
+    And node A is on release version 3.0-SNAPSHOT
