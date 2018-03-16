@@ -1,6 +1,7 @@
 package com.r3.corda.networkmanage.common.persistence.entity
 
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
+import net.corda.core.identity.CordaX500Name
 import org.hibernate.envers.Audited
 import java.math.BigInteger
 import java.security.cert.CRLReason
@@ -25,7 +26,8 @@ class CertificateRevocationRequestEntity(
         val certificateSerialNumber: BigInteger,
 
         @Column(name = "legal_name", length = 256, nullable = false)
-        val legalName: String,
+        @Convert(converter = CordaX500NameAttributeConverter::class)
+        val legalName: CordaX500Name,
 
         @Audited
         @Column(name = "status", nullable = false)
@@ -56,7 +58,7 @@ class CertificateRevocationRequestEntity(
              certificateData: CertificateDataEntity = this.certificateData,
              certificateSerialNumber: BigInteger = this.certificateSerialNumber,
              status: RequestStatus = this.status,
-             legalName: String = this.legalName,
+             legalName: CordaX500Name = this.legalName,
              reporter: String = this.reporter,
              modifiedBy: String = this.modifiedBy,
              modifiedAt: Instant = this.modifiedAt,

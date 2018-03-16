@@ -37,7 +37,7 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
                         modifiedBy = request.reporter,
                         certificateData = certificateData,
                         reporter = request.reporter,
-                        legalName = certificateData.legalName()
+                        legalName = certificateData.legalName
                 ))
                 requestId
             }
@@ -84,7 +84,7 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
                                        legalName: CordaX500Name?,
                                        result: CertificateSigningRequestEntity): CertificateSigningRequestEntity {
         val certData = result.certificateData!!
-        require(legalName == null || result.legalName == legalName.toString()) {
+        require(legalName == null || result.legalName == legalName) {
             "The legal name does not match."
         }
         require(csrRequestId == null || result.requestId == csrRequestId) {
@@ -98,7 +98,7 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
 
     override fun getRevocationRequest(requestId: String): CertificateRevocationRequestData? {
         return database.transaction {
-            getRevocationRequestEntity(requestId)?.toCertificateRevocationRequest()
+            getRevocationRequestEntity(requestId)?.toCertificateRevocationRequestData()
         }
     }
 
@@ -110,7 +110,7 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
                     where(builder.equal(get<RequestStatus>(CertificateRevocationRequestEntity::status.name), revocationStatus))
                 }
             }
-            session.createQuery(query).resultList.map { it.toCertificateRevocationRequest() }
+            session.createQuery(query).resultList.map { it.toCertificateRevocationRequestData() }
         }
     }
 
@@ -153,14 +153,15 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
         }
     }
 
-    private fun CertificateRevocationRequestEntity.toCertificateRevocationRequest(): CertificateRevocationRequestData {
+    private fun CertificateRevocationRequestEntity.toCertificateRevocationRequestData(): CertificateRevocationRequestData {
         return CertificateRevocationRequestData(
                 requestId,
                 certificateSerialNumber,
                 modifiedAt,
-                CordaX500Name.parse(legalName),
+                legalName,
                 status,
                 revocationReason,
-                reporter)
+                reporter
+        )
     }
 }

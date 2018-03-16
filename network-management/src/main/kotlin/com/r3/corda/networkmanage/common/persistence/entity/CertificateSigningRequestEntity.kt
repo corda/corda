@@ -16,11 +16,12 @@ import com.r3.corda.networkmanage.common.persistence.CertificateStatus
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import com.r3.corda.networkmanage.common.utils.buildCertPath
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.hibernate.envers.Audited
 import java.math.BigInteger
 import java.security.cert.CertPath
-import java.security.cert.X509Certificate
 import java.time.Instant
 import javax.persistence.*
 
@@ -32,8 +33,9 @@ data class CertificateSigningRequestEntity(
         val requestId: String,
 
         // TODO: Store X500Name with a proper schema.
-        @Column(name = "legal_name", length = 256, nullable = false)
-        val legalName: String,
+        @Column(name = "legal_name", length = 256)
+        @Convert(converter = CordaX500NameAttributeConverter::class)
+        val legalName: CordaX500Name?,
 
         @Column(name = "public_key_hash", length = 64)
         val publicKeyHash: String,
@@ -66,16 +68,18 @@ data class CertificateSigningRequestEntity(
         @JoinColumn(name = "private_network", foreignKey = ForeignKey(name = "FK_CSR_PN"))
         val privateNetwork: PrivateNetworkEntity? = null
 ) {
-    fun toCertificateSigningRequest() = CertificateSigningRequest(
-            requestId = requestId,
-            legalName = legalName,
-            publicKeyHash = SecureHash.parse(publicKeyHash),
-            status = status,
-            request = request(),
-            remark = remark,
-            modifiedBy = modifiedBy,
-            certData = certificateData?.toCertificateData()
-    )
+    fun toCertificateSigningRequest(): CertificateSigningRequest {
+        return CertificateSigningRequest(
+                requestId = requestId,
+                legalName = legalName,
+                publicKeyHash = SecureHash.parse(publicKeyHash),
+                status = status,
+                request = request(),
+                remark = remark,
+                modifiedBy = modifiedBy,
+                certData = certificateData?.toCertificateData()
+        )
+    }
 
     private fun request() = PKCS10CertificationRequest(requestBytes)
 }
@@ -108,8 +112,8 @@ data class CertificateDataEntity(
         )
     }
 
-    fun legalName(): String {
-        return (toCertificatePath().certificates.first() as X509Certificate).subjectX500Principal.name
+    val legalName: CordaX500Name get() {
+        return CordaX500Name.build(toCertificatePath().x509Certificates[0].subjectX500Principal)
     }
 
     fun copy(certificateStatus: CertificateStatus = this.certificateStatus,

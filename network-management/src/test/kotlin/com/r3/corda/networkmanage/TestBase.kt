@@ -17,6 +17,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.createDevNodeCaCertPath
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
@@ -35,7 +36,7 @@ abstract class TestBase {
     protected fun certificateSigningRequest(
             requestId: String = SecureHash.randomSHA256().toString(),
             status: RequestStatus = RequestStatus.NEW,
-            legalName: String = "TestLegalName",
+            legalName: CordaX500Name = ALICE_NAME,
             publicKeyHash: SecureHash = SecureHash.randomSHA256(),
             remark: String = "Test remark",
             request: PKCS10CertificationRequest = mock(),

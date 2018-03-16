@@ -42,9 +42,7 @@
             <column name="request_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="legal_name" type="NVARCHAR(256)">
-                <constraints nullable="false"/>
-            </column>
+            <column name="legal_name" type="NVARCHAR(256)"/>
             <column name="modified_at" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>

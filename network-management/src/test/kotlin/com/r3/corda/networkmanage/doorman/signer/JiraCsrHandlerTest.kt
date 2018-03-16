@@ -20,6 +20,8 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -89,7 +91,7 @@ class JiraCsrHandlerTest : TestBase() {
     fun `create tickets`() {
         val csr = certificateSigningRequest(
                 requestId = requestId,
-                legalName = "name",
+                legalName = ALICE_NAME,
                 status = RequestStatus.NEW,
                 request = pkcS10CertificationRequest)
         whenever(certificationRequestStorage.getRequests(RequestStatus.NEW)).thenReturn(listOf(csr))
@@ -105,8 +107,8 @@ class JiraCsrHandlerTest : TestBase() {
     fun `sync tickets status`() {
         val id1 = SecureHash.randomSHA256().toString()
         val id2 = SecureHash.randomSHA256().toString()
-        val csr1 = CertificateSigningRequest(id1, "name1", SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, "Test", null)
-        val csr2 = CertificateSigningRequest(id2, "name2", SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, "Test", null)
+        val csr1 = CertificateSigningRequest(id1, ALICE_NAME, SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, "Test", null)
+        val csr2 = CertificateSigningRequest(id2, BOB_NAME, SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, "Test", null)
 
         val requests = mutableMapOf(id1 to csr1, id2 to csr2)
 
