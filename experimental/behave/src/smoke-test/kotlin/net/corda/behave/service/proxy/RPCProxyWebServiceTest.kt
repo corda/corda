@@ -9,6 +9,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashExitFlow
@@ -87,7 +88,7 @@ class RPCProxyWebServiceTest {
     @Test
     fun startFlowCashIssuePartyB() {
         val notary = rpcProxyClientB.notaryIdentities()[0]
-        val response = rpcProxyClientB.startFlow(::CashIssueFlow, POUNDS(5000), OpaqueBytes.of(1), notary)
+        val response = rpcProxyClientB.startFlow(::CashIssueFlow, DOLLARS(10000), OpaqueBytes.of(1), notary)
         val result = response.returnValue.getOrThrow().stx
         println(result)
     }
@@ -102,8 +103,8 @@ class RPCProxyWebServiceTest {
 
     @Test
     fun startFlowCashPaymentToPartyA() {
-        val recipient = rpcProxyClient.partiesFromName("PartyA", false).first()
-        val response = rpcProxyClient.startFlow(::CashPaymentFlow, POUNDS(200), recipient)
+        val recipient = rpcProxyClientB.partiesFromName("PartyA", false).first()
+        val response = rpcProxyClientB.startFlow(::CashPaymentFlow, DOLLARS(500), recipient)
         val result = response.returnValue.getOrThrow().stx
         println(result)
     }

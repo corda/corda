@@ -27,7 +27,7 @@ echo "*************************************************************"
 cp -v $(ls node/capsule/build/libs/corda-*.jar | tail -n1) ${STAGING_DIR}/corda.jar
 
 # Copy Corda libraries into apps
-cp -v $(ls finance/build/libs/corda-finance-*.jar | tail -n1) ${STAGING_DIR}/apps/corda-finance.jar
+cp -v $(ls finance/build/libs/corda-finance-*.jar | tail -n1) ${STAGING_DIR}/apps
 
 # build and distribute Doorman/NMS 
 ./gradlew network-management:capsule:buildDoormanJAR
