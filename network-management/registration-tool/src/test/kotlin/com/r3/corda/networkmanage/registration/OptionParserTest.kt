@@ -1,8 +1,8 @@
 package com.r3.corda.networkmanage.registration
 
 import joptsimple.OptionException
-import junit.framework.Assert.assertEquals
 import net.corda.core.internal.div
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Before
 import org.junit.Rule
@@ -27,17 +27,21 @@ class OptionParserTest {
 
     @Test
     fun `parse registration args correctly`() {
-        requireNotNull(parseOptions("--config-file", "${tempDir / "test.file"}") as? ToolOption.RegistrationOption).apply {
-            assertEquals(tempDir / "test.file", configFilePath)
-        }
+        val options = parseOptions("--config-file", "${tempDir / "test.file"}") as ToolOption.RegistrationOption
+        assertThat(options.configFile).isEqualTo(tempDir / "test.file")
     }
 
     @Test
     fun `registration args should be unavailable in key copy mode`() {
-        assertThatThrownBy {
-            val keyCopyArgs = arrayOf("--importkeystore", "--srckeystore", "${tempDir / "source.jks"}", "--srcstorepass", "password1", "--destkeystore", "${tempDir / "target.jks"}", "--deststorepass", "password2", "-srcalias", "testalias")
-            parseOptions(*keyCopyArgs, "--config-file", "test.file")
-        }.isInstanceOf(OptionException::class.java)
+        val keyCopyArgs = arrayOf(
+                "--importkeystore",
+                "--srckeystore", "${tempDir / "source.jks"}",
+                "--srcstorepass", "password1",
+                "--destkeystore", "${tempDir / "target.jks"}",
+                "--deststorepass", "password2",
+                "--srcalias", "testalias")
+        assertThatThrownBy { parseOptions(*keyCopyArgs, "--config-file", "test.file") }
+                .isInstanceOf(OptionException::class.java)
                 .hasMessageContaining("Option(s) [config-file] are unavailable given other options on the command line")
     }
 
@@ -50,14 +54,39 @@ class OptionParserTest {
     }
 
     @Test
-    fun `parse key copy option correctly`() {
-        val keyCopyArgs = arrayOf("--importkeystore", "--srckeystore", "${tempDir / "source.jks"}", "--srcstorepass", "password1", "--destkeystore", "${tempDir / "target.jks"}", "--deststorepass", "password2", "-srcalias", "testalias")
-        requireNotNull(parseOptions(*keyCopyArgs) as? ToolOption.KeyCopierOption).apply {
-            assertEquals(tempDir / "source.jks", srcPath)
-            assertEquals(tempDir / "target.jks", destPath)
-            assertEquals("password1", srcPass)
-            assertEquals("password2", destPass)
-            assertEquals("testalias", srcAlias)
-        }
+    fun `all import keystore options`() {
+        val keyCopyArgs = arrayOf(
+                "--importkeystore",
+                "--srckeystore", "${tempDir / "source.jks"}",
+                "--srcstorepass", "password1",
+                "--destkeystore", "${tempDir / "target.jks"}",
+                "--deststorepass", "password2",
+                "--srcalias", "testalias",
+                "--destalias", "testalias2")
+        assertThat(parseOptions(*keyCopyArgs)).isEqualTo(ToolOption.KeyCopierOption(
+                sourceFile = tempDir / "source.jks",
+                desinationFile = tempDir / "target.jks",
+                sourcePassword = "password1",
+                destinationPassword = "password2",
+                sourceAlias = "testalias",
+                destinationAlias = "testalias2"
+        ))
+    }
+
+    @Test
+    fun `minimum import keystore options`() {
+        val keyCopyArgs = arrayOf(
+                "--importkeystore",
+                "--srckeystore", "${tempDir / "source.jks"}",
+                "--destkeystore", "${tempDir / "target.jks"}",
+                "--srcalias", "testalias")
+        assertThat(parseOptions(*keyCopyArgs)).isEqualTo(ToolOption.KeyCopierOption(
+                sourceFile = tempDir / "source.jks",
+                desinationFile = tempDir / "target.jks",
+                sourcePassword = null,
+                destinationPassword = null,
+                sourceAlias = "testalias",
+                destinationAlias = null
+        ))
     }
 }

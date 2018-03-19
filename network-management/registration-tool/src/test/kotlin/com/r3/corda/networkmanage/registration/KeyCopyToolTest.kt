@@ -19,23 +19,29 @@ class KeyCopyToolTest {
 
     @Test
     fun `key copy correctly`() {
-        val keyCopyOption = ToolOption.KeyCopierOption(tempDir / "srcKeystore.jks", tempDir / "destKeystore.jks", "srctestpass", "desttestpass", "TestKeyAlias", null)
+        val keyCopyOption = ToolOption.KeyCopierOption(
+                sourceFile = tempDir / "srcKeystore.jks",
+                desinationFile = tempDir / "destKeystore.jks",
+                sourcePassword = "srctestpass",
+                destinationPassword = "desttestpass",
+                sourceAlias = "TestKeyAlias",
+                destinationAlias = null)
 
         // Prepare source and destination keystores
         val keyPair = Crypto.generateKeyPair()
         val cert = X509Utilities.createSelfSignedCACertificate(X500Principal("O=Test"), keyPair)
 
-        X509KeyStore.fromFile(keyCopyOption.srcPath, keyCopyOption.srcPass, createNew = true).update {
-            setPrivateKey(keyCopyOption.srcAlias, keyPair.private, listOf(cert))
+        X509KeyStore.fromFile(keyCopyOption.sourceFile, keyCopyOption.sourcePassword!!, createNew = true).update {
+            setPrivateKey(keyCopyOption.sourceAlias, keyPair.private, listOf(cert))
         }
-        X509KeyStore.fromFile(keyCopyOption.destPath, keyCopyOption.destPass, createNew = true)
+        X509KeyStore.fromFile(keyCopyOption.desinationFile, keyCopyOption.destinationPassword!!, createNew = true)
 
         // Copy private key from src keystore to dest keystore using the tool
         keyCopyOption.copyKeystore()
 
         // Verify key copied correctly
-        val destKeystore = X509KeyStore.fromFile(keyCopyOption.destPath, keyCopyOption.destPass)
-        assertEquals(keyPair.private, destKeystore.getPrivateKey(keyCopyOption.srcAlias, keyCopyOption.destPass))
-        assertEquals(cert, destKeystore.getCertificate(keyCopyOption.srcAlias))
+        val destKeystore = X509KeyStore.fromFile(keyCopyOption.desinationFile, keyCopyOption.destinationPassword!!)
+        assertEquals(keyPair.private, destKeystore.getPrivateKey(keyCopyOption.sourceAlias, keyCopyOption.destinationPassword!!))
+        assertEquals(cert, destKeystore.getCertificate(keyCopyOption.sourceAlias))
     }
 }
