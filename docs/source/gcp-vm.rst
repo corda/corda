@@ -23,6 +23,8 @@ STEP 1: Create a GCP Project
 In the project drop down click on the plus icon to create a new
 project to house your Corda resources.
 
+.. image:: resources/consolegcp.png
+
 Enter a project name and click Create.
 
 STEP 2: Launch the VM
