@@ -63,9 +63,9 @@ Now run the following to configure the firewall to allow Corda traffic
 
 .. code:: bash
 
-    gcloud compute firewall-rules create myrpc --allow tcp:10002
-    gcloud compute firewall-rules create myrpc --allow tcp:10003
-    gcloud compute firewall-rules create myrpc --allow tcp:8080
+    gcloud compute firewall-rules create nodetonode --allow tcp:10002
+    gcloud compute firewall-rules create nodetorpc --allow tcp:10003
+    gcloud compute firewall-rules create webserver --allow tcp:8080
 
 
 Next we promote the ephemeral IP address associated with this
