@@ -1,4 +1,4 @@
-package net.corda.behave.service
+package net.corda.behave.service.container
 
 import net.corda.behave.network.Network
 import net.corda.behave.node.Distribution

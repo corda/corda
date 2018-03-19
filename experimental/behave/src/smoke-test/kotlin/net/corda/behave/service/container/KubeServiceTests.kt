@@ -1,4 +1,4 @@
-package net.corda.behave.containers
+package net.corda.behave.service.container
 
 import net.corda.behave.service.containers.KubeContainerService
 import org.assertj.core.api.Assertions.assertThat

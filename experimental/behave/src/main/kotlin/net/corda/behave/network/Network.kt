@@ -72,7 +72,7 @@ class Network private constructor(
                 databaseType: DatabaseType = DatabaseType.H2,
                 notaryType: NotaryType = NotaryType.NONE,
                 issuableCurrencies: List<String> = emptyList(),
-                compatibilityZoneURL: String = "http://localhost:1300",
+                compatibilityZoneURL: String? = null,
                 withRPCProxy: Boolean = false
         ): Builder {
             val czURL = if (distribution.type == Distribution.Type.R3_CORDA) compatibilityZoneURL else null
@@ -91,7 +91,7 @@ class Network private constructor(
             nodeBuilder
                     .withDirectory(directory)
                     .withTimeout(timeout)
-                    .withNetworkMap("\"http://localhost:1300\"")
+//                    .withNetworkMap("\"http://localhost:1300\"")
             val node = nodeBuilder.build()
             nodes[node.config.name] = node
             return this
