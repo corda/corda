@@ -173,6 +173,7 @@ class RPCClientProxyHandler(
     private val deduplicationSequenceNumber = AtomicLong(0)
 
     private val lock = ReentrantReadWriteLock()
+    @Volatile
     private var sendingEnabled = true
 
     /**
