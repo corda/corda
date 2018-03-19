@@ -91,7 +91,7 @@ the --addresses flag and the region:
     gcloud compute addresses create corda-node --addresses 35.204.53.61 --region europe-west4
 
 
-STEP 4: Download and set upyour Corda node
+STEP 4: Download and set up your Corda node
 
 Now your environment is configured you can switch to the Explore
 application and click on the copy to clipboard button to get your
