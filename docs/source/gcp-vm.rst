@@ -18,7 +18,7 @@ Deploy Corda node
 Browse to `<https://console.cloud.google.com>` and log in with your
 Google credentials.
 
-STEP 1: Create a GCP Project
+**STEP 1: Create a GCP Project**
 
 In the project drop down click on the plus icon to create a new
 project to house your Corda resources.
@@ -34,7 +34,7 @@ project to house your Corda resources.
 
 Enter a project name and click Create.
 
-STEP 2: Launch the VM
+**STEP 2: Launch the VM**
 
 In the left hand side nav click on Compute Engine.
 
@@ -55,8 +55,7 @@ Dont worry about firewall settings as we will configure those later.
 Click Create and wait a few sections for your instance to provision
 and start running.
 
-
-STEP 3: Connect to your VM and set up the environment
+**STEP 3: Connect to your VM and set up the environment**
 
 Once your instance is running click on the SSH button to launch a
 cloud SSH terminal in a new window. 
@@ -100,8 +99,7 @@ the --addresses flag and the region:
 
     gcloud compute addresses create corda-node --addresses 35.204.53.61 --region europe-west4
 
-
-STEP 4: Download and set up your Corda node
+**STEP 4: Download and set up your Corda node**
 
 Now your environment is configured you can switch to the Explore
 application and click on the copy to clipboard button to get your
