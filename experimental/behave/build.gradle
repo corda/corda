@@ -39,8 +39,15 @@ sourceSets {
         }
         resources.srcDir file('src/scenario/resources')
     }
+    smokeTest {
+        kotlin {
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+            srcDir file('src/smoke-test/kotlin')
+        }
+    }
     rpcProxy {
-        java {
+        kotlin {
             srcDir "src/main/kotlin"
         }
         resources {
@@ -53,14 +60,15 @@ configurations {
     scenarioCompile.extendsFrom testCompile
     scenarioRuntime.extendsFrom testRuntime
 
-    rpcProxyRuntime.extendsFrom runTime
+    smokeTestCompile.extendsFrom compile
+    smokeTestRuntime.extendsFrom runtime
 }
 
 dependencies {
 
     // Library
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     compile("com.github.corda.crash:crash.shell:$crash_version") {
@@ -107,15 +115,19 @@ dependencies {
     scenarioCompile "info.cukes:cucumber-junit:$cucumber_version"
     scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
 
+    // Smoke tests
+    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
+    smokeTestCompile "junit:junit:$junit_version"
+
     // Jetty http server
-    rpcProxyRuntime "org.eclipse.jetty:jetty-servlet:$jetty_version"
-    rpcProxyRuntime "org.eclipse.jetty:jetty-webapp:$jetty_version"
-    rpcProxyRuntime "javax.servlet:javax.servlet-api:3.1.0"
+    rpcProxyCompile "org.eclipse.jetty:jetty-servlet:$jetty_version"
+    rpcProxyCompile "org.eclipse.jetty:jetty-webapp:$jetty_version"
+    rpcProxyCompile "javax.servlet:javax.servlet-api:3.1.0"
 
     // Jersey for JAX-RS implementation for use in Jetty
-    rpcProxyRuntime "org.glassfish.jersey.core:jersey-server:$jersey_version"
-    rpcProxyRuntime "org.glassfish.jersey.containers:jersey-container-servlet-core:$jersey_version"
-    rpcProxyRuntime "org.glassfish.jersey.containers:jersey-container-jetty-http:$jersey_version"
+    rpcProxyCompile "org.glassfish.jersey.core:jersey-server:$jersey_version"
+    rpcProxyCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:$jersey_version"
+    rpcProxyCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:$jersey_version"
 
 }
 
@@ -144,6 +156,11 @@ task scenarios(type: Test) {
         systemProperty "cucumber.options", "--tags $tags"
         logger.warn("Only running tests tagged with: $tags ...")
     }
+}
+
+task smokeTest(type: Test) {
+    testClassesDirs = sourceSets.smokeTest.output.classesDirs
+    classpath = sourceSets.smokeTest.runtimeClasspath
 }
 
 task rpcProxyJar(type: Jar) {

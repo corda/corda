@@ -62,7 +62,7 @@ class RPCProxyServer(hostAndPort: NetworkHostAndPort,
         }
     }
 
-    val hostAndPort: NetworkHostAndPort
+    private val hostAndPort: NetworkHostAndPort
         get() = server.connectors.mapNotNull { it as? ServerConnector }
                 .map { NetworkHostAndPort(it.host, it.localPort) }
                 .first()
