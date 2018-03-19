@@ -81,7 +81,7 @@ Find your external IP:
 
 .. code:: bash
 
-    gcloud compute regions list
+    gcloud compute addresses list
 
 Then run this command with the ephemeral IP address as the argument to
 the --addresses flag and the region:
@@ -94,7 +94,7 @@ the --addresses flag and the region:
 STEP 4: Download and set upyour Corda node
 
 Now your environment is configured you can switch to the Explore
-application and clock on the copy to clipboard button to get your
+application and click on the copy to clipboard button to get your
 dedicated download bundle.
 
 In your cloud VM terminal run the following command to download the
