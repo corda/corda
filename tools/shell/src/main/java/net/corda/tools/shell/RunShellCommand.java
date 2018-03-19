@@ -11,8 +11,9 @@ import org.crsh.cli.Usage;
 import org.crsh.command.InvocationContext;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import static java.util.Comparator.comparing;
 
 // Note that this class cannot be converted to Kotlin because CRaSH does not understand InvocationContext<Map<?, ?>> which
 // is the closest you can get in Kotlin to raw types.
@@ -44,7 +45,7 @@ public class RunShellCommand extends InteractiveShellCommand {
         // Each element we emit is a map of column -> content.
         Set<Map.Entry<String, String>> entries = parser.getAvailableCommands().entrySet();
         ArrayList<Map.Entry<String, String>> entryList = new ArrayList<>(entries);
-        entryList.sort(Comparator.comparing(Map.Entry::getKey));
+        entryList.sort(comparing(Map.Entry::getKey));
         for (Map.Entry<String, String> entry : entryList) {
             // Skip these entries as they aren't really interesting for the user.
             if (entry.getKey().equals("startFlowDynamic")) continue;
