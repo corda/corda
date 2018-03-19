@@ -42,9 +42,15 @@ class ScenarioState {
             // Network is already running
             return
         }
-        val networkBuilder = Network.new()
+
+        // Corda Network will be configured as R3 Corda (with Doorman/NMS) if any Node uses an R3.Corda distribution
+        val r3CordaNode = nodes.find { it.networkType == Distribution.Type.R3_CORDA }
+        val networkType = if (r3CordaNode != null) Distribution.Type.R3_CORDA else Distribution.Type.CORDA
+        Network.log.info("Corda network type: $networkType")
+
+        val networkBuilder = Network.new(networkType)
         for (node in nodes) {
-            networkBuilder.addNode(node)
+            networkBuilder.addNode(node.withNetworkType(networkType))
         }
         network = networkBuilder.generate()
         network?.start()
