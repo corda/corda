@@ -12,7 +12,6 @@ import net.corda.core.internal.copyTo
 import org.crsh.command.InvocationContext
 import rx.Observable
 import java.io.BufferedInputStream
-import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -66,20 +65,15 @@ object InputStreamSerializer : JsonSerializer<InputStream>() {
     var invokeContext: InvocationContext<*>? = null
 
     override fun serialize(value: InputStream, gen: JsonGenerator, serializers: SerializerProvider) {
-        try {
+
+        value.use {
             val toPath = invokeContext!!.readLine("Path to save stream to (enter to ignore): ", true)
             if (toPath == null || toPath.isBlank()) {
                 gen.writeString("<not saved>")
             } else {
                 val path = Paths.get(toPath)
-                value.copyTo(path)
+                it.copyTo(path)
                 gen.writeString("<saved to: ${path.toAbsolutePath()}>")
-            }
-        } finally {
-            try {
-                value.close()
-            } catch (ignored: IOException) {
-                // Ignore.
             }
         }
     }
