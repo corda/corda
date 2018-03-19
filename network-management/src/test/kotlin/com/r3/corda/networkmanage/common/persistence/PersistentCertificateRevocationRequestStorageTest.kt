@@ -96,7 +96,7 @@ class PersistentCertificateRevocationRequestStorageTest : TestBase() {
     }
 
     @Test
-    fun `Certificate revocation request is not persisted if a valid certificate cannot be found`() {
+    fun `revocation request fails if a valid certificate cannot be found`() {
         // given
 
         // then

@@ -142,7 +142,7 @@ open class MockServices private constructor(
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties(initialIdentity.name.organisation)
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
-            val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(initialIdentity.name.organisation), identityService, schemaService, cordappLoader.appClassLoader)
+            val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(initialIdentity.name.organisation), identityService, schemaService)
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
                     override val vaultService: VaultService = makeVaultService(database.hibernateConfig, schemaService)
