@@ -2,10 +2,13 @@ package net.corda.nodeapi.internal.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.security.cert.X509Certificate
 import java.time.Instant
@@ -52,4 +55,11 @@ fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCert: X509Certifi
     require(CertRole.extract(sig.by) == CertRole.NETWORK_MAP) { "Incorrect cert role: ${CertRole.extract(sig.by)}" }
     X509Utilities.validateCertificateChain(rootCert, sig.by, rootCert)
     return verified()
+}
+
+class NetworkMapAndSigned private constructor(val networkMap: NetworkMap, val signed: SignedNetworkMap) {
+    constructor(networkMap: NetworkMap, signer: (SerializedBytes<NetworkMap>) -> DigitalSignatureWithCert) : this(networkMap, networkMap.signWithCert(signer))
+    constructor(signed: SignedNetworkMap) : this(signed.verified(), signed)
+    operator fun component1(): NetworkMap = networkMap
+    operator fun component2(): SignedNetworkMap = signed
 }
