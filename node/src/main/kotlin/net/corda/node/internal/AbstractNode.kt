@@ -19,7 +19,16 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sign
-import net.corda.core.flows.*
+import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.NotaryChangeFlow
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.StartableByService
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -28,9 +37,24 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.*
-import net.corda.core.node.*
-import net.corda.core.node.services.*
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.FlowHandleImpl
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.FlowProgressHandleImpl
+import net.corda.core.messaging.RPCOps
+import net.corda.core.node.AppServiceHub
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.CordaService
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.NotaryService
+import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -50,21 +74,61 @@ import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
-import net.corda.node.services.api.*
-import net.corda.node.services.config.*
+import net.corda.node.services.api.CheckpointStorage
+import net.corda.node.services.api.DummyAuditService
+import net.corda.node.services.api.FlowStarter
+import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.api.MonitoringService
+import net.corda.node.services.api.NetworkMapCacheBaseInternal
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.api.NodePropertiesStore
+import net.corda.node.services.api.SchedulerService
+import net.corda.node.services.api.SchemaService
+import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.StartedNodeServices
+import net.corda.node.services.api.VaultServiceInternal
+import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.config.BFTSMaRtConfiguration
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.shell.toShellConfig
+import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.*
-import net.corda.node.services.persistence.*
+import net.corda.node.services.network.NetworkMapCacheImpl
+import net.corda.node.services.network.NetworkMapClient
+import net.corda.node.services.network.NetworkMapUpdater
+import net.corda.node.services.network.NodeInfoWatcher
+import net.corda.node.services.network.PersistentNetworkMapCache
+import net.corda.node.services.persistence.AbstractPartyDescriptor
+import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
+import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.persistence.DBTransactionMappingStorage
+import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.node.services.persistence.NodePropertiesPersistentStore
+import net.corda.node.services.persistence.RunOnceService
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.statemachine.*
-import net.corda.node.services.transactions.*
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
+import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
+import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.statemachine.appName
+import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
+import net.corda.node.services.transactions.BFTNonValidatingNotaryService
+import net.corda.node.services.transactions.BFTSMaRt
+import net.corda.node.services.transactions.MySQLNonValidatingNotaryService
+import net.corda.node.services.transactions.MySQLValidatingNotaryService
+import net.corda.node.services.transactions.RaftNonValidatingNotaryService
+import net.corda.node.services.transactions.RaftUniquenessProvider
+import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
@@ -74,10 +138,11 @@ import net.corda.node.utilities.NodeBuildProperties
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.persistence.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.SchemaMigration
+import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.nodeapi.internal.storeLegalIdentity
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -99,6 +164,7 @@ import java.time.Clock
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 import kotlin.collections.set
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
@@ -159,6 +225,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected lateinit var networkMapUpdater: NetworkMapUpdater
     lateinit var securityManager: RPCSecurityManager
 
+    private val shutdownExecutor = Executors.newSingleThreadExecutor()
+
     /** Completes once the node has successfully registered with the network map service
      * or has loaded network map data from local database */
     val nodeReadyFuture: CordaFuture<Unit> get() = _nodeReadyFuture
@@ -173,7 +241,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager): CordaRPCOps {
-        return SecureCordaRPCOps(services, smm, database, flowStarter)
+
+        return SecureCordaRPCOps(services, smm, database, flowStarter, { shutdownExecutor.submit { stop() } })
     }
 
     private fun initCertificate() {
@@ -657,7 +726,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
         val props = configuration.dataSourceProperties
         if (props.isEmpty()) throw DatabaseConfigurationException("There must be a database configured.")
-        val database = configureDatabase(props, configuration.database, identityService, schemaService, cordappLoader.appClassLoader)
+        val database = configureDatabase(props, configuration.database, identityService, schemaService)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
         runOnStop += database::close
@@ -735,6 +804,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             toRun()
         }
         runOnStop.clear()
+        shutdownExecutor.shutdown()
         _started = null
     }
 
@@ -897,8 +967,7 @@ internal class NetworkMapCacheEmptyException : Exception()
 fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       identityService: IdentityService,
-                      schemaService: SchemaService = NodeSchemaService(),
-                      cordappClassLoader: ClassLoader? = null): CordaPersistence {
+                      schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
@@ -911,7 +980,6 @@ fun configureDatabase(hikariProperties: Properties,
             schemaService.schemaOptions.keys,
             dataSource,
             !isH2Database(jdbcUrl),
-            databaseConfig,
-            cordappClassLoader ?: Thread.currentThread().contextClassLoader).nodeStartup()
-    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters, cordappClassLoader)
+            databaseConfig).nodeStartup()
+    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
 }

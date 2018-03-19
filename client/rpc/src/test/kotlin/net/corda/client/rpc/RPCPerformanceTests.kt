@@ -11,10 +11,9 @@
 package net.corda.client.rpc
 
 import com.google.common.base.Stopwatch
-import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.RPCOps
-import net.corda.core.utilities.days
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.messaging.RPCServerConfiguration
@@ -54,7 +53,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
     }
 
     private fun RPCDriverDSL.testProxy(
-            clientConfiguration: RPCClientConfiguration,
+            clientConfiguration: CordaRPCClientConfigurationImpl,
             serverConfiguration: RPCServerConfiguration
     ): TestProxy<TestOps> {
         return testProxy<TestOps>(
@@ -67,7 +66,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
     private fun warmup() {
         rpcDriver {
             val proxy = testProxy(
-                    RPCClientConfiguration.default,
+                    CordaRPCClientConfigurationImpl.default,
                     RPCServerConfiguration.default
             )
             val executor = Executors.newFixedThreadPool(4)
@@ -97,7 +96,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
         measure(inputOutputSizes, (1..5)) { inputOutputSize, _ ->
             rpcDriver {
                 val proxy = testProxy(
-                        RPCClientConfiguration.default.copy(
+                        CordaRPCClientConfigurationImpl.default.copy(
                                 observationExecutorPoolSize = 2
                         ),
                         RPCServerConfiguration.default.copy(
@@ -136,7 +135,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
         rpcDriver {
             val metricRegistry = startReporter(shutdownManager)
             val proxy = testProxy(
-                    RPCClientConfiguration.default.copy(
+                    CordaRPCClientConfigurationImpl.default.copy(
                             reapInterval = 1.seconds
                     ),
                     RPCServerConfiguration.default.copy(
@@ -169,7 +168,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
             // TODO this hangs with more parallelism
             rpcDriver {
                 val proxy = testProxy(
-                        RPCClientConfiguration.default,
+                        CordaRPCClientConfigurationImpl.default,
                         RPCServerConfiguration.default
                 )
                 val numberOfMessages = 1000

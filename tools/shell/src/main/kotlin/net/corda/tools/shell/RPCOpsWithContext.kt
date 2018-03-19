@@ -26,6 +26,5 @@ fun makeRPCOps(getCordaRPCOps: (username: String, credential: String) -> CordaRP
             // Unpack exception.
             throw e.targetException
         }
-    }
-    ) as CordaRPCOps
+    }) as CordaRPCOps
 }

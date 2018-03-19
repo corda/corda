@@ -7,6 +7,8 @@ from previous releases. Please refer to :doc:`upgrade-notes` for detailed instru
 UNRELEASED
 ----------
 
+* Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
+
 * Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
 
 * The web server now has its own ``web-server.conf`` file, separate from ``node.conf``.

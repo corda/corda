@@ -45,7 +45,7 @@ import javax.ws.rs.core.Response.status
 
 class NetworkMapServer(private val cacheTimeout: Duration,
                        hostAndPort: NetworkHostAndPort,
-                       private val networkMapCa: CertificateAndKeyPair = createDevNetworkMapCa(),
+                       private val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa(),
                        private val myHostNameValue: String = "test.host.name",
                        vararg additionalServices: Any) : Closeable {
     companion object {
@@ -118,9 +118,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
     inner class InMemoryNetworkMapService {
         private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
         val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()
-        private val signedNetParams by lazy {
-            networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
-        }
+        private val signedNetParams by lazy { networkMapCertAndKeyPair.sign(networkParameters) }
 
         @POST
         @Path("publish")
@@ -153,7 +151,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getNetworkMap(): Response {
             val networkMap = NetworkMap(nodeInfoMap.keys.toList(), signedNetParams.raw.hash, parametersUpdate)
-            val signedNetworkMap = networkMap.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
+            val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
             return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${cacheTimeout.seconds}").build()
         }
 
@@ -182,8 +180,10 @@ class NetworkMapServer(private val cacheTimeout: Duration,
             val requestedParameters = if (requestedHash == signedNetParams.raw.hash) {
                 signedNetParams
             } else if (requestedHash == nextNetworkParameters?.serialize()?.hash) {
-                nextNetworkParameters?.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
-            } else null
+                nextNetworkParameters?.let { networkMapCertAndKeyPair.sign(it) }
+            } else {
+                null
+            }
             requireNotNull(requestedParameters)
             return Response.ok(requestedParameters!!.serialize().bytes).build()
         }

@@ -55,7 +55,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
     }
 
     @Test
-    fun `saveNetworkParameters and then saveNewActiveNetworkMap creates the active network map`() {
+    fun `create active network map`() {
         // given
         // Create node info.
         val (signedNodeInfo) = createValidSignedNodeInfo("Test", requestStorage)
