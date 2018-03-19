@@ -1,13 +1,16 @@
 package net.corda.tools.shell
 
 import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.google.common.io.Closeables
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
+import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.CordaException
@@ -18,13 +21,9 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -50,12 +49,13 @@ import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.Subscriber
-import java.io.*
+import java.io.FileDescriptor
+import java.io.FileInputStream
+import java.io.InputStream
+import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.UndeclaredThrowableException
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
@@ -73,69 +73,30 @@ import kotlin.concurrent.thread
 // TODO: Resurrect or reimplement the mail plugin.
 // TODO: Make it notice new shell commands added after the node started.
 
-data class SSHDConfiguration(val port: Int) {
-    companion object {
-        internal const val INVALID_PORT_FORMAT = "Invalid port: %s"
-        private const val MISSING_PORT_FORMAT = "Missing port: %s"
-
-        /**
-         * Parses a string of the form port into a [SSHDConfiguration].
-         * @throws IllegalArgumentException if the port is missing or the string is garbage.
-         */
-        @JvmStatic
-        fun parse(str: String): SSHDConfiguration {
-            require(!str.isNullOrBlank()) { SSHDConfiguration.MISSING_PORT_FORMAT.format(str) }
-            val port = try {
-                str.toInt()
-            } catch (ex: NumberFormatException) {
-                throw IllegalArgumentException("Port syntax is invalid, expected port")
-            }
-            return SSHDConfiguration(port)
-        }
-    }
-
-    init {
-        require(port in (0..0xffff)) { INVALID_PORT_FORMAT.format(port) }
-    }
-}
-
-data class ShellSslOptions(override val sslKeystore: Path, override val keyStorePassword: String, override val trustStoreFile:Path, override val trustStorePassword: String) : SSLConfiguration {
-    override val certificatesDirectory: Path get() = Paths.get("")
-}
-
-data class ShellConfiguration(
-        val commandsDirectory: Path,
-        val cordappsDirectory: Path? = null,
-        var user: String = "",
-        var password: String = "",
-        val hostAndPort: NetworkHostAndPort,
-        val ssl: ShellSslOptions? = null,
-        val sshdPort: Int? = null,
-        val sshHostKeyDirectory: Path? = null,
-        val noLocalShell: Boolean = false) {
-    companion object {
-        const val SSH_PORT = 2222
-        const val COMMANDS_DIR = "shell-commands"
-        const val CORDAPPS_DIR = "cordapps"
-        const val SSHD_HOSTKEY_DIR = "ssh"
-    }
-}
-
 object InteractiveShell {
     private val log = LoggerFactory.getLogger(javaClass)
     private lateinit var rpcOps: (username: String, credentials: String) -> CordaRPCOps
-    private lateinit var connection: CordaRPCOps
+    private lateinit var ops: CordaRPCOps
+    private lateinit var connection: CordaRPCConnection
     private var shell: Shell? = null
     private var classLoader: ClassLoader? = null
+    private lateinit var shellConfiguration: ShellConfiguration
+    private var onExit: () -> Unit = {}
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
      */
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
+        shellConfiguration = configuration
         rpcOps = { username: String, credentials: String ->
             val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
-                    sslConfiguration = configuration.ssl, classLoader = classLoader)
-            client.start(username, credentials).proxy
+                    configuration = object : CordaRPCClientConfiguration {
+                        override val maxReconnectAttempts = 1
+                    },
+                    sslConfiguration = configuration.ssl,
+                    classLoader = classLoader)
+            this.connection = client.start(username, credentials)
+            connection.proxy
         }
         InteractiveShell.classLoader = classLoader
         val runSshDaemon = configuration.sshdPort != null
@@ -160,6 +121,7 @@ object InteractiveShell {
     }
 
     fun runLocalShell(onExit: () -> Unit = {}) {
+        this.onExit = onExit
         val terminal = TerminalFactory.create()
         val consoleReader = ConsoleReader("Corda", FileInputStream(FileDescriptor.`in`), System.out, terminal)
         val jlineProcessor = JLineProcessor(terminal.isAnsiSupported, shell, consoleReader, System.out)
@@ -205,18 +167,18 @@ object InteractiveShell {
                     return super.getPlugins().filterNot { it is JavaLanguage } + CordaAuthenticationPlugin(rpcOps)
                 }
             }
-            val attributes = emptyMap<String,Any>()
+            val attributes = emptyMap<String, Any>()
             val context = PluginContext(discovery, attributes, commandsFS, confFS, classLoader)
             context.refresh()
             this.config = config
             start(context)
-            connection = makeRPCOps(rpcOps, localUserName, localUserPassword)
-            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, connection, StdoutANSIProgressRenderer))
+            ops = makeRPCOps(rpcOps, localUserName, localUserPassword)
+            return context.getPlugin(ShellFactory::class.java).create(null, CordaSSHAuthInfo(false, ops, StdoutANSIProgressRenderer))
         }
     }
 
     fun nodeInfo() = try {
-        connection.nodeInfo()
+        ops.nodeInfo()
     } catch (e: UndeclaredThrowableException) {
         throw e.cause ?: e
     }
@@ -411,14 +373,16 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper): Any? {
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper, isSsh: Boolean = false): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
-        if (cmd.toLowerCase().startsWith("startflow")) {
+        if (cmd.startsWith("startflow", ignoreCase = true)) {
             // The flow command provides better support and startFlow requires special handling anyway due to
             // the generic startFlow RPC interface which offers no type information with which to parse the
             // string form of the command.
             out.println("Please use the 'flow' command to interact with flows rather than the 'run' command.", Color.yellow)
             return null
+        } else if (cmd.substringAfter(" ").trim().equals("gracefulShutdown", ignoreCase = true)) {
+            return InteractiveShell.gracefulShutdown(out, cordaRPCOps, isSsh)
         }
 
         var result: Any? = null
@@ -455,6 +419,68 @@ object InteractiveShell {
             InputStreamDeserializer.closeAll()
         }
         return result
+    }
+
+
+    @JvmStatic
+    fun gracefulShutdown(userSessionOut: RenderPrintWriter, cordaRPCOps: CordaRPCOps, isSsh: Boolean = false) {
+
+        fun display(statements: RenderPrintWriter.() -> Unit) {
+            statements.invoke(userSessionOut)
+            userSessionOut.flush()
+        }
+
+        var isShuttingDown = false
+        try {
+            display {
+                println("Orchestrating a clean shutdown...")
+                println("...enabling draining mode")
+            }
+            cordaRPCOps.setFlowsDrainingModeEnabled(true)
+            display {
+                println("...waiting for in-flight flows to be completed")
+            }
+            cordaRPCOps.pendingFlowsCount().updates
+                    .doOnError { error ->
+                        log.error(error.message)
+                        throw error
+                    }
+                    .doOnNext { remaining ->
+                        display {
+                            println("...remaining: ${remaining.first}/${remaining.second}")
+                        }
+                    }
+                    .doOnCompleted {
+                        if (isSsh) {
+                            // print in the original Shell process
+                            System.out.println("Shutting down the node via remote SSH session (it may take a while)")
+                        }
+                        display {
+                            println("Shutting down the node (it may take a while)")
+                        }
+                        cordaRPCOps.shutdown()
+                        isShuttingDown = true
+                        connection.forceClose()
+                        display {
+                            println("...done, quitting standalone shell now.")
+                        }
+                        onExit.invoke()
+                    }.toBlocking().single()
+        } catch (e: StringToMethodCallParser.UnparseableCallException) {
+            display {
+                println(e.message, Color.red)
+                println("Please try 'man run' to learn what syntax is acceptable")
+            }
+        } catch (e: Exception) {
+            if (!isShuttingDown) {
+                display {
+                    println("RPC failed: ${e.rootCause}", Color.red)
+                }
+            }
+        } finally {
+            InputStreamSerializer.invokeContext = null
+            InputStreamDeserializer.closeAll()
+        }
     }
 
     private fun printAndFollowRPCResponse(response: Any?, out: PrintWriter): CordaFuture<Unit> {
@@ -518,6 +544,7 @@ object InteractiveShell {
             return printNextElements(response.updates, printerFun, out)
         }
         if (response is Observable<*>) {
+
             return printNextElements(response, printerFun, out)
         }
 
@@ -532,94 +559,4 @@ object InteractiveShell {
         return subscriber.future
     }
 
-    //region Extra serializers
-    //
-    // These serializers are used to enable the user to specify objects that aren't natural data containers in the shell,
-    // and for the shell to print things out that otherwise wouldn't be usefully printable.
-
-    private object ObservableSerializer : JsonSerializer<Observable<*>>() {
-        override fun serialize(value: Observable<*>, gen: JsonGenerator, serializers: SerializerProvider) {
-            gen.writeString("(observable)")
-        }
-    }
-
-    // A file name is deserialized to an InputStream if found.
-    object InputStreamDeserializer : JsonDeserializer<InputStream>() {
-        // Keep track of them so we can close them later.
-        private val streams = Collections.synchronizedSet(HashSet<InputStream>())
-
-        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): InputStream {
-            val stream = object : BufferedInputStream(Files.newInputStream(Paths.get(p.text))) {
-                override fun close() {
-                    super.close()
-                    streams.remove(this)
-                }
-            }
-            streams += stream
-            return stream
-        }
-
-        fun closeAll() {
-            // Clone the set with toList() here so each closed stream can be removed from the set inside close().
-            streams.toList().forEach { Closeables.closeQuietly(it) }
-        }
-    }
-
-    // An InputStream found in a response triggers a request to the user to provide somewhere to save it.
-    private object InputStreamSerializer : JsonSerializer<InputStream>() {
-        var invokeContext: InvocationContext<*>? = null
-
-        override fun serialize(value: InputStream, gen: JsonGenerator, serializers: SerializerProvider) {
-            try {
-                val toPath = invokeContext!!.readLine("Path to save stream to (enter to ignore): ", true)
-                if (toPath == null || toPath.isBlank()) {
-                    gen.writeString("<not saved>")
-                } else {
-                    val path = Paths.get(toPath)
-                    value.copyTo(path)
-                    gen.writeString("<saved to: ${path.toAbsolutePath()}>")
-                }
-            } finally {
-                try {
-                    value.close()
-                } catch (e: IOException) {
-                    // Ignore.
-                }
-            }
-        }
-    }
-
-    /**
-     * String value deserialized to [UniqueIdentifier].
-     * Any string value used as [UniqueIdentifier.externalId].
-     * If string contains underscore(i.e. externalId_uuid) then split with it.
-     *      Index 0 as [UniqueIdentifier.externalId]
-     *      Index 1 as [UniqueIdentifier.id]
-     * */
-    object UniqueIdentifierDeserializer : JsonDeserializer<UniqueIdentifier>() {
-        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): UniqueIdentifier {
-            //Check if externalId and UUID may be separated by underscore.
-            if (p.text.contains("_")) {
-                val ids = p.text.split("_")
-                //Create UUID object from string.
-                val uuid: UUID = UUID.fromString(ids[1])
-                //Create UniqueIdentifier object using externalId and UUID.
-                return UniqueIdentifier(ids[0], uuid)
-            }
-            //Any other string used as externalId.
-            return UniqueIdentifier.fromString(p.text)
-        }
-    }
-
-    /**
-     * String value deserialized to [UUID].
-     * */
-    object UUIDDeserializer : JsonDeserializer<UUID>() {
-        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): UUID {
-            //Create UUID object from string.
-            return UUID.fromString(p.text)
-        }
-    }
-
-    //endregion
 }

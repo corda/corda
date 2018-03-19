@@ -3,7 +3,7 @@ package net.corda.testing.node.internal
 import net.corda.client.mock.Generator
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
-import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.Trace
@@ -59,7 +59,7 @@ import net.corda.nodeapi.internal.config.User as InternalUser
 inline fun <reified I : RPCOps> RPCDriverDSL.startInVmRpcClient(
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password,
-        configuration: RPCClientConfiguration = RPCClientConfiguration.default
+        configuration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default
 ) = startInVmRpcClient(I::class.java, username, password, configuration)
 
 inline fun <reified I : RPCOps> RPCDriverDSL.startRandomRpcClient(
@@ -72,7 +72,7 @@ inline fun <reified I : RPCOps> RPCDriverDSL.startRpcClient(
         rpcAddress: NetworkHostAndPort,
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password,
-        configuration: RPCClientConfiguration = RPCClientConfiguration.default
+        configuration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default
 ) = startRpcClient(I::class.java, rpcAddress, username, password, configuration)
 
 data class RpcBrokerHandle(
@@ -253,7 +253,7 @@ data class RPCDriverDSL(
             rpcOpsClass: Class<I>,
             username: String = rpcTestUser.username,
             password: String = rpcTestUser.password,
-            configuration: RPCClientConfiguration = RPCClientConfiguration.default
+            configuration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default
     ): CordaFuture<I> {
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(inVmClientTransportConfiguration, configuration)
@@ -324,7 +324,7 @@ data class RPCDriverDSL(
             rpcAddress: NetworkHostAndPort,
             username: String = rpcTestUser.username,
             password: String = rpcTestUser.password,
-            configuration: RPCClientConfiguration = RPCClientConfiguration.default
+            configuration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default
     ): CordaFuture<I> {
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), rpcAddress, null), configuration)

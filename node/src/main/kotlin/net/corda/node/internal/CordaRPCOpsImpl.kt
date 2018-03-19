@@ -45,7 +45,8 @@ internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
         private val database: CordaPersistence,
-        private val flowStarter: FlowStarter
+        private val flowStarter: FlowStarter,
+        private val shutdownNode: () -> Unit
 ) : CordaRPCOps {
     override fun networkMapSnapshot(): List<NodeInfo> {
         val (snapshot, updates) = networkMapFeed()
@@ -296,6 +297,10 @@ internal class CordaRPCOpsImpl(
 
     override fun isFlowsDrainingModeEnabled(): Boolean {
         return services.nodeProperties.flowsDrainingMode.isEnabled()
+    }
+
+    override fun shutdown() {
+        shutdownNode.invoke()
     }
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {

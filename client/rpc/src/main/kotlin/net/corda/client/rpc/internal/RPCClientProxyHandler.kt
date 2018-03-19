@@ -11,6 +11,7 @@ import com.github.benmanes.caffeine.cache.RemovalCause
 import com.github.benmanes.caffeine.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
 import net.corda.core.context.Actor
@@ -70,7 +71,7 @@ import kotlin.reflect.jvm.javaMethod
  * The cleanup happens in batches using a dedicated reaper, scheduled on [reaperExecutor].
  */
 class RPCClientProxyHandler(
-        private val rpcConfiguration: RPCClientConfiguration,
+        private val rpcConfiguration: CordaRPCClientConfiguration,
         private val rpcUsername: String,
         private val rpcPassword: String,
         private val serverLocator: ServerLocator,
@@ -414,8 +415,8 @@ class RPCClientProxyHandler(
                     sendingEnabled = false
                 }
 
-                log.warn("RPC server unavailable.")
-                log.warn("Terminating observables and in flight RPCs.")
+                log.warn("RPC server unavailable. RPC calls are being buffered.")
+                log.warn("Terminating observables.")
                 val m = observableContext.observableMap.asMap()
                 m.keys.forEach { k ->
                     observationExecutorPool.run(k) {

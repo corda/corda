@@ -24,7 +24,7 @@ class CordaAuthenticationPlugin(private val rpcOps: (username: String, credentia
         }
         try {
             val ops = rpcOps(username, credential)
-            return CordaSSHAuthInfo(true, ops)
+            return CordaSSHAuthInfo(true, ops, isSsh = true)
         } catch (e: ActiveMQSecurityException) {
             logger.warn(e.message)
         } catch (e: Exception) {
