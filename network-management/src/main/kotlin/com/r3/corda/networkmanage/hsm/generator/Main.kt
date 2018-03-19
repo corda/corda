@@ -15,7 +15,7 @@ import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
 import net.corda.nodeapi.internal.crypto.CertificateType.ROOT_CA
 import org.apache.logging.log4j.LogManager
 
-private val log = LogManager.getLogger("com.r3.corda.networkmanage.hsm.generator.Main")
+private val logger = LogManager.getLogger("com.r3.corda.networkmanage.hsm.generator.Main")
 
 fun main(args: Array<String>) {
     run(parseParameters(parseCommandLine(*args)?.configFile))
@@ -31,6 +31,7 @@ fun run(parameters: GeneratorParameters) {
         try {
             AutoAuthenticator(providerConfig, userConfigs).connectAndAuthenticate { provider ->
                 val generator = KeyCertificateGenerator(this)
+                logger.info("Generating ${certConfig.certificateType.name} certificate.")
                 if (certConfig.certificateType == ROOT_CA) {
                     generator.generate(provider)
                 } else {
@@ -48,7 +49,7 @@ fun run(parameters: GeneratorParameters) {
                 provider.logoff()
             }
         } catch (e: Exception) {
-            log.error(mapCryptoServerException(e))
+            logger.error("HSM certificate generation error.", mapCryptoServerException(e))
         }
     }
 }
