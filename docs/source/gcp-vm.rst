@@ -38,6 +38,9 @@ STEP 2: Launch the VM
 
 In the left hand side nav click on Compute Engine.
 
+.. image:: resources/gcpcompute.png
+   :scale: 50 %
+
 Click on Create Instance.
 
 Fill in the form with the desired VM specs:
