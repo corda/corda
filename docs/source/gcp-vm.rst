@@ -24,11 +24,13 @@ In the project drop down click on the plus icon to create a new
 project to house your Corda resources.
 
 .. image:: resources/consolegcp.png
+   :scale: 50 %
 
 .. image:: resources/console2.png
-
+   :scale: 50 %
+   
 .. image:: resources/newprojectgcp.png
-
+   :scale: 50 %
 
 Enter a project name and click Create.
 
