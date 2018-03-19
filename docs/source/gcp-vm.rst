@@ -25,6 +25,11 @@ project to house your Corda resources.
 
 .. image:: resources/consolegcp.png
 
+.. image:: resources/console2.png
+
+.. image:: resources/newprojectgcp.png
+
+
 Enter a project name and click Create.
 
 STEP 2: Launch the VM
