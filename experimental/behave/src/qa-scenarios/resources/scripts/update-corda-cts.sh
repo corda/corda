@@ -25,7 +25,7 @@ echo "*************************************************************"
 # Copy Corda capsule into deps
 ./gradlew clean install
 cp -v $(ls node/capsule/build/libs/corda-*.jar | tail -n1) ${STAGING_DIR}/corda.jar
-cp -v $(ls finance/build/libs/corda-finance-*.jar | tail -n1) ${STAGING_DIR}/apps/corda-finance.jar
+cp -v $(ls finance/build/libs/corda-finance-*.jar | tail -n1) ${STAGING_DIR}/apps
 
 # Build Network Bootstrapper
 ./gradlew buildBootstrapperJar
