@@ -35,8 +35,6 @@ class Network private constructor(
         private val timeout: Duration = 2.minutes
 ) : Closeable, Iterable<Node> {
 
-    private val log = getLogger<Network>()
-
     private val latch = CountDownLatch(1)
 
     private var isRunning = false
@@ -54,6 +52,7 @@ class Network private constructor(
     }
 
     class Builder internal constructor(
+            private val networkType: Distribution.Type,
             private val timeout: Duration
     ) {
 
@@ -73,9 +72,9 @@ class Network private constructor(
                 notaryType: NotaryType = NotaryType.NONE,
                 issuableCurrencies: List<String> = emptyList(),
                 compatibilityZoneURL: String? = null,
-                withRPCProxy: Boolean = false
+                withRPCProxy: Boolean = false,
+                networkType: Distribution.Type = Distribution.Type.CORDA
         ): Builder {
-            val czURL = if (distribution.type == Distribution.Type.R3_CORDA) compatibilityZoneURL else null
             return addNode(Node.new()
                     .withName(name)
                     .withDistribution(distribution)
@@ -83,7 +82,8 @@ class Network private constructor(
                     .withNotaryType(notaryType)
                     .withIssuableCurrencies(*issuableCurrencies.toTypedArray())
                     .withRPCProxy(withRPCProxy)
-                    .withNetworkMap(czURL)
+                    .withNetworkMap(compatibilityZoneURL)
+                    .withNetworkType(networkType)
             )
         }
 
@@ -91,7 +91,6 @@ class Network private constructor(
             nodeBuilder
                     .withDirectory(directory)
                     .withTimeout(timeout)
-//                    .withNetworkMap("\"http://localhost:1300\"")
             val node = nodeBuilder.build()
             nodes[node.config.name] = node
             return this
@@ -107,12 +106,8 @@ class Network private constructor(
 //                return
             }
 
-            // Corda distribution (OS or R3 Corda) will be determined by the type the first node
-            val distribution = network.nodes.values.first().config.distribution
-            network.log.info("Corda network distribution: $distribution")
-
-            if (distribution.type == Distribution.Type.R3_CORDA)
-                network.bootstrapDoorman(distribution)
+            if (networkType == Distribution.Type.R3_CORDA)
+                network.bootstrapDoorman()
             else
                 network.bootstrapLocalNetwork()
             return network
@@ -151,7 +146,13 @@ class Network private constructor(
      * https://github.com/corda/enterprise/blob/master/network-management/README.md
      * using Local signing and "Auto Approval" mode
      */
-    private fun bootstrapDoorman(distribution: Distribution) {
+    private fun bootstrapDoorman() {
+
+        // WARNING!! Need to use the correct bootstrapper
+        // only if using OS nodes (need to choose the latest version)
+        val r3node = nodes.values
+                .find { it.config.distribution.type == Distribution.Type.R3_CORDA } ?: throw CordaRuntimeException("Missing R3 distribution node")
+        val distribution = r3node.config.distribution
 
         // Copy over reference configuration files used in bootstrapping
         val source = doormanConfigDirectory
@@ -513,10 +514,10 @@ class Network private constructor(
     }
 
     companion object {
-
+        val log = getLogger<Network>()
         const val CLEANUP_ON_ERROR = false
 
-        fun new(timeout: Duration = 2.minutes
-        ): Builder = Builder(timeout)
+        fun new(type: Distribution.Type = Distribution.Type.CORDA, timeout: Duration = 2.minutes
+        ): Builder = Builder(type, timeout)
     }
 }

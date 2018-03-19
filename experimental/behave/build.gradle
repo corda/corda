@@ -37,7 +37,10 @@ sourceSets {
             runtimeClasspath += main.output
             srcDir file('src/scenario/kotlin')
         }
-        resources.srcDir file('src/scenario/resources')
+        resources {
+            srcDirs = ['src/scenario/resources',
+                       'src/qa-scenarios/resources']
+        }
     }
     smokeTest {
         kotlin {

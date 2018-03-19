@@ -32,7 +32,8 @@ class Node(
         val config: Configuration,
         private val rootDirectory: File = currentDirectory,
         private val settings: ServiceSettings = ServiceSettings(),
-        val rpcProxy: Boolean = false
+        val rpcProxy: Boolean = false,
+        val networkType: Distribution.Type
 ) {
 
     private val log = getLogger<Node>()
@@ -85,8 +86,8 @@ class Node(
         log.info("Configuring {} ...", this)
         serviceDependencies.addAll(config.database.type.dependencies(config))
         config.distribution.ensureAvailable()
-        if (config.distribution.type == Distribution.Type.CORDA)
-            config.writeToFile(rootDirectory / "${config.name}_node.conf")
+        if (networkType == Distribution.Type.CORDA)
+            config.writeToFile(rootDirectory / "${config.name}.conf")
         else
             config.writeToFile(rootDirectory / "${config.name}"/ "node.conf")
         installApps()
@@ -264,7 +265,7 @@ class Node(
 
         private var notaryType = NotaryType.NONE
 
-        private var compatibilityZoneURL: String? = null
+        private var compatibilityZoneURL: String? = "\"http://localhost:1300\""
 
         private val issuableCurrencies = mutableListOf<String>()
 
@@ -282,6 +283,8 @@ class Node(
 
         private var rpcProxy = false
 
+        var networkType = distribution.type
+
         fun withName(newName: String): Builder {
             name = newName
             return this
@@ -289,6 +292,7 @@ class Node(
 
         fun withDistribution(newDistribution: Distribution): Builder {
             distribution = newDistribution
+            networkType = distribution.type
             return this
         }
 
@@ -304,6 +308,11 @@ class Node(
 
         fun withNetworkMap(newCompatibilityZoneURL: String?): Builder {
             compatibilityZoneURL = newCompatibilityZoneURL
+            return this
+        }
+
+        fun withNetworkType(newNetworkType: Distribution.Type): Builder {
+            networkType = newNetworkType
             return this
         }
 
@@ -355,6 +364,7 @@ class Node(
         fun build(): Node {
             val name = name ?: error("Node name not set")
             val directory = directory ?: error("Runtime directory not set")
+            val compatibilityZoneURL = if (networkType == Distribution.Type.R3_CORDA) compatibilityZoneURL else null
             return Node(
                     Configuration(
                             name,
@@ -375,7 +385,8 @@ class Node(
                     ),
                     directory,
                     ServiceSettings(timeout),
-                    rpcProxy = rpcProxy
+                    rpcProxy = rpcProxy,
+                    networkType = networkType
             )
         }
 
