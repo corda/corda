@@ -72,17 +72,20 @@ instance to a static IP address.
 First check the region and select the one you are using from the list:
 
 .. code:: bash
+
     gcloud compute regions list
 
 Find your external IP:
 
 .. code:: bash
+
     gcloud compute regions list
 
 Then run this command with the ephemeral IP address as the argument to
 the --addresses flag and the region:
 
 .. code:: bash
+
     gcloud compute addresses create corda-node --addresses 35.204.53.61 --region europe-west4
 
 
@@ -96,11 +99,13 @@ In your cloud VM terminal run the following command to download the
 bundle to your instance:
 
 .. code:: bash
+
     wget [your-specific-download-link]
 
 Make a directory and unzip the file in this directory:
 
 .. code:: bash
+
     mkdir corda
     mv node.zip corda
     cd corda
@@ -115,11 +120,13 @@ EDITS
 Now run screen so the node keeps running if your session disconnects:
 
 .. code:: bash
+
     screen
 
 then run the corda node and webserver:
 
 .. code:: bash
+
     java -jar corda.jar
     CTL-A c 
     java -jar corda-webserver.jar
