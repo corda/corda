@@ -134,14 +134,14 @@ Memory usage and tuning
 
 All garbage collected programs can run faster if you give them more memory, as they need to collect less
 frequently. As a default JVM will happily consume all the memory on your system if you let it, Corda is
-configured with a relatively small 200mb Java heap by default. When other overheads are added, this yields
-a total memory usage of about 500mb for a node (the overheads come from things like compiled code, metadata,
+configured with a 512mb Java heap by default. When other overheads are added, this yields
+a total memory usage of about 800mb for a node (the overheads come from things like compiled code, metadata,
 off-heap buffers, thread stacks, etc).
 
 If you want to make your node go faster and profiling suggests excessive GC overhead is the cause, or if your
 node is running out of memory, you can give it more by running the node like this:
 
-``java -Xmx1024m -jar corda.jar``
+``java -Dcapsule.jvm.args="-Xmx1024m" -jar corda.jar``
 
 The example command above would give a 1 gigabyte Java heap.
 

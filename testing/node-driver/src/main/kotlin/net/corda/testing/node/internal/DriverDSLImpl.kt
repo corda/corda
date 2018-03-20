@@ -215,7 +215,7 @@ class DriverDSLImpl(
                                     verifierType: VerifierType,
                                     customOverrides: Map<String, Any?>,
                                     startInSameProcess: Boolean? = null,
-                                    maximumHeapSize: String = "200m",
+                                    maximumHeapSize: String = "512m",
                                     p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort()): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
         val rpcAdminAddress = portAllocation.nextHostAndPort()
@@ -366,7 +366,7 @@ class DriverDSLImpl(
         )
         val cordaConfig = typesafe.parseAsNodeConfiguration()
         val config = NodeConfig(rawConfig, cordaConfig)
-        return startNodeInternal(config, webAddress, null, "200m", localNetworkMap)
+        return startNodeInternal(config, webAddress, null, "512m", localNetworkMap)
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process): WebserverHandle {
@@ -632,7 +632,7 @@ class DriverDSLImpl(
                 monitorPort,
                 systemProperties,
                 cordappPackages,
-                "200m",
+                "512m",
                 *extraCmdLineFlag
         )
 

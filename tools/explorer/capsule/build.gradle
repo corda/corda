@@ -44,7 +44,7 @@ task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').co
         // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
         //
         // If you change these flags, please also update Driver.kt
-        jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
+        jvmArgs = ['-Xmx512m', '-XX:+UseG1GC']
     }
 }
 
