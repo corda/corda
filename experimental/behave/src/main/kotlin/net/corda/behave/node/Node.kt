@@ -9,6 +9,7 @@ import net.corda.behave.logging.getLogger
 import net.corda.behave.monitoring.PatternWatch
 import net.corda.behave.node.configuration.*
 import net.corda.behave.process.JarCommand
+import net.corda.behave.process.JarCommandWithMain
 import net.corda.behave.seconds
 import net.corda.behave.service.Service
 import net.corda.behave.service.ServiceSettings
@@ -19,6 +20,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.minutes
 import org.apache.commons.io.FileUtils
 import java.io.File
 import java.net.InetAddress
@@ -86,11 +88,22 @@ class Node(
         log.info("Configuring {} ...", this)
         serviceDependencies.addAll(config.database.type.dependencies(config))
         config.distribution.ensureAvailable()
-        if (networkType == Distribution.Type.CORDA)
+        if (networkType == Distribution.Type.CORDA) {
             config.writeToFile(rootDirectory / "${config.name}.conf")
-        else
-            config.writeToFile(rootDirectory / "${config.name}"/ "node.conf")
+        }
+        else {
+            config.writeToFile(rootDirectory / "${config.name}" / "node.conf")
+        }
         installApps()
+    }
+
+    private fun initialiseDatabase(database: DatabaseConfiguration) {
+        log.info("Initialising database for R3 Corda node: $database")
+        val command = JarCommandWithMain(listOf(Distribution.R3_MASTER.dbMigrationJar, rootDirectory / "libs" / DatabaseType.SQL_SERVER.settings.driverJar!!),
+                "com.r3.corda.dbmigration.DBMigration",
+                arrayOf("--base-directory", "$runtimeDirectory", "--execute-migration"),
+                runtimeDirectory, 2.minutes)
+        command.run()
     }
 
     fun start(): Boolean {
@@ -99,8 +112,12 @@ class Node(
         }
         log.info("Starting {} ...", this)
         return try {
-//            service.start()
-//            service.execute(command)
+            // initialise database via DB migration tool
+            if (config.distribution.type == Distribution.Type.R3_CORDA &&
+                config.database.type != DatabaseType.H2) {
+                initialiseDatabase(config.database)
+            }
+            // launch node itself
             command.start()
             isStarted = true
             true

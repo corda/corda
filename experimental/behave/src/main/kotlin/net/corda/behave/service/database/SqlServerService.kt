@@ -52,6 +52,7 @@ class SqlServerService(
         val database = "master"
         val schema = "dbo"
         val username = "sa"
+        val driver = "mssql-jdbc-6.2.2.jre8.jar"
 
     }
 

@@ -96,7 +96,8 @@ class RPCProxyWebServiceTest {
     @Test
     fun startFlowCashPaymentToPartyB() {
         val recipient = rpcProxyClient.partiesFromName("PartyB", false).first()
-        val response = rpcProxyClient.startFlow(::CashPaymentFlow, POUNDS(200), recipient)
+//        val response = rpcProxyClient.startFlow(::CashPaymentFlow, POUNDS(200), recipient)
+        val response = rpcProxyClient.startFlow(::CashPaymentFlow, DOLLARS(250), recipient)
         val result = response.returnValue.getOrThrow().stx
         println(result)
     }
@@ -104,7 +105,8 @@ class RPCProxyWebServiceTest {
     @Test
     fun startFlowCashPaymentToPartyA() {
         val recipient = rpcProxyClientB.partiesFromName("PartyA", false).first()
-        val response = rpcProxyClientB.startFlow(::CashPaymentFlow, DOLLARS(500), recipient)
+//        val response = rpcProxyClientB.startFlow(::CashPaymentFlow, DOLLARS(500), recipient)
+        val response = rpcProxyClientB.startFlow(::CashPaymentFlow, POUNDS(100), recipient)
         val result = response.returnValue.getOrThrow().stx
         println(result)
     }

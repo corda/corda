@@ -21,6 +21,7 @@ enum class DatabaseType(val settings: DatabaseSettings) {
 
     SQL_SERVER(DatabaseSettings()
             .withDatabase(SqlServerService.database)
+            .withDriver(SqlServerService.driver)
             .withSchema(SqlServerService.schema)
             .withUser(SqlServerService.username)
             .withConfigTemplate(SqlServerConfigurationTemplate())

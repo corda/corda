@@ -40,7 +40,7 @@ Feature: Compatibility - Node versions
       | corda-3.0          | r3-master               | GBP      |
 #      | corda-3.0          | r3corda-3.0-DP3         | GBP      |
 
-  Scenario Outline: User can connect to an R3 Corda database
+  Scenario Outline: User can connect to an R3 Corda node using a SQL Server database
     Given a node PartyA of version <Node-Version>
     And node PartyA uses database of type <Database-Type>
     When the network is ready
@@ -66,12 +66,12 @@ Feature: Compatibility - Node versions
       | corda-3.0          | r3-master               | GBP      | SQL Server        |
 #      | corda-3.0          | r3corda-3.0-DP3         | GBP      |
 
-  Scenario Outline: User can connect to node's database
+  Scenario Outline: User can connect to an R3 Corda node using a PostgreSQL database
     Given a node PartyA of version <Node-Version>
     And node PartyA uses database of type <Database-Type>
     When the network is ready
     Then user can connect to the database of node PartyA
 
     Examples:
-      | Node-Version    | Database-Type     |
-      | corda-3.0       | SQL Server        |
+      | Node-Version    | Database-Type   |
+      | r3-master       | postgres        |
