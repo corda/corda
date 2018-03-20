@@ -1,5 +1,7 @@
 Deploying a Corda Node to a Google Cloud Platform VM
-=============================================
+====================================================
+
+.. contents::
 
 Corda Connect Explore will allow you to create a self service download
 link with a node preconfigured to join the Explore environment. This
@@ -13,7 +15,7 @@ Pre-requisites
 
 
 Deploy Corda node
----------------------------
+-----------------
 
 Browse to `<https://console.cloud.google.com>` and log in with your
 Google credentials.
