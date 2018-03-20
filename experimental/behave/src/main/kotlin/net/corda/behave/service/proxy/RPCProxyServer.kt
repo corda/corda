@@ -88,8 +88,6 @@ fun initialiseSerialization() {
                 registerScheme(AMQPClientSerializationScheme(emptyList()))
             },
             AMQP_P2P_CONTEXT,
-
-
             rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)
 }
 

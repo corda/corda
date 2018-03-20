@@ -59,9 +59,14 @@ class Distribution private constructor(
     val networkBootstrapper: File = nodePrefix / "$version/network-bootstrapper.jar"
 
     /**
-     * The path to the doorman jar.
+     * The path to the doorman jar (R3 Corda only).
      */
     val doormanJar: File = nodePrefix / "$version/doorman.jar"
+
+    /**
+     * The path to the DB migration jar (R3 Corda only).
+     */
+    val dbMigrationJar: File = nodePrefix / "$version/dbmigration.jar"
 
     /**
      * The path to the RPC proxy tool.
