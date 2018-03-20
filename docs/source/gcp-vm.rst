@@ -43,6 +43,9 @@ In the left hand side nav click on Compute Engine.
 
 Click on Create Instance.
 
+.. image:: resources/consolegcpcreatevm.png
+   :scale: 50 %
+
 Fill in the form with the desired VM specs:
 
 Recommended minimum 4vCPU with 15GB memory and 40GB Persistent disk.
@@ -51,6 +54,9 @@ Ubuntu 16.04 LTS.
 Allow full API access.
 
 Dont worry about firewall settings as we will configure those later. 
+
+.. image:: resources/gcpconsolevmsettings.png
+   :scale: 50 %
 
 Click Create and wait a few sections for your instance to provision
 and start running.
