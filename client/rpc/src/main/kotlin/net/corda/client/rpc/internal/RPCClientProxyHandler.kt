@@ -415,7 +415,6 @@ class RPCClientProxyHandler(
                     sendingEnabled = false
                 }
 
-                log.warn("RPC server unavailable. RPC calls are being buffered.")
                 log.warn("Terminating observables.")
                 val m = observableContext.observableMap.asMap()
                 m.keys.forEach { k ->

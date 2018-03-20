@@ -32,6 +32,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.concurrent.thread
 
 class RPCStabilityTests {
     @Rule
@@ -247,9 +248,18 @@ class RPCStabilityTests {
             assertEquals("pong", client.ping())
             serverFollower.shutdown()
             startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
-            Thread.sleep(1000) //wait for the server to come back up
-            val pingFuture = pool.fork(client::ping)
-            assertEquals("pong", pingFuture.getOrThrow(10.seconds))
+            var response: String? = null
+            val rpcThread = thread {
+                while (response == null) { //keep trying rpc call until server responds
+                    try {
+                        response = client.ping() //call will throw while server is rebooting
+                    } catch (e: RPCException) {
+                        //do nothing
+                    }
+                }
+            }
+            rpcThread.join(10000) //wait for thread to finish for max 10s to avoid long runs if something fails
+            assertEquals("pong", response)
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
     }
