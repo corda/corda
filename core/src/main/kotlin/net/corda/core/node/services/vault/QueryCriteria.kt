@@ -51,6 +51,13 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     @CordaSerializable
     data class TimeCondition(val type: TimeInstantType, val predicate: ColumnPredicate<Instant>)
 
+    /**
+     * Select states based on their locks.
+     *
+     * @param [type] Whether to select all locked states, all unlocked states,
+     *   specific locked states, or all unlocked states plus specific locked states.
+     * @param [lockIds] The specific locked states to select (if applicable).
+     */
     // DOCSTART VaultQuerySoftLockingCriteria
     @CordaSerializable
     data class SoftLockingCondition(val type: SoftLockingType, val lockIds: List<UUID> = emptyList())
