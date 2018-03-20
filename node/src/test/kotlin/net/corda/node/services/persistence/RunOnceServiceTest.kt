@@ -146,11 +146,14 @@ class RunOnceServiceTest {
 
             var secondTimestamp = LocalDateTime.now()
             var firstTimestamp = LocalDateTime.now()
+            var firstVersion = -1L
+            var secondVersion = -1L
 
             database.transaction {
                 val query = session.createNativeQuery(selectQuery, RunOnceService.MutualExclusion::class.java)
                 val result = machine1RowCheck(query)
                 firstTimestamp = result.timestamp
+                firstVersion = result.version
             }
 
             runnable.run()
@@ -159,9 +162,11 @@ class RunOnceServiceTest {
                 val query = session.createNativeQuery(selectQuery, RunOnceService.MutualExclusion::class.java)
                 val result = machine1RowCheck(query)
                 secondTimestamp = result.timestamp
+                secondVersion = result.version
             }
 
             assertTrue(secondTimestamp.isAfter(firstTimestamp))
+            assertTrue(secondVersion > firstVersion)
 
             mock<ScheduledFuture<*>>()
         }
@@ -170,7 +175,6 @@ class RunOnceServiceTest {
 
         verify(mockUpdateExecutor).scheduleAtFixedRate(any(), any(), any(), any())
     }
-
 
     @Test
     fun `timer exits if no row`() {
@@ -255,3 +259,4 @@ class RunOnceServiceTest {
         return result
     }
 }
+
