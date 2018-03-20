@@ -19,6 +19,8 @@ from the previous milestone release.
 
 * java.security.cert.CRLReason added to the default Whitelist.
 
+* java.security.cert.X509CRL serialization support added.
+
 * Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
   where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
   one node with the legal name is found.
