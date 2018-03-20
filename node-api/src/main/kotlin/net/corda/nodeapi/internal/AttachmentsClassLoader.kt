@@ -13,7 +13,7 @@ package net.corda.nodeapi.internal
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
+import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -43,7 +43,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
     }
 
     init {
-        require(attachments.mapNotNull { it as? ContractAttachment }.none { it.uploader != DEPLOYED_CORDAPP_UPLOADER }) {
+        require(attachments.mapNotNull { it as? ContractAttachment }.all { isUploaderTrusted(it.uploader) }) {
             "Attempting to load Contract Attachments downloaded from the network"
         }
 
