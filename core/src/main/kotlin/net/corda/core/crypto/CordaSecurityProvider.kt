@@ -14,6 +14,12 @@ import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_KEY
 import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_SIGNATURE
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import java.security.Provider
+import io.netty.util.concurrent.FastThreadLocal
+import net.corda.core.internal.VisibleForTesting
+import java.security.SecureRandom
+import java.security.SecureRandomSpi
+
+internal const val CORDA_SECURE_RANDOM_ALGORITHM = "CordaPRNG"
 
 class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME security provider wrapper") {
     companion object {
@@ -27,6 +33,11 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
         put("Alg.Alias.KeyFactory.OID.$COMPOSITE_KEY", CompositeKey.KEY_ALGORITHM)
         put("Alg.Alias.Signature.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
         put("Alg.Alias.Signature.OID.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
+        // Assuming this Provider is the first SecureRandom Provider, this algorithm is the SecureRandom default:
+        putService(DelegatingSecureRandomService(this) {
+            // Unlike all the NativePRNG algorithms, this doesn't use a global lock:
+            object : SecureRandom(sun.security.provider.SecureRandom(), null) {}
+        })
     }
 }
 
@@ -37,4 +48,27 @@ object CordaObjectIdentifier {
     val COMPOSITE_KEY = ASN1ObjectIdentifier("2.25.30086077608615255153862931087626791002")
     @JvmField
     val COMPOSITE_SIGNATURE = ASN1ObjectIdentifier("2.25.30086077608615255153862931087626791003")
+}
+
+internal class DelegatingSecureRandomService internal constructor(
+        provider: CordaSecurityProvider, secureRandomFactory: () -> SecureRandom) : Provider.Service(
+        provider, type, CORDA_SECURE_RANDOM_ALGORITHM, DelegatingSecureRandomSpi::class.java.name, null, null) {
+    internal companion object {
+        internal val type = "SecureRandom"
+    }
+
+    internal val instance = DelegatingSecureRandomSpi(secureRandomFactory)
+    override fun newInstance(constructorParameter: Any?) = instance
+}
+
+internal class DelegatingSecureRandomSpi internal constructor(secureRandomFactory: () -> SecureRandom) : SecureRandomSpi() {
+    private val threadLocalSecureRandom = object : FastThreadLocal<SecureRandom>() {
+        override fun initialValue() = secureRandomFactory()
+    }
+
+    override fun engineSetSeed(seed: ByteArray) = threadLocalSecureRandom.get().setSeed(seed)
+    override fun engineNextBytes(bytes: ByteArray) = threadLocalSecureRandom.get().nextBytes(bytes)
+    override fun engineGenerateSeed(numBytes: Int): ByteArray? = threadLocalSecureRandom.get().generateSeed(numBytes)
+    @VisibleForTesting
+    internal fun currentThreadSecureRandom() = threadLocalSecureRandom.get()
 }
