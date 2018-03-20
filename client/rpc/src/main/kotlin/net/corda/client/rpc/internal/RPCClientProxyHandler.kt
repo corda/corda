@@ -172,8 +172,7 @@ class RPCClientProxyHandler(
     private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry)
     private val deduplicationSequenceNumber = AtomicLong(0)
 
-    @Volatile
-    private var sendingEnabled: AtomicBoolean = AtomicBoolean(true)
+    private val sendingEnabled = AtomicBoolean(true)
 
     /**
      * Start the client. This creates the per-client queue, starts the consumer session and the reaper.
