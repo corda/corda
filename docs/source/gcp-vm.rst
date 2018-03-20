@@ -66,6 +66,12 @@ and start running.
 Once your instance is running click on the SSH button to launch a
 cloud SSH terminal in a new window. 
 
+.. image:: resources/gcpconsolelaunchssh.png
+   :scale: 50 %
+   
+.. image:: resources/gcpshell.png
+   :scale: 50 %
+
 We need a few utilities so go ahead and check the following are
 installed and if not install with apt-get:
 
