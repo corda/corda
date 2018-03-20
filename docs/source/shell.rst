@@ -356,6 +356,8 @@ Limitations
 
 The shell will be enhanced over time. The currently known limitations include:
 
+* Flows cannot be run unless they override the progress tracker
+* If a command requires an argument of an abstract type, the command cannot be run because the concrete subclass to use cannot be specified using the YAML syntax
 * There is no command completion for flows or RPCs
 * Command history is not preserved across restarts
 * The ``jdbc`` command requires you to explicitly log into the database first
