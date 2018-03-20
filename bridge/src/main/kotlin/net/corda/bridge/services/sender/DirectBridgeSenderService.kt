@@ -22,7 +22,7 @@ class DirectBridgeSenderService(val conf: BridgeConfiguration,
     private val statusFollower: ServiceStateCombiner
     private var statusSubscriber: Subscription? = null
     private var connectionSubscriber: Subscription? = null
-    private var bridgeControlListener: BridgeControlListener = BridgeControlListener(conf, { ForwardingArtemisMessageClient(artemisConnectionService) })
+    private var bridgeControlListener: BridgeControlListener = BridgeControlListener(conf, conf.outboundConfig!!.socksProxyConfig, { ForwardingArtemisMessageClient(artemisConnectionService) })
 
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService, artemisConnectionService, haService))

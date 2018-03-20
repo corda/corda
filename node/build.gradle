@@ -229,6 +229,11 @@ dependencies {
 
     // Jolokia JVM monitoring agent, required to push logs through slf4j
     compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
+
+    // Allow access to simple SOCKS Server for integration testing
+    testCompile('io.netty:netty-example:4.1.9.Final') {
+        exclude group: "io.netty", module: "netty-tcnative"
+    }
 }
 
 task integrationTest(type: Test) {
