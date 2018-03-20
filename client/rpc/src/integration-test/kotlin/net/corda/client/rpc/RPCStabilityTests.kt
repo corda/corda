@@ -12,6 +12,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.eventually
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.internal.*
@@ -248,17 +249,7 @@ class RPCStabilityTests {
             assertEquals("pong", client.ping())
             serverFollower.shutdown()
             startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
-            var response: String? = null
-            val rpcThread = thread {
-                while (response == null) { //keep trying rpc call until server responds
-                    try {
-                        response = client.ping() //call will throw while server is rebooting
-                    } catch (e: RPCException) {
-                        //do nothing
-                    }
-                }
-            }
-            rpcThread.join(10000) //wait for thread to finish for max 10s to avoid long runs if something fails
+            val response = eventually<RPCException, String>(10.seconds) { client.ping() }
             assertEquals("pong", response)
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
