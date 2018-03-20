@@ -152,6 +152,24 @@ You can extend ``deployNodes`` to generate additional nodes.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
+To extend node configuration beyond the properties defined in the ``deployNodes`` task use the ``configFile`` property with the path (relative or absolute) set to an additional configuration file.
+This file should follow the standard :doc:`corda-configuration-file` format, as per node.conf. The properties from this file will be appended to the generated node configuration. Note, if you add a property already created by the 'deployNodes' task, both properties will be present in the file.
+The path to the file can also be added while running the Gradle task via the ``-PconfigFile`` command line option. However, the same file will be applied to all nodes.
+Following the previous example ``PartyB`` node will have additional configuration options added from a file ``none-b.conf``:
+
+.. sourcecode:: groovy
+
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        [...]
+        node {
+            name "O=PartyB,L=New York,C=US"
+            [...]
+            // Grants user1 the ability to start the MyFlow flow.
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.net.corda.flows.MyFlow"]]]
+            configFile = "samples/trader-demo/src/main/resources/none-b.conf"
+        }
+    }
+
 Specifying a custom webserver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 By default, any node listing a webport will use the default development webserver, which is not production-ready. You

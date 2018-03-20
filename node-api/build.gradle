@@ -72,6 +72,19 @@ dependencies {
     testCompile project(':node-driver')
 }
 
+configurations {
+        testArtifacts.extendsFrom testRuntime
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+artifacts {
+    testArtifacts testJar
+}
+
 jar {
     baseName 'corda-node-api'
 }
