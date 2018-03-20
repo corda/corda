@@ -1,11 +1,11 @@
 Changelog
 =========
 
-Here are brief summaries of what's changed between each release. This includes some guidance on how to upgrade code
-from previous releases. Please refer to :doc:`upgrade-notes` for detailed instructions.
-
-UNRELEASED
+Unreleased
 ----------
+
+Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
+from the previous milestone release.
 
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
@@ -18,6 +18,8 @@ UNRELEASED
 * java.math.BigInteger serialization support added.
 
 * java.security.cert.CRLReason added to the default Whitelist.
+
+* java.security.cert.X509CRL serialization support added.
 
 * Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
   where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
@@ -109,6 +111,10 @@ R3 Corda 3.0 Developer Preview
 
    * Single node notaries no longer have a second separate notary identity. Their main identity *is* their notary identity.
      Use ``NetworkMapCache.notaryIdentities`` to get the list of available notaries.
+
+  * Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
+    where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
+    one node with the legal name is found.
 
    * The common name in the node's X.500 legal name is no longer reserved and can be used as part of the node's name.
 

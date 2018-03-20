@@ -51,10 +51,9 @@ import java.lang.reflect.Method
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import kotlin.concurrent.withLock
 import kotlin.reflect.jvm.javaMethod
 
 /**
@@ -183,9 +182,7 @@ class RPCClientProxyHandler(
     private val deduplicationChecker = DeduplicationChecker(rpcConfiguration.deduplicationCacheExpiry)
     private val deduplicationSequenceNumber = AtomicLong(0)
 
-    private val lock = ReentrantReadWriteLock()
-    @Volatile
-    private var sendingEnabled = true
+    private val sendingEnabled = AtomicBoolean(true)
 
     /**
      * Start the client. This creates the per-client queue, starts the consumer session and the reaper.
@@ -229,10 +226,8 @@ class RPCClientProxyHandler(
             throw RPCException("RPC Proxy is closed")
         }
 
-        lock.readLock().withLock {
-            if (!sendingEnabled)
-                throw RPCException("RPC server is not available.")
-        }
+        if (!sendingEnabled.get())
+            throw RPCException("RPC server is not available.")
 
         val replyId = InvocationId.newInstance()
         callSiteMap?.set(replyId, Throwable("<Call site of root RPC '${method.name}'>"))
@@ -421,11 +416,8 @@ class RPCClientProxyHandler(
     private fun failoverHandler(event: FailoverEventType) {
         when (event) {
             FailoverEventType.FAILURE_DETECTED -> {
-                lock.writeLock().withLock {
-                    sendingEnabled = false
-                }
+                sendingEnabled.set(false)
 
-                log.warn("RPC server unavailable. RPC calls are being buffered.")
                 log.warn("Terminating observables.")
                 val m = observableContext.observableMap.asMap()
                 m.keys.forEach { k ->
@@ -444,9 +436,7 @@ class RPCClientProxyHandler(
             }
 
             FailoverEventType.FAILOVER_COMPLETED -> {
-                lock.writeLock().withLock {
-                    sendingEnabled = true
-                }
+                sendingEnabled.set(true)
                 log.info("RPC server available.")
             }
 

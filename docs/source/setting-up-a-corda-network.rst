@@ -61,9 +61,11 @@ be done with the network bootstrapper. This is a tool that scans all the node co
 generate the network parameters file which is copied to the nodes' directories. It also copies each node's node-info file
 to every other node so that they can all transact with each other.
 
-The bootstrapper tool can be downloaded from http://downloads.corda.net/network-bootstrapper-corda-X.Y.jar, where ``X`` is the major Corda version and ``Y`` is the minor Corda version.
+The bootstrapper tool can be downloaded from http://downloads.corda.net/network-bootstrapper-corda-X.Y.jar, where ``X``
+is the major Corda version and ``Y`` is the minor Corda version.
 
-To use it, create a directory containing a ``node.conf`` file for each node you want to create. Then run the following command:
+To use it, create a directory containing a node config file, ending in "_node.conf", for each node you want to create.
+Then run the following command:
 
 ``java -jar network-bootstrapper.jar <nodes-root-dir>``
 
@@ -72,9 +74,9 @@ For example running the command on a directory containing these files :
 .. sourcecode:: none
 
     .
-    ├── notary.conf             // The notary's node.conf file
-    ├── partya.conf             // Party A's node.conf file
-    └── partyb.conf             // Party B's node.conf file
+    ├── notary_node.conf             // The notary's node.conf file
+    ├── partya_node.conf             // Party A's node.conf file
+    └── partyb_node.conf             // Party B's node.conf file
 
 Would generate directories containing three nodes: notary, partya and partyb.
 
