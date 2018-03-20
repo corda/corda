@@ -107,11 +107,12 @@ Mac
 
 Java
 ^^^^
-1. Open "System Preferences > Java"
-2. In the Java Control Panel, if an update is available, click "Update Now"
-3. In the "Software Update" window, click "Install Update". If required, enter your password and click "Install Helper" when prompted
-4. Wait for a pop-up window indicating that you have successfully installed the update, and click "Close"
-5. Open a new terminal and type ``java -version`` to test that Java is installed correctly
+1. Visit http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
+2. Scroll down to "Java SE Development Kit 8uXXX" (where "XXX" is the latest minor version number)
+3. Toggle "Accept License Agreement"
+4. Click the download link for jdk-8uXXX-macosx-x64.dmg (where "XXX" is the latest minor version number)
+5. Download and run the executable to install Java (use the default settings)
+6. Open a new terminal window and run ``java -version`` to test that Java is installed correctly
 
 IntelliJ
 ^^^^^^^^

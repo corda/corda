@@ -49,7 +49,7 @@ class NetworkMapUpdaterTest {
     private val networkMapCache = createMockNetworkMapCache()
     private val nodeInfoMap = ConcurrentHashMap<SecureHash, SignedNodeInfo>()
     private val networkParamsMap = HashMap<SecureHash, NetworkParameters>()
-    private val networkMapCa: CertificateAndKeyPair = createDevNetworkMapCa()
+    private val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa()
     private val cacheExpiryMs = 100
     private val networkMapClient = createMockNetworkMapClient()
     private val scheduler = TestScheduler()
@@ -254,7 +254,7 @@ class NetworkMapUpdaterTest {
             }
             on { getNetworkParameters(any()) }.then {
                 val paramsHash: SecureHash = uncheckedCast(it.arguments[0])
-                networkParamsMap[paramsHash]?.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
+                networkParamsMap[paramsHash]?.let { networkMapCertAndKeyPair.sign(it) }
             }
             on { ackNetworkParametersUpdate(any()) }.then {
                 Unit

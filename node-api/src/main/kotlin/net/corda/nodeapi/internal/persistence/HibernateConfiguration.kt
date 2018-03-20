@@ -9,6 +9,8 @@ import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.Identifier
 import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
+import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
+import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
@@ -26,7 +28,8 @@ import javax.persistence.AttributeConverter
 class HibernateConfiguration(
         schemas: Set<MappedSchema>,
         private val databaseConfig: DatabaseConfig,
-        private val attributeConverters: Collection<AttributeConverter<*, *>>
+        private val attributeConverters: Collection<AttributeConverter<*, *>>,
+        val cordappClassLoader: ClassLoader? = null
 ) {
     companion object {
         private val logger = contextLogger()
@@ -60,7 +63,7 @@ class HibernateConfiguration(
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
-        val sessionFactory = buildSessionFactory(config, metadataSources, databaseConfig.serverNameTablePrefix)
+        val sessionFactory = buildSessionFactory(config, metadataSources, databaseConfig.serverNameTablePrefix, cordappClassLoader)
         logger.info("Created session factory for schemas: $schemas")
 
         // export Hibernate JMX statistics
@@ -87,8 +90,15 @@ class HibernateConfiguration(
         }
     }
 
-    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String): SessionFactory {
+    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String, cordappClassLoader: ClassLoader?): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
+
+        if (cordappClassLoader != null) {
+            config.standardServiceRegistryBuilder.addService(
+                    ClassLoaderService::class.java,
+                    ClassLoaderServiceImpl(cordappClassLoader))
+        }
+
         val metadata = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build()).run {
             applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
                 override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {

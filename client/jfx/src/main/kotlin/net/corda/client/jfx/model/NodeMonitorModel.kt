@@ -58,9 +58,9 @@ class NodeMonitorModel {
     fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
         val client = CordaRPCClient(
                 nodeHostAndPort,
-                CordaRPCClientConfiguration.DEFAULT.copy(
-                        connectionMaxRetryInterval = 10.seconds
-                )
+                object : CordaRPCClientConfiguration {
+                    override val connectionMaxRetryInterval = 10.seconds
+                }
         )
         val connection = client.start(username, password)
         val proxy = connection.proxy
@@ -88,14 +88,13 @@ class NodeMonitorModel {
         stateMachineUpdates.startWith(currentStateMachines).subscribe(stateMachineUpdatesSubject)
 
         // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates
-        val (_, vaultUpdates) = proxy.vaultTrackBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
+        val (statesSnapshot, vaultUpdates) = proxy.vaultTrackBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
                 PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
-
-        val vaultSnapshot = proxy.vaultQueryBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED),
-                PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
-        // We have to fetch the snapshot separately since vault query API doesn't allow different criteria for snapshot and updates.
-        // TODO : This will create a small window of opportunity for inconsistent updates, might need to change the vault API to handle this case.
-        val initialVaultUpdate = Vault.Update(setOf(), vaultSnapshot.states.toSet())
+        val unconsumedStates = statesSnapshot.states.filterIndexed { index, _ ->
+            statesSnapshot.statesMetadata[index].status == Vault.StateStatus.UNCONSUMED
+        }.toSet()
+        val consumedStates = statesSnapshot.states.toSet() - unconsumedStates
+        val initialVaultUpdate = Vault.Update(consumedStates, unconsumedStates)
         vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject)
 
         // Transactions

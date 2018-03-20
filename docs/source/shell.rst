@@ -18,6 +18,7 @@ the `CRaSH`_ shell and supports many of the same features. These features includ
 * Issuing SQL queries to the underlying database
 * Viewing JMX metrics and monitoring exports
 * UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnular data
+* Shutting the node down.
 
 Permissions
 -----------
@@ -197,6 +198,14 @@ Some RPCs return a stream of events that will be shown on screen until you press
 You can find a list of the available RPC methods
 `here <https://docs.corda.net/api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html>`_.
 
+Shutting down the node
+**********************
+
+You can shut the node down via shell:
+
+* ``gracefulShutdown`` will put node into draining mode, and shut down when there are no flows running
+* ``shutdown`` will shut the node down immediately
+
 Flow commands
 *************
 
@@ -347,6 +356,8 @@ Limitations
 
 The shell will be enhanced over time. The currently known limitations include:
 
+* Flows cannot be run unless they override the progress tracker
+* If a command requires an argument of an abstract type, the command cannot be run because the concrete subclass to use cannot be specified using the YAML syntax
 * There is no command completion for flows or RPCs
 * Command history is not preserved across restarts
 * The ``jdbc`` command requires you to explicitly log into the database first

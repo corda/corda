@@ -51,14 +51,19 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     private companion object {
-        @JvmStatic
-        private fun createContractFor(className: ContractClassName): Try<Contract> {
-            return Try.on { this::class.java.classLoader.loadClass(className).asSubclass(Contract::class.java).getConstructor().newInstance() }
+        private fun createContractFor(className: ContractClassName, classLoader: ClassLoader?): Try<Contract> {
+            return Try.on {
+                (classLoader ?: this::class.java.classLoader)
+                        .loadClass(className)
+                        .asSubclass(Contract::class.java)
+                        .getConstructor()
+                        .newInstance()
+            }
         }
     }
 
-    private val contracts: Map<ContractClassName, Try<Contract>> = (inputs.map { it.state.contract } + outputs.map { it.contract })
-            .toSet().map { it to createContractFor(it) }.toMap()
+    private val contracts: Map<ContractClassName, Try<Contract>> = (inputs.map { it.state } + outputs)
+            .map { it.contract to createContractFor(it.contract, it.data::class.java.classLoader) }.toMap()
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
 

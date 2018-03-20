@@ -1,6 +1,5 @@
 package net.corda.client.rpc.internal
 
-import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
@@ -27,51 +26,26 @@ import java.time.Duration
 /**
  * This configuration may be used to tweak the internals of the RPC client.
  */
-data class RPCClientConfiguration(
-        /** The minimum protocol version required from the server */
-        val minimumServerProtocolVersion: Int,
-        /**
-         * If set to true the client will track RPC call sites. If an error occurs subsequently during the RPC or in a
-         * returned Observable stream the stack trace of the originating RPC will be shown as well. Note that
-         * constructing call stacks is a moderately expensive operation.
-         */
-        val trackRpcCallSites: Boolean,
-        /**
-         * The interval of unused observable reaping. Leaked Observables (unused ones) are detected using weak references
-         * and are cleaned up in batches in this interval. If set too large it will waste server side resources for this
-         * duration. If set too low it wastes client side cycles.
-         */
-        val reapInterval: Duration,
-        /** The number of threads to use for observations (for executing [Observable.onNext]) */
-        val observationExecutorPoolSize: Int,
-        /**
-         * Determines the concurrency level of the Observable Cache. This is exposed because it implicitly determines
-         * the limit on the number of leaked observables reaped because of garbage collection per reaping.
-         * See the implementation of [com.google.common.cache.LocalCache] for details.
-         */
-        val cacheConcurrencyLevel: Int,
-        /** The retry interval of artemis connections in milliseconds */
-        val connectionRetryInterval: Duration,
-        /** The retry interval multiplier for exponential backoff */
-        val connectionRetryIntervalMultiplier: Double,
-        /** Maximum retry interval */
-        val connectionMaxRetryInterval: Duration,
-        /** Maximum reconnect attempts on failover */
-        val maxReconnectAttempts: Int,
-        /** Maximum file size */
-        val maxFileSize: Int,
-        /** The cache expiry of a deduplication watermark per client. */
-        val deduplicationCacheExpiry: Duration
-) {
+data class CordaRPCClientConfigurationImpl(
+        override val minimumServerProtocolVersion: Int,
+        override val trackRpcCallSites: Boolean,
+        override val reapInterval: Duration,
+        override val observationExecutorPoolSize: Int,
+        override val connectionRetryInterval: Duration,
+        override val connectionRetryIntervalMultiplier: Double,
+        override val connectionMaxRetryInterval: Duration,
+        override val maxReconnectAttempts: Int,
+        override val maxFileSize: Int,
+        override val deduplicationCacheExpiry: Duration
+) : CordaRPCClientConfiguration {
     companion object {
-        val unlimitedReconnectAttempts = -1
+        private const val unlimitedReconnectAttempts = -1
         @JvmStatic
-        val default = RPCClientConfiguration(
+        val default = CordaRPCClientConfigurationImpl(
                 minimumServerProtocolVersion = 0,
                 trackRpcCallSites = false,
                 reapInterval = 1.seconds,
                 observationExecutorPoolSize = 4,
-                cacheConcurrencyLevel = 8,
                 connectionRetryInterval = 5.seconds,
                 connectionRetryIntervalMultiplier = 1.5,
                 connectionMaxRetryInterval = 3.minutes,
@@ -85,13 +59,13 @@ data class RPCClientConfiguration(
 
 class RPCClient<I : RPCOps>(
         val transport: TransportConfiguration,
-        val rpcConfiguration: RPCClientConfiguration = RPCClientConfiguration.default,
+        val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
         val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
 ) {
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: SSLConfiguration? = null,
-            configuration: RPCClientConfiguration = RPCClientConfiguration.default,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfiguration), configuration, serializationContext)
 

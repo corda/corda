@@ -4,6 +4,7 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AttachmentWithContext
+import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.serialization.CordaSerializable
 
 /** Constrain which contract-code-containing attachment can be used with a [ContractState]. */
@@ -19,9 +20,17 @@ object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment) = true
 }
 
-/** An [AttachmentConstraint] that verifies by hash */
+/**
+ * An [AttachmentConstraint] that verifies by hash.
+ * The state protected by this constraint can only be used in a transaction created with that version of the jar.
+ * And a receiving node will only accept it if a cordapp with that hash has (is) been deployed on the node.
+ */
 data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentConstraint {
-    override fun isSatisfiedBy(attachment: Attachment) = attachment.id == attachmentId
+    override fun isSatisfiedBy(attachment: Attachment): Boolean {
+        return if (attachment is AttachmentWithContext) {
+            attachment.id == attachmentId && isUploaderTrusted(attachment.contractAttachment.uploader)
+        } else false
+    }
 }
 
 /**

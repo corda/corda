@@ -105,6 +105,7 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
         configuration.sshdPort?.apply{ println("SSH server listening on port $this.") }
 
         exit.await()
+        // because we can't clean certain Crash Shell threads that block on read()
         exitProcess(0)
     }
 }

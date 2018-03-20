@@ -27,7 +27,7 @@ RPC permissions
 ---------------
 For a node's owner to interact with their node via RPC, they must define one or more RPC users. Each user is
 authenticated with a username and password, and is assigned a set of permissions that control which RPC operations they
-can perform.
+can perform. Permissions are not required to interact with the node via the shell, unless the shell is being accessed via SSH.
 
 RPC users are created by adding them to the ``rpcUsers`` list in the node's ``node.conf`` file:
 
@@ -125,6 +125,8 @@ You can provide an RPC user with the permission to perform any RPC operation (in
             }
             ...
         ]
+
+.. _rpc_security_mgmt_ref:
 
 RPC security management
 -----------------------
