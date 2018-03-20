@@ -160,7 +160,7 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
             PropertyDescriptorsRegex.re.find(func.name)?.apply {
                 // matching means we have an func getX where the property could be x or X
                 // so having pre-loaded all of the properties we try to match to either case. If that
-                // fails the getter doesn't refer to a property directly, but may to a constructor
+                // fails the getter doesn't refer to a property directly, but may refer to a constructor
                 // parameter that shadows a property
                 val properties =
                         classProperties[groups[2]!!.value] ?:

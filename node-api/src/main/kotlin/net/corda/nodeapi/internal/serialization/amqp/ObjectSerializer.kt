@@ -63,8 +63,8 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
                 javaConstructor?.parameterCount ?: 0 > 0
         ) {
             throw NotSerializableException("Serialization constructor for class $type expects "
-                    + "${javaConstructor?.parameterCount} parameter but we have ${propertySerializers.size} "
-                    + "properties to serialize")
+                    + "${javaConstructor?.parameterCount} parameters but we have ${propertySerializers.size} "
+                    + "properties to serialize.")
         }
 
         // Write described
@@ -146,7 +146,8 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
         if (properties.size != javaConstructor?.parameterCount) {
             throw NotSerializableException("Serialization constructor for class $type expects "
-                    + "${javaConstructor?.parameterCount} parameter but we have ${properties.size} serialized properties")
+                    + "${javaConstructor?.parameterCount} parameters but we have ${properties.size} "
+                    + "serialized properties.")
         }
 
         return javaConstructor?.newInstance(*properties.toTypedArray())
