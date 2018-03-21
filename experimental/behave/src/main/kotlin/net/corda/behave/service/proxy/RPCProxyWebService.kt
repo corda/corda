@@ -136,7 +136,7 @@ class RPCProxyWebService(targetHostAndPort: NetworkHostAndPort) {
 
     private fun <T> use(action: (CordaRPCOps) -> T): Response {
         val targetHost = NetworkHostAndPort("localhost", targetPort)
-        val config = CordaRPCClientConfiguration(connectionMaxRetryInterval = 10.seconds)
+        val config = CordaRPCClientConfiguration.default()
         log.info("Establishing RPC connection to ${targetHost.host} on port ${targetHost.port} ...")
         return try {
             CordaRPCClient(targetHost, config).use("corda", Configuration.DEFAULT_PASSWORD) {
