@@ -1,10 +1,12 @@
 package net.corda.behave.database
 
 import net.corda.behave.database.configuration.H2ConfigurationTemplate
+import net.corda.behave.database.configuration.PostgresConfigurationTemplate
 import net.corda.behave.database.configuration.SqlServerConfigurationTemplate
 import net.corda.behave.node.configuration.Configuration
 import net.corda.behave.node.configuration.DatabaseConfiguration
 import net.corda.behave.service.database.H2Service
+import net.corda.behave.service.database.PostgreSQLService
 import net.corda.behave.service.database.SqlServerService
 
 enum class DatabaseType(val settings: DatabaseSettings) {
@@ -28,6 +30,16 @@ enum class DatabaseType(val settings: DatabaseSettings) {
             .withServiceInitiator {
                 SqlServerService("sqlserver-${it.name}", it.database.port, it.database.password)
             }
+    ),
+
+    POSTGRES(DatabaseSettings()
+            .withDriver(PostgreSQLService.driver)
+            .withSchema(PostgreSQLService.schema)
+            .withUser(PostgreSQLService.username)
+            .withConfigTemplate(PostgresConfigurationTemplate())
+            .withServiceInitiator {
+                PostgreSQLService("postgres-${it.name}", it.database.port, it.database.password)
+            }
     );
 
     fun dependencies(config: Configuration) = settings.dependencies(config)
@@ -41,6 +53,8 @@ enum class DatabaseType(val settings: DatabaseSettings) {
             "sql_server" -> SQL_SERVER
             "sql server" -> SQL_SERVER
             "sqlserver" -> SQL_SERVER
+            "postgres" -> POSTGRES
+            "postgreSQL" -> POSTGRES
             else -> null
         }
 
