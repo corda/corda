@@ -669,20 +669,20 @@ private class P2PMessagingConsumer(
 
     val messages: PublishSubject<ClientMessage> = PublishSubject.create<ClientMessage>()
 
-    private var initialOnlyConsumer = multiplex(queueNames, createSession, initialSessionMessages)
-    private var initialAndExistingConsumer = multiplex(queueNames, createSession)
+    private val existingOnlyConsumer = multiplex(queueNames, createSession, initialSessionMessages)
+    private val initialAndExistingConsumer = multiplex(queueNames, createSession)
     private val subscriptions = mutableSetOf<Subscription>()
 
     override fun start() {
 
         synchronized(this) {
             require(!startedFlag)
-            drainingModeWasChangedEvents.filter { change -> change.switchedOn() }.doOnNext { initialAndExistingConsumer.switchTo(initialOnlyConsumer) }.subscribe()
-            drainingModeWasChangedEvents.filter { change -> change.switchedOff() }.doOnNext { initialOnlyConsumer.switchTo(initialAndExistingConsumer) }.subscribe()
-            subscriptions += initialOnlyConsumer.messages.doOnNext(messages::onNext).subscribe()
+            drainingModeWasChangedEvents.filter { change -> change.switchedOn() }.doOnNext { initialAndExistingConsumer.switchTo(existingOnlyConsumer) }.subscribe()
+            drainingModeWasChangedEvents.filter { change -> change.switchedOff() }.doOnNext { existingOnlyConsumer.switchTo(initialAndExistingConsumer) }.subscribe()
+            subscriptions += existingOnlyConsumer.messages.doOnNext(messages::onNext).subscribe()
             subscriptions += initialAndExistingConsumer.messages.doOnNext(messages::onNext).subscribe()
             if (isDrainingModeOn()) {
-                initialOnlyConsumer.start()
+                existingOnlyConsumer.start()
             } else {
                 initialAndExistingConsumer.start()
             }
@@ -694,7 +694,7 @@ private class P2PMessagingConsumer(
 
         synchronized(this) {
             if (startedFlag) {
-                initialOnlyConsumer.stop()
+                existingOnlyConsumer.stop()
                 initialAndExistingConsumer.stop()
                 subscriptions.forEach(Subscription::unsubscribe)
                 subscriptions.clear()
