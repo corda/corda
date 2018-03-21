@@ -138,7 +138,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
     }
 
     override fun getRequests(requestStatus: RequestStatus): List<CertificateSigningRequest> {
-        return database.transaction {
+        return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             val builder = session.criteriaBuilder
             val query = builder.createQuery(CertificateSigningRequestEntity::class.java).run {
                 from(CertificateSigningRequestEntity::class.java).run {
