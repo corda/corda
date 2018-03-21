@@ -41,7 +41,7 @@ class FlowsDrainingModeContentionTest {
     }
 
     @Test
-    fun example() {
+    fun `draining mode does not deadlock with acks between 2 nodes`() {
 
         val message = "Ground control to Major Tom"
 
