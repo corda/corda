@@ -45,8 +45,7 @@ class NodeSuspendAndResumeTest : NodeBasedTest(listOf("net.corda.finance.contrac
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, DUMMY_NOTARY_NAME)
-                .map { it.toDatabaseSchemaName() }.toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 
     private val rpcUser = User("user1", "test", permissions = setOf(
@@ -71,6 +70,7 @@ class NodeSuspendAndResumeTest : NodeBasedTest(listOf("net.corda.finance.contrac
             }
             (startedNode.network as P2PMessagingClient).runningFuture.get()
         }
+        node.stop()
     }
 
     @Test
@@ -92,6 +92,7 @@ class NodeSuspendAndResumeTest : NodeBasedTest(listOf("net.corda.finance.contrac
             println("Balance: $currentCashAmount")
             assertEquals((123 * i).DOLLARS, currentCashAmount)
         }
+        node.stop()
     }
 
     @Test
@@ -120,6 +121,8 @@ class NodeSuspendAndResumeTest : NodeBasedTest(listOf("net.corda.finance.contrac
         currentCashAmount = getCashBalance(node)
         println("Balance: $currentCashAmount")
         assertEquals(123.DOLLARS, currentCashAmount)
+
+        node.stop()
     }
 
     @Test
@@ -142,6 +145,8 @@ class NodeSuspendAndResumeTest : NodeBasedTest(listOf("net.corda.finance.contrac
         val currentCashAmount = getCashBalance(node)
         println("Balance: $currentCashAmount")
         assertEquals(123.DOLLARS, currentCashAmount)
+
+        node.stop()
     }
 
     @Test
@@ -161,6 +166,8 @@ class NodeSuspendAndResumeTest : NodeBasedTest(listOf("net.corda.finance.contrac
         val currentCashAmount = getCashBalance(node)
         println("Balance: $currentCashAmount")
         assertEquals(123.DOLLARS, currentCashAmount)
+
+        node.stop()
     }
 
     @Test
@@ -182,6 +189,8 @@ class NodeSuspendAndResumeTest : NodeBasedTest(listOf("net.corda.finance.contrac
         val currentCashAmount = getCashBalance(node)
         println("Balance: $currentCashAmount")
         assertEquals(123.DOLLARS, currentCashAmount)
+
+        node.stop()
     }
 
     @Test
@@ -201,6 +210,8 @@ class NodeSuspendAndResumeTest : NodeBasedTest(listOf("net.corda.finance.contrac
         val currentCashAmount = getCashBalance(node)
         println("Balance: $currentCashAmount")
         assertEquals(123.DOLLARS, currentCashAmount)
+
+        node.stop()
     }
 
     @Test
@@ -220,6 +231,8 @@ class NodeSuspendAndResumeTest : NodeBasedTest(listOf("net.corda.finance.contrac
         Assertions.assertThatExceptionOfType(ActiveMQNotConnectedException::class.java).isThrownBy {
             issueCash(node, node.generateAndSaveNodeInfo().identityFromX500Name(ALICE_NAME))
         }
+
+        node.stop()
     }
 
     private fun issueCash(node: Node, party: Party) {

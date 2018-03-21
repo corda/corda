@@ -4,6 +4,7 @@ DROP TABLE ${schema}.cp_states_v2_participants CASCADE CONSTRAINTS
 DROP TABLE ${schema}.dummy_linear_state_parts CASCADE CONSTRAINTS
 DROP TABLE ${schema}.dummy_linear_states_v2_parts CASCADE CONSTRAINTS
 DROP TABLE ${schema}.dummy_deal_states_parts CASCADE CONSTRAINTS
+DROP TABLE ${schema}.node_attchments_contracts CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_attachments CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_checkpoints CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_transactions CASCADE CONSTRAINTS
@@ -14,7 +15,8 @@ DROP TABLE ${schema}.node_our_key_pairs CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_scheduled_states CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_network_map_nodes CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_network_map_subscribers CASCADE CONSTRAINTS
-DROP TABLE ${schema}.node_notary_commit_log CASCADE CONSTRAINTS
+DROP TABLE ${schema}.node_notary_committed_states CASCADE CONSTRAINTS
+DROP TABLE ${schema}.node_notary_request_log CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_transaction_mappings CASCADE CONSTRAINTS
 DROP TABLE ${schema}.vault_fungible_states_parts CASCADE CONSTRAINTS
 DROP TABLE ${schema}.vault_linear_states_parts CASCADE CONSTRAINTS
@@ -32,6 +34,7 @@ DROP TABLE ${schema}.cp_states CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_contract_upgrades CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_identities CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_named_identities CASCADE CONSTRAINTS
+DROP TABLE ${schema}.node_properties CASCADE CONSTRAINTS
 DROP TABLE ${schema}.children CASCADE CONSTRAINTS
 DROP TABLE ${schema}.parents CASCADE CONSTRAINTS
 DROP TABLE ${schema}.contract_cash_states CASCADE CONSTRAINTS
