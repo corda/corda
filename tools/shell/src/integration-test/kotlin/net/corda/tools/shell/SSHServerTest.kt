@@ -35,6 +35,7 @@ import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.io.Streams
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 import java.net.ConnectException
 import kotlin.test.assertTrue
@@ -139,6 +140,7 @@ class SSHServerTest : IntegrationTest() {
         }
     }
 
+    @Ignore
     @Test
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
