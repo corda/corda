@@ -25,9 +25,11 @@ buildscript {
 // causing the problems in runtime. Those can be changed by manipulating above properties
 // See https://github.com/spring-gradle-plugins/dependency-management-plugin/blob/master/README.md#changing-the-value-of-a-version-property
 // This has to be repeated here as otherwise the order of files does matter
+// See a list here: https://github.com/spring-projects/spring-boot/blob/master/spring-boot-project/spring-boot-dependencies/pom.xml
 ext['artemis.version'] = "$artemis_version"
 ext['hibernate.version'] = "$hibernate_version"
 ext['jackson.version'] = "$jackson_version"
+ext['dropwizard-metrics.version'] = "$metrics_version"
 
 
 apply plugin: 'java'

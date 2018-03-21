@@ -12,10 +12,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
-import com.codahale.metrics.Gauge
-import com.codahale.metrics.Histogram
-import com.codahale.metrics.MetricRegistry
-import com.codahale.metrics.SlidingTimeWindowReservoir
+import com.codahale.metrics.*
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
@@ -30,6 +27,7 @@ import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * This is the bottom execution engine of flow side-effects.
@@ -47,23 +45,20 @@ class ActionExecutorImpl(
         val log = contextLogger()
     }
 
-    private class LatchedGauge : Gauge<Long> {
-        private var value: Long = 0
-        fun update(value: Long) {
-            this.value = value
-        }
-
+    /**
+     * This [Gauge] just reports the sum of the bytes checkpointed during the last second.
+     */
+    private class LatchedGauge(private val reservoir: Reservoir) : Gauge<Long> {
         override fun getValue(): Long {
-            val retVal = value
-            value = 0
-            return retVal
+            return reservoir.snapshot.values.sum()
         }
     }
 
     private val checkpointingMeter = metrics.meter("Flows.Checkpointing Rate")
     private val checkpointSizesThisSecond = SlidingTimeWindowReservoir(1, TimeUnit.SECONDS)
-    private val checkpointBandwidthHist = metrics.register("Flows.CheckpointVolumeBytesPerSecondHist", Histogram(SlidingTimeWindowReservoir(1, TimeUnit.DAYS)))
-    private val checkpointBandwidth = metrics.register("Flows.CheckpointVolumeBytesPerSecondCurrent", LatchedGauge())
+    private val lastBandwidthUpdate = AtomicLong(0)
+    private val checkpointBandwidthHist = metrics.register("Flows.CheckpointVolumeBytesPerSecondHist", Histogram(SlidingTimeWindowArrayReservoir(1, TimeUnit.DAYS)))
+    private val checkpointBandwidth = metrics.register("Flows.CheckpointVolumeBytesPerSecondCurrent", LatchedGauge(checkpointSizesThisSecond))
 
     @Suspendable
     override fun executeAction(fiber: FlowFiber, action: Action) {
@@ -107,9 +102,14 @@ class ActionExecutorImpl(
         checkpointStorage.addCheckpoint(action.id, checkpointBytes)
         checkpointingMeter.mark()
         checkpointSizesThisSecond.update(checkpointBytes.size.toLong())
-        val checkpointVolume = checkpointSizesThisSecond.snapshot.values.sum()
-        checkpointBandwidthHist.update(checkpointVolume)
-        checkpointBandwidth.update(checkpointVolume)
+        var lastUpdateTime = lastBandwidthUpdate.get()
+        while (System.nanoTime() - lastUpdateTime > TimeUnit.SECONDS.toNanos(1)) {
+            if (lastBandwidthUpdate.compareAndSet(lastUpdateTime, System.nanoTime())) {
+                val checkpointVolume = checkpointSizesThisSecond.snapshot.values.sum()
+                checkpointBandwidthHist.update(checkpointVolume)
+            }
+            lastUpdateTime = lastBandwidthUpdate.get()
+        }
     }
 
     @Suspendable
