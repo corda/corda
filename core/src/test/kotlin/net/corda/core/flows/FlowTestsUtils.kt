@@ -43,20 +43,6 @@ inline fun <I : FlowLogic<*>, reified R : FlowLogic<*>> StartedNode<InternalMock
 }
 
 /**
- * Allows to register a flow of type [R] against an initiating flow of type [I].
- */
-inline fun <I : FlowLogic<*>, reified R> StartedNode<InternalMockNetwork.MockNode>.registerInitiatedFlowAsClosure(initiatingFlowType: KClass<I>, noinline action: FlowSession.() -> R) {
-
-    internalRegisterFlowFactory(initiatingFlowType.java, InitiatedFlowFactory.Core { session -> InitiatedFlowClosure(session, action) }, InitiatedFlowClosure::class.javaObjectType, true)
-}
-
-class InitiatedFlowClosure<out R>(private val session: FlowSession, private val action: FlowSession.() -> R) : FlowLogic<R>() {
-
-    @Suspendable
-    override fun call(): R = action(session)
-}
-
-/**
  * Allows to register a flow of type [Answer] against an initiating flow of type [I], returning a valure of type [R].
  */
 inline fun <I : FlowLogic<*>, reified R : Any> StartedNode<InternalMockNetwork.MockNode>.registerAnswer(initiatingFlowType: KClass<I>, value: R) {
