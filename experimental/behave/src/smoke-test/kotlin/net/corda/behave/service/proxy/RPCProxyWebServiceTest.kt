@@ -1,8 +1,6 @@
 package net.corda.behave.service.proxy
 
 import com.opengamma.strata.product.common.BuySell
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.responseAs
 import net.corda.core.messaging.startFlow
@@ -18,6 +16,7 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.flows.IRSTradeFlow
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -25,9 +24,12 @@ import java.time.LocalDate
 class RPCProxyWebServiceTest {
 
     init {
-        initialiseSerialization()
+        try { initialiseSerialization() } catch (e: Exception) {}
     }
 
+    /**
+     *  client -> HTTPtoRPCProxy -> Corda Node
+     */
     private val hostAndPort = NetworkHostAndPort("localhost", 13002)
     private val rpcProxyClient = CordaRPCProxyClient(hostAndPort)
 
@@ -36,39 +38,27 @@ class RPCProxyWebServiceTest {
 
     @Test
     fun myIp() {
-//        RPCProxyServer(hostAndPort, webService = RPCProxyWebService()).use {
-//            it.start()
-            val response = doGet<String>("my-ip")
-            println(response)
-            assertTrue(response.contains("My ip is"))
-//        }
+        val response = doGet<String>("my-ip")
+        println(response)
+        assertTrue(response.contains("My ip is"))
     }
 
     @Test
     fun nodeInfo() {
-//        RPCProxyServer(hostAndPort, webService = RPCProxyWebService()).use {
-//            it.start()
-            val response = rpcProxyClient.nodeInfo()
-            println(response)
-//        }
+        val response = rpcProxyClient.nodeInfo()
+        println(response)
     }
 
     @Test
     fun registeredFlows() {
-//        RPCProxyServer(hostAndPort, webService = RPCProxyWebService()).use {
-//            it.start()
-            val response = rpcProxyClient.registeredFlows()
-            println(response)
-//        }
+        val response = rpcProxyClient.registeredFlows()
+        println(response)
     }
 
     @Test
     fun notaryIdentities() {
-//        RPCProxyServer(hostAndPort, webService = RPCProxyWebService()).use {
-//            it.start()
-            val response = rpcProxyClient.notaryIdentities()
-            println(response)
-//        }
+        val response = rpcProxyClient.notaryIdentities()
+        println(response)
     }
 
     @Test
@@ -80,7 +70,7 @@ class RPCProxyWebServiceTest {
     @Test
     fun startFlowCashIssuePartyA() {
         val notary = rpcProxyClient.notaryIdentities()[0]
-        val response = rpcProxyClient.startFlow(::CashIssueFlow, POUNDS(5000), OpaqueBytes.of(1), notary)
+        val response = rpcProxyClient.startFlow(::CashIssueFlow, POUNDS(500), OpaqueBytes.of(1), notary)
         val result = response.returnValue.getOrThrow().stx
         println(result)
     }
@@ -88,7 +78,7 @@ class RPCProxyWebServiceTest {
     @Test
     fun startFlowCashIssuePartyB() {
         val notary = rpcProxyClientB.notaryIdentities()[0]
-        val response = rpcProxyClientB.startFlow(::CashIssueFlow, DOLLARS(10000), OpaqueBytes.of(1), notary)
+        val response = rpcProxyClientB.startFlow(::CashIssueFlow, DOLLARS(1000), OpaqueBytes.of(1), notary)
         val result = response.returnValue.getOrThrow().stx
         println(result)
     }
@@ -96,8 +86,7 @@ class RPCProxyWebServiceTest {
     @Test
     fun startFlowCashPaymentToPartyB() {
         val recipient = rpcProxyClient.partiesFromName("PartyB", false).first()
-//        val response = rpcProxyClient.startFlow(::CashPaymentFlow, POUNDS(200), recipient)
-        val response = rpcProxyClient.startFlow(::CashPaymentFlow, DOLLARS(250), recipient)
+        val response = rpcProxyClient.startFlow(::CashPaymentFlow, POUNDS(250), recipient)
         val result = response.returnValue.getOrThrow().stx
         println(result)
     }
@@ -105,8 +94,7 @@ class RPCProxyWebServiceTest {
     @Test
     fun startFlowCashPaymentToPartyA() {
         val recipient = rpcProxyClientB.partiesFromName("PartyA", false).first()
-//        val response = rpcProxyClientB.startFlow(::CashPaymentFlow, DOLLARS(500), recipient)
-        val response = rpcProxyClientB.startFlow(::CashPaymentFlow, POUNDS(100), recipient)
+        val response = rpcProxyClientB.startFlow(::CashPaymentFlow, DOLLARS(500), recipient)
         val result = response.returnValue.getOrThrow().stx
         println(result)
     }
@@ -116,6 +104,48 @@ class RPCProxyWebServiceTest {
         val response = rpcProxyClient.startFlow(::CashExitFlow, POUNDS(500), OpaqueBytes.of(1))
         val result = response.returnValue.getOrThrow().stx
         println(result)
+    }
+
+    @Test
+    fun startMultiPartyCashFlows() {
+        val notary = rpcProxyClient.notaryIdentities()[0]
+
+        // Party A issue 500 GBP
+        println("Party A issuing 500 GBP")
+        rpcProxyClient.startFlow(::CashIssueFlow, POUNDS(500), OpaqueBytes.of(1), notary).returnValue.getOrThrow()
+
+        // Party B issue 1000 USD
+        println("Party B issuing 1000 USD")
+        rpcProxyClientB.startFlow(::CashIssueFlow, DOLLARS(1000), OpaqueBytes.of(1), notary).returnValue.getOrThrow()
+
+        // Party A transfers 250 GBP to Party B
+        println("Party A transferring 250 GBP to Party B")
+        val partyB = rpcProxyClient.partiesFromName("PartyB", false).first()
+        rpcProxyClient.startFlow(::CashPaymentFlow, POUNDS(250), partyB).returnValue.getOrThrow()
+
+        // Party B transfers 500 USD to Party A
+        println("Party B transferring 500 USD to Party A")
+        val partyA = rpcProxyClientB.partiesFromName("PartyA", false).first()
+        rpcProxyClientB.startFlow(::CashPaymentFlow, DOLLARS(500), partyA).returnValue.getOrThrow()
+
+        // Party B transfers back 125 GBP to Party A
+        println("Party B transferring back 125 GBP to Party A")
+        rpcProxyClientB.startFlow(::CashPaymentFlow, POUNDS(125), partyA).returnValue.getOrThrow()
+
+        // Party A transfers back 250 USD to Party B
+        println("Party A transferring back 250 USD to Party B")
+        rpcProxyClient.startFlow(::CashPaymentFlow, DOLLARS(250), partyB).returnValue.getOrThrow()
+
+        // Query the Vault of each respective Party
+        val responseA = rpcProxyClient.vaultQuery(Cash.State::class.java)
+        responseA.states.forEach { state ->
+            println("PartyA: ${state.state.data.amount}")
+        }
+
+        val responseB = rpcProxyClientB.vaultQuery(Cash.State::class.java)
+        responseB.states.forEach { state ->
+            println("PartyB: ${state.state.data.amount}")
+        }
     }
 
     @Test
@@ -184,16 +214,7 @@ class RPCProxyWebServiceTest {
         }
         catch (e: Exception) {
             println("Vault Cash query error: ${e.message}")
-        }
-    }
-
-    private fun <T: ContractState> vaultQuery(contractStateType: Class<out T>): List<StateAndRef<T>> {
-        try {
-            return rpcProxyClient.vaultQuery(contractStateType).states
-        }
-        catch (e: Exception) {
-            println("Vault query error: ${e.message}")
-            throw e
+            fail()
         }
     }
 

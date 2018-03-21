@@ -111,10 +111,7 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
         val argList = listOf(flowName, *args)
 
         println("Corda RPC Proxy client calling: $flowName with values: $argList")
-        // TODO: Fix me to return an arbitrary result type <T>
-//        val response = doPost<AbstractCashFlow.Result>(targetHostAndPort, "start-flow", argList.serialize().bytes)
-//        val response = doPost<ContractState>(targetHostAndPort, "start-flow", argList.serialize().bytes)
-        val response = doPost<SignedTransaction>(targetHostAndPort, "start-flow", argList.serialize().bytes)
+        val response = doPost<Any>(targetHostAndPort, "start-flow", argList.serialize().bytes)
         val result = doneFuture(response)
         return FlowHandleImpl(StateMachineRunId.createRandom(), result) as FlowHandle<T>
     }
@@ -204,6 +201,10 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
     }
 
     override fun isFlowsDrainingModeEnabled(): Boolean {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun shutdown() {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
