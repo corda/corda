@@ -28,9 +28,8 @@ interface TestInterface {
     fun runThing() : Int
 }
 
-
 // Create a custom serialization factory where we need to be able to both specify a carpenter
-// but also have the class loader used be the carpenter be substantially different from the
+// but also have the class loader used by the carpenter be substantially different from the
 // one used by the factory so as to ensure we can control their behaviour independently.
 class TestFactory(override val classCarpenter: ClassCarpenter, cl: ClassLoader)
     : SerializerFactory (classCarpenter.whitelist, cl)
@@ -93,6 +92,5 @@ class CarpenterExceptionTests {
             DeserializationInput(factory).deserialize(ser)
         }.isInstanceOf(NotSerializableException::class.java)
                 .hasMessageContaining(C2::class.java.name)
-
     }
 }
