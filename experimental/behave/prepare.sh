@@ -27,6 +27,7 @@ cp -v $(ls samples/simm-valuation-demo/build/libs/simm-valuation-demo-*.jar | ta
 # Download database drivers
 curl "https://search.maven.org/remotecontent?filepath=com/h2database/h2/1.4.196/h2-1.4.196.jar" > ${DRIVERS_DIR}/h2-1.4.196.jar
 curl -L "https://github.com/Microsoft/mssql-jdbc/releases/download/v6.2.2/mssql-jdbc-6.2.2.jre8.jar" > ${DRIVERS_DIR}/mssql-jdbc-6.2.2.jre8.jar
+curl -L "http://central.maven.org/maven2/org/postgresql/postgresql/42.1.4/postgresql-42.1.4.jar" > ${DRIVERS_DIR}/postgresql-42.1.4.jar
 
 # Build Network Bootstrapper
 ./gradlew buildBootstrapperJar

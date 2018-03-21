@@ -38,9 +38,11 @@ enum class DatabaseType(val settings: DatabaseSettings) {
             .withUser(PostgreSQLService.username)
             .withConfigTemplate(PostgresConfigurationTemplate())
             .withServiceInitiator {
-                PostgreSQLService("postgres-${it.name}", it.database.port, it.database.password)
+                PostgreSQLService("postgres-${it.name}", it.database.port, "postgres")
             }
     );
+
+    val driverJar = settings.driverJar
 
     fun dependencies(config: Configuration) = settings.dependencies(config)
 
