@@ -12,10 +12,10 @@ package net.corda.core.crypto
 
 import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_KEY
 import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_SIGNATURE
-import org.bouncycastle.asn1.ASN1ObjectIdentifier
-import java.security.Provider
-import io.netty.util.concurrent.FastThreadLocal
 import net.corda.core.internal.VisibleForTesting
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import io.netty.util.concurrent.FastThreadLocal
+import java.security.Provider
 import java.security.SecureRandom
 import java.security.SecureRandomSpi
 
@@ -33,11 +33,12 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
         put("Alg.Alias.KeyFactory.OID.$COMPOSITE_KEY", CompositeKey.KEY_ALGORITHM)
         put("Alg.Alias.Signature.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
         put("Alg.Alias.Signature.OID.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
+        setSecureRandomService()
+    }
+
+    private fun setSecureRandomService() {
         // Assuming this Provider is the first SecureRandom Provider, this algorithm is the SecureRandom default:
-        putService(DelegatingSecureRandomService(this) {
-            // Unlike all the NativePRNG algorithms, this doesn't use a global lock:
-            object : SecureRandom(sun.security.provider.SecureRandom(), null) {}
-        })
+        putService(DelegatingSecureRandomService(this))
     }
 }
 
@@ -50,14 +51,16 @@ object CordaObjectIdentifier {
     val COMPOSITE_SIGNATURE = ASN1ObjectIdentifier("2.25.30086077608615255153862931087626791003")
 }
 
-internal class DelegatingSecureRandomService internal constructor(
-        provider: CordaSecurityProvider, secureRandomFactory: () -> SecureRandom) : Provider.Service(
+// Unlike all the NativePRNG algorithms, this doesn't use a global lock:
+private class SunSecureRandom : SecureRandom(sun.security.provider.SecureRandom(), null)
+
+private class DelegatingSecureRandomService(provider: CordaSecurityProvider) : Provider.Service(
         provider, type, CORDA_SECURE_RANDOM_ALGORITHM, DelegatingSecureRandomSpi::class.java.name, null, null) {
-    internal companion object {
-        internal val type = "SecureRandom"
+    private companion object {
+        private const val type = "SecureRandom"
     }
 
-    internal val instance = DelegatingSecureRandomSpi(secureRandomFactory)
+    internal val instance = DelegatingSecureRandomSpi(::SunSecureRandom)
     override fun newInstance(constructorParameter: Any?) = instance
 }
 
