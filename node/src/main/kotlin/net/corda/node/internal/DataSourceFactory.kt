@@ -14,10 +14,14 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import com.zaxxer.hikari.util.PropertyElf
 import net.corda.core.internal.declaredField
+import net.corda.core.internal.div
 import org.h2.engine.Database
 import org.h2.engine.Engine
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Modifier
+import java.net.URLClassLoader
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 import javax.sql.DataSource
 
@@ -52,5 +56,29 @@ object DataSourceFactory {
                 PropertyElf.setTargetFromProperties(it, config.dataSourceProperties)
             }
         }
+    }
+
+    fun createDatasourceFromDriverJars(dataSourceProperties: Properties, baseClassLoader: ClassLoader, driverJarsPath: Path): DataSource {
+        return URLClassLoader(Files.newDirectoryStream(driverJarsPath, "*.jar").map { it.toUri().toURL() }.toTypedArray(), baseClassLoader).use { driversClassLoader ->
+            val dataSourceClassName = dataSourceProperties["dataSourceClassName"] as String?
+            val dataSourceClass = driversClassLoader.loadClass(dataSourceClassName)
+            val dataSourceInstance = dataSourceClass.newInstance() as DataSource
+
+            val props = Properties().also {
+                it.putAll(dataSourceProperties.propertyNames().toList()
+                        .filter { name -> (name as String).startsWith("dataSource.") }
+                        .map { name -> (name as String).substring("dataSource.".length) to (dataSourceProperties[name]) }.toMap())
+            }
+            PropertyElf.setTargetFromProperties(dataSourceInstance, props)
+
+            dataSourceInstance
+        }
+    }
+
+    fun createHikariDatasourceFromDriverJars(dataSourceProperties: Properties, baseClassLoader: ClassLoader, driverJarsPath: Path): DataSource {
+        val dataSource = createDatasourceFromDriverJars(dataSourceProperties, baseClassLoader, driverJarsPath)
+        val cfg = HikariConfig(dataSourceProperties)
+        cfg.dataSource = dataSource
+        return HikariDataSource(cfg)
     }
 }

@@ -22,6 +22,7 @@ import net.corda.core.internal.MigrationHelpers
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.schemas.MappedSchema
+import net.corda.node.internal.DataSourceFactory.createDatasourceFromDriverJars
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.parseAsNodeConfiguration
@@ -213,21 +214,7 @@ private fun getMigrationOutput(baseDirectory: Path, options: OptionSet): Writer 
 
 private fun runWithDataSource(config: Configuration, baseDirectory: Path, classLoader: ClassLoader, withDatasource: (DataSource) -> Unit) {
     val driversFolder = baseDirectory / "drivers"
-    val dataSourceClass = config.dataSourceProperties["dataSourceClassName"] as String?
-
-    return URLClassLoader(Files.newDirectoryStream(driversFolder, "*.jar").map { it.toUri().toURL() }.toTypedArray(), classLoader).use { driversClassLoader ->
-        val driverClass = driversClassLoader.loadClass(dataSourceClass)
-        val dataSourceInstance = driverClass.newInstance() as DataSource
-
-        val props = Properties().also {
-            it.putAll(config.dataSourceProperties.propertyNames().toList()
-                            .filter { name -> (name as String).startsWith("dataSource.") }
-                            .map { name -> (name as String).substring("dataSource.".length) to (config.dataSourceProperties[name]) }.toMap())
-        }
-        PropertyElf.setTargetFromProperties(dataSourceInstance, props)
-
-        withDatasource(dataSourceInstance)
-    }
+    return withDatasource(createDatasourceFromDriverJars(config.dataSourceProperties, classLoader, driversFolder))
 }
 
 private fun errorAndExit(message: String?) {
