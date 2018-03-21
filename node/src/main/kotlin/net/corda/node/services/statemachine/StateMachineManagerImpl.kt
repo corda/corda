@@ -12,6 +12,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.FlowException
@@ -640,8 +641,16 @@ class StateMachineManagerImpl(
             }
         }
 
+        // TODO MS re-enable and remove the println(...)
+//        val additionalHeaders = fiber?.context?.origin.let { if (it is InvocationOrigin.Peer && it.party == party.name) {
+//            println("MICHELE: same party")
+//            emptyMap()
+//        } else message.additionalHeaders() }
+
+        val additionalHeaders = message.additionalHeaders()
+
         serviceHub.networkService.apply {
-            send(createMessage(sessionTopic, serialized.bytes), address, retryId = retryId, additionalHeaders = message.additionalHeaders())
+            send(createMessage(sessionTopic, serialized.bytes), address, retryId = retryId, additionalHeaders = additionalHeaders)
         }
     }
 }

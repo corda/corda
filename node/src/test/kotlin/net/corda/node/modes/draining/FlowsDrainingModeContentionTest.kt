@@ -40,6 +40,7 @@ class FlowsDrainingModeContentionTest {
         mockNet.stopNodes()
     }
 
+    // TODO MS move to use driver (Draining mode doesn't work with MockNetwork)
     @Test
     fun `draining mode does not deadlock with acks between 2 nodes`() {
 
@@ -68,7 +69,7 @@ class FlowsDrainingModeContentionTest {
                     val signedTx = serviceHub.addSignature(tx)
                     assertThat(signedTx.id).isEqualTo(tx.id)
                     alice.services.nodeProperties.flowsDrainingMode.setEnabled(true)
-                    subFlow(FinalityFlow(signedTx))
+                    subFlow(FinalityFlow(signedTx, setOf(session.counterparty)))
                 }
             } as FlowLogic<Unit>
         }
