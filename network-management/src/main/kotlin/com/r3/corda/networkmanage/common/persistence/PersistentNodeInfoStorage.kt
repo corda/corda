@@ -13,6 +13,7 @@ package com.r3.corda.networkmanage.common.persistence
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRequestEntity
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
 import com.r3.corda.networkmanage.common.utils.buildCertPath
+import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.CertRole
@@ -54,6 +55,7 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
             val hash = signedNodeInfo.raw.hash
             val hashedNodeInfo = NodeInfoEntity(
                     nodeInfoHash = hash.toString(),
+                    identityPkHash = nodeInfo.legalIdentities.first().owningKey.hashString(),
                     certificateSigningRequest = request,
                     signedNodeInfoBytes = signedNodeInfo.serialize().bytes,
                     isCurrent = true)
@@ -68,10 +70,31 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
         }
     }
 
+    override fun getAcceptedParametersUpdateHash(nodeInfoHash: SecureHash): SecureHash? {
+        return database.transaction {
+            val hashString = session.find(NodeInfoEntity::class.java, nodeInfoHash.toString())?.acceptedParametersHash
+            if (hashString == null || hashString.isEmpty()) null else SecureHash.parse(hashString)
+        }
+    }
+
     override fun getCertificatePath(publicKeyHash: SecureHash): CertPath? {
         return database.transaction {
             val request = getSignedRequestByPublicHash(publicKeyHash)
             request?.let { buildCertPath(it.certificateData!!.certificatePathBytes) }
+        }
+    }
+
+    override fun ackNodeInfoParametersUpdate(publicKeyHash: SecureHash, acceptedParametersHash: SecureHash) {
+        return database.transaction {
+            val builder = session.criteriaBuilder
+            val query = builder.createQuery(NodeInfoEntity::class.java).run {
+                from(NodeInfoEntity::class.java).run {
+                    where(builder.equal(get<NodeInfoEntity>(NodeInfoEntity::identityPkHash.name), publicKeyHash.toString()))
+                }
+            }
+            val nodeInfo = session.createQuery(query).setMaxResults(1).uniqueResult()
+            val newInfo = nodeInfo.copy(acceptedParametersHash = acceptedParametersHash.toString())
+            session.merge(newInfo)
         }
     }
 

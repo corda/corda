@@ -97,8 +97,8 @@
             <column name="hash" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="certificate" type="BLOB"/>
             <column name="created" type="TIMESTAMP"/>
+            <column name="certificate" type="BLOB"/>
             <column name="parameters_bytes" type="BLOB">
                 <constraints nullable="false"/>
             </column>
@@ -110,6 +110,7 @@
             <column name="node_info_hash" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
+            <column name="public_key_hash" type="NVARCHAR(64)"/>
             <column name="signed_node_info_bytes" type="BLOB">
                 <constraints nullable="false"/>
             </column>
@@ -122,6 +123,7 @@
             <column name="published_at" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
+            <column name="accepted_parameters_hash" type="NVARCHAR(64)"/>
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="1520338500424-8">
@@ -312,5 +314,22 @@
         <addForeignKeyConstraint baseColumnNames="network_parameters" baseTableName="network_map"
                                  constraintName="FK_NM_NP"
                                  referencedColumnNames="hash" referencedTableName="network_parameters"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="update-net-params">
+        <createTable tableName="parameters_update">
+            <column name="description" type="VARCHAR(255)"/>
+            <column name="update_deadline" type="TIMESTAMP"/>
+            <column name="id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_parameters" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="flag_day" type="BOOLEAN"/>
+        </createTable>
+        <addPrimaryKey columnNames="id" constraintName="CONSTRAINT_PARAMUPKEY" tableName="parameters_update"/>
+        <addForeignKeyConstraint baseTableName="parameters_update" baseColumnNames="network_parameters"
+                                 constraintName="FK_PU_NP"
+                                 referencedTableName="network_parameters" referencedColumnNames="hash"/>
     </changeSet>
 </databaseChangeLog>

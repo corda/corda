@@ -11,17 +11,13 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.r3.corda.networkmanage.common.makeTestDataSourceProperties
-import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.cordform.CordformNode
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.internal.list
+import net.corda.core.internal.*
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -30,9 +26,7 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.NodeHandleInternal
@@ -55,12 +49,11 @@ class NodeRegistrationTest : IntegrationTest() {
         private val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
         private val aliceName = CordaX500Name("Alice", "London", "GB")
         private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
+        private val timeoutMillis = 5.seconds.toMillis()
 
         @ClassRule
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(notaryName.organisation, aliceName.organisation, genevieveName.organisation)
-
-        private val timeoutMillis = 5.seconds.toMillis()
     }
 
     @Rule
@@ -71,7 +64,7 @@ class NodeRegistrationTest : IntegrationTest() {
     private val serverAddress = portAllocation.nextHostAndPort()
 
     private lateinit var rootCaCert: X509Certificate
-    private lateinit var csrCa: CertificateAndKeyPair
+    private lateinit var doormanCa: CertificateAndKeyPair
     private lateinit var networkMapCa: CertificateAndKeyPair
     private lateinit var dbName: String
 
@@ -82,7 +75,7 @@ class NodeRegistrationTest : IntegrationTest() {
         dbName = random63BitValue().toString()
         val (rootCa, doormanCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
-        this.csrCa = doormanCa
+        this.doormanCa = doormanCa
         networkMapCa = createDevNetworkMapCa(rootCa)
     }
 
@@ -96,17 +89,19 @@ class NodeRegistrationTest : IntegrationTest() {
         // Start the server without the network parameters config which won't start the network map. Just the doorman
         // registration process will start up, allowing us to register the notaries which will then be used in the network
         // parameters.
-        server = startNetworkManagementServer(networkParameters = null)
+        server = startServer(startNetworkMap = false)
         val compatibilityZone = CompatibilityZoneParams(
                 URL("http://$serverAddress"),
                 publishNotaries = { notaryInfos ->
+                    val setNetParams = NetworkParametersCmd.Set(
+                            notaries = notaryInfos,
+                            minimumPlatformVersion = 1,
+                            maxMessageSize = 10485760,
+                            maxTransactionSize = 10485760,
+                            parametersUpdate = null
+                    )
                     // Restart the server once we're able to generate the network parameters
-                    server!!.close()
-                    server = startNetworkManagementServer(testNetworkParameters(notaryInfos))
-                    // Once restarted we delay starting the nodes to make sure the network map server has processed the
-                    // network parameters, otherwise the nodes will fail to start as the network parameters won't be
-                    // available for them to download.
-                    Thread.sleep(2 * timeoutMillis)
+                    applyNetworkParametersAndStart(setNetParams)
                 },
                 rootCert = rootCaCert
         )
@@ -149,25 +144,6 @@ class NodeRegistrationTest : IntegrationTest() {
         }
     }
 
-
-    private fun startNetworkManagementServer(networkParameters: NetworkParameters?): NetworkManagementServer {
-        return NetworkManagementServer().apply {
-            start(
-                    serverAddress,
-                    configureDatabase(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true)),
-                    CertPathAndKey(listOf(csrCa.certificate, rootCaCert), csrCa.keyPair.private),
-                    DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis),
-                    networkParameters?.let {
-                        NetworkMapStartParams(
-                                LocalSigner(networkMapCa),
-                                it,
-                                NetworkMapConfig(cacheTimeout = timeoutMillis, signInterval = timeoutMillis)
-                        )
-                    }
-            )
-        }
-    }
-
     private fun NodeHandleInternal.onlySeesFromNetworkMap(vararg nodes: NodeHandle) {
         // Make sure the nodes aren't getting the node infos from their additional directories
         val nodeInfosDir = configuration.baseDirectory / CordformNode.NODE_INFO_DIRECTORY
@@ -175,5 +151,33 @@ class NodeRegistrationTest : IntegrationTest() {
             assertThat(nodeInfosDir.list { it.toList() }).isEmpty()
         }
         assertThat(rpc.networkMapSnapshot()).containsOnlyElementsOf(nodes.map { it.nodeInfo })
+    }
+
+    private fun startServer(startNetworkMap: Boolean = true): NetworkManagementServer {
+        val server = NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true))
+        server.start(
+                serverAddress,
+                CertPathAndKey(listOf(doormanCa.certificate, rootCaCert), doormanCa.keyPair.private),
+                DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis),
+                if (startNetworkMap) {
+                    NetworkMapStartParams(
+                            LocalSigner(networkMapCa),
+                            NetworkMapConfig(cacheTimeout = timeoutMillis, signInterval = timeoutMillis)
+                    )
+                } else {
+                    null
+                }
+        )
+        return server
+    }
+
+    private fun applyNetworkParametersAndStart(networkParametersCmd: NetworkParametersCmd) {
+        server?.close()
+        NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true)).use {
+            it.processNetworkParameters(networkParametersCmd)
+        }
+        server = startServer(startNetworkMap = true)
+        // Wait for server to process the parameters update and for the nodes to poll again
+        Thread.sleep(timeoutMillis * 2)
     }
 }

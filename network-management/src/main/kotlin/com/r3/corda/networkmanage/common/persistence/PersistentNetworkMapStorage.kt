@@ -15,9 +15,11 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
+import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.NetworkMapAndSigned
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import java.time.Instant
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 
 /**
@@ -86,12 +88,21 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
         val serialised = networkParameters.serialize()
         val hash = serialised.hash
         database.transaction {
-            session.saveOrUpdate(NetworkParametersEntity(
-                    parametersBytes = serialised.bytes,
-                    parametersHash = hash.toString(),
-                    signature = signature?.bytes,
-                    certificate = signature?.by?.encoded
-            ))
+            val entity = getNetworkParametersEntity(hash)
+            val newNetworkParamsEntity = if (entity != null) {
+                entity.copy(
+                        signature = signature?.bytes,
+                        certificate = signature?.by?.encoded
+                )
+            } else {
+                NetworkParametersEntity(
+                        parametersBytes = serialised.bytes,
+                        parametersHash = hash.toString(),
+                        signature = signature?.bytes,
+                        certificate = signature?.by?.encoded
+                )
+            }
+            session.merge(newNetworkParamsEntity)
         }
         return hash
     }
@@ -107,6 +118,52 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
             }
             // We just want the last entry
             session.createQuery(query).setMaxResults(1).uniqueResult()
+        }
+    }
+
+    override fun saveNewParametersUpdate(networkParameters: NetworkParameters, description: String, updateDeadline: Instant) {
+        database.transaction {
+            val hash = saveNetworkParameters(networkParameters, null)
+            val netParamsEntity = getNetworkParametersEntity(hash)!!
+            clearParametersUpdates()
+            session.save(ParametersUpdateEntity(0, netParamsEntity, description, updateDeadline))
+        }
+    }
+
+    override fun clearParametersUpdates() {
+        database.transaction {
+            val delete = "delete from ${ParametersUpdateEntity::class.java.name}"
+            session.createQuery(delete).executeUpdate()
+        }
+    }
+
+    override fun getParametersUpdate(): ParametersUpdateEntity? {
+        return database.transaction {
+            val currentParametersHash = getActiveNetworkMap()?.toNetworkMap()?.networkParameterHash
+            val latestParameters = getLatestNetworkParameters()
+            val criteria = session.criteriaBuilder.createQuery(ParametersUpdateEntity::class.java)
+            val root = criteria.from(ParametersUpdateEntity::class.java)
+            val query = criteria.select(root)
+            // We just want the last entry
+            val parametersUpdate = session.createQuery(query).setMaxResults(1).uniqueResult()
+            check(parametersUpdate == null || latestParameters == parametersUpdate.networkParameters) {
+                "ParametersUpdate doesn't correspond to latest network parameters"
+            }
+            // Highly unlikely, but...
+            check (parametersUpdate == null || latestParameters?.parametersHash != currentParametersHash?.toString()) {
+                "Having update for parameters that are already in network map"
+            }
+            parametersUpdate
+        }
+    }
+
+    override fun setFlagDay(parametersHash: SecureHash) {
+        database.transaction {
+            val parametersUpdateEntity = getParametersUpdate() ?: throw IllegalArgumentException("Setting flag day but no parameters update to switch to")
+            if (parametersHash.toString() != parametersUpdateEntity.networkParameters.parametersHash) {
+                throw IllegalArgumentException("Setting flag day for parameters: $parametersHash, but in database we have update for: ${parametersUpdateEntity.networkParameters.parametersHash}")
+            }
+            session.merge(parametersUpdateEntity.copy(flagDay = true))
         }
     }
 

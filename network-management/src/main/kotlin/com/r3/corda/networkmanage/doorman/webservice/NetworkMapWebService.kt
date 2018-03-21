@@ -17,6 +17,8 @@ import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
 import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService.Companion.NETWORK_MAP_PATH
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sha256
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
@@ -92,6 +94,25 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
                 is InvalidKeyException, is SignatureException -> status(Response.Status.UNAUTHORIZED).entity(e.message)
                 // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
                 else -> throw e
+            }
+        }.build()
+    }
+
+    @POST
+    @Path("ack-parameters")
+    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+    fun ackNetworkParameters(input: InputStream): Response {
+        return try {
+            val signedParametersHash = input.readBytes().deserialize<SignedData<SecureHash>>()
+            val hash = signedParametersHash.verified()
+            networkMapStorage.getSignedNetworkParameters(hash) ?: throw IllegalArgumentException("No network parameters with hash $hash")
+            logger.debug { "Received ack-parameters with $hash from ${signedParametersHash.sig.by}" }
+            nodeInfoStorage.ackNodeInfoParametersUpdate(signedParametersHash.sig.by.encoded.sha256(), hash)
+            ok()
+        } catch (e: Exception) {
+            when (e) {
+                is SignatureException -> status(Response.Status.FORBIDDEN).entity(e.message)
+                else -> status(Response.Status.INTERNAL_SERVER_ERROR)
             }
         }.build()
     }

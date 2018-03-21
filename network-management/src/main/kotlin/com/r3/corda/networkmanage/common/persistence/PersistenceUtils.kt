@@ -68,7 +68,8 @@ sealed class NetworkManagementSchemaServices {
                     CertificateRevocationListEntity::class.java,
                     NodeInfoEntity::class.java,
                     NetworkParametersEntity::class.java,
-                    NetworkMapEntity::class.java)) {
+                    NetworkMapEntity::class.java,
+                    ParametersUpdateEntity::class.java)) {
         override val migrationResource = "network-manager.changelog-master"
     }
 }

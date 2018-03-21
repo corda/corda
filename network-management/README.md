@@ -59,9 +59,12 @@ java -DdefaultLogLevel=TRACE -DconsoleLogLevel=TRACE -jar doorman-<version>.jar 
 #Configuring network management service
 ### Local signing
 
-   When `keystorePath` is provided in the config file, a signer will be created to handle all the signing periodically using the CA keys in the provided keystore.
+   When `keystorePath` is provided in the config file, a signer will be created to handle all the signing periodically
+   using the CA keys in the provided keystore.
    
-   The network management service can be started without a signer, the signing will be delegated to external process (e.g. HSM) connecting to the same database, the server will poll the database periodically for newly signed data and update the statuses accordingly.
+   The network management service can be started without a signer, the signing will be delegated to external process
+   (e.g. HSM) connecting to the same database, the server will poll the database periodically for newly signed data and
+   update the statuses accordingly.
    
    Additional configuration needed for local signer:
    ```
@@ -77,7 +80,8 @@ Doorman service can be started with the following options :
 
 ### JIRA
 
-The doorman service can use JIRA to manage the certificate signing request approval workflow. This can be turned on by providing JIRA connection configuration in the config file.
+The doorman service can use JIRA to manage the certificate signing request approval workflow. This can be turned on by providing
+JIRA connection configuration in the config file.
    ```
    doorman {
        jira {
@@ -93,10 +97,12 @@ The doorman service can use JIRA to manage the certificate signing request appro
    ```
 #### JIRA project configuration
 * The JIRA project should setup as "Business Project" with "Task" workflow.
-* Custom text field input "Request ID", and "Reject Reason" should be created in JIRA, doorman will exit with error without these custom fields.
+* Custom text field input "Request ID", and "Reject Reason" should be created in JIRA, doorman will exit with error without
+these custom fields.
   
 ### Auto approval 
-  When `approveAll` is set to `true`, the doorman will approve all requests on receive. (*This should only be enabled in a test environment)
+  When `approveAll` is set to `true`, the doorman will approve all requests on receive. (*This should only be enabled in a
+  test environment)
     
 ### Network map service
   Network map service can be enabled by providing the following config:
@@ -106,11 +112,10 @@ The doorman service can use JIRA to manage the certificate signing request appro
     signInterval = 10000
   }
   ```
-  `cacheTimeout`(ms) determines how often the server should poll the database for a newly signed network map and also how often nodes should poll for a new network map (by including this value in the HTTP response header). **This is not how often changes to the network map are signed, which is a different process.**
-  
+  `cacheTimeout`(ms) determines how often the server should poll the database for a newly signed network map and also how often nodes should poll for a new network map (by including this value in the HTTP response header). **This is not how often changes to  the  network map are signed, which is a different process.**  
   `signInterval`(ms) this is only relevant when local signer is enabled. The signer poll the database according to the `signInterval`, and create a new network map if the collection of node info hashes is different from the current network map. 
     
-##Example config file
+## Example config file
 ```
 basedir = "."
 address = "localhost:0"
@@ -214,11 +219,17 @@ networkMap {
       
    Save the parameters to `network-parameters.conf`
 
-### 6. Load initial network parameters file for network map service
-A network parameters file is required to start the network map service for the first time. The initial network parameters file can be loaded using the `--update-network-parameters` flag.
-We can now restart the network management server with both doorman and network map service.  
+### 6. Load the initial network parameters
+A network parameters file is required to start the network map service for the first time. The initial network parameters
+file can be loaded using the `--set-network-parameters` flag. We can now restart the network management server with
+both doorman and network map service.  
 ```
-java -jar doorman-<version>.jar --config-file <config file> --update-network-parameters network-parameters.conf
+java -jar doorman-<version>.jar --config-file <config file> --set-network-parameters network-parameters.conf
+```
+
+The server will terminate once this process is complete. Start it back up again with both the doorman and network map service.
+```
+java -jar doorman-<version>.jar --config-file <config file>
 ```
 
 ### 7. Archive policy
@@ -230,11 +241,42 @@ Run the following SQL script to archive the node info table (change the timestam
     delect from node_info where is_current = false and published_at < '2018-03-12'
 ```
 
-## Private Network Map
+# Updating the network parameters
+The initial network parameters can be subsequently changed through an update process. However, these changes must first
+be advertised to the entire network to allow nodes time to agree to the changes.
+
+The server needs to be shutdown and started with the same `set-network-parameters` as before but this time the network
+parameters file must have `parametersUpdate` config block:
+    
+    parametersUpdate {
+        description = "Important update"
+        updateDeadline = "2017-08-31T05:10:36.297Z" # ISO-8601 time, substitute it with update deadline
+    }
+    
+`description` is a short description of the update that will be communicated to the nodes and `updateDeadline` is
+the time (in ISO-8601 format) by which all nodes in the network must decide that they have accepted the new parameters.
+
+NOTE: Currently only backwards compatible changes to the network parameters can be made, i.e. notaries can't be removed,
+max transaction size can only increase, etc.
+
+It is possible to poll the network map database to check how many network participants have accepted the new network parameters
+- the information is stored in the `node-info.accepted_parameters_hash` column.
+
+When the time for switching the parameters comes, doorman should be restarted again, this time only with `flag-day` flag
+(no parameters file).
+```
+java -jar doorman-<version>.jar --flag-day
+```
+
+This will switch the parameters that were previously advertised as an update to be the current ones in the network map.
+All nodes in the network need to restart to apply the new parameters. Any node which has not accepted the new parameters
+will fail to start.
+
+# Private Network Map
 The private network is a tactical solution to provide temporary privacy to the initial network map.
 
-### Creating a private network
-To create a new private network, a entry has to be create in the ``private_network`` table manually.
+## Creating a private network
+To create a new private network, an entry has to be created in the ``private_network`` table manually.
 
 Run the following SQL script to create a new private network:
 
@@ -248,12 +290,12 @@ Then use the following SQL to retrieve the private network ID for the private ne
 select id from private_network where name = 'Private Network Name'
 ```
 
-### Modify existing private network registration
+## Modify existing private network registration
 Since this is a tactical solution, any modification will require manual database changes.
 
 **We should try to keep these changes to the minimal**
 
-#### Add nodes to a private network
+### Add nodes to a private network
 
 ```
 update certificate_signing_request 
@@ -269,7 +311,7 @@ set private_network = '<<private_network_id>>'
 where status = 'APPROVED'
 ```
 
-#### Move a node from its private network and into the global network map**
+### Move a node from its private network and into the global network map**
 
 ```
 update certificate_signing_request 

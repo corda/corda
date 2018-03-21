@@ -55,4 +55,19 @@ class NetworkParametersEntity(
                 DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), signature)
         )
     }
+
+    fun copy(parametersHash: String = this.parametersHash,
+             created: Instant = this.created,
+             parametersBytes: ByteArray = this.parametersBytes,
+             signature: ByteArray? = this.signature,
+             certificate: ByteArray? = this.certificate
+    ): NetworkParametersEntity {
+        return NetworkParametersEntity(
+                parametersHash = parametersHash,
+                created = created,
+                parametersBytes = parametersBytes,
+                signature = signature,
+                certificate = certificate
+        )
+    }
 }

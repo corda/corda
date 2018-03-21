@@ -1,6 +1,5 @@
 package com.r3.corda.networkmanage.common.persistence
 
-import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 
 /**

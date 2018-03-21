@@ -146,6 +146,21 @@ class PersistentNodeInfoStorageTest : TestBase() {
         val persistedSignedNodeInfo = nodeInfoStorage.getNodeInfo(nodeInfoHash)
         assertThat(persistedSignedNodeInfo?.signatures).isEqualTo(nodeInfoWithSigned.signed.signatures)
     }
+
+    @Test
+    fun `accept parameters updates node info correctly`() {
+        // given
+        val (nodeInfoWithSigned) = createValidSignedNodeInfo("Test", requestStorage)
+
+        // when
+        val paramsHash = SecureHash.randomSHA256()
+        val nodeInfoHash = nodeInfoStorage.putNodeInfo(nodeInfoWithSigned)
+        nodeInfoStorage.ackNodeInfoParametersUpdate(SecureHash.parse(nodeInfoWithSigned.nodeInfo.legalIdentities.first().owningKey.hashString()), paramsHash)
+
+        // then
+        val persistedParametersHash = nodeInfoStorage.getAcceptedParametersUpdateHash(nodeInfoHash)
+        assertThat(persistedParametersHash).isEqualTo(paramsHash)
+    }
 }
 
 internal fun createValidSignedNodeInfo(organisation: String,

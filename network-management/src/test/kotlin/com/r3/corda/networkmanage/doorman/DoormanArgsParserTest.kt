@@ -26,7 +26,7 @@ class DoormanArgsParserTest {
     @Test
     fun `should fail when network parameters file is missing`() {
         assertThatThrownBy {
-            argsParser.parse("--config-file", validConfigPath, "--update-network-parameters", "not-here")
+            argsParser.parse("--config-file", validConfigPath, "--set-network-parameters", "not-here")
         }.hasMessageContaining("not-here")
     }
 

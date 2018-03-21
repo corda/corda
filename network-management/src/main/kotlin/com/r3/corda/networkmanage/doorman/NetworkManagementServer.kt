@@ -11,10 +11,7 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory
-import com.r3.corda.networkmanage.common.persistence.ApproveAllCertificateSigningRequestStorage
-import com.r3.corda.networkmanage.common.persistence.PersistentCertificateSigningRequestStorage
-import com.r3.corda.networkmanage.common.persistence.PersistentNetworkMapStorage
-import com.r3.corda.networkmanage.common.persistence.PersistentNodeInfoStorage
+import com.r3.corda.networkmanage.common.persistence.*
 import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.doorman.signer.DefaultCsrHandler
@@ -23,23 +20,31 @@ import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import com.r3.corda.networkmanage.doorman.webservice.MonitoringWebService
 import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
+import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.io.Closeable
 import java.net.URI
 import java.time.Duration
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-class NetworkManagementServer : Closeable {
+class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: DatabaseConfig) : Closeable {
     companion object {
         private val logger = contextLogger()
     }
 
     private val closeActions = mutableListOf<() -> Unit>()
+    private val database = configureDatabase(dataSourceProperties, databaseConfig).also { closeActions += it::close }
+    private val networkMapStorage = PersistentNetworkMapStorage(database)
+    private val nodeInfoStorage = PersistentNodeInfoStorage(database)
+
     lateinit var hostAndPort: NetworkHostAndPort
 
     override fun close() {
@@ -53,23 +58,12 @@ class NetworkManagementServer : Closeable {
         }
     }
 
-    private fun getNetworkMapService(config: NetworkMapConfig, database: CordaPersistence, signer: LocalSigner?, newNetworkParameters: NetworkParameters?): NetworkMapWebService {
-        val networkMapStorage = PersistentNetworkMapStorage(database)
-        val nodeInfoStorage = PersistentNodeInfoStorage(database)
+    private fun getNetworkMapService(config: NetworkMapConfig, signer: LocalSigner?): NetworkMapWebService {
         val localNetworkMapSigner = signer?.let { NetworkMapSigner(networkMapStorage, it) }
-
-        newNetworkParameters?.let {
-            val netParamsOfNetworkMap = networkMapStorage.getActiveNetworkMap()?.networkParameters
-            if (netParamsOfNetworkMap == null) {
-                localNetworkMapSigner?.signAndPersistNetworkParameters(it) ?: networkMapStorage.saveNetworkParameters(it, null)
-            } else {
-                throw UnsupportedOperationException("Network parameters already exist. Updating them is not supported yet.")
-            }
-        }
-
-        val latestParameters = networkMapStorage.getLatestNetworkParameters() ?:
+        val latestParameters = networkMapStorage.getLatestNetworkParameters()?.toNetworkParameters() ?:
                 throw IllegalStateException("No network parameters were found. Please upload new network parameters before starting network map service")
         logger.info("Starting network map service with network parameters: $latestParameters")
+        localNetworkMapSigner?.signAndPersistNetworkParameters(latestParameters)
 
         if (localNetworkMapSigner != null) {
             logger.info("Starting background worker for signing the network map using the local key store")
@@ -87,7 +81,6 @@ class NetworkManagementServer : Closeable {
 
         return NetworkMapWebService(nodeInfoStorage, networkMapStorage, config)
     }
-
 
     private fun getDoormanService(config: DoormanConfig,
                                   database: CordaPersistence,
@@ -128,16 +121,15 @@ class NetworkManagementServer : Closeable {
     }
 
     fun start(hostAndPort: NetworkHostAndPort,
-              database: CordaPersistence,
               csrCertPathAndKey: CertPathAndKey?,
-              doormanServiceParameter: DoormanConfig?,  // TODO Doorman config shouldn't be optional as the doorman is always required to run
+              doormanConfig: DoormanConfig?, // TODO Doorman config shouldn't be optional as the doorman is always required to run
               startNetworkMap: NetworkMapStartParams?
     ) {
         val services = mutableListOf<Any>()
         val serverStatus = NetworkManagementServerStatus()
 
-        startNetworkMap?.let { services += getNetworkMapService(it.config, database, it.signer, it.updateNetworkParameters) }
-        doormanServiceParameter?.let { services += getDoormanService(it, database, csrCertPathAndKey, serverStatus) }
+        startNetworkMap?.let { services += getNetworkMapService(it.config, it.signer) }
+        doormanConfig?.let { services += getDoormanService(it, database, csrCertPathAndKey, serverStatus) }
 
         require(services.isNotEmpty()) { "No service created, please provide at least one service config." }
 
@@ -149,5 +141,86 @@ class NetworkManagementServer : Closeable {
 
         closeActions += webServer::close
         this.hostAndPort = webServer.hostAndPort
+    }
+
+    fun processNetworkParameters(networkParametersCmd: NetworkParametersCmd) {
+        when (networkParametersCmd) {
+            is NetworkParametersCmd.Set -> handleSetNetworkParameters(networkParametersCmd)
+            NetworkParametersCmd.FlagDay -> handleFlagDay()
+            NetworkParametersCmd.CancelUpdate -> handleCancelUpdate()
+        }
+    }
+
+    private fun handleSetNetworkParameters(setNetParams: NetworkParametersCmd.Set) {
+        logger.info("maxMessageSize is not currently wired in the nodes")
+        val activeNetParams = networkMapStorage.getActiveNetworkMap()?.networkParameters?.toNetworkParameters()
+        if (activeNetParams == null) {
+            require(setNetParams.parametersUpdate == null) {
+                "'parametersUpdate' specified in network parameters file but there are no network parameters to update"
+            }
+            val initialNetParams = setNetParams.toNetworkParameters(modifiedTime = Instant.now(), epoch = 1)
+            logger.info("Saving initial network parameters to be signed:\n$initialNetParams")
+            networkMapStorage.saveNetworkParameters(initialNetParams, null)
+        } else {
+            val parametersUpdate = requireNotNull(setNetParams.parametersUpdate) {
+                "'parametersUpdate' not specified in network parameters file but there is already an active set of network parameters."
+            }
+
+            setNetParams.checkCompatibility(activeNetParams)
+
+            val latestNetParams = checkNotNull(networkMapStorage.getLatestNetworkParameters()?.toNetworkParameters()) {
+                "Something has gone wrong! We have an active set of network parameters ($activeNetParams) but apparently no latest network parameters!"
+            }
+
+            // It's not necessary that latestNetParams is the current active network parameters. It can be the network
+            // parameters from a previous update attempt which has't activated yet. We still take the epoch value for this
+            // new set from latestNetParams to make sure the advertised update attempts have incrementing epochs.
+            // This has the implication that active network parameters may have gaps in their epochs.
+            val newNetParams = setNetParams.toNetworkParameters(modifiedTime = Instant.now(), epoch = latestNetParams.epoch + 1)
+
+            logger.info("Enabling update to network parameters:\n$newNetParams\n$parametersUpdate")
+
+            require(!sameNetworkParameters(latestNetParams, newNetParams)) { "New network parameters are the same as the latest ones" }
+
+            networkMapStorage.saveNewParametersUpdate(newNetParams, parametersUpdate.description, parametersUpdate.updateDeadline)
+
+            logger.info("Update enabled")
+        }
+    }
+
+    private fun sameNetworkParameters(params1: NetworkParameters, params2: NetworkParameters): Boolean {
+        return params1.copy(epoch = 1, modifiedTime = Instant.MAX) == params2.copy(epoch = 1, modifiedTime = Instant.MAX)
+    }
+
+    private fun handleFlagDay() {
+        val parametersUpdate = checkNotNull(networkMapStorage.getParametersUpdate()) {
+            "No network parameters updates are scheduled"
+        }
+        check(Instant.now() >= parametersUpdate.updateDeadline) {
+            "Update deadline of ${parametersUpdate.updateDeadline} hasn't passed yet"
+        }
+        val activeNetParams = networkMapStorage.getActiveNetworkMap()?.networkParameters
+        val latestNetParamsEntity = networkMapStorage.getLatestNetworkParameters()!!
+        check(latestNetParamsEntity.isSigned) {
+            "Parameters we are trying to switch to haven't been signed yet"
+        }
+        // TODO This check is stil not good enough as when it comes to signing, the NetworkMapSigner will just accept
+        check(latestNetParamsEntity.parametersHash == parametersUpdate.networkParameters.parametersHash) {
+            "The latest network parameters is not the scheduled one:\n${latestNetParamsEntity.toNetworkParameters()}\n${parametersUpdate.toParametersUpdate()}"
+        }
+        logger.info("Flag day has occurred, however the new network parameters won't be active until the new network map is signed.\n" +
+                "Switching from: $activeNetParams\nTo: ${latestNetParamsEntity.toNetworkParameters()}")
+        networkMapStorage.setFlagDay(SecureHash.parse(parametersUpdate.networkParameters.parametersHash))
+    }
+
+    private fun handleCancelUpdate() {
+        val parametersUpdate = networkMapStorage.getParametersUpdate()
+        if (parametersUpdate == null) {
+            logger.info("Trying to cancel parameters update but no update is scheduled")
+        } else {
+            logger.info("Cancelling parameters update: ${parametersUpdate.toParametersUpdate()}")
+            // We leave parameters from that update in the database, for auditing reasons
+            networkMapStorage.clearParametersUpdates()
+        }
     }
 }

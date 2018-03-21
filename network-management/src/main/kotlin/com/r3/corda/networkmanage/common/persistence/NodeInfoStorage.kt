@@ -33,9 +33,23 @@ interface NodeInfoStorage {
     fun getNodeInfo(nodeInfoHash: SecureHash): SignedNodeInfo?
 
     /**
+     * Retrieve latest accepted parameters hash for nodeInfo with given hash.
+     * @return Hash of network parameters that the node has accepted or null if couldn't find node info with given hash or
+     * there is no information on accepted parameters hash stored for this entity
+     */
+    fun getAcceptedParametersUpdateHash(nodeInfoHash: SecureHash): SecureHash?
+
+    /**
      * The [nodeInfoAndSigned] is keyed by the public key, old node info with the same public key will be replaced by the new node info.
      * @param nodeInfoAndSigned signed node info data to be stored
      * @return hash for the newly created node info entry
      */
     fun putNodeInfo(nodeInfoAndSigned: NodeInfoAndSigned): SecureHash
+
+    /**
+     * Store information about latest accepted [NetworkParameters] hash.
+     * @param publicKeyHash Hash of public key that accepted network parameters. This public key should belong to [NodeInfo]
+     * @param acceptedParametersHash Hash of latest accepted network parameters.
+     */
+    fun ackNodeInfoParametersUpdate(publicKeyHash: SecureHash, acceptedParametersHash: SecureHash)
 }

@@ -23,6 +23,9 @@ data class NodeInfoEntity(
         @Column(name = "node_info_hash", length = 64)
         val nodeInfoHash: String = "",
 
+        @Column(name = "public_key_hash", length = 64)
+        val identityPkHash: String = "",
+
         @ManyToOne(optional = false, fetch = FetchType.LAZY)
         @JoinColumn(name = "certificate_signing_request")
         val certificateSigningRequest: CertificateSigningRequestEntity,
@@ -35,10 +38,30 @@ data class NodeInfoEntity(
         val isCurrent: Boolean,
 
         @Column(name = "published_at")
-        val publishedAt: Instant = Instant.now()
+        val publishedAt: Instant = Instant.now(),
+
+        @Column(name = "accepted_parameters_hash", length = 64)
+        val acceptedParametersHash: String = ""
 ) {
     /**
      * Deserialize NodeInfoEntity.signedNodeInfoBytes into the [SignedNodeInfo] instance
      */
     fun toSignedNodeInfo() = signedNodeInfoBytes.deserialize<SignedNodeInfo>()
+
+    fun copy(nodeInfoHash: String = this.nodeInfoHash,
+             certificateSigningRequest: CertificateSigningRequestEntity = this.certificateSigningRequest,
+             signedNodeInfoBytes: ByteArray = this.signedNodeInfoBytes,
+             isCurrent: Boolean = this.isCurrent,
+             publishedAt: Instant = this.publishedAt,
+             acceptedParametersHash: String = this.acceptedParametersHash
+    ): NodeInfoEntity {
+        return NodeInfoEntity(
+                nodeInfoHash = nodeInfoHash,
+                certificateSigningRequest = certificateSigningRequest,
+                signedNodeInfoBytes = signedNodeInfoBytes,
+                isCurrent = isCurrent,
+                publishedAt = publishedAt,
+                acceptedParametersHash = acceptedParametersHash
+        )
+    }
 }

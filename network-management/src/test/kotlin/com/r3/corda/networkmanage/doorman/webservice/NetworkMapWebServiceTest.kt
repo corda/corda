@@ -10,21 +10,19 @@
 
 package com.r3.corda.networkmanage.doorman.webservice
 
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.times
-import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.createNetworkMapEntity
 import com.r3.corda.networkmanage.doorman.NetworkManagementWebServer
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
+import net.corda.core.crypto.*
 import net.corda.core.crypto.SecureHash.Companion.randomSHA256
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.checkOkResponse
-import net.corda.core.internal.openHttpConnection
-import net.corda.core.internal.responseAs
+import net.corda.core.internal.*
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
@@ -43,7 +41,6 @@ import org.junit.Test
 import java.io.IOException
 import java.net.URL
 import java.security.cert.X509Certificate
-import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
 
 class NetworkMapWebServiceTest {
@@ -68,15 +65,13 @@ class NetworkMapWebServiceTest {
         val networkMapStorage: NetworkMapStorage = mock {
             on { getActiveNetworkMap() }.thenReturn(createNetworkMapEntity())
         }
-
         // Create node info.
         val (_, signedNodeInfo) = createNodeInfoAndSigned(CordaX500Name("Test", "London", "GB"))
 
         NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
             it.start()
-            val nodeInfoAndSignature = signedNodeInfo.serialize().bytes
             // Post node info and signature to doorman, this should pass without any exception.
-            it.doPost("publish", nodeInfoAndSignature)
+            it.doPost("publish", signedNodeInfo.serialize())
         }
     }
 
@@ -90,8 +85,7 @@ class NetworkMapWebServiceTest {
 
         NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
             it.start()
-            val nodeInfoAndSignature = signedNodeInfo.serialize().bytes
-            assertThatThrownBy { it.doPost("publish", nodeInfoAndSignature) }
+            assertThatThrownBy { it.doPost("publish", signedNodeInfo.serialize()) }
                     .hasMessageStartingWith("Response Code 400: Minimum platform version is 2")
         }
     }
@@ -106,8 +100,7 @@ class NetworkMapWebServiceTest {
 
         NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(mock(), networkMapStorage, testNetworkMapConfig)).use {
             it.start()
-            val nodeInfoAndSignature = signedNodeInfo.serialize().bytes
-            assertThatThrownBy { it.doPost("publish", nodeInfoAndSignature) }
+            assertThatThrownBy { it.doPost("publish", signedNodeInfo.serialize()) }
                     .hasMessageStartingWith("Response Code 503: Network parameters have not been initialised")
         }
     }
@@ -158,7 +151,7 @@ class NetworkMapWebServiceTest {
 
     @Test
     fun `get network parameters`() {
-        val networkParameters = testNetworkParameters(emptyList())
+        val networkParameters = testNetworkParameters()
         val signedNetworkParameters = signingCertAndKeyPair.sign(networkParameters)
         val networkParametersHash = signedNetworkParameters.raw.hash
 
@@ -178,15 +171,33 @@ class NetworkMapWebServiceTest {
         }
     }
 
-    private fun NetworkManagementWebServer.doPost(path: String, payload: ByteArray) {
-        val url = URL("http://$hostAndPort/network-map/$path")
-        url.openHttpConnection().apply {
-            doOutput = true
-            requestMethod = "POST"
-            setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
-            outputStream.write(payload)
-            checkOkResponse()
+    @Test
+    fun `ack network parameters update`() {
+        val netParams = testNetworkParameters()
+        val hash = netParams.serialize().hash
+        val nodeInfoStorage: NodeInfoStorage = mock {
+            on { ackNodeInfoParametersUpdate(any(), eq(hash)) }.then { Unit }
         }
+        val networkMapStorage: NetworkMapStorage = mock {
+            on { getSignedNetworkParameters(hash) }.thenReturn(signingCertAndKeyPair.sign(netParams))
+        }
+        NetworkManagementWebServer(NetworkHostAndPort("localhost", 0), NetworkMapWebService(nodeInfoStorage, networkMapStorage, testNetworkMapConfig)).use {
+            it.start()
+            val keyPair = Crypto.generateKeyPair()
+            val signedHash = hash.serialize().sign { keyPair.sign(it) }
+            it.doPost("ack-parameters", signedHash.serialize())
+            verify(nodeInfoStorage).ackNodeInfoParametersUpdate(keyPair.public.encoded.sha256(), hash)
+            val randomSigned = SecureHash.randomSHA256().serialize().sign { keyPair.sign(it) }
+            assertThatThrownBy { it.doPost("ack-parameters", randomSigned.serialize()) }
+                    .hasMessageContaining("HTTP ERROR 500")
+            val badSigned = SignedData(signedHash.raw, randomSigned.sig)
+            assertThatThrownBy { it.doPost("ack-parameters", badSigned.serialize()) }
+                    .hasMessageStartingWith("Response Code 403: Signature Verification failed!")
+        }
+    }
+
+    private fun NetworkManagementWebServer.doPost(path: String, payload: OpaqueBytes) {
+        URL("http://$hostAndPort/network-map/$path").post(payload)
     }
 
     private inline fun <reified T : Any> NetworkManagementWebServer.doGet(path: String): T {

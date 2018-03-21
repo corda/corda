@@ -96,14 +96,11 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
     @Test
     fun `Signing service signs approved CSRs`() {
         //Start doorman server
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
-
-        NetworkManagementServer().use { server ->
+        NetworkManagementServer(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true)).use { server ->
             server.start(
                     hostAndPort = NetworkHostAndPort(HOST, 0),
-                    database = database,
                     csrCertPathAndKey = null,
-                    doormanServiceParameter = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jira = null),
+                    doormanConfig = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jira = null),
                     startNetworkMap = null)
             val doormanHostAndPort = server.hostAndPort
             // Start Corda network registration.
@@ -164,9 +161,6 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn("iTest@R3.com").whenever(it).emailAddress
-//            doReturn(X509KeyStore.fromFile(it.nodeKeystore, it.keyStorePassword, true)).whenever(it).loadNodeKeyStore(any())
-//            doReturn(X509KeyStore.fromFile(it.sslKeystore, it.keyStorePassword, true)).whenever(it).loadSslKeyStore(any())
-//            doReturn(trustStore).whenever(it).loadTrustStore(any())
         }
     }
 }
