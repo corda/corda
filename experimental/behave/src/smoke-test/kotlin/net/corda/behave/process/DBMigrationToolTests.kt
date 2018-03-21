@@ -13,8 +13,9 @@ class DBMigrationToolTests {
      * Commands used to perform Database initialisation and migration as per:
      * http://docs.corda.r3.com/website/releases/docs_head/api-persistence.html#database-migration
      */
-    private val nodeRunDir = currentDirectory / "build/runs/20180379-164247/PartyA"
-    private val jdbcDriverSQLServer = nodeRunDir / "../libs/mssql-jdbc-6.2.2.jre8.jar"
+    private val nodeRunDir = currentDirectory / "build/runs/20180380-123848/PartyA"
+//    private val jdbcDriverSQLServer = nodeRunDir / "../libs/mssql-jdbc-6.2.2.jre8.jar"
+    private val jdbcDriverSQLServer = nodeRunDir / "../libs/postgresql-42.1.4.jar"
 
     private val migrationToolMain = "com.r3.corda.dbmigration.DBMigration"
 

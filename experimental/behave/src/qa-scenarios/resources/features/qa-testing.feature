@@ -75,3 +75,19 @@ Feature: Compatibility - Node versions
     Examples:
       | Node-Version    | Database-Type   |
       | r3-master       | postgres        |
+
+  Scenario Outline: QA: Corda (OS) Node using H2 can transact with R3 Corda (Enterprise) node using Postgres, in an R3 Corda configured network.
+    Given a node PartyA of version <R3-Corda-Node-Version> with proxy
+    And node PartyA uses database of type <Database-Type>
+    And node PartyA has the finance app installed
+    And a node PartyB of version <Corda-Node-Version>
+    And node PartyB has the finance app installed
+    And a nonvalidating notary Notary of version <R3-Corda-Node-Version>
+    When the network is ready
+    Then node PartyA can issue 1000 <Currency>
+    And node PartyA can transfer 100 <Currency> to node B
+
+    Examples:
+      | Corda-Node-Version | R3-Corda-Node-Version   | Currency | Database-Type   |
+      | corda-3.0          | r3-master               | GBP      | postgres        |
+#      | corda-3.0          | r3corda-3.0-DP3         | GBP      |

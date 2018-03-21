@@ -19,8 +19,6 @@ class PostgreSQLService(
     override val internalPort = 5432
 
     init {
-//        addEnvironmentVariable("ACCEPT_EULA", "Y")
-//        addEnvironmentVariable("SA_PASSWORD", password)
         setStartupStatement("database system is ready to accept connections")
     }
 

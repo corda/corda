@@ -99,7 +99,7 @@ class Node(
 
     private fun initialiseDatabase(database: DatabaseConfiguration) {
         log.info("Initialising database for R3 Corda node: $database")
-        val command = JarCommandWithMain(listOf(Distribution.R3_MASTER.dbMigrationJar, rootDirectory / "libs" / DatabaseType.SQL_SERVER.settings.driverJar!!),
+        val command = JarCommandWithMain(listOf(Distribution.R3_MASTER.dbMigrationJar, rootDirectory / "libs" / database.type.driverJar!!),
                 "com.r3.corda.dbmigration.DBMigration",
                 arrayOf("--base-directory", "$runtimeDirectory", "--execute-migration"),
                 runtimeDirectory, 2.minutes)
