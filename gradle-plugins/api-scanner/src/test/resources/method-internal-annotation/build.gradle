@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'net.corda.plugins.api-scanner'
+}
+
+description 'Test behaviour of internal annotations on methods'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir files(
+                "../resources/test/method-internal-annotation/java",
+                "../resources/test/common-internal/java"
+            )
+        }
+    }
+}
+
+jar {
+    baseName = "method-internal-annotation"
+}
+
+scanApi {
+    verbose = true
+}

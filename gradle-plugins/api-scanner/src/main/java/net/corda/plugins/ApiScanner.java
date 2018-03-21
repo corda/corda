@@ -7,6 +7,8 @@ import org.gradle.api.file.FileCollection;
 import org.gradle.api.tasks.TaskCollection;
 import org.gradle.jvm.tasks.Jar;
 
+import javax.annotation.Nonnull;
+
 public class ApiScanner implements Plugin<Project> {
 
     /**
@@ -16,7 +18,7 @@ public class ApiScanner implements Plugin<Project> {
      * @param p Current project.
      */
     @Override
-    public void apply(Project p) {
+    public void apply(@Nonnull Project p) {
         p.getLogger().info("Applying API scanner to {}", p.getName());
 
         ScannerExtension extension = p.getExtensions().create("scanApi", ScannerExtension.class);

@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+    id 'net.corda.plugins.api-scanner'
+}
+
+description 'Test behaviour of a basic Java class'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir file("../resources/test/basic-class/java")
+        }
+    }
+}
+
+jar {
+    baseName = "basic-class"
+}
+
+scanApi {
+    verbose = true
+}

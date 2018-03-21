@@ -1,4 +1,5 @@
 apply plugin: 'java'
+apply plugin: 'java-gradle-plugin'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
 
@@ -7,15 +8,36 @@ description "Generates a summary of the artifact's public API"
 repositories {
     mavenLocal()
     mavenCentral()
+    jcenter()
+}
+
+gradlePlugin {
+    plugins {
+        apiScannerPlugin {
+            id = 'net.corda.plugins.api-scanner'
+            implementationClass = 'net.corda.plugins.ApiScanner'
+        }
+    }
 }
 
 dependencies {
-    compile gradleApi()
     compile "io.github.lukehutch:fast-classpath-scanner:2.7.0"
-    testCompile "junit:junit:4.12"
+    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "junit:junit:$junit_version"
+
+    // This dependency is only to prevent IntelliJ from choking
+    // on the Kotlin classes in the test/resources directory.
+    testCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    testCompile project(':api-scanner:annotations')
+}
+
+processTestResources {
+    filesMatching('**/kotlin-*/build.gradle') {
+        expand(['kotlin_version': kotlin_version])
+    }
 }
 
 publish {
     name project.name
 }
-

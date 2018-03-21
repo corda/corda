@@ -1,0 +1,32 @@
+plugins {
+    id 'net.corda.plugins.api-scanner'
+    id 'org.jetbrains.kotlin.jvm' version '$kotlin_version'
+}
+
+description 'Test appearance of internal Corda annotations in Kotlin'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        kotlin {
+            srcDir file("../resources/test/kotlin-internal-annotation/kotlin")
+        }
+    }
+}
+
+dependencies {
+    compile 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version'
+    compile 'org.jetbrains.kotlin:kotlin-reflect:$kotlin_version'
+}
+
+jar {
+    baseName = "kotlin-internal-annotation"
+}
+
+scanApi {
+    verbose = true
+}

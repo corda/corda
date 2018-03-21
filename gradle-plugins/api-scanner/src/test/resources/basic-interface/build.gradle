@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+    id 'net.corda.plugins.api-scanner'
+}
+
+description 'Test behaviour of a basic Java interface'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir file("../resources/test/basic-interface/java")
+        }
+    }
+}
+
+jar {
+    baseName = "basic-interface"
+}
+
+scanApi {
+    verbose = true
+}

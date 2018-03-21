@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+    id 'net.corda.plugins.api-scanner'
+}
+
+description 'Test behaviour of an internal package'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir file("../resources/test/internal-package/java")
+        }
+    }
+}
+
+jar {
+    baseName = "internal-package"
+}
+
+scanApi {
+    verbose = true
+}

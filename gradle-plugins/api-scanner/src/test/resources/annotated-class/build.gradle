@@ -1,0 +1,31 @@
+plugins {
+    id 'java'
+    id 'net.corda.plugins.api-scanner'
+}
+
+description 'Test annotation inheritance across classes'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir file("../resources/test/annotated-class/java")
+        }
+    }
+}
+
+dependencies {
+    compile files('../../annotations/build/libs/annotations.jar')
+}
+
+jar {
+    baseName = "annotated-class"
+}
+
+scanApi {
+    verbose = true
+}

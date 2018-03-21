@@ -1,0 +1,7 @@
+apply plugin: 'java'
+
+description 'A library of annotations for testing API Scanner.'
+
+jar {
+    archiveName 'annotations.jar'
+}
