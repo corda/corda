@@ -19,6 +19,8 @@ from the previous milestone release.
 
 * java.security.cert.CRLReason added to the default Whitelist.
 
+* java.security.cert.X509CRL serialization support added.
+
 .. _changelog_v3:
 
 Version 3.0

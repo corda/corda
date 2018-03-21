@@ -41,8 +41,8 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
     @CordaSerializable
     class Request(
             @Id
-            @GeneratedValue(strategy = GenerationType.AUTO)
-            val id: Int = 0,
+            @GeneratedValue
+            val id: Int? = null,
 
             @Column(name = "consuming_transaction_id")
             val consumingTxHash: String,
