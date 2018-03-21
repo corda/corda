@@ -134,7 +134,6 @@ class MessagingExecutor(
                     if (job is Job.Send) {
                         job.sentFuture.setException(exception)
                     }
-                    session.rollback()
                 }
             }
         }
