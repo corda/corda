@@ -28,7 +28,9 @@ class CommercialPaperTest {
     private companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
         val bob = TestIdentity(BOB_NAME, 80)
+        // DOCSTART 14
         val bigCorp = TestIdentity((CordaX500Name("BigCorp", "New York", "GB")))
+        // DOCEND 14
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val TEST_TX_TIME: Instant = Instant.parse("2015-04-17T12:00:00.00Z")

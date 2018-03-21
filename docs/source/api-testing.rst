@@ -304,6 +304,27 @@ Contract testing
 The Corda test framework includes the ability to create a test ledger by calling the ``ledger`` function
 on an implementation of the ``ServiceHub`` interface.
 
+Test identities
+^^^^^^^^^^^^^^^
+
+You can create dummy identities to use in test transactions using the ``TestIdentity`` class. Each ``TestIdentity``
+wraps the ``CordaX500Name`` and ``KeyPair`` of a dummy identity. ``TestIdentity`` also provides helper
+methods for retrieving the identity's ``Party`` and ``PartyAndCertificate`` representations.
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+        :language: kotlin
+        :start-after: DOCSTART 14
+        :end-before: DOCEND 14
+        :dedent: 8
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 14
+        :end-before: DOCEND 14
+        :dedent: 4
+
 MockServices
 ^^^^^^^^^^^^
 
