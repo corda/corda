@@ -1,6 +1,10 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.MESSAGE_CONTRACT_PROGRAM_ID
+import net.corda.Message
+import net.corda.MessageContract
+import net.corda.MessageState
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.flows.*
@@ -10,12 +14,10 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
-import net.corda.node.services.Permissions
-import net.corda.MESSAGE_CONTRACT_PROGRAM_ID
-import net.corda.Message
-import net.corda.MessageContract
-import net.corda.MessageState
+import net.corda.core.utilities.unwrap
+import net.corda.RpcInfo
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
@@ -31,14 +33,10 @@ import java.util.concurrent.ScheduledExecutorService
 class FlowsDrainingModeContentionTest {
 
     private val portAllocation = PortAllocation.Incremental(10000)
-    private val user = User("mark", "dadada", setOf(Permissions.all()))
+    private val user = User("mark", "dadada", setOf(all()))
     private val users = listOf(user)
 
     private var executor: ScheduledExecutorService? = null
-
-    companion object {
-        private val logger = loggerFor<P2PFlowsDrainingModeTest>()
-    }
 
     @Before
     fun setup() {
@@ -61,7 +59,8 @@ class FlowsDrainingModeContentionTest {
             val nodeB = startNode(rpcUsers = users).getOrThrow()
             defaultNotaryNode.getOrThrow()
 
-            val flow = nodeA.rpc.startFlow(::ProposeTransactionAndWaitForCommit, message, nodeB.nodeInfo.singleIdentity(), defaultNotaryIdentity)
+            val nodeARpcInfo = RpcInfo(nodeA.rpcAddress, user.username, user.password)
+            val flow = nodeA.rpc.startFlow(::ProposeTransactionAndWaitForCommit, message, nodeARpcInfo, nodeB.nodeInfo.singleIdentity(), defaultNotaryIdentity)
             val committedTx = flow.returnValue.getOrThrow()
 
             committedTx.inputs
@@ -73,7 +72,7 @@ class FlowsDrainingModeContentionTest {
 
 @StartableByRPC
 @InitiatingFlow
-class ProposeTransactionAndWaitForCommit(private val data: String, private val counterParty: Party, private val notary: Party) : FlowLogic<SignedTransaction>() {
+class ProposeTransactionAndWaitForCommit(private val data: String, private val myRpcInfo: RpcInfo, private val counterParty: Party, private val notary: Party) : FlowLogic<SignedTransaction>() {
 
     @Suspendable
     override fun call(): SignedTransaction {
@@ -86,6 +85,7 @@ class ProposeTransactionAndWaitForCommit(private val data: String, private val c
         transaction.withItems(StateAndContract(messageState, MESSAGE_CONTRACT_PROGRAM_ID), command)
         val signedTx = serviceHub.signInitialTransaction(transaction)
         subFlow(SendTransactionFlow(session, signedTx))
+        session.send(myRpcInfo)
         return waitForLedgerCommit(signedTx.id)
     }
 }
@@ -99,8 +99,15 @@ class SignTransactionTriggerDrainingModeAndFinality(private val session: FlowSes
         val tx = subFlow(ReceiveTransactionFlow(session))
         logger.info("Got transaction from counterParty.")
         val signedTx = serviceHub.addSignature(tx)
-        // TODO MS fix this
-//        alice.services.nodeProperties.flowsDrainingMode.setEnabled(true)
+        val initiatingRpcInfo = session.receive<RpcInfo>().unwrap { it }
+        triggerDrainingModeForInitiatingNode(initiatingRpcInfo)
+
         subFlow(FinalityFlow(signedTx, setOf(session.counterparty)))
+    }
+
+    private fun triggerDrainingModeForInitiatingNode(initiatingRpcInfo: RpcInfo) {
+        CordaRPCClient(initiatingRpcInfo.address).start(initiatingRpcInfo.username, initiatingRpcInfo.password).use {
+            it.proxy.setFlowsDrainingModeEnabled(true)
+        }
     }
 }
