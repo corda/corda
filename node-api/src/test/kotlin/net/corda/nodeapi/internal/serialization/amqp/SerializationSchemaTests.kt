@@ -28,13 +28,13 @@ class TestSerializerFactory(
     }
 }
 
-// Instance of our test factory counting registration attempts. Sucks its  gloal but for testing purposes this
-// is the easiest way of getting access to the object
+// Instance of our test factory counting registration attempts. Sucks its global, but for testing purposes this
+// is the easiest way of getting access to the object.
 val testFactory = TestSerializerFactory(TESTING_CONTEXT.whitelist, TESTING_CONTEXT.deserializationClassLoader)
 
 // Serializer factory factory, plugs into the SerializationScheme and controls which factory type
 // we make for each use case. For our tests we need to make sure if its the Testing use case we return
-// the global factory object created above that counts registrations
+// the global factory object created above that counts registrations.
 class TestSerializerFactoryFactory : SerializerFactoryFactory() {
     override fun make(context: SerializationContext) =
             when (context.useCase) {
@@ -56,16 +56,16 @@ class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme(emptyList(),
 }
 
 // Test SerializationFactory that wraps a serialization scheme that just allows us to call <OBJ>.serialize.
-// Returns the testing scheme we created above that wraps the testing factory
+// Returns the testing scheme we created above that wraps the testing factory.
 class TestSerializationFactory : SerializationFactory() {
-    val scheme = AMQPTestSerializationScheme()
+    private val scheme = AMQPTestSerializationScheme()
 
     override fun <T : Any> deserialize(
             byteSequence: ByteSequence,
             clazz: Class<T>, context:
             SerializationContext
     ): T {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        throw UnsupportedOperationException()
     }
 
     override fun <T : Any> deserializeWithCompatibleContext(
@@ -73,7 +73,7 @@ class TestSerializationFactory : SerializationFactory() {
             clazz: Class<T>,
             context: SerializationContext
     ): ObjectWithCompatibleContext<T> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        throw UnsupportedOperationException()
     }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext) = scheme.serialize(obj, context)
