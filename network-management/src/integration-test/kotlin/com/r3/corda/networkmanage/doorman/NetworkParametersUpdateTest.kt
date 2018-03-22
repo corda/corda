@@ -19,22 +19,25 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.NodeHandleInternal
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.createDevIntermediateCaCertPath
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.After
+import org.junit.*
 import org.junit.Assert.assertEquals
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
 import java.net.URL
 import java.security.cert.X509Certificate
 import java.time.Instant
 
-class NetworkParametersUpdateTest {
+class NetworkParametersUpdateTest : IntegrationTest() {
     companion object {
         private val timeoutMillis = 5.seconds.toMillis()
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 
     @Rule
