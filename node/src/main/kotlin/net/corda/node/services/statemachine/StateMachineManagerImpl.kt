@@ -641,14 +641,7 @@ class StateMachineManagerImpl(
             }
         }
 
-        // TODO MS re-enable and remove the println(...)
-//        val additionalHeaders = fiber?.context?.origin.let { if (it is InvocationOrigin.Peer && it.party == party.name) {
-//            println("MICHELE: same party")
-//            emptyMap()
-//        } else message.additionalHeaders() }
-
-        val additionalHeaders = message.additionalHeaders()
-
+        val additionalHeaders = fiber?.context?.origin.let { if (it is InvocationOrigin.Peer && it.party == party.name) { emptyMap() } else message.additionalHeaders() }
         serviceHub.networkService.apply {
             send(createMessage(sessionTopic, serialized.bytes), address, retryId = retryId, additionalHeaders = additionalHeaders)
         }
