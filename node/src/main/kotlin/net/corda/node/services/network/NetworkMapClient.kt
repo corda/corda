@@ -2,7 +2,9 @@ package net.corda.node.services.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.internal.*
+import net.corda.core.internal.openHttpConnection
+import net.corda.core.internal.post
+import net.corda.core.internal.responseAs
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -11,7 +13,10 @@ import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
 import net.corda.node.utilities.registration.cacheControl
 import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.network.*
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkMap
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import java.io.BufferedReader
 import java.net.URL
 import java.security.cert.X509Certificate
@@ -44,10 +49,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, val trustedRoot: X509Certifica
         val signedNetworkMap = connection.responseAs<SignedNetworkMap>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustedRoot)
         val timeout = connection.cacheControl().maxAgeSeconds().seconds
-        logger.trace {
-            "Fetched network map update from $networkMapUrl successfully, retrieved ${networkMap.nodeInfoHashes.size} " +
-                    "node info hashes. Node Info hashes:\n${networkMap.nodeInfoHashes.joinToString("\n")}"
-        }
+        logger.trace { "Fetched network map update from $networkMapUrl successfully: $networkMap" }
         return NetworkMapResponse(networkMap, timeout)
     }
 

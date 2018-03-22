@@ -44,10 +44,6 @@ class NetworkMapServer(private val cacheTimeout: Duration,
 
     private val server: Server
     var networkParameters: NetworkParameters = stubNetworkParameters
-        set(networkParameters) {
-            check(field == stubNetworkParameters) { "Network parameters can be set only once" }
-            field = networkParameters
-        }
     private val service = InMemoryNetworkMapService()
     private var parametersUpdate: ParametersUpdate? = null
     private var nextNetworkParameters: NetworkParameters? = null
