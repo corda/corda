@@ -16,6 +16,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.core.serialization.serialize
@@ -36,10 +37,15 @@ import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.*
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
 import java.net.URL
 import java.time.Instant
 import kotlin.streams.toList
-import kotlin.test.assertEquals
 
 class NetworkMapTest : IntegrationTest() {
     companion object {
@@ -109,13 +115,13 @@ class NetworkMapTest : IntegrationTest() {
                 )
             }
             // This should throw, because the nextHash has been replaced by laterHash
-            Assertions.assertThatThrownBy { alice.rpc.acceptNewNetworkParameters(nextHash) }.hasMessageContaining("Refused to accept parameters with hash")
+            assertThatThrownBy { alice.rpc.acceptNewNetworkParameters(nextHash) }.hasMessageContaining("Refused to accept parameters with hash")
             alice.rpc.acceptNewNetworkParameters(laterHash)
             assertEquals(laterHash, networkMapServer.latestParametersAccepted(alice.nodeInfo.legalIdentities.first().owningKey))
             networkMapServer.advertiseNewParameters()
             val networkParameters = (alice.configuration.baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME)
                     .readObject<SignedNetworkParameters>().verified()
-            Assert.assertEquals(networkParameters, laterParams)
+            assertEquals(networkParameters, laterParams)
         }
     }
 
