@@ -10,7 +10,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
+import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -65,6 +67,7 @@ fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration {
         override val certificatesDirectory = Files.createTempDirectory("certs")
         override val keyStorePassword: String get() = "cordacadevpass"
         override val trustStorePassword: String get() = "trustpass"
+        override val revocationCheckConfig: RevocationCheckConfig = RevocationCheckConfig()
 
         init {
             configureDevKeyAndTrustStores(legalName)
@@ -120,22 +123,24 @@ fun createDevNodeCaCertPath(
 /** Application of [doAnswer] that gets a value from the given [map] using the arg at [argIndex] as key. */
 fun doLookup(map: Map<*, *>, argIndex: Int = 0) = doAnswer { map[it.arguments[argIndex]] }
 
-fun SSLConfiguration.useSslRpcOverrides(): Map<String, String> {
+fun SSLConfiguration.useSslRpcOverrides(): Map<String, Any> {
     return mapOf(
             "rpcSettings.useSsl" to "true",
             "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
             "rpcSettings.ssl.keyStorePassword" to keyStorePassword,
-            "rpcSettings.ssl.trustStorePassword" to trustStorePassword
+            "rpcSettings.ssl.trustStorePassword" to trustStorePassword,
+            "rpcSettings.ssl.revocationCheckConfig" to RevocationCheckConfig().toConfig().root().unwrapped()
     )
 }
 
-fun SSLConfiguration.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<String, String> {
+fun SSLConfiguration.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<String, Any> {
     return mapOf(
             "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
             "rpcSettings.useSsl" to "false",
             "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
             "rpcSettings.ssl.keyStorePassword" to keyStorePassword,
-            "rpcSettings.ssl.trustStorePassword" to trustStorePassword
+            "rpcSettings.ssl.trustStorePassword" to trustStorePassword,
+            "rpcSettings.ssl.revocationCheckConfig" to RevocationCheckConfig().toConfig().root().unwrapped()
     )
 }
 

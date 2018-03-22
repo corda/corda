@@ -14,6 +14,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
@@ -40,6 +41,7 @@ class AMQPServer(val hostName: String,
                  private val keyStore: KeyStore,
                  private val keyStorePrivateKeyPassword: CharArray,
                  private val trustStore: KeyStore,
+                 private val revocationCheckConfig: RevocationCheckConfig,
                  private val trace: Boolean = false) : AutoCloseable {
 
     companion object {
@@ -66,7 +68,8 @@ class AMQPServer(val hostName: String,
                 keyStore: KeyStore,
                 keyStorePrivateKeyPassword: String,
                 trustStore: KeyStore,
-                trace: Boolean = false) : this(hostName, port, userName, password, keyStore, keyStorePrivateKeyPassword.toCharArray(), trustStore, trace)
+                revocationCheckConfig: RevocationCheckConfig,
+                trace: Boolean = false) : this(hostName, port, userName, password, keyStore, keyStorePrivateKeyPassword.toCharArray(), trustStore, revocationCheckConfig, trace)
 
     private class ServerChannelInitializer(val parent: AMQPServer) : ChannelInitializer<SocketChannel>() {
         private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
@@ -74,7 +77,7 @@ class AMQPServer(val hostName: String,
 
         init {
             keyManagerFactory.init(parent.keyStore, parent.keyStorePrivateKeyPassword)
-            trustManagerFactory.init(parent.trustStore)
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(parent.trustStore, parent.revocationCheckConfig))
         }
 
         override fun initChannel(ch: SocketChannel) {

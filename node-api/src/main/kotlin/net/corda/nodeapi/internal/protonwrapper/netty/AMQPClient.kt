@@ -12,6 +12,7 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
@@ -38,6 +39,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                  private val keyStore: KeyStore,
                  private val keyStorePrivateKeyPassword: String,
                  private val trustStore: KeyStore,
+                 private val revocationCheckConfig: RevocationCheckConfig,
                  private val trace: Boolean = false,
                  private val sharedThreadPool: EventLoopGroup? = null) : AutoCloseable {
     companion object {
@@ -102,7 +104,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         init {
             keyManagerFactory.init(parent.keyStore, parent.keyStorePrivateKeyPassword.toCharArray())
-            trustManagerFactory.init(parent.trustStore)
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(parent.trustStore, parent.revocationCheckConfig))
         }
 
         override fun initChannel(ch: SocketChannel) {

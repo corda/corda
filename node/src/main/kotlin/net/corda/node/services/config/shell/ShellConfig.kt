@@ -4,7 +4,6 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.nodeapi.internal.config.User
 import net.corda.tools.shell.ShellConfiguration
 import net.corda.tools.shell.ShellConfiguration.Companion.COMMANDS_DIR
@@ -22,7 +21,8 @@ fun NodeConfiguration.toShellConfig(): ShellConfiguration {
             ShellSslOptions(sslKeystore,
                     keyStorePassword,
                     trustStoreFile,
-                    trustStorePassword)
+                    trustStorePassword,
+                    revocationCheckConfig)
         }
     } else {
         null

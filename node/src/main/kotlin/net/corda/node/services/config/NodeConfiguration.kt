@@ -9,10 +9,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.artemis.CertificateChainCheckPolicy
 import net.corda.node.services.config.rpc.NodeRpcOptions
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
-import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
@@ -130,6 +127,7 @@ data class NodeConfigurationImpl(
         override val emailAddress: String,
         override val keyStorePassword: String,
         override val trustStorePassword: String,
+        override val revocationCheckConfig: RevocationCheckConfig = RevocationCheckConfig(),
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
         override val rpcUsers: List<User>,
@@ -165,7 +163,7 @@ data class NodeConfigurationImpl(
         private val logger = loggerFor<NodeConfigurationImpl>()
     }
 
-    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword))
+    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword, revocationCheckConfig))
 
     private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
         return when {

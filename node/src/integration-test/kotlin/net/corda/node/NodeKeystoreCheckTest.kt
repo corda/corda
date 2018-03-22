@@ -4,6 +4,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.internal.div
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.configureDevKeyAndTrustStores
+import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -34,6 +35,7 @@ class NodeKeystoreCheckTest {
                 override val keyStorePassword: String = keystorePassword
                 override val trustStorePassword: String = keystorePassword
                 override val certificatesDirectory: Path = baseDirectory(ALICE_NAME) / "certificates"
+                override val revocationCheckConfig: RevocationCheckConfig = RevocationCheckConfig()
             }
             config.configureDevKeyAndTrustStores(ALICE_NAME)
 

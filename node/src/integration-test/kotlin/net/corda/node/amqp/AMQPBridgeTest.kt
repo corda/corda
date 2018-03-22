@@ -15,6 +15,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.bridging.AMQPBridgeManager
 import net.corda.nodeapi.internal.bridging.BridgeManager
+import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
@@ -77,7 +78,7 @@ class AMQPBridgeTest {
 
         fun formatMessage(expected: String, actual: Int, received: List<Int>): String {
             return "Expected message with id $expected, got $actual, previous message receive sequence: " +
-            "${received.joinToString(",  ", "[", "]")}."
+                    "${received.joinToString(",  ", "[", "]")}."
         }
 
         val received1 = receive.next()
@@ -173,6 +174,7 @@ class AMQPBridgeTest {
             doReturn(temporaryFolder.root.toPath() / "artemis").whenever(it).baseDirectory
             doReturn(ALICE_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
+            doReturn(RevocationCheckConfig()).whenever(it).revocationCheckConfig
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
@@ -210,6 +212,7 @@ class AMQPBridgeTest {
                 serverConfig.loadSslKeyStore().internal,
                 serverConfig.keyStorePassword,
                 serverConfig.loadTrustStore().internal,
+                revocationCheckConfig = RevocationCheckConfig(),
                 trace = true
         )
     }

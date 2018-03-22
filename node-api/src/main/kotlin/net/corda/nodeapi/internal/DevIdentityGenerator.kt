@@ -8,6 +8,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -35,6 +36,7 @@ object DevIdentityGenerator {
             override val baseDirectory = nodeDir
             override val keyStorePassword: String = "cordacadevpass"
             override val trustStorePassword get() = throw NotImplementedError("Not expected to be called")
+            override val revocationCheckConfig: RevocationCheckConfig = RevocationCheckConfig()
         }
 
         nodeSslConfig.certificatesDirectory.createDirectories()

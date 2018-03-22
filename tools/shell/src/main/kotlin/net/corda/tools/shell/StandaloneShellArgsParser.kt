@@ -6,6 +6,7 @@ import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.tools.shell.ShellConfiguration.Companion.COMMANDS_DIR
 import org.slf4j.event.Level
@@ -209,7 +210,8 @@ private class ShellConfigurationFile {
                                 sslKeystore = Paths.get(it.keystore.path),
                                 keyStorePassword = it.keystore.password,
                                 trustStoreFile = Paths.get(it.truststore.path),
-                                trustStorePassword = it.truststore.password)
+                                trustStorePassword = it.truststore.password,
+                                revocationCheckConfig = RevocationCheckConfig())
                     }
 
             return ShellConfiguration(
