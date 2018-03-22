@@ -10,7 +10,6 @@
 
 package com.r3.corda.networkmanage.common.persistence.entity
 
-import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.SignedNodeInfo
 import java.time.Instant
 import javax.persistence.*
@@ -21,47 +20,27 @@ data class NodeInfoEntity(
         // Hash of serialized [NodeInfo] without signatures.
         @Id
         @Column(name = "node_info_hash", length = 64)
-        val nodeInfoHash: String = "",
+        val nodeInfoHash: String,
 
         @Column(name = "public_key_hash", length = 64)
-        val identityPkHash: String = "",
+        val publicKeyHash: String,
 
         @ManyToOne(optional = false, fetch = FetchType.LAZY)
-        @JoinColumn(name = "certificate_signing_request")
+        @JoinColumn(name = "cert_signing_request", nullable = false)
         val certificateSigningRequest: CertificateSigningRequestEntity,
 
         @Lob
-        @Column(name = "signed_node_info_bytes")
-        val signedNodeInfoBytes: ByteArray,
+        @Column(name = "signed_node_info_bytes", nullable = false)
+        @Convert(converter = SignedNodeInfoConverter::class)
+        val signedNodeInfo: SignedNodeInfo,
 
-        @Column(name = "is_current")
+        @Column(name = "is_current", nullable = false)
         val isCurrent: Boolean,
 
-        @Column(name = "published_at")
+        @Column(name = "published_at", nullable = false)
         val publishedAt: Instant = Instant.now(),
 
-        @Column(name = "accepted_parameters_hash", length = 64)
-        val acceptedParametersHash: String = ""
-) {
-    /**
-     * Deserialize NodeInfoEntity.signedNodeInfoBytes into the [SignedNodeInfo] instance
-     */
-    fun toSignedNodeInfo() = signedNodeInfoBytes.deserialize<SignedNodeInfo>()
-
-    fun copy(nodeInfoHash: String = this.nodeInfoHash,
-             certificateSigningRequest: CertificateSigningRequestEntity = this.certificateSigningRequest,
-             signedNodeInfoBytes: ByteArray = this.signedNodeInfoBytes,
-             isCurrent: Boolean = this.isCurrent,
-             publishedAt: Instant = this.publishedAt,
-             acceptedParametersHash: String = this.acceptedParametersHash
-    ): NodeInfoEntity {
-        return NodeInfoEntity(
-                nodeInfoHash = nodeInfoHash,
-                certificateSigningRequest = certificateSigningRequest,
-                signedNodeInfoBytes = signedNodeInfoBytes,
-                isCurrent = isCurrent,
-                publishedAt = publishedAt,
-                acceptedParametersHash = acceptedParametersHash
-        )
-    }
-}
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "accepted_network_parameters")
+        val acceptedNetworkParameters: NetworkParametersEntity?
+)

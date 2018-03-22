@@ -40,6 +40,7 @@ interface NetworkMapStorage {
     /**
      * Retrieves node info hashes where [NodeInfoEntity.isCurrent] is true and the certificate status is [CertificateStatus.VALID]
      */
+    // TODO "Active" is the wrong word here
     fun getActiveNodeInfoHashes(): List<SecureHash>
 
     /**

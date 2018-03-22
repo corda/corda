@@ -119,7 +119,7 @@ class NetworkMapWebServiceTest {
             it.start()
             val signedNetworkMapResponse = it.doGet<SignedNetworkMap>("")
             verify(networkMapStorage, times(1)).getActiveNetworkMap()
-            assertEquals(signedNetworkMapResponse.verifiedNetworkMapCert(rootCaCert), networkMapEntity.toNetworkMap())
+            assertEquals(signedNetworkMapResponse.verifiedNetworkMapCert(rootCaCert), networkMapEntity.networkMap)
         }
     }
 

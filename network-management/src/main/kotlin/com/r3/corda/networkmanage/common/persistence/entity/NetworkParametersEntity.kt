@@ -12,27 +12,26 @@ package com.r3.corda.networkmanage.common.persistence.entity
 
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import org.hibernate.annotations.CreationTimestamp
+import java.security.cert.X509Certificate
 import java.time.Instant
 import javax.persistence.*
 
 @Entity
-@Table(name = "network_parameters", indexes = arrayOf(Index(name = "IDX_NET_PARAMS_HASH", columnList = "hash")))
+@Table(name = "network_parameters", indexes = arrayOf(Index(name = "IDX_NP_HASH", columnList = "hash")))
 class NetworkParametersEntity(
         @Id
-        @Column(name = "hash", length = 64, unique = true)
-        val parametersHash: String,
+        @Column(name = "hash", length = 64, nullable = false)
+        val hash: String,
 
-        @CreationTimestamp
+        @Column(nullable = false)
         val created: Instant = Instant.now(),
 
         @Lob
         @Column(name = "parameters_bytes", nullable = false)
-        val parametersBytes: ByteArray,
+        @Convert(converter = NetworkParametersConverter::class)
+        val networkParameters: NetworkParameters,
 
         // Both of the fields below are nullable, because of the way we sign network map data. NetworkParameters can be
         // inserted into database without signature. Then signing service will sign them.
@@ -41,31 +40,27 @@ class NetworkParametersEntity(
         val signature: ByteArray?,
 
         @Lob
-        @Column(name = "certificate")
-        val certificate: ByteArray?
+        @Column(name = "cert")
+        @Convert(converter = X509CertificateConverter::class)
+        val certificate: X509Certificate?
 ) {
     val isSigned: Boolean get() = certificate != null && signature != null
 
-    fun toNetworkParameters(): NetworkParameters = parametersBytes.deserialize()
-
     fun toSignedNetworkParameters(): SignedNetworkParameters {
-        if (certificate == null || signature == null) throw IllegalStateException("Network parameters entity is not signed: $parametersHash")
-        return SignedNetworkParameters(
-                SerializedBytes(parametersBytes),
-                DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), signature)
-        )
+        if (certificate == null || signature == null) throw IllegalStateException("Network parameters entity is not signed: $hash")
+        return SignedNetworkParameters(networkParameters.serialize(), DigitalSignatureWithCert(certificate, signature))
     }
 
-    fun copy(parametersHash: String = this.parametersHash,
+    fun copy(parametersHash: String = this.hash,
              created: Instant = this.created,
-             parametersBytes: ByteArray = this.parametersBytes,
+             networkParameters: NetworkParameters = this.networkParameters,
              signature: ByteArray? = this.signature,
-             certificate: ByteArray? = this.certificate
+             certificate: X509Certificate? = this.certificate
     ): NetworkParametersEntity {
         return NetworkParametersEntity(
-                parametersHash = parametersHash,
+                hash = parametersHash,
                 created = created,
-                parametersBytes = parametersBytes,
+                networkParameters = networkParameters,
                 signature = signature,
                 certificate = certificate
         )

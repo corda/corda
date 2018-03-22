@@ -14,7 +14,6 @@ import com.r3.corda.networkmanage.common.persistence.CertificateData
 import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequest
 import com.r3.corda.networkmanage.common.persistence.CertificateStatus
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
-import com.r3.corda.networkmanage.common.utils.buildCertPath
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -26,10 +25,10 @@ import java.time.Instant
 import javax.persistence.*
 
 @Entity
-@Table(name = "certificate_signing_request", indexes = arrayOf(Index(name = "IDX_PUB_KEY_HASH", columnList = "public_key_hash")))
+@Table(name = "cert_signing_request", indexes = arrayOf(Index(name = "IDX__CSR__PKH", columnList = "public_key_hash")))
 data class CertificateSigningRequestEntity(
         @Id
-        @Column(name = "request_id", length = 64)
+        @Column(name = "request_id", length = 64, nullable = false)
         val requestId: String,
 
         // TODO: Store X500Name with a proper schema.
@@ -37,19 +36,21 @@ data class CertificateSigningRequestEntity(
         @Convert(converter = CordaX500NameAttributeConverter::class)
         val legalName: CordaX500Name?,
 
-        @Column(name = "public_key_hash", length = 64)
+        @Column(name = "public_key_hash", length = 64, nullable = false)
         val publicKeyHash: String,
 
+        // Setting [columnDefinition] is a work around for a hibernate problem when using SQL database.
+        // TODO: Remove this when we find out the cause of the problem.
         @Audited
-        @Column(name = "status", nullable = false)
+        @Column(name = "status", length = 16, nullable = false, columnDefinition = "NVARCHAR(16)")
         @Enumerated(EnumType.STRING)
         val status: RequestStatus = RequestStatus.NEW,
 
         @Audited
-        @Column(name = "modified_by", length = 512)
+        @Column(name = "modified_by", length = 64, nullable = false)
         val modifiedBy: String,
 
-        @Audited
+        // TODO: Use audit framework instead.
         @Column(name = "modified_at", nullable = false)
         val modifiedAt: Instant = Instant.now(),
 
@@ -62,10 +63,11 @@ data class CertificateSigningRequestEntity(
 
         @Lob
         @Column(name = "request_bytes", nullable = false)
-        val requestBytes: ByteArray,
+        @Convert(converter = PKCS10CertificationRequestConverter::class)
+        val request: PKCS10CertificationRequest,
 
         @ManyToOne
-        @JoinColumn(name = "private_network", foreignKey = ForeignKey(name = "FK_CSR_PN"))
+        @JoinColumn(name = "private_network", foreignKey = ForeignKey(name = "FK__CSR__PN"))
         val privateNetwork: PrivateNetworkEntity? = null
 ) {
     fun toCertificateSigningRequest(): CertificateSigningRequest {
@@ -74,70 +76,53 @@ data class CertificateSigningRequestEntity(
                 legalName = legalName,
                 publicKeyHash = SecureHash.parse(publicKeyHash),
                 status = status,
-                request = request(),
+                request = request,
                 remark = remark,
                 modifiedBy = modifiedBy,
                 certData = certificateData?.toCertificateData()
         )
     }
-
-    private fun request() = PKCS10CertificationRequest(requestBytes)
 }
 
 @Entity
-@Table(name = "certificate_data")
+@Table(name = "cert_data")
 data class CertificateDataEntity(
         @Id
         @GeneratedValue(strategy = GenerationType.SEQUENCE)
         val id: Long? = null,
 
-        @Column(name = "certificate_status")
+        // Setting [columnDefinition] is a work around for a hibernate problem when using SQL database.
+        // TODO: Remove this when we find out the cause of the problem.
+        @Column(name = "cert_status", length = 16, nullable = false, columnDefinition = "NVARCHAR(16)")
+        @Enumerated(EnumType.STRING)
         val certificateStatus: CertificateStatus,
 
         @Lob
-        @Column(name = "certificate_path_bytes")
-        val certificatePathBytes: ByteArray,
+        @Column(name = "cert_path_bytes", nullable = false)
+        @Convert(converter = CertPathConverter::class)
+        val certPath: CertPath,
 
         @OneToOne(fetch = FetchType.EAGER, optional = false)
-        @JoinColumn(name = "certificate_signing_request", foreignKey = ForeignKey(name = "FK__cert_data__cert_sign_req"))
+        @JoinColumn(name = "cert_signing_request", foreignKey = ForeignKey(name = "FK__CD__CSR"), nullable = false)
         val certificateSigningRequest: CertificateSigningRequestEntity,
 
-        @Column(name = "certificate_serial_number", unique = true)
+        @Column(name = "cert_serial_number", unique = true, nullable = false, columnDefinition = "NUMERIC(28)")
         val certificateSerialNumber: BigInteger
 ) {
-    fun toCertificateData(): CertificateData {
-        return CertificateData(
-                certStatus = certificateStatus,
-                certPath = toCertificatePath()
-        )
-    }
+    fun toCertificateData(): CertificateData = CertificateData(certificateStatus, certPath)
 
     val legalName: CordaX500Name get() {
-        return CordaX500Name.build(toCertificatePath().x509Certificates[0].subjectX500Principal)
+        return CordaX500Name.build(certPath.x509Certificates[0].subjectX500Principal)
     }
-
-    fun copy(certificateStatus: CertificateStatus = this.certificateStatus,
-             certificatePathBytes: ByteArray = this.certificatePathBytes,
-             certificateSigningRequest: CertificateSigningRequestEntity = this.certificateSigningRequest,
-             certificateSerialNumber: BigInteger = this.certificateSerialNumber): CertificateDataEntity {
-        return CertificateDataEntity(
-                id = this.id,
-                certificateStatus = certificateStatus,
-                certificatePathBytes = certificatePathBytes,
-                certificateSigningRequest = certificateSigningRequest,
-                certificateSerialNumber = certificateSerialNumber)
-    }
-
-    private fun toCertificatePath(): CertPath = buildCertPath(certificatePathBytes)
 }
 
 @Entity
 @Table(name = "private_network")
 data class PrivateNetworkEntity(
         @Id
-        @Column(name = "id")
+        @Column(name = "id", length = 64)
         val networkId: String,
 
-        @Column(name = "name")
+        @Column(name = "name", length = 255, nullable = false)
         val networkName: String
 )

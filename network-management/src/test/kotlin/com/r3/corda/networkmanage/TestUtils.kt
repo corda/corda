@@ -15,18 +15,17 @@ fun createNetworkParametersEntity(signingCertAndKeyPair: CertificateAndKeyPair =
                                   networkParameters: NetworkParameters = testNetworkParameters()): NetworkParametersEntity {
     val signedNetParams = signingCertAndKeyPair.sign(networkParameters)
     return NetworkParametersEntity(
-            parametersHash = signedNetParams.raw.hash.toString(),
-            parametersBytes = signedNetParams.raw.bytes,
+            hash = signedNetParams.raw.hash.toString(),
+            networkParameters = networkParameters,
             signature = signedNetParams.sig.bytes,
-            certificate = signedNetParams.sig.by.encoded
+            certificate = signedNetParams.sig.by
     )
 }
 
 fun createNetworkParametersEntityUnsigned(networkParameters: NetworkParameters = testNetworkParameters()): NetworkParametersEntity {
-    val serialised = networkParameters.serialize()
     return NetworkParametersEntity(
-            parametersHash = serialised.hash.toString(),
-            parametersBytes = serialised.bytes,
+            hash = networkParameters.serialize().hash.toString(),
+            networkParameters = networkParameters,
             signature = null,
             certificate = null
     )
@@ -36,11 +35,12 @@ fun createNetworkMapEntity(signingCertAndKeyPair: CertificateAndKeyPair = create
                            netParamsEntity: NetworkParametersEntity,
                            nodeInfoHashes: List<SecureHash> = emptyList(),
                            parametersUpdate: ParametersUpdate? = null): NetworkMapEntity {
-    val signedNetMap = signingCertAndKeyPair.sign(NetworkMap(nodeInfoHashes, SecureHash.parse(netParamsEntity.parametersHash), parametersUpdate))
+    val networkMap = NetworkMap(nodeInfoHashes, SecureHash.parse(netParamsEntity.hash), parametersUpdate)
+    val signedNetworkMap = signingCertAndKeyPair.sign(networkMap)
     return NetworkMapEntity(
-            networkMapBytes = signedNetMap.raw.bytes,
-            signature = signedNetMap.sig.bytes,
-            certificate = signedNetMap.sig.by.encoded,
+            networkMap = networkMap,
+            signature = signedNetworkMap.sig.bytes,
+            certificate = signedNetworkMap.sig.by,
             networkParameters = netParamsEntity
     )
 }

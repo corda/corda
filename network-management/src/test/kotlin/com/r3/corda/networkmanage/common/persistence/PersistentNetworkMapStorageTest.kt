@@ -87,7 +87,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         assertThat(activeSignedNetworkMap.sig).isEqualTo(networkMapAndSigned.signed.sig)
         assertThat(activeNetworkParameters).isEqualTo(networkParameters)
         assertThat(activeSignedNetworkParameters.sig).isEqualTo(networkParametersSig)
-        assertThat(SecureHash.parse(activeNetworkParametersEntity.parametersHash))
+        assertThat(SecureHash.parse(activeNetworkParametersEntity.hash))
                 .isEqualTo(activeNetworkMap.networkParameterHash)
                 .isEqualTo(networkParametersHash)
     }
@@ -100,7 +100,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         // We may have not signed them yet.
         networkMapStorage.saveNetworkParameters(params2, null)
 
-        assertThat(networkMapStorage.getLatestNetworkParameters()?.toNetworkParameters()).isEqualTo(params2)
+        assertThat(networkMapStorage.getLatestNetworkParameters()?.networkParameters).isEqualTo(params2)
     }
 
     @Test

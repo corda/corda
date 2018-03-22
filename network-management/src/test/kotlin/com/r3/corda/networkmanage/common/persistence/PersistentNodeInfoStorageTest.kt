@@ -14,15 +14,18 @@ import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.NodeInfoAndSigned
+import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.signWith
@@ -45,13 +48,15 @@ class PersistentNodeInfoStorageTest : TestBase() {
     private lateinit var networkMapStorage: PersistentNetworkMapStorage
     private lateinit var persistence: CordaPersistence
     private lateinit var rootCaCert: X509Certificate
-    private lateinit var intermediateCa: CertificateAndKeyPair
+    private lateinit var doormanCertAndKeyPair: CertificateAndKeyPair
+    private lateinit var networkMapCertAndKeyPair: CertificateAndKeyPair
 
     @Before
     fun startDb() {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
-        this.intermediateCa = intermediateCa
+        this.doormanCertAndKeyPair = intermediateCa
+        networkMapCertAndKeyPair = createDevNetworkMapCa(rootCa)
         persistence = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
         nodeInfoStorage = PersistentNodeInfoStorage(persistence)
         requestStorage = PersistentCertificateSigningRequestStorage(persistence)
@@ -70,8 +75,8 @@ class PersistentNodeInfoStorageTest : TestBase() {
         val name = CordaX500Name(organisation = "Test", locality = "London", country = "GB")
         val nodeCaCert = X509Utilities.createCertificate(
                 CertificateType.NODE_CA,
-                intermediateCa.certificate,
-                intermediateCa.keyPair,
+                doormanCertAndKeyPair.certificate,
+                doormanCertAndKeyPair.keyPair,
                 name.x500Principal,
                 keyPair.public)
 
@@ -85,7 +90,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
 
         requestStorage.putCertificatePath(
                 requestId,
-                X509Utilities.buildCertPath(nodeCaCert, intermediateCa.certificate, rootCaCert),
+                X509Utilities.buildCertPath(nodeCaCert, doormanCertAndKeyPair.certificate, rootCaCert),
                 CertificateSigningRequestStorage.DOORMAN_SIGNATURE)
 
         val storedCertPath = nodeInfoStorage.getCertificatePath(SecureHash.parse(keyPair.public.hashString()))
@@ -150,16 +155,37 @@ class PersistentNodeInfoStorageTest : TestBase() {
     @Test
     fun `accept parameters updates node info correctly`() {
         // given
-        val (nodeInfoWithSigned) = createValidSignedNodeInfo("Test", requestStorage)
+        val (nodeInfoAndSigned) = createValidSignedNodeInfo("Test", requestStorage)
 
         // when
-        val paramsHash = SecureHash.randomSHA256()
-        val nodeInfoHash = nodeInfoStorage.putNodeInfo(nodeInfoWithSigned)
-        nodeInfoStorage.ackNodeInfoParametersUpdate(SecureHash.parse(nodeInfoWithSigned.nodeInfo.legalIdentities.first().owningKey.hashString()), paramsHash)
+        val networkParameters = testNetworkParameters()
+        val sigWithCert = networkMapCertAndKeyPair.sign(networkParameters).sig
+        val netParamsHash = networkMapStorage.saveNetworkParameters(networkParameters, sigWithCert)
+        val nodeInfoHash = nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
+        nodeInfoStorage.ackNodeInfoParametersUpdate(nodeInfoAndSigned.nodeInfo.legalIdentities[0].owningKey.encoded.sha256(), netParamsHash)
 
         // then
-        val persistedParametersHash = nodeInfoStorage.getAcceptedParametersUpdateHash(nodeInfoHash)
-        assertThat(persistedParametersHash).isEqualTo(paramsHash)
+        val acceptedNetworkParameters = nodeInfoStorage.getAcceptedNetworkParameters(nodeInfoHash)
+        assertThat(acceptedNetworkParameters?.hash).isEqualTo(netParamsHash.toString())
+    }
+
+    @Test
+    fun `updating node info after it's accepted network parameters`() {
+        val networkParameters = testNetworkParameters()
+        val sigWithCert = networkMapCertAndKeyPair.sign(networkParameters).sig
+        val netParamsHash = networkMapStorage.saveNetworkParameters(networkParameters, sigWithCert)
+
+        val (nodeInfoAndSigned, privateKey) = createValidSignedNodeInfo("Test", requestStorage)
+        nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
+
+        nodeInfoStorage.ackNodeInfoParametersUpdate(nodeInfoAndSigned.nodeInfo.legalIdentities[0].owningKey.encoded.sha256(), netParamsHash)
+
+        val nodeInfo2 = nodeInfoAndSigned.nodeInfo.copy(serial = 2)
+        val nodeInfoAndSigned2 = NodeInfoAndSigned(nodeInfo2.signWith(listOf(privateKey)))
+        val nodeInfoHash2 = nodeInfoStorage.putNodeInfo(nodeInfoAndSigned2)
+
+        val acceptedNetworkParameters = nodeInfoStorage.getAcceptedNetworkParameters(nodeInfoHash2)
+        assertThat(acceptedNetworkParameters?.hash).isEqualTo(netParamsHash.toString())
     }
 }
 

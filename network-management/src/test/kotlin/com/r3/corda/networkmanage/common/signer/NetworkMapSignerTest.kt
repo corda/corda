@@ -149,7 +149,6 @@ class NetworkMapSignerTest : TestBase() {
         // given
         val currentNetworkParameters = createNetworkParametersEntity(signingCertAndKeyPair)
         val updateNetworkParameters = createNetworkParametersEntityUnsigned(testNetworkParameters(epoch = 2))
-        val updateParametersHash = SecureHash.parse(updateNetworkParameters.parametersHash)
         val parametersUpdate = ParametersUpdateEntity(0, updateNetworkParameters,"Update time", Instant.ofEpochMilli(random63BitValue()))
         val netMapEntity = createNetworkMapEntity(signingCertAndKeyPair, currentNetworkParameters, emptyList(), null)
         whenever(networkMapStorage.getActiveNetworkMap()).thenReturn(netMapEntity)
@@ -170,8 +169,8 @@ class NetworkMapSignerTest : TestBase() {
         val paramsCaptor = argumentCaptor<NetworkParameters>()
         val signatureCaptor = argumentCaptor<DigitalSignatureWithCert>()
         verify(networkMapStorage, times(1)).saveNetworkParameters(paramsCaptor.capture(), signatureCaptor.capture())
-        assertEquals(paramsCaptor.firstValue, updateNetworkParameters.toNetworkParameters())
-        assertThat(signatureCaptor.firstValue.verify(updateNetworkParameters.parametersBytes))
+        assertEquals(paramsCaptor.firstValue, updateNetworkParameters.networkParameters)
+        signatureCaptor.firstValue.verify(updateNetworkParameters.networkParameters.serialize())
     }
 
     @Test
@@ -206,7 +205,7 @@ class NetworkMapSignerTest : TestBase() {
         argumentCaptor<NetworkMapAndSigned>().apply {
             verify(networkMapStorage).saveNewActiveNetworkMap(capture())
             val netMap = firstValue.networkMap
-            assertEquals(SecureHash.parse(updateNetworkParameters.parametersHash), netMap.networkParameterHash)
+            assertEquals(SecureHash.parse(updateNetworkParameters.hash), netMap.networkParameterHash)
             assertEquals(emptyList(), netMap.nodeInfoHashes)
             assertEquals(null, netMap.parametersUpdate)
         }
@@ -231,7 +230,7 @@ class NetworkMapSignerTest : TestBase() {
         argumentCaptor<NetworkMapAndSigned>().apply {
             verify(networkMapStorage).saveNewActiveNetworkMap(capture())
             val netMap = firstValue.networkMap
-            assertEquals(SecureHash.parse(activeNetworkParameters.parametersHash), netMap.networkParameterHash)
+            assertEquals(SecureHash.parse(activeNetworkParameters.hash), netMap.networkParameterHash)
             assertEquals(emptyList(), netMap.nodeInfoHashes)
             assertEquals(null, netMap.parametersUpdate)
         }

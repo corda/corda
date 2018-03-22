@@ -3,7 +3,6 @@ package com.r3.corda.networkmanage.common.persistence
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateDataEntity
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateRevocationListEntity
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateRevocationRequestEntity
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import java.math.BigInteger
@@ -21,10 +20,7 @@ class PersistentCertificateRevocationListStorage(private val database: CordaPers
                 }
             }
             // We just want the last signed entry
-            val crlEntity = session.createQuery(query).setMaxResults(1).uniqueResult()
-            crlEntity?.let {
-                X509CertificateFactory().delegate.generateCRL(crlEntity.crlBytes.inputStream()) as X509CRL
-            }
+            session.createQuery(query).setMaxResults(1).uniqueResult()?.crl
         }
     }
 
@@ -34,7 +30,7 @@ class PersistentCertificateRevocationListStorage(private val database: CordaPers
                 revokeCertificate(it.serialNumber, revokedAt, this)
             }
             session.save(CertificateRevocationListEntity(
-                    crlBytes = crl.encoded,
+                    crl = crl,
                     crlIssuer = crlIssuer,
                     signedBy = signedBy,
                     modifiedAt = Instant.now()

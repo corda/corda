@@ -9,73 +9,52 @@ import java.time.Instant
 import javax.persistence.*
 
 @Entity
-@Table(name = "certificate_revocation_request")
-class CertificateRevocationRequestEntity(
+@Table(name = "cert_revocation_request")
+data class CertificateRevocationRequestEntity(
         @Id
         @GeneratedValue(strategy = GenerationType.SEQUENCE)
         val id: Long? = null,
 
-        @Column(name = "request_id", length = 256, nullable = false, unique = true)
+        @Column(name = "request_id", length = 64, nullable = false, unique = true)
         val requestId: String,
 
         @OneToOne(fetch = FetchType.EAGER)
-        @JoinColumn(name = "certificate_data")
+        @JoinColumn(name = "cert_data", nullable = false)
         val certificateData: CertificateDataEntity,
 
-        @Column(name = "certificate_serial_number", nullable = false)
+        @Column(name = "cert_serial_number", nullable = false, columnDefinition = "NUMERIC(28)")
         val certificateSerialNumber: BigInteger,
 
         @Column(name = "legal_name", length = 256, nullable = false)
         @Convert(converter = CordaX500NameAttributeConverter::class)
         val legalName: CordaX500Name,
 
+        // Setting [columnDefinition] is a work around for a hibernate problem when using SQL database.
+        // TODO: Remove this when we find out the cause of the problem.
         @Audited
-        @Column(name = "status", nullable = false)
+        @Column(name = "status", length = 16, nullable = false, columnDefinition = "NVARCHAR(16)")
         @Enumerated(EnumType.STRING)
         val status: RequestStatus = RequestStatus.NEW,
 
-        @Column(name = "reporter", nullable = false, length = 512)
+        @Column(name = "reporter", nullable = false, length = 64)
         val reporter: String,
 
         @Audited
-        @Column(name = "modified_by", nullable = false, length = 512)
+        @Column(name = "modified_by", nullable = false, length = 64)
         val modifiedBy: String,
 
         @Audited
         @Column(name = "modified_at", nullable = false)
         val modifiedAt: Instant = Instant.now(),
 
+        // Setting [columnDefinition] is a work around for a hibernate problem when using SQL database.
+        // TODO: Remove this when we find out the cause of the problem.
         @Audited
-        @Column(name = "revocation_reason", nullable = false)
+        @Column(name = "revocation_reason", length = 32, nullable = false, columnDefinition = "NVARCHAR(32)")
         @Enumerated(EnumType.STRING)
         val revocationReason: CRLReason,
 
         @Audited
         @Column(name = "remark", length = 256)
         val remark: String? = null
-) {
-    fun copy(requestId: String = this.requestId,
-             certificateData: CertificateDataEntity = this.certificateData,
-             certificateSerialNumber: BigInteger = this.certificateSerialNumber,
-             status: RequestStatus = this.status,
-             legalName: CordaX500Name = this.legalName,
-             reporter: String = this.reporter,
-             modifiedBy: String = this.modifiedBy,
-             modifiedAt: Instant = this.modifiedAt,
-             revocationReason: CRLReason = this.revocationReason,
-             remark: String? = this.remark): CertificateRevocationRequestEntity {
-        return CertificateRevocationRequestEntity(
-                id = this.id,
-                requestId = requestId,
-                certificateData = certificateData,
-                certificateSerialNumber = certificateSerialNumber,
-                status = status,
-                legalName = legalName,
-                reporter = reporter,
-                modifiedBy = modifiedBy,
-                modifiedAt = modifiedAt,
-                revocationReason = revocationReason,
-                remark = remark
-        )
-    }
-}
+)

@@ -51,7 +51,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
             session.merge(certificateSigningRequest)
             val certificateDataEntity = CertificateDataEntity(
                     certificateStatus = CertificateStatus.VALID,
-                    certificatePathBytes = certPath.encoded,
+                    certPath = certPath,
                     certificateSigningRequest = certificateSigningRequest,
                     certificateSerialNumber = certPath.x509Certificates.first().serialNumber)
             session.persist(certificateDataEntity)
@@ -71,7 +71,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
                         requestId = requestId,
                         legalName = legalNameOrRejectMessage as? CordaX500Name,
                         publicKeyHash = toSupportedPublicKey(request.subjectPublicKeyInfo).hashString(),
-                        requestBytes = request.encoded,
+                        request = request,
                         remark = legalNameOrRejectMessage as? String,
                         modifiedBy = CertificateSigningRequestStorage.DOORMAN_SIGNATURE,
                         status = if (legalNameOrRejectMessage is CordaX500Name) RequestStatus.NEW else RequestStatus.REJECTED

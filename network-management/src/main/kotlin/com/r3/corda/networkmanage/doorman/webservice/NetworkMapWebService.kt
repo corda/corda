@@ -57,9 +57,9 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
             .build {
                 networkMapStorage.getActiveNetworkMap()?.let {
                     logger.info("Re-publishing network map")
-                    val networkMap = it.toNetworkMap()
+                    val networkMap = it.networkMap
                     val signedNetworkMap = it.toSignedNetworkMap()
-                    CachedData(signedNetworkMap, networkMap.nodeInfoHashes.toSet(), it.networkParameters.toNetworkParameters())
+                    CachedData(signedNetworkMap, networkMap.nodeInfoHashes.toSet(), it.networkParameters.networkParameters)
                 }
             }
 
@@ -109,11 +109,8 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
             logger.debug { "Received ack-parameters with $hash from ${signedParametersHash.sig.by}" }
             nodeInfoStorage.ackNodeInfoParametersUpdate(signedParametersHash.sig.by.encoded.sha256(), hash)
             ok()
-        } catch (e: Exception) {
-            when (e) {
-                is SignatureException -> status(Response.Status.FORBIDDEN).entity(e.message)
-                else -> status(Response.Status.INTERNAL_SERVER_ERROR)
-            }
+        } catch (e: SignatureException) {
+            status(Response.Status.FORBIDDEN).entity(e.message)
         }.build()
     }
 

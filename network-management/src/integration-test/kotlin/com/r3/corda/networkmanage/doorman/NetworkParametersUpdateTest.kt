@@ -107,8 +107,7 @@ class NetworkParametersUpdateTest {
                             description = "Very Important Update",
                             updateDeadline = updateDeadline
                     )
-            )
-            )
+            ))
 
             updates.expectEvents(isStrict = true) {
                 sequence(

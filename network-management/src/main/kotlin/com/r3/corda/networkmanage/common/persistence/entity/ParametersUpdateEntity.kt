@@ -7,7 +7,7 @@ import javax.persistence.*
 
 @Entity
 @Table(name = "parameters_update")
-class ParametersUpdateEntity(
+data class ParametersUpdateEntity(
         @Id
         @GeneratedValue(strategy = GenerationType.SEQUENCE)
         val id: Long? = null,
@@ -17,31 +17,17 @@ class ParametersUpdateEntity(
         @JoinColumn(name = "network_parameters", foreignKey = ForeignKey(name = "FK__param_up__net_param"))
         val networkParameters: NetworkParametersEntity,
 
-        @Column(name = "description")
+        @Column(name = "description", nullable = false)
         val description: String,
 
-        @Column(name = "update_deadline")
+        @Column(name = "update_deadline", nullable = false)
         val updateDeadline: Instant,
 
         // This boolean flag is used when we want to explicitly point that it's time to switch parameters in network map.
-        @Column(name = "flag_day")
+        @Column(name = "flag_day", nullable = false)
         val flagDay: Boolean = false
 ) {
-    fun toParametersUpdate(): ParametersUpdate = ParametersUpdate(SecureHash.parse(networkParameters.parametersHash), description, updateDeadline)
-
-    fun toNetMapUpdate(): ParametersUpdate? = if (!flagDay) ParametersUpdate(SecureHash.parse(networkParameters.parametersHash), description, updateDeadline) else null
-
-    fun copy(id: Long? = this.id,
-             networkParameters: NetworkParametersEntity = this.networkParameters,
-             description: String = this.description,
-             updateDeadline: Instant = this.updateDeadline,
-             flagDay: Boolean = this.flagDay): ParametersUpdateEntity {
-        return ParametersUpdateEntity(
-                id = id,
-                networkParameters = networkParameters,
-                description = description,
-                updateDeadline = updateDeadline,
-                flagDay = flagDay
-        )
+    fun toParametersUpdate(): ParametersUpdate {
+        return ParametersUpdate(SecureHash.parse(networkParameters.hash), description, updateDeadline)
     }
 }

@@ -22,7 +22,6 @@ import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService
 import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -60,7 +59,7 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
 
     private fun getNetworkMapService(config: NetworkMapConfig, signer: LocalSigner?): NetworkMapWebService {
         val localNetworkMapSigner = signer?.let { NetworkMapSigner(networkMapStorage, it) }
-        val latestParameters = networkMapStorage.getLatestNetworkParameters()?.toNetworkParameters() ?:
+        val latestParameters = networkMapStorage.getLatestNetworkParameters()?.networkParameters ?:
                 throw IllegalStateException("No network parameters were found. Please upload new network parameters before starting network map service")
         logger.info("Starting network map service with network parameters: $latestParameters")
         localNetworkMapSigner?.signAndPersistNetworkParameters(latestParameters)
@@ -153,7 +152,7 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
 
     private fun handleSetNetworkParameters(setNetParams: NetworkParametersCmd.Set) {
         logger.info("maxMessageSize is not currently wired in the nodes")
-        val activeNetParams = networkMapStorage.getActiveNetworkMap()?.networkParameters?.toNetworkParameters()
+        val activeNetParams = networkMapStorage.getActiveNetworkMap()?.networkParameters?.networkParameters
         if (activeNetParams == null) {
             require(setNetParams.parametersUpdate == null) {
                 "'parametersUpdate' specified in network parameters file but there are no network parameters to update"
@@ -163,19 +162,19 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
             networkMapStorage.saveNetworkParameters(initialNetParams, null)
         } else {
             val parametersUpdate = requireNotNull(setNetParams.parametersUpdate) {
-                "'parametersUpdate' not specified in network parameters file but there is already an active set of network parameters."
+                "'parametersUpdate' not specified in network parameters file but there is already an active set of network parameters"
             }
 
             setNetParams.checkCompatibility(activeNetParams)
 
-            val latestNetParams = checkNotNull(networkMapStorage.getLatestNetworkParameters()?.toNetworkParameters()) {
+            val latestNetParams = checkNotNull(networkMapStorage.getLatestNetworkParameters()?.networkParameters) {
                 "Something has gone wrong! We have an active set of network parameters ($activeNetParams) but apparently no latest network parameters!"
             }
 
             // It's not necessary that latestNetParams is the current active network parameters. It can be the network
             // parameters from a previous update attempt which has't activated yet. We still take the epoch value for this
             // new set from latestNetParams to make sure the advertised update attempts have incrementing epochs.
-            // This has the implication that active network parameters may have gaps in their epochs.
+            // This has the implication that *active* network parameters may have gaps in their epochs.
             val newNetParams = setNetParams.toNetworkParameters(modifiedTime = Instant.now(), epoch = latestNetParams.epoch + 1)
 
             logger.info("Enabling update to network parameters:\n$newNetParams\n$parametersUpdate")
@@ -205,12 +204,12 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
             "Parameters we are trying to switch to haven't been signed yet"
         }
         // TODO This check is stil not good enough as when it comes to signing, the NetworkMapSigner will just accept
-        check(latestNetParamsEntity.parametersHash == parametersUpdate.networkParameters.parametersHash) {
-            "The latest network parameters is not the scheduled one:\n${latestNetParamsEntity.toNetworkParameters()}\n${parametersUpdate.toParametersUpdate()}"
+        check(latestNetParamsEntity.hash == parametersUpdate.networkParameters.hash) {
+            "The latest network parameters is not the scheduled one:\n${latestNetParamsEntity.networkParameters}\n${parametersUpdate.toParametersUpdate()}"
         }
         logger.info("Flag day has occurred, however the new network parameters won't be active until the new network map is signed.\n" +
-                "Switching from: $activeNetParams\nTo: ${latestNetParamsEntity.toNetworkParameters()}")
-        networkMapStorage.setFlagDay(SecureHash.parse(parametersUpdate.networkParameters.parametersHash))
+                "Switching from: $activeNetParams\nTo: ${latestNetParamsEntity.networkParameters}")
+        networkMapStorage.setFlagDay(SecureHash.parse(parametersUpdate.networkParameters.hash))
     }
 
     private fun handleCancelUpdate() {

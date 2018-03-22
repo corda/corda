@@ -15,12 +15,11 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
-import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.NetworkMapAndSigned
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import java.time.Instant
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import java.time.Instant
 
 /**
  * Database implementation of the [NetworkMapStorage] interface
@@ -49,9 +48,9 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
                 "Network parameters ${networkMap.networkParameterHash} are not signed"
             }
             session.save(NetworkMapEntity(
-                    networkMapBytes = signedNetworkMap.raw.bytes,
+                    networkMap = networkMap,
                     signature = signedNetworkMap.sig.bytes,
-                    certificate = signedNetworkMap.sig.by.encoded,
+                    certificate = signedNetworkMap.sig.by,
                     networkParameters = networkParametersEntity
             ))
         }
@@ -85,21 +84,22 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
     }
 
     override fun saveNetworkParameters(networkParameters: NetworkParameters, signature: DigitalSignatureWithCert?): SecureHash {
-        val serialised = networkParameters.serialize()
-        val hash = serialised.hash
+        val serialized = networkParameters.serialize()
+        signature?.verify(serialized)
+        val hash = serialized.hash
         database.transaction {
             val entity = getNetworkParametersEntity(hash)
             val newNetworkParamsEntity = if (entity != null) {
                 entity.copy(
                         signature = signature?.bytes,
-                        certificate = signature?.by?.encoded
+                        certificate = signature?.by
                 )
             } else {
                 NetworkParametersEntity(
-                        parametersBytes = serialised.bytes,
-                        parametersHash = hash.toString(),
+                        networkParameters = networkParameters,
+                        hash = hash.toString(),
                         signature = signature?.bytes,
-                        certificate = signature?.by?.encoded
+                        certificate = signature?.by
                 )
             }
             session.merge(newNetworkParamsEntity)
@@ -139,7 +139,7 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
 
     override fun getParametersUpdate(): ParametersUpdateEntity? {
         return database.transaction {
-            val currentParametersHash = getActiveNetworkMap()?.toNetworkMap()?.networkParameterHash
+            val currentParametersHash = getActiveNetworkMap()?.networkParameters?.hash
             val latestParameters = getLatestNetworkParameters()
             val criteria = session.criteriaBuilder.createQuery(ParametersUpdateEntity::class.java)
             val root = criteria.from(ParametersUpdateEntity::class.java)
@@ -150,7 +150,7 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
                 "ParametersUpdate doesn't correspond to latest network parameters"
             }
             // Highly unlikely, but...
-            check (parametersUpdate == null || latestParameters?.parametersHash != currentParametersHash?.toString()) {
+            check(parametersUpdate == null || latestParameters?.hash != currentParametersHash) {
                 "Having update for parameters that are already in network map"
             }
             parametersUpdate
@@ -160,16 +160,16 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
     override fun setFlagDay(parametersHash: SecureHash) {
         database.transaction {
             val parametersUpdateEntity = getParametersUpdate() ?: throw IllegalArgumentException("Setting flag day but no parameters update to switch to")
-            if (parametersHash.toString() != parametersUpdateEntity.networkParameters.parametersHash) {
-                throw IllegalArgumentException("Setting flag day for parameters: $parametersHash, but in database we have update for: ${parametersUpdateEntity.networkParameters.parametersHash}")
+            if (parametersHash.toString() != parametersUpdateEntity.networkParameters.hash) {
+                throw IllegalArgumentException("Setting flag day for parameters: $parametersHash, but in database we have update for: ${parametersUpdateEntity.networkParameters.hash}")
             }
             session.merge(parametersUpdateEntity.copy(flagDay = true))
         }
     }
+}
 
-    private fun DatabaseTransaction.getNetworkParametersEntity(hash: SecureHash): NetworkParametersEntity? {
-        return uniqueEntityWhere { builder, path ->
-            builder.equal(path.get<String>(NetworkParametersEntity::parametersHash.name), hash.toString())
-        }
+internal fun DatabaseTransaction.getNetworkParametersEntity(hash: SecureHash): NetworkParametersEntity? {
+    return uniqueEntityWhere { builder, path ->
+        builder.equal(path.get<String>(NetworkParametersEntity::hash.name), hash.toString())
     }
 }

@@ -11,11 +11,10 @@
 package com.r3.corda.networkmanage.common.persistence.entity
 
 import net.corda.core.internal.DigitalSignatureWithCert
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkMap
+import java.security.cert.X509Certificate
 import javax.persistence.*
 
 @Entity
@@ -27,26 +26,23 @@ class NetworkMapEntity(
 
         @Lob
         @Column(name = "serialized_network_map", nullable = false)
-        val networkMapBytes: ByteArray,
+        @Convert(converter = NetworkMapConverter::class)
+        val networkMap: NetworkMap,
 
         @Lob
         @Column(name = "signature", nullable = false)
         val signature: ByteArray,
 
         @Lob
-        @Column(name = "certificate", nullable = false)
-        val certificate: ByteArray,
+        @Column(name = "cert", nullable = false)
+        @Convert(converter = X509CertificateConverter::class)
+        val certificate: X509Certificate,
 
         @ManyToOne(optional = false, fetch = FetchType.EAGER)
-        @JoinColumn(name = "network_parameters")
+        @JoinColumn(name = "network_parameters", nullable = false)
         val networkParameters: NetworkParametersEntity
 ) {
-    fun toNetworkMap(): NetworkMap = networkMapBytes.deserialize()
-
     fun toSignedNetworkMap(): SignedNetworkMap {
-        return SignedNetworkMap(
-                SerializedBytes(networkMapBytes),
-                DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), signature)
-        )
+        return SignedNetworkMap(networkMap.serialize(), DigitalSignatureWithCert(certificate, signature))
     }
 }
