@@ -54,6 +54,7 @@ enum class DatabaseType(val settings: DatabaseSettings) {
             "h2" -> H2
             "sql_server" -> SQL_SERVER
             "sql server" -> SQL_SERVER
+            "sql-server" -> SQL_SERVER
             "sqlserver" -> SQL_SERVER
             "postgres" -> POSTGRES
             "postgreSQL" -> POSTGRES
