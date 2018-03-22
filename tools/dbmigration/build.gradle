@@ -37,6 +37,7 @@ dependencies{
 
 shadowJar {
     transform(de.sebastianboegl.gradle.plugins.shadow.transformers.Log4j2PluginsFileTransformer)
+    archiveName = "migration-tool-${version}.jar"
 }
 
-
+task buildMigrationTool(dependsOn: shadowJar)

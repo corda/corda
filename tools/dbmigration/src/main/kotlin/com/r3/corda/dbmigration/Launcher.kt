@@ -13,8 +13,7 @@
 package com.r3.corda.dbmigration
 
 import com.typesafe.config.ConfigFactory
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
+import com.zaxxer.hikari.util.PropertyElf
 import joptsimple.OptionException
 import joptsimple.OptionParser
 import joptsimple.OptionSet
@@ -23,6 +22,7 @@ import net.corda.core.internal.MigrationHelpers
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.schemas.MappedSchema
+import net.corda.node.internal.DataSourceFactory.createDatasourceFromDriverJars
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.parseAsNodeConfiguration
@@ -37,6 +37,7 @@ import java.io.FileWriter
 import java.io.PrintWriter
 import java.io.Writer
 import java.net.URLClassLoader
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
@@ -71,7 +72,7 @@ private fun initOptionParser(): OptionParser = OptionParser().apply {
             .defaultsTo(Mode.NODE)
 
     accepts(BASE_DIRECTORY, "The node or doorman directory")
-            .withRequiredArg()
+            .withRequiredArg().required()
 
     accepts(CONFIG, "The name of the config file. By default 'node.conf' for a simple node and 'network-management.conf' for a doorman.")
             .withOptionalArg()
@@ -141,12 +142,12 @@ private fun runCommand(options: OptionSet, parser: OptionParser) {
 private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: Path, mode: Mode, classLoader: ClassLoader, schemas: Set<MappedSchema>) {
     val config = ConfigFactory.parseFile(configFile.toFile()).resolve().parseAs(Configuration::class, false)
 
-    fun runMigrationCommand(withMigration: (SchemaMigration) -> Unit): Unit = runWithDataSource(config) { dataSource ->
+    fun runMigrationCommand(withMigration: (SchemaMigration) -> Unit): Unit = runWithDataSource(config, baseDirectory, classLoader) { dataSource ->
         withMigration(SchemaMigration(schemas, dataSource, true, config.database, classLoader))
     }
 
     when {
-        options.has(RELEASE_LOCK) -> runWithDataSource(ConfigFactory.parseFile(configFile.toFile()).resolve().parseAs(Configuration::class)) {
+        options.has(RELEASE_LOCK) -> runWithDataSource(ConfigFactory.parseFile(configFile.toFile()).resolve().parseAs(Configuration::class), baseDirectory, classLoader) {
             SchemaMigration(emptySet(), it, true, config.database, Thread.currentThread().contextClassLoader).forceReleaseMigrationLock()
         }
         options.has(DRY_RUN) -> {
@@ -165,7 +166,7 @@ private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: P
             fun generateMigrationFileForSchema(schemaClass: String) {
                 logger.info("Creating database migration files for schema: $schemaClass into ${baseDirectory / "migration"}")
                 try {
-                    runWithDataSource(config) {
+                    runWithDataSource(config, baseDirectory, classLoader) {
                         MigrationExporter(baseDirectory, config.dataSourceProperties, classLoader, it).generateMigrationForCorDapp(schemaClass)
                     }
                 } catch (e: Exception) {
@@ -211,12 +212,9 @@ private fun getMigrationOutput(baseDirectory: Path, options: OptionSet): Writer 
     }
 }
 
-private fun runWithDataSource(config: Configuration, withDatasource: (DataSource) -> Unit) {
-    val cfg = HikariConfig(config.dataSourceProperties)
-    cfg.maximumPoolSize = 1
-    return HikariDataSource(cfg).use { dataSource ->
-        withDatasource(dataSource)
-    }
+private fun runWithDataSource(config: Configuration, baseDirectory: Path, classLoader: ClassLoader, withDatasource: (DataSource) -> Unit) {
+    val driversFolder = baseDirectory / "drivers"
+    return withDatasource(createDatasourceFromDriverJars(config.dataSourceProperties, classLoader, driversFolder))
 }
 
 private fun errorAndExit(message: String?) {
