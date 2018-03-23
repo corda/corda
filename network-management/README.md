@@ -245,7 +245,7 @@ Run the following SQL script to archive the node info table (change the timestam
 The initial network parameters can be subsequently changed through an update process. However, these changes must first
 be advertised to the entire network to allow nodes time to agree to the changes.
 
-The server needs to be shutdown and started with the same `set-network-parameters` as before but this time the network
+The server needs to be shutdown and started with the same `set-network-parameters` flag as before but this time the network
 parameters file must have `parametersUpdate` config block:
     
     parametersUpdate {
@@ -268,9 +268,17 @@ When the time for switching the parameters comes, doorman should be restarted ag
 java -jar doorman-<version>.jar --flag-day
 ```
 
-This will switch the parameters that were previously advertised as an update to be the current ones in the network map.
+This will switch the parameters that were previously advertised as an update to be the current ones in the network map,
+however the new network parameters won't be active until the new network map is signed (either by HSM or by local signer).
 All nodes in the network need to restart to apply the new parameters. Any node which has not accepted the new parameters
 will fail to start.
+
+It is possible to cancel the previously scheduled updated. To do so simply run:
+```
+java -jar doorman-<version>.jar --cancel-update
+```
+
+The network map will continue to advertise the cancelled update until the new network map is signed.
 
 # Private Network Map
 The private network is a tactical solution to provide temporary privacy to the initial network map.

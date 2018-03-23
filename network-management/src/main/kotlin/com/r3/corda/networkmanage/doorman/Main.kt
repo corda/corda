@@ -26,6 +26,7 @@ fun main(args: Array<String>) {
         println("Version: ${Manifests.read("Doorman-Version")}")
     }
 
+    initialiseSerialization()
     val cmdLineOptions = try {
         DoormanArgsParser().parse(*args)
     } catch (e: ShowHelpException) {
@@ -81,8 +82,6 @@ private fun caKeyGenMode(config: NetworkManagementServerConfig) {
 }
 
 private fun doormanMode(cmdLineOptions: DoormanCmdLineOptions, config: NetworkManagementServerConfig) {
-    initialiseSerialization()
-
     val networkManagementServer = NetworkManagementServer(config.dataSourceProperties, config.database)
 
     if (cmdLineOptions.networkParametersCmd == null) {

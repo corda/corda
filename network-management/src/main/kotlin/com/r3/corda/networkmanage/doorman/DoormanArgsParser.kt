@@ -32,7 +32,7 @@ class DoormanArgsParser {
             .withRequiredArg()
             .withValuesConvertedBy(PathConverter(PathProperties.FILE_EXISTING))
     private val flagDayArg = optionParser.accepts("flag-day", "Roll over the scheduled network parameters to be the current.")
-    private val cancelUpdateArg = optionParser.accepts("cancel-network-parameters-update", "Cancel the scheduled update of the network parameters.")
+    private val cancelUpdateArg = optionParser.accepts("cancel-update", "Cancel the scheduled update of the network parameters.")
     private val trustStorePasswordArg = optionParser
             .accepts("trust-store-password", "Password for the generated network root trust store. Only applicable when operating in ${Mode.ROOT_KEYGEN} mode.")
             .withRequiredArg()

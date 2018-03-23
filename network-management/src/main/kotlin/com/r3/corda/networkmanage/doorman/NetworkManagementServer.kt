@@ -58,7 +58,7 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
         val localNetworkMapSigner = signer?.let { NetworkMapSigner(networkMapStorage, it) }
         val latestParameters = networkMapStorage.getLatestNetworkParameters()?.networkParameters ?:
                 throw IllegalStateException("No network parameters were found. Please upload new network parameters before starting network map service")
-        logger.info("Starting network map service with network parameters: $latestParameters")
+        logger.info("Starting network map service with latest network parameters: $latestParameters")
         localNetworkMapSigner?.signAndPersistNetworkParameters(latestParameters)
 
         if (localNetworkMapSigner != null) {
@@ -204,6 +204,7 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
             val initialNetParams = setNetParams.toNetworkParameters(modifiedTime = Instant.now(), epoch = 1)
             logger.info("Saving initial network parameters to be signed:\n$initialNetParams")
             networkMapStorage.saveNetworkParameters(initialNetParams, null)
+            println("Saved initial network parameters to be signed:\n$initialNetParams")
         } else {
             val parametersUpdate = requireNotNull(setNetParams.parametersUpdate) {
                 "'parametersUpdate' not specified in network parameters file but there is already an active set of network parameters"
@@ -228,6 +229,7 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
             networkMapStorage.saveNewParametersUpdate(newNetParams, parametersUpdate.description, parametersUpdate.updateDeadline)
 
             logger.info("Update enabled")
+            println("Enabled update to network parameters:\n$newNetParams\n$parametersUpdate")
         }
     }
 
@@ -254,6 +256,7 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
         logger.info("Flag day has occurred, however the new network parameters won't be active until the new network map is signed.\n" +
                 "Switching from: $activeNetParams\nTo: ${latestNetParamsEntity.networkParameters}")
         networkMapStorage.setFlagDay(SecureHash.parse(parametersUpdate.networkParameters.hash))
+        println("Set the flag day")
     }
 
     private fun handleCancelUpdate() {
@@ -265,5 +268,6 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
             // We leave parameters from that update in the database, for auditing reasons
             networkMapStorage.clearParametersUpdates()
         }
+        println("Done with cancel update")
     }
 }
