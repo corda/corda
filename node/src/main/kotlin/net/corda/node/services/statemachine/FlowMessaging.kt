@@ -33,7 +33,7 @@ interface FlowMessaging {
      * listen on the send acknowledgement.
      */
     @Suspendable
-    fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId)
+    fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId, omitDrainingModeHeaders: Boolean = false)
 
     /**
      * Start the messaging using the [onMessage] message handler.
@@ -59,9 +59,9 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     }
 
     @Suspendable
-    override fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId) {
+    override fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId, omitDrainingModeHeaders: Boolean) {
         log.trace { "Sending message $deduplicationId $message to party $party" }
-        val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders())
+        val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders(omitDrainingModeHeaders))
         val partyInfo = serviceHub.networkMapCache.getPartyInfo(party) ?: throw IllegalArgumentException("Don't know about $party")
         val address = serviceHub.networkService.getAddressOfParty(partyInfo)
         val sequenceKey = when (message) {
@@ -71,10 +71,10 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
         serviceHub.networkService.send(networkMessage, address, sequenceKey = sequenceKey)
     }
 
-    private fun SessionMessage.additionalHeaders(): Map<String, String> {
-        return when (this) {
-            is InitialSessionMessage -> mapOf(P2PMessagingHeaders.Type.KEY to P2PMessagingHeaders.Type.SESSION_INIT_VALUE)
-            else -> emptyMap()
+    private fun SessionMessage.additionalHeaders(omitDrainingModeHeaders: Boolean): Map<String, String> {
+        return when {
+            this !is InitialSessionMessage || omitDrainingModeHeaders -> emptyMap()
+            else -> mapOf(P2PMessagingHeaders.Type.KEY to P2PMessagingHeaders.Type.SESSION_INIT_VALUE)
         }
     }
 

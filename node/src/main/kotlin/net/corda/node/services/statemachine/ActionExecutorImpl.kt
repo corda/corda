@@ -13,6 +13,8 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.*
+import net.corda.core.context.InvocationOrigin
+import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
@@ -72,7 +74,7 @@ class ActionExecutorImpl(
             is Action.ScheduleEvent -> executeScheduleEvent(fiber, action)
             is Action.SleepUntil -> executeSleepUntil(action)
             is Action.RemoveCheckpoint -> executeRemoveCheckpoint(action)
-            is Action.SendInitial -> executeSendInitial(action)
+            is Action.SendInitial -> executeSendInitial(action, fiber.mightDeadlockDrainingTarget(action.party))
             is Action.SendExisting -> executeSendExisting(action)
             is Action.AddSessionBinding -> executeAddSessionBinding(action)
             is Action.RemoveSessionBindings -> executeRemoveSessionBindings(action)
@@ -82,6 +84,12 @@ class ActionExecutorImpl(
             is Action.RollbackTransaction -> executeRollbackTransaction()
             is Action.CommitTransaction -> executeCommitTransaction()
         }
+    }
+
+    private fun FlowFiber.mightDeadlockDrainingTarget(target: Party): Boolean {
+        // This prevents a "deadlock" in case an initiated flow tries to start a session against a draining node that is also the initiator.
+        // It does not help in case more than 2 nodes are involved in a circle, so the kill switch via RPC should be used in that case.
+        return invocationContext().origin.let { it is InvocationOrigin.Peer && it.party == target.name }
     }
 
     @Suspendable
@@ -166,8 +174,8 @@ class ActionExecutorImpl(
     }
 
     @Suspendable
-    private fun executeSendInitial(action: Action.SendInitial) {
-        flowMessaging.sendSessionMessage(action.party, action.initialise, action.deduplicationId)
+    private fun executeSendInitial(action: Action.SendInitial, omitDrainingModeHeaders: Boolean) {
+        flowMessaging.sendSessionMessage(action.party, action.initialise, action.deduplicationId, omitDrainingModeHeaders)
     }
 
     @Suspendable

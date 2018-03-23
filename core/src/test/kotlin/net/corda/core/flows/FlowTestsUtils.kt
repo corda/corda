@@ -48,7 +48,7 @@ class NoAnswer(private val closure: () -> Unit = {}) : FlowLogic<Unit>() {
 /**
  * Allows to register a flow of type [R] against an initiating flow of type [I].
  */
-inline fun <I : FlowLogic<*>, reified R : FlowLogic<*>> StartedNode<InternalMockNetwork.MockNode>.registerInitiatedFlow(initiatingFlowType: KClass<I>, crossinline construct: (session: FlowSession) -> R) {
+inline fun <I : FlowLogic<*>, reified R : FlowLogic<*>> StartedNode<*>.registerInitiatedFlow(initiatingFlowType: KClass<I>, crossinline construct: (session: FlowSession) -> R) {
     internalRegisterFlowFactory(initiatingFlowType.java, InitiatedFlowFactory.Core { session -> construct(session) }, R::class.javaObjectType, true)
 }
 
