@@ -40,9 +40,9 @@ Here is an example node configuration for PostgreSQL:
 
     dataSourceProperties = {
         dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
-        dataSource.url = "jdbc:postgresql://[HOST]:[PORT]/postgres"
-        dataSource.user = [USER]
-        dataSource.password = [PASSWORD]
+        "dataSource.url" = "jdbc:postgresql://[HOST]:[PORT]/postgres"
+        "dataSource.user" = [USER]
+        "dataSource.password" = [PASSWORD]
     }
     database = {
         transactionIsolationLevel = READ_COMMITTED
