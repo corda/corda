@@ -80,53 +80,50 @@ and start running.
 
 **STEP 3: Connect to your VM and set up the environment**
 
-Once your instance is running click on the SSH button to launch a
-cloud SSH terminal in a new window. 
+Once your instance is running click on the "Connect" button and copy the ssh command:
 
-.. image:: resources/gcpconsolelaunchssh.png
-   :scale: 50 %
-   
-.. image:: resources/gcpshell.png
+.. image:: resources/azure-connect.png
    :scale: 50 %
 
-We need a few utilities so go ahead and check the following are
-installed and if not install with apt-get:
+.. image:: resources/azure-connect-ssh.png
+   :scale: 50 %
+
+Enter the ssh command into your terminal. At the prompt to continue connecting type yes and then enter the password you configured earlier to log into the remote VM:
+
+.. image:: resources/azure-shell.png
+   :scale: 50 %
+
+We need a few utilities so go ahead and install the following with apt-get:
 
 .. code:: bash
 
     sudo apt-get update
     sudo apt-get install -y unzip  screen wget openjdk-8-jdk
 
-Now run the following to configure the firewall to allow Corda traffic
+
+We need to configure the firewall to allow Corda traffic.
+
+Back in the portal click on networking:
+
+.. image:: resources/azure-networking.png
+   :scale: 50 %
+
+Click on add inbound port rule
+
+.. image:: resources/azure-port-rule.png
+   :scale: 50 %
+
+
+Add 3 rules with the following port, name and priorities:
 
 .. code:: bash
 
-    gcloud compute firewall-rules create nodetonode --allow tcp:10002
-    gcloud compute firewall-rules create nodetorpc --allow tcp:10003
-    gcloud compute firewall-rules create webserver --allow tcp:8080
+    Port range: 10002, Priority: 1041  Name: Port_10002
+    Port range: 10003, Priority: 1042  Name: Port_10003
+    Port range: 8080, Priority: 1043  Name: Port_8080
 
+.. note:: The priority has to be unique number in the range 900 (highest) and 4096 (lowest) priority.
 
-Next we promote the ephemeral IP address associated with this
-instance to a static IP address.
-
-First check the region and select the one you are using from the list:
-
-.. code:: bash
-
-    gcloud compute regions list
-
-Find your external IP:
-
-.. code:: bash
-
-    gcloud compute addresses list
-
-Then run this command with the ephemeral IP address as the argument to
-the --addresses flag and the region:
-
-.. code:: bash
-
-    gcloud compute addresses create corda-node --addresses 35.204.53.61 --region europe-west4
 
 **STEP 4: Download and set up your Corda node**
 
@@ -134,12 +131,12 @@ Now your environment is configured you can switch to the Explore
 application and click on the copy to clipboard button to get your
 dedicated download bundle.
 
-In your cloud VM terminal run the following command to download the
+In your terminal run the following command to download the
 bundle to your instance:
 
 .. code:: bash
 
-    wget [your-specific-download-link]
+    curl [your-specific-download-link]
 
 Make a directory and unzip the file in this directory:
 
