@@ -12,6 +12,7 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import com.esotericsoftware.kryo.KryoException
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.serialization.SerializedBytes
@@ -33,7 +34,7 @@ interface FlowMessaging {
      * listen on the send acknowledgement.
      */
     @Suspendable
-    fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId, omitDrainingModeHeaders: Boolean = false)
+    fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId)
 
     /**
      * Start the messaging using the [onMessage] message handler.
@@ -59,9 +60,9 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     }
 
     @Suspendable
-    override fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId, omitDrainingModeHeaders: Boolean) {
+    override fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId) {
         log.trace { "Sending message $deduplicationId $message to party $party" }
-        val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders(omitDrainingModeHeaders))
+        val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders(party))
         val partyInfo = serviceHub.networkMapCache.getPartyInfo(party) ?: throw IllegalArgumentException("Don't know about $party")
         val address = serviceHub.networkService.getAddressOfParty(partyInfo)
         val sequenceKey = when (message) {
@@ -71,9 +72,13 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
         serviceHub.networkService.send(networkMessage, address, sequenceKey = sequenceKey)
     }
 
-    private fun SessionMessage.additionalHeaders(omitDrainingModeHeaders: Boolean): Map<String, String> {
+    private fun SessionMessage.additionalHeaders(target: Party): Map<String, String> {
+
+        // This prevents a "deadlock" in case an initiated flow tries to start a session against a draining node that is also the initiator.
+        // It does not help in case more than 2 nodes are involved in a circle, so the kill switch via RPC should be used in that case.
+        val mightDeadlockDrainingTarget = FlowStateMachineImpl.currentStateMachine()?.context?.origin.let { it is InvocationOrigin.Peer && it.party == target.name }
         return when {
-            this !is InitialSessionMessage || omitDrainingModeHeaders -> emptyMap()
+            this !is InitialSessionMessage || mightDeadlockDrainingTarget -> emptyMap()
             else -> mapOf(P2PMessagingHeaders.Type.KEY to P2PMessagingHeaders.Type.SESSION_INIT_VALUE)
         }
     }

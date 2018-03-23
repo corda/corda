@@ -11,7 +11,6 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.context.InvocationContext
 import net.corda.core.flows.StateMachineRunId
 import net.corda.node.services.statemachine.transitions.StateMachine
 
@@ -26,6 +25,4 @@ interface FlowFiber {
     fun scheduleEvent(event: Event)
 
     fun snapshot(): StateMachineState
-
-    fun invocationContext(): InvocationContext
 }

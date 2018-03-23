@@ -64,8 +64,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     override val serviceHub get() = getTransientField(TransientValues::serviceHub)
 
-    override fun invocationContext(): InvocationContext = snapshot().flowLogic.stateMachine.context
-
     data class TransientValues(
             val eventQueue: Channel<Event>,
             val resultFuture: CordaFuture<Any?>,
