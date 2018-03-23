@@ -1,4 +1,4 @@
-Deploying a Corda Node to a Google Cloud Platform VM
+Deploying a Corda Node to an Azure Cloud Platform VM
 ====================================================
 
 .. contents::
