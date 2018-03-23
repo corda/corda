@@ -50,21 +50,6 @@ inline fun <I : FlowLogic<*>, reified R : Any> StartedNode<InternalMockNetwork.M
 }
 
 /**
- * Returns an [InitiatingFlow] that executes the logic specified.
- */
-fun <R> initiatingFlow(action: FlowLogic<R>.() -> R): FlowLogic<R> {
-
-    return (@InitiatingFlow object : FlowLogic<R>() {
-
-        @Suspendable
-        override fun call(): R {
-
-            return action(this)
-        }
-    })
-}
-
-/**
  * Extracts data from a [Map[FlowSession, UntrustworthyData<Any>]] without performing checks and casting to [R].
  */
 @Suppress("UNCHECKED_CAST")

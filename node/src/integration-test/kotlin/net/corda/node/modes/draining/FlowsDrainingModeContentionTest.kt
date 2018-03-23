@@ -78,14 +78,15 @@ class ProposeTransactionAndWaitForCommit(private val data: String, private val m
     override fun call(): SignedTransaction {
 
         val session = initiateFlow(counterParty)
-        val transaction = TransactionBuilder(notary)
-
         val messageState = MessageState(message = Message(data), by = ourIdentity)
         val command = Command(MessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
+        val transaction = TransactionBuilder(notary)
         transaction.withItems(StateAndContract(messageState, MESSAGE_CONTRACT_PROGRAM_ID), command)
         val signedTx = serviceHub.signInitialTransaction(transaction)
+
         subFlow(SendTransactionFlow(session, signedTx))
         session.send(myRpcInfo)
+
         return waitForLedgerCommit(signedTx.id)
     }
 }
@@ -97,15 +98,16 @@ class SignTransactionTriggerDrainingModeAndFinality(private val session: FlowSes
     override fun call() {
 
         val tx = subFlow(ReceiveTransactionFlow(session))
-        logger.info("Got transaction from counterParty.")
         val signedTx = serviceHub.addSignature(tx)
         val initiatingRpcInfo = session.receive<RpcInfo>().unwrap { it }
+
         triggerDrainingModeForInitiatingNode(initiatingRpcInfo)
 
         subFlow(FinalityFlow(signedTx, setOf(session.counterparty)))
     }
 
     private fun triggerDrainingModeForInitiatingNode(initiatingRpcInfo: RpcInfo) {
+
         CordaRPCClient(initiatingRpcInfo.address).start(initiatingRpcInfo.username, initiatingRpcInfo.password).use {
             it.proxy.setFlowsDrainingModeEnabled(true)
         }
