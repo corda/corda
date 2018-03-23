@@ -35,7 +35,7 @@ dependencies {
     compile "org.apache.qpid:proton-j:0.21.0"
 
     // FastClasspathScanner: classpath scanning - needed for the NetworkBootstraper
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
+    compile 'io.github.lukehutch:fast-classpath-scanner:2.18.1'
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
