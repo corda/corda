@@ -24,6 +24,7 @@ import com.r3.corda.networkmanage.hsm.generator.GeneratorParameters
 import com.r3.corda.networkmanage.hsm.generator.UserAuthenticationParameters
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.div
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.crypto.CertificateType
 import org.junit.Before
 import org.junit.Rule
@@ -146,7 +147,7 @@ abstract class HsmBaseTest {
                 validDays = 3650,
                 rootKeyStorePassword = TRUSTSTORE_PASSWORD,
                 crlDistributionPoint = URL("http://test.com/revoked.crl"),
-                compatibilityZoneURL = URL("http://test.com/api"),
+                crlServerSocketAddress = NetworkHostAndPort("test.com", 4555),
                 crlUpdatePeriod = 1000,
                 authParameters = AuthParametersConfig(
                         mode = SigningServiceAuthMode.PASSWORD,

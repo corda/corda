@@ -62,6 +62,6 @@ fun main(args: Array<String>) {
     } else if (config.doorman != null) {
         CsrProcessor(config.doorman, config.device, config.keySpecifier, persistence).showMenu()
     } else if (config.doorman != null) {
-        CrrProcessor(config.doorman, config.device, config.keySpecifier, persistence).showMenu()
+        CrrProcessor(config.doorman, config.device, config.keySpecifier).showMenu()
     }
 }

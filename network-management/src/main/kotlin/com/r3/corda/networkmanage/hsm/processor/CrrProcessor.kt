@@ -1,26 +1,22 @@
 package com.r3.corda.networkmanage.hsm.processor
 
-import com.google.common.net.HostAndPort
 import com.r3.corda.networkmanage.common.persistence.CrlIssuer
-import com.r3.corda.networkmanage.common.persistence.PersistentCertificateRevocationListStorage
-import com.r3.corda.networkmanage.common.persistence.PersistentCertificateRevocationRequestStorage
-import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import com.r3.corda.networkmanage.common.signer.CertificateRevocationListSigner
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
 import com.r3.corda.networkmanage.hsm.configuration.DoormanCertificateConfig
 import com.r3.corda.networkmanage.hsm.menu.Menu
 import com.r3.corda.networkmanage.hsm.signer.HsmSigner
+import com.r3.corda.networkmanage.hsm.sockets.SocketCertificateRevocationList
+import com.r3.corda.networkmanage.hsm.sockets.CertificateRevocationRequestRetriever
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.getAndInitializeKeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.getX509Certificate
-import net.corda.nodeapi.internal.persistence.CordaPersistence
 import java.time.Duration
 
 class CrrProcessor(private val config: DoormanCertificateConfig,
                    private val device: String,
-                   private val keySpecifier: Int,
-                   private val persistance: CordaPersistence) : Processor() {
+                   private val keySpecifier: Int) : Processor() {
     private companion object {
         private const val RESET = "\u001B[0m"
         private const val BLACK = "\u001B[30m"
@@ -40,12 +36,12 @@ class CrrProcessor(private val config: DoormanCertificateConfig,
                 mode = auth.mode,
                 authStrengthThreshold = auth.threshold)
         Menu().withExceptionHandler(this::processError).setExitOption("2", "Quit").addItem("1", "View current and sign a new certificate revocation list", {
-            val crlStorage = PersistentCertificateRevocationListStorage(persistance)
-            val currentCrl = crlStorage.getCertificateRevocationList(CrlIssuer.DOORMAN)
+            val crlTransceiver = SocketCertificateRevocationList(config.crlServerSocketAddress)
+            val currentCrl = crlTransceiver.getCertificateRevocationList(CrlIssuer.DOORMAN)
             printlnColor("Current CRL:")
             printlnColor(currentCrl.toString(), YELLOW)
-            val crrStorage = PersistentCertificateRevocationRequestStorage(persistance)
-            val approvedRequests = crrStorage.getRevocationRequests(RequestStatus.APPROVED)
+            val crrRetriever = CertificateRevocationRequestRetriever(config.crlServerSocketAddress)
+            val approvedRequests = crrRetriever.retrieveApprovedCertificateRevocationRequests()
             if (approvedRequests.isEmpty()) {
                 printlnColor("There are no approved Certificate Revocation Requests.", GREEN)
             } else {
@@ -60,12 +56,12 @@ class CrrProcessor(private val config: DoormanCertificateConfig,
                             val keyStore = getAndInitializeKeyStore(provider)
                             val issuerCertificate = keyStore.getX509Certificate(CORDA_INTERMEDIATE_CA)
                             val crlSigner = CertificateRevocationListSigner(
-                                    revocationListStorage = crlStorage,
+                                    revocationListStorage = crlTransceiver,
                                     issuerCertificate = issuerCertificate,
                                     updateInterval = Duration.ofMillis(config.crlUpdatePeriod),
                                     endpoint = config.crlDistributionPoint,
                                     signer = HsmSigner(provider = provider, keyName = CORDA_INTERMEDIATE_CA))
-                            val currentRequests = crrStorage.getRevocationRequests(RequestStatus.DONE)
+                            val currentRequests = crrRetriever.retrieveDoneCertificateRevocationRequests()
                             crlSigner.createSignedCRL(approvedRequests, currentRequests, signers.toString())
                         }
                     })

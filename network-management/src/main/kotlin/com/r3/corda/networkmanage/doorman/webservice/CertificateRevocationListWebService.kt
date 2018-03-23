@@ -6,7 +6,6 @@ import com.r3.corda.networkmanage.common.persistence.CertificateRevocationListSt
 import com.r3.corda.networkmanage.common.persistence.CrlIssuer
 import com.r3.corda.networkmanage.doorman.webservice.CertificateRevocationListWebService.Companion.CRL_PATH
 import net.corda.core.utilities.contextLogger
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import javax.ws.rs.GET
 import javax.ws.rs.Path
