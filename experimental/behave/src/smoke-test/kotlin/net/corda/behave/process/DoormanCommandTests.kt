@@ -76,7 +76,7 @@ class DoormanCommandTests {
     fun `step 6 - load initial network parameters file for network map service`() {
         println(runDir)
         val command = JarCommand(Distribution.R3_MASTER.doormanJar,
-                                arrayOf("--config-file", "$runDir/node.conf", "--update-network-parameters", "$runDir/network-parameters.conf"),
+                                arrayOf("--config-file", "$runDir/node.conf", "--set-network-parameters", "$runDir/network-parameters.conf"),
                                 runDir, 1.minutes)
         assertThat(command.run()).isEqualTo(0)
     }
