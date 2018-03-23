@@ -53,7 +53,7 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
                 (if (notary != null)
                     " AND vs.notary_name = ?" else "") +
                 (if (onlyFromIssuerParties.isNotEmpty())
-                    " AND ccs.issuer_key = ANY (?)" else "") +
+                    " AND ccs.issuer_key_hash = ANY (?)" else "") +
                 (if (withIssuerRefs.isNotEmpty())
                     " AND ccs.issuer_ref = ANY (?)" else "") +
                 """)

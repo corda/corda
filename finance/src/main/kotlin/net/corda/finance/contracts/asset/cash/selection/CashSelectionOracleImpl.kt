@@ -50,7 +50,7 @@ class CashSelectionOracleImpl : AbstractCashSelection(maxRetries = 16, retrySlee
                 (if (notary != null)
                     " AND vs.notary_name = ?" else "") +
                 (if (onlyFromIssuerParties.isNotEmpty())
-                    " AND ccs.issuer_key IN (?)" else "") +
+                    " AND ccs.issuer_key_hash IN (?)" else "") +
                 (if (withIssuerRefs.isNotEmpty())
                     " AND ccs.issuer_ref IN (?)" else "") +
                 """)
@@ -79,7 +79,7 @@ class CashSelectionOracleImpl : AbstractCashSelection(maxRetries = 16, retrySlee
                 lock_id = $lockId
                 """ +
                         (if (notary != null) "notary = ${notary.name}" else "") +
-                        (if (onlyFromIssuerParties.isNotEmpty()) "issuer_key IN ${onlyFromIssuerParties.map { it.owningKey.toStringShort() as Any }.toTypedArray()}" else "") +
+                        (if (onlyFromIssuerParties.isNotEmpty()) "issuer_key_hash IN ${onlyFromIssuerParties.map { it.owningKey.toStringShort() as Any }.toTypedArray()}" else "") +
                         (if (withIssuerRefs.isNotEmpty()) "issuer_ref IN ${withIssuerRefs.map { it.bytes.toHexString() as Any }.toTypedArray()}" else "") +
                         "total <= ${amount.quantity}"
             }

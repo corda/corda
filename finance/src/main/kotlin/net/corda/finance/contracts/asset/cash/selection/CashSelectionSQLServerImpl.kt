@@ -53,7 +53,7 @@ class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retryS
                 (if (notary != null)
                     " AND vs.notary_name = ?" else "") +
                 (if (onlyFromIssuerParties.isNotEmpty())
-                    " AND ccs.issuer_key IN (?)" else "") +
+                    " AND ccs.issuer_key_hash IN (?)" else "") +
                 (if (withIssuerRefs.isNotEmpty())
                     " AND ccs.issuer_ref IN (?)" else "") +
                 """)
