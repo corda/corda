@@ -240,6 +240,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
             scheduler.scheduleStateActivity(ssr1)
         }
         database.dataSource.connection.commit()
+        //Force the thread to shut down with operations waiting
         scheduler.cancel()
         database.close()
 
@@ -250,12 +251,14 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         flows[logicRef] = flowLogic
 
         val newDatabase = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
-        newDatabase.transaction {
+        val newScheduler = newDatabase.transaction {
             System.out.println(newDatabase.dataSource.connection.metaData)
             createScheduler(newDatabase)
         }
         testClock.advanceBy(1.days)
         assertStarted(flowLogic)
+
+        newScheduler.join()
     }
 
     @Test
@@ -285,5 +288,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         assertWaitingFor(ssr1)
         testClock.advanceBy(1.days)
         assertStarted(flowLogic)
+
+        scheduler.join()
     }
 }
