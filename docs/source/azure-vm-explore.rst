@@ -5,63 +5,78 @@ Deploying a Corda Node to an Azure Cloud Platform VM
 
 Corda Connect Explore will allow you to create a self service download
 link with a node preconfigured to join the Explore environment. This
-document will describe how to set up a virtual machine on the Google
+document will describe how to set up a virtual machine on the Azure
 Cloud Platform to deploy your pre-generated Corda node on.
 
 Pre-requisites
 --------------
-* Ensure you have a registered Google Cloud Platform account with
-  `billing enabled <https://cloud.google.com/billing/docs/how-to/manage-billing-account>` which can create virtual machines under your subscription(s) and you are logged on to the GCP console: `<https://console.cloud.google.com>`.
+* Ensure you have a registered Microsoft Azure account with an R3 Member subscription which can create virtual machines and you are logged on to the Azure portal: `<https://portal.azure.com>`.
 
 
 Deploy Corda node
 -----------------
 
-Browse to `<https://console.cloud.google.com>` and log in with your
-Google credentials.
+Browse to `<https://portal.azure.com>` and log in with your Microsoft account.
 
-**STEP 1: Create a GCP Project**
 
-In the project drop down click on the plus icon to create a new
-project to house your Corda resources.
+**STEP 1: Create a Resource Group**
 
-.. image:: resources/consolegcp.png
-   :scale: 50 %
 
-.. image:: resources/console2.png
-   :scale: 50 %
-   
-.. image:: resources/newprojectgcp.png
-   :scale: 50 %
-
-Enter a project name and click Create.
 
 **STEP 2: Launch the VM**
 
-In the left hand side nav click on Compute Engine.
+At the top of the left sidenav click on the button with the green cross "Create a resource".
 
-.. image:: resources/gcpcompute.png
+.. image:: resources/azure-create-resource.png
    :scale: 50 %
 
-Click on Create Instance.
+In this example we are going to use an Ubuntu server so select the "Ubuntu Server 17.10 VM" option.
 
-.. image:: resources/consolegcpcreatevm.png
+.. image:: resources/azure-select-ubuntu.png
+:scale: 50 %
+
+
+Fill in the form:
+
+.. image:: resources/azure-vm-form.png
+:scale: 50 %
+
+Add a username (to log into the VM) and choose and enter a password.
+
+Choose the resource group we created earlier from the "Use existing" dropdown.
+
+Select a cloud region geographically near to your location to host your VM.
+
+Click on OK.
+
+Choose the "D4S_V3 Standard" option and click "Select":
+
+.. image:: resources/azure-vm-spec.png
    :scale: 50 %
 
-Fill in the form with the desired VM specs:
+Click on "Public IP address" to open the settings panel
 
-Recommended minimum 4vCPU with 15GB memory and 40GB Persistent disk.
-Ubuntu 16.04 LTS.
+.. image:: resources/azure-vm-settings.png
+:scale: 50 %
 
-Allow full API access.
+Set the IP address to "Static" under Assignment. (Note this is so the IP address for your node does not change rapidly and need to update the network map.)
 
-Dont worry about firewall settings as we will configure those later. 
+.. image:: resources/azure-set-static-ip.png
+:scale: 50 %
 
-.. image:: resources/gcpconsolevmsettings.png
-   :scale: 50 %
+Click OK and OK again on the Settings panel.
 
-Click Create and wait a few sections for your instance to provision
+.. image:: resources/azure-settings-ok.png
+:scale: 50 %
+
+
+Click Create and wait a few minutes for your instance to provision
 and start running.
+
+.. image:: resources/azure-create-vm.png
+:scale: 50 %
+
+
 
 **STEP 3: Connect to your VM and set up the environment**
 
