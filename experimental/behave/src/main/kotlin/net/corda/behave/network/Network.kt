@@ -214,13 +214,9 @@ class Network private constructor(
         // 6. Load initial network parameters file for network map service
         val networkParamsConfig = if (notaryNodes.isEmpty()) "network-parameters-without-notary.conf" else "network-parameters.conf"
         val updateNetworkParams = JarCommand(distribution.doormanJar,
-                                             arrayOf("--config-file", "$doormanTargetDirectory/node.conf", "--update-network-parameters", "$doormanTargetDirectory/$networkParamsConfig"),
+                                             arrayOf("--config-file", "$doormanTargetDirectory/node.conf", "--set-network-parameters", "$doormanTargetDirectory/$networkParamsConfig"),
                                              doormanTargetDirectory, timeout)
-        runCommand(updateNetworkParams, noWait = true)
-        // WAIT 15 SECS and then interrupt command to gracefully terminate
-        sleep(15.seconds.toMillis())
-        updateNetworkParams.interrupt()
-        updateNetworkParams.waitFor()
+        runCommand(updateNetworkParams)
 
         // 7. Start a fully configured Doorman / NMS
         doormanNMS = JarCommand(distribution.doormanJar,
