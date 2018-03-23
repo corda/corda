@@ -32,7 +32,7 @@ data class CertificateSigningRequest(val requestId: String,
  */
 interface CertificateSigningRequestStorage {
     companion object {
-        val DOORMAN_SIGNATURE = "Doorman"
+        val DOORMAN_SIGNATURE = "Doorman-Csr-Signer"
     }
 
     /**

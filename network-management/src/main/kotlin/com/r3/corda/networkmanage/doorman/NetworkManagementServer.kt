@@ -14,16 +14,13 @@ import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientF
 import com.r3.corda.networkmanage.common.persistence.*
 import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
-import com.r3.corda.networkmanage.doorman.signer.DefaultCsrHandler
-import com.r3.corda.networkmanage.doorman.signer.JiraCsrHandler
-import com.r3.corda.networkmanage.doorman.signer.LocalSigner
-import com.r3.corda.networkmanage.doorman.webservice.MonitoringWebService
-import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService
-import com.r3.corda.networkmanage.doorman.webservice.RegistrationWebService
+import com.r3.corda.networkmanage.doorman.signer.*
+import com.r3.corda.networkmanage.doorman.webservice.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.io.Closeable
@@ -48,7 +45,7 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
 
     override fun close() {
         logger.info("Closing server...")
-        for (closeAction in closeActions) {
+        for (closeAction in closeActions.reversed()) {
             try {
                 closeAction()
             } catch (e: Exception) {
@@ -96,7 +93,7 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
         val jiraConfig = config.jira
         val requestProcessor = if (jiraConfig != null) {
             val jiraWebAPI = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
-            val jiraClient = JiraClient(jiraWebAPI, jiraConfig.projectCode)
+            val jiraClient = CsrJiraClient(jiraWebAPI, jiraConfig.projectCode)
             JiraCsrHandler(jiraClient, requestService, DefaultCsrHandler(requestService, csrCertPathAndKey))
         } else {
             DefaultCsrHandler(requestService, csrCertPathAndKey)
@@ -119,9 +116,51 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
         return RegistrationWebService(requestProcessor, Duration.ofMillis(config.approveInterval))
     }
 
+    private fun getRevocationServices(config: CertificateRevocationConfig,
+                                      database: CordaPersistence,
+                                      csrCertPathAndKeyPair: CertPathAndKey?): Pair<CertificateRevocationRequestWebService, CertificateRevocationListWebService> {
+        logger.info("Starting Revocation server.")
+        val crrStorage = if (config.approveAll) {
+            logger.warn("Revocation server is in 'Approve All' mode, this will approve all incoming certificate signing requests.")
+            ApproveAllCertificateRevocationRequestStorage(PersistentCertificateRevocationRequestStorage(database))
+        } else {
+            PersistentCertificateRevocationRequestStorage(database)
+        }
+        val crlStorage = PersistentCertificateRevocationListStorage(database)
+
+        val crlHandler = csrCertPathAndKeyPair?.let {
+            LocalCrlHandler(crrStorage, crlStorage, CertificateAndKeyPair(it.certPath.first(), it.toKeyPair()), Duration.ofMillis(config.crlUpdateInterval), config.crlEndpoint)
+        }
+
+        val jiraConfig = config.jira
+        val crrHandler = if (jiraConfig != null) {
+            val jiraWebAPI = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
+            val jiraClient = CrrJiraClient(jiraWebAPI, jiraConfig.projectCode)
+            JiraCrrHandler(jiraClient, crrStorage, crlHandler)
+        } else {
+            DefaultCrrHandler(crrStorage, crlHandler)
+        }
+
+        val scheduledExecutor = Executors.newScheduledThreadPool(1)
+        val approvalThread = Runnable {
+            try {
+                // Process Jira approved tickets.
+                crrHandler.processRequests()
+            } catch (e: Exception) {
+                // Log the error and carry on.
+                logger.error("Error encountered when approving request.", e)
+            }
+        }
+        scheduledExecutor.scheduleAtFixedRate(approvalThread, config.approveInterval, config.approveInterval, TimeUnit.MILLISECONDS)
+        closeActions += scheduledExecutor::shutdown
+        // TODO start socket server
+        return Pair(CertificateRevocationRequestWebService(crrHandler), CertificateRevocationListWebService(crlStorage, Duration.ofMillis(config.crlCacheTimeout)))
+    }
+
     fun start(hostAndPort: NetworkHostAndPort,
               csrCertPathAndKey: CertPathAndKey?,
-              doormanConfig: DoormanConfig?, // TODO Doorman config shouldn't be optional as the doorman is always required to run
+              doormanConfig: DoormanConfig?,  // TODO Doorman config shouldn't be optional as the doorman is always required to run
+              revocationConfig: CertificateRevocationConfig?,
               startNetworkMap: NetworkMapStartParams?
     ) {
         val services = mutableListOf<Any>()
@@ -129,6 +168,11 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
 
         startNetworkMap?.let { services += getNetworkMapService(it.config, it.signer) }
         doormanConfig?.let { services += getDoormanService(it, database, csrCertPathAndKey, serverStatus) }
+        revocationConfig?.let {
+            val revocationServices = getRevocationServices(it, database, csrCertPathAndKey)
+            services += revocationServices.first
+            services += revocationServices.second
+        }
 
         require(services.isNotEmpty()) { "No service created, please provide at least one service config." }
 

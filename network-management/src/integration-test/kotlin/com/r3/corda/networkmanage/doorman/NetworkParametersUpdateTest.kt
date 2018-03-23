@@ -146,6 +146,7 @@ class NetworkParametersUpdateTest : IntegrationTest() {
                 serverAddress,
                 CertPathAndKey(listOf(doormanCa.certificate, rootCaCert), doormanCa.keyPair.private),
                 DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis),
+                null,
                 if (startNetworkMap) {
                     NetworkMapStartParams(
                             LocalSigner(networkMapCa),

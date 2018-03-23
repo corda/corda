@@ -14,14 +14,12 @@ import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.*
 import com.r3.corda.networkmanage.doorman.ApprovedRequest
-import com.r3.corda.networkmanage.doorman.JiraClient
+import com.r3.corda.networkmanage.doorman.CsrJiraClient
 import com.r3.corda.networkmanage.doorman.RejectedRequest
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -37,7 +35,7 @@ class JiraCsrHandlerTest : TestBase() {
     val mockitoRule: MockitoRule = MockitoJUnit.rule()
 
     @Mock
-    private lateinit var jiraClient: JiraClient
+    private lateinit var jiraClient: CsrJiraClient
 
     @Mock
     private lateinit var certificationRequestStorage: CertificateSigningRequestStorage
@@ -68,7 +66,7 @@ class JiraCsrHandlerTest : TestBase() {
     fun `If jira connection fails we don't mark the ticket as created`() {
         whenever(defaultCsrHandler.saveRequest(any())).thenReturn(requestId)
         whenever(defaultCsrHandler.getResponse(requestId)).thenReturn(certificateResponse)
-        whenever(jiraClient.createRequestTicket(eq(requestId), any())).thenThrow(IllegalStateException("something broke"))
+        whenever(jiraClient.createCertificateSigningRequestTicket(eq(requestId), any())).thenThrow(IllegalStateException("something broke"))
 
         // Test
         jiraCsrHandler.saveRequest(pkcS10CertificationRequest)
@@ -91,7 +89,7 @@ class JiraCsrHandlerTest : TestBase() {
     fun `create tickets`() {
         val csr = certificateSigningRequest(
                 requestId = requestId,
-                legalName = ALICE_NAME,
+                legalName = CordaX500Name.parse("O=Test Org., C=GB, L=London"),
                 status = RequestStatus.NEW,
                 request = pkcS10CertificationRequest)
         whenever(certificationRequestStorage.getRequests(RequestStatus.NEW)).thenReturn(listOf(csr))
@@ -99,7 +97,7 @@ class JiraCsrHandlerTest : TestBase() {
         // Test
         jiraCsrHandler.processRequests()
 
-        verify(jiraClient).createRequestTicket(requestId, csr.request)
+        verify(jiraClient).createCertificateSigningRequestTicket(requestId, csr.request)
         verify(certificationRequestStorage).markRequestTicketCreated(requestId)
     }
 
@@ -107,8 +105,8 @@ class JiraCsrHandlerTest : TestBase() {
     fun `sync tickets status`() {
         val id1 = SecureHash.randomSHA256().toString()
         val id2 = SecureHash.randomSHA256().toString()
-        val csr1 = CertificateSigningRequest(id1, ALICE_NAME, SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, "Test", null)
-        val csr2 = CertificateSigningRequest(id2, BOB_NAME, SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, "Test", null)
+        val csr1 = CertificateSigningRequest(id1, CordaX500Name.parse("O=Test1 Org., C=GB, L=London"), SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, "Test", null)
+        val csr2 = CertificateSigningRequest(id2, CordaX500Name.parse("O=Test2 Org., C=GB, L=London"), SecureHash.randomSHA256(), RequestStatus.NEW, pkcS10CertificationRequest, null, "Test", null)
 
         val requests = mutableMapOf(id1 to csr1, id2 to csr2)
 
@@ -135,8 +133,8 @@ class JiraCsrHandlerTest : TestBase() {
         // Test.
         jiraCsrHandler.processRequests()
 
-        verify(jiraClient).createRequestTicket(id1, csr1.request)
-        verify(jiraClient).createRequestTicket(id2, csr2.request)
+        verify(jiraClient).createCertificateSigningRequestTicket(id1, csr1.request)
+        verify(jiraClient).createCertificateSigningRequestTicket(id2, csr2.request)
 
         verify(certificationRequestStorage).markRequestTicketCreated(id1)
         verify(certificationRequestStorage).markRequestTicketCreated(id2)
@@ -147,7 +145,7 @@ class JiraCsrHandlerTest : TestBase() {
 
         // Verify jira client get the correct call.
         verify(jiraClient).updateRejectedRequests(listOf(id2))
-        verify(jiraClient).updateSignedRequests(emptyMap())
+        verify(jiraClient).updateDoneCertificateSigningRequests(emptyMap())
 
         // Sign request 1
         val certPath = mock<CertPath>()
@@ -158,6 +156,6 @@ class JiraCsrHandlerTest : TestBase() {
         jiraCsrHandler.processRequests()
 
         // Update signed request should be called.
-        verify(jiraClient).updateSignedRequests(mapOf(id1 to certPath))
+        verify(jiraClient).updateDoneCertificateSigningRequests(mapOf(id1 to certPath))
     }
 }

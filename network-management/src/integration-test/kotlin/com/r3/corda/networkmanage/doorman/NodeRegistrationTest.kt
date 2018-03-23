@@ -159,6 +159,13 @@ class NodeRegistrationTest : IntegrationTest() {
                 serverAddress,
                 CertPathAndKey(listOf(doormanCa.certificate, rootCaCert), doormanCa.keyPair.private),
                 DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis),
+                CertificateRevocationConfig(
+                        approveAll = true,
+                        jira = null,
+                        approveInterval = timeoutMillis,
+                        crlCacheTimeout = timeoutMillis,
+                        crlEndpoint = URL("http://test.com/crl"),
+                        crlUpdateInterval = timeoutMillis),
                 if (startNetworkMap) {
                     NetworkMapStartParams(
                             LocalSigner(networkMapCa),

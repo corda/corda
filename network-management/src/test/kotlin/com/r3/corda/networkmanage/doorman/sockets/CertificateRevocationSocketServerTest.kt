@@ -11,6 +11,7 @@ import com.r3.corda.networkmanage.common.utils.writeObject
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.x500Name
+import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.freePort
@@ -117,7 +118,9 @@ class CertificateRevocationSocketServerTest {
                 certificateSerialNumber = BigInteger.TEN,
                 status = status,
                 reason = CRLReason.KEY_COMPROMISE,
-                modifiedAt = Instant.now()
+                modifiedAt = Instant.now(),
+                certificateSigningRequestId = "CSR-ID",
+                certificate = createDevNodeCa(DEV_INTERMEDIATE_CA, CordaX500Name.parse("O=R3Cev, L=London, C=GB")).certificate
         )
     }
 }

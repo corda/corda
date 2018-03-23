@@ -7,6 +7,10 @@ import java.time.Instant
  * Interface for managing certificate revocation list persistence
  */
 interface CertificateRevocationListStorage {
+    companion object {
+        val DOORMAN_SIGNATURE = "Doorman-Crl-Signer"
+    }
+
     /**
      * Retrieves the latest certificate revocation list.
      *

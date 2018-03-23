@@ -100,6 +100,7 @@ private fun doormanMode(cmdLineOptions: DoormanCmdLineOptions, config: NetworkMa
                 config.address,
                 csrAndNetworkMap?.first,
                 config.doorman,
+                config.revocation,
                 networkMapStartParams)
 
         Runtime.getRuntime().addShutdownHook(object : Thread("ShutdownHook") {

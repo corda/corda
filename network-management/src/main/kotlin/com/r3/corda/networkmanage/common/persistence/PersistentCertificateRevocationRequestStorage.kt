@@ -10,6 +10,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import java.math.BigInteger
+import java.security.cert.X509Certificate
 import java.time.Instant
 
 class PersistentCertificateRevocationRequestStorage(private val database: CordaPersistence) : CertificateRevocationRequestStorage {
@@ -129,7 +130,7 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
         }
     }
 
-    override fun rejectRevocationRequest(requestId: String, rejectedBy: String, reason: String) {
+    override fun rejectRevocationRequest(requestId: String, rejectedBy: String, reason: String?) {
         database.transaction {
             val revocation = getRevocationRequestEntity(requestId)
             if (revocation == null) {
@@ -145,10 +146,28 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
         }
     }
 
-    private fun getRevocationRequestEntity(requestId: String): CertificateRevocationRequestEntity? {
+    override fun markRequestTicketCreated(requestId: String) {
+        // Even though, we have an assumption that there is always a single instance of the doorman service running,
+        // the SERIALIZABLE isolation level is used here just to ensure data consistency between the updates.
+        return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
+            val request = getRevocationRequestEntity(requestId, RequestStatus.NEW)
+            request ?: throw IllegalArgumentException("Error when creating request ticket with id: $requestId. Request does not exist or its status is not NEW.")
+            val update = request.copy(
+                    modifiedAt = Instant.now(),
+                    status = RequestStatus.TICKET_CREATED)
+            session.merge(update)
+        }
+    }
+
+    private fun getRevocationRequestEntity(requestId: String, status: RequestStatus? = null): CertificateRevocationRequestEntity? {
         return database.transaction {
             uniqueEntityWhere { builder, path ->
-                builder.equal(path.get<String>(CertificateRevocationRequestEntity::requestId.name), requestId)
+                val idEqual = builder.equal(path.get<String>(CertificateRevocationRequestEntity::requestId.name), requestId)
+                if (status == null) {
+                    idEqual
+                } else {
+                    builder.and(idEqual, builder.equal(path.get<RequestStatus>(CertificateRevocationRequestEntity::status.name), status))
+                }
             }
         }
     }
@@ -156,6 +175,8 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
     private fun CertificateRevocationRequestEntity.toCertificateRevocationRequestData(): CertificateRevocationRequestData {
         return CertificateRevocationRequestData(
                 requestId,
+                certificateData.certificateSigningRequest.requestId,
+                certificateData.certPath.certificates.first() as X509Certificate,
                 certificateSerialNumber,
                 modifiedAt,
                 legalName,

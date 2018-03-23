@@ -14,6 +14,7 @@ import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.common.HOST
 import com.r3.corda.networkmanage.common.HsmBaseTest
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
+import com.r3.corda.networkmanage.doorman.CertificateRevocationConfig
 import com.r3.corda.networkmanage.doorman.DoormanConfig
 import com.r3.corda.networkmanage.doorman.NetworkManagementServer
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
@@ -26,6 +27,8 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.hours
+import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
@@ -101,6 +104,14 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
                     hostAndPort = NetworkHostAndPort(HOST, 0),
                     csrCertPathAndKey = null,
                     doormanConfig = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jira = null),
+                    revocationConfig = CertificateRevocationConfig(
+                            approveAll = true,
+                            jira = null,
+                            crlUpdateInterval = 2.hours.toMillis(),
+                            crlCacheTimeout = 30.minutes.toMillis(),
+                            crlEndpoint = URL("http://test.com/crl"),
+                            approveInterval = 10.minutes.toMillis()
+                    ),
                     startNetworkMap = null)
             val doormanHostAndPort = server.hostAndPort
             // Start Corda network registration.

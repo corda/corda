@@ -1,6 +1,6 @@
 package com.r3.corda.networkmanage.doorman.webservice
 
-import com.r3.corda.networkmanage.common.persistence.CertificateRevocationRequestStorage
+import com.r3.corda.networkmanage.doorman.signer.CrrHandler
 import com.r3.corda.networkmanage.doorman.webservice.CertificateRevocationRequestWebService.Companion.CRR_PATH
 import net.corda.core.serialization.deserialize
 import net.corda.nodeapi.internal.network.CertificateRevocationRequest
@@ -14,7 +14,7 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 
 @Path(CRR_PATH)
-class CertificateRevocationRequestWebService(private val revocationRequestStorage: CertificateRevocationRequestStorage) {
+class CertificateRevocationRequestWebService(private val crrHandler: CrrHandler) {
 
     companion object {
         const val CRR_PATH = "certificate-revocation-request"
@@ -25,7 +25,7 @@ class CertificateRevocationRequestWebService(private val revocationRequestStorag
     @Produces(MediaType.TEXT_PLAIN)
     fun submitRequest(input: InputStream): Response {
         val request = input.readBytes().deserialize<CertificateRevocationRequest>()
-        val requestId = revocationRequestStorage.saveRevocationRequest(request)
+        val requestId = crrHandler.saveRevocationRequest(request)
         return ok(requestId).build()
     }
 }

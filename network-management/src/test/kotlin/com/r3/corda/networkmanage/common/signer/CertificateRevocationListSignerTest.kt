@@ -62,6 +62,8 @@ class CertificateRevocationListSignerTest : TestBase() {
     private fun givenCertificateRevocationRequest(status: RequestStatus): CertificateRevocationRequestData {
         return CertificateRevocationRequestData(
                 SecureHash.randomSHA256().toString(),
+                "CSR-ID-1",
+                mock(),
                 BigInteger.valueOf(random63BitValue()),
                 Instant.now(),
                 CordaX500Name.parse("CN=Bank A, O=$status, L=London, C=GB"),

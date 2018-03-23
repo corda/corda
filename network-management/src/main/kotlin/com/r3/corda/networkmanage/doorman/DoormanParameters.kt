@@ -14,6 +14,7 @@ import com.google.common.primitives.Booleans
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
@@ -24,6 +25,7 @@ data class NetworkManagementServerConfig( // TODO: Move local signing to signing
 
         val doorman: DoormanConfig?,
         val networkMap: NetworkMapConfig?,
+        val revocation: CertificateRevocationConfig?,
 
         // TODO Should be part of a localSigning sub-config
         val keystorePath: Path? = null,
@@ -46,6 +48,19 @@ data class NetworkManagementServerConfig( // TODO: Move local signing to signing
 
 data class DoormanConfig(val approveAll: Boolean = false,
                          val jira: JiraConfig? = null,
+                         val approveInterval: Long = NetworkManagementServerConfig.DEFAULT_APPROVE_INTERVAL.toMillis()) {
+    init {
+        require(Booleans.countTrue(approveAll, jira != null) == 1) {
+            "Either 'approveAll' or 'jira' config settings need to be specified but not both"
+        }
+    }
+}
+
+data class CertificateRevocationConfig(val approveAll: Boolean = false,
+                         val jira: JiraConfig? = null,
+                         val crlUpdateInterval: Long,
+                         val crlEndpoint: URL,
+                         val crlCacheTimeout: Long,
                          val approveInterval: Long = NetworkManagementServerConfig.DEFAULT_APPROVE_INTERVAL.toMillis()) {
     init {
         require(Booleans.countTrue(approveAll, jira != null) == 1) {

@@ -23,18 +23,18 @@ import javax.security.auth.x500.X500Principal
 
 @Ignore
 // This is manual test for testing Jira API.
-class JiraClientTest {
-    private lateinit var jiraClient: JiraClient
+class CsrJiraClientTest {
+    private lateinit var jiraClient: CsrJiraClient
     @Before
     fun init() {
         val jiraWebAPI = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI("http://jira.url.com"), "username", "password")
-        jiraClient = JiraClient(jiraWebAPI, "DOOR")
+        jiraClient = CsrJiraClient(jiraWebAPI, "DOOR")
     }
 
     @Test
     fun createRequestTicket() {
         val request = X509Utilities.createCertificateSigningRequest(CordaX500Name("JiraAPITest", "R3 Ltd 3", "London", "GB").x500Principal, "test@test.com", Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
-        jiraClient.createRequestTicket(SecureHash.randomSHA256().toString(), request)
+        jiraClient.createCertificateSigningRequestTicket(SecureHash.randomSHA256().toString(), request)
     }
 
     @Test
@@ -54,7 +54,7 @@ class JiraClientTest {
         val selfSignedCaCertPath = X509Utilities.buildCertPath(X509Utilities.createSelfSignedCACertificate(
                 X500Principal("O=test,L=london,C=GB"),
                 Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)))
-        jiraClient.updateSignedRequests(requests.associateBy({ it.requestId }, { selfSignedCaCertPath }))
+        jiraClient.updateDoneCertificateSigningRequests(requests.associateBy({ it.requestId }, { selfSignedCaCertPath }))
     }
 
     @Test

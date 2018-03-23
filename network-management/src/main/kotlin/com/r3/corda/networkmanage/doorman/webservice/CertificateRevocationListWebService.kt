@@ -6,6 +6,7 @@ import com.r3.corda.networkmanage.common.persistence.CertificateRevocationListSt
 import com.r3.corda.networkmanage.common.persistence.CrlIssuer
 import com.r3.corda.networkmanage.doorman.webservice.CertificateRevocationListWebService.Companion.CRL_PATH
 import net.corda.core.utilities.contextLogger
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import javax.ws.rs.GET
 import javax.ws.rs.Path
@@ -16,7 +17,7 @@ import javax.ws.rs.core.Response.status
 
 @Path(CRL_PATH)
 class CertificateRevocationListWebService(private val revocationListStorage: CertificateRevocationListStorage,
-                                          cacheTimeout: Long) {
+                                          cacheTimeout: Duration) {
     companion object {
         private val logger = contextLogger()
         const val CRL_PATH = "certificate-revocation-list"
@@ -26,7 +27,7 @@ class CertificateRevocationListWebService(private val revocationListStorage: Cer
     }
 
     private val crlCache: LoadingCache<CrlIssuer, ByteArray> = Caffeine.newBuilder()
-            .expireAfterWrite(cacheTimeout, TimeUnit.MILLISECONDS)
+            .expireAfterWrite(cacheTimeout.toMillis(), TimeUnit.MILLISECONDS)
             .build({ key ->
                 revocationListStorage.getCertificateRevocationList(key)?.encoded
             })

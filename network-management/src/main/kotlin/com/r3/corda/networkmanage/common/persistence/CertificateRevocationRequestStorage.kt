@@ -5,6 +5,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.network.CertificateRevocationRequest
 import java.math.BigInteger
 import java.security.cert.CRLReason
+import java.security.cert.X509Certificate
 import java.time.Instant
 
 /**
@@ -12,6 +13,8 @@ import java.time.Instant
  */
 @CordaSerializable
 data class CertificateRevocationRequestData(val requestId: String, // This is a uniquely generated string
+                                            val certificateSigningRequestId: String,
+                                            val certificate: X509Certificate,
                                             val certificateSerialNumber: BigInteger,
                                             val modifiedAt: Instant,
                                             val legalName: CordaX500Name,
@@ -23,6 +26,9 @@ data class CertificateRevocationRequestData(val requestId: String, // This is a 
  * Interface for managing certificate revocation requests persistence
  */
 interface CertificateRevocationRequestStorage {
+    companion object {
+        val DOORMAN_SIGNATURE = "Doorman-Crr-Signer"
+    }
 
     /**
      * Creates a new revocation request for the given [certificateSerialNumber].
@@ -70,5 +76,10 @@ interface CertificateRevocationRequestStorage {
      * @param rejectedBy who is rejecting it
      * @param reason description of the reason of this rejection.
      */
-    fun rejectRevocationRequest(requestId: String, rejectedBy: String, reason: String)
+    fun rejectRevocationRequest(requestId: String, rejectedBy: String, reason: String?)
+
+    /**
+     * Persist the fact that a ticket has been created for the given [requestId].
+     */
+    fun markRequestTicketCreated(requestId: String)
 }
