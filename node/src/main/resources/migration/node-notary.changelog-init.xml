@@ -42,16 +42,16 @@
             <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="output_index" type="INT(10)">
+            <column name="output_index" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="raft_log_index" type="BIGINT(19)"/>
+            <column name="raft_log_index" type="BIGINT"/>
             <column name="consuming_transaction_id" type="NVARCHAR(64)"/>
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="1521131680317-17">
         <createTable tableName="node_notary_request_log">
-            <column name="id" type="INT(10)">
+            <column name="id" type="INT">
                 <constraints nullable="false"/>
             </column>
             <column name="consuming_transaction_id" type="NVARCHAR(64)">
