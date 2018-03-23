@@ -33,13 +33,13 @@ At the top of the left sidenav click on the button with the green cross "Create 
 In this example we are going to use an Ubuntu server so select the "Ubuntu Server 17.10 VM" option.
 
 .. image:: resources/azure-select-ubuntu.png
-:scale: 50 %
+   :scale: 50 %
 
 
 Fill in the form:
 
 .. image:: resources/azure-vm-form.png
-:scale: 50 %
+   :scale: 50 %
 
 Add a username (to log into the VM) and choose and enter a password.
 
@@ -57,24 +57,24 @@ Choose the "D4S_V3 Standard" option and click "Select":
 Click on "Public IP address" to open the settings panel
 
 .. image:: resources/azure-vm-settings.png
-:scale: 50 %
+   :scale: 50 %
 
 Set the IP address to "Static" under Assignment. (Note this is so the IP address for your node does not change rapidly and need to update the network map.)
 
 .. image:: resources/azure-set-static-ip.png
-:scale: 50 %
+   :scale: 50 %
 
 Click OK and OK again on the Settings panel.
 
 .. image:: resources/azure-settings-ok.png
-:scale: 50 %
+   :scale: 50 %
 
 
 Click Create and wait a few minutes for your instance to provision
 and start running.
 
 .. image:: resources/azure-create-vm.png
-:scale: 50 %
+   :scale: 50 %
 
 
 
