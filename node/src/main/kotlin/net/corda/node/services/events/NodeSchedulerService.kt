@@ -247,6 +247,12 @@ class NodeSchedulerService(private val clock: CordaClock,
         schedulerTimerExecutor.join()
     }
 
+    @VisibleForTesting
+    internal fun cancelAndWait() {
+        schedulerTimerExecutor.shutdownNow()
+        schedulerTimerExecutor.join()
+    }
+
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
         serverThread.execute {
             var flowName: String? = "(unknown)"
