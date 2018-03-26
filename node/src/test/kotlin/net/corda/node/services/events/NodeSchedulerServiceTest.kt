@@ -91,7 +91,7 @@ open class NodeSchedulerServiceTestBase {
 
     protected fun assertStarted(flowLogic: FlowLogic<*>) {
         // Like in assertWaitingFor, use timeout to make verify wait as we often race the call to startFlow:
-        verify(flowStarter, timeout(5000)).startFlow(same(flowLogic)!!, any())
+        verify(flowStarter, timeout(5000)).startFlow(same(flowLogic)!!, any(), any())
     }
 
     protected fun assertStarted(event: Event) = assertStarted(event.flowLogic)
