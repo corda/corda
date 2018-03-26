@@ -92,6 +92,12 @@ class NetworkMapServer(private val cacheTimeout: Duration,
         return service.latestAcceptedParametersMap[publicKey]
     }
 
+    fun advertiseNewParameters() {
+        networkParameters = checkNotNull(nextNetworkParameters) { "Schedule parameters update first" }
+        nextNetworkParameters = null
+        parametersUpdate = null
+    }
+
     override fun close() {
         server.stop()
     }
