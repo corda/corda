@@ -14,11 +14,13 @@ import net.corda.core.serialization.CordaSerializable
 abstract class CoreTransaction : BaseTransaction() {
     /** The inputs of this transaction, containing state references only **/
     abstract override val inputs: List<StateRef>
+    abstract override val unspendableInputs: List<StateRef>
 }
 
 /** A transaction with fully resolved components, such as input states. */
 abstract class FullTransaction : BaseTransaction() {
     abstract override val inputs: List<StateAndRef<ContractState>>
+    abstract override val unspendableInputs: List<StateAndRef<ContractState>>
 
     override fun checkBaseInvariants() {
         super.checkBaseInvariants()

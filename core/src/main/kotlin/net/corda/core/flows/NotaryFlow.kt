@@ -143,7 +143,7 @@ class NotaryFlow {
                 txId = parts.id
                 checkNotary(parts.notary)
                 service.validateTimeWindow(parts.timestamp)
-                service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty)
+                service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, parts.unspendableInputs)
                 signTransactionAndSendResponse(txId)
             } catch (e: NotaryInternalException) {
                 throw NotaryException(e.error, txId)
@@ -178,7 +178,7 @@ class NotaryFlow {
  * The minimum amount of information needed to notarise a transaction. Note that this does not include
  * any sensitive transaction details.
  */
-data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: TimeWindow?, val notary: Party?)
+data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: TimeWindow?, val notary: Party?, val unspendableInputs: List<StateRef> = emptyList())
 
 /**
  * Exception thrown by the notary service if any issues are encountered while trying to commit a transaction. The

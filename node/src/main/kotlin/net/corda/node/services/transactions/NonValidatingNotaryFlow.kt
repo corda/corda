@@ -2,15 +2,11 @@ package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ComponentGroupEnum
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.NotaryFlow
-import net.corda.core.flows.TransactionParts
-import net.corda.core.flows.NotarisationPayload
-import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.*
 import net.corda.core.internal.validateRequest
 import net.corda.core.node.services.TrustedAuthorityNotaryService
-import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.ContractUpgradeFilteredTransaction
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.utilities.unwrap
@@ -41,12 +37,13 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAut
                     verify()
                     checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
                     checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
+                    checkAllComponentsVisible(ComponentGroupEnum.UNSPENDABLE_INPUTS_GROUP)
                 }
                 val notary = tx.notary
-                TransactionParts(tx.id, tx.inputs, tx.timeWindow, notary)
+                TransactionParts(tx.id, tx.inputs, tx.timeWindow, notary, tx.unspendableInputs)
             }
-            is ContractUpgradeFilteredTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary)
-            is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary)
+            is ContractUpgradeFilteredTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary, tx.unspendableInputs)
+            is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary, tx.unspendableInputs)
             else -> {
                 throw IllegalArgumentException("Received unexpected transaction type: ${tx::class.java.simpleName}," +
                         "expected either ${FilteredTransaction::class.java.simpleName} or ${NotaryChangeWireTransaction::class.java.simpleName}")

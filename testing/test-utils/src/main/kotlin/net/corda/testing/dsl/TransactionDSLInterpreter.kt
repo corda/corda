@@ -4,8 +4,8 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
-import net.corda.core.utilities.seconds
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.seconds
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -27,6 +27,12 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param stateRef The input [StateRef].
      */
     fun input(stateRef: StateRef)
+
+    /**
+     * Add an unspendable input reference to the transaction. Note that [verifies] will resolve this reference.
+     * @param stateRef The input [StateRef].
+     */
+    fun unspendableInput(stateRef: StateRef)
 
     /**
      * Adds an output to the transaction.
@@ -81,13 +87,32 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
  * */
 class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private val notary: Party) : TransactionDSLInterpreter by interpreter {
     /**
+     * Looks up the output label and adds the found state as an unspendable input.
+     * @param stateLabel The label of the output state specified when calling [TransactionDSLInterpreter.output] and friends.
+     */
+    fun unspendableInput(stateLabel: String) = unspendableInput(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
+
+    /**
+     * Creates an [LedgerDSLInterpreter._unverifiedTransaction] with a single input state and adds its reference as an
+     * unspendable input to the current transaction.
+     * @param state The state to be added.
+     */
+    fun unspendableInput(contractClassName: ContractClassName, state: ContractState) {
+        val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary)) {
+            output(contractClassName, null, notary, null, AlwaysAcceptAttachmentConstraint, state)
+        }
+        unspendableInput(transaction.outRef<ContractState>(0).ref)
+    }
+
+
+    /**
      * Looks up the output label and adds the found state as an input.
      * @param stateLabel The label of the output state specified when calling [TransactionDSLInterpreter.output] and friends.
      */
     fun input(stateLabel: String) = input(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
 
     /**
-     * Creates an [LedgerDSLInterpreter._unverifiedTransaction] with a single output state and adds it's reference as an
+     * Creates an [LedgerDSLInterpreter._unverifiedTransaction] with a single input state and adds it's reference as an
      * input to the current transaction.
      * @param state The state to be added.
      */
