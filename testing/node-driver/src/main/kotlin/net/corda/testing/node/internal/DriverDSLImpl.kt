@@ -701,7 +701,8 @@ class DriverDSLImpl(
                         if (it == processDeathFuture) {
                             throw ListenProcessDeathException(config.corda.p2pAddress, process)
                         }
-                        processDeathFuture.cancel(false)
+                        // Will interrupt polling for process death as this is no longer relevant since the process been successfully started and reflected itself in the NetworkMap.
+                        processDeathFuture.cancel(true)
                         log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: $webAddress")
                         OutOfProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
                     }
