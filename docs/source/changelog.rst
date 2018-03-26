@@ -13,6 +13,10 @@ from the previous milestone release.
   reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
   we are disallowing this as the paradigm in general makes little sense for Contract States
 
+* Fix CORDA-1258. Custom serializers were spuriously registered every time a serialization factory was fetched from the cache rather than
+  only once when it was created. Whilst registering serializers that already exist is essentially a no-op, it's a performance overhead for
+  a very frequent operation that hits a synchronisation point (and is thus flagged as contended by our perfomance suite)
+
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
   .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later

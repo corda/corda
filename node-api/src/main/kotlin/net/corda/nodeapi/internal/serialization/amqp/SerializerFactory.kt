@@ -198,7 +198,7 @@ open class SerializerFactory(
      * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer
      * that expects to find getters and a constructor with a parameter for each property.
      */
-    fun register(customSerializer: CustomSerializer<out Any>) {
+    open fun register(customSerializer: CustomSerializer<out Any>) {
         if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
             customSerializers += customSerializer
             serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
