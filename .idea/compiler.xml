@@ -10,6 +10,7 @@
       <module name="bank-of-corda-demo_integrationTest" target="1.8" />
       <module name="bank-of-corda-demo_main" target="1.8" />
       <module name="bank-of-corda-demo_test" target="1.8" />
+      <module name="behave_api" target="1.8" />
       <module name="behave_main" target="1.8" />
       <module name="behave_rpcProxy" target="1.8" />
       <module name="behave_scenario" target="1.8" />
@@ -131,6 +132,7 @@
       <module name="shell_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
+      <module name="simm-valuation-demo_scenario" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
       <module name="smoke-test-utils_main" target="1.8" />
       <module name="smoke-test-utils_test" target="1.8" />

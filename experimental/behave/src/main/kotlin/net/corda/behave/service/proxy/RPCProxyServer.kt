@@ -2,6 +2,7 @@ package net.corda.behave.service.proxy
 
 import net.corda.behave.service.Service
 import net.corda.behave.service.ServiceSettings
+import net.corda.behave.service.proxy.RPCProxyServer.Companion.initialiseSerialization
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -78,17 +79,19 @@ class RPCProxyServer(hostAndPort: NetworkHostAndPort,
             addServlet(jerseyServlet, "/*")
         }
     }
-}
 
-fun initialiseSerialization() {
-    nodeSerializationEnv =
-    SerializationEnvironmentImpl(
-            SerializationFactoryImpl().apply {
-                registerScheme(KryoClientSerializationScheme())
-                registerScheme(AMQPClientSerializationScheme(emptyList()))
-            },
-            AMQP_P2P_CONTEXT,
-            rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)
+    companion object {
+        fun initialiseSerialization() {
+            nodeSerializationEnv =
+                    SerializationEnvironmentImpl(
+                            SerializationFactoryImpl().apply {
+                                registerScheme(KryoClientSerializationScheme())
+                                registerScheme(AMQPClientSerializationScheme(emptyList()))
+                            },
+                            AMQP_P2P_CONTEXT,
+                            rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)
+        }
+    }
 }
 
 fun main(args: Array<String>) {
