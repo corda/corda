@@ -305,16 +305,21 @@ class RPCStabilityTests {
 
             var terminateHandlerCalled = false
             var errorHandlerCalled = false
+            var exceptionMessage: String? = null
             val subscription = client.subscribe()
                      .doOnTerminate{ terminateHandlerCalled = true }
                      .doOnError { errorHandlerCalled = true }
-                     .subscribe()
+                     .subscribe({}, {
+                         //log exception
+                         exceptionMessage = it.message
+                     })
 
             serverFollower.shutdown()
             Thread.sleep(100)
 
             assertTrue(terminateHandlerCalled)
             assertTrue(errorHandlerCalled)
+            assertEquals("Connection failure detected.", exceptionMessage)
             assertTrue(subscription.isUnsubscribed)
 
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
