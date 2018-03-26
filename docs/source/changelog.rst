@@ -4,10 +4,13 @@ Changelog
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
-.. _changelog_v3_1:
-
-Version 3.1
+Unreleased
 -----------
+
+* Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
+
+  .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
+  than 2.12.3 (including 2.12.4) exhibit a different issue.
 
 * Updated the api scanner gradle plugin to work the same way as the version in master. These changes make the api scanner more
   accurate and fix a couple of bugs, and change the format of the api-current.txt file slightly. Backporting these changes
