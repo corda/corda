@@ -137,7 +137,7 @@
             <column name="published_at" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="accepted_network_parameters" type="NVARCHAR(64)"/>
+            <column name="accepted_params_update" type="BIGINT"/>
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="1520338500424-8">
@@ -318,7 +318,7 @@
     </changeSet>
     <changeSet author="R3.Corda" id="1520338500424-38">
         <addForeignKeyConstraint baseColumnNames="network_parameters" baseTableName="network_map"
-                                 constraintName="FK_NM_NP"
+                                 constraintName="FK__NM__NP"
                                  referencedColumnNames="hash" referencedTableName="network_parameters"/>
     </changeSet>
     <changeSet author="R3.Corda" id="1520338500424-39">
@@ -335,18 +335,18 @@
             <column name="network_parameters" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="flag_day" type="BOOLEAN">
+            <column name="status" type="NVARCHAR(16)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
         <addPrimaryKey columnNames="id" constraintName="CONSTRAINT_PARAMUPKEY" tableName="parameters_update"/>
         <addForeignKeyConstraint baseTableName="parameters_update" baseColumnNames="network_parameters"
-                                 constraintName="FK_PU_NP"
+                                 constraintName="FK__PU__NP"
                                  referencedTableName="network_parameters" referencedColumnNames="hash"/>
     </changeSet>
     <changeSet author="R3.Corda" id="1520338500424-40">
-        <addForeignKeyConstraint baseColumnNames="accepted_network_parameters" baseTableName="node_info"
-                                 constraintName="FK__NI__NP"
-                                 referencedColumnNames="hash" referencedTableName="network_parameters"/>
+        <addForeignKeyConstraint baseColumnNames="accepted_params_update" baseTableName="node_info"
+                                 constraintName="FK__NI__PU"
+                                 referencedColumnNames="id" referencedTableName="parameters_update"/>
     </changeSet>
 </databaseChangeLog>

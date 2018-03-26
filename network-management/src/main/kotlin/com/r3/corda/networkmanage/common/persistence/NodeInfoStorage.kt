@@ -10,7 +10,7 @@
 
 package com.r3.corda.networkmanage.common.persistence
 
-import com.r3.corda.networkmanage.common.persistence.entity.NetworkParametersEntity
+import com.r3.corda.networkmanage.common.persistence.entity.ParametersUpdateEntity
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NodeInfo
 import net.corda.nodeapi.internal.NodeInfoAndSigned
@@ -34,10 +34,10 @@ interface NodeInfoStorage {
     fun getNodeInfo(nodeInfoHash: SecureHash): SignedNodeInfo?
 
     /**
-     * Returns the network parameters that the node has accepted or null if couldn't find node info with given hash or
-     * there is no information on accepted parameters hash stored for this entity
+     * Returns the parameters update the node has accepted or null if couldn't find node info with given hash or
+     * there is no information on accepted parameters update stored for this entity.
      */
-    fun getAcceptedNetworkParameters(nodeInfoHash: SecureHash): NetworkParametersEntity?
+    fun getAcceptedParametersUpdate(nodeInfoHash: SecureHash): ParametersUpdateEntity?
 
     /**
      * The [nodeInfoAndSigned] is keyed by the public key, old node info with the same public key will be replaced by the new node info.

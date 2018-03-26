@@ -12,14 +12,14 @@ package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
+import com.r3.corda.networkmanage.common.persistence.entity.ParametersUpdateEntity
+import com.r3.corda.networkmanage.common.persistence.entity.UpdateStatus
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.random63BitValue
-import net.corda.core.serialization.serialize
+import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.NetworkMapAndSigned
-import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -68,8 +68,8 @@ class PersistentNetworkMapStorageTest : TestBase() {
         // Create network parameters
         val networkParameters = testNetworkParameters(maxTransactionSize = 1234567)
         val networkParametersSig = networkMapCertAndKeyPair.sign(networkParameters).sig
-        val networkParametersHash = networkMapStorage.saveNetworkParameters(networkParameters, networkParametersSig)
-        val networkMap = NetworkMap(listOf(nodeInfoHash), networkParametersHash, null)
+        val networkParametersHash = networkMapStorage.saveNetworkParameters(networkParameters, networkParametersSig).hash
+        val networkMap = NetworkMap(listOf(nodeInfoHash), SecureHash.parse(networkParametersHash), null)
         val networkMapAndSigned = NetworkMapAndSigned(networkMap) { networkMapCertAndKeyPair.sign(networkMap).sig }
 
         // when
@@ -87,8 +87,8 @@ class PersistentNetworkMapStorageTest : TestBase() {
         assertThat(activeSignedNetworkMap.sig).isEqualTo(networkMapAndSigned.signed.sig)
         assertThat(activeNetworkParameters).isEqualTo(networkParameters)
         assertThat(activeSignedNetworkParameters.sig).isEqualTo(networkParametersSig)
-        assertThat(SecureHash.parse(activeNetworkParametersEntity.hash))
-                .isEqualTo(activeNetworkMap.networkParameterHash)
+        assertThat(activeNetworkParametersEntity.hash)
+                .isEqualTo(activeNetworkMap.networkParameterHash.toString())
                 .isEqualTo(networkParametersHash)
     }
 
@@ -127,27 +127,26 @@ class PersistentNetworkMapStorageTest : TestBase() {
     }
 
     @Test
-    fun `saveNewParametersUpdate clears the previous updates from database`() {
-        val testParameters1 = testNetworkParameters(epoch = 1)
-        val testParameters2 = testNetworkParameters(epoch = 2)
-        val hash1 = testParameters1.serialize().hash
-        val hash2 = testParameters2.serialize().hash
-        val updateDeadline1 = Instant.ofEpochMilli(random63BitValue())
-        val updateDeadline2 = Instant.ofEpochMilli(random63BitValue())
-        networkMapStorage.saveNewParametersUpdate(testParameters1, "Update 1", updateDeadline1)
-        networkMapStorage.saveNewParametersUpdate(testParameters1, "Update of update", updateDeadline1)
-        assertThat(networkMapStorage.getParametersUpdate()?.toParametersUpdate()).isEqualTo(ParametersUpdate(hash1, "Update of update", updateDeadline1))
-        networkMapStorage.saveNewParametersUpdate(testParameters2, "Update 3", updateDeadline2)
-        assertThat(networkMapStorage.getParametersUpdate()?.toParametersUpdate()).isEqualTo(ParametersUpdate(hash2, "Update 3", updateDeadline2))
+    fun `saveNewParametersUpdate marks update as NEW and persists network parameters as the latest`() {
+        val networkParameters = testNetworkParameters()
+        val updateDeadline = Instant.now() + 10.days
+        networkMapStorage.saveNewParametersUpdate(networkParameters, "Update 1", updateDeadline)
+        val parameterUpdate = networkMapStorage.getCurrentParametersUpdate()!!
+        assertThat(parameterUpdate.description).isEqualTo("Update 1")
+        assertThat(parameterUpdate.updateDeadline).isEqualTo(updateDeadline)
+        assertThat(parameterUpdate.status).isEqualTo(UpdateStatus.NEW)
+        assertThat(parameterUpdate.networkParameters.networkParameters).isEqualTo(networkParameters)
+        assertThat(networkMapStorage.getLatestNetworkParameters()?.networkParameters).isEqualTo(networkParameters)
     }
 
     @Test
-    fun `clear parameters update removes all parameters updates`() {
-        val params1 = testNetworkParameters(minimumPlatformVersion = 1)
-        val params2 = testNetworkParameters(minimumPlatformVersion = 2)
-        networkMapStorage.saveNewParametersUpdate(params1, "Update 1", Instant.ofEpochMilli(random63BitValue()))
-        networkMapStorage.saveNewParametersUpdate(params2, "Update 2", Instant.ofEpochMilli(random63BitValue()))
-        networkMapStorage.clearParametersUpdates()
-        assertThat(networkMapStorage.getParametersUpdate()).isNull()
+    fun `saveNewParametersUpdate marks previous update as cancelled`() {
+        networkMapStorage.saveNewParametersUpdate(testNetworkParameters(epoch = 1), "Update 1", Instant.now() + 1.days)
+        networkMapStorage.saveNewParametersUpdate(testNetworkParameters(epoch = 2), "Update of update", Instant.now() + 2.days)
+        val firstUpdate = persistence.transaction {
+            session.fromQuery<ParametersUpdateEntity>("u where u.description = 'Update 1'").singleResult
+        }
+        assertThat(firstUpdate.status).isEqualTo(UpdateStatus.CANCELLED)
+        assertThat(networkMapStorage.getCurrentParametersUpdate()?.description).isEqualTo("Update of update")
     }
 }

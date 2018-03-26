@@ -12,11 +12,11 @@ package com.r3.corda.networkmanage.doorman
 
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory
 import com.r3.corda.networkmanage.common.persistence.*
+import com.r3.corda.networkmanage.common.persistence.entity.UpdateStatus
 import com.r3.corda.networkmanage.common.signer.NetworkMapSigner
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.doorman.signer.*
 import com.r3.corda.networkmanage.doorman.webservice.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -238,36 +238,33 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
     }
 
     private fun handleFlagDay() {
-        val parametersUpdate = checkNotNull(networkMapStorage.getParametersUpdate()) {
+        val parametersUpdate = checkNotNull(networkMapStorage.getCurrentParametersUpdate()) {
             "No network parameters updates are scheduled"
         }
         check(Instant.now() >= parametersUpdate.updateDeadline) {
             "Update deadline of ${parametersUpdate.updateDeadline} hasn't passed yet"
         }
+        val latestNetParamsEntity = networkMapStorage.getLatestNetworkParameters()
+        check(parametersUpdate.networkParameters.hash == networkMapStorage.getLatestNetworkParameters()?.hash) {
+            "The latest network parameters is not the scheduled one:\n${latestNetParamsEntity?.networkParameters}\n${parametersUpdate.toParametersUpdate()}"
+        }
         val activeNetParams = networkMapStorage.getActiveNetworkMap()?.networkParameters
-        val latestNetParamsEntity = networkMapStorage.getLatestNetworkParameters()!!
-        check(latestNetParamsEntity.isSigned) {
+        check(parametersUpdate.networkParameters.isSigned) {
             "Parameters we are trying to switch to haven't been signed yet"
         }
-        // TODO This check is stil not good enough as when it comes to signing, the NetworkMapSigner will just accept
-        check(latestNetParamsEntity.hash == parametersUpdate.networkParameters.hash) {
-            "The latest network parameters is not the scheduled one:\n${latestNetParamsEntity.networkParameters}\n${parametersUpdate.toParametersUpdate()}"
-        }
-        logger.info("Flag day has occurred, however the new network parameters won't be active until the new network map is signed.\n" +
-                "Switching from: $activeNetParams\nTo: ${latestNetParamsEntity.networkParameters}")
-        networkMapStorage.setFlagDay(SecureHash.parse(parametersUpdate.networkParameters.hash))
-        println("Set the flag day")
+        logger.info("""Flag day has occurred, however the new network parameters won't be active until the new network map is signed.
+From: $activeNetParams
+To: ${parametersUpdate.networkParameters}""")
+        networkMapStorage.setParametersUpdateStatus(parametersUpdate, UpdateStatus.FLAG_DAY)
     }
 
     private fun handleCancelUpdate() {
-        val parametersUpdate = networkMapStorage.getParametersUpdate()
-        if (parametersUpdate == null) {
-            logger.info("Trying to cancel parameters update but no update is scheduled")
-        } else {
-            logger.info("Cancelling parameters update: ${parametersUpdate.toParametersUpdate()}")
-            // We leave parameters from that update in the database, for auditing reasons
-            networkMapStorage.clearParametersUpdates()
+        val parametersUpdate = checkNotNull(networkMapStorage.getCurrentParametersUpdate()) {
+            "No network parameters updates are scheduled"
         }
+        logger.info("""Cancelling parameters update: ${parametersUpdate.toParametersUpdate()}.
+However, the network map will continue to advertise this update until the new one is signed.""")
+        networkMapStorage.setParametersUpdateStatus(parametersUpdate, UpdateStatus.CANCELLED)
         println("Done with cancel update")
     }
 }

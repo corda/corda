@@ -41,6 +41,6 @@ data class NodeInfoEntity(
         val publishedAt: Instant = Instant.now(),
 
         @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "accepted_network_parameters")
-        val acceptedNetworkParameters: NetworkParametersEntity?
+        @JoinColumn(name = "accepted_params_update")
+        val acceptedParametersUpdate: ParametersUpdateEntity?
 )

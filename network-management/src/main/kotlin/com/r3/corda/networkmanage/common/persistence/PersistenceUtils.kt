@@ -18,12 +18,17 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.SchemaMigration
+import org.hibernate.Session
 import org.hibernate.query.Query
 import java.util.*
 import javax.persistence.LockModeType
 import javax.persistence.criteria.CriteriaBuilder
 import javax.persistence.criteria.Path
 import javax.persistence.criteria.Predicate
+
+inline fun <reified T> Session.fromQuery(query: String): Query<T> {
+    return createQuery("from ${T::class.java.name} $query", T::class.java)
+}
 
 inline fun <reified T> DatabaseTransaction.uniqueEntityWhere(predicate: (CriteriaBuilder, Path<T>) -> Predicate): T? {
     return entitiesWhere(predicate).setMaxResults(1).uniqueResult()

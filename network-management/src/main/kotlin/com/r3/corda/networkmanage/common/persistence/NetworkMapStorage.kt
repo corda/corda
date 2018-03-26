@@ -10,22 +10,19 @@
 
 package com.r3.corda.networkmanage.common.persistence
 
-import com.r3.corda.networkmanage.common.persistence.entity.NetworkMapEntity
-import com.r3.corda.networkmanage.common.persistence.entity.NetworkParametersEntity
-import com.r3.corda.networkmanage.common.persistence.entity.ParametersUpdateEntity
-import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
+import com.r3.corda.networkmanage.common.persistence.entity.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkMapAndSigned
-import net.corda.nodeapi.internal.network.ParametersUpdate
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import java.time.Instant
 
 /**
  * Data access object interface for NetworkMap persistence layer
  */
-// TODO This storage abstraction should be removed. It results in less readable code when constructing network map in NetworkMapSigner
+// TODO This storage abstraction needs some thought. Some of the methods clearly don't make sense e.g. setParametersUpdateStatus.
+// The NetworkMapSignerTest uses a mock of this which means we need to provide methods for every trivial db operation.
 interface NetworkMapStorage {
     /**
      * Returns the active network map, or null
@@ -52,21 +49,15 @@ interface NetworkMapStorage {
 
     /**
      *  Persists given network parameters with signature if provided.
-     *  @return hash corresponding to newly created network parameters entry
+     *  @return The newly inserted [NetworkParametersEntity]
      */
-    fun saveNetworkParameters(networkParameters: NetworkParameters, signature: DigitalSignatureWithCert?): SecureHash
+    fun saveNetworkParameters(networkParameters: NetworkParameters, signature: DigitalSignatureWithCert?): NetworkParametersEntity
 
     /**
-     * Save new parameters update information with corresponding network parameters. Only one parameters update entity can be present at any time. Any existing
-     * parameters update is cleared and overwritten by this one.
+     * Save new parameters update information with corresponding network parameters. Only one parameters update entity
+     * can be NEW or FLAG_DAY at any time - if one exists it will be cancelled.
      */
     fun saveNewParametersUpdate(networkParameters: NetworkParameters, description: String, updateDeadline: Instant)
-
-    /**
-     * Indicate that it is time to switch network parameters in network map from active ones to the ones from update.
-     * @param parametersHash hash of the parameters from update
-     */
-    fun setFlagDay(parametersHash: SecureHash)
 
     /**
      * Retrieves the latest (i.e. most recently inserted) network parameters entity
@@ -75,13 +66,8 @@ interface NetworkMapStorage {
      */
     fun getLatestNetworkParameters(): NetworkParametersEntity?
 
-    /**
-     * Retrieve any parameters update that may be active, null if none are present.
-     */
-    fun getParametersUpdate(): ParametersUpdateEntity?
+    /** Returns the single new or flag day parameters update, or null if there isn't one. */
+    fun getCurrentParametersUpdate(): ParametersUpdateEntity?
 
-    /**
-     * Removes any scheduled parameters updates.
-     */
-    fun clearParametersUpdates()
+    fun setParametersUpdateStatus(update: ParametersUpdateEntity, newStatus: UpdateStatus)
 }

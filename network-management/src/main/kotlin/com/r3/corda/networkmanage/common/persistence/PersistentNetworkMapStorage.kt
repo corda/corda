@@ -11,6 +11,7 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.common.persistence.entity.*
+import com.r3.corda.networkmanage.common.utils.logger
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NetworkParameters
@@ -83,11 +84,11 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
         }
     }
 
-    override fun saveNetworkParameters(networkParameters: NetworkParameters, signature: DigitalSignatureWithCert?): SecureHash {
+    override fun saveNetworkParameters(networkParameters: NetworkParameters, signature: DigitalSignatureWithCert?): NetworkParametersEntity {
         val serialized = networkParameters.serialize()
         signature?.verify(serialized)
         val hash = serialized.hash
-        database.transaction {
+        return database.transaction {
             val entity = getNetworkParametersEntity(hash)
             val newNetworkParamsEntity = if (entity != null) {
                 entity.copy(
@@ -102,9 +103,8 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
                         certificate = signature?.by
                 )
             }
-            session.merge(newNetworkParamsEntity)
+            session.merge(newNetworkParamsEntity) as NetworkParametersEntity
         }
-        return hash
     }
 
     override fun getLatestNetworkParameters(): NetworkParametersEntity? {
@@ -123,47 +123,37 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
 
     override fun saveNewParametersUpdate(networkParameters: NetworkParameters, description: String, updateDeadline: Instant) {
         database.transaction {
-            val hash = saveNetworkParameters(networkParameters, null)
-            val netParamsEntity = getNetworkParametersEntity(hash)!!
-            clearParametersUpdates()
-            session.save(ParametersUpdateEntity(0, netParamsEntity, description, updateDeadline))
+            val existingUpdate = getCurrentParametersUpdate()
+            if (existingUpdate != null) {
+                logger.info("Cancelling existing update: $existingUpdate")
+                session.merge(existingUpdate.copy(status = UpdateStatus.CANCELLED))
+            }
+            val netParamsEntity = saveNetworkParameters(networkParameters, null)
+            session.save(ParametersUpdateEntity(
+                    networkParameters = netParamsEntity,
+                    description = description,
+                    updateDeadline = updateDeadline
+            ))
         }
     }
 
-    override fun clearParametersUpdates() {
-        database.transaction {
-            val delete = "delete from ${ParametersUpdateEntity::class.java.name}"
-            session.createQuery(delete).executeUpdate()
-        }
-    }
-
-    override fun getParametersUpdate(): ParametersUpdateEntity? {
+    override fun getCurrentParametersUpdate(): ParametersUpdateEntity? {
         return database.transaction {
-            val currentParametersHash = getActiveNetworkMap()?.networkParameters?.hash
-            val latestParameters = getLatestNetworkParameters()
-            val criteria = session.criteriaBuilder.createQuery(ParametersUpdateEntity::class.java)
-            val root = criteria.from(ParametersUpdateEntity::class.java)
-            val query = criteria.select(root)
-            // We just want the last entry
-            val parametersUpdate = session.createQuery(query).setMaxResults(1).uniqueResult()
-            check(parametersUpdate == null || latestParameters == parametersUpdate.networkParameters) {
-                "ParametersUpdate doesn't correspond to latest network parameters"
+            val newParamsUpdates = session.fromQuery<ParametersUpdateEntity>("u where u.status in :statuses")
+                    .setParameterList("statuses", listOf(UpdateStatus.NEW, UpdateStatus.FLAG_DAY))
+                    .resultList
+            when (newParamsUpdates.size) {
+                0 -> null
+                1 -> newParamsUpdates[0]
+                else -> throw IllegalStateException("More than one update found: $newParamsUpdates")
             }
-            // Highly unlikely, but...
-            check(parametersUpdate == null || latestParameters?.hash != currentParametersHash) {
-                "Having update for parameters that are already in network map"
-            }
-            parametersUpdate
         }
     }
 
-    override fun setFlagDay(parametersHash: SecureHash) {
+    override fun setParametersUpdateStatus(update: ParametersUpdateEntity, newStatus: UpdateStatus) {
+        require(newStatus != UpdateStatus.NEW)
         database.transaction {
-            val parametersUpdateEntity = getParametersUpdate() ?: throw IllegalArgumentException("Setting flag day but no parameters update to switch to")
-            if (parametersHash.toString() != parametersUpdateEntity.networkParameters.hash) {
-                throw IllegalArgumentException("Setting flag day for parameters: $parametersHash, but in database we have update for: ${parametersUpdateEntity.networkParameters.hash}")
-            }
-            session.merge(parametersUpdateEntity.copy(flagDay = true))
+            session.merge(update.copy(status = newStatus))
         }
     }
 }

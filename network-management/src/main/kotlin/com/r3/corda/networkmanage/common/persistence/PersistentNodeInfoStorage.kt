@@ -11,9 +11,11 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRequestEntity
-import com.r3.corda.networkmanage.common.persistence.entity.NetworkParametersEntity
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
+import com.r3.corda.networkmanage.common.persistence.entity.ParametersUpdateEntity
+import com.r3.corda.networkmanage.common.persistence.entity.UpdateStatus
 import com.r3.corda.networkmanage.common.utils.hashString
+import com.r3.corda.networkmanage.common.utils.logger
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.CertRole
@@ -33,7 +35,19 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
         val nodeCaCert = nodeInfo.legalIdentitiesAndCerts[0].certPath.x509Certificates.find { CertRole.extract(it) == NODE_CA }
         nodeCaCert ?: throw IllegalArgumentException("Missing Node CA")
+        val nodeInfoHash = signedNodeInfo.raw.hash
+
         database.transaction {
+            val count = session.createQuery(
+                    "select count(*) from ${NodeInfoEntity::class.java.name} where nodeInfoHash = :nodeInfoHash", java.lang.Long::class.java)
+                    .setParameter("nodeInfoHash", nodeInfoHash.toString())
+                    .singleResult
+                    .toLong()
+            if (count != 0L) {
+                logger.debug("Ignoring duplicate publish: $nodeInfo")
+                return@transaction nodeInfoHash
+            }
+
             // TODO Move these checks out of data access layer
             val request = requireNotNull(getSignedRequestByPublicHash(nodeCaCert.publicKey.encoded.sha256())) {
                 "Node-info not registered with us"
@@ -42,9 +56,8 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
                 require(it == CertificateStatus.VALID) { "Certificate is no longer valid: $it" }
             }
 
-            val existingNodeInfos = session.createQuery(
-                    "from ${NodeInfoEntity::class.java.name} n where n.certificateSigningRequest = :csr and n.isCurrent = true order by n.publishedAt desc",
-                    NodeInfoEntity::class.java)
+            val existingNodeInfos = session.fromQuery<NodeInfoEntity>(
+                    "n where n.certificateSigningRequest = :csr and n.isCurrent = true order by n.publishedAt desc")
                     .setParameter("csr", request)
                     .resultList
 
@@ -52,15 +65,16 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
             existingNodeInfos.forEach { session.merge(it.copy(isCurrent = false)) }
 
             session.save(NodeInfoEntity(
-                    nodeInfoHash = signedNodeInfo.raw.hash.toString(),
+                    nodeInfoHash = nodeInfoHash.toString(),
                     publicKeyHash = nodeInfo.legalIdentities[0].owningKey.hashString(),
                     certificateSigningRequest = request,
                     signedNodeInfo = signedNodeInfo,
                     isCurrent = true,
-                    acceptedNetworkParameters = existingNodeInfos.firstOrNull()?.acceptedNetworkParameters
+                    acceptedParametersUpdate = existingNodeInfos.firstOrNull()?.acceptedParametersUpdate
             ))
         }
-        return signedNodeInfo.raw.hash
+
+        return nodeInfoHash
     }
 
     override fun getNodeInfo(nodeInfoHash: SecureHash): SignedNodeInfo? {
@@ -69,9 +83,9 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
         }
     }
 
-    override fun getAcceptedNetworkParameters(nodeInfoHash: SecureHash): NetworkParametersEntity? {
+    override fun getAcceptedParametersUpdate(nodeInfoHash: SecureHash): ParametersUpdateEntity? {
         return database.transaction {
-            session.find(NodeInfoEntity::class.java, nodeInfoHash.toString())?.acceptedNetworkParameters
+            session.find(NodeInfoEntity::class.java, nodeInfoHash.toString())?.acceptedParametersUpdate
         }
     }
 
@@ -84,21 +98,18 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
 
     override fun ackNodeInfoParametersUpdate(publicKeyHash: SecureHash, acceptedParametersHash: SecureHash) {
         return database.transaction {
-            val builder = session.criteriaBuilder
-            val query = builder.createQuery(NodeInfoEntity::class.java).run {
-                from(NodeInfoEntity::class.java).run {
-                    where(builder.equal(get<NodeInfoEntity>(NodeInfoEntity::publicKeyHash.name), publicKeyHash.toString()))
-                }
+            val nodeInfoEntity = session.fromQuery<NodeInfoEntity>(
+                    "n where n.publicKeyHash = :publicKeyHash and isCurrent = true")
+                    .setParameter("publicKeyHash", publicKeyHash.toString())
+                    .singleResult
+            val parametersUpdateEntity = session.fromQuery<ParametersUpdateEntity>(
+                    "u where u.networkParameters.hash = :acceptedParametersHash").
+                    setParameter("acceptedParametersHash", acceptedParametersHash.toString())
+                    .singleResult
+            require(parametersUpdateEntity.status in listOf(UpdateStatus.NEW, UpdateStatus.FLAG_DAY)) {
+                "$parametersUpdateEntity can no longer be accepted as it's ${parametersUpdateEntity.status}"
             }
-            val nodeInfo = requireNotNull(session.createQuery(query).setMaxResults(1).uniqueResult()) {
-                "NodeInfo with public key hash $publicKeyHash doesn't exist"
-            }
-            val networkParameters = requireNotNull(getNetworkParametersEntity(acceptedParametersHash)) {
-                "Network parameters $acceptedParametersHash doesn't exist"
-            }
-            require(networkParameters.isSigned) { "Network parameters $acceptedParametersHash is not signed" }
-            val newInfo = nodeInfo.copy(acceptedNetworkParameters = networkParameters)
-            session.merge(newInfo)
+            session.merge(nodeInfoEntity.copy(acceptedParametersUpdate = parametersUpdateEntity))
         }
     }
 

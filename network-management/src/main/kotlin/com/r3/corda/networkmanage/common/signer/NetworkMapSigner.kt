@@ -11,6 +11,7 @@
 package com.r3.corda.networkmanage.common.signer
 
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
+import com.r3.corda.networkmanage.common.persistence.entity.UpdateStatus.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.contextLogger
@@ -34,7 +35,7 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private
         }
         logger.debug { "Retrieved latest network parameters: ${latestNetworkParameters.networkParameters}" }
 
-        val parametersUpdate = networkMapStorage.getParametersUpdate()
+        val parametersUpdate = networkMapStorage.getCurrentParametersUpdate()
         logger.debug { "Retrieved parameters update: $parametersUpdate" }
         check(parametersUpdate == null || parametersUpdate.networkParameters.hash == latestNetworkParameters.hash) {
             "The latest network parameters are not the scheduled updated ones"
@@ -61,8 +62,8 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private
             logger.debug { "No need to sign any network parameters as they're up-to-date" }
         }
 
-        val parametersToNetworkMap = if (parametersUpdate?.flagDay == true || activeNetworkParameters == null) {
-            networkMapStorage.clearParametersUpdates()
+        val parametersToNetworkMap = if (parametersUpdate?.status == FLAG_DAY || activeNetworkParameters == null) {
+            parametersUpdate?.let { networkMapStorage.setParametersUpdateStatus(it, APPLIED) }
             latestNetworkParameters
         } else {
             activeNetworkParameters
@@ -71,7 +72,7 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private
         val newNetworkMap = NetworkMap(
                 nodeInfoHashes,
                 SecureHash.parse(parametersToNetworkMap.hash),
-                parametersUpdate?.let { if (!it.flagDay) it.toParametersUpdate() else null })
+                parametersUpdate?.let { if (it.status == NEW) it.toParametersUpdate() else null })
         logger.debug { "Potential new network map: $newNetworkMap" }
 
         if (activeNetworkMap?.networkMap != newNetworkMap) {

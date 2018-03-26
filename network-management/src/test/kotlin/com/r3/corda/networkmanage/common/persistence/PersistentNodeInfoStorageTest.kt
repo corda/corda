@@ -11,6 +11,7 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.TestBase
+import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
 import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -18,8 +19,8 @@ import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.NodeInfoAndSigned
-import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -36,6 +37,7 @@ import org.junit.Before
 import org.junit.Test
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import java.time.Instant
 import javax.security.auth.x500.X500Principal
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -49,14 +51,12 @@ class PersistentNodeInfoStorageTest : TestBase() {
     private lateinit var persistence: CordaPersistence
     private lateinit var rootCaCert: X509Certificate
     private lateinit var doormanCertAndKeyPair: CertificateAndKeyPair
-    private lateinit var networkMapCertAndKeyPair: CertificateAndKeyPair
 
     @Before
     fun startDb() {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
         this.doormanCertAndKeyPair = intermediateCa
-        networkMapCertAndKeyPair = createDevNetworkMapCa(rootCa)
         persistence = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
         nodeInfoStorage = PersistentNodeInfoStorage(persistence)
         requestStorage = PersistentCertificateSigningRequestStorage(persistence)
@@ -142,14 +142,26 @@ class PersistentNodeInfoStorageTest : TestBase() {
     @Test
     fun `putNodeInfo persists SignedNodeInfo with its signature`() {
         // given
-        val (nodeInfoWithSigned) = createValidSignedNodeInfo("Test", requestStorage)
+        val (nodeInfoAndSigned) = createValidSignedNodeInfo("Test", requestStorage)
 
         // when
-        val nodeInfoHash = nodeInfoStorage.putNodeInfo(nodeInfoWithSigned)
+        val nodeInfoHash = nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
 
         // then
         val persistedSignedNodeInfo = nodeInfoStorage.getNodeInfo(nodeInfoHash)
-        assertThat(persistedSignedNodeInfo?.signatures).isEqualTo(nodeInfoWithSigned.signed.signatures)
+        assertThat(persistedSignedNodeInfo?.signatures).isEqualTo(nodeInfoAndSigned.signed.signatures)
+    }
+
+    @Test
+    fun `publish same node info twice`() {
+        fun singleNodeInfo() = persistence.transaction { session.fromQuery<NodeInfoEntity>("").singleResult }
+
+        val (nodeInfoAndSigned) = createValidSignedNodeInfo("Test", requestStorage)
+        nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
+        val nodeInfo = singleNodeInfo()
+        nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
+        assertThat(nodeInfo.publishedAt).isEqualTo(singleNodeInfo().publishedAt)  // Check publishAt hasn't changed
+        assertThat(singleNodeInfo().isCurrent).isTrue()
     }
 
     @Test
@@ -159,21 +171,21 @@ class PersistentNodeInfoStorageTest : TestBase() {
 
         // when
         val networkParameters = testNetworkParameters()
-        val sigWithCert = networkMapCertAndKeyPair.sign(networkParameters).sig
-        val netParamsHash = networkMapStorage.saveNetworkParameters(networkParameters, sigWithCert)
+        val netParamsHash = networkParameters.serialize().hash
+        networkMapStorage.saveNewParametersUpdate(networkParameters, "Update", Instant.now() + 1.days)
         val nodeInfoHash = nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
         nodeInfoStorage.ackNodeInfoParametersUpdate(nodeInfoAndSigned.nodeInfo.legalIdentities[0].owningKey.encoded.sha256(), netParamsHash)
 
         // then
-        val acceptedNetworkParameters = nodeInfoStorage.getAcceptedNetworkParameters(nodeInfoHash)
-        assertThat(acceptedNetworkParameters?.hash).isEqualTo(netParamsHash.toString())
+        val acceptedUpdate = nodeInfoStorage.getAcceptedParametersUpdate(nodeInfoHash)
+        assertThat(acceptedUpdate?.networkParameters?.hash).isEqualTo(netParamsHash.toString())
     }
 
     @Test
     fun `updating node info after it's accepted network parameters`() {
         val networkParameters = testNetworkParameters()
-        val sigWithCert = networkMapCertAndKeyPair.sign(networkParameters).sig
-        val netParamsHash = networkMapStorage.saveNetworkParameters(networkParameters, sigWithCert)
+        val netParamsHash = networkParameters.serialize().hash
+        networkMapStorage.saveNewParametersUpdate(networkParameters, "Update", Instant.now() + 1.days)
 
         val (nodeInfoAndSigned, privateKey) = createValidSignedNodeInfo("Test", requestStorage)
         nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
@@ -184,8 +196,8 @@ class PersistentNodeInfoStorageTest : TestBase() {
         val nodeInfoAndSigned2 = NodeInfoAndSigned(nodeInfo2.signWith(listOf(privateKey)))
         val nodeInfoHash2 = nodeInfoStorage.putNodeInfo(nodeInfoAndSigned2)
 
-        val acceptedNetworkParameters = nodeInfoStorage.getAcceptedNetworkParameters(nodeInfoHash2)
-        assertThat(acceptedNetworkParameters?.hash).isEqualTo(netParamsHash.toString())
+        val acceptedUpdate = nodeInfoStorage.getAcceptedParametersUpdate(nodeInfoHash2)
+        assertThat(acceptedUpdate?.networkParameters?.hash).isEqualTo(netParamsHash.toString())
     }
 }
 

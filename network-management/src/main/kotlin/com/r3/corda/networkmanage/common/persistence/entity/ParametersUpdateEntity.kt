@@ -23,11 +23,26 @@ data class ParametersUpdateEntity(
         @Column(name = "update_deadline", nullable = false)
         val updateDeadline: Instant,
 
-        // This boolean flag is used when we want to explicitly point that it's time to switch parameters in network map.
-        @Column(name = "flag_day", nullable = false)
-        val flagDay: Boolean = false
+        @Column(name = "status", length = 16, nullable = false, columnDefinition = "NVARCHAR(16)")
+        @Enumerated(EnumType.STRING)
+        val status: UpdateStatus = UpdateStatus.NEW
 ) {
     fun toParametersUpdate(): ParametersUpdate {
         return ParametersUpdate(SecureHash.parse(networkParameters.hash), description, updateDeadline)
     }
 }
+
+enum class UpdateStatus {
+    /** A newly created update. */
+    NEW,
+    /**
+     * An update that has passed its deadline and flagged to be made active on the next signing event. At most only one
+     * update with status either NEW or FLAG_DAY can exist.
+     */
+    FLAG_DAY,
+    /** Any previously flagged update that has been activated into the network map. */
+    APPLIED,
+    /** A new or flag day update that has been cancelled. */
+    CANCELLED
+}
+
