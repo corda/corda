@@ -136,6 +136,7 @@ dependencies {
     scenarioCompile "info.cukes:cucumber-java8:$cucumber_version"
     scenarioCompile "info.cukes:cucumber-junit:$cucumber_version"
     scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
+    scenarioCompile "org.reflections:reflections:0.9.9-RC2"
 
     // Smoke tests
     smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
