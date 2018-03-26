@@ -239,9 +239,10 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         database.transaction {
             scheduler.scheduleStateActivity(ssr1)
         }
+        // XXX: For some reason without the commit the db closes without writing the transactions
         database.dataSource.connection.commit()
-        //Force the thread to shut down with operations waiting
-        scheduler.cancel()
+        // Force the thread to shut down with operations waiting
+        scheduler.cancelAndWait()
         database.close()
 
         val flowLogic = rigorousMock<FlowLogic<*>>()
@@ -252,13 +253,13 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
 
         val newDatabase = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
         val newScheduler = newDatabase.transaction {
-            System.out.println(newDatabase.dataSource.connection.metaData)
             createScheduler(newDatabase)
         }
         testClock.advanceBy(1.days)
         assertStarted(flowLogic)
 
         newScheduler.join()
+        newDatabase.close()
     }
 
     @Test
@@ -290,5 +291,6 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         assertStarted(flowLogic)
 
         scheduler.join()
+        database.close()
     }
 }

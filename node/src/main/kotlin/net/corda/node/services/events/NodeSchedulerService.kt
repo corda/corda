@@ -248,7 +248,7 @@ class NodeSchedulerService(private val clock: CordaClock,
     }
 
     @VisibleForTesting
-    internal fun cancel() {
+    internal fun cancelAndWait() {
         schedulerTimerExecutor.shutdownNow()
         schedulerTimerExecutor.join()
     }
