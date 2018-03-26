@@ -67,7 +67,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
         // NOTE: these can be overridden in node.conf.
         //
         // If you change these flags, please also update Driver.kt
-        jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
+        jvmArgs = ['-Xmx512m', '-XX:+UseG1GC']
     }
 }
 
