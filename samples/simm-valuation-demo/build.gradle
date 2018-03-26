@@ -1,5 +1,7 @@
 buildscript {
     ext.strata_version = '1.1.2'
+    ext.corda_release_group = 'net.corda'
+    ext.cucumber_version = '1.2.5'
 }
 
 apply plugin: 'java'
@@ -19,11 +21,24 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
     }
+    scenario {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/system-test/scenario/kotlin')
+        }
+        resources {
+            srcDir 'src/system-test/scenario/resources'
+        }
+    }
 }
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
+
+    scenarioCompile.extendsFrom testCompile
+    scenarioRuntime.extendsFrom testRuntime
 }
 
 dependencies {
@@ -58,6 +73,12 @@ dependencies {
     testCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
+
+    // Scenarios / End-to-End Tests
+    testCompile "${corda_release_group}.behave:behave-scenario-api:${corda_release_version}"
+    scenarioCompile "info.cukes:cucumber-java8:$cucumber_version"
+    scenarioCompile "info.cukes:cucumber-junit:$cucumber_version"
+    scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {

@@ -28,7 +28,8 @@ fi
 echo "Launching RPC proxy ..."
 echo "/usr/bin/java -cp $DISTRO_DIR/corda-rpcProxy.jar:\
 \n\t$(ls $DISTRO_DIR/proxy/*.jar | tr '\n' ':'):\
-\n\t$(ls $DISTRO_DIR/apps/*.jar | tr '\n' ':') \
+\n\t$(ls $DISTRO_DIR/apps/*.jar | tr '\n' ':')
+\
 \n\tnet.corda.behave.service.proxy.RPCProxyServerKt ${PORT}
 "
 

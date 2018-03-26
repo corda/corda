@@ -1,10 +1,7 @@
 package net.corda.behave.network
 
 import net.corda.behave.database.DatabaseType
-import net.corda.behave.file.LogSource
-import net.corda.behave.file.currentDirectory
-import net.corda.behave.file.div
-import net.corda.behave.file.doormanConfigDirectory
+import net.corda.behave.file.*
 import net.corda.behave.logging.getLogger
 import net.corda.behave.minutes
 import net.corda.behave.node.Distribution
@@ -116,9 +113,10 @@ class Network private constructor(
 
     fun copyDatabaseDrivers() {
         val driverDirectory = targetDirectory / "libs"
+        log.info("Copying database drivers from $stagingRoot/deps/drivers to $driverDirectory")
         FileUtils.forceMkdir(driverDirectory)
         FileUtils.copyDirectory(
-                currentDirectory / "deps/drivers",
+                stagingRoot / "deps/drivers",
                 driverDirectory
         )
     }
@@ -284,8 +282,7 @@ class Network private constructor(
                 .config.distribution.networkBootstrapper
 
         if (!bootstrapper.exists()) {
-            log.warn("Network bootstrapping tool does not exist; continuing ...")
-            return
+            signalFailure("Network bootstrapping tool does not exist; continuing ...")
         }
 
         log.info("Bootstrapping network, please wait ...")

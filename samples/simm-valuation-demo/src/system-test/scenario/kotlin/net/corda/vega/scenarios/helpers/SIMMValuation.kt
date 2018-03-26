@@ -1,4 +1,4 @@
-package net.corda.behave.scenarios.helpers.cordapps
+package net.corda.vega.scenarios.helpers
 
 import com.opengamma.strata.product.common.BuySell
 import net.corda.behave.scenarios.ScenarioState

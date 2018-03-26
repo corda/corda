@@ -279,8 +279,8 @@ class RPCProxyWebServiceTest {
         val swap = SwapDataModel(tradeId, "desc", valuationDate, "EUR_FIXED_1Y_EURIBOR_3M",
                 valuationDate, LocalDate.parse("2020-01-02"), BuySell.BUY, BigDecimal.valueOf(1000), BigDecimal.valueOf(0.1))
 
-        val ownParty = rpcProxyClient.partiesFromName("EntityA", false).first()
-        val counterParty = rpcProxyClient.partiesFromName("EntityB", false).first()
+        val ownParty = rpcProxyClient.partiesFromName("PartyA", false).first()
+        val counterParty = rpcProxyClient.partiesFromName("PartyB", false).first()
 
         val buyer = if (swap.buySell.isBuy) ownParty else counterParty
         val seller = if (swap.buySell.isSell) ownParty else counterParty

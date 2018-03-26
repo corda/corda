@@ -1,19 +1,18 @@
 package net.corda.behave.scenarios
 
+//import net.corda.behave.scenarios.helpers.cordapps.Options
+//import net.corda.behave.scenarios.helpers.cordapps.SIMMValuation
+//import net.corda.behave.scenarios.steps.cordapp.optionsSteps
+//import net.corda.behave.scenarios.steps.cordapp.simmValuationSteps
 import cucumber.api.java8.En
 import net.corda.behave.scenarios.helpers.*
-//import net.corda.behave.scenarios.helpers.cordapps.Options
-import net.corda.behave.scenarios.helpers.cordapps.SIMMValuation
 import net.corda.behave.scenarios.steps.*
-//import net.corda.behave.scenarios.steps.cordapp.optionsSteps
-import net.corda.behave.scenarios.steps.cordapp.simmValuationSteps
-import net.corda.behave.service.proxy.initialiseSerialization
 import net.corda.core.messaging.CordaRPCOps
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 @Suppress("KDocMissingDocumentation")
-class StepsContainer(val state: ScenarioState) : En {
+abstract class StepsContainer(val state: ScenarioState) : En {
 
     private val log: Logger = LoggerFactory.getLogger(StepsContainer::class.java)
 
@@ -25,13 +24,12 @@ class StepsContainer(val state: ScenarioState) : En {
             ::rpcSteps,
             ::sshSteps,
             ::startupSteps,
-            ::vaultSteps,
-            ::simmValuationSteps
+            ::vaultSteps
 //            ::optionsSteps
     )
 
     init {
-        initialiseSerialization()
+        println("StepsContainer init ...")
         stepDefinitions.forEach { it({ this.steps(it) }) }
     }
 
@@ -61,12 +59,19 @@ class StepsContainer(val state: ScenarioState) : En {
 
     val cash = Cash(state)
 
-    val simmValuation = SIMMValuation(state)
-
 //    val options = Options(state)
 
-    private fun steps(action: (StepsContainer.() -> Unit)) {
+    fun steps(action: (StepsContainer.() -> Unit)) {
         action(this)
     }
 
+    fun registerStepsProvider(provider: StepsProvider) {
+        log.info("Registering steps provider: $provider")
+        provider.stepsDefinition { this.steps { provider.stepsDefinition} }
+    }
+}
+
+interface StepsProvider {
+    val name: String
+    val stepsDefinition: (StepsBlock) -> Unit
 }
