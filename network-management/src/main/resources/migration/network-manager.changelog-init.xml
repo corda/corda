@@ -323,7 +323,7 @@
     </changeSet>
     <changeSet author="R3.Corda" id="1520338500424-39">
         <createTable tableName="parameters_update">
-            <column name="description" type="VARCHAR(255)">
+            <column name="description" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="update_deadline" type="TIMESTAMP">
