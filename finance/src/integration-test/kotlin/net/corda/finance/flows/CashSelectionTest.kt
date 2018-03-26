@@ -21,6 +21,7 @@ class CashSelectionTest {
 
         driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf(Cash::class, CashSchemaV1::class).map { it.packageName })) {
 
+            defaultNotaryNode.getOrThrow()
             val node = startNode().getOrThrow() as InProcessImpl
             val issuerRef = OpaqueBytes.of(0)
             val issuedAmount = 1000.DOLLARS
