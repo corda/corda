@@ -38,7 +38,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
          * Request unspendable inputs as well as regular inputs.
          */
         private fun dependencyIDs(stx: SignedTransaction): Set<SecureHash> {
-            return stx.inputs.map { it.txhash }.toSet() + stx.unspendableInputs.map { it.txhash }.toSet()
+            return stx.inputs.map { it.txhash }.toSet() + stx.references.map { it.txhash }.toSet()
         }
 
         /**

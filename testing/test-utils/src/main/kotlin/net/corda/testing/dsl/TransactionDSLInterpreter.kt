@@ -32,7 +32,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * Add an unspendable input reference to the transaction. Note that [verifies] will resolve this reference.
      * @param stateRef The input [StateRef].
      */
-    fun unspendableInput(stateRef: StateRef)
+    fun reference(stateRef: StateRef)
 
     /**
      * Adds an output to the transaction.
@@ -90,18 +90,18 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
      * Looks up the output label and adds the found state as an unspendable input.
      * @param stateLabel The label of the output state specified when calling [TransactionDSLInterpreter.output] and friends.
      */
-    fun unspendableInput(stateLabel: String) = unspendableInput(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
+    fun reference(stateLabel: String) = reference(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
 
     /**
      * Creates an [LedgerDSLInterpreter._unverifiedTransaction] with a single input state and adds its reference as an
      * unspendable input to the current transaction.
      * @param state The state to be added.
      */
-    fun unspendableInput(contractClassName: ContractClassName, state: ContractState) {
+    fun reference(contractClassName: ContractClassName, state: ContractState) {
         val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary)) {
             output(contractClassName, null, notary, null, AlwaysAcceptAttachmentConstraint, state)
         }
-        unspendableInput(transaction.outRef<ContractState>(0).ref)
+        reference(transaction.outRef<ContractState>(0).ref)
     }
 
 

@@ -42,7 +42,7 @@ open class TransactionBuilder constructor(
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
         protected var privacySalt: PrivacySalt = PrivacySalt(),
-        protected val unspendableInputs: MutableList<StateRef> = arrayListOf()
+        protected val references: MutableList<StateRef> = arrayListOf()
 ) {
     constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
@@ -61,7 +61,7 @@ open class TransactionBuilder constructor(
                 commands = ArrayList(commands),
                 window = window,
                 privacySalt = privacySalt,
-                unspendableInputs = ArrayList(unspendableInputs)
+                references = ArrayList(references)
         )
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
         t.referenceInputsWithTransactionState.addAll(this.referenceInputsWithTransactionState)
@@ -73,7 +73,7 @@ open class TransactionBuilder constructor(
      * A more convenient way to add items to this transaction that calls the add* methods for you based on type
      * Don't
      */
-    @Deprecated("*** WARNING: THIS METHOD CANNOT BE USED TO ADD UNSPENDABLE STATES!! USE \"addUnspendableInputState\"***")
+    @Deprecated("*** WARNING: THIS METHOD CANNOT BE USED TO ADD REFERENCE STATES!! USE \"addReferenceState\"***")
     fun withItems(vararg items: Any): TransactionBuilder {
         for (t in items) {
             when (t) {
@@ -119,7 +119,7 @@ open class TransactionBuilder constructor(
         }
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + makeContractAttachments(services.cordappProvider), notary, window, unspendableInputStates()), privacySalt)
+            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + makeContractAttachments(services.cordappProvider), notary, window, referenceStates()), privacySalt)
         }
     }
 
@@ -156,9 +156,9 @@ open class TransactionBuilder constructor(
         require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
     }
 
-    open fun addUnspendableInputState(stateAndRef: StateAndRef<ContractState>): TransactionBuilder {
+    open fun addReferenceState(stateAndRef: StateAndRef<ContractState>): TransactionBuilder {
         checkNotary(stateAndRef)
-        unspendableInputs.add(stateAndRef.ref)
+        references.add(stateAndRef.ref)
         referenceInputsWithTransactionState.add(stateAndRef.state)
         return this
     }
@@ -227,7 +227,7 @@ open class TransactionBuilder constructor(
     }
 
     // Accessors that yield immutable snapshots.
-    fun unspendableInputStates(): List<StateRef> = ArrayList(unspendableInputs)
+    fun referenceStates(): List<StateRef> = ArrayList(references)
     fun inputStates(): List<StateRef> = ArrayList(inputs)
 
     fun attachments(): List<SecureHash> = ArrayList(attachments)

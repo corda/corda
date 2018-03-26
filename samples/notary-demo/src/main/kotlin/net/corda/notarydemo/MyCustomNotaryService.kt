@@ -51,7 +51,7 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
             verifySignatures(stx)
             resolveAndContractVerify(stx)
             val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
-            return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!, stx.unspendableInputs)
+            return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!, stx.references)
         } catch (e: Exception) {
             throw when (e) {
                 is TransactionVerificationException,

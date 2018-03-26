@@ -20,14 +20,12 @@ import net.corda.testing.node.ledger
 import org.junit.Rule
 import org.junit.Test
 
-val CONTRACT_ID = "net.corda.core.transactions.UnspendableInputTests\$ExampleContract"
+val CONTRACT_ID = "net.corda.core.transactions.ReferenceStateTests\$ExampleContract"
 
-class UnspendableInputTests {
+class ReferenceStateTests {
     private companion object {
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val ISSUER = TestIdentity(CordaX500Name("ISSUER", "London", "GB"))
-        val ISSUER_PARTY get() = ISSUER.party
-        val ISSUER_PUBKEY get() = ISSUER.publicKey
         val ALICE = TestIdentity(CordaX500Name("ALICE", "London", "GB"))
         val ALICE_PARTY get() = ALICE.party
         val ALICE_PUBKEY get() = ALICE.publicKey
@@ -53,7 +51,7 @@ class UnspendableInputTests {
     // output when it is being referred to. However, we might want all states to be referable, so this
     // check might not be present in other contracts, like Cash, for example. Cash might have a command
     // called "Share" that allows a party to prove to another that they own over a certain amount of cash.
-    // As such, cash can be added to the unspendableInputs list with a "Share" command.
+    // As such, cash can be added to the references list with a "Share" command.
     data class ExampleState(val creator: Party, val data: String) : ContractState {
         override val participants: List<AbstractParty> get() = listOf(creator)
     }
@@ -64,14 +62,6 @@ class UnspendableInputTests {
         class Update : Commands
 
         override fun verify(tx: LedgerTransaction) {
-            // If there are no inputs or outputs of ExampleState type then we know this state is in the
-            // unspendableInputs list. We don't need to run any contract code if this state is being used as a reference
-            // only.
-            val usedAsReference = tx.inputsOfType<ExampleState>().isEmpty() && tx.outputsOfType<ExampleState>().isEmpty()
-            if (usedAsReference) {
-                return
-            }
-
             val command = tx.commands.requireSingleCommand<Commands>()
             when (command.value) {
                 is Create -> requireThat {
@@ -96,9 +86,9 @@ class UnspendableInputTests {
     }
 
     @Test
-    fun `create an unspendable state then refer to it multiple times`() {
+    fun `create a reference state then refer to it multiple times`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
-            // Create an unspendable input. The unspendable input is created in the normal way. A transaction with one
+            // Create a reference state. The reference state is created in the normal way. A transaction with one
             // or more outputs. It makes sense to create them one at a time, so the creator can have fine grained
             // control over who sees what.
             transaction {
@@ -106,10 +96,10 @@ class UnspendableInputTests {
                 command(ALICE_PUBKEY, ExampleContract.Create())
                 verifies()
             }
-            // Somewhere down the line, Bob obtains the ExampleState and now refers to an unspendable input. As such, it
-            // is added to the unspendableInputs list.
+            // Somewhere down the line, Bob obtains the ExampleState and now refers to it as a reference state. As such,
+            // it is added to the references list.
             transaction {
-                unspendableInput("REF DATA")
+                reference("REF DATA")
                 input(Cash.PROGRAM_ID, bobCash)
                 output(Cash.PROGRAM_ID, "ALICE CASH", bobCash.withNewOwner(ALICE_PARTY).ownableState)
                 command(BOB_PUBKEY, Cash.Commands.Move())
@@ -117,7 +107,7 @@ class UnspendableInputTests {
             }
             // Alice can use it too.
             transaction {
-                unspendableInput("REF DATA")
+                reference("REF DATA")
                 input("ALICE CASH")
                 output(Cash.PROGRAM_ID, "BOB CASH 2", bobCash.withNewOwner(BOB_PARTY).ownableState)
                 command(ALICE_PUBKEY, Cash.Commands.Move())
@@ -125,7 +115,7 @@ class UnspendableInputTests {
             }
             // Bob can use it again.
             transaction {
-                unspendableInput("REF DATA")
+                reference("REF DATA")
                 input("BOB CASH 2")
                 output(Cash.PROGRAM_ID, bobCash.withNewOwner(ALICE_PARTY).ownableState)
                 command(BOB_PUBKEY, Cash.Commands.Move())
@@ -135,7 +125,7 @@ class UnspendableInputTests {
     }
 
     @Test
-    fun `Non-creator node cannot spend spend an unspendable state`() {
+    fun `Non-creator node cannot spend spend a reference state`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 output(CONTRACT_ID, "REF DATA", ExampleState(ALICE_PARTY, "HELLO CORDA"))
@@ -154,7 +144,7 @@ class UnspendableInputTests {
     }
 
     @Test
-    fun `Can't use old unspendable states`() {
+    fun `Can't use old reference states`() {
         val refData = ExampleState(ALICE_PARTY, "HELLO CORDA")
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
@@ -164,7 +154,7 @@ class UnspendableInputTests {
             }
             // Refer to it. All OK.
             transaction {
-                unspendableInput("REF DATA")
+                reference("REF DATA")
                 input(Cash.PROGRAM_ID, bobCash)
                 output(Cash.PROGRAM_ID, "ALICE CASH", bobCash.withNewOwner(ALICE_PARTY).ownableState)
                 command(BOB_PUBKEY, Cash.Commands.Move())
@@ -179,7 +169,7 @@ class UnspendableInputTests {
             }
             // Try to use the old one.
             transaction {
-                unspendableInput("REF DATA")
+                reference("REF DATA")
                 input("ALICE CASH")
                 output(Cash.PROGRAM_ID, bobCash.withNewOwner(BOB_PARTY).ownableState)
                 command(ALICE_PUBKEY, Cash.Commands.Move())

@@ -97,9 +97,9 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addInputState(StateAndRef(state, stateRef))
     }
 
-    override fun unspendableInput(stateRef: StateRef) {
+    override fun reference(stateRef: StateRef) {
         val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
-        transactionBuilder.addUnspendableInputState(StateAndRef(state, stateRef))
+        transactionBuilder.addReferenceState(StateAndRef(state, stateRef))
     }
 
     override fun output(contractClassName: ContractClassName,
@@ -297,7 +297,7 @@ data class TestLedgerDSLInterpreter private constructor(
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
                 ltx.verify()
-                val allInputs = wtx.inputs `union` wtx.unspendableInputs
+                val allInputs = wtx.inputs `union` wtx.references
                 val doubleSpend = allInputs `intersect` usedInputs
                 if (!doubleSpend.isEmpty()) {
                     val txIds = mutableListOf(wtx.id)

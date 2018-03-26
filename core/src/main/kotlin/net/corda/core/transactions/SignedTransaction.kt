@@ -68,7 +68,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     fun buildFilteredTransaction(filtering: Predicate<Any>) = tx.buildFilteredTransaction(filtering)
 
     /** Helper to access the unspendable inputs of the contained transaction. */
-    val unspendableInputs: List<StateRef> get() = coreTransaction.unspendableInputs
+    val references: List<StateRef> get() = coreTransaction.references
     /** Helper to access the inputs of the contained transaction. */
     val inputs: List<StateRef> get() = coreTransaction.inputs
     /** Helper to access the notary of the contained transaction. */

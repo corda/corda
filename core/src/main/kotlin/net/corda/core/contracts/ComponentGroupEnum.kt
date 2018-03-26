@@ -12,5 +12,5 @@ enum class ComponentGroupEnum {
     NOTARY_GROUP, // ordinal = 4.
     TIMEWINDOW_GROUP, // ordinal = 5.
     SIGNERS_GROUP, // ordinal = 6.
-    UNSPENDABLE_INPUTS_GROUP // ordinal = 7.
+    REFERENCES_GROUP // ordinal = 7.
 }

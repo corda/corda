@@ -37,13 +37,13 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAut
                     verify()
                     checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
                     checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
-                    checkAllComponentsVisible(ComponentGroupEnum.UNSPENDABLE_INPUTS_GROUP)
+                    checkAllComponentsVisible(ComponentGroupEnum.REFERENCES_GROUP)
                 }
                 val notary = tx.notary
-                TransactionParts(tx.id, tx.inputs, tx.timeWindow, notary, tx.unspendableInputs)
+                TransactionParts(tx.id, tx.inputs, tx.timeWindow, notary, tx.references)
             }
-            is ContractUpgradeFilteredTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary, tx.unspendableInputs)
-            is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary, tx.unspendableInputs)
+            is ContractUpgradeFilteredTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary, tx.references)
+            is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary, tx.references)
             else -> {
                 throw IllegalArgumentException("Received unexpected transaction type: ${tx::class.java.simpleName}," +
                         "expected either ${FilteredTransaction::class.java.simpleName} or ${NotaryChangeWireTransaction::class.java.simpleName}")

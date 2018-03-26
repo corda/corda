@@ -93,8 +93,8 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
                 )
     }
 
-    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, unspendableStates: List<StateRef>) {
-        val allStates = states + unspendableStates
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, references: List<StateRef>) {
+        val allStates = states + references
         val conflict = mutex.locked {
             val conflictingStates = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
             for (inputState in allStates) {

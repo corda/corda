@@ -34,7 +34,7 @@ data class ContractUpgradeWireTransaction(
         val privacySalt: PrivacySalt = PrivacySalt()
 ) : CoreTransaction() {
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
-    override val unspendableInputs: List<StateRef> = serializedComponents[UNSPENDABLE_INPUTS.ordinal].deserialize()
+    override val references: List<StateRef> = serializedComponents[REFERENCES.ordinal].deserialize()
     override val notary: Party by lazy { serializedComponents[NOTARY.ordinal].deserialize<Party>() }
     val legacyContractAttachmentId: SecureHash by lazy { serializedComponents[LEGACY_ATTACHMENT.ordinal].deserialize<SecureHash>() }
     val upgradedContractClassName: ContractClassName by lazy { serializedComponents[UPGRADED_CONTRACT.ordinal].deserialize<ContractClassName>() }
@@ -67,8 +67,8 @@ data class ContractUpgradeWireTransaction(
 
     /** Resolves input states and contract attachments, and builds a ContractUpgradeLedgerTransaction. */
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): ContractUpgradeLedgerTransaction {
-        val resolvedUnspendableInputs = services.loadStates(unspendableInputs.toSet()).toList()
-        val resolvedInputs = services.loadStates(inputs.toSet() + unspendableInputs.toSet()).toList()
+        val resolvedReferences = services.loadStates(references.toSet()).toList()
+        val resolvedInputs = services.loadStates(inputs.toSet() + references.toSet()).toList()
         val legacyContractAttachment = services.attachments.openAttachment(legacyContractAttachmentId)
                 ?: throw AttachmentResolutionException(legacyContractAttachmentId)
         val upgradedContractAttachment = services.attachments.openAttachment(upgradedContractAttachmentId)
@@ -83,14 +83,15 @@ data class ContractUpgradeWireTransaction(
                 privacySalt,
                 sigs,
                 services.networkParameters,
-                resolvedUnspendableInputs
+                resolvedReferences
         )
     }
 
-    /** Constructs a filtered transaction: the inputs and the notary party are always visible, while the rest are hidden. */
+    /** Constructs a filtered transaction: the inputs, references and the notary party are always visible, while the rest are hidden. */
     fun buildFilteredTransaction(): ContractUpgradeFilteredTransaction {
         val totalComponents = (0 until serializedComponents.size).toSet()
         val visibleComponents = mapOf(
+                REFERENCES.ordinal to FilteredComponent(serializedComponents[REFERENCES.ordinal], nonces[REFERENCES.ordinal]),
                 INPUTS.ordinal to FilteredComponent(serializedComponents[INPUTS.ordinal], nonces[INPUTS.ordinal]),
                 NOTARY.ordinal to FilteredComponent(serializedComponents[NOTARY.ordinal], nonces[NOTARY.ordinal])
         )
@@ -103,7 +104,7 @@ data class ContractUpgradeWireTransaction(
     }
 
     enum class Component {
-        INPUTS, NOTARY, LEGACY_ATTACHMENT, UPGRADED_CONTRACT, UPGRADED_ATTACHMENT
+        INPUTS, NOTARY, LEGACY_ATTACHMENT, UPGRADED_CONTRACT, UPGRADED_ATTACHMENT, REFERENCES
     }
 }
 
@@ -126,9 +127,9 @@ data class ContractUpgradeFilteredTransaction(
         visibleComponents[INPUTS.ordinal]?.component?.deserialize<List<StateRef>>()
                 ?: throw IllegalArgumentException("Inputs not specified")
     }
-    override val unspendableInputs: List<StateRef> by lazy {
-        visibleComponents[UNSPENDABLE_INPUTS.ordinal]?.component?.deserialize<List<StateRef>>()
-                ?: throw IllegalArgumentException("Unspendable inputs not specified")
+    override val references: List<StateRef> by lazy {
+        visibleComponents[REFERENCES.ordinal]?.component?.deserialize<List<StateRef>>()
+                ?: throw IllegalArgumentException("References not specified")
     }
     override val notary: Party by lazy {
         visibleComponents[NOTARY.ordinal]?.component?.deserialize<Party>()
@@ -174,7 +175,7 @@ data class ContractUpgradeLedgerTransaction(
         val privacySalt: PrivacySalt,
         override val sigs: List<TransactionSignature>,
         private val networkParameters: NetworkParameters,
-        override val unspendableInputs: List<StateAndRef<ContractState>> = emptyList()
+        override val references: List<StateAndRef<ContractState>> = emptyList()
 ) : FullTransaction(), TransactionWithSignatures {
     /** The legacy contract class name is determined by the first input state. */
     private val legacyContractClassName = inputs.first().state.contract

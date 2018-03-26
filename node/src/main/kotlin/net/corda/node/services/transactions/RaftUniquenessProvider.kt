@@ -200,12 +200,12 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
     }
 
 
-    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, unspendableStates: List<StateRef>) {
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, references: List<StateRef>) {
         // Check for conflicts using all states but don't commit the unspendable states.
-        val allStates = states + unspendableStates
+        val allStates = states + references
         val entries = allStates.mapIndexed { i, stateRef ->
             stateRef to UniquenessProvider.ConsumingTx(txId, i, callerIdentity)
-        }.filter { it.first !in unspendableStates }
+        }.filter { it.first !in references }
 
         log.debug("Attempting to commit input states: ${states.joinToString()}")
         val commitCommand = DistributedImmutableMap.Commands.PutAll(encode(entries))
