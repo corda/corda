@@ -147,12 +147,13 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             // This update was handled already.
             return
         }
-        val newParameters = networkMapClient.getNetworkParameters(update.newParametersHash)
-        logger.info("Downloaded new network parameters: $newParameters from the update: $update")
-        newNetworkParameters = Pair(update, newParameters)
+        val newSignedNetParams = networkMapClient.getNetworkParameters(update.newParametersHash)
+        val newNetParams = newSignedNetParams.verifiedNetworkMapCert(networkMapClient.trustedRoot)
+        logger.info("Downloaded new network parameters: $newNetParams from the update: $update")
+        newNetworkParameters = Pair(update, newSignedNetParams)
         val updateInfo = ParametersUpdateInfo(
                 update.newParametersHash,
-                newParameters.verifiedNetworkMapCert(networkMapClient.trustedRoot),
+                newNetParams,
                 update.description,
                 update.updateDeadline)
         parametersUpdatesTrack.onNext(updateInfo)
@@ -162,15 +163,17 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         networkMapClient ?: throw IllegalStateException("Network parameters updates are not support without compatibility zone configured")
         // TODO This scenario will happen if node was restarted and didn't download parameters yet, but we accepted them.
         // Add persisting of newest parameters from update.
-        val (_, newParams) = requireNotNull(newNetworkParameters) { "Couldn't find parameters update for the hash: $parametersHash" }
+        val (update, signedNewNetParams) = requireNotNull(newNetworkParameters) { "Couldn't find parameters update for the hash: $parametersHash" }
         // We should check that we sign the right data structure hash.
-        val newParametersHash = newParams.verifiedNetworkMapCert(networkMapClient.trustedRoot).serialize().hash
+        val newNetParams = signedNewNetParams.verifiedNetworkMapCert(networkMapClient.trustedRoot)
+        val newParametersHash = newNetParams.serialize().hash
         if (parametersHash == newParametersHash) {
             // The latest parameters have priority.
-            newParams.serialize()
+            signedNewNetParams.serialize()
                     .open()
                     .copyTo(baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME, StandardCopyOption.REPLACE_EXISTING)
             networkMapClient.ackNetworkParametersUpdate(sign(parametersHash))
+            logger.info("Accepted network parameter update $update: $newNetParams")
         } else {
             throw IllegalArgumentException("Refused to accept parameters with hash $parametersHash because network map " +
                     "advertises update with hash $newParametersHash. Please check newest version")

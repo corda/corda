@@ -13,6 +13,11 @@ from the previous milestone release.
   reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
   we are disallowing this as the paradigm in general makes little sense for Contract States
 
+* Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
+
+  .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
+  than 2.12.3 (including 2.12.4) exhibit a different issue.
+
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
 * Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
@@ -24,6 +29,8 @@ from the previous milestone release.
 * java.math.BigInteger serialization support added.
 
 * java.security.cert.CRLReason added to the default Whitelist.
+
+* java.security.cert.X509CRL serialization support added.
 
 .. _changelog_v3:
 

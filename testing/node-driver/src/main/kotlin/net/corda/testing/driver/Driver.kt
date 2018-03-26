@@ -144,7 +144,7 @@ data class NodeParameters(
         val verifierType: VerifierType = VerifierType.InMemory,
         val customOverrides: Map<String, Any?> = emptyMap(),
         val startInSameProcess: Boolean? = null,
-        val maximumHeapSize: String = "200m"
+        val maximumHeapSize: String = "512m"
 ) {
     fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
     fun withRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)

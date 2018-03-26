@@ -304,6 +304,57 @@ Contract testing
 The Corda test framework includes the ability to create a test ledger by calling the ``ledger`` function
 on an implementation of the ``ServiceHub`` interface.
 
+Test identities
+^^^^^^^^^^^^^^^
+
+You can create dummy identities to use in test transactions using the ``TestIdentity`` class:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+        :language: kotlin
+        :start-after: DOCSTART 14
+        :end-before: DOCEND 14
+        :dedent: 8
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 14
+        :end-before: DOCEND 14
+        :dedent: 4
+
+``TestIdentity`` exposes the following fields and methods:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        val identityParty: Party = bigCorp.party
+        val identityName: CordaX500Name = bigCorp.name
+        val identityPubKey: PublicKey = bigCorp.publicKey
+        val identityKeyPair: KeyPair = bigCorp.keyPair
+        val identityPartyAndCertificate: PartyAndCertificate = bigCorp.identity
+
+   .. sourcecode:: java
+
+        Party identityParty = bigCorp.getParty();
+        CordaX500Name identityName = bigCorp.getName();
+        PublicKey identityPubKey = bigCorp.getPublicKey();
+        KeyPair identityKeyPair = bigCorp.getKeyPair();
+        PartyAndCertificate identityPartyAndCertificate = bigCorp.getIdentity();
+
+You can also create a unique ``TestIdentity`` using the ``fresh`` method:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        val uniqueTestIdentity: TestIdentity = TestIdentity.fresh("orgName")
+
+   .. sourcecode:: java
+
+        TestIdentity uniqueTestIdentity = TestIdentity.Companion.fresh("orgName");
+
 MockServices
 ^^^^^^^^^^^^
 

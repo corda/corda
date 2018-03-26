@@ -8,15 +8,19 @@ import net.corda.client.rpc.RPCException
 import net.corda.core.CordaException
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.x500Name
 import net.corda.core.serialization.*
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
+import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
 import net.corda.testing.contracts.DummyContract
@@ -29,6 +33,9 @@ import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.assertj.core.api.Assertions.*
+import org.bouncycastle.cert.X509v2CRLBuilder
+import org.bouncycastle.cert.jcajce.JcaX509CRLConverter
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Assert.*
 import org.junit.Ignore
 import org.junit.Rule
@@ -41,6 +48,7 @@ import java.io.IOException
 import java.io.NotSerializableException
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.security.cert.X509CRL
 import java.time.*
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -51,6 +59,7 @@ import kotlin.test.assertTrue
 
 object AckWrapper {
     object Ack
+
     fun serialize() {
         val factory = testDefaultFactoryNoEvolution()
         SerializationOutput(factory).serialize(Ack)
@@ -59,6 +68,7 @@ object AckWrapper {
 
 object PrivateAckWrapper {
     private object Ack
+
     fun serialize() {
         val factory = testDefaultFactoryNoEvolution()
         SerializationOutput(factory).serialize(Ack)
@@ -630,6 +640,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     }
 
     private val FOO_PROGRAM_ID = "net.corda.nodeapi.internal.serialization.amqp.SerializationOutputTests.FooContract"
+
     class FooState : ContractState {
         override val participants: List<AbstractParty> = emptyList()
     }
@@ -992,6 +1003,25 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         assertEquals(objCopy.a, objCopy.b)
     }
 
+    private fun emptyCrl(): X509CRL {
+        val builder = X509v2CRLBuilder(CordaX500Name.build(DEV_INTERMEDIATE_CA.certificate.issuerX500Principal).x500Name, Date())
+        val provider = BouncyCastleProvider()
+        val crlHolder = builder.build(ContentSignerBuilder.build(Crypto.RSA_SHA256, Crypto.generateKeyPair(Crypto.RSA_SHA256).private, provider))
+        return JcaX509CRLConverter().setProvider(provider).getCRL(crlHolder)
+    }
+
+    @Test
+    fun `test X509CRL custom serializer`() {
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CRLSerializer)
+
+        val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CRLSerializer)
+
+        val obj = emptyCrl()
+        serdes(obj, factory, factory2)
+    }
+
     data class ByteArrays(val a: ByteArray, val b: ByteArray)
 
     @Test
@@ -1197,7 +1227,8 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     @Test
     fun throwable() {
         class TestException(message: String?, cause: Throwable?) : CordaException(message, cause)
-        val testExcp = TestException("hello", Throwable().apply { stackTrace = Thread.currentThread().stackTrace } )
+
+        val testExcp = TestException("hello", Throwable().apply { stackTrace = Thread.currentThread().stackTrace })
         val factory = testDefaultFactoryNoEvolution()
         SerializationOutput(factory).serialize(testExcp)
     }

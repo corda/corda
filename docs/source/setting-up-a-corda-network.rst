@@ -67,7 +67,7 @@ is the major Corda version and ``Y`` is the minor Corda version.
 To use it, create a directory containing a node config file, ending in "_node.conf", for each node you want to create.
 Then run the following command:
 
-``java -jar network-bootstrapper.jar <nodes-root-dir>``
+``java -jar network-bootstrapper-corda-X.Y.jar <nodes-root-dir>``
 
 For example running the command on a directory containing these files :
 

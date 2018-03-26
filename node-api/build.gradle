@@ -35,7 +35,7 @@ dependencies {
     compile "org.apache.qpid:proton-j:0.21.0"
 
     // FastClasspathScanner: classpath scanning - needed for the NetworkBootstraper
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
+    compile 'io.github.lukehutch:fast-classpath-scanner:2.12.3'
 
     // Pure-Java Snappy compression
     compile 'org.iq80.snappy:snappy:0.4'
@@ -47,6 +47,19 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile project(':node-driver')
+}
+
+configurations {
+        testArtifacts.extendsFrom testRuntime
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+artifacts {
+    testArtifacts testJar
 }
 
 jar {

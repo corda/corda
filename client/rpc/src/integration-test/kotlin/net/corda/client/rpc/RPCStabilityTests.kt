@@ -12,6 +12,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.eventually
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.internal.*
@@ -247,9 +248,8 @@ class RPCStabilityTests {
             assertEquals("pong", client.ping())
             serverFollower.shutdown()
             startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
-            Thread.sleep(1000) //wait for the server to come back up
-            val pingFuture = pool.fork(client::ping)
-            assertEquals("pong", pingFuture.getOrThrow(10.seconds))
+            val response = eventually<RPCException, String>(10.seconds) { client.ping() }
+            assertEquals("pong", response)
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
     }
@@ -305,16 +305,21 @@ class RPCStabilityTests {
 
             var terminateHandlerCalled = false
             var errorHandlerCalled = false
+            var exceptionMessage: String? = null
             val subscription = client.subscribe()
                      .doOnTerminate{ terminateHandlerCalled = true }
-                     .doOnError { errorHandlerCalled = true }
-                     .subscribe()
+                     .subscribe({}, {
+                         errorHandlerCalled = true
+                         //log exception
+                         exceptionMessage = it.message
+                     })
 
             serverFollower.shutdown()
             Thread.sleep(100)
 
             assertTrue(terminateHandlerCalled)
             assertTrue(errorHandlerCalled)
+            assertEquals("Connection failure detected.", exceptionMessage)
             assertTrue(subscription.isUnsubscribed)
 
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
