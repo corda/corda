@@ -68,7 +68,7 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
      * loaded JDBC driver.
      * Note: the first loaded implementation to pass this check will be used at run-time.
      */
-    abstract fun isCompatible(metadata: DatabaseMetaData): Boolean
+    protected abstract fun isCompatible(metadata: DatabaseMetaData): Boolean
 
     /**
      * A vendor specific query(ies) to gather Cash states that are available.
@@ -84,10 +84,10 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
      * otherwise what is available is returned unlocked for informational purposes.
      * @return The result of the withResultSet function
      */
-    abstract fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
+    protected abstract fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
                               onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean
 
-    override abstract fun toString(): String
+    abstract override fun toString(): String
 
     /**
      * Query to gather Cash states that are available and retry if they are temporarily unavailable.

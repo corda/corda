@@ -56,7 +56,7 @@ dependencies {
     testCompile "org.apache.curator:curator-test:${curator_version}"
 
     // FastClasspathScanner: classpath scanning - needed for the NetworkBootstraper
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
+    compile 'io.github.lukehutch:fast-classpath-scanner:2.12.3'
 
     // Pure-Java Snappy compression
     compile 'org.iq80.snappy:snappy:0.4'

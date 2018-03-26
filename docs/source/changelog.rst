@@ -7,6 +7,11 @@ Unreleased
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
+* Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
+
+  .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
+  than 2.12.3 (including 2.12.4) exhibit a different issue.
+
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
 * Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
