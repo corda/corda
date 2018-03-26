@@ -308,8 +308,8 @@ class RPCStabilityTests {
             var exceptionMessage: String? = null
             val subscription = client.subscribe()
                      .doOnTerminate{ terminateHandlerCalled = true }
-                     .doOnError { errorHandlerCalled = true }
                      .subscribe({}, {
+                         errorHandlerCalled = true
                          //log exception
                          exceptionMessage = it.message
                      })
