@@ -75,3 +75,12 @@ interface StepsProvider {
     val name: String
     val stepsDefinition: (StepsBlock) -> Unit
 }
+
+class BarStepsProvider : StepsProvider {
+
+    override val name: String
+        get() = "Bar"
+    override val stepsDefinition: (StepsBlock) -> Unit
+        get() = {}
+
+}
