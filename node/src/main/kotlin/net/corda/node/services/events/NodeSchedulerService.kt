@@ -285,6 +285,12 @@ class NodeSchedulerService(private val clock: CordaClock,
         schedulerTimerExecutor.join()
     }
 
+    @VisibleForTesting
+    internal fun cancelAndWait() {
+        schedulerTimerExecutor.shutdownNow()
+        schedulerTimerExecutor.join()
+    }
+
     private inner class FlowStartDeduplicationHandler(val scheduledState: ScheduledStateRef) : DeduplicationHandler {
         override fun insideDatabaseTransaction() {
             scheduledStates.remove(scheduledState.ref)
