@@ -93,6 +93,10 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
                 )
     }
 
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
+        commit(states, txId, callerIdentity, emptyList())
+    }
+
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, references: List<StateRef>) {
         val allStates = states + references
         val conflict = mutex.locked {

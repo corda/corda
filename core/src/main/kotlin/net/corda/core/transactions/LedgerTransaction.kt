@@ -27,7 +27,7 @@ import java.util.function.Predicate
 // currently sends this across to out-of-process verifiers. We'll need to change that first.
 // DOCSTART 1
 @CordaSerializable
-data class LedgerTransaction constructor(
+data class LedgerTransaction @JvmOverloads constructor(
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
         override val inputs: List<StateAndRef<ContractState>>,
         override val outputs: List<TransactionState<ContractState>>,
@@ -493,15 +493,18 @@ data class LedgerTransaction constructor(
     fun getAttachment(id: SecureHash): Attachment = attachments.first { it.id == id }
 
     @JvmOverloads
-    fun copy(inputs: List<StateAndRef<ContractState>>,
-             outputs: List<TransactionState<ContractState>>,
-             commands: List<CommandWithParties<CommandData>>,
-             attachments: List<Attachment>,
-             id: SecureHash,
-             notary: Party?,
-             timeWindow: TimeWindow?,
-             privacySalt: PrivacySalt,
-             references: List<StateAndRef<ContractState>> = emptyList()
-    ) = copy(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, references)
+    fun copy(inputs: List<StateAndRef<ContractState>> = this.inputs,
+             outputs: List<TransactionState<ContractState>> = this.outputs,
+             commands: List<CommandWithParties<CommandData>> = this.commands,
+             attachments: List<Attachment> = this.attachments,
+             id: SecureHash = this.id,
+             notary: Party? = this.notary,
+             timeWindow: TimeWindow? = this.timeWindow,
+             privacySalt: PrivacySalt = this.privacySalt,
+             networkParameters: NetworkParameters? = this.networkParameters
+    ): LedgerTransaction {
+        return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references)
+    }
+
 }
 

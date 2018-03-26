@@ -79,6 +79,7 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
      * A NotaryException is thrown if any of the states have been consumed by a different transaction. Note that
      * this method does not throw an exception when input states are present multiple times within the transaction.
      */
+    @JvmOverloads
     fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party, references: List<StateRef> = emptyList()) {
         try {
             uniquenessProvider.commit(inputs, txId, caller, references)

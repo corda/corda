@@ -199,6 +199,9 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
         })
     }
 
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
+        commit(states, txId, callerIdentity, emptyList())
+    }
 
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, references: List<StateRef>) {
         // Check for conflicts using all states but don't commit the unspendable states.

@@ -165,7 +165,7 @@ data class ContractUpgradeFilteredTransaction(
  * In contrast with a regular transaction, signatures are checked against the signers specified by input states'
  * *participants* fields, so full resolution is needed for signature verification.
  */
-data class ContractUpgradeLedgerTransaction(
+data class ContractUpgradeLedgerTransaction @JvmOverloads constructor(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,
         val legacyContractAttachment: Attachment,
@@ -253,5 +253,29 @@ data class ContractUpgradeLedgerTransaction(
                 .asSubclass(Contract::class.java)
                 .getConstructor()
                 .newInstance() as UpgradedContract<ContractState, *>
+    }
+
+    fun copy(
+            inputs: List<StateAndRef<ContractState>>,
+            notary: Party,
+            legacyContractAttachment: Attachment,
+            upgradedContractClassName: ContractClassName,
+            upgradedContractAttachment: Attachment,
+            id: SecureHash,
+            privacySalt: PrivacySalt,
+            sigs: List<TransactionSignature>,
+            networkParameters: NetworkParameters
+    ): ContractUpgradeLedgerTransaction {
+        return ContractUpgradeLedgerTransaction(
+                inputs,
+                notary,
+                legacyContractAttachment,
+                upgradedContractClassName,
+                upgradedContractAttachment,
+                id,
+                privacySalt,
+                sigs,
+                networkParameters
+        )
     }
 }

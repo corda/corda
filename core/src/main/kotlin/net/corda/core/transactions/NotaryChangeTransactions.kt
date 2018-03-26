@@ -83,7 +83,7 @@ data class NotaryChangeWireTransaction(
  * signatures are checked against the signers specified by input states' *participants* fields, so full resolution is
  * needed for signature verification.
  */
-data class NotaryChangeLedgerTransaction(
+data class NotaryChangeLedgerTransaction @JvmOverloads constructor(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,
         val newNotary: Party,
@@ -127,5 +127,15 @@ data class NotaryChangeLedgerTransaction(
                 }
             }
         }
+    }
+
+    fun copy(
+            inputs: List<StateAndRef<ContractState>>,
+            notary: Party,
+            newNotary: Party,
+            id: SecureHash,
+            sigs: List<TransactionSignature>
+    ): NotaryChangeLedgerTransaction {
+        return NotaryChangeLedgerTransaction(inputs, notary, newNotary, id, sigs)
     }
 }

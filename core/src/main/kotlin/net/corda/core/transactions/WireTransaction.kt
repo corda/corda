@@ -43,14 +43,14 @@ import java.util.function.Predicate
 class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt = PrivacySalt()) : TraversableTransaction(componentGroups) {
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.", ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
-    constructor(inputs: List<StateRef>,
-                attachments: List<SecureHash>,
-                outputs: List<TransactionState<ContractState>>,
-                commands: List<Command<*>>,
-                notary: Party?,
-                timeWindow: TimeWindow?,
-                privacySalt: PrivacySalt = PrivacySalt(),
-                references: List<StateRef> = emptyList()
+    @JvmOverloads constructor(inputs: List<StateRef>,
+                              attachments: List<SecureHash>,
+                              outputs: List<TransactionState<ContractState>>,
+                              commands: List<Command<*>>,
+                              notary: Party?,
+                              timeWindow: TimeWindow?,
+                              privacySalt: PrivacySalt = PrivacySalt(),
+                              references: List<StateRef> = emptyList()
     ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, references), privacySalt)
 
     init {
@@ -236,6 +236,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
          * Creating list of [ComponentGroup] used in one of the constructors of [WireTransaction] required
          * for backwards compatibility purposes.
          */
+        @JvmOverloads
         fun createComponentGroups(inputs: List<StateRef>,
                                   outputs: List<TransactionState<ContractState>>,
                                   commands: List<Command<*>>,

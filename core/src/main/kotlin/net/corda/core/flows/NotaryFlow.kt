@@ -178,7 +178,17 @@ class NotaryFlow {
  * The minimum amount of information needed to notarise a transaction. Note that this does not include
  * any sensitive transaction details.
  */
-data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: TimeWindow?, val notary: Party?, val references: List<StateRef> = emptyList())
+data class TransactionParts @JvmOverloads constructor(
+        val id: SecureHash,
+        val inputs: List<StateRef>,
+        val timestamp: TimeWindow?,
+        val notary: Party?,
+        val references: List<StateRef> = emptyList()
+) {
+    fun copy(id: SecureHash, inputs: List<StateRef>, timestamp: TimeWindow?, notary: Party?): TransactionParts {
+        return TransactionParts(id, inputs, timestamp, notary, references)
+    }
+}
 
 /**
  * Exception thrown by the notary service if any issues are encountered while trying to commit a transaction. The

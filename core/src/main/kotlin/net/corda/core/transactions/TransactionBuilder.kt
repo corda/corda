@@ -33,7 +33,7 @@ import kotlin.collections.ArrayList
  * When this is set to a non-null value, an output state can be added by just passing in a [ContractState] – a
  * [TransactionState] with this notary specified will be generated automatically.
  */
-open class TransactionBuilder constructor(
+open class TransactionBuilder @JvmOverloads constructor(
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
@@ -44,8 +44,6 @@ open class TransactionBuilder constructor(
         protected var privacySalt: PrivacySalt = PrivacySalt(),
         protected val references: MutableList<StateRef> = arrayListOf()
 ) {
-    constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
-
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private val referenceInputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 
@@ -70,8 +68,7 @@ open class TransactionBuilder constructor(
 
     // DOCSTART 1
     /**
-     * A more convenient way to add items to this transaction that calls the add* methods for you based on type
-     * Don't
+     * A more convenient way to add items to this transaction that calls the add* methods for you based on type.
      */
     @Deprecated("*** WARNING: THIS METHOD CANNOT BE USED TO ADD REFERENCE STATES!! USE \"addReferenceState\"***")
     fun withItems(vararg items: Any): TransactionBuilder {
