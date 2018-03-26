@@ -29,7 +29,7 @@ class CarpenterClassLoader(parentClassLoader: ClassLoader = Thread.currentThread
 class InterfaceMismatchNonGetterException (val clazz: Class<*>, val method: Method) : InterfaceMismatchException(
     "Requested interfaces must consist only of methods that start with 'get': ${clazz.name}.${method.name}")
 
-class InterfaceMismatchMissingFieldException (val clazz: Class<*>, val field: String) : InterfaceMismatchException(
+class InterfaceMismatchMissingAMQPFieldException (val clazz: Class<*>, val field: String) : InterfaceMismatchException(
     "Interface ${clazz.name} requires a field named $field but that isn't found in the schema or any superclass schemas")
 
 /**
@@ -436,7 +436,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
                 if (fieldNameFromItf.isEmpty() && SimpleFieldAccess::class.java in schema.interfaces) return@forEach
 
                 if ((schema is ClassSchema) and (fieldNameFromItf !in allFields)) {
-                    throw InterfaceMismatchMissingFieldException(itf, fieldNameFromItf)
+                    throw InterfaceMismatchMissingAMQPFieldException(itf, fieldNameFromItf)
                 }
             }
         }

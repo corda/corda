@@ -9,7 +9,7 @@ from the previous milestone release.
 
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
-* Carpenter Exceptions will be caught internally by the Serializer and rethrown as NotSerializable
+* Carpenter Exceptions will be caught internally by the Serializer and rethrown as a ``NotSerializableException``
 
   * Specific details of the error encountered are logged to the node's log file. More information can be enabled by setting the debug level to ``trace`` ; this will cause the full stack trace of the error to be dumped into the log.
 

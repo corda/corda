@@ -69,7 +69,7 @@ class CarpenterExceptionTests {
     }
 
     @Test
-    fun carpenterExcpRethrownAsNSE() {
+    fun carpenterExceptionRethrownAsNotSerializableException() {
         data class C2 (val i: Int) : TestInterface {
             override fun runThing() = 1
         }

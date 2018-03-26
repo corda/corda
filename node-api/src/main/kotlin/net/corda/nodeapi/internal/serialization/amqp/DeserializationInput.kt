@@ -155,7 +155,7 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
                         val serializer = serializerFactory.get(obj.descriptor, schemas)
                         if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) {
                             !isSubClassOf(type) && !materiallyEquivalentTo(type)
-                        }){
+                        }) {
                             throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
                                     "expected to be of type $type but was ${serializer.type}")
                         }
