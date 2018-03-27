@@ -30,6 +30,8 @@ import org.slf4j.Logger
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 open class NodeSchedulerServiceTestBase {
     protected class Event(time: Instant) {
@@ -82,6 +84,28 @@ open class NodeSchedulerServiceTestBase {
     protected fun assertStarted(event: Event) = assertStarted(event.flowLogic)
 }
 
+class MockScheduledFlowRepository : ScheduledFlowRepository {
+    private val map = HashMap<StateRef, ScheduledStateRef>()
+
+    override fun getLatest(): Pair<StateRef, ScheduledStateRef>? {
+        val latest = map.values.sortedBy { it.scheduledAt }.firstOrNull()
+
+        return if (latest == null) {
+            null
+        } else {
+            Pair(latest.ref, latest)
+        }
+    }
+
+    override fun merge(value: ScheduledStateRef) {
+        map.put(value.ref, value)
+    }
+
+    override fun delete(key: StateRef) {
+        map.remove(key)
+    }
+}
+
 class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     private val database = rigorousMock<CordaPersistence>().also {
         doAnswer {
@@ -100,7 +124,10 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
             nodeProperties = nodeProperties,
             drainingModePollPeriod = Duration.ofSeconds(5),
             log = log,
-            scheduledStates = mutableMapOf()).apply { start() }
+            schedulerRepo = MockScheduledFlowRepository()
+    ).apply { start() }
+
+
     @Rule
     @JvmField
     val tearDown = object : TestWatcher() {
@@ -225,6 +252,23 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
     }
 
     @Test
+    fun `test that correct item is returned`() {
+
+        val dataSourceProps = MockServices.makeTestDataSourceProperties()
+        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
+        database.transaction {
+            val repo = PersistentScheduledFlowRepository(database)
+            val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+            val ssr = ScheduledStateRef(stateRef, mark)
+            repo.merge(ssr)
+
+            val output = repo.getLatest()
+            assertEquals(output?.first, stateRef)
+            assertEquals(output?.second, ssr)
+        }
+    }
+
+    @Test
     fun `test that schedule is persisted`() {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
         val timeInTheFuture = mark + 1.days
@@ -292,5 +336,79 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
 
         scheduler.join()
         database.close()
+    }
+}
+
+class PersistentNodeSchedulerRepositoryTest {
+    private val databaseConfig: DatabaseConfig = DatabaseConfig()
+    private val mark = Instant.now()
+
+    @Test
+    fun `test that earliest item is returned`() {
+        val laterTime = mark + 1.days
+        val dataSourceProps = MockServices.makeTestDataSourceProperties()
+        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
+
+        database.transaction {
+            val repo = PersistentScheduledFlowRepository(database)
+            val laterStateRef = StateRef(SecureHash.randomSHA256(), 0)
+            val laterSsr = ScheduledStateRef(laterStateRef, laterTime)
+            repo.merge(laterSsr)
+
+            val earlierStateRef = StateRef(SecureHash.randomSHA256(), 0)
+            val earlierSsr = ScheduledStateRef(earlierStateRef, mark)
+            repo.merge(earlierSsr)
+
+            val output = repo.getLatest()
+            assertEquals(output?.first, earlierStateRef)
+            assertEquals(output?.second, earlierSsr)
+        }
+    }
+
+    @Test
+    fun `test that item is rescheduled`() {
+        val laterTime = mark + 1.days
+        val dataSourceProps = MockServices.makeTestDataSourceProperties()
+        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
+        database.transaction {
+            val repo = PersistentScheduledFlowRepository(database)
+            val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+            val laterSsr = ScheduledStateRef(stateRef, laterTime)
+
+            repo.merge(laterSsr)
+
+            val updatedEarlierSsr = ScheduledStateRef(stateRef, mark)
+            repo.merge(updatedEarlierSsr)
+
+            val output = repo.getLatest()
+            assertEquals(output?.first, stateRef)
+            assertEquals(output?.second, updatedEarlierSsr)
+
+            repo.delete(output?.first!!)
+
+            val nextOutput = repo.getLatest()
+            assertNull(nextOutput)
+        }
+    }
+
+    @Test
+    fun `test that item is rescheduled 2`() {
+        val laterTime = mark + 1.days
+        val dataSourceProps = MockServices.makeTestDataSourceProperties()
+        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
+        database.transaction {
+            val repo = PersistentScheduledFlowRepository(database)
+            val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+            val laterSsr = ScheduledStateRef(stateRef, laterTime)
+
+            repo.merge(laterSsr)
+
+            val updatedEarlierSsr = ScheduledStateRef(stateRef, mark)
+            repo.merge(updatedEarlierSsr)
+
+            val output = repo.getLatest()
+            assertEquals(output?.first, stateRef)
+            assertEquals(output?.second, updatedEarlierSsr)
+        }
     }
 }
