@@ -2,7 +2,7 @@ package net.corda.core.schemas
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.toHexString
 import java.io.Serializable
 import javax.persistence.Column

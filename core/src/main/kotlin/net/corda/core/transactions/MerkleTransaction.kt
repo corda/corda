@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.CordaException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*

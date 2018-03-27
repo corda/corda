@@ -5,7 +5,7 @@ import com.esotericsoftware.kryo.KryoException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters

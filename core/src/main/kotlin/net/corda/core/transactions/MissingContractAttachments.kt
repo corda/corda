@@ -3,7 +3,7 @@ package net.corda.core.transactions
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
 import net.corda.core.flows.FlowException
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 
 /**
  * A contract attachment was missing when trying to automatically attach all known contract attachments

@@ -11,7 +11,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault.StateStatus
 import net.corda.core.node.services.vault.*
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NonEmptySet

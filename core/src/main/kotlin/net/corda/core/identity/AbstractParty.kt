@@ -2,7 +2,7 @@ package net.corda.core.identity
 
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 

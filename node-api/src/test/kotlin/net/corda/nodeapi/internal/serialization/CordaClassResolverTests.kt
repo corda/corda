@@ -6,6 +6,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.nhaarman.mockito_kotlin.*
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*

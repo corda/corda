@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import org.junit.Test
 import kotlin.test.*
 import net.corda.nodeapi.internal.serialization.carpenter.*
@@ -29,7 +29,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
     private val sf1 = testDefaultFactoryNoEvolution()
 
-    // Deserialize with whitelisting on to check that `CordaSerializable` annotation present.
+    // Deserialize with whitelisting on to check that `net.corda.annotations.serialization.CordaSerializable` annotation present.
     private val sf2 = testDefaultFactoryWithWhitelist()
 
     @Test

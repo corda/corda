@@ -9,7 +9,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.read
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.finance.CHF
 import net.corda.finance.EUR

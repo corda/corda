@@ -1,6 +1,6 @@
 package net.corda.core.contracts
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 
 /**
  * Wrap an attachment in this if it is to be used as an executable contract attachment

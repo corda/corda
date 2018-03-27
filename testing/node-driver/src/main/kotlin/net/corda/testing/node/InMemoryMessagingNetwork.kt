@@ -12,7 +12,7 @@ import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes

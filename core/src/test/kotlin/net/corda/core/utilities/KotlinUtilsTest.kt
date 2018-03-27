@@ -1,8 +1,8 @@
 package net.corda.core.utilities
 
 import com.esotericsoftware.kryo.KryoException
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.serialization.KRYO_CHECKPOINT_CONTEXT

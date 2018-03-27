@@ -9,7 +9,7 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentState
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.time.Instant
 import java.util.*

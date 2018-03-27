@@ -2,7 +2,7 @@ package net.corda.core.utilities
 
 import net.corda.core.internal.concurrent.get
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Observable

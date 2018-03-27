@@ -1,6 +1,6 @@
 package net.corda.core.utilities
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import java.net.URI
 import java.net.URISyntaxException
 

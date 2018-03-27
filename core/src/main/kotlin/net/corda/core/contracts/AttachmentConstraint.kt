@@ -5,7 +5,7 @@ import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 
 /** Constrain which contract-code-containing attachment can be used with a [ContractState]. */
 @CordaSerializable

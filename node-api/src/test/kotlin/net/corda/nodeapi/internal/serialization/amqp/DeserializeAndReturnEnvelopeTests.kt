@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals

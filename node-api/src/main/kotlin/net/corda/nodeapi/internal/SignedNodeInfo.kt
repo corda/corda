@@ -4,7 +4,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.verify
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize

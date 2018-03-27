@@ -8,7 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
 import java.io.Serializable

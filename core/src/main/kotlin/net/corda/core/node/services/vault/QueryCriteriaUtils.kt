@@ -5,7 +5,7 @@ package net.corda.core.node.services.vault
 import net.corda.core.DoNotImplement
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.schemas.PersistentState
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import java.lang.reflect.Field
 import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.javaGetter

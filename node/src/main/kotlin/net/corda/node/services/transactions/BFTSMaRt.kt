@@ -20,7 +20,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.toTypedArray
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize

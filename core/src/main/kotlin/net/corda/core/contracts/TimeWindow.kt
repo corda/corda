@@ -2,7 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.internal.div
 import net.corda.core.internal.until
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.WireTransaction
 import java.time.Duration
 import java.time.Instant

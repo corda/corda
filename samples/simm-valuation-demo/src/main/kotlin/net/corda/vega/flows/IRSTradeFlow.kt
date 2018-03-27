@@ -3,7 +3,7 @@ package net.corda.vega.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.TwoPartyDealFlow

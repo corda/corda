@@ -8,7 +8,7 @@ import net.corda.core.internal.Emoji
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey

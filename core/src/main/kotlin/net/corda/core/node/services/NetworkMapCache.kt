@@ -8,7 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import rx.Observable
 import java.security.PublicKey

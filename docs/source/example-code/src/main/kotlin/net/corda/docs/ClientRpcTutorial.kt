@@ -7,7 +7,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes

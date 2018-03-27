@@ -1,9 +1,8 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.crypto.random63BitValue
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import java.security.SecureRandom
 

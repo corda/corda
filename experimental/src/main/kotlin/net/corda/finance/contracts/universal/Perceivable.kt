@@ -1,7 +1,7 @@
 package net.corda.finance.contracts.universal
 
 import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.Tenor
 import java.lang.reflect.Type

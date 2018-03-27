@@ -3,7 +3,7 @@ package net.corda.core.contracts
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.NonEmptySet
 import java.security.PublicKey
 

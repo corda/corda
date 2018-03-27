@@ -1,7 +1,7 @@
 package net.corda.core.utilities
 
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.Try.Failure
 import net.corda.core.utilities.Try.Success
 

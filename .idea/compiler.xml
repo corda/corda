@@ -23,6 +23,8 @@
       <module name="client_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
+      <module name="corda-annotations_main" target="1.8" />
+      <module name="corda-annotations_test" target="1.8" />
       <module name="corda-core_integrationTest" target="1.8" />
       <module name="corda-core_smokeTest" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />

@@ -7,7 +7,7 @@ import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.contracts.asset.Cash

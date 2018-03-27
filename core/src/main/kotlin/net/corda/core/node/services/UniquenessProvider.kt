@@ -5,7 +5,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 
 /**
  * A service that records input states of the given transaction and provides conflict information

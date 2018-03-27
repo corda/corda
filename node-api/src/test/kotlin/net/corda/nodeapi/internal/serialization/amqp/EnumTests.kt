@@ -1,7 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import org.assertj.core.api.Assertions
 import org.junit.Test

@@ -1,7 +1,7 @@
 package net.corda.core.contracts
 
 import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 
 // DOCSTART 1
 typealias ContractClassName = String
