@@ -42,6 +42,7 @@ class VerifierTests {
         return transactions.map { currentLedger.resolveWireTransaction(it) }
     }
 
+    @Ignore
     @Test
     fun `single verifier works with requestor`() {
         verifierDriver(extraCordappPackagesToScan = listOf("net.corda.finance.contracts")) {
@@ -74,6 +75,7 @@ class VerifierTests {
         }
     }
 
+    @Ignore
     @Test
     fun `multiple verifiers work with requestor`() {
         verifierDriver {
