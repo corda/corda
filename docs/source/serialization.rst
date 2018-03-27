@@ -442,6 +442,66 @@ associates it with the actual member variable.
             fun getStatesToConsume() = states
         }
 
+Mutable Containers
+``````````````````
+
+Because Java fundamentally provides no mechanism by which the mutability of a class can be determined this presents a
+problem for the serialization framework. When reconstituting objects with container properties we must chose wethe to
+create mutable or immutable objects. Given the restrictions, we have decided it is better to preserve the immutability
+of immutable objects rather than force mutability on presumed immutable objects.
+
+.. note:: Whilst we could potentially infer mutability empirically, doing so exhaustivly is impossible as it's a design
+  decision rather than something intrinsic to the JVM. At present, we defer to simply making things imumutable on reconstruction
+  with the following owkrarounds provided for those who use them. In future, this may change, but for now use the following
+  examples as a guide.
+
+For example, consider the following
+
+.. sourcecode:: kotlin
+
+    data class C(val l : MutableList<String>)
+
+    val bytes = C(mutableListOf ("a", "b", "c")).serialize()
+    val newC = bytes.deserialize()
+
+    newC.l.add("d")
+
+The call to ``newC.l.add`` will throw an ``UnsupportedOperationException``.
+
+There are two workarounds that can be used to preserve mutability on reconstituted objects. Firstly, if the class
+isn't a Kotlin data class and thus isn't restricted by having to have a primary constructor
+
+.. sourcecode:: kotlin
+
+    class C {
+        val l : MutableList<String>
+
+        @Suppress("Unused")
+        constructor (l : MutableList<String>) {
+            this.l = l.toMutableList()
+        }
+    }
+
+    // This time this call will succeed
+    newC.l.add("d")
+
+Secondly, if the class is a Kotlin data class, a secondary constructor can be used
+
+.. sourcecode:: kotlin
+
+    data class C (val l : MutableList<String>){
+        @ConstructorForDeserialization
+        @Suppress("Unused")
+        constructor (l : Collection<String>) : this (l.toMutableList())
+    }
+
+    // This will also work
+    newC.l.add("d")
+
+.. note:: If mutability isn't an issue at all then in the case of data classes a single constructor can
+  bse used by making the property var instead of val and in the ``init`` block reassigning the property
+  to a mutable instance
+
 Enums
 `````
 
