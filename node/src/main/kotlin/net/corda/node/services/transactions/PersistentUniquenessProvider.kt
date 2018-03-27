@@ -61,7 +61,7 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
-    class CommittedState(id: PersistentStateRef, consumingTxHash: String) : BaseComittedState(id, consumingTxHash), Serializable
+    class CommittedState(id: PersistentStateRef, consumingTxHash: String) : BaseComittedState(id, consumingTxHash)
 
     private class InnerState {
         val committedStates = createMap()
