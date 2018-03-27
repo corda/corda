@@ -450,8 +450,8 @@ problem for the serialization framework. When reconstituting objects with contai
 must chose whether to create mutable or immutable objects. Given the restrictions, we have decided it is better to
 preserve the immutability of immutable objects rather than force mutability on presumed immutable objects.
 
-.. note:: Whilst we could potentially infer mutability empirically, doing so exhaustivly is impossible as it's a design
-  decision rather than something intrinsic to the JVM. At present, we defer to simply making things imumutable on reconstruction
+.. note:: Whilst we could potentially infer mutability empirically, doing so exhaustively is impossible as it's a design
+  decision rather than something intrinsic to the JVM. At present, we defer to simply making things immutable on reconstruction
   with the following workarounds provided for those who use them. In future, this may change, but for now use the following
   examples as a guide.
 
