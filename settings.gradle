@@ -47,3 +47,5 @@ include 'samples:simm-valuation-demo'
 include 'samples:notary-demo'
 include 'samples:bank-of-corda-demo'
 include 'samples:cordapp-configuration'
+include 'corda-annotations'
+
