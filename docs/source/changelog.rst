@@ -7,6 +7,12 @@ Unreleased
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
+* Serializing an inner class (non-static nested class in Java, inner class in Kotlin) will be rejected explicitly by the serialization
+  framework. Prior to this change it didn't work, but the error thrown was opaque (complaining about too few arguments
+  to a constructor). Whilst this was possible in the older Kryo implementation (Kryo passing null as the synthesised
+  reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
+  we are disallowing this as the paradigm in general makes little sense for Contract States
+
 * Fix CORDA-1258. Custom serializers were spuriously registered every time a serialization factory was fetched from the cache rather than
   only once when it was created. Whilst registering serializers that already exist is essentially a no-op, it's a performance overhead for
   a very frequent operation that hits a synchronisation point (and is thus flagged as contended by our perfomance suite)

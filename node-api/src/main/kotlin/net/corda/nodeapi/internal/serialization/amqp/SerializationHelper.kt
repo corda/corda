@@ -17,6 +17,7 @@ import kotlin.reflect.KParameter
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.isAccessible
+import kotlin.reflect.jvm.javaConstructor
 import kotlin.reflect.jvm.javaType
 
 /**
@@ -33,6 +34,7 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
         var annotatedCount = 0
         val kotlinConstructors = clazz.kotlin.constructors
         val hasDefault = kotlinConstructors.any { it.parameters.isEmpty() }
+
         for (kotlinConstructor in kotlinConstructors) {
             if (preferredCandidate == null && kotlinConstructors.size == 1) {
                 preferredCandidate = kotlinConstructor
@@ -158,7 +160,7 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
             PropertyDescriptorsRegex.re.find(func.name)?.apply {
                 // matching means we have an func getX where the property could be x or X
                 // so having pre-loaded all of the properties we try to match to either case. If that
-                // fails the getter doesn't refer to a property directly, but may to a cosntructor
+                // fails the getter doesn't refer to a property directly, but may refer to a constructor
                 // parameter that shadows a property
                 val properties =
                         classProperties[groups[2]!!.value] ?:
@@ -219,19 +221,26 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
 
     val classProperties = clazz.propertyDescriptors()
 
+    // Annoyingly there isn't a better way to ascertain that the constructor for the class
+    // has a synthetic parameter inserted to capture the reference to the outer class. You'd
+    // think you could inspect the parameter and check the isSynthetic flag but that is always
+    // false so given the naming convention is specified by the standard we can just check for
+    // this
+    if (kotlinConstructor.javaConstructor?.parameterCount ?: 0 > 0 &&
+            kotlinConstructor.javaConstructor?.parameters?.get(0)?.name == "this$0"
+    ) {
+        throw SyntheticParameterException(type)
+    }
+
     if (classProperties.isNotEmpty() && kotlinConstructor.parameters.isEmpty()) {
         return propertiesForSerializationFromSetters(classProperties, type, factory)
     }
 
     return mutableListOf<PropertyAccessor>().apply {
         kotlinConstructor.parameters.withIndex().forEach { param ->
-            // If a parameter doesn't have a name *at all* then chances are it's a synthesised
-            // one. A good example of this is non static nested classes in Java where instances
-            // of the nested class require access to the outer class without breaking
-            // encapsulation. Thus a parameter is inserted into the constructor that passes a
-            // reference to the enclosing class. In this case we can't do anything with
-            // it so just ignore it as it'll be supplied at runtime anyway on invocation
-            val name = param.value.name ?: return@forEach
+            // name cannot be null, if it is then this is a synthetic field and we will have bailed
+            // out prior to this
+            val name = param.value.name!!
 
             // We will already have disambiguated getA for property A or a but we still need to cope
             // with the case we don't know the case of A when the parameter doesn't match a property
