@@ -7,12 +7,26 @@ Unreleased
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
+* Serializing an inner class (non-static nested class in Java, inner class in Kotlin) will be rejected explicitly by the serialization
+  framework. Prior to this change it didn't work, but the error thrown was opaque (complaining about too few arguments
+  to a constructor). Whilst this was possible in the older Kryo implementation (Kryo passing null as the synthesised
+  reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
+  we are disallowing this as the paradigm in general makes little sense for Contract States
+
+* Fix CORDA-1258. Custom serializers were spuriously registered every time a serialization factory was fetched from the cache rather than
+  only once when it was created. Whilst registering serializers that already exist is essentially a no-op, it's a performance overhead for
+  a very frequent operation that hits a synchronisation point (and is thus flagged as contended by our perfomance suite)
+
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
   .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
   than 2.12.3 (including 2.12.4) exhibit a different issue.
 
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
+
+* Carpenter Exceptions will be caught internally by the Serializer and rethrown as a ``NotSerializableException``
+
+  * Specific details of the error encountered are logged to the node's log file. More information can be enabled by setting the debug level to ``trace`` ; this will cause the full stack trace of the error to be dumped into the log.
 
 * Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
 

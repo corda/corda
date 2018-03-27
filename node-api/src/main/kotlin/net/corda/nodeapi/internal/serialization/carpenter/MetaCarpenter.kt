@@ -15,13 +15,13 @@ import net.corda.nodeapi.internal.serialization.amqp.RestrictedType
 import net.corda.nodeapi.internal.serialization.amqp.TypeNotation
 
 /**
- * Generated from an AMQP schema this class represents the classes unknown to the deserialiser and that thusly
- * require carpenting up in bytecode form. This is a multi step process as carpenting one object may be depedent
+ * Generated from an AMQP schema this class represents the classes unknown to the deserializer and that thusly
+ * require carpenting up in bytecode form. This is a multi step process as carpenting one object may be dependent
  * upon the creation of others, this information is tracked in the dependency tree represented by
  * [dependencies] and [dependsOn]. Creatable classes are stored in [carpenterSchemas].
  *
  * The state of this class after initial generation is expected to mutate as classes are built by the carpenter
- * enablaing the resolution of dependencies and thus new carpenter schemas added whilst those already
+ * enabling the resolution of dependencies and thus new carpenter schemas added whilst those already
  * carpented schemas are removed.
  *
  * @property carpenterSchemas The list of carpentable classes
@@ -65,7 +65,7 @@ data class CarpenterMetaSchema(
 
 /**
  * Take a dependency tree of [CarpenterMetaSchema] and reduce it to zero by carpenting those classes that
- * require it. As classes are carpented check for depdency resolution, if now free generate a [Schema] for
+ * require it. As classes are carpented check for dependency resolution, if now free generate a [Schema] for
  * that class and add it to the list of classes ([CarpenterMetaSchema.carpenterSchemas]) that require
  * carpenting
  *
@@ -105,7 +105,11 @@ class MetaCarpenter(schemas: CarpenterMetaSchema, cc: ClassCarpenter) : MetaCarp
     override fun build() {
         while (schemas.carpenterSchemas.isNotEmpty()) {
             val newObject = schemas.carpenterSchemas.removeAt(0)
-            step(newObject)
+            try {
+                step(newObject)
+            } catch (e: ClassCarpenterException) {
+                throw MetaCarpenterException(newObject.name, e)
+            }
         }
     }
 }

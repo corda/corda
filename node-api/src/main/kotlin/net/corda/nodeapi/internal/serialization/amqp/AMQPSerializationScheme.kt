@@ -39,8 +39,15 @@ fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
     }
 }
 
-abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>) : SerializationScheme {
+open class SerializerFactoryFactory {
+    open fun make(context: SerializationContext) =
+        SerializerFactory(context.whitelist, context.deserializationClassLoader)
+}
 
+abstract class AbstractAMQPSerializationScheme(
+        val cordappLoader: List<Cordapp>,
+        val sff : SerializerFactoryFactory = SerializerFactoryFactory()
+) : SerializationScheme {
     // TODO: This method of initialisation for the Whitelist and plugin serializers will have to change
     // when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest way
     companion object {
@@ -126,9 +133,11 @@ abstract class AbstractAMQPSerializationScheme(val cordappLoader: List<Cordapp>)
                     rpcClientSerializerFactory(context)
                 SerializationContext.UseCase.RPCServer ->
                     rpcServerSerializerFactory(context)
-                else -> SerializerFactory(context.whitelist, context.deserializationClassLoader)
+                else -> sff.make(context)
+            }.also {
+                registerCustomSerializers(it)
             }
-        }.also { registerCustomSerializers(it) }
+        }
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {

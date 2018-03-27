@@ -18,6 +18,7 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import java.lang.Character.isJavaIdentifierPart
 import java.lang.Character.isJavaIdentifierStart
+import java.lang.reflect.Method
 import java.util.*
 
 /**
@@ -34,6 +35,12 @@ class CarpenterClassLoader(parentClassLoader: ClassLoader = Thread.currentThread
         ClassLoader(parentClassLoader) {
     fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
 }
+
+class InterfaceMismatchNonGetterException (val clazz: Class<*>, val method: Method) : InterfaceMismatchException(
+    "Requested interfaces must consist only of methods that start with 'get': ${clazz.name}.${method.name}")
+
+class InterfaceMismatchMissingAMQPFieldException (val clazz: Class<*>, val field: String) : InterfaceMismatchException(
+    "Interface ${clazz.name} requires a field named $field but that isn't found in the schema or any superclass schemas")
 
 /**
  * Which version of the java runtime are we constructing objects against
@@ -415,7 +422,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
      * whitelisted classes
      */
     private fun validateSchema(schema: Schema) {
-        if (schema.name in _loaded) throw DuplicateNameException()
+        if (schema.name in _loaded) throw DuplicateNameException(schema.name)
         fun isJavaName(n: String) = n.isNotBlank() && isJavaIdentifierStart(n.first()) && n.all(::isJavaIdentifierPart)
         require(isJavaName(schema.name.split(".").last())) { "Not a valid Java name: ${schema.name}" }
         schema.fields.forEach {
@@ -430,20 +437,17 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
             itf.methods.forEach {
                 val fieldNameFromItf = when {
                     it.name.startsWith("get") -> it.name.substring(3).decapitalize()
-                    else -> throw InterfaceMismatchException(
-                            "Requested interfaces must consist only of methods that start "
-                                    + "with 'get': ${itf.name}.${it.name}")
+                    else -> throw InterfaceMismatchNonGetterException(itf, it)
                 }
 
-                // If we're trying to carpent a class that prior to serialisation / deserialisation
+                // If we're trying to carpent a class that prior to serialisation / deserialization
                 // was made by a carpenter then we can ignore this (it will implement a plain get
                 // method from SimpleFieldAccess).
                 if (fieldNameFromItf.isEmpty() && SimpleFieldAccess::class.java in schema.interfaces) return@forEach
 
-                if ((schema is ClassSchema) and (fieldNameFromItf !in allFields))
-                    throw InterfaceMismatchException(
-                            "Interface ${itf.name} requires a field named $fieldNameFromItf but that "
-                                    + "isn't found in the schema or any superclass schemas")
+                if ((schema is ClassSchema) and (fieldNameFromItf !in allFields)) {
+                    throw InterfaceMismatchMissingAMQPFieldException(itf, fieldNameFromItf)
+                }
             }
         }
     }
