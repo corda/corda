@@ -10,6 +10,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
@@ -53,8 +55,8 @@ class P2PFlowsDrainingModeTest {
 
         driver(DriverParameters(isDebug = true, startNodesInProcess = false, portAllocation = portAllocation)) {
 
-            val initiatedNode = startNode().getOrThrow()
-            val initiating = startNode(rpcUsers = users).getOrThrow().rpc
+            val initiatedNode = startNode(providedName = ALICE_NAME).getOrThrow()
+            val initiating = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow().rpc
             val counterParty = initiatedNode.nodeInfo.singleIdentity()
             val initiated = initiatedNode.rpc
 
@@ -85,8 +87,8 @@ class P2PFlowsDrainingModeTest {
 
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = portAllocation)) {
 
-            val nodeA = startNode(rpcUsers = users).getOrThrow()
-            val nodeB = startNode(rpcUsers = users).getOrThrow()
+            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
             var successful = false
             val latch = CountDownLatch(1)
             nodeB.rpc.setFlowsDrainingModeEnabled(true)
