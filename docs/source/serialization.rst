@@ -446,9 +446,9 @@ Mutable Containers
 ``````````````````
 
 Because Java fundamentally provides no mechanism by which the mutability of a class can be determined this presents a
-problem for the serialization framework. When reconstituting objects with container properties we must chose whether to
-create mutable or immutable objects. Given the restrictions, we have decided it is better to preserve the immutability
-of immutable objects rather than force mutability on presumed immutable objects.
+problem for the serialization framework. When reconstituting objects with container properties (lists, maps, etc) we
+must chose whether to create mutable or immutable objects. Given the restrictions, we have decided it is better to
+preserve the immutability of immutable objects rather than force mutability on presumed immutable objects.
 
 .. note:: Whilst we could potentially infer mutability empirically, doing so exhaustivly is impossible as it's a design
   decision rather than something intrinsic to the JVM. At present, we defer to simply making things imumutable on reconstruction
@@ -510,12 +510,12 @@ passed in as the Constructor parameter.
 
 .. sourcecode:: kotlin
 
-    data class C(val l : MutableList<String>)
+    data class C(val l : List<String>)
 
-    val bytes = C(mutableListOf ("a", "b", "c")).serialize()
+    val bytes = C(listOf ("a", "b", "c")).serialize()
     val newC = bytes.deserialize()
 
-    val newC2 = newC.copy (l = (newC.l + "d").toMutableList())
+    val newC2 = newC.copy (l = (newC.l + "d"))
 
 .. note:: If mutability isn't an issue at all then in the case of data classes a single constructor can
   be used by making the property var instead of val and in the ``init`` block reassigning the property
