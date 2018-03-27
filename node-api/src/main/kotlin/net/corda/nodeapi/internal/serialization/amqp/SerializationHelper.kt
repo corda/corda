@@ -246,8 +246,7 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
             // with the case we don't know the case of A when the parameter doesn't match a property
             // but has a getter
             val matchingProperty = classProperties[name] ?: classProperties[name.capitalize()] ?:
-            throw NotSerializableException(
-                    "Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
+            throw NotSerializableException("Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
 
             // If the property has a getter we'll use that to retrieve it's value from the instance, if it doesn't
             // *for *know* we switch to a reflection based method
