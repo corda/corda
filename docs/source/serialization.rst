@@ -468,7 +468,7 @@ For example, consider the following
 
 The call to ``newC.l.add`` will throw an ``UnsupportedOperationException``.
 
-There are two workarounds that can be used to preserve mutability on reconstituted objects. Firstly, if the class
+There are several workarounds that can be used to preserve mutability on reconstituted objects. Firstly, if the class
 isn't a Kotlin data class and thus isn't restricted by having to have a primary constructor
 
 .. sourcecode:: kotlin
@@ -481,6 +481,9 @@ isn't a Kotlin data class and thus isn't restricted by having to have a primary 
             this.l = l.toMutableList()
         }
     }
+
+    val bytes = C(mutableListOf ("a", "b", "c")).serialize()
+    val newC = bytes.deserialize()
 
     // This time this call will succeed
     newC.l.add("d")
@@ -495,11 +498,27 @@ Secondly, if the class is a Kotlin data class, a secondary constructor can be us
         constructor (l : Collection<String>) : this (l.toMutableList())
     }
 
+    val bytes = C(mutableListOf ("a", "b", "c")).serialize()
+    val newC = bytes.deserialize()
+
     // This will also work
     newC.l.add("d")
 
+Thirdly, to preserve immutability of objects (a recommend design principle - Copy on Write semantics) then mutating the
+contents of the class can be done by creating a new copy of the data class with the altered list passed (in this example)
+passed in as the Constructor parameter.
+
+.. sourcecode:: kotlin
+
+    data class C(val l : MutableList<String>)
+
+    val bytes = C(mutableListOf ("a", "b", "c")).serialize()
+    val newC = bytes.deserialize()
+
+    val newC2 = newC.copy (l = (newC.l + "d").toMutableList())
+
 .. note:: If mutability isn't an issue at all then in the case of data classes a single constructor can
-  bse used by making the property var instead of val and in the ``init`` block reassigning the property
+  be used by making the property var instead of val and in the ``init`` block reassigning the property
   to a mutable instance
 
 Enums

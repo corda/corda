@@ -48,4 +48,13 @@ class RoundTripTests {
 
         newC.l.add("d")
     }
+
+    @Test
+    fun mutableBecomesImmutable4() {
+        data class C(val l : MutableList<String>)
+        val factory = testDefaultFactoryNoEvolution()
+        val bytes = SerializationOutput(factory).serialize(C(mutableListOf ("a", "b", "c")))
+        val newC = DeserializationInput(factory).deserialize(bytes)
+        val newC2 = newC.copy (l = (newC.l + "d").toMutableList())
+    }
 }
