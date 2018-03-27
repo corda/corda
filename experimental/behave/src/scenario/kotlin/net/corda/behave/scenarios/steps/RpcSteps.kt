@@ -1,13 +1,15 @@
 package net.corda.behave.scenarios.steps
 
-import net.corda.behave.scenarios.StepsBlock
+import net.corda.behave.scenarios.ScenarioState
+import net.corda.behave.scenarios.api.StepsBlock
 
-fun rpcSteps(steps: StepsBlock) = steps {
+class RpcSteps(state: ScenarioState) : StepsBlock(state) {
 
-    Then<String>("^user can connect to node (\\w+) using RPC$") { name ->
-        withClient(name) {
-            succeed()
+    override fun initialize() {
+        Then<String>("^user can connect to node (\\w+) using RPC$") { name ->
+            withClient(name) {
+                succeed()
+            }
         }
     }
-
 }

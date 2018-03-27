@@ -1,13 +1,18 @@
 package net.corda.behave.scenarios.steps
 
-import net.corda.behave.scenarios.StepsBlock
+import net.corda.behave.scenarios.ScenarioState
+import net.corda.behave.scenarios.api.StepsBlock
+import net.corda.behave.scenarios.helpers.Ssh
 
-fun sshSteps(steps: StepsBlock) = steps {
+class SshSteps(state: ScenarioState) : StepsBlock(state) {
 
-    Then<String>("^user can connect to node (\\w+) using SSH$") { name ->
-        withNetwork {
-            ssh.canConnectTo(name)
+    override fun initialize() {
+        val ssh = Ssh(state)
+
+        Then<String>("^user can connect to node (\\w+) using SSH$") { name ->
+            withNetwork {
+                ssh.canConnectTo(name)
+            }
         }
     }
-
 }

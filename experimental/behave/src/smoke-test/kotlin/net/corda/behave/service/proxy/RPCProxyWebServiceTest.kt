@@ -24,10 +24,6 @@ import java.time.LocalDate
 
 class RPCProxyWebServiceTest {
 
-    init {
-        try { initialiseSerialization() } catch (e: Exception) {}
-    }
-
     /**
      *  client -> HTTPtoRPCProxy -> Corda Node
      */

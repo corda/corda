@@ -1,5 +1,7 @@
 package net.corda.behave.service.proxy
 
+import net.corda.behave.logging.getLogger
+import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
@@ -25,6 +27,12 @@ import java.security.PublicKey
 import java.time.Instant
 
 class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : CordaRPCOps {
+
+    init {
+        try {
+            KryoClientSerializationScheme.initialiseSerialization()
+        } catch (e: Exception) { getLogger<CordaRPCProxyClient>().warn("Kryo RPC Client serialization already initialised.")}
+    }
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.

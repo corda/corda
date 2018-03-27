@@ -1,5 +1,6 @@
 package net.corda.behave.service.proxy
 
+import net.corda.behave.logging.getLogger
 import net.corda.behave.service.Service
 import net.corda.behave.service.ServiceSettings
 import net.corda.behave.service.proxy.RPCProxyServer.Companion.initialiseSerialization
@@ -82,14 +83,17 @@ class RPCProxyServer(hostAndPort: NetworkHostAndPort,
 
     companion object {
         fun initialiseSerialization() {
-            nodeSerializationEnv =
-                    SerializationEnvironmentImpl(
-                            SerializationFactoryImpl().apply {
-                                registerScheme(KryoClientSerializationScheme())
-                                registerScheme(AMQPClientSerializationScheme(emptyList()))
-                            },
-                            AMQP_P2P_CONTEXT,
-                            rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)
+            try {
+                nodeSerializationEnv =
+                        SerializationEnvironmentImpl(
+                                SerializationFactoryImpl().apply {
+                                    registerScheme(KryoClientSerializationScheme())
+                                    registerScheme(AMQPClientSerializationScheme(emptyList()))
+                                },
+                                AMQP_P2P_CONTEXT,
+                                rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)
+            }
+            catch(e: Exception) {  getLogger<RPCProxyServer>().warn("Skipping initialiseSerialization: ${e.message}") }
         }
     }
 }

@@ -1,5 +1,7 @@
 package net.corda.behave.scenarios
 
+import net.corda.behave.scenarios.api.StepsBlock
+import net.corda.behave.scenarios.api.StepsProvider
 import org.junit.Test
 import org.reflections.Reflections
 import kotlin.test.assertEquals
@@ -15,11 +17,7 @@ class StepsProviderTests {
             foundProviders.add(it.simpleName)
             val instance = it.newInstance()
             val name = instance.name
-            val stepsDefinition = instance.stepsDefinition
             assert(it.simpleName.contains(name))
-            stepsDefinition {
-                // Blah
-            }
         }
 
         assertEquals(2, foundProviders.size)
@@ -32,9 +30,12 @@ class StepsProviderTests {
         override val name: String
             get() = "Foo"
 
-        override val stepsDefinition: (StepsBlock) -> Unit
-            get() = {}
-
+        override val stepsDefinition: StepsBlock
+            get() = DummyStepsBlock()
     }
 
+    class DummyStepsBlock : StepsBlock(ScenarioState()) {
+        override fun initialize() {
+        }
+    }
 }
