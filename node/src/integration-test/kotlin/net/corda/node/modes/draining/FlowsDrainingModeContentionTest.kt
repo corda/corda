@@ -25,6 +25,8 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.all
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
@@ -62,8 +64,8 @@ class FlowsDrainingModeContentionTest {
 
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = portAllocation, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
 
-            val nodeA = startNode(rpcUsers = users).getOrThrow()
-            val nodeB = startNode(rpcUsers = users).getOrThrow()
+            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
             defaultNotaryNode.getOrThrow()
 
             val nodeARpcInfo = RpcInfo(nodeA.rpcAddress, user.username, user.password)

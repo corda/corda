@@ -11,12 +11,8 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
 import net.corda.client.rpc.internal.drainAndShutdown
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.startFlow
@@ -73,9 +69,10 @@ class P2PFlowsDrainingModeTest : IntegrationTest() {
     @Test
     fun `flows draining mode suspends consumption of initial session messages`() {
 
-        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = portAllocation)) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = false, portAllocation = portAllocation)) {
+
             val initiatedNode = startNode(providedName = ALICE_NAME).getOrThrow()
-            val initiating = startNode(rpcUsers = users, providedName = BOB_NAME).getOrThrow().rpc
+            val initiating = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow().rpc
             val counterParty = initiatedNode.nodeInfo.singleIdentity()
             val initiated = initiatedNode.rpc
 
@@ -106,8 +103,8 @@ class P2PFlowsDrainingModeTest : IntegrationTest() {
 
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = portAllocation)) {
 
-            val nodeA = startNode(rpcUsers = users).getOrThrow()
-            val nodeB = startNode(rpcUsers = users).getOrThrow()
+            val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
+            val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
             var successful = false
             val latch = CountDownLatch(1)
             nodeB.rpc.setFlowsDrainingModeEnabled(true)
