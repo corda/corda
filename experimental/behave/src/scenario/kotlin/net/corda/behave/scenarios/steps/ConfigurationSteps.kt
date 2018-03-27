@@ -7,9 +7,9 @@ import net.corda.behave.scenarios.ScenarioState
 import net.corda.behave.scenarios.api.StepsBlock
 import net.corda.core.identity.CordaX500Name
 
-class ConfigurationSteps(state: ScenarioState) : StepsBlock(state) {
+class ConfigurationSteps : StepsBlock {
 
-    override fun initialize() {
+    override fun initialize(state: ScenarioState) {
         fun node(name: String) = state.nodeBuilder(name)
 
         Given<String, String>("^a node (\\w+) of version ([^ ]+)$") { name, version ->

@@ -12,19 +12,19 @@ class StepsContainer(val state: ScenarioState) {
     private val log = loggerFor<StepsContainer>()
 
     private val stepDefinitions: List<StepsBlock> = listOf(
-            CashStepsBlock(state),
-            ConfigurationSteps(state),
-            DatabaseSteps(state),
-            NetworkSteps(state),
-            RpcSteps(state),
-            SshSteps(state),
-            StartupSteps(state),
-            VaultSteps(state)
+            CashSteps(),
+            ConfigurationSteps(),
+            DatabaseSteps(),
+            NetworkSteps(),
+            RpcSteps(),
+            SshSteps(),
+            StartupSteps(),
+            VaultSteps()
     )
 
     init {
         log.info("Initialising common Steps Provider ...")
-        stepDefinitions.forEach { it.initialize() }
+        stepDefinitions.forEach { it.initialize(state) }
 
         log.info("Searching and registering custom Steps Providers ...")
         val reflections = Reflections("net.corda")
@@ -36,7 +36,7 @@ class StepsContainer(val state: ScenarioState) {
             val stepsDefinition = instance.stepsDefinition
             assert(it.simpleName.contains(name))
             println("Registering: $stepsDefinition")
-            stepsDefinition.initialize()
+            stepsDefinition.initialize(state)
         }
     }
 
@@ -44,5 +44,3 @@ class StepsContainer(val state: ScenarioState) {
         action(this)
     }
 }
-
-

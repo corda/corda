@@ -7,16 +7,16 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.utilities.sumByLong
 import net.corda.finance.contracts.asset.Cash
 
-class VaultSteps(state: ScenarioState) : StepsBlock(state) {
+class VaultSteps : StepsBlock {
 
-    override fun initialize() {
+    override fun initialize(state: ScenarioState) {
         val vault = Vault(state)
 
         Then<String, Int>("^node (\\w+) vault contains (\\d+) states$") { node, count ->
             if (vault.query(node, ContractState::class.java).size == count)
                 succeed()
             else
-                fail("Vault on node $node does not contain expected number of states: $count")
+                state.fail("Vault on node $node does not contain expected number of states: $count")
         }
 
         Then<String, Int, String>("^node (\\w+) vault contains (\\d+) (\\w+) states$") { node, count, contractType ->
@@ -25,9 +25,9 @@ class VaultSteps(state: ScenarioState) : StepsBlock(state) {
                 if (vault.query(node, contractStateTypeClass).size == count)
                     succeed()
                 else
-                    fail("Vault on node $node does not contain expected number of states: $count")
+                    state.fail("Vault on node $node does not contain expected number of states: $count")
             } catch (e: Exception) {
-                fail("Invalid contract state class type: ${e.message}")
+                state.fail("Invalid contract state class type: ${e.message}")
             }
         }
 
@@ -38,7 +38,7 @@ class VaultSteps(state: ScenarioState) : StepsBlock(state) {
             if (sumCashStates == total)
                 succeed()
             else
-                fail("Vault on node $node does not contain total cash of : $total")
+                state.fail("Vault on node $node does not contain total cash of : $total")
         }
     }
 }
