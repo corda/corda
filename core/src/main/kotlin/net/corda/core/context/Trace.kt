@@ -1,6 +1,6 @@
 package net.corda.core.context
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.Id
 import net.corda.core.utilities.UuidGenerator
 import java.time.Instant

@@ -1,7 +1,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import java.security.PublicKey
 
 object NullKeys {

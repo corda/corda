@@ -3,7 +3,7 @@ package net.corda.finance.schemas
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import org.hibernate.annotations.Type

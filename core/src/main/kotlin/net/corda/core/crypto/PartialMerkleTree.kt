@@ -2,7 +2,7 @@ package net.corda.core.crypto
 
 import net.corda.core.CordaException
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import java.util.*
 
 @CordaSerializable

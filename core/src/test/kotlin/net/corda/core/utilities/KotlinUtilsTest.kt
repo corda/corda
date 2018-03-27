@@ -73,12 +73,12 @@ class KotlinUtilsTest {
         }
     }
 
-    @CordaSerializable
+    @net.corda.annotations.serialization.CordaSerializable
     private class NonCapturingTransientProperty {
         val transientVal by transient { random63BitValue() }
     }
 
-    @CordaSerializable
+    @net.corda.annotations.serialization.CordaSerializable
     private class CapturingTransientProperty(val prefix: String, val seed: Long = random63BitValue()) {
         val transientVal by transient { prefix + seed + random63BitValue() }
     }

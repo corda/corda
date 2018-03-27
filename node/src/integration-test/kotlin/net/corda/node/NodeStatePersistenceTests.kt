@@ -32,6 +32,7 @@ import java.lang.management.ManagementFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
+
 class NodeStatePersistenceTests {
     @Test
     fun `persistent state survives node restart`() {

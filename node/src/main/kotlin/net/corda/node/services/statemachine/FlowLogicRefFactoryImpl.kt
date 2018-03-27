@@ -3,7 +3,7 @@ package net.corda.node.services.statemachine
 import net.corda.core.internal.VisibleForTesting
 import com.google.common.primitives.Primitives
 import net.corda.core.flows.*
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type

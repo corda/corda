@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.exactAdd
 import net.corda.core.utilities.sequence
 import org.bouncycastle.asn1.*
@@ -152,7 +152,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
         override fun compareTo(other: NodeAndWeight): Int {
             return if (weight == other.weight)
-                // TODO: this might be expensive, consider a faster deterministic compareTo implementation when weights are equal.
+            // TODO: this might be expensive, consider a faster deterministic compareTo implementation when weights are equal.
                 node.encoded.sequence().compareTo(other.node.encoded.sequence())
             else
                 weight.compareTo(other.weight)

@@ -14,7 +14,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TokenizableAssetInfo
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.asset.CommodityContract
 import java.math.BigDecimal

@@ -1,7 +1,7 @@
 package net.corda.core.utilities
 
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject

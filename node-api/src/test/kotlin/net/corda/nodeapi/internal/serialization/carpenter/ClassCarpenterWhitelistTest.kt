@@ -68,6 +68,22 @@ class ClassCarpenterWhitelistTest {
     }
 
     @Test
+    fun notWhitelistedButAnnotatedWithNewAnnotation() {
+        @net.corda.annotations.serialization.CordaSerializable data class A(val a: Int)
+
+        class WL : ClassWhitelist {
+            override fun hasListed(type: Class<*>) = false
+        }
+
+        val cc = ClassCarpenter(whitelist = WL())
+
+        // again, simply not throwing here is enough to show the test worked and the carpenter
+        // didn't reject the type even though it wasn't on the whitelist because it was
+        // annotated properly
+        cc.build(ClassSchema("thing", mapOf("a" to NonNullableField(A::class.java))))
+    }
+
+    @Test
     @Ignore("Currently the carpenter doesn't inspect it's whitelist so will carpent anything" +
             "it's asked relying on the serializer factory to not ask for anything")
     fun notWhitelistedButCarpented() {

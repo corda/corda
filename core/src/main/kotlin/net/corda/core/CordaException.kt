@@ -1,6 +1,6 @@
 package net.corda.core
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import java.util.*
 
 @CordaSerializable

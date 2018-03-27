@@ -5,7 +5,7 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString

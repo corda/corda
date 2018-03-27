@@ -16,7 +16,7 @@ class EnumTests {
         TSHIRT, UNDERWIRE, PUSHUP, BRALETTE, STRAPLESS, SPORTS, BACKLESS, PADDED
     }
 
-    @CordaSerializable
+    @net.corda.annotations.serialization.CordaSerializable
     enum class AnnotatedBras {
         TSHIRT, UNDERWIRE, PUSHUP, BRALETTE, STRAPLESS, SPORTS, BACKLESS, PADDED
     }
@@ -228,7 +228,7 @@ class EnumTests {
 
     @Test
     fun enumAnnotated() {
-        @CordaSerializable data class C(val c: AnnotatedBras)
+        @net.corda.annotations.serialization.CordaSerializable data class C(val c: AnnotatedBras)
 
         class WL : ClassWhitelist {
             override fun hasListed(type: Class<*>) = false

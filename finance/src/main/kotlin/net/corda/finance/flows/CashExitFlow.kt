@@ -9,7 +9,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker

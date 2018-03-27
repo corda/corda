@@ -22,7 +22,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.TwoPartyDealFlow

@@ -1,6 +1,6 @@
 package net.corda.finance.utils
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import java.util.*
 
 data class ScreenCoordinate(val screenX: Double, val screenY: Double)

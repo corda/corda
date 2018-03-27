@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 
 /**
  * SignatureMeta is required to add extra meta-data to a transaction's signature.

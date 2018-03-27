@@ -7,7 +7,7 @@ import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.NotaryChangeWireTransaction.Component.*
@@ -55,8 +55,8 @@ data class NotaryChangeWireTransaction(
         serializedComponents.map { component ->
             component.bytes.sha256()
         }.reduce { combinedHash, componentHash ->
-            combinedHash.hashConcat(componentHash)
-        }
+                    combinedHash.hashConcat(componentHash)
+                }
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */

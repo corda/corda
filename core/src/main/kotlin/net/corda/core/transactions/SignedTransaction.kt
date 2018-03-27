@@ -8,7 +8,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize

@@ -1,12 +1,11 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.CordaSerializable
 import org.junit.Test
 import kotlin.test.*
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 
-@CordaSerializable
+@net.corda.annotations.serialization.CordaSerializable
 interface I {
     fun getName(): String
 }
@@ -29,7 +28,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
     private val sf1 = testDefaultFactoryNoEvolution()
 
-    // Deserialize with whitelisting on to check that `CordaSerializable` annotation present.
+    // Deserialize with whitelisting on to check that `net.corda.annotations.serialization.CordaSerializable` annotation present.
     private val sf2 = testDefaultFactoryWithWhitelist()
 
     @Test
@@ -120,7 +119,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(),
                 mapOf("a" to NonNullableField(Int::class.java))))
 
-        @CordaSerializable
+        @net.corda.annotations.serialization.CordaSerializable
         data class Outer(val a: Array<Any>)
 
         val outer = Outer(arrayOf(
@@ -191,7 +190,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         val nestedClass = cc.build(ClassSchema("nestedType",
                 mapOf("name" to NonNullableField(String::class.java))))
 
-        @CordaSerializable
+        @net.corda.annotations.serialization.CordaSerializable
         data class outer(val a: Any, val b: Any)
 
         val classInstance = outer(
@@ -211,7 +210,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
                 "v1" to NonNullableField(Int::class.java),
                 "v2" to NonNullableField(Int::class.java))))
 
-        @CordaSerializable
+        @net.corda.annotations.serialization.CordaSerializable
         data class outer(val l: List<Any>)
 
         val toSerialise = outer(listOf(

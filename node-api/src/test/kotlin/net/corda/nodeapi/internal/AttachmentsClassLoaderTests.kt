@@ -207,7 +207,7 @@ class AttachmentsClassLoaderTests {
     }
 
     // top level wrapper
-    @CordaSerializable
+    @net.corda.annotations.serialization.CordaSerializable
     class Data(val contract: Contract)
 
     @Test

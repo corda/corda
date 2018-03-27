@@ -7,7 +7,7 @@ import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.Try
 import java.util.*
 import java.util.function.Predicate

@@ -17,7 +17,7 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
 import rx.Observable

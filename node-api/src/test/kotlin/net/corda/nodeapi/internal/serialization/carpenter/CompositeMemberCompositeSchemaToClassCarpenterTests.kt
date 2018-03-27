@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput

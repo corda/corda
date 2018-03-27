@@ -5,7 +5,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import java.time.Instant

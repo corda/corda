@@ -7,7 +7,7 @@ import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.security.cert.X509Certificate

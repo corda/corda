@@ -8,7 +8,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver

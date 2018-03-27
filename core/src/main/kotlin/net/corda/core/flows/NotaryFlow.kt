@@ -12,7 +12,7 @@ import net.corda.core.internal.generateSignature
 import net.corda.core.internal.validateSignatures
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction

@@ -9,7 +9,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.excludeHostNode
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData

@@ -2,7 +2,7 @@
 
 package net.corda.core.utilities
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
 import java.io.OutputStream
 import java.lang.Math.max

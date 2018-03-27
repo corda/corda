@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 
 /**
  * A [SignableData] object is the packet actually signed.

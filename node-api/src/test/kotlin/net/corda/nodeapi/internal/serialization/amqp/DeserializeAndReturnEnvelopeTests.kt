@@ -45,7 +45,7 @@ class DeserializeAndReturnEnvelopeTests {
 
     @Test
     fun unannotatedInterfaceIsNotInSchema() {
-        @CordaSerializable
+        @net.corda.annotations.serialization.CordaSerializable
         data class Foo(val bar: Int) : Comparable<Foo> {
             override fun compareTo(other: Foo): Int = bar.compareTo(other.bar)
         }

@@ -2,7 +2,7 @@ package net.corda.core.context
 
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import java.security.Principal
 
 /**

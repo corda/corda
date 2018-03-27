@@ -2,7 +2,7 @@ package net.corda.core.flows
 
 import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 
 /**
  * The public factory interface for creating validated [FlowLogicRef] instances as part of the scheduling framework.

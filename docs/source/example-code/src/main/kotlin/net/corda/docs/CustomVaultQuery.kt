@@ -6,7 +6,7 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*

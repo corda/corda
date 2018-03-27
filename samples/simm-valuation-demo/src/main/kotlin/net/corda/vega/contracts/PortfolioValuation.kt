@@ -2,7 +2,7 @@ package net.corda.vega.contracts
 
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount
 import com.opengamma.strata.market.param.CurrencyParameterSensitivities
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.vega.analytics.CordaMarketData
 import net.corda.vega.analytics.InitialMarginTriple
 import java.math.BigDecimal

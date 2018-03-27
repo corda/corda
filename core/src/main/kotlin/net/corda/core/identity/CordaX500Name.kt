@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableSet
 import net.corda.core.internal.LegalNameValidator
 import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.internal.x500Name
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue

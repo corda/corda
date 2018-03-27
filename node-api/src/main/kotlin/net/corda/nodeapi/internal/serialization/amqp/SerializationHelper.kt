@@ -129,8 +129,8 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
             classProperties.computeIfAbsent(property.name) {
                 PropertyDescriptor()
             }.apply {
-                this.field = property
-            }
+                        this.field = property
+                    }
         }
         clazz = clazz.superclass
     } while (clazz != null)
@@ -246,8 +246,8 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
             // with the case we don't know the case of A when the parameter doesn't match a property
             // but has a getter
             val matchingProperty = classProperties[name] ?: classProperties[name.capitalize()] ?:
-                    throw NotSerializableException(
-                            "Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
+            throw NotSerializableException(
+                    "Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
 
             // If the property has a getter we'll use that to retrieve it's value from the instance, if it doesn't
             // *for *know* we switch to a reflection based method
@@ -268,10 +268,10 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
                 Pair(PublicPropertyReader(getter), returnType)
             } else {
                 val field = classProperties[name]!!.field ?:
-                        throw NotSerializableException("No property matching constructor parameter named - \"$name\" - " +
-                                "of \"$clazz\". If using Java, check that you have the -parameters option specified " +
-                                "in the Java compiler. Alternately, provide a proxy serializer " +
-                                "(SerializationCustomSerializer) if recompiling isn't an option")
+                throw NotSerializableException("No property matching constructor parameter named - \"$name\" - " +
+                        "of \"$clazz\". If using Java, check that you have the -parameters option specified " +
+                        "in the Java compiler. Alternately, provide a proxy serializer " +
+                        "(SerializationCustomSerializer) if recompiling isn't an option")
 
                 Pair(PrivatePropertyReader(field, type), field.genericType)
             }
@@ -530,7 +530,7 @@ fun ClassWhitelist.isNotWhitelisted(clazz: Class<*>) = !(this.isWhitelisted(claz
 
 // Recursively check the class, interfaces and superclasses for our annotation.
 fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {
-    return type.isAnnotationPresent(CordaSerializable::class.java)
+         return hasSerializationAnnotation(type)
             || type.interfaces.any { hasAnnotationInHierarchy(it) }
             || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
 }
@@ -579,3 +579,6 @@ fun Class<*>.objectInstance() =
                 }
             }
         }
+
+private fun hasSerializationAnnotation(type: Class<*>) =
+        (type.isAnnotationPresent(CordaSerializable::class.java) || type.isAnnotationPresent(net.corda.annotations.serialization.CordaSerializable::class.java))

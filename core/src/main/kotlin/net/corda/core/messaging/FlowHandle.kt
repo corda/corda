@@ -3,7 +3,7 @@ package net.corda.core.messaging
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import rx.Observable
 
 /**

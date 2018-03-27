@@ -10,7 +10,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationToken
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializeAsTokenContext

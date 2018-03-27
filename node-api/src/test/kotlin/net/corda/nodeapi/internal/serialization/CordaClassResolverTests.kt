@@ -23,7 +23,7 @@ import java.sql.Connection
 import java.util.*
 import kotlin.test.*
 
-@CordaSerializable
+@net.corda.annotations.serialization.CordaSerializable
 enum class Foo {
     Bar {
         override val value = 0
@@ -43,7 +43,7 @@ enum class BadFood {
     abstract val value: Int
 }
 
-@CordaSerializable
+@net.corda.annotations.serialization.CordaSerializable
 enum class Simple {
     Easy
 }
@@ -52,7 +52,7 @@ enum class BadSimple {
     Nasty
 }
 
-@CordaSerializable
+@net.corda.annotations.serialization.CordaSerializable
 open class Element
 
 open class SubElement : Element()
@@ -63,7 +63,7 @@ abstract class AbstractClass
 
 interface Interface
 
-@CordaSerializable
+@net.corda.annotations.serialization.CordaSerializable
 interface SerializableInterface
 
 interface SerializableSubInterface : SerializableInterface
@@ -76,7 +76,7 @@ open class SerializableViaSubInterface : SerializableSubInterface
 
 class SerializableViaSuperSubInterface : SerializableViaSubInterface()
 
-@CordaSerializable
+@net.corda.annotations.serialization.CordaSerializable
 class CustomSerializable : KryoSerializable {
     override fun read(kryo: Kryo?, input: Input?) {
     }
@@ -85,7 +85,7 @@ class CustomSerializable : KryoSerializable {
     }
 }
 
-@CordaSerializable
+@net.corda.annotations.serialization.CordaSerializable
 @DefaultSerializer(DefaultSerializableSerializer::class)
 class DefaultSerializable
 
@@ -360,7 +360,7 @@ class CordaClassResolverTests {
         resolver.getRegistration(LinkedHashSet::class.java)
     }
 
-    @CordaSerializable
+    @net.corda.annotations.serialization.CordaSerializable
     class CordaSerializableHashSet<E> : HashSet<E>()
 
     @Test

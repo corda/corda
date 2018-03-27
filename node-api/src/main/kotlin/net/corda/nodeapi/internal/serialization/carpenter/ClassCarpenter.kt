@@ -142,6 +142,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
                 if (schema.flags.cordaSerializable()) {
                     visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
+                    visitAnnotation(Type.getDescriptor(net.corda.annotations.serialization.CordaSerializable::class.java), true).visitEnd()
                 }
 
                 generateFields(schema)
@@ -163,6 +164,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
                 if (schema.flags.cordaSerializable()) {
                     visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
+                    visitAnnotation(Type.getDescriptor(net.corda.annotations.serialization.CordaSerializable::class.java), true).visitEnd()
                 }
                 generateAbstractGetters(schema)
             }.visitEnd()
@@ -186,6 +188,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
                 if (schema.flags.cordaSerializable()) {
                     visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
+                    visitAnnotation(Type.getDescriptor(net.corda.annotations.serialization.CordaSerializable::class.java), true).visitEnd()
                 }
                 generateFields(schema)
                 generateClassConstructor(schema)
