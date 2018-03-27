@@ -2842,27 +2842,27 @@ public final class net.corda.core.schemas.CommonSchemaV1 extends net.corda.core.
 @javax.persistence.MappedSuperclass @net.corda.core.serialization.CordaSerializable public static class net.corda.core.schemas.CommonSchemaV1$FungibleState extends net.corda.core.schemas.PersistentState
   public <init>()
   public <init>(Set, net.corda.core.identity.AbstractParty, long, net.corda.core.identity.AbstractParty, byte[])
-  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.AbstractParty getIssuer()
-  @org.jetbrains.annotations.NotNull public final byte[] getIssuerRef()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.identity.AbstractParty getOwner()
+  @org.jetbrains.annotations.NotNull public net.corda.core.identity.AbstractParty getIssuer()
+  @org.jetbrains.annotations.NotNull public byte[] getIssuerRef()
+  @org.jetbrains.annotations.NotNull public net.corda.core.identity.AbstractParty getOwner()
   @org.jetbrains.annotations.Nullable public Set getParticipants()
-  public final long getQuantity()
-  public final void setIssuer(net.corda.core.identity.AbstractParty)
-  public final void setIssuerRef(byte[])
-  public final void setOwner(net.corda.core.identity.AbstractParty)
+  public long getQuantity()
+  public void setIssuer(net.corda.core.identity.AbstractParty)
+  public void setIssuerRef(byte[])
+  public void setOwner(net.corda.core.identity.AbstractParty)
   public void setParticipants(Set)
-  public final void setQuantity(long)
+  public void setQuantity(long)
 ##
 @javax.persistence.MappedSuperclass @net.corda.core.serialization.CordaSerializable public static class net.corda.core.schemas.CommonSchemaV1$LinearState extends net.corda.core.schemas.PersistentState
   public <init>()
   public <init>(Set, String, UUID)
   public <init>(net.corda.core.contracts.UniqueIdentifier, Set)
-  @org.jetbrains.annotations.Nullable public final String getExternalId()
+  @org.jetbrains.annotations.Nullable public String getExternalId()
   @org.jetbrains.annotations.Nullable public Set getParticipants()
-  @org.jetbrains.annotations.NotNull public final UUID getUuid()
-  public final void setExternalId(String)
+  @org.jetbrains.annotations.NotNull public UUID getUuid()
+  public void setExternalId(String)
   public void setParticipants(Set)
-  public final void setUuid(UUID)
+  public void setUuid(UUID)
 ##
 public class net.corda.core.schemas.MappedSchema extends java.lang.Object
   public <init>(Class, int, Iterable)
@@ -2874,10 +2874,10 @@ public class net.corda.core.schemas.MappedSchema extends java.lang.Object
 @javax.persistence.MappedSuperclass @net.corda.core.serialization.CordaSerializable public class net.corda.core.schemas.PersistentState extends java.lang.Object implements net.corda.core.schemas.StatePersistable
   public <init>()
   public <init>(net.corda.core.schemas.PersistentStateRef)
-  @org.jetbrains.annotations.Nullable public final net.corda.core.schemas.PersistentStateRef getStateRef()
-  public final void setStateRef(net.corda.core.schemas.PersistentStateRef)
+  @org.jetbrains.annotations.Nullable public net.corda.core.schemas.PersistentStateRef getStateRef()
+  public void setStateRef(net.corda.core.schemas.PersistentStateRef)
 ##
-@javax.persistence.Embeddable public final class net.corda.core.schemas.PersistentStateRef extends java.lang.Object implements java.io.Serializable
+@javax.persistence.Embeddable public class net.corda.core.schemas.PersistentStateRef extends java.lang.Object implements java.io.Serializable
   public <init>()
   public <init>(String, Integer)
   public <init>(net.corda.core.contracts.StateRef)
@@ -2885,18 +2885,18 @@ public class net.corda.core.schemas.MappedSchema extends java.lang.Object
   @org.jetbrains.annotations.Nullable public final Integer component2()
   @org.jetbrains.annotations.NotNull public final net.corda.core.schemas.PersistentStateRef copy(String, Integer)
   public boolean equals(Object)
-  @org.jetbrains.annotations.Nullable public final Integer getIndex()
-  @org.jetbrains.annotations.Nullable public final String getTxId()
+  @org.jetbrains.annotations.Nullable public Integer getIndex()
+  @org.jetbrains.annotations.Nullable public String getTxId()
   public int hashCode()
-  public final void setIndex(Integer)
-  public final void setTxId(String)
+  public void setIndex(Integer)
+  public void setTxId(String)
   public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.schemas.QueryableState extends net.corda.core.contracts.ContractState
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.schemas.PersistentState generateMappedObject(net.corda.core.schemas.MappedSchema)
   @org.jetbrains.annotations.NotNull public abstract Iterable supportedSchemas()
 ##
-public interface net.corda.core.schemas.StatePersistable
+public interface net.corda.core.schemas.StatePersistable extends java.io.Serializable
 ##
 public interface net.corda.core.serialization.ClassWhitelist
   public abstract boolean hasListed(Class)
