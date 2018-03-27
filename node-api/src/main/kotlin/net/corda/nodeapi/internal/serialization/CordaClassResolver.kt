@@ -126,11 +126,9 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
         return (type.classLoader !is AttachmentsClassLoader)
                 && !KryoSerializable::class.java.isAssignableFrom(type)
                 && !type.isAnnotationPresent(DefaultSerializer::class.java)
-                && (hasSerializationAnnotation(type) || whitelist.hasAnnotationInHierarchy(type))
+                && ((type.isAnnotationPresent(CordaSerializable::class.java) || type.isAnnotationPresent(net.corda.annotations.serialization.CordaSerializable::class.java))
+                || whitelist.hasAnnotationInHierarchy(type))
     }
-
-    private fun hasSerializationAnnotation(type: Class<*>) =
-            (type.isAnnotationPresent(CordaSerializable::class.java) || type.isAnnotationPresent(net.corda.annotations.serialization.CordaSerializable::class.java))
 
     // Need to clear out class names from attachments.
     override fun reset() {

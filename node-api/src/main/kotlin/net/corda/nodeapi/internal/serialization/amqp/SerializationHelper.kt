@@ -530,7 +530,7 @@ fun ClassWhitelist.isNotWhitelisted(clazz: Class<*>) = !(this.isWhitelisted(claz
 
 // Recursively check the class, interfaces and superclasses for our annotation.
 fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {
-         return hasSerializationAnnotation(type)
+         return (type.isAnnotationPresent(CordaSerializable::class.java) || type.isAnnotationPresent(net.corda.annotations.serialization.CordaSerializable::class.java))
             || type.interfaces.any { hasAnnotationInHierarchy(it) }
             || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
 }
@@ -580,5 +580,3 @@ fun Class<*>.objectInstance() =
             }
         }
 
-private fun hasSerializationAnnotation(type: Class<*>) =
-        (type.isAnnotationPresent(CordaSerializable::class.java) || type.isAnnotationPresent(net.corda.annotations.serialization.CordaSerializable::class.java))
