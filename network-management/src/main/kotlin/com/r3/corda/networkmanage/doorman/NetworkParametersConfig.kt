@@ -35,7 +35,12 @@ data class NotaryConfig(private val notaryNodeInfoFile: Path,
     }
 }
 
-data class ParametersUpdateConfig(val description: String, val updateDeadline: Instant)
+data class ParametersUpdateConfig(val description: String, val updateDeadline: Instant) {
+    init {
+        val now = Instant.now()
+        require(updateDeadline == now || updateDeadline.isAfter(now)) { "The updateDeadline time must be in the future." }
+    }
+}
 
 /**
  * Data class containing the fields from [NetworkParameters] which can be read at start-up time from doorman.
