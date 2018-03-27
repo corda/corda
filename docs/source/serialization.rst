@@ -455,7 +455,7 @@ preserve the immutability of immutable objects rather than force mutability on p
   with the following workarounds provided for those who use them. In future, this may change, but for now use the following
   examples as a guide.
 
-For example, consider the following
+For example, consider the following:
 
 .. sourcecode:: kotlin
 
@@ -469,7 +469,7 @@ For example, consider the following
 The call to ``newC.l.add`` will throw an ``UnsupportedOperationException``.
 
 There are several workarounds that can be used to preserve mutability on reconstituted objects. Firstly, if the class
-isn't a Kotlin data class and thus isn't restricted by having to have a primary constructor
+isn't a Kotlin data class and thus isn't restricted by having to have a primary constructor.
 
 .. sourcecode:: kotlin
 
@@ -488,7 +488,7 @@ isn't a Kotlin data class and thus isn't restricted by having to have a primary 
     // This time this call will succeed
     newC.l.add("d")
 
-Secondly, if the class is a Kotlin data class, a secondary constructor can be used
+Secondly, if the class is a Kotlin data class, a secondary constructor can be used.
 
 .. sourcecode:: kotlin
 
