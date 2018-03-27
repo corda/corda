@@ -5,6 +5,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import org.hibernate.annotations.Type
+import java.io.Serializable
 import java.time.Instant
 import java.util.*
 import javax.persistence.*
@@ -54,5 +55,5 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
 
             @Column(name = "linear_boolean")
             var linearBoolean: Boolean
-    ) : PersistentState()
+    ) : PersistentState(), Serializable
 }

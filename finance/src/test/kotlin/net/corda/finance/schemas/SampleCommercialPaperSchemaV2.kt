@@ -7,6 +7,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
+import java.io.Serializable
 import java.time.Instant
 import javax.persistence.*
 
@@ -54,5 +55,5 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
             val _issuerParty: AbstractParty,
             @Transient
             val _issuerRef: OpaqueBytes
-    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef.bytes)
+    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef.bytes), Serializable
 }

@@ -4,6 +4,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.OpaqueBytes
+import java.io.Serializable
 import javax.persistence.*
 
 /**
@@ -39,5 +40,5 @@ object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             val _issuerParty: AbstractParty,
             @Transient
             val _issuerRef: OpaqueBytes
-    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef.bytes)
+    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef.bytes), Serializable
 }

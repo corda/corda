@@ -46,6 +46,7 @@ import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
+import java.io.Serializable
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -189,7 +190,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
 
             @Column(name = "insertion_time")
             var insertionTime: Instant = Instant.now()
-    )
+    ) : Serializable
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_retry")
@@ -204,7 +205,7 @@ class P2PMessagingClient(private val config: NodeConfiguration,
             @Lob
             @Column
             var recipients: ByteArray = EMPTY_BYTE_ARRAY
-    )
+    ) : Serializable
 
     fun start() {
         state.locked {

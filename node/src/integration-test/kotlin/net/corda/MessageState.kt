@@ -8,6 +8,7 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
+import java.io.Serializable
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Table
@@ -45,7 +46,7 @@ object MessageSchemaV1 : MappedSchema(
 
             @Column(name = "value")
             var value: String
-    ) : PersistentState()
+    ) : PersistentState(), Serializable
 }
 
 const val MESSAGE_CONTRACT_PROGRAM_ID = "net.corda.MessageContract"
