@@ -1,13 +1,18 @@
 package net.corda.behave.scenarios.steps
 
-import net.corda.behave.scenarios.StepsBlock
+import net.corda.behave.scenarios.ScenarioState
+import net.corda.behave.scenarios.api.StepsBlock
+import net.corda.behave.scenarios.helpers.Database
 
-fun databaseSteps(steps: StepsBlock) = steps {
+class DatabaseSteps(state: ScenarioState) : StepsBlock(state) {
 
-    Then<String>("^user can connect to the database of node (\\w+)$") { name ->
-        withNetwork {
-            database.canConnectTo(name)
+    override fun initialize() {
+        val database = Database(state)
+
+        Then<String>("^user can connect to the database of node (\\w+)$") { name ->
+            withNetwork {
+                database.canConnectTo(name)
+            }
         }
     }
-
 }

@@ -2,7 +2,6 @@ package net.corda.vega.scenarios.test
 
 import com.opengamma.strata.product.common.BuySell
 import net.corda.behave.service.proxy.CordaRPCProxyClient
-import net.corda.client.rpc.internal.KryoClientSerializationScheme.Companion.initialiseSerialization
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
@@ -17,10 +16,6 @@ import java.time.LocalDate
 //class RPCProxyWebServiceTest : BaseRPCProxyWebServiceTest {
 // Base interface executes a basic subset of public RPC API calls.
 class SIMMValuationRPCProxyWebServiceTest {
-
-    init {
-        try { initialiseSerialization() } catch (e: Exception) {}
-    }
 
     /**
      *  These tests assume you have a running Corda Network fronted with an HTTPtoRPCProxy (for Kryo -> AMQP bridging)

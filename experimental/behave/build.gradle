@@ -210,11 +210,18 @@ jar {
 task apiJar(type: Jar, dependsOn: classes) {
     baseName "behave-scenario-api"
     from sourceSets.scenario.output
+    from {
+        configurations.scenarioCompile.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
     from project(':client:rpc').configurations.compile.collect { zipTree it }
     with jar
     include 'net/corda/behave/**'
     include 'net/corda/client/rpc/**'
     include 'net/corda/core/**'
+    include 'cucumber/**'
+    include 'org/reflections/**'
     include 'org/apache/commons/io/**'
     exclude '**/features/**'
     exclude '**/scripts/**'
