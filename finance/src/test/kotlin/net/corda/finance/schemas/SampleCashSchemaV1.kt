@@ -5,7 +5,6 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import org.hibernate.annotations.Type
-import java.io.Serializable
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Index
@@ -41,5 +40,5 @@ object SampleCashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
             @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray
-    ) : PersistentState(), Serializable
+    ) : PersistentState()
 }

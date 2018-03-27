@@ -4,7 +4,6 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
-import java.io.Serializable
 import javax.persistence.*
 
 /**
@@ -31,5 +30,5 @@ object DummyDealStateSchemaV1 : MappedSchema(schemaFamily = DummyDealStateSchema
             @Transient
             val uid: UniqueIdentifier
 
-    ) : CommonSchemaV1.LinearState(uuid = uid.id, externalId = uid.externalId, participants = participants), Serializable
+    ) : CommonSchemaV1.LinearState(uuid = uid.id, externalId = uid.externalId, participants = participants)
 }

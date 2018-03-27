@@ -131,7 +131,7 @@ class SchemaFamily
 object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::class.java, Child::class.java)) {
     @Entity
     @Table(name = "Parents")
-    class Parent : PersistentState(), Serializable {
+    class Parent : PersistentState() {
         @OneToMany(fetch = FetchType.LAZY)
         @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
         @OrderColumn

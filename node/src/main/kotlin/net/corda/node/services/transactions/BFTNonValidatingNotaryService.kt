@@ -21,7 +21,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import java.io.Serializable
 import java.security.PublicKey
 import javax.persistence.Entity
 import javax.persistence.Table
@@ -97,7 +96,7 @@ class BFTNonValidatingNotaryService(
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}bft_committed_states")
-    class CommittedState(id: PersistentStateRef, consumingTxHash: String) : PersistentUniquenessProvider.BaseComittedState(id, consumingTxHash), Serializable
+    class CommittedState(id: PersistentStateRef, consumingTxHash: String) : PersistentUniquenessProvider.BaseComittedState(id, consumingTxHash)
 
     private fun createMap(): AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef> {
         return AppendOnlyPersistentMap(

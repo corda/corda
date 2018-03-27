@@ -63,7 +63,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             /** refers to the last time a lock was taken (reserved) or updated (released, re-reserved) */
             @Column(name = "lock_timestamp", nullable = true)
             var lockUpdateTime: Instant? = null
-    ) : PersistentState(), Serializable
+    ) : PersistentState()
 
     @Entity
     @Table(name = "vault_linear_states",
@@ -93,7 +93,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @Column(name = "uuid", nullable = false)
             @Type(type = "uuid-char")
             var uuid: UUID
-    ) : PersistentState(), Serializable {
+    ) : PersistentState() {
         constructor(uid: UniqueIdentifier, _participants: List<AbstractParty>) :
                 this(externalId = uid.externalId,
                         uuid = uid.id,
@@ -140,7 +140,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
             @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray
-    ) : PersistentState(), Serializable {
+    ) : PersistentState() {
         constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
                 this(owner = _owner,
                         quantity = _quantity,

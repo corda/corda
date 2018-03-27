@@ -3,7 +3,6 @@ package net.corda.core.schemas
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import org.hibernate.annotations.Type
-import java.io.Serializable
 import java.util.*
 import javax.persistence.Column
 import javax.persistence.MappedSuperclass
@@ -37,7 +36,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             @Type(type = "uuid-char")
             var uuid: UUID
 
-    ) : PersistentState(), Serializable {
+    ) : PersistentState() {
         constructor(uid: UniqueIdentifier, _participants: Set<AbstractParty>)
                 : this(participants = _participants.toMutableSet(),
                 externalId = uid.externalId,
@@ -77,5 +76,5 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
             @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray
-    ) : PersistentState(), Serializable
+    ) : PersistentState()
 }

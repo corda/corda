@@ -5,7 +5,6 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import org.hibernate.annotations.Type
-import java.io.Serializable
 import java.time.Instant
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -53,5 +52,5 @@ object SampleCommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPap
             @Column(name = "face_value_issuer_ref", length = MAX_ISSUER_REF_SIZE)
             @Type(type = "corda-wrapper-binary")
             var faceValueIssuerRef: ByteArray
-    ) : PersistentState(), Serializable
+    ) : PersistentState()
 }

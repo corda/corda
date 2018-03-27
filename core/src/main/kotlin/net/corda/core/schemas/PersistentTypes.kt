@@ -50,7 +50,7 @@ open class MappedSchema(schemaFamily: Class<*>,
  * [StateRef] will be set to the correct value by the framework (there's no need to set during mapping generation by the state itself).
  */
 @MappedSuperclass
-@CordaSerializable open class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : StatePersistable, Serializable
+@CordaSerializable open class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : StatePersistable
 
 /**
  * Embedded [StateRef] representation used in state mapping.
@@ -69,4 +69,4 @@ data class PersistentStateRef(
 /**
  * Marker interface to denote a persistable Corda state entity that will always have a transaction id and index
  */
-interface StatePersistable
+interface StatePersistable : Serializable
