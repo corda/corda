@@ -6,6 +6,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.nhaarman.mockito_kotlin.*
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
@@ -23,7 +24,7 @@ import java.sql.Connection
 import java.util.*
 import kotlin.test.*
 
-@net.corda.annotations.serialization.CordaSerializable
+@CordaSerializable
 enum class Foo {
     Bar {
         override val value = 0
@@ -43,7 +44,7 @@ enum class BadFood {
     abstract val value: Int
 }
 
-@net.corda.annotations.serialization.CordaSerializable
+@CordaSerializable
 enum class Simple {
     Easy
 }
@@ -52,7 +53,7 @@ enum class BadSimple {
     Nasty
 }
 
-@net.corda.annotations.serialization.CordaSerializable
+@CordaSerializable
 open class Element
 
 open class SubElement : Element()
@@ -63,7 +64,7 @@ abstract class AbstractClass
 
 interface Interface
 
-@net.corda.annotations.serialization.CordaSerializable
+@CordaSerializable
 interface SerializableInterface
 
 interface SerializableSubInterface : SerializableInterface
@@ -76,7 +77,7 @@ open class SerializableViaSubInterface : SerializableSubInterface
 
 class SerializableViaSuperSubInterface : SerializableViaSubInterface()
 
-@net.corda.annotations.serialization.CordaSerializable
+@CordaSerializable
 class CustomSerializable : KryoSerializable {
     override fun read(kryo: Kryo?, input: Input?) {
     }
@@ -85,7 +86,7 @@ class CustomSerializable : KryoSerializable {
     }
 }
 
-@net.corda.annotations.serialization.CordaSerializable
+@CordaSerializable
 @DefaultSerializer(DefaultSerializableSerializer::class)
 class DefaultSerializable
 
@@ -360,7 +361,7 @@ class CordaClassResolverTests {
         resolver.getRegistration(LinkedHashSet::class.java)
     }
 
-    @net.corda.annotations.serialization.CordaSerializable
+    @CordaSerializable
     class CordaSerializableHashSet<E> : HashSet<E>()
 
     @Test

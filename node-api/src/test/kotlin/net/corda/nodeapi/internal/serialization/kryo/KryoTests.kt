@@ -21,8 +21,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
 import org.assertj.core.api.Assertions.*
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,7 +32,10 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
 import java.util.*
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @RunWith(Parameterized::class)
 class KryoTests(private val compression: CordaSerializationEncoding?) {
@@ -329,7 +331,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         doReturn(false).whenever(context.encodingWhitelist).acceptEncoding(compression)
         val compressed = "whatever".serialize(factory, context)
         catchThrowable { compressed.deserialize(factory, context) }.run {
-            assertSame<Any>(KryoException::class.java, javaClass)
+            assertSame(KryoException::class.java, javaClass)
             assertEquals(encodingNotPermittedFormat.format(compression), message)
         }
     }

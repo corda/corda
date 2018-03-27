@@ -1,11 +1,12 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.annotations.serialization.CordaSerializable
 import org.junit.Test
 import kotlin.test.*
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 
-@net.corda.annotations.serialization.CordaSerializable
+@CordaSerializable
 interface I {
     fun getName(): String
 }
@@ -119,7 +120,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(),
                 mapOf("a" to NonNullableField(Int::class.java))))
 
-        @net.corda.annotations.serialization.CordaSerializable
+        @CordaSerializable
         data class Outer(val a: Array<Any>)
 
         val outer = Outer(arrayOf(
@@ -190,7 +191,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         val nestedClass = cc.build(ClassSchema("nestedType",
                 mapOf("name" to NonNullableField(String::class.java))))
 
-        @net.corda.annotations.serialization.CordaSerializable
+        @CordaSerializable
         data class outer(val a: Any, val b: Any)
 
         val classInstance = outer(
@@ -210,7 +211,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
                 "v1" to NonNullableField(Int::class.java),
                 "v2" to NonNullableField(Int::class.java))))
 
-        @net.corda.annotations.serialization.CordaSerializable
+        @CordaSerializable
         data class outer(val l: List<Any>)
 
         val toSerialise = outer(listOf(

@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
@@ -207,7 +208,7 @@ class AttachmentsClassLoaderTests {
     }
 
     // top level wrapper
-    @net.corda.annotations.serialization.CordaSerializable
+    @CordaSerializable
     class Data(val contract: Contract)
 
     @Test

@@ -1,8 +1,8 @@
 package net.corda.core.utilities
 
 import com.esotericsoftware.kryo.KryoException
+import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.serialization.KRYO_CHECKPOINT_CONTEXT
@@ -73,12 +73,12 @@ class KotlinUtilsTest {
         }
     }
 
-    @net.corda.annotations.serialization.CordaSerializable
+    @CordaSerializable
     private class NonCapturingTransientProperty {
         val transientVal by transient { random63BitValue() }
     }
 
-    @net.corda.annotations.serialization.CordaSerializable
+    @CordaSerializable
     private class CapturingTransientProperty(val prefix: String, val seed: Long = random63BitValue()) {
         val transientVal by transient { prefix + seed + random63BitValue() }
     }
