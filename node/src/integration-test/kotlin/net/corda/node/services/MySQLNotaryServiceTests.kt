@@ -51,6 +51,7 @@ import kotlin.test.assertFailsWith
 class MySQLNotaryServiceTests : IntegrationTest() {
     companion object {
         val notaryName = CordaX500Name("MySQL Notary Service", "Zurich", "CH")
+        val notaryNodeName = CordaX500Name("Notary Replica 1", "Zurich", "CH")
         @ClassRule
         @JvmField
         val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2")
@@ -64,11 +65,10 @@ class MySQLNotaryServiceTests : IntegrationTest() {
     @Before
     fun before() {
         mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
-        notaryParty = DevIdentityGenerator.installKeyStoreWithNodeIdentity(mockNet.baseDirectory(mockNet.nextNodeId), notaryName)
+        notaryParty = DevIdentityGenerator.generateDistributedNotarySingularIdentity(listOf(mockNet.baseDirectory(mockNet.nextNodeId)), notaryName)
         val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryParty, false))))
         val notaryNodeUnstarted = createNotaryNode()
         val nodeUnstarted = mockNet.createUnstartedNode()
-
         val startedNodes = listOf(notaryNodeUnstarted, nodeUnstarted).map { n ->
             networkParameters.install(mockNet.baseDirectory(n.id))
             n.start()
@@ -144,7 +144,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
         }
         return mockNet.createUnstartedNode(
                 InternalMockNodeParameters(
-                        legalName = notaryName,
+                        legalName = notaryNodeName,
                         entropyRoot = BigInteger.valueOf(60L),
                         configOverrides = {
                             val notaryConfig = NotaryConfig(validating = false, mysql = MySQLConfiguration(dataStoreProperties))

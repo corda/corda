@@ -112,7 +112,7 @@ data class NotaryConfig(val validating: Boolean,
             "raft, bftSMaRt, custom, and mysql configs cannot be specified together"
         }
     }
-    val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null
+    val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null || mysql != null
 }
 
 data class MySQLConfiguration(

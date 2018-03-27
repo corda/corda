@@ -39,7 +39,7 @@ configurations {
 
 task buildRegistrationTool(type: FatCapsule, dependsOn: 'jar') {
     group = "build"
-    applicationClass 'com.r3.corda.networkmanage.registration.RegistrationToolKt'
+    applicationClass 'com.r3.corda.networkmanage.registration.MainKt'
     archiveName "registration-tool-${version}.jar"
     capsuleManifest {
         applicationVersion = corda_release_version

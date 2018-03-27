@@ -22,6 +22,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.parseAs
 import java.net.URL
 import java.nio.file.Path
+import java.nio.file.Paths
 
 fun RegistrationOption.runRegistration() {
     val config = ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(false))
@@ -31,7 +32,9 @@ fun RegistrationOption.runRegistration() {
     val sslConfig = object : SSLConfiguration {
         override val keyStorePassword: String  by lazy { config.keyStorePassword ?: readPassword("Node Keystore password:") }
         override val trustStorePassword: String by lazy { config.trustStorePassword ?: readPassword("Node TrustStore password:") }
-        override val certificatesDirectory: Path = configFile.parent / "certificates"
+        val parent = configFile.parent
+        override val certificatesDirectory: Path = if (parent != null) parent / "certificates"
+                                                   else Paths.get("certificates")
     }
 
     NetworkRegistrationHelper(sslConfig,
