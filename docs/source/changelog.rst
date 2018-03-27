@@ -15,6 +15,9 @@ Version 3.1
   released in gradle plugins version 3.0.10. For more information on the api scanner see
   the `documentation <https://github.com/corda/corda-gradle-plugins/tree/master/api-scanner>`_.
 
+* Fixed security vulnerability when using the ``HashAttachmentConstraint``. Added strict check that the contract JARs
+  referenced in a transaction were deployed on the node.
+
 .. _changelog_v3:
 
 Version 3.0
