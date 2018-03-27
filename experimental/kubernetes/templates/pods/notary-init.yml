@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: notary
+  labels:
+    app: notary
+spec:
+  imagePullSecrets:
+  - name: regsecret 
+  containers:
+  - name: notary
+    image: {{ image }}
+    imagePullPolicy: Always
+    volumeMounts:
+      - mountPath: /data
+        name: pv
+      - mountPath: /truststore
+        name: truststore
+        readOnly: true
+    ports:
+      - containerPort: 1300
+    env:
+      - name: "NAMESPACE"
+        value: "{{ namespace }}"
+    command:
+      - '/app/init.sh'
+  volumes:
+    - name: pv
+      persistentVolumeClaim:
+        claimName: notary
+    - name: truststore
+      secret:
+        secretName: truststore-3.0.0

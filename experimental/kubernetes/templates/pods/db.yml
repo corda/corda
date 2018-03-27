@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db
+  labels:
+    app: db
+spec:
+  containers:
+  - name: db
+    image: postgres
+    ports:
+      - containerPort: 5432

@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: notary
+spec:
+  selector:
+    app: notary
+  ports:
+  - protocol: TCP
+    port: 10001
+    targetPort: 10001
+    name: p2p
+  - protocol: TCP
+    port: 10002
+    targetPort: 10002
+    name: rpc

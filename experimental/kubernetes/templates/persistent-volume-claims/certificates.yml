@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: certificates
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ storage_class }}
+  resources:
+    requests:
+      storage: 200Mi

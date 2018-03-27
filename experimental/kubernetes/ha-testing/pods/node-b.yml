@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hanode-b
+  labels:
+    app: hanode
+spec:
+  imagePullSecrets:
+  - name: regsecret
+  containers:
+  - name: hanode
+    image: ctesting.azurecr.io/r3/hanode:b3f29942d1
+    imagePullPolicy: Always
+    env:
+    - name: "COMPATIBILITY_ZONE_URL"
+      value: "http://doorman:1300"
+    volumeMounts:
+    - mountPath: /app/artemis
+      name: artemis
+    - mountPath: /app/cordapps
+      name: cordapps
+    - mountPath: /app/certificates
+      name: certificates
+    - mountPath: /truststore
+      name: truststore
+      readOnly: true
+    ports:
+      - containerPort: 10002
+      - containerPort: 10003
+  volumes:
+  - name: artemis
+    persistentVolumeClaim:
+      claimName: artemis
+  - name: cordapps
+    persistentVolumeClaim:
+      claimName: cordapps
+  - name: certificates
+    persistentVolumeClaim:
+      claimName: certificates
+  - name: truststore
+    secret:
+      secretName: truststore-3.0.0

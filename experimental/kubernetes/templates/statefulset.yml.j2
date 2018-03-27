@@ -1,0 +1,54 @@
+apiVersion: "apps/v1beta1"
+kind: StatefulSet
+metadata:
+  name: {{ version }}
+spec:
+  serviceName: {{ version }}
+  replicas: 0
+  template:
+    metadata:
+      labels:
+        version: {{ version }}
+    spec:
+      imagePullSecrets:
+        - name: regsecret
+      containers:
+        - name: corda
+          image: {{ image }}
+          imagePullPolicy: Always
+          ports:
+            - name: p2p
+              containerPort: 10002
+            - name: rpc
+              containerPort: 10003
+            - name: admin
+              containerPort: 10004
+          env:
+            - name: "P2P_ADDRESS"
+              value: "$HOSTNAME.{{ version }}.{{ namespace }}.svc.cluster.local:10002"
+            - name: "RPC_ADDRESS"
+              value: "$HOSTNAME.{{ version }}.{{ namespace }}.svc.cluster.local:10003"
+            - name: "ADMIN_ADDRESS"
+              value: "$HOSTNAME.{{ version }}.{{ namespace }}.svc.cluster.local:10004"
+            - name: "CONFIG_FILE"
+              value: "/config/node.conf"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: truststore
+              mountPath: /truststore
+              readOnly: true
+            - name: cordapps
+              mountPath: /app/cordapps
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: corda
+        - name: truststore
+          secret:
+            secretName: truststore-3.0.0
+        - name: cordapps
+          persistentVolumeClaim:
+            claimName: cordapps

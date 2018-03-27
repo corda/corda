@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: distribute-cordapps
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+        - name: regsecret
+      containers:
+      - name: distribute-healthcheck-cordapp
+        image: {{ image }}
+        command: ["/bin/sh", "-c", "rm -f cordapps-mnt/* && cp /cordapps/* /cordapps-mnt/"]
+        volumeMounts:
+        - name: cordapps
+          mountPath: /cordapps-mnt
+      restartPolicy: Never
+      volumes:
+      - name: cordapps
+        persistentVolumeClaim:
+          claimName: cordapps
+  backoffLimit: 4

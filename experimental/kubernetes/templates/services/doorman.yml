@@ -1,0 +1,11 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: doorman
+spec:
+  selector:
+    app: doorman
+  ports:
+  - protocol: TCP
+    port: 1300
+    targetPort: 1300

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: zk
+  labels:
+    app: zk
+spec:
+  containers:
+  - name: zk
+    image: zookeeper:3.5
+    ports:
+      - containerPort: 2181
+      - containerPort: 2888
+      - containerPort: 3888

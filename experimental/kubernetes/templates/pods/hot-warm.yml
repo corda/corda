@@ -1,0 +1,62 @@
+apiVersion: "apps/v1beta1"
+kind: Deployment
+metadata:
+  name: {{ name }}
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: {{ name }}
+  template:
+    metadata:
+      labels:
+        app: {{ name }}
+    spec:
+      imagePullSecrets:
+      - name: regsecret
+      containers:
+      - name: node
+        image: {{ image }}
+        imagePullPolicy: Always
+        env:
+        - name: "CONFIG_FILE"
+          value: "/config/hot-warm.conf"
+        - name: "COMPATIBILITY_ZONE_URL"
+          value: "http://doorman:1300"
+        volumeMounts:
+        - mountPath: /config
+          name: config
+          readOnly: true
+        - mountPath: /app/artemis
+          name: artemis
+        - mountPath: /app/cordapps
+          name: cordapps
+        - mountPath: /app/certificates
+          name: certificates
+        - mountPath: /truststore
+          name: truststore
+          readOnly: true
+        ports:
+        - containerPort: 10002
+        - containerPort: 10003
+        readinessProbe:
+          tcpSocket:
+            port: 10002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: corda
+      - name: artemis
+        persistentVolumeClaim:
+          claimName: artemis
+      - name: cordapps
+        persistentVolumeClaim:
+          claimName: cordapps
+      - name: certificates
+        persistentVolumeClaim:
+          claimName: certificates
+      - name: truststore
+        secret:
+          secretName: truststore-3.0.0
