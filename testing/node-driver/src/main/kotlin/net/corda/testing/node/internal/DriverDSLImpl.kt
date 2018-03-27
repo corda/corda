@@ -77,6 +77,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.collections.ArrayList
 import kotlin.concurrent.thread
 import net.corda.nodeapi.internal.config.User as InternalUser
 
@@ -112,8 +113,14 @@ class DriverDSLImpl(
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
+
+    interface Waitable {
+        @Throws(InterruptedException::class)
+        fun waitFor(): Int
+    }
+
     class State {
-        val processes = ArrayList<Process>()
+        val processes = ArrayList<Waitable>()
     }
 
     private val state = ThreadBox(State())
@@ -670,20 +677,33 @@ class DriverDSLImpl(
                         }
                     }
             )
-            return nodeAndThreadFuture.flatMap { (node, thread) ->
+            val nodeFuture: CordaFuture<NodeHandle> = nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     allNodesConnected(rpc).map {
                         InProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit, node)
                     }
                 }
             }
+            state.locked {
+                processes += object : Waitable {
+                    override fun waitFor(): Int {
+                        nodeAndThreadFuture.toCompletableFuture().join().second.join()
+                        return 1;
+                    }
+                }
+            }
+            return nodeFuture
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
             if (waitForAllNodesToFinish) {
                 state.locked {
-                    processes += process
+                    processes += object : Waitable {
+                        override fun waitFor(): Int {
+                            return process.waitFor()
+                        }
+                    }
                 }
             } else {
                 shutdownManager.registerProcessShutdown(process)
@@ -781,8 +801,8 @@ class DriverDSLImpl(
                 }
                 node to nodeThread
             }.flatMap { nodeAndThread ->
-                addressMustBeBoundFuture(executorService, config.corda.p2pAddress).map { nodeAndThread }
-            }
+                        addressMustBeBoundFuture(executorService, config.corda.p2pAddress).map { nodeAndThread }
+                    }
         }
 
         private fun startOutOfProcessNode(
@@ -890,8 +910,8 @@ class DriverDSLImpl(
             val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
             if (index == -1) return emptyList()
-            val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?:
-                    throw IllegalStateException("Function instantiating driver must be defined in a package.")
+            val callerPackage = Class.forName(stackTrace[index + 1].className).`package`
+                    ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
             return listOf(callerPackage.name)
         }
 

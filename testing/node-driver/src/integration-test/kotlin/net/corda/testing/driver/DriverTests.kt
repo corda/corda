@@ -22,9 +22,9 @@ import net.corda.testing.http.HttpApi
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
+import org.junit.Assert
 import org.junit.Test
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.*
 import kotlin.streams.toList
 
 class DriverTests {
@@ -152,6 +152,33 @@ class DriverTests {
 
             assertThatCode { newNode(DUMMY_BANK_A_NAME)().getOrThrow() }.doesNotThrowAnyException()
         }
+    }
+
+
+    @Test
+    fun `driver waits for nodes to finish`() {
+        val nodeQueue = LinkedBlockingDeque<Pair<NodeHandle, List<NotaryHandle>>>(1)
+        val driverThread = Thread(Runnable {
+            driver(DriverParameters(startNodesInProcess = true, waitForAllNodesToFinish = true)) {
+                val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
+                notaryHandles.forEach { it.nodeHandles.toCompletableFuture().get() }
+                nodeQueue.put(Pair(nodeA, notaryHandles))
+            }
+        })
+        driverThread.start();
+        val (node, notaries) = nodeQueue.take()
+        Assert.assertTrue(driverThread.isAlive)
+        node.stop()
+        notaries.forEach {
+            it.nodeHandles.toCompletableFuture().get().forEach {
+                try {
+                    it.stop()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+        driverThread.join()
     }
 
     private fun DriverDSL.newNode(name: CordaX500Name) = { startNode(NodeParameters(providedName = name)) }
