@@ -10,6 +10,7 @@
 
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.internal.packageName
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.SerializedBytes
@@ -19,6 +20,8 @@ import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 // NOTE: To recreate the test files used by these tests uncomment the original test classes and comment
 //       the new ones out, then change each test to write out the serialized bytes rather than read
@@ -356,6 +359,9 @@ class EnumEvolveTests {
                 Pair("$resource.5.G", MultiOperations.C))
 
         fun load(l: List<Pair<String, MultiOperations>>) = l.map {
+            assertNotNull (EvolvabilityTests::class.java.getResource(it.first))
+            assertTrue (File(EvolvabilityTests::class.java.getResource(it.first).toURI()).exists())
+
             Pair(DeserializationInput(sf).deserialize(SerializedBytes<C>(
                     File(EvolvabilityTests::class.java.getResource(it.first).toURI()).readBytes())), it.second)
         }

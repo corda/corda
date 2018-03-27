@@ -192,7 +192,7 @@ interface SerializationContext {
     /**
      * The use case that we are serializing for, since it influences the implementations chosen.
      */
-    enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint }
+    enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint, Testing }
 }
 
 /**
