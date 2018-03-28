@@ -14,7 +14,7 @@ Feature: Compatibility - Node configuration
 
   Examples:
       | Corda-Node-Version-X |
-      | corda-3.0-RC01       |
+      | corda-3.0       |
 
   Scenario Outline: R3 Corda node can transact with another R3 Corda node where node configuration is changed on one of the R3 Corda nodes
     Given a node A of version <Corda-Node-Version-X>
@@ -27,7 +27,7 @@ Feature: Compatibility - Node configuration
 
     Examples:
       | Corda-Node-Version-X |
-      | r3corda-3.0-DP2      |
+      | r3corda-3.0-DP3-RC01      |
 
   Scenario Outline: R3 Corda node can transact with another Corda (OS) node where where node configuration is changed on both of the R3 Corda nodes
     Given a node A of version <Corda-Node-Version-X>
@@ -41,4 +41,4 @@ Feature: Compatibility - Node configuration
 
     Examples:
       | Corda-Node-Version-X | Corda-Node-Version-Y |
-      | r3corda-3.0-DP2      | corda-3.0            |
+      | r3corda-3.0-DP3-RC01      | corda-3.0            |

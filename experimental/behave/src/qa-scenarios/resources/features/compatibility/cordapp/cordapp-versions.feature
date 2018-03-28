@@ -13,4 +13,4 @@ Feature: Compatibility - CorDapp versions
 
   Examples:
       | Corda-Node-Version-X | Cordapp-Version-X | Cordapp-Version-Y |
-      | corda-3.0-RC01       | finance-V1        | finance-V2        |
+      | corda-3.0       | finance-V1        | finance-V2        |

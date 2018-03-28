@@ -1,5 +1,5 @@
-@compatibility @node @cordapps
-Feature: Compatibility - Mixed Corda distributions (OS and Enterprise) running different CorDapps
+@qa compatibility @node @cordapps
+Feature: Compatibility - Corda distributions (OS and Enterprise) running different CorDapps
   To support an interoperable Corda network, different CorDapps must have the ability to transact in mixed Corda (OS) and R3 Corda (Enterprise) networks.
 
   Scenario Outline: Run the SIMM valuation demo in a Corda OS Network.
