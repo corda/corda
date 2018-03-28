@@ -8,7 +8,7 @@ Feature: Compatibility - Node versions
 
     Examples:
       | Corda-Node-Version    |
-      | corda-3.0-RC03        |
+      | corda-3.0        |
 
   Scenario Outline: Startup a Corda (OS) Node from Artifactory
     Given a node PartyA of version <Corda-Node-Version>
@@ -17,7 +17,7 @@ Feature: Compatibility - Node versions
 
     Examples:
       | Corda-Node-Version    |
-      | corda-3.0-RC01        |
+      | corda-3.0        |
 
   Scenario Outline: Startup an R3 Corda Node from Artifactory
     Given a node PartyA of version <Corda-Node-Version>
@@ -25,7 +25,7 @@ Feature: Compatibility - Node versions
 
     Examples:
       | Corda-Node-Version    |
-      | r3corda-3.0-DP2       |
+      | r3corda-3.0-DP3-RC01       |
 
   Scenario Outline: Startup a Corda (OS) Node and print its node information
     Given a node PartyA of version <Corda-Node-Version>
@@ -35,7 +35,7 @@ Feature: Compatibility - Node versions
 
     Examples:
       | Corda-Node-Version    |
-      | corda-3.0-HC02        |
+      | corda-3.0        |
 
   Scenario Outline: Startup a Corda (OS) Node with several Cordapps deployed.
     Given a node PartyA of version <Corda-Node-Version>
@@ -47,7 +47,7 @@ Feature: Compatibility - Node versions
 
     Examples:
       | Corda-Node-Version    |
-      | corda-3.0-HC02        |
+      | corda-3.0        |
 
   Scenario Outline: Startup a Corda (OS) Node and issue some currency
     Given a node PartyA of version <Corda-Node-Version>
@@ -57,7 +57,7 @@ Feature: Compatibility - Node versions
 
     Examples:
       | Corda-Node-Version    | Currency |
-      | corda-3.0-HC02        | GBP      |
+      | corda-3.0        | GBP      |
 
   Scenario Outline: R3 Corda (Enterprise) Node can transact with Corda (OS) node, in a Corda OS configured network
     Given a node PartyA of version <Corda-Node-Version>
@@ -71,7 +71,7 @@ Feature: Compatibility - Node versions
 
     Examples:
       | Corda-Node-Version    | R3-Corda-Node-Version | Currency |
-      | corda-3.0-RC01        | r3-master             | GBP      |
+      | corda-3.0        | r3-master             | GBP      |
 
   Scenario Outline: Corda (OS) Node can transact with R3 Corda (Enterprise) node, in an R3 Corda configured network.
     Given a node PartyA of version <R3-Corda-Node-Version>
@@ -85,4 +85,4 @@ Feature: Compatibility - Node versions
 
     Examples:
       | Corda-Node-Version | R3-Corda-Node-Version   | Currency |
-      | corda-3.0-RC02     | r3-master               | GBP      |
+      | corda-3.0     | r3-master               | GBP      |

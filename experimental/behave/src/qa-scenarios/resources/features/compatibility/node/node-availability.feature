@@ -16,4 +16,4 @@ Feature: Compatibility - Node high availability and operational continuity
 
   Examples:
       | Corda-Node-Version-X |
-      | r3corda-3.0-DP2      |
+      | r3corda-3.0-DP3-RC01      |

@@ -14,5 +14,5 @@ Feature: Compatibility - Mixed Corda distributions (OS and Enterprise) running d
 
     Examples:
       | Corda-Node-Version    | R3-Corda-Node-Version   | Currency |
-      | corda-3.0-RC01        | r3corda-3.0-DP2         | GBP      |
+      | corda-3.0        | r3corda-3.0-DP3-RC01         | GBP      |
 
