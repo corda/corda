@@ -2,6 +2,7 @@ package com.r3.corda.networkmanage.common.persistence.entity
 
 import net.corda.core.crypto.SecureHash
 import net.corda.nodeapi.internal.network.ParametersUpdate
+import java.io.Serializable
 import java.time.Instant
 import javax.persistence.*
 
@@ -26,7 +27,7 @@ data class ParametersUpdateEntity(
         @Column(name = "status", length = 16, nullable = false, columnDefinition = "NVARCHAR(16)")
         @Enumerated(EnumType.STRING)
         val status: UpdateStatus = UpdateStatus.NEW
-) {
+) : Serializable {
     fun toParametersUpdate(): ParametersUpdate {
         return ParametersUpdate(SecureHash.parse(networkParameters.hash), description, updateDeadline)
     }

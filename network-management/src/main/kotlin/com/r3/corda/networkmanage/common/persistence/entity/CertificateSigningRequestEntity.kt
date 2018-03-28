@@ -19,6 +19,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.hibernate.envers.Audited
+import java.io.Serializable
 import java.math.BigInteger
 import java.security.cert.CertPath
 import java.time.Instant
@@ -69,7 +70,7 @@ data class CertificateSigningRequestEntity(
         @ManyToOne
         @JoinColumn(name = "private_network", foreignKey = ForeignKey(name = "FK__CSR__PN"))
         val privateNetwork: PrivateNetworkEntity? = null
-) {
+) : Serializable {
     fun toCertificateSigningRequest(): CertificateSigningRequest {
         return CertificateSigningRequest(
                 requestId = requestId,
@@ -108,7 +109,7 @@ data class CertificateDataEntity(
 
         @Column(name = "cert_serial_number", unique = true, nullable = false, columnDefinition = "NUMERIC(28)")
         val certificateSerialNumber: BigInteger
-) {
+) : Serializable {
     fun toCertificateData(): CertificateData = CertificateData(certificateStatus, certPath)
 
     val legalName: CordaX500Name get() {
@@ -125,4 +126,4 @@ data class PrivateNetworkEntity(
 
         @Column(name = "name", length = 255, nullable = false)
         val networkName: String
-)
+) : Serializable

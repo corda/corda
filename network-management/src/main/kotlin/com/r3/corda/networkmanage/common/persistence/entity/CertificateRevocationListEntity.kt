@@ -1,6 +1,7 @@
 package com.r3.corda.networkmanage.common.persistence.entity
 
 import com.r3.corda.networkmanage.common.persistence.CrlIssuer
+import java.io.Serializable
 import java.security.cert.X509CRL
 import java.time.Instant
 import javax.persistence.*
@@ -26,4 +27,4 @@ class CertificateRevocationListEntity(
 
         @Column(name = "modified_at", nullable = false)
         val modifiedAt: Instant = Instant.now()
-)
+) : Serializable

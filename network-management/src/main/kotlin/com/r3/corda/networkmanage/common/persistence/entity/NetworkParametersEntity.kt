@@ -14,6 +14,7 @@ import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import java.io.Serializable
 import java.security.cert.X509Certificate
 import java.time.Instant
 import javax.persistence.*
@@ -43,12 +44,13 @@ class NetworkParametersEntity(
         @Column(name = "cert")
         @Convert(converter = X509CertificateConverter::class)
         val certificate: X509Certificate?
-) {
+) : Serializable {
     val isSigned: Boolean get() = certificate != null && signature != null
 
     fun toSignedNetworkParameters(): SignedNetworkParameters {
-        if (certificate == null || signature == null) throw IllegalStateException("Network parameters entity is not signed: $hash")
-        return SignedNetworkParameters(networkParameters.serialize(), DigitalSignatureWithCert(certificate, signature))
+        val cert = certificate ?: throw IllegalStateException("Network parameters entity is not signed: $hash")
+        val sign = signature ?: throw IllegalStateException("Network parameters entity is not signed: $hash")
+        return SignedNetworkParameters(networkParameters.serialize(), DigitalSignatureWithCert(cert, sign))
     }
 
     fun copy(parametersHash: String = this.hash,

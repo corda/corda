@@ -30,6 +30,7 @@ import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.Ignore
 import org.junit.Test
+import java.io.Serializable
 import javax.persistence.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -154,7 +155,7 @@ object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::clas
     @Suppress("unused")
     @Entity
     @Table(name = "children")
-    class Child {
+    class Child : Serializable {
         @Id
         @GeneratedValue
         @Column(name = "child_id", unique = true, nullable = false)

@@ -11,6 +11,7 @@
 package com.r3.corda.networkmanage.common.persistence.entity
 
 import net.corda.nodeapi.internal.SignedNodeInfo
+import java.io.Serializable
 import java.time.Instant
 import javax.persistence.*
 
@@ -40,7 +41,7 @@ data class NodeInfoEntity(
         @Column(name = "published_at", nullable = false)
         val publishedAt: Instant = Instant.now(),
 
-        @ManyToOne(fetch = FetchType.LAZY)
+        @ManyToOne(fetch = FetchType.EAGER)
         @JoinColumn(name = "accepted_params_update")
         val acceptedParametersUpdate: ParametersUpdateEntity?
-)
+) : Serializable
