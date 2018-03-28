@@ -7,7 +7,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -28,8 +27,11 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.*
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.VerifierType
 import net.corda.node.services.config.shell.shellUser
+import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -284,7 +286,7 @@ open class Node(configuration: NodeConfiguration,
             runOnStop += this::close
             when (rpcOps) {
                 // not sure what this RPCOps base interface is for
-                is CordaRPCOps -> start(RpcExceptionHandlingProxy(rpcOps), securityManager)
+                is SecureCordaRPCOps -> start(RpcExceptionHandlingProxy(rpcOps), securityManager)
                 else -> start(rpcOps, securityManager)
             }
         }

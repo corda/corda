@@ -1,12 +1,11 @@
 package net.corda.nodeapi.exceptions
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.core.CordaRuntimeException
 
 /**
  * An [Exception] to signal RPC clients that something went wrong within a Corda node.
  */
-@CordaSerializable
-class InternalNodeException(message: String) : Exception(message) {
+class InternalNodeException(message: String) : CordaClientException(message) {
 
     companion object {
 
@@ -14,11 +13,19 @@ class InternalNodeException(message: String) : Exception(message) {
 
         fun defaultMessage(): String = DEFAULT_MESSAGE
 
-        fun wrap(cause: Throwable): InternalNodeException {
+        fun wrap(wrapped: Throwable): Throwable {
 
-            return when (cause) {
-                is WithClientRelevantMessage -> InternalNodeException(cause.messageForClient)
-                else -> InternalNodeException(DEFAULT_MESSAGE)
+            return when {
+                wrapped is CordaRuntimeException && wrapped is WithClientRelevantMessage -> {
+                    wrapped.setCause(null)
+                    wrapped
+                }
+                else -> {
+                    when (wrapped) {
+                        is WithClientRelevantMessage -> InternalNodeException(wrapped.message ?: DEFAULT_MESSAGE)
+                        else -> InternalNodeException(DEFAULT_MESSAGE)
+                    }
+                }
             }
         }
     }

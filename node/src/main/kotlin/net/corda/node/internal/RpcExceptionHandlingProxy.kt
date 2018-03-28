@@ -22,11 +22,13 @@ import net.corda.nodeapi.exceptions.adapters.FlowProgressHandleErrorMappingAdapt
 import java.io.InputStream
 import java.security.PublicKey
 
-class RpcExceptionHandlingProxy(private val delegate: CordaRPCOps) : CordaRPCOps {
+class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : CordaRPCOps {
 
     private companion object {
         private val logger = loggerFor<RpcExceptionHandlingProxy>()
     }
+
+    override val protocolVersion: Int get() = delegate.protocolVersion
 
     override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> = wrap {
 

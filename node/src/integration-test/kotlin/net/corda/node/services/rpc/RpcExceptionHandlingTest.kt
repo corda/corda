@@ -1,6 +1,7 @@
 package net.corda.node.services.rpc
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.ClientRelevantException
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
@@ -48,9 +49,8 @@ class RpcExceptionHandlingTest {
 
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
             val clientRelevantMessage = "This is for the players!"
-            val internalMessage = "This is NOT for the players!"
 
-            assertThatCode { node.rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage, internalMessage).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+            assertThatCode { node.rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
@@ -111,13 +111,11 @@ class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit
 }
 
 @StartableByRPC
-class ClientRelevantErrorFlow(private val clientRelevantMessage: String, private val message: String) : FlowLogic<String>() {
+class ClientRelevantErrorFlow(private val message: String) : FlowLogic<String>() {
 
     @Suspendable
     override fun call(): String {
 
-        throw ClientRelevantException(clientRelevantMessage, message, SQLException("Oops!"))
+        throw ClientRelevantException(message, SQLException("Oops!"))
     }
 }
-
-class ClientRelevantException(override val messageForClient: String, message: String?, cause: Throwable?) : Exception(message, cause), WithClientRelevantMessage
