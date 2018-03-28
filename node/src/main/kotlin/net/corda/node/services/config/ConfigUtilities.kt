@@ -10,7 +10,6 @@ import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.crypto.save
@@ -43,7 +42,7 @@ object ConfigHelper {
         val entrySet = finalConfig.entrySet().filter { entry -> entry.key.contains("\"") }
         for (mutableEntry in entrySet) {
             val key = mutableEntry.key
-                log.error("Config files should not contain \" in property names. Please fix: ${key}")
+            log.error("Config files should not contain \" in property names. Please fix: ${key}")
         }
 
         return finalConfig

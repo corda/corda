@@ -22,6 +22,8 @@ Format
 The Corda configuration file uses the HOCON format which is superset of JSON. Please visit
 `<https://github.com/typesafehub/config/blob/master/HOCON.md>`_ for further details.
 
+Please do NOT use double quotes in configuration keys.
+
 Defaults
 --------
 A set of default configuration options are loaded from the built-in resource file ``/node/src/main/resources/reference.conf``.
