@@ -13,9 +13,11 @@ package com.r3.corda.networkmanage.doorman
 import com.jcabi.manifests.Manifests
 import com.r3.corda.networkmanage.common.utils.*
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
+import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.slf4j.LoggerFactory
+import java.nio.file.NoSuchFileException
 import java.time.Instant
 import kotlin.system.exitProcess
 
@@ -51,7 +53,10 @@ data class NetworkManagementServerStatus(var serverStartTime: Instant = Instant.
 
 private fun processKeyStore(config: NetworkManagementServerConfig): Pair<CertPathAndKey, LocalSigner>? {
     if (config.keystorePath == null) return null
-
+    if (!config.keystorePath.exists()) {
+        println("Could not find keystore: ${config.keystorePath}. You need to create it first or point to the correct location. Please consult the documentation.")
+        exitProcess(0)
+    }
     // Get password from console if not in config.
     val keyStorePassword = config.keystorePassword ?: readPassword("Key store password: ")
     val privateKeyPassword = config.caPrivateKeyPassword ?: readPassword("Private key password: ")

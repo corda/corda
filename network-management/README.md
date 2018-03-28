@@ -193,7 +193,7 @@ networkMap {
    By default it will expect trust store file received from the doorman to be in the location ``certificates/network-root-truststore.jks``.
    This can be overridden with the additional `--network-root-truststore` flag.
    
-   NOTE: This step applies to all nodes that wish to register with the doorman.
+   NOTE: This step applies to all nodes that wish to register with the doorman. You will have to configure ``compatibiityZoneURL`` and set ``devMode`` to false on each node.
 
 ### 4. Generate node info files for notary nodes
    Once notary nodes are registered, run the notary nodes with the `just-generate-node-info` flag.
