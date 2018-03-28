@@ -14,6 +14,7 @@ import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkMap
+import java.io.Serializable
 import java.security.cert.X509Certificate
 import javax.persistence.*
 
@@ -41,7 +42,7 @@ class NetworkMapEntity(
         @ManyToOne(optional = false, fetch = FetchType.EAGER)
         @JoinColumn(name = "network_parameters", nullable = false)
         val networkParameters: NetworkParametersEntity
-) {
+) : Serializable {
     fun toSignedNetworkMap(): SignedNetworkMap {
         return SignedNetworkMap(networkMap.serialize(), DigitalSignatureWithCert(certificate, signature))
     }

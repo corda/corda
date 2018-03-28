@@ -16,6 +16,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.hibernate.Session
+import java.io.Serializable
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.temporal.ChronoField
@@ -57,7 +58,7 @@ class RunOnceService(private val database: CordaPersistence, private val machine
 
     @Entity
     @Table(name = TABLE)
-    class MutualExclusion(machineNameInit: String, pidInit: String, timeStampInit: LocalDateTime, versionInit: Long = 0) {
+    class MutualExclusion(machineNameInit: String, pidInit: String, timeStampInit: LocalDateTime, versionInit: Long = 0) : Serializable {
         @Column(name = ID, insertable = false, updatable = false)
         @Id
         val id: Char = 'X'

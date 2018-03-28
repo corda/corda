@@ -155,7 +155,7 @@ object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::clas
     @Suppress("unused")
     @Entity
     @Table(name = "children")
-    class Child {
+    class Child : Serializable {
         @Id
         @GeneratedValue
         @Column(name = "child_id", unique = true, nullable = false)

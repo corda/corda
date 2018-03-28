@@ -3,6 +3,7 @@ package com.r3.corda.networkmanage.common.persistence.entity
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import net.corda.core.identity.CordaX500Name
 import org.hibernate.envers.Audited
+import java.io.Serializable
 import java.math.BigInteger
 import java.security.cert.CRLReason
 import java.time.Instant
@@ -57,4 +58,4 @@ data class CertificateRevocationRequestEntity(
         @Audited
         @Column(name = "remark", length = 256)
         val remark: String? = null
-)
+) : Serializable
