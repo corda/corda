@@ -11,6 +11,7 @@
 package net.corda.finance.contracts.asset.cash.selection
 
 import net.corda.core.contracts.Amount
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
@@ -38,7 +39,8 @@ class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retryS
     override fun toString() = "${this::class.java} for $JDBC_DRIVER_NAME"
 
     override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
-                              onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean {
+                              onlyFromIssuerParties: Set<AbstractParty>,
+                              withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean {
 
         val selectJoin = """
             WITH row(transaction_id, output_index, pennies, total, lock_id) AS
@@ -52,10 +54,20 @@ class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retryS
                 AND (vs.lock_id = ? OR vs.lock_id is null)"""+
                 (if (notary != null)
                     " AND vs.notary_name = ?" else "") +
-                (if (onlyFromIssuerParties.isNotEmpty())
-                    " AND ccs.issuer_key_hash IN (?)" else "") +
-                (if (withIssuerRefs.isNotEmpty())
-                    " AND ccs.issuer_ref IN (?)" else "") +
+                // mssql-server driver does not implement setArray(), so in the following way
+                // we explicitly unpack the parameters list
+                (if (onlyFromIssuerParties.isNotEmpty()) {
+                    val repeats = generateSequence { "?" }
+                            .take(onlyFromIssuerParties.size)
+                            .joinToString (",")
+                    " AND ccs.issuer_key_hash IN ($repeats)"
+                    } else { "" }) +
+                (if (withIssuerRefs.isNotEmpty()) {
+                    val repeats = generateSequence { "?" }
+                            .take(withIssuerRefs.size)
+                            .joinToString (",")
+                    " AND ccs.issuer_ref IN ($repeats)"
+                } else { "" }) +
                 """)
             SELECT row.transaction_id, row.output_index, row.pennies, row.total, row.lock_id
             FROM row where row.total <= ? + row.pennies"""
@@ -67,10 +79,12 @@ class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retryS
             statement.setString(++pIndex, lockId.toString())
             if (notary != null)
                 statement.setString(++pIndex, notary.name.toString())
-            if (onlyFromIssuerParties.isNotEmpty())
-                statement.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toBase58String() as Any }.toTypedArray())
-            if (withIssuerRefs.isNotEmpty())
-                statement.setObject(++pIndex, withIssuerRefs.map { it.bytes as Any }.toTypedArray())
+            onlyFromIssuerParties.map { it.owningKey.toStringShort() }.forEach {
+                statement.setObject(++pIndex, it)
+            }
+            withIssuerRefs.map { it.bytes }.forEach {
+                statement.setBytes(++pIndex, it)
+            }
             statement.setLong(++pIndex, amount.quantity)
             log.debug(selectJoin)
 
