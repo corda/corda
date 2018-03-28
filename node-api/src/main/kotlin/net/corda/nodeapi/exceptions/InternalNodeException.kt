@@ -6,7 +6,7 @@ import net.corda.core.serialization.CordaSerializable
  * An [Exception] to signal RPC clients that something went wrong within a Corda node.
  */
 @CordaSerializable
-class InternalNodeException private constructor(message: String) : Exception(message) {
+class InternalNodeException(message: String) : Exception(message) {
 
     companion object {
 

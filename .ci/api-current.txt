@@ -4390,7 +4390,7 @@ public static final class net.corda.client.rpc.CordaRPCClientConfiguration$Compa
   public int getServerProtocolVersion()
   public void notifyServerAndClose()
 ##
-public final class net.corda.client.rpc.PermissionException extends net.corda.core.CordaRuntimeException
+public final class net.corda.client.rpc.PermissionException extends net.corda.core.CordaRuntimeException implements net.corda.nodeapi.exceptions.WithClientRelevantMessage
   public <init>(String)
 ##
 @net.corda.core.DoNotImplement public interface net.corda.client.rpc.RPCConnection extends java.io.Closeable

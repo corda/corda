@@ -55,9 +55,19 @@ fun <SNAPSHOT, ELEMENT> DataFeed<SNAPSHOT, ELEMENT>.mapErrors(transform: (Throwa
 }
 
 /**
+ * Returns a [DataFeed] that processes errors according to the provided [action].
+ */
+fun <SNAPSHOT, ELEMENT> DataFeed<SNAPSHOT, ELEMENT>.doOnError(action: (Throwable) -> Unit): DataFeed<SNAPSHOT, ELEMENT> {
+
+    return copy(updates = updates.doOnError(action))
+}
+
+/**
  * Returns an [Observable] that transforms errors according to the provided [transform] function.
  */
 fun <ELEMENT> Observable<ELEMENT>.mapErrors(transform: (Throwable) -> Throwable): Observable<ELEMENT> {
 
-    return onErrorResumeNext { error -> Observable.error(transform(error)) }
+    return onErrorResumeNext { error ->
+        Observable.error(transform(error))
+    }
 }

@@ -3,6 +3,7 @@ package net.corda.node.internal
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.doOnError
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -31,9 +32,7 @@ class RpcExceptionHandlingProxy(private val delegate: CordaRPCOps) : CordaRPCOps
 
         val handle = delegate.startFlowDynamic(logicType, *args)
         val result = FlowHandleErrorMappingAdapter(handle)
-        result.returnValue.doOnError { error ->
-            logger.error(error.message, error)
-        }
+        result.returnValue.doOnError { error -> logger.error(error.message, error) }
         result
     }
 
@@ -41,18 +40,7 @@ class RpcExceptionHandlingProxy(private val delegate: CordaRPCOps) : CordaRPCOps
 
         val handle = delegate.startTrackedFlowDynamic(logicType, *args)
         val result = FlowProgressHandleErrorMappingAdapter(handle)
-        result.returnValue.doOnError { error ->
-            logger.error(error.message, error)
-        }
-        result.progress.subscribe({}) { error ->
-            logger.error(error.message, error)
-        }
-        result.stepsTreeFeed?.updates?.subscribe({}) { error ->
-            logger.error(error.message, error)
-        }
-        result.stepsTreeIndexFeed?.updates?.subscribe({}) { error ->
-            logger.error(error.message, error)
-        }
+        result.returnValue.doOnError { error -> logger.error(error.message, error) }
         result
     }
 
@@ -152,11 +140,7 @@ class RpcExceptionHandlingProxy(private val delegate: CordaRPCOps) : CordaRPCOps
 
     private fun <SNAPSHOT, ELEMENT> wrapFeed(call: () -> DataFeed<SNAPSHOT, ELEMENT>) = wrap {
 
-        val feed = call.invoke().mapErrors(InternalNodeException.Companion::wrap)
-        feed.updates.subscribe({}) { error ->
-            logger.error(error.message, error)
-        }
-        feed
+        call.invoke().doOnError { error -> logger.error(error.message, error) }.mapErrors(InternalNodeException.Companion::wrap)
     }
 
     private fun <RESULT> wrapFuture(call: () -> CordaFuture<RESULT>): CordaFuture<RESULT> = wrap { call.invoke().mapError(InternalNodeException.Companion::wrap).doOnError { error -> logger.error(error.message, error) } }

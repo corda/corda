@@ -10,7 +10,7 @@ import net.corda.nodeapi.exceptions.InternalNodeException
  * Adapter able to mask errors within a Corda node for RPC clients.
  */
 @CordaSerializable
-data class FlowProgressHandleErrorMappingAdapter<RESULT>(private val wrapped: FlowProgressHandle<RESULT>) : FlowProgressHandle<RESULT> by wrapped {
+class FlowProgressHandleErrorMappingAdapter<RESULT>(val wrapped: FlowProgressHandle<RESULT>) : FlowProgressHandle<RESULT> by wrapped {
 
     override val returnValue = wrapped.returnValue.mapError(InternalNodeException.Companion::wrap)
 

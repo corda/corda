@@ -7,6 +7,8 @@ Unreleased
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
+* Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
+
 * Serializing an inner class (non-static nested class in Java, inner class in Kotlin) will be rejected explicitly by the serialization
   framework. Prior to this change it didn't work, but the error thrown was opaque (complaining about too few arguments
   to a constructor). Whilst this was possible in the older Kryo implementation (Kryo passing null as the synthesised
