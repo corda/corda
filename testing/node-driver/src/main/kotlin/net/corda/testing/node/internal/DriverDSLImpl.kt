@@ -256,7 +256,8 @@ class DriverDSLImpl(
                 configOverrides = configOf(
                         "p2pAddress" to "localhost:1222", // required argument, not really used
                         "compatibilityZoneURL" to compatibilityZoneURL.toString(),
-                        "myLegalName" to providedName.toString())
+                        "myLegalName" to providedName.toString(),
+                        "devMode" to false)
         ))
 
         config.corda.certificatesDirectory.createDirectories()
