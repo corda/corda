@@ -21,6 +21,7 @@ import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Stream
+import java.io.Serializable
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
@@ -42,7 +43,7 @@ class DBCheckpointStorage : CheckpointStorage {
             @Lob
             @Column(name = "checkpoint_value")
             var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
-    )
+    ) : Serializable
 
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
         currentDBSession().saveOrUpdate(DBCheckpoint().apply {

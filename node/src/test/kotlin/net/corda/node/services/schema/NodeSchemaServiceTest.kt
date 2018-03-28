@@ -30,6 +30,7 @@ import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.Ignore
 import org.junit.Test
+import java.io.Serializable
 import javax.persistence.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

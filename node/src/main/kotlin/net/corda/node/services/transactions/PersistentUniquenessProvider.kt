@@ -28,6 +28,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import java.io.Serializable
 import java.time.Clock
 import java.time.Instant
 import java.util.*
@@ -44,7 +45,7 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
 
             @Column(name = "consuming_transaction_id")
             val consumingTxHash: String
-    )
+    ) : Serializable
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_request_log")
@@ -66,7 +67,7 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
 
             @Column(name = "request_timestamp")
             var requestDate: Instant
-    )
+    ) : Serializable
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
