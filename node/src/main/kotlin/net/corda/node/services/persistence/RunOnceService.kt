@@ -35,10 +35,11 @@ const val VERSION = "version"
  * Makes sure only one node is able to write to database.
  * Running node updates row whilst running. When a node starts up, it checks no one has updated row within a specified time frame.
  *
- * @property pid process id
+ * @property machineName unique name for node.
+ * @property pid process id.
  * @property updateInterval rate(milliseconds) at which the running node updates row.
  * @property waitInterval amount of time(milliseconds) to wait since last row update before being able to become the master node.
- * @property updateExecutor runs a row update every [updateInterval] milliseconds
+ * @property updateExecutor runs a row update every [updateInterval] milliseconds.
  */
 class RunOnceService(private val database: CordaPersistence, private val machineName: String, private val pid: String,
                      private val updateInterval: Long, private val waitInterval: Long,
