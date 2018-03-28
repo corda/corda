@@ -24,7 +24,7 @@ The Corda configuration file uses the HOCON format which is superset of JSON. Pl
 
 Please do NOT use double quotes (``"``) in configuration keys.
 
-Node will throw exception `Config files should not contain \" in property names. Please fix: [key]`
+Node setup will log `Config files should not contain \" in property names. Please fix: [key]` as error
 when it founds double quotes around keys.
 This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them
 e.g.:
