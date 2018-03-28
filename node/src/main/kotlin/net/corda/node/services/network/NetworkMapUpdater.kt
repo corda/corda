@@ -5,6 +5,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.readObject
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.serialization.serialize
@@ -111,11 +113,16 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         networkMap.parametersUpdate?.let { handleUpdateNetworkParameters(networkMapClient, it) }
 
         if (currentParametersHash != networkMap.networkParameterHash) {
-            // TODO This needs special handling (node omitted update process/didn't accept new parameters or didn't restart on updateDeadline)
-            logger.error("Node is using parameters with hash: $currentParametersHash but network map is " +
-                    "advertising: ${networkMap.networkParameterHash}.\n" +
-                    "Node will shutdown now, if you accepted new network parameters it is sufficient to start it again.\n" +
-                    "Otherwise please update node to use correct network parameters file.")
+            val updatesFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
+            val acceptedHash = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>().raw.hash else null
+            if (acceptedHash == networkMap.networkParameterHash) {
+                logger.info("Flag day occurred. Network map switched to the new network parameters: ${networkMap.networkParameterHash}. Node will shutdown now and needs to be started again.")
+            } else {
+                // TODO This needs special handling (node omitted update process or didn't accept new parameters)
+                logger.error("Node is using parameters with hash: $currentParametersHash but network map is " +
+                        "advertising: ${networkMap.networkParameterHash}.\n" +
+                        "Node will shutdown now. Please update node to use correct network parameters file.")
+            }
             System.exit(1)
         }
 
