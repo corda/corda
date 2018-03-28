@@ -114,7 +114,7 @@ dependencies {
     compile "io.kubernetes:client-java:$kubernetes_client_version"
     compile "io.reactivex:rxjava:$rxjava_version"
 
-    compileOnly project(':finance')
+    compile project(':finance')
     compileOnly project(':node-api')
     compileOnly project(':client:rpc')
 

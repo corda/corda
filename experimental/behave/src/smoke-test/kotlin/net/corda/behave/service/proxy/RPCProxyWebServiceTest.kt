@@ -1,6 +1,5 @@
 package net.corda.behave.service.proxy
 
-import com.opengamma.strata.product.common.BuySell
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.responseAs
 import net.corda.core.messaging.startFlow
@@ -14,13 +13,9 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.vega.api.SwapDataModel
-import net.corda.vega.flows.IRSTradeFlow
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.math.BigDecimal
-import java.time.LocalDate
 
 class RPCProxyWebServiceTest {
 
@@ -266,57 +261,6 @@ class RPCProxyWebServiceTest {
             println("============================================================================================")
         }
     }
-
-    @Test
-    fun startFlowSIMMTrade() {
-        val valuationDate: LocalDate = LocalDate.parse("2016-06-06")
-        val tradeId = "trade1"
-
-        val swap = SwapDataModel(tradeId, "desc", valuationDate, "EUR_FIXED_1Y_EURIBOR_3M",
-                valuationDate, LocalDate.parse("2020-01-02"), BuySell.BUY, BigDecimal.valueOf(1000), BigDecimal.valueOf(0.1))
-
-        val ownParty = rpcProxyClient.partiesFromName("PartyA", false).first()
-        val counterParty = rpcProxyClient.partiesFromName("PartyB", false).first()
-
-        val buyer = if (swap.buySell.isBuy) ownParty else counterParty
-        val seller = if (swap.buySell.isSell) ownParty else counterParty
-        val response = rpcProxyClient.startFlow(IRSTradeFlow::Requester, swap.toData(buyer, seller), ownParty).returnValue.getOrThrow()
-        println(response)
-    }
-
-//    @Test
-//    fun startFlowOptionsCash() {
-//        val response = rpcProxyClient.startFlow(::SelfIssueCashFlow, 50000.POUNDS).returnValue.getOrThrow()
-//        println(response)
-//    }
-//
-//    @Test
-//    fun startFlowOptionsIssue() {
-//        val ownParty = rpcProxyClient.partiesFromName("PartyA", false).first()
-//        val issuerParty = rpcProxyClient.partiesFromName("Issuer", false).firstOrNull() ?: throw IllegalArgumentException("Unknown issuer")
-//        val expiryDate = LocalDate.parse("2022-04-12").atStartOfDay().toInstant(ZoneOffset.UTC)
-//        val type =OptionType.CALL
-//        val strikePrice = 95.POUNDS
-//        val underlying = "Wilburton State Bank"
-//        val optionToIssue = OptionState(
-//                strikePrice = strikePrice,
-//                expiryDate = expiryDate,
-//                underlyingStock = underlying,
-//                issuer = issuerParty,
-//                owner = ownParty,
-//                optionType = type)
-//        val response = rpcProxyClient.startFlow(OptionIssueFlow::Initiator, optionToIssue).returnValue.getOrThrow()
-//        println(response)
-//    }
-//
-//    @Test
-//    fun startFlowOptionsTrade() {
-//        val trade = rpcProxyClient.vaultQuery(OptionState::class.java).states.firstOrNull() ?: throw CordaException("No states in vault")
-//        val counterparty = rpcProxyClient.partiesFromName("PartyB", false).firstOrNull() ?: throw IllegalArgumentException("Unknown counterparty")
-//        println("Trading ${trade.state.data} with counterparty $counterparty")
-//        val response = rpcProxyClient.startFlow(OptionTradeFlow::Initiator, trade.state.data.linearId, counterparty).returnValue.getOrThrow()
-//        println(response)
-//    }
 
     @Test
     fun vaultQueryCash() {

@@ -5,6 +5,7 @@ import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
 import net.corda.behave.file.currentDirectory
 import net.corda.behave.file.div
+import net.corda.behave.file.stagingRoot
 import net.corda.behave.logging.getLogger
 import net.corda.behave.monitoring.PatternWatch
 import net.corda.behave.node.configuration.*
@@ -264,7 +265,7 @@ class Node(
 
     private fun installApps() {
         val version = config.distribution.version
-        val appDirectory = rootDirectory / "../../../deps/corda/$version/apps"
+        val appDirectory = stagingRoot / "deps/corda/$version/apps"
         if (appDirectory.exists()) {
             val targetAppDirectory = runtimeDirectory / "cordapps"
             FileUtils.copyDirectory(appDirectory, targetAppDirectory)

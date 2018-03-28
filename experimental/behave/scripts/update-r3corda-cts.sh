@@ -35,7 +35,7 @@ cp -v $(ls network-management/capsule/build/libs/doorman-*.jar | tail -n1) ${STA
 
 # build and distribute DB Migration tool
 ./gradlew tools:dbmigration:shadowJar
-cp -v $(ls tools/dbmigration/build/libs/dbmigration-*.jar | tail -n1) ${STAGING_DIR}/dbmigration.jar
+cp -v $(ls tools/dbmigration/build/libs/*migration-*.jar | tail -n1) ${STAGING_DIR}/dbmigration.jar
 
 # Build rpcProxy (required by CTS Scenario Driver to call Corda 3.0 which continues to use Kryo for RPC)
 # cd experimental/behave

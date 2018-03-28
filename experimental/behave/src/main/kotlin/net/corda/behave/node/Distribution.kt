@@ -1,6 +1,7 @@
 package net.corda.behave.node
 
 import net.corda.behave.file.div
+import net.corda.behave.file.stagingRoot
 import net.corda.behave.logging.getLogger
 import net.corda.behave.service.Service
 import org.apache.commons.io.FileUtils
@@ -112,9 +113,7 @@ class Distribution private constructor(
 
         private val distributions = mutableListOf<Distribution>()
 
-        private val directory = File(System.getProperty("user.dir"))
-
-        private val nodePrefix = directory / "deps/corda"
+        private val nodePrefix = stagingRoot / "deps/corda"
 
         /**
          * Corda Open Source, version 3.0.0
