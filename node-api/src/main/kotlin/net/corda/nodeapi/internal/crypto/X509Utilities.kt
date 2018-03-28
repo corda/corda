@@ -114,7 +114,18 @@ object X509Utilities {
     fun validateCertPath(trustedRoot: X509Certificate, certPath: CertPath) {
         val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
         params.isRevocationEnabled = false
-        CertPathValidator.getInstance("PKIX").validate(certPath, params)
+        try {
+            CertPathValidator.getInstance("PKIX").validate(certPath, params)
+        } catch (e: CertPathValidatorException) {
+            throw CertPathValidatorException(
+                    """Cert path failed to validate against root certificate.
+Reason: ${e.reason}
+Offending cert index: ${e.index}
+Cert path: $certPath
+
+Root certificate:
+$trustedRoot""", e, certPath, e.index)
+        }
     }
 
     /**
