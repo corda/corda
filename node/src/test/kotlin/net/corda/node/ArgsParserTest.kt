@@ -37,7 +37,7 @@ class ArgsParserTest {
                 help = false,
                 logToConsole = false,
                 loggingLevel = Level.INFO,
-                nodeRegistrationConfig = null,
+                nodeRegistrationOption = null,
                 isVersion = false,
                 noLocalShell = false,
                 sshdServer = false,
@@ -136,9 +136,9 @@ class ArgsParserTest {
         X509KeyStore.fromFile(truststorePath, "dummy_password", createNew = true)
         try {
             val cmdLineOptions = parser.parse("--initial-registration", "--network-root-truststore", "$truststorePath", "--network-root-truststore-password", "password-test")
-            assertNotNull(cmdLineOptions.nodeRegistrationConfig)
-            assertEquals(truststorePath.toAbsolutePath(), cmdLineOptions.nodeRegistrationConfig?.networkRootTrustStorePath)
-            assertEquals("password-test", cmdLineOptions.nodeRegistrationConfig?.networkRootTrustStorePassword)
+            assertNotNull(cmdLineOptions.nodeRegistrationOption)
+            assertEquals(truststorePath.toAbsolutePath(), cmdLineOptions.nodeRegistrationOption?.networkRootTrustStorePath)
+            assertEquals("password-test", cmdLineOptions.nodeRegistrationOption?.networkRootTrustStorePassword)
         } finally {
             Files.delete(truststorePath)
         }
