@@ -7,16 +7,9 @@ val currentDirectory: File
 
 // location of Corda distributions and Drivers dependencies
 val stagingRoot: File
-//    get() = if (System.getProperty("STAGING_ROOT") != null)
-//                File(System.getProperty("STAGING_ROOT"))
-//            else currentDirectory
-    get() = File("/Users/josecoll/IdeaProjects/corda-reviews/experimental/behave")
-
-val scriptsDirectory: File
-    get() = currentDirectory / "src/scripts"
-
-val doormanScriptsDirectory: File
-    get() = scriptsDirectory / "doorman"
+    get() = if (System.getProperty("STAGING_ROOT") != null)
+                File(System.getProperty("STAGING_ROOT"))
+            else currentDirectory
 
 val doormanConfigDirectory: File
     get() = currentDirectory / "src/main/resources/doorman"
