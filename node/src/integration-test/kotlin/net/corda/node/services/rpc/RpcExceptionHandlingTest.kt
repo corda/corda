@@ -1,29 +1,24 @@
 package net.corda.node.services.rpc
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.client.rpc.RPCException
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
+import net.corda.nodeapi.exceptions.InternalNodeException
+import net.corda.nodeapi.exceptions.WithClientRelevantMessage
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.hibernate.exception.GenericJDBCException
 import org.junit.Test
 import java.sql.SQLException
-import java.util.concurrent.TimeUnit
-import kotlin.test.fail
 
 class RpcExceptionHandlingTest {
 
@@ -37,11 +32,29 @@ class RpcExceptionHandlingTest {
 
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
 
-            // TODO MS: change exception type to InternalNodeException
-            assertThatCode { node.rpc.startFlow(::Flow).returnValue.getOrThrow() }.isInstanceOfSatisfying(GenericJDBCException::class.java) { exception ->
+            assertThatCode { node.rpc.startFlow(::Flow).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
+                assertThat(exception.message).isEqualTo(InternalNodeException.defaultMessage())
+            }
+        }
+    }
+
+    @Test
+    fun `rpc client handles client-relevant exceptions thrown on node side`() {
+
+        driver(DriverParameters(startNodesInProcess = true)) {
+
+            val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
+            val clientRelevantMessage = "This is for the players!"
+            val internalMessage = "This is NOT for the players!"
+
+            assertThatCode { node.rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage, internalMessage).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+
+                assertThat(exception).hasNoCause()
+                assertThat(exception.stackTrace).isEmpty()
+                assertThat(exception.message).isEqualTo(clientRelevantMessage)
             }
         }
     }
@@ -54,13 +67,11 @@ class RpcExceptionHandlingTest {
             val nodeA = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
             val nodeB = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
 
-            // TODO MS: change exception type to InternalNodeException
-            assertThatCode { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }.isInstanceOfSatisfying(UnexpectedFlowEndException::class.java) { exception ->
+            assertThatCode { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
-                // TODO MS: make this stricter (check each part, if not null)
-                assertThat(exception.message).doesNotContain(nodeB.nodeInfo.singleIdentity().name.x500Principal.toString())
+                assertThat(exception.message).isEqualTo(InternalNodeException.defaultMessage())
             }
         }
     }
@@ -94,7 +105,19 @@ class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit
     @Suspendable
     override fun call() {
 
-        val message = initiatingSession.receive<String>().unwrap { it }
+        initiatingSession.receive<String>().unwrap { it }
         throw GenericJDBCException("Something went wrong!", SQLException("Oops!"))
     }
 }
+
+@StartableByRPC
+class ClientRelevantErrorFlow(private val clientRelevantMessage: String, private val message: String) : FlowLogic<String>() {
+
+    @Suspendable
+    override fun call(): String {
+
+        throw ClientRelevantException(clientRelevantMessage, message, SQLException("Oops!"))
+    }
+}
+
+class ClientRelevantException(override val messageForClient: String, message: String?, cause: Throwable?) : Exception(message, cause), WithClientRelevantMessage

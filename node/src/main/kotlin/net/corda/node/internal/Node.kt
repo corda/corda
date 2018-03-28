@@ -7,6 +7,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -281,7 +282,11 @@ open class Node(configuration: NodeConfiguration,
         // Start up the MQ clients.
         rpcMessagingClient?.run {
             runOnStop += this::close
-            start(rpcOps, securityManager)
+            when (rpcOps) {
+                // not sure what this RPCOps base interface is for
+                is CordaRPCOps -> start(RpcExceptionHandlingProxy(rpcOps), securityManager)
+                else -> start(rpcOps, securityManager)
+            }
         }
         verifierMessagingClient?.run {
             runOnStop += this::stop

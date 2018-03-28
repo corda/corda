@@ -40,6 +40,29 @@ fun <V, W> CordaFuture<out V>.map(transform: (V) -> W): CordaFuture<W> = CordaFu
 }
 
 /**
+ * Returns a future that will also apply the passed closure on an error.
+ */
+fun <RESULT> CordaFuture<out RESULT>.doOnError(accept: (Throwable) -> Unit): CordaFuture<RESULT> = CordaFutureImpl<RESULT>().also { result ->
+    thenMatch({
+        result.capture { it }
+    }, {
+        accept(it)
+        result.setException(it)
+    })
+}
+
+/**
+ * Returns a future that will map an error thrown using the provided [transform] function.
+ */
+fun <ELEMENT> CordaFuture<out ELEMENT>.mapError(transform: (Throwable) -> Throwable): CordaFuture<ELEMENT> = CordaFutureImpl<ELEMENT>().also { result ->
+    thenMatch({
+        result.capture { it }
+    }, {
+        result.setException(transform(it))
+    })
+}
+
+/**
  * Returns a future that will have the same outcome as the future returned by the given transform.
  * But if this future or the transform fails, the returned future's outcome is the same throwable.
  * In the case where this future fails, the transform is not invoked.
