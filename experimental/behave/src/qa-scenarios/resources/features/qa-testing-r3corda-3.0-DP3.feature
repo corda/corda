@@ -1,4 +1,4 @@
-@compatibility @node
+@qa @compatibility @node
 Feature: Compatibility - Node versions
   To support an interoperable Corda network, a Corda (OS) node must have the ability to transact with an R3 Corda (Enterprise) node for the same version.
 
@@ -48,7 +48,7 @@ Feature: Compatibility - Node versions
 
     Examples:
       | R3-Corda-Node-Version   | Currency | Database-Type     |
-      | r3corda-3.0-DP3-RC01               | GBP      | SQL Server        |
+      | r3corda-3.0-DP3-RC01    | GBP      | SQL Server        |
 
   Scenario Outline: User can connect to an R3 Corda node using a PostgreSQL database
     Given a node PartyA of version <Node-Version>
@@ -57,8 +57,8 @@ Feature: Compatibility - Node versions
     Then user can connect to the database of node PartyA
 
     Examples:
-      | Node-Version    | Database-Type   |
-      | r3corda-3.0-DP3-RC01       | postgres        |
+      | Node-Version         | Database-Type   |
+      | r3corda-3.0-DP3-RC01 | postgres        |
 
   Scenario Outline: QA: Node using H2 can transact with node using Postgres, in an R3 Corda configured network.
     Given a node PartyA of version <R3-Corda-Node-Version> with proxy

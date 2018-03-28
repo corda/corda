@@ -76,9 +76,6 @@ dependencies {
 
     // Scenarios / End-to-End Tests
     testCompile "${corda_release_group}.behave:behave-scenario-api:${corda_release_version}"
-    scenarioCompile "info.cukes:cucumber-java8:$cucumber_version"
-    scenarioCompile "info.cukes:cucumber-junit:$cucumber_version"
-    scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
@@ -156,7 +153,8 @@ task integrationTest(type: Test, dependsOn: []) {
 }
 
 task scenarioJar(type: Jar, dependsOn: classes) {
-    baseName "behave-scenario-test"
+    archiveName "simm-valuation-demo-behave-test.jar"
+//    classifier "behave-test"
     from sourceSets.scenario.output
 }
 

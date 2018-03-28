@@ -1,5 +1,6 @@
-package net.corda.behave.scenarios
+package net.corda.behave.scenarios.tests
 
+import net.corda.behave.scenarios.ScenarioState
 import net.corda.behave.scenarios.api.StepsBlock
 import net.corda.behave.scenarios.api.StepsProvider
 import org.junit.Test
@@ -20,9 +21,8 @@ class StepsProviderTests {
             assert(it.simpleName.contains(name))
         }
 
-        assertEquals(2, foundProviders.size)
+        assertEquals(1, foundProviders.size)
         assert(foundProviders.contains("FooStepsProvider"))
-        assert(foundProviders.contains("BarStepsProvider"))
     }
 
     class FooStepsProvider : StepsProvider {
@@ -34,8 +34,8 @@ class StepsProviderTests {
             get() = DummyStepsBlock()
     }
 
-    class DummyStepsBlock : StepsBlock(ScenarioState()) {
-        override fun initialize() {
+    class DummyStepsBlock : StepsBlock {
+        override fun initialize(state: ScenarioState) {
         }
     }
 }

@@ -1,4 +1,4 @@
-@compatibility @node
+@qa @compatibility @node
 Feature: Compatibility - Node versions
   To support an interoperable Corda network, a Corda (OS) node must have the ability to transact with an R3 Corda (Enterprise) node for the same version.
 
