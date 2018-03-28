@@ -29,8 +29,8 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
     private fun retrieveNetworkParameters(): NetworkParameters {
         val advertisedParametersHash = try {
             networkMapClient?.getNetworkMap()?.payload?.networkParameterHash
-        } catch(e: ConnectException) {
-            logger.info("Couldn't connect to NetworkMap")
+        } catch (e: ConnectException) {
+            logger.info("Couldn't connect to NetworkMap", e)
             // If NetworkMap is down while restarting the node, we should be still able to continue with parameters from file
             null
         }
