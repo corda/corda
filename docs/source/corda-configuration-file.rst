@@ -22,7 +22,14 @@ Format
 The Corda configuration file uses the HOCON format which is superset of JSON. Please visit
 `<https://github.com/typesafehub/config/blob/master/HOCON.md>`_ for further details.
 
-Please do NOT use double quotes in configuration keys.
+Please do NOT use double quotes (``"``) in configuration keys.
+
+Node will throw exception `Config files should not contain \" in property names. Please fix: [key]`
+when it founds double quotes around keys.
+This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them
+e.g.:
+The property `"dataSourceProperties.dataSourceClassName" = "val"` in ``reference.conf``
+would be not overwritten by the property `dataSourceProperties.dataSourceClassName = "val2"` in ``node.conf``.
 
 Defaults
 --------
