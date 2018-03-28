@@ -69,4 +69,4 @@ data class PersistentStateRef(
 /**
  * Marker interface to denote a persistable Corda state entity that will always have a transaction id and index
  */
-interface StatePersistable
+interface StatePersistable : Serializable

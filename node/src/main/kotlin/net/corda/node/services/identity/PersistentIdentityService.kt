@@ -17,6 +17,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import java.io.Serializable
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -75,7 +76,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
             @Lob
             @Column(name = "identity_value")
             var identity: ByteArray = EMPTY_BYTE_ARRAY
-    )
+    ) : Serializable
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}named_identities")
@@ -86,7 +87,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
 
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE)
             var publicKeyHash: String = ""
-    )
+    ) : Serializable
 
     override val caCertStore: CertStore
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
