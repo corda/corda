@@ -13,7 +13,7 @@
 package com.r3.corda.dbmigration
 
 import com.typesafe.config.ConfigFactory
-import com.zaxxer.hikari.util.PropertyElf
+import com.typesafe.config.ConfigParseOptions
 import joptsimple.OptionException
 import joptsimple.OptionParser
 import joptsimple.OptionSet
@@ -25,6 +25,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.node.internal.DataSourceFactory.createDatasourceFromDriverJars
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.configOf
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.node.services.persistence.MigrationExporter
 import net.corda.node.services.schema.NodeSchemaService
@@ -37,7 +38,6 @@ import java.io.FileWriter
 import java.io.PrintWriter
 import java.io.Writer
 import java.net.URLClassLoader
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
@@ -140,7 +140,16 @@ private fun runCommand(options: OptionSet, parser: OptionParser) {
 }
 
 private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: Path, mode: Mode, classLoader: ClassLoader, schemas: Set<MappedSchema>) {
-    val config = ConfigFactory.parseFile(configFile.toFile()).resolve().parseAs(Configuration::class, false)
+    val parsedConfig = ConfigFactory.parseFile(configFile.toFile()).resolve().let {
+        if (mode == Mode.NODE) {
+            it.withFallback(configOf("baseDirectory" to baseDirectory.toString()))
+                    .withFallback(ConfigFactory.parseResources("reference.conf", ConfigParseOptions.defaults().setAllowMissing(true)))
+                    .resolve()
+        } else {
+            it
+        }
+    }
+    val config = parsedConfig.parseAs(Configuration::class, false)
 
     fun runMigrationCommand(withMigration: (SchemaMigration) -> Unit): Unit = runWithDataSource(config, baseDirectory, classLoader) { dataSource ->
         withMigration(SchemaMigration(schemas, dataSource, true, config.database, classLoader))
