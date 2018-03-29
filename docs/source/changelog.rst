@@ -5,7 +5,9 @@ Here are brief summaries of what's changed between each snapshot release. This i
 from the previous milestone release.
 
 Unreleased
------------
+----------
+
+* Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
 
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
