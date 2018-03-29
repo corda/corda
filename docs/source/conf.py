@@ -28,7 +28,13 @@ import sphinx_rtd_theme
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = []
+extensions = ['rst2pdf.pdfbuilder']
+
+# PDF configuration
+pdf_documents = [('index', u'corda-developer-site', u'Corda Developer Documentation', u'R3')]
+pdf_stylesheets = ['sphinx', 'kerning', 'a4', 'murphy', 'tenpoint']
+pdf_compressed = True
+pdf_fit_mode = "shrink"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

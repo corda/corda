@@ -23,6 +23,9 @@ Unreleased
 * Fixed security vulnerability when using the ``HashAttachmentConstraint``. Added strict check that the contract JARs
   referenced in a transaction were deployed on the node.
 
+* Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
+all the needed network data, waiting in the background for network map to become available.
+
 .. _changelog_v3:
 
 Version 3.0

@@ -15,6 +15,7 @@ import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.io.Serializable
 import java.util.*
 import javax.persistence.*
 
@@ -35,7 +36,7 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
             @Lob
             @Column(name = "transaction_value")
             var transaction: ByteArray = ByteArray(0)
-    )
+    ) : Serializable
 
     private companion object {
         fun createTransactionsMap(maxSizeInBytes: Long)
