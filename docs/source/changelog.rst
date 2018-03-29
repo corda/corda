@@ -34,6 +34,8 @@ from the previous milestone release.
 
 * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
 
+* Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
+
 * java.math.BigInteger serialization support added.
 
 * java.security.cert.CRLReason added to the default Whitelist.
