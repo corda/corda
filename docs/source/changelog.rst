@@ -5,7 +5,7 @@ Here are brief summaries of what's changed between each snapshot release. This i
 from the previous milestone release.
 
 Unreleased
------------
+----------
 
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
@@ -20,6 +20,9 @@ Unreleased
 
 * Fixed security vulnerability when using the ``HashAttachmentConstraint``. Added strict check that the contract JARs
   referenced in a transaction were deployed on the node.
+
+* Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
+all the needed network data, waiting in the background for network map to become available.
 
 .. _changelog_v3:
 
