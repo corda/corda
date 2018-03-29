@@ -115,10 +115,12 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     }
 
     @GET
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
     fun getNetworkMap(): Response = createResponse(currentSignedNetworkMap, addCacheTimeout = true)
 
     @GET
     @Path("node-info/{nodeInfoHash}")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
     fun getNodeInfo(@PathParam("nodeInfoHash") nodeInfoHash: String): Response {
         // Only serve node info if its in the current network map, otherwise return 404.
         logger.trace { "Processing node info request for hash: '$nodeInfoHash'" }
@@ -134,6 +136,7 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     @GET
     @Path("network-parameters/{hash}")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
     fun getNetworkParameters(@PathParam("hash") hash: String): Response {
         val signedNetParams = networkMapStorage.getSignedNetworkParameters(SecureHash.parse(hash))
         logger.trace { "Precessed network parameter request for hash: '$hash'" }
