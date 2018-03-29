@@ -12,7 +12,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
-import net.corda.nodeapi.exceptions.CordaClientException
+import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
@@ -176,8 +176,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             networkMapClient.ackNetworkParametersUpdate(sign(parametersHash))
             logger.info("Accepted network parameter update $update: $newNetParams")
         } else {
-            throw CordaClientException("Refused to accept parameters with hash $parametersHash because network map " +
-                    "advertises update with hash $newParametersHash. Please check newest version")
+            throw OutdatedNetworkParameterHashException(parametersHash, newParametersHash)
         }
     }
 }

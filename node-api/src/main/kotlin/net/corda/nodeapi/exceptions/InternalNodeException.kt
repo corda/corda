@@ -1,11 +1,18 @@
 package net.corda.nodeapi.exceptions
 
 import net.corda.core.CordaRuntimeException
+import java.io.InvalidClassException
+
+// could change to use package name matching but trying to avoid reflection for now
+private val whitelisted = setOf(
+        InvalidClassException::class,
+        RpcSerializableError::class
+)
 
 /**
  * An [Exception] to signal RPC clients that something went wrong within a Corda node.
  */
-class InternalNodeException(message: String) : CordaClientException(message) {
+class InternalNodeException(message: String) : CordaRuntimeException(message) {
 
     companion object {
 
@@ -13,19 +20,12 @@ class InternalNodeException(message: String) : CordaClientException(message) {
 
         fun defaultMessage(): String = DEFAULT_MESSAGE
 
-        fun wrap(wrapped: Throwable): Throwable {
+        fun obfuscateIfInternal(wrapped: Throwable): Throwable {
 
+            (wrapped as? CordaRuntimeException)?.setCause(null)
             return when {
-                wrapped is CordaRuntimeException && wrapped is WithClientRelevantMessage -> {
-                    wrapped.setCause(null)
-                    wrapped
-                }
-                else -> {
-                    when (wrapped) {
-                        is WithClientRelevantMessage -> InternalNodeException(wrapped.message ?: DEFAULT_MESSAGE)
-                        else -> InternalNodeException(DEFAULT_MESSAGE)
-                    }
-                }
+                whitelisted.any { it.isInstance(wrapped) } -> wrapped
+                else -> InternalNodeException(DEFAULT_MESSAGE)
             }
         }
     }

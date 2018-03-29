@@ -17,8 +17,8 @@ import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.node.services.vault.*
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.exceptions.InternalNodeException
-import net.corda.nodeapi.exceptions.adapters.FlowHandleErrorMappingAdapter
-import net.corda.nodeapi.exceptions.adapters.FlowProgressHandleErrorMappingAdapter
+import net.corda.nodeapi.exceptions.adapters.InternalObfuscatingFlowHandle
+import net.corda.nodeapi.exceptions.adapters.InternalObfuscatingFlowProgressHandle
 import java.io.InputStream
 import java.security.PublicKey
 
@@ -33,7 +33,7 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
     override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> = wrap {
 
         val handle = delegate.startFlowDynamic(logicType, *args)
-        val result = FlowHandleErrorMappingAdapter(handle)
+        val result = InternalObfuscatingFlowHandle(handle)
         result.returnValue.doOnError { error -> logger.error(error.message, error) }
         result
     }
@@ -41,7 +41,7 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> = wrap {
 
         val handle = delegate.startTrackedFlowDynamic(logicType, *args)
-        val result = FlowProgressHandleErrorMappingAdapter(handle)
+        val result = InternalObfuscatingFlowProgressHandle(handle)
         result.returnValue.doOnError { error -> logger.error(error.message, error) }
         result
     }
@@ -136,14 +136,14 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
             call.invoke()
         } catch (error: Throwable) {
             logger.error(error.message, error)
-            throw InternalNodeException.wrap(error)
+            throw InternalNodeException.obfuscateIfInternal(error)
         }
     }
 
     private fun <SNAPSHOT, ELEMENT> wrapFeed(call: () -> DataFeed<SNAPSHOT, ELEMENT>) = wrap {
 
-        call.invoke().doOnError { error -> logger.error(error.message, error) }.mapErrors(InternalNodeException.Companion::wrap)
+        call.invoke().doOnError { error -> logger.error(error.message, error) }.mapErrors(InternalNodeException.Companion::obfuscateIfInternal)
     }
 
-    private fun <RESULT> wrapFuture(call: () -> CordaFuture<RESULT>): CordaFuture<RESULT> = wrap { call.invoke().mapError(InternalNodeException.Companion::wrap).doOnError { error -> logger.error(error.message, error) } }
+    private fun <RESULT> wrapFuture(call: () -> CordaFuture<RESULT>): CordaFuture<RESULT> = wrap { call.invoke().mapError(InternalNodeException.Companion::obfuscateIfInternal).doOnError { error -> logger.error(error.message, error) } }
 }

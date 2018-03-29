@@ -9,7 +9,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.exceptions.InternalNodeException
-import net.corda.nodeapi.exceptions.WithClientRelevantMessage
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
