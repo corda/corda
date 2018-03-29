@@ -16,7 +16,9 @@ import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.cordform.CordformNode
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.list
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -26,7 +28,8 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.core.*
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.NodeHandleInternal
@@ -164,8 +167,10 @@ class NodeRegistrationTest : IntegrationTest() {
                         jira = null,
                         approveInterval = timeoutMillis,
                         crlCacheTimeout = timeoutMillis,
-                        crlEndpoint = URL("http://test.com/crl"),
-                        crlUpdateInterval = timeoutMillis),
+                        localSigning = CertificateRevocationConfig.LocalSigning(
+                                crlEndpoint = URL("http://test.com/crl"),
+                                crlUpdateInterval = timeoutMillis)
+                ),
                 if (startNetworkMap) {
                     NetworkMapStartParams(
                             LocalSigner(networkMapCa),

@@ -46,6 +46,10 @@ Allowed parameters are:
 
     :crlDistributionPoint: Certificate revocation list location for the node CA certificate.
 
+    :crlServerSocketAddress: Address of the socket connection serving the certificate revocation list.
+
+    :crlUpdatePeriod: Validity time of the issued certificate revocation lists (in milliseconds).
+
     :authParameters: Authentication configuration for the CSR signing process.
 
         :mode: Authentication mode. Allowed values are: PASSWORD, CARD_READER and KEY_FILE

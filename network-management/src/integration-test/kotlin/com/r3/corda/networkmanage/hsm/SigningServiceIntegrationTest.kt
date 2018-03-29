@@ -107,10 +107,12 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
                     revocationConfig = CertificateRevocationConfig(
                             approveAll = true,
                             jira = null,
-                            crlUpdateInterval = 2.hours.toMillis(),
                             crlCacheTimeout = 30.minutes.toMillis(),
-                            crlEndpoint = URL("http://test.com/crl"),
-                            approveInterval = 10.minutes.toMillis()
+                            approveInterval = 10.minutes.toMillis(),
+                            localSigning = CertificateRevocationConfig.LocalSigning(
+                                    crlEndpoint = URL("http://test.com/crl"),
+                                    crlUpdateInterval = 2.hours.toMillis()
+                            )
                     ),
                     startNetworkMap = null)
             val doormanHostAndPort = server.hostAndPort

@@ -57,20 +57,22 @@ data class DoormanConfig(val approveAll: Boolean = false,
 }
 
 data class CertificateRevocationConfig(val approveAll: Boolean = false,
-                         val jira: JiraConfig? = null,
-                         val crlUpdateInterval: Long,
-                         val crlEndpoint: URL,
-                         val crlCacheTimeout: Long,
-                         val approveInterval: Long = NetworkManagementServerConfig.DEFAULT_APPROVE_INTERVAL.toMillis()) {
+                                       val jira: JiraConfig? = null,
+                                       val localSigning: LocalSigning?,
+                                       val crlCacheTimeout: Long,
+                                       val approveInterval: Long = NetworkManagementServerConfig.DEFAULT_APPROVE_INTERVAL.toMillis()) {
     init {
         require(Booleans.countTrue(approveAll, jira != null) == 1) {
             "Either 'approveAll' or 'jira' config settings need to be specified but not both"
         }
     }
+
+    data class LocalSigning(val crlUpdateInterval: Long,
+                            val crlEndpoint: URL)
 }
 
 data class NetworkMapConfig(val cacheTimeout: Long,
-                            // TODO: Move signing to signing server.
+        // TODO: Move signing to signing server.
                             val signInterval: Long = NetworkManagementServerConfig.DEFAULT_SIGN_INTERVAL.toMillis())
 
 enum class Mode {

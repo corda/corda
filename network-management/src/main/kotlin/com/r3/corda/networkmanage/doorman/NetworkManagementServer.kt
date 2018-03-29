@@ -129,7 +129,11 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
         val crlStorage = PersistentCertificateRevocationListStorage(database)
 
         val crlHandler = csrCertPathAndKeyPair?.let {
-            LocalCrlHandler(crrStorage, crlStorage, CertificateAndKeyPair(it.certPath.first(), it.toKeyPair()), Duration.ofMillis(config.crlUpdateInterval), config.crlEndpoint)
+            LocalCrlHandler(crrStorage,
+                    crlStorage,
+                    CertificateAndKeyPair(it.certPath.first(), it.toKeyPair()),
+                    Duration.ofMillis(config.localSigning!!.crlUpdateInterval),
+                    config.localSigning.crlEndpoint)
         }
 
         val jiraConfig = config.jira

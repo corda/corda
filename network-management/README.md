@@ -80,8 +80,8 @@ Doorman service can be started with the following options :
 
 ### JIRA
 
-The doorman service can use JIRA to manage the certificate signing request approval workflow. This can be turned on by providing
-JIRA connection configuration in the config file.
+The doorman service can use JIRA to manage both the certificate signing request and the certificate revocation request approval work flows.
+This can be turned on by providing JIRA connection configuration in the config file.
    ```
    doorman {
        jira {
@@ -146,6 +146,21 @@ doorman {
   jira {
     address = "https://doorman-jira-host.com/"
     projectCode = "TD"
+    username = "username"
+    password = "password"
+  }
+}
+
+# Comment out this section if running without the revocation service
+revocation {
+  approveInterval = 10000
+  approveAll = false
+  crlUpdateInterval = 86400000
+  crlEndpoint = "http://test.com/crl"
+  crlCacheTimeout = 86400000
+  jira {
+    address = "https://doorman-jira-host.com/"
+    projectCode = "CRR"
     username = "username"
     password = "password"
   }
