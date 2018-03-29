@@ -11,4 +11,7 @@ else
     source virtualenv/Scripts/activate
 fi
 
+# TODO: The PDF rendering is pretty ugly and can be improved a lot.
+make pdf
+mv build/pdf/corda-developer-site.pdf build/html/_static/corda-developer-site.pdf
 make html

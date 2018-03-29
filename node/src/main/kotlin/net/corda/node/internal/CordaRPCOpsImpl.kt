@@ -217,14 +217,9 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
-        try {
-            return database.transaction {
+        // TODO: this operation should not require an explicit transaction
+        return database.transaction {
                 services.attachments.queryAttachments(query, sorting)
-            }
-        } catch (e: Exception) {
-            // log and rethrow exception so we keep a copy server side
-            log.error(e.message)
-            throw e.cause ?: e
         }
     }
 
