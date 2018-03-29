@@ -5,6 +5,7 @@ package net.corda.core
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.messaging.DataFeed
 import rx.Observable
 import rx.Observer
 
@@ -42,5 +43,31 @@ fun <T> Observable<T>.toFuture(): CordaFuture<T> = openFuture<T>().also {
         if (it.isCancelled) {
             subscription.unsubscribe()
         }
+    }
+}
+
+/**
+ * Returns a [DataFeed] that transforms errors according to the provided [transform] function.
+ */
+fun <SNAPSHOT, ELEMENT> DataFeed<SNAPSHOT, ELEMENT>.mapErrors(transform: (Throwable) -> Throwable): DataFeed<SNAPSHOT, ELEMENT> {
+
+    return copy(updates = updates.mapErrors(transform))
+}
+
+/**
+ * Returns a [DataFeed] that processes errors according to the provided [action].
+ */
+fun <SNAPSHOT, ELEMENT> DataFeed<SNAPSHOT, ELEMENT>.doOnError(action: (Throwable) -> Unit): DataFeed<SNAPSHOT, ELEMENT> {
+
+    return copy(updates = updates.doOnError(action))
+}
+
+/**
+ * Returns an [Observable] that transforms errors according to the provided [transform] function.
+ */
+fun <ELEMENT> Observable<ELEMENT>.mapErrors(transform: (Throwable) -> Throwable): Observable<ELEMENT> {
+
+    return onErrorResumeNext { error ->
+        Observable.error(transform(error))
     }
 }
