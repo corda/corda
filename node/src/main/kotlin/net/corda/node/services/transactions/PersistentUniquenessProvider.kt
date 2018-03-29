@@ -39,7 +39,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
 
             @Embedded
             var party: PersistentParty = PersistentParty()
-    )
+    ) : Serializable
 
     @Embeddable
     data class PersistentParty(
