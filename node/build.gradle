@@ -231,8 +231,9 @@ dependencies {
     compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
 
     // Allow access to simple SOCKS Server for integration testing
-    testCompile('io.netty:netty-example:4.1.9.Final') {
+    testCompile("io.netty:netty-example:$netty_version") {
         exclude group: "io.netty", module: "netty-tcnative"
+        exclude group: "ch.qos.logback", module: "logback-classic"
     }
 }
 
