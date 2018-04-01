@@ -29,7 +29,7 @@ data class NotaryChangeWireTransaction(
          */
         val serializedComponents: List<OpaqueBytes>
 ) : CoreTransaction() {
-    override val references: List<StateRef> = serializedComponents[REFERENCES.ordinal].deserialize()
+    override val references: List<StateRef> = emptyList()
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
     override val notary: Party = serializedComponents[NOTARY.ordinal].deserialize()
     /** Identity of the notary service to reassign the states to.*/
@@ -62,16 +62,15 @@ data class NotaryChangeWireTransaction(
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>) : NotaryChangeLedgerTransaction {
-        val resolvedReferenceInputs = services.loadStates(references.toSet()).toList()
         val resolvedInputs = services.loadStates(inputs.toSet()).toList()
-        return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs, resolvedReferenceInputs)
+        return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs)
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
     fun resolve(services: ServiceHub, sigs: List<TransactionSignature>) = resolve(services as ServicesForResolution, sigs)
 
     enum class Component {
-        INPUTS, NOTARY, NEW_NOTARY, REFERENCES
+        INPUTS, NOTARY, NEW_NOTARY
     }
 
     @Deprecated("Required only for backwards compatibility purposes. This type of transaction should not be constructed outside Corda code.", ReplaceWith("NotaryChangeTransactionBuilder"), DeprecationLevel.WARNING)
