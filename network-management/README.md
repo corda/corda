@@ -271,37 +271,38 @@ Run the following SQL script to archive the node info table (change the timestam
 
 # Updating the network parameters
 The initial network parameters can be subsequently changed through an update process. However, these changes must first
-be advertised to the entire network to allow nodes time to agree to the changes.
+be advertised to the entire network to allow nodes time to agree to the changes. Every time the server needs to be shutdown
+and run with one of the following flags: `--set-network-parameters`, `--flag-day` or `--cancel-update`. For change to be
+advertised to the nodes new network map has to be signed (either by HSM or by local signer).
 
-The server needs to be shutdown and started with the same `set-network-parameters` flag as before but this time the network
-parameters file must have `parametersUpdate` config block:
-    
-    parametersUpdate {
-        description = "Important update"
-        updateDeadline = "2017-08-31T05:10:36.297Z" # ISO-8601 time, substitute it with update deadline
-    }
-    
-`description` is a short description of the update that will be communicated to the nodes and `updateDeadline` is
-the time (in ISO-8601 format) by which all nodes in the network must decide that they have accepted the new parameters.
+Typical update process is as follows:
+1. Start network map with initial network parameters.
+2. To advertise an update:
+    * Stop network-management.
+    * Run it with ``--set-network-parameters`` flag. The network parameters file must have `parametersUpdate` config block:
+        ```    
+            parametersUpdate {
+                description = "Important update"
+                updateDeadline = "2017-08-31T05:10:36.297Z" # ISO-8601 time, substitute it with update deadline
+            }
+        ```    
+        Where `description` is a short description of the update that will be communicated to the nodes and `updateDeadline` is
+        the time (in ISO-8601 format) by which all nodes in the network must decide that they have accepted the new parameters.
+        
+        NOTE: Currently only backwards compatible changes to the network parameters can be made, i.e. notaries can't be removed,
+        max transaction size can only increase, etc.
+        
+        The process will exit, nothing will be sent to the nodes yet.
+    * Start network-management as normal without any flags. This time, the nodes will be notified of the new parameters
+    update next time they poll.
+3. Before the `updateDeadline` time, nodes will have to run the RPC command to accept new parameters.
+This will not activate the new network parameters on the nodes. It is possible to poll the network map database to check 
+how many network participants have accepted the new network parameters - the information is stored in the `node-info.accepted_parameters_hash` column.
+4. When the flag day comes. Restart network-management with ``--flag-day`` flag. This will cause all nodes in the network
+to shutdown when they see that the network parameters have changed.
+The nodes that didn't accept the parameters will be removed from the network map. The ones that accepted, will need to be manually restarted.
 
-NOTE: Currently only backwards compatible changes to the network parameters can be made, i.e. notaries can't be removed,
-max transaction size can only increase, etc.
-
-It is possible to poll the network map database to check how many network participants have accepted the new network parameters
-- the information is stored in the `node-info.accepted_parameters_hash` column.
-
-When the time for switching the parameters comes, doorman should be restarted again, this time only with `flag-day` flag
-(no parameters file).
-```
-java -jar doorman-<version>.jar --flag-day
-```
-
-This will switch the parameters that were previously advertised as an update to be the current ones in the network map,
-however the new network parameters won't be active until the new network map is signed (either by HSM or by local signer).
-All nodes in the network need to restart to apply the new parameters. Any node which has not accepted the new parameters
-will fail to start.
-
-It is possible to cancel the previously scheduled updated. To do so simply run:
+It is possible to cancel the previously scheduled update. To do so simply run:
 ```
 java -jar doorman-<version>.jar --cancel-update
 ```
