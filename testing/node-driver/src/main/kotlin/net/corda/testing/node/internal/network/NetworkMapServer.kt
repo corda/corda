@@ -32,7 +32,7 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 import javax.ws.rs.core.Response.status
 
-class NetworkMapServer(private val cacheTimeout: Duration,
+class NetworkMapServer(private val pollInterval: Duration,
                        hostAndPort: NetworkHostAndPort,
                        private val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa(),
                        private val myHostNameValue: String = "test.host.name",
@@ -137,7 +137,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
         fun getNetworkMap(): Response {
             val networkMap = NetworkMap(nodeInfoMap.keys.toList(), signedNetParams.raw.hash, parametersUpdate)
             val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
-            return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${cacheTimeout.seconds}").build()
+            return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${pollInterval.seconds}").build()
         }
 
         // Remove nodeInfo for testing.
