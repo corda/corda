@@ -40,5 +40,4 @@ fun NodeConfiguration.toShellConfig(): ShellConfiguration {
             noLocalShell = this.noLocalShell)
 }
 
-private fun localShellUser() = User("shell", "shell", setOf(Permissions.all()))
-fun NodeConfiguration.shellUser() = shouldInitCrashShell()?.let { localShellUser() }
+fun localShellUser() = User("shell", "shell", setOf(Permissions.all()))
