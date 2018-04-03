@@ -525,6 +525,7 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
                             }
 
                             override fun onCompleted() {
+                                observableContext.clientAddressToObservables.remove(observableContext.clientAddress, observableId)
                             }
                         }
                 )
