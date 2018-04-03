@@ -49,7 +49,7 @@ Fields
 
 :machineName: Unique name for node.
 
-:updateInterval: Rate(milliseconds) at which the running node updates the mutual exclusion lease.
+:updateInterval: Period(milliseconds) over which the running node updates the mutual exclusion lease.
 
 :waitInterval: Amount of time(milliseconds) to wait since last mutual exclusion lease update before being able to become the master node. This has to be greater than updateInterval.
 
