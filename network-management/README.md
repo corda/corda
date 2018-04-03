@@ -48,6 +48,19 @@ The built file will appear in
 network-management/capsule-hsm-cert-generator/build/libs/hsm-cert-generator-<VERSION>.jar
 ```
 
+## Certificate Revocation Request Submission Tool
+
+To build a fat jar containing all the CRR submission tool code you can simply invoke
+```
+    ./gradlew network-management:capsule-crr-submission:buildCrrSubmissionJAR
+```
+
+The built file will appear in
+```
+network-management/capsule-crr-submission/build/libs/crr-submission-<VERSION>.jar
+```
+
+
 # Logs
 In order to set the desired logging level the system properties need to be used.
 Appropriate system properties can be set at the execution time.

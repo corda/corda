@@ -15,9 +15,15 @@ data class CertificateRevocationRequest(val certificateSerialNumber: BigInteger?
                                         val legalName: CordaX500Name? = null,
                                         val reason: CRLReason,
                                         val reporter: String) {
-    init {
-        require(certificateSerialNumber != null || csrRequestId != null || legalName != null) {
-            "At least one of the following needs to be specified: certificateSerialNumber, csrRequestId, legalName."
+    companion object {
+        fun validateOptional(certificateSerialNumber: BigInteger?, csrRequestId: String?, legalName: CordaX500Name?) {
+            require(certificateSerialNumber != null || csrRequestId != null || legalName != null) {
+                "At least one of the following needs to be specified: certificateSerialNumber, csrRequestId, legalName."
+            }
         }
+    }
+
+    init {
+        validateOptional(certificateSerialNumber, csrRequestId, legalName)
     }
 }

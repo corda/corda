@@ -15,9 +15,6 @@ At startup, the HSM Certificate Generation Tool reads a configuration file, pass
 This is an example of what a tool configuration file might look like:
     .. literalinclude:: ../../network-management/generator.conf
 
-Invoke doorman with ``-?`` for a full list of supported command-line arguments.
-
-
 General configuration parameters
 --------------------------------
 Allowed parameters are:
