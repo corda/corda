@@ -62,7 +62,7 @@ class NodeRegistrationTest {
     @Before
     fun startServer() {
         server = NetworkMapServer(
-                cacheTimeout = 1.minutes,
+                responseValidityDuration = 1.seconds,
                 hostAndPort = portAllocation.nextHostAndPort(),
                 myHostNameValue = "localhost",
                 additionalServices = registrationHandler)
