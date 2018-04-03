@@ -23,7 +23,7 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.internal.security.DevModeRPCSecurityManagerImpl
+import net.corda.node.internal.security.RPCSecurityManagerWithLocalShellUser
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.api.NodePropertiesStore
@@ -163,7 +163,7 @@ open class Node(configuration: NodeConfiguration,
         SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
         securityManager = with(RPCSecurityManagerImpl(securityManagerConfig)) {
-            if (configuration.shouldInitCrashShell()) DevModeRPCSecurityManagerImpl(this) else this
+            if (configuration.shouldInitCrashShell()) RPCSecurityManagerWithLocalShellUser(this) else this
         }
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker(networkParameters)
