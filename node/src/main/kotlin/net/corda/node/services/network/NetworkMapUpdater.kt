@@ -15,12 +15,7 @@ import net.corda.core.utilities.minutes
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
-import net.corda.nodeapi.internal.NodeInfoAndSigned
-import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
-import net.corda.nodeapi.internal.network.ParametersUpdate
-import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.network.*
 import rx.Subscription
 import rx.subjects.PublishSubject
 import java.nio.file.Path
@@ -28,6 +23,7 @@ import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.system.exitProcess
 
 class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val fileWatcher: NodeInfoWatcher,
@@ -57,36 +53,6 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         return DataFeed(currentUpdateInfo, parametersUpdatesTrack)
     }
 
-    fun updateNodeInfo(nodeInfoAndSigned: NodeInfoAndSigned) {
-        // TODO We've already done this lookup and check in AbstractNode.initNodeInfo
-        val oldNodeInfo = networkMapCache.getNodeByLegalIdentity(nodeInfoAndSigned.nodeInfo.legalIdentities[0])
-        // Compare node info without timestamp.
-        if (nodeInfoAndSigned.nodeInfo.copy(serial = 0L) == oldNodeInfo?.copy(serial = 0L)) return
-
-        logger.info("Node-info has changed so submitting update. Old node-info was $oldNodeInfo")
-        // Only publish and write to disk if there are changes to the node info.
-        networkMapCache.addNode(nodeInfoAndSigned.nodeInfo)
-        fileWatcher.saveToFile(nodeInfoAndSigned)
-
-        if (networkMapClient != null) {
-            tryPublishNodeInfoAsync(nodeInfoAndSigned.signed, networkMapClient)
-        }
-    }
-
-    private fun tryPublishNodeInfoAsync(signedNodeInfo: SignedNodeInfo, networkMapClient: NetworkMapClient) {
-        executor.submit(object : Runnable {
-            override fun run() {
-                try {
-                    networkMapClient.publish(signedNodeInfo)
-                } catch (t: Throwable) {
-                    logger.warn("Error encountered while publishing node info, will retry in $defaultRetryInterval", t)
-                    // TODO: Exponential backoff?
-                    executor.schedule(this, defaultRetryInterval.toMillis(), TimeUnit.MILLISECONDS)
-                }
-            }
-        })
-    }
-
     fun subscribeToNetworkMap() {
         require(fileWatcherSubscription == null) { "Should not call this method twice." }
         // Subscribe to file based networkMap
@@ -114,17 +80,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         networkMap.parametersUpdate?.let { handleUpdateNetworkParameters(networkMapClient, it) }
 
         if (currentParametersHash != networkMap.networkParameterHash) {
-            val updatesFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
-            val acceptedHash = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>().raw.hash else null
-            if (acceptedHash == networkMap.networkParameterHash) {
-                logger.info("Flag day occurred. Network map switched to the new network parameters: ${networkMap.networkParameterHash}. Node will shutdown now and needs to be started again.")
-            } else {
-                // TODO This needs special handling (node omitted update process or didn't accept new parameters)
-                logger.error("Node is using parameters with hash: $currentParametersHash but network map is " +
-                        "advertising: ${networkMap.networkParameterHash}.\n" +
-                        "Node will shutdown now. Please update node to use correct network parameters file.")
-            }
-            System.exit(1)
+            exitOnParametersMismatch(networkMap)
         }
 
         val currentNodeHashes = networkMapCache.allNodeHashes
@@ -149,6 +105,23 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 .forEach(networkMapCache::removeNode)
 
         return cacheTimeout
+    }
+
+    private fun exitOnParametersMismatch(networkMap: NetworkMap) {
+        val updatesFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
+        val acceptedHash = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>().raw.hash else null
+        val exitCode = if (acceptedHash == networkMap.networkParameterHash) {
+            logger.info("Flag day occurred. Network map switched to the new network parameters: " +
+                    "${networkMap.networkParameterHash}. Node will shutdown now and needs to be started again.")
+            0
+        } else {
+            // TODO This needs special handling (node omitted update process or didn't accept new parameters)
+            logger.error("Node is using parameters with hash: $currentParametersHash but network map is " +
+                    "advertising: ${networkMap.networkParameterHash}.\n" +
+                    "Node will shutdown now. Please update node to use correct network parameters file.")
+            1
+        }
+        exitProcess(exitCode)
     }
 
     private fun handleUpdateNetworkParameters(networkMapClient: NetworkMapClient, update: ParametersUpdate) {
