@@ -1,6 +1,5 @@
 package net.corda.node.internal.security
 
-import net.corda.node.services.config.shell.localShellUser
 import net.corda.nodeapi.internal.config.User
 import org.apache.shiro.mgt.DefaultSecurityManager
 import org.apache.shiro.subject.SimplePrincipalCollection
@@ -9,9 +8,8 @@ import javax.security.auth.login.FailedLoginException
 /**
  * Wrapper for [RPCSecurityManager] which creates in-memory [AuthorizingSubject] for [User].
  * Can be used to add on a specific [User] on top of the principals provided by the [RPCSecurityManager] realm.
- * By the default grants "ALL" permissions to "shell/shell" user/password.
  */
-class RPCSecurityManagerWithLocalShellUser(private val delegate: RPCSecurityManager, private val user: User = localShellUser()) : RPCSecurityManager by delegate {
+class RPCSecurityManagerWithAdditionalUser(private val delegate: RPCSecurityManager, private val user: User) : RPCSecurityManager by delegate {
 
     private val realmId = user.username + "Realm"
     private val shellAuthorizingSubject = ShiroAuthorizingSubject(subjectId = SimplePrincipalCollection(user.username, id.value),
