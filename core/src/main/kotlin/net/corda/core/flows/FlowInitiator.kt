@@ -1,5 +1,6 @@
 package net.corda.core.flows
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.context.Actor
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.InvocationContext
@@ -7,7 +8,6 @@ import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.annotations.serialization.CordaSerializable
 import java.security.Principal
 
 /**
@@ -18,7 +18,7 @@ import java.security.Principal
  * communication started by peer nodes ([FlowInitiator.Peer]), scheduled flows ([FlowInitiator.Scheduled])
  * or via the Corda Shell ([FlowInitiator.Shell]).
  */
-@CordaSerializable
+@Serializable
 sealed class FlowInitiator : Principal {
     /** Started using [net.corda.core.messaging.CordaRPCOps.startFlowDynamic]. */
     data class RPC(val username: String) : FlowInitiator() {

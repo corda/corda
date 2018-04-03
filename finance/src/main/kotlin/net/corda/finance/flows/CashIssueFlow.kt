@@ -1,10 +1,10 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
@@ -48,6 +48,6 @@ class CashIssueFlow(private val amount: Amount<Currency>,
         return Result(notarised, ourIdentity)
     }
 
-    @CordaSerializable
+    @Serializable
     class IssueRequest(amount: Amount<Currency>, val issueRef: OpaqueBytes, val notary: Party) : AbstractRequest(amount)
 }

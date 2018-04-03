@@ -1,8 +1,8 @@
 package net.corda.core.identity
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.PartyAndReference
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 
@@ -10,7 +10,7 @@ import java.security.PublicKey
  * An [AbstractParty] contains the common elements of [Party] and [AnonymousParty], specifically the owning key of
  * the party. In most cases [Party] or [AnonymousParty] should be used, depending on use-case.
  */
-@CordaSerializable
+@Serializable
 @DoNotImplement
 abstract class AbstractParty(val owningKey: PublicKey) {
     /** Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key */

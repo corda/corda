@@ -1,6 +1,7 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
@@ -9,7 +10,6 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
@@ -77,6 +77,6 @@ class CashExitFlow(private val amount: Amount<Currency>,
         return Result(notarised, null)
     }
 
-    @CordaSerializable
+    @Serializable
     class ExitRequest(amount: Amount<Currency>, val issuerRef: OpaqueBytes) : AbstractRequest(amount)
 }

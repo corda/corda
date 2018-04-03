@@ -1,8 +1,8 @@
 package net.corda.core.contracts
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.identity.Party
 import net.corda.core.internal.extractFile
-import net.corda.annotations.serialization.CordaSerializable
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.OutputStream
@@ -27,7 +27,7 @@ import java.util.jar.JarInputStream
  * Finally, using ZIPs ensures files have a timestamp associated with them, and enables informational attachments
  * to be password protected (although in current releases password protected ZIPs are likely to fail to work).
  */
-@CordaSerializable
+@Serializable
 interface Attachment : NamedByHash {
     fun open(): InputStream
     fun openAsJAR(): JarInputStream {

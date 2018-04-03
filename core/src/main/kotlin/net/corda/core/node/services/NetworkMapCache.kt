@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.AbstractParty
@@ -8,7 +9,6 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import rx.Observable
 import java.security.PublicKey
@@ -20,7 +20,7 @@ import java.security.PublicKey
  * with a specified network map service, which it fetches data from and then subscribes to updates of.
  */
 interface NetworkMapCache : NetworkMapCacheBase {
-    @CordaSerializable
+    @Serializable
     sealed class MapChange {
         abstract val node: NodeInfo
 

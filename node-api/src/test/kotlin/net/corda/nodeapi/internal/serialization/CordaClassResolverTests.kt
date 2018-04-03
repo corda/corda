@@ -5,26 +5,32 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.MapReferenceResolver
-import com.nhaarman.mockito_kotlin.*
-import net.corda.annotations.serialization.CordaSerializable
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.whenever
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.serialization.*
+import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.SerializationContext
 import net.corda.nodeapi.internal.AttachmentsClassLoader
 import net.corda.nodeapi.internal.AttachmentsClassLoaderTests
 import net.corda.nodeapi.internal.serialization.kryo.CordaKryo
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
-import net.corda.testing.services.MockAttachmentStorage
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
 import java.lang.IllegalStateException
 import java.sql.Connection
 import java.util.*
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
-@CordaSerializable
+@Serializable
 enum class Foo {
     Bar {
         override val value = 0
@@ -44,7 +50,7 @@ enum class BadFood {
     abstract val value: Int
 }
 
-@CordaSerializable
+@Serializable
 enum class Simple {
     Easy
 }
@@ -53,7 +59,7 @@ enum class BadSimple {
     Nasty
 }
 
-@CordaSerializable
+@Serializable
 open class Element
 
 open class SubElement : Element()
@@ -64,7 +70,7 @@ abstract class AbstractClass
 
 interface Interface
 
-@CordaSerializable
+@Serializable
 interface SerializableInterface
 
 interface SerializableSubInterface : SerializableInterface
@@ -77,7 +83,7 @@ open class SerializableViaSubInterface : SerializableSubInterface
 
 class SerializableViaSuperSubInterface : SerializableViaSubInterface()
 
-@CordaSerializable
+@Serializable
 class CustomSerializable : KryoSerializable {
     override fun read(kryo: Kryo?, input: Input?) {
     }
@@ -86,7 +92,7 @@ class CustomSerializable : KryoSerializable {
     }
 }
 
-@CordaSerializable
+@Serializable
 @DefaultSerializer(DefaultSerializableSerializer::class)
 class DefaultSerializable
 
@@ -361,7 +367,7 @@ class CordaClassResolverTests {
         resolver.getRegistration(LinkedHashSet::class.java)
     }
 
-    @CordaSerializable
+    @Serializable
     class CordaSerializableHashSet<E> : HashSet<E>()
 
     @Test
@@ -369,7 +375,7 @@ class CordaClassResolverTests {
         expectedEx.expect(IllegalStateException::class.java)
         expectedEx.expectMessage("The superclass java.util.HashSet of net.corda.nodeapi.internal.serialization.CordaClassResolverTests\$CordaSerializableHashSet is blacklisted, so it cannot be used in serialization.")
         val resolver = CordaClassResolver(allButBlacklistedContext)
-        // CordaSerializableHashSet is @CordaSerializable, but extends the blacklisted HashSet.
+        // CordaSerializableHashSet is @Serializable, but extends the blacklisted HashSet.
         resolver.getRegistration(CordaSerializableHashSet::class.java)
     }
 }

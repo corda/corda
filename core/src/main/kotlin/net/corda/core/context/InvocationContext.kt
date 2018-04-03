@@ -1,8 +1,8 @@
 package net.corda.core.context
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.identity.CordaX500Name
-import net.corda.annotations.serialization.CordaSerializable
 import java.security.Principal
 
 /**
@@ -15,7 +15,7 @@ import java.security.Principal
  * @property externalTrace Optional external invocation trace for cross-system logs correlation.
  * @property impersonatedActor Optional impersonated actor, used for logging but not for authorisation.
  */
-@CordaSerializable
+@Serializable
 data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val actor: Actor?, val externalTrace: Trace? = null, val impersonatedActor: Actor? = null) {
     companion object {
         /**
@@ -64,7 +64,7 @@ data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val
 /**
  * Models an initiator in Corda, can be a user, a service, etc.
  */
-@CordaSerializable
+@Serializable
 data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdentity: CordaX500Name) {
 
     companion object {
@@ -75,7 +75,7 @@ data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdenti
     /**
      * Actor id.
      */
-    @CordaSerializable
+    @Serializable
     data class Id(val value: String)
 
 }
@@ -83,7 +83,7 @@ data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdenti
 /**
  * Represents the source of an action such as a flow start, an RPC, a shell command etc.
  */
-@CordaSerializable
+@Serializable
 sealed class InvocationOrigin {
     /**
      * Returns the [Principal] for a given [Actor].
@@ -130,5 +130,5 @@ sealed class InvocationOrigin {
 /**
  * Authentication / Authorisation Service ID.
  */
-@CordaSerializable
+@Serializable
 data class AuthServiceId(val value: String)

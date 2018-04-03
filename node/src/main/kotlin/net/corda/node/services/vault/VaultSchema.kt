@@ -8,11 +8,10 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
-import java.io.Serializable
 import java.time.Instant
+import java.io.Serializable
 import java.util.*
 import javax.persistence.*
 
@@ -24,7 +23,7 @@ object VaultSchema
 /**
  * First version of the Vault ORM schema
  */
-@CordaSerializable
+@net.corda.annotations.serialization.Serializable
 object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
         mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
     @Entity

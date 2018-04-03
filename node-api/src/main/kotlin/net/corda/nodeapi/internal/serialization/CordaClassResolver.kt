@@ -126,7 +126,7 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
         return (type.classLoader !is AttachmentsClassLoader)
                 && !KryoSerializable::class.java.isAssignableFrom(type)
                 && !type.isAnnotationPresent(DefaultSerializer::class.java)
-                && ((type.isAnnotationPresent(CordaSerializable::class.java) || type.isAnnotationPresent(net.corda.annotations.serialization.CordaSerializable::class.java))
+                && ((type.isAnnotationPresent(CordaSerializable::class.java) || type.isAnnotationPresent(net.corda.annotations.serialization.Serializable::class.java))
                 || whitelist.hasAnnotationInHierarchy(type))
     }
 

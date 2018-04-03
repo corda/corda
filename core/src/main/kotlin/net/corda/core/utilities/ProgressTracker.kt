@@ -1,7 +1,7 @@
 package net.corda.core.utilities
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
-import net.corda.annotations.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
@@ -29,9 +29,9 @@ import java.util.*
  * A progress tracker is *not* thread safe. You may move events from the thread making progress to another thread by
  * using the [Observable] subscribeOn call.
  */
-@CordaSerializable
+@Serializable
 class ProgressTracker(vararg steps: Step) {
-    @CordaSerializable
+    @Serializable
     sealed class Change(val progressTracker: ProgressTracker) {
         data class Position(val tracker: ProgressTracker,  val newStep: Step) : Change(tracker) {
             override fun toString() = newStep.label
@@ -47,7 +47,7 @@ class ProgressTracker(vararg steps: Step) {
     }
 
     /** The superclass of all step objects. */
-    @CordaSerializable
+    @Serializable
     open class Step(open val label: String) {
         open val changes: Observable<Change> get() = Observable.empty()
         open fun childProgressTracker(): ProgressTracker? = null
@@ -68,7 +68,7 @@ class ProgressTracker(vararg steps: Step) {
         override fun equals(other: Any?) = other is DONE
     }
 
-    @CordaSerializable
+    @Serializable
     private data class Child(val tracker: ProgressTracker, @Transient val subscription: Subscription?)
 
     private val childProgressTrackers = mutableMapOf<Step, Child>()

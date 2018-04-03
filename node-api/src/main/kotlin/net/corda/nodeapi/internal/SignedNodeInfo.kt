@@ -1,10 +1,10 @@
 package net.corda.nodeapi.internal
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.verify
 import net.corda.core.node.NodeInfo
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -19,7 +19,7 @@ import java.security.SignatureException
 // that the node owns. This check can only be done by the network map server as it can check with the doorman if a node
 // is part of a composite identity. This of course further requires the doorman being able to issue CSRs for composite
 // public keys.
-@CordaSerializable
+@Serializable
 class SignedNodeInfo(val raw: SerializedBytes<NodeInfo>, val signatures: List<DigitalSignature>) {
     // TODO Add root cert param (or TrustAnchor) to make sure all the identities belong to the same root
     fun verified(): NodeInfo {

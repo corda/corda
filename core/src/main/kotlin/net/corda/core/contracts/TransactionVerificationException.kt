@@ -1,9 +1,9 @@
 package net.corda.core.contracts
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.NonEmptySet
 import java.security.PublicKey
 
@@ -31,7 +31,7 @@ class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attac
  * @property txId the Merkle root hash (identifier) of the transaction that failed verification.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-@CordaSerializable
+@Serializable
 sealed class TransactionVerificationException(val txId: SecureHash, message: String, cause: Throwable?)
     : FlowException("$message, transaction: $txId", cause) {
 
@@ -106,7 +106,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
         : TransactionVerificationException(txId, "Missing required encumbrance $missing in $inOut", null)
 
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
-    @CordaSerializable
+    @Serializable
     enum class Direction {
         /** Issue in the inputs list */ INPUT,
         /** Issue in the outputs list */ OUTPUT

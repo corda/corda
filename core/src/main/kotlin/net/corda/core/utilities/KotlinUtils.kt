@@ -1,11 +1,10 @@
 package net.corda.core.utilities
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.internal.concurrent.get
 import net.corda.core.internal.uncheckedCast
-import net.corda.annotations.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import rx.Observable
 import java.time.Duration
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
@@ -105,7 +104,7 @@ interface VariablePropertyDelegate<T> : PropertyDelegate<T> {
     operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T)
 }
 
-@CordaSerializable
+@Serializable
 private class TransientProperty<out T> internal constructor(private val initialiser: () -> T) : PropertyDelegate<T> {
     @Transient private var initialised = false
     @Transient private var value: T? = null

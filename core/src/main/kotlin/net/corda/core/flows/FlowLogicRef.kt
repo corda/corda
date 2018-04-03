@@ -1,8 +1,8 @@
 package net.corda.core.flows
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
-import net.corda.annotations.serialization.CordaSerializable
 
 /**
  * The public factory interface for creating validated [FlowLogicRef] instances as part of the scheduling framework.
@@ -45,7 +45,7 @@ interface FlowLogicRefFactory {
  *
  * @property type the fully qualified name of the class that failed checks.
  */
-@CordaSerializable
+@Serializable
 class IllegalFlowLogicException(val type: String, msg: String) :
         IllegalArgumentException("A FlowLogicRef cannot be constructed for FlowLogic of type $type: $msg") {
     constructor(type: Class<*>, msg: String) : this(type.name, msg)
@@ -58,6 +58,6 @@ class IllegalFlowLogicException(val type: String, msg: String) :
  * Only allows a String reference to the FlowLogic class, and only allows restricted argument types as per [FlowLogicRefFactory].
  */
 // TODO: align this with the existing [FlowRef] in the bank-side API (probably replace some of the API classes)
-@CordaSerializable
+@Serializable
 @DoNotImplement
 interface FlowLogicRef

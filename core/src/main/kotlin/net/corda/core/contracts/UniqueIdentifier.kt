@@ -1,7 +1,7 @@
 package net.corda.core.contracts
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.internal.VisibleForTesting
-import net.corda.annotations.serialization.CordaSerializable
 import java.util.*
 
 /**
@@ -16,7 +16,7 @@ import java.util.*
  * So that the first time a state is issued this should be given a new UUID.
  * Subsequent copies and evolutions of a state should just copy the [externalId] and [id] fields unmodified.
  */
-@CordaSerializable
+@Serializable
 data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.randomUUID()) : Comparable<UniqueIdentifier> {
     override fun toString(): String = if (externalId != null) "${externalId}_$id" else id.toString()
 

@@ -1,9 +1,9 @@
 package net.corda.core.node
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 
 /**
@@ -18,7 +18,7 @@ import net.corda.core.utilities.NetworkHostAndPort
  * @property serial An arbitrary number incremented each time the NodeInfo is changed. This is analogous to the same
  *           concept in DNS.
  */
-@CordaSerializable
+@Serializable
 data class NodeInfo(val addresses: List<NetworkHostAndPort>,
                     val legalIdentitiesAndCerts: List<PartyAndCertificate>,
                     val platformVersion: Int,

@@ -1,10 +1,10 @@
 package net.corda.core.identity
 
 import com.google.common.collect.ImmutableSet
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.internal.LegalNameValidator
 import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.internal.x500Name
-import net.corda.annotations.serialization.CordaSerializable
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.AttributeTypeAndValue
@@ -29,7 +29,7 @@ import javax.security.auth.x500.X500Principal
  * @property country country the organisation is in, as an ISO 3166-1 2-letter country code. Corresponds to the "C"
  * attribute type.
  */
-@CordaSerializable
+@Serializable
 data class CordaX500Name(val commonName: String?,
                          val organisationUnit: String?,
                          val organisation: String,

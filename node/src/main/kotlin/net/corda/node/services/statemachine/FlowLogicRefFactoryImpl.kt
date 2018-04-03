@@ -1,9 +1,9 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.internal.VisibleForTesting
 import com.google.common.primitives.Primitives
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.flows.*
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.SingletonSerializeAsToken
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -16,7 +16,7 @@ import kotlin.reflect.jvm.javaType
 /**
  * The internal concrete implementation of the FlowLogicRef marker interface.
  */
-@CordaSerializable
+@Serializable
 data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String, val args: Map<String, Any?>) : FlowLogicRef
 
 /**

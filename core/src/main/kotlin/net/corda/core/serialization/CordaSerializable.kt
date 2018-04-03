@@ -19,5 +19,5 @@ import java.lang.annotation.Inherited
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 @Inherited
-@Deprecated("please use net.corda.annotations.serialization.CordaSerializable")
+@Deprecated("please use net.corda.annotations.serialization.Serializable")
 annotation class CordaSerializable

@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
@@ -12,7 +13,6 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -460,7 +460,7 @@ abstract class FlowLogic<out T> {
 /**
  * Version and name of the CorDapp hosting the other side of the flow.
  */
-@CordaSerializable
+@Serializable
 data class FlowInfo(
         /**
          * The integer flow version the other side is using.

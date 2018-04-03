@@ -1,8 +1,8 @@
 package net.corda.core.contracts
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.exactAdd
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -36,7 +36,7 @@ interface TokenizableAssetInfo {
  * @property token the type of token this is an amount of. This is usually a singleton.
  * @param T the type of the token, for example [Currency]. T should implement [TokenizableAssetInfo] if automatic conversion to/from a display format is required.
  */
-@CordaSerializable
+@Serializable
 data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal, val token: T) : Comparable<Amount<T>> {
     // TODO Proper lookup of currencies in a locale and context sensitive fashion is not supported and is left to the application.
     companion object {
@@ -315,7 +315,7 @@ data class SourceAndAmount<T : Any, out P : Any>(val source: P, val amount: Amou
  * @property destination is the [Party], [CompositeKey], or other identifier of the token sink if quantityDelta is positive,
  * or the token source if quantityDelta is negative. The type P should support value equality.
  */
-@CordaSerializable
+@Serializable
 class AmountTransfer<T : Any, P : Any>(val quantityDelta: Long,
                                        val token: T,
                                        val source: P,

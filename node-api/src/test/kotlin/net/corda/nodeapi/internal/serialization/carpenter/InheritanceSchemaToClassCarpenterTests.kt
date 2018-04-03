@@ -1,33 +1,33 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import org.junit.Test
 import kotlin.test.*
 
-@CordaSerializable
+@Serializable
 interface J {
     val j: Int
 }
 
-@CordaSerializable
+@Serializable
 interface I {
     val i: Int
 }
 
-@CordaSerializable
+@Serializable
 interface II {
     val ii: Int
 }
 
-@CordaSerializable
+@Serializable
 interface III : I {
     val iii: Int
     override val i: Int
 }
 
-@CordaSerializable
+@Serializable
 interface IIII {
     val iiii: Int
     val i: I

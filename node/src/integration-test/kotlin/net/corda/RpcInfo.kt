@@ -1,7 +1,7 @@
 package net.corda
 
-import net.corda.core.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.utilities.NetworkHostAndPort
 
-@CordaSerializable
+@Serializable
 data class RpcInfo(val address: NetworkHostAndPort, val username: String, val password: String)

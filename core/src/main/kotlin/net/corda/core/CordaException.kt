@@ -1,9 +1,9 @@
 package net.corda.core
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import java.util.*
 
-@CordaSerializable
+@Serializable
 interface CordaThrowable {
     var originalExceptionClassName: String?
     val originalMessage: String?

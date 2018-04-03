@@ -2,6 +2,7 @@
 
 package net.corda.core.node.services.vault
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
@@ -9,7 +10,6 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentState
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.time.Instant
 import java.util.*
@@ -45,10 +45,10 @@ interface GenericQueryCriteria<Q : GenericQueryCriteria<Q, *>, in P : BaseQueryC
  * Indexing assumptions:
  * QueryCriteria assumes underlying schema tables are correctly indexed for performance.
  */
-@CordaSerializable
+@Serializable
 sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaParser>, GenericQueryCriteria.ChainableQueryCriteria<QueryCriteria, IQueryCriteriaParser> {
 
-    @CordaSerializable
+    @Serializable
     data class TimeCondition(val type: TimeInstantType, val predicate: ColumnPredicate<Instant>)
 
     /**
@@ -59,10 +59,10 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      * @param [lockIds] The specific locked states to select (if applicable).
      */
     // DOCSTART VaultQuerySoftLockingCriteria
-    @CordaSerializable
+    @Serializable
     data class SoftLockingCondition(val type: SoftLockingType, val lockIds: List<UUID> = emptyList())
 
-    @CordaSerializable
+    @Serializable
     enum class SoftLockingType {
         UNLOCKED_ONLY,  // only unlocked states
         LOCKED_ONLY,    // only soft locked states
@@ -154,7 +154,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     }
 
     // timestamps stored in the vault states table [VaultSchema.VaultStates]
-    @CordaSerializable
+    @Serializable
     enum class TimeInstantType {
         RECORDED,
         CONSUMED
@@ -166,7 +166,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     override fun and(criteria: QueryCriteria): QueryCriteria = AndComposition(this, criteria)
     override fun or(criteria: QueryCriteria): QueryCriteria = OrComposition(this, criteria)
 }
-@CordaSerializable
+@Serializable
 sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser>, GenericQueryCriteria.ChainableQueryCriteria<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser> {
     /**
      * AttachmentsQueryCriteria:

@@ -1,7 +1,7 @@
 package net.corda.core.utilities
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.internal.uncheckedCast
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.Try.Failure
 import net.corda.core.utilities.Try.Success
 
@@ -9,7 +9,7 @@ import net.corda.core.utilities.Try.Success
  * Representation of an operation that has either succeeded with a result (represented by [Success]) or failed with an
  * exception (represented by [Failure]).
  */
-@CordaSerializable
+@Serializable
 sealed class Try<out A> {
     companion object {
         /**

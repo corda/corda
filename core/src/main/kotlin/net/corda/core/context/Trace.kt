@@ -1,6 +1,6 @@
 package net.corda.core.context
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.utilities.Id
 import net.corda.core.utilities.UuidGenerator
 import java.time.Instant
@@ -8,7 +8,7 @@ import java.time.Instant
 /**
  * Contextual tracing information, including invocation and session id.
  */
-@CordaSerializable
+@Serializable
 data class Trace(val invocationId: InvocationId, val sessionId: SessionId) {
 
     companion object {
@@ -23,7 +23,7 @@ data class Trace(val invocationId: InvocationId, val sessionId: SessionId) {
     /**
      * Represents id and timestamp of an invocation.
      */
-    @CordaSerializable
+    @Serializable
     class InvocationId(value: String, timestamp: Instant) : Id<String>(value, TYPE, timestamp) {
 
         companion object {
@@ -40,7 +40,7 @@ data class Trace(val invocationId: InvocationId, val sessionId: SessionId) {
     /**
      * Represents id and timestamp of a session.
      */
-    @CordaSerializable
+    @Serializable
     class SessionId(value: String, timestamp: Instant) : Id<String>(value, TYPE, timestamp) {
 
         companion object {

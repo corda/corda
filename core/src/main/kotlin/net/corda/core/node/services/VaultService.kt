@@ -1,6 +1,7 @@
 package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
@@ -11,7 +12,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault.StateStatus
 import net.corda.core.node.services.vault.*
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.NonEmptySet
@@ -31,7 +31,7 @@ import java.util.*
  *   Active means they haven't been consumed yet (or we don't know about it).
  *   Relevant means they contain at least one of our pubkeys.
  */
-@CordaSerializable
+@Serializable
 class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     /**
      * Represents an update observed by the vault that will be notified to observers.  Include the [StateRef]s of
@@ -41,7 +41,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      * If the vault observes multiple transactions simultaneously, where some transactions consume the outputs of some of the
      * other transactions observed, then the changes are observed "net" of those.
      */
-    @CordaSerializable
+    @Serializable
     data class Update<U : ContractState>(
             val consumed: Set<StateAndRef<U>>,
             val produced: Set<StateAndRef<U>>,
@@ -98,12 +98,12 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         }
     }
 
-    @CordaSerializable
+    @Serializable
     enum class StateStatus {
         UNCONSUMED, CONSUMED, ALL
     }
 
-    @CordaSerializable
+    @Serializable
     enum class UpdateType {
         GENERAL, NOTARY_CHANGE, CONTRACT_UPGRADE
     }
@@ -121,14 +121,14 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      *  Note: currently otherResults are used only for Aggregate Functions (in which case, the states and statesMetadata
      *  results will be empty).
      */
-    @CordaSerializable
+    @Serializable
     data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
                                            val statesMetadata: List<StateMetadata>,
                                            val totalStatesAvailable: Long,
                                            val stateTypes: StateStatus,
                                            val otherResults: List<Any>)
 
-    @CordaSerializable
+    @Serializable
     data class StateMetadata(val ref: StateRef,
                              val contractStateClassName: String,
                              val recordedTime: Instant,

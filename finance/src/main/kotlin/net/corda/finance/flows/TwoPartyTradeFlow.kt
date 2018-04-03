@@ -1,12 +1,12 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.confidential.IdentitySyncFlow
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -49,7 +49,7 @@ object TwoPartyTradeFlow {
      *
      * @param payToIdentity anonymous identity of the seller, for payment to be sent to.
      */
-    @CordaSerializable
+    @Serializable
     data class SellerTradeInfo(
             val price: Amount<Currency>,
             val payToIdentity: PartyAndCertificate

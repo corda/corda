@@ -1,8 +1,8 @@
 package net.corda.core.contracts
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.internal.div
 import net.corda.core.internal.until
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.WireTransaction
 import java.time.Duration
 import java.time.Instant
@@ -18,7 +18,7 @@ import java.time.Instant
  * [WireTransaction] has an optional time-window property, which if specified, restricts the validity of the transaction
  * to that time-interval as the Consensus Service will not sign it if it's received outside of this window.
  */
-@CordaSerializable
+@Serializable
 abstract class TimeWindow {
     companion object {
         /** Creates a [TimeWindow] with null [untilTime], i.e. the time interval `[fromTime, ∞)`. [midpoint] will return null. */

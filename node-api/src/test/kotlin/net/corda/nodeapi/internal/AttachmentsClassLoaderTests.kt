@@ -2,8 +2,9 @@ package net.corda.nodeapi.internal
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.annotations.serialization.CordaSerializable
-import net.corda.core.contracts.*
+import net.corda.annotations.serialization.Serializable
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.Contract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.declaredField
@@ -23,9 +24,9 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.internal.kryoSpecific
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.*
@@ -208,7 +209,7 @@ class AttachmentsClassLoaderTests {
     }
 
     // top level wrapper
-    @CordaSerializable
+    @Serializable
     class Data(val contract: Contract)
 
     @Test

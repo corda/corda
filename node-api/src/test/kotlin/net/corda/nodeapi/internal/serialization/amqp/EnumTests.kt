@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializedBytes
 import org.assertj.core.api.Assertions
@@ -16,7 +16,7 @@ class EnumTests {
         TSHIRT, UNDERWIRE, VEST, PANTS, STRAPLESS, BRIEFS, TEMPLE, HIPSTERS
     }
 
-    @CordaSerializable
+    @Serializable
     enum class AnnotatedUnderGarments {
         TSHIRT, UNDERWIRE, VEST, PANTS, STRAPLESS, BRIEFS, TEMPLE, HIPSTERS
     }
@@ -228,7 +228,8 @@ class EnumTests {
 
     @Test
     fun enumAnnotated() {
-        @CordaSerializable data class C(val c: AnnotatedUnderGarments)
+        @Serializable
+        data class C(val c: AnnotatedUnderGarments)
 
         class WL : ClassWhitelist {
             override fun hasListed(type: Class<*>) = false

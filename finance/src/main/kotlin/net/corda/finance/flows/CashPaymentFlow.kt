@@ -1,13 +1,13 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.contracts.asset.Cash
@@ -68,7 +68,7 @@ open class CashPaymentFlow(
         return Result(notarised, anonymousRecipient)
     }
 
-    @CordaSerializable
+    @Serializable
     class PaymentRequest(amount: Amount<Currency>,
                          val recipient: Party,
                          val anonymous: Boolean,

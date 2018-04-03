@@ -2,7 +2,6 @@ package net.corda.core.schemas
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.toHexString
 import java.io.Serializable
 import javax.persistence.Column
@@ -50,7 +49,8 @@ open class MappedSchema(schemaFamily: Class<*>,
  * [StateRef] will be set to the correct value by the framework (there's no need to set during mapping generation by the state itself).
  */
 @MappedSuperclass
-@CordaSerializable open class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : StatePersistable
+@net.corda.annotations.serialization.Serializable
+open class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : StatePersistable
 
 /**
  * Embedded [StateRef] representation used in state mapping.

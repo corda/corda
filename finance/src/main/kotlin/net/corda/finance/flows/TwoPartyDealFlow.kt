@@ -1,6 +1,7 @@
 package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.TransactionSignature
@@ -9,7 +10,6 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.excludeNotary
 import net.corda.core.identity.groupPublicKeysByWellKnownParty
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -32,7 +32,7 @@ object TwoPartyDealFlow {
      * @param primaryIdentity the (anonymised) identity of the participant that initiates communication/handshake.
      * @param secondaryIdentity the (anonymised) identity of the participant that is recipient of initial communication.
      */
-    @CordaSerializable
+    @Serializable
     data class Handshake<out T>(val payload: T, val primaryIdentity: AnonymousParty, val secondaryIdentity: AnonymousParty)
 
     /**
@@ -154,7 +154,7 @@ object TwoPartyDealFlow {
         protected abstract fun assembleSharedTX(handshake: Handshake<U>): Triple<TransactionBuilder, List<PublicKey>, List<TransactionSignature>>
     }
 
-    @CordaSerializable
+    @Serializable
     data class AutoOffer(val notary: Party, val dealBeingOffered: DealState)
 
     /**

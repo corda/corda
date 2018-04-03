@@ -373,7 +373,7 @@ private fun exploreType(type: Type?, interfaces: MutableSet<Type>, serializerFac
     val clazz = type?.asClass()
     if (clazz != null) {
         if (clazz.isInterface) {
-            if (serializerFactory.whitelist.isNotWhitelisted(clazz)) return // We stop exploring once we reach a branch that has no `CordaSerializable` annotation or whitelisting.
+            if (serializerFactory.whitelist.isNotWhitelisted(clazz)) return // We stop exploring once we reach a branch that has no `Serializable` annotation or whitelisting.
             else interfaces += type
         }
         for (newInterface in clazz.genericInterfaces) {
@@ -520,7 +520,7 @@ private fun Throwable.setMessage(newMsg: String) {
 
 fun ClassWhitelist.requireWhitelisted(type: Type) {
     if (!this.isWhitelisted(type.asClass()!!)) {
-        throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
+        throw NotSerializableException("Class $type is not on the whitelist or annotated with @Serializable.")
     }
 }
 
@@ -529,7 +529,7 @@ fun ClassWhitelist.isNotWhitelisted(clazz: Class<*>) = !(this.isWhitelisted(claz
 
 // Recursively check the class, interfaces and superclasses for our annotation.
 fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {
-         return (type.isAnnotationPresent(CordaSerializable::class.java) || type.isAnnotationPresent(net.corda.annotations.serialization.CordaSerializable::class.java))
+         return (type.isAnnotationPresent(CordaSerializable::class.java) || type.isAnnotationPresent(net.corda.annotations.serialization.Serializable::class.java))
             || type.interfaces.any { hasAnnotationInHierarchy(it) }
             || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
 }

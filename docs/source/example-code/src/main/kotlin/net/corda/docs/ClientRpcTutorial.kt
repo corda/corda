@@ -2,12 +2,12 @@
 
 package net.corda.docs
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Amount
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
@@ -20,8 +20,8 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.node.User
 import net.corda.testing.driver.driver
+import net.corda.testing.node.User
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.MultiGraph
@@ -137,7 +137,7 @@ fun generateTransactions(proxy: CordaRPCOps) {
 data class ExampleRPCValue(val foo: String)
 
 // Annotated, so no need to whitelist manually.
-@CordaSerializable
+@Serializable
 data class ExampleRPCValue2(val bar: Int)
 
 class ExampleRPCSerializationWhitelist : SerializationWhitelist {

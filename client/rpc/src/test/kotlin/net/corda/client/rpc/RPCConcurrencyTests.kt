@@ -1,11 +1,11 @@
 package net.corda.client.rpc
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.RPCOps
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.node.services.messaging.RPCServerConfiguration
@@ -31,7 +31,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
     /**
      * Holds a "rose"-tree of [Observable]s which allows us to test arbitrary [Observable] nesting in RPC replies.
      */
-    @CordaSerializable
+    @Serializable
     data class ObservableRose<out A>(val value: A, val branches: Observable<out ObservableRose<A>>)
 
     private interface TestOps : RPCOps {

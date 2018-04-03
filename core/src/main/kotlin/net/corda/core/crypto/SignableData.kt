@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 
 /**
  * A [SignableData] object is the packet actually signed.
@@ -11,5 +11,5 @@ import net.corda.annotations.serialization.CordaSerializable
  * @param txId transaction's id or root of multi-transaction Merkle tree in case of multi-transaction signing.
  * @param signatureMetadata meta data required.
  */
-@CordaSerializable
+@Serializable
 data class SignableData(val txId: SecureHash, val signatureMetadata: SignatureMetadata)

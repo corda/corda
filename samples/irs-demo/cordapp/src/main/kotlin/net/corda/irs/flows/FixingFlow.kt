@@ -1,12 +1,12 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
@@ -104,7 +104,7 @@ object FixingFlow {
 
 
     /** Used to set up the session between [Floater] and [Fixer] */
-    @CordaSerializable
+    @Serializable
     data class FixingSession(val ref: StateRef, val oracle: Party)
 
     /**

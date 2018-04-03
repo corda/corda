@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
@@ -12,7 +13,6 @@ import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
@@ -70,7 +70,7 @@ class InMemoryMessagingNetwork private constructor(
     private val handleEndpointMap = HashMap<PeerHandle, InMemoryMessaging>()
 
     /** A class which represents a message being transferred from sender to recipients, within the [InMemoryMessageNetwork]. **/
-    @CordaSerializable
+    @Serializable
     class MessageTransfer private constructor(val sender: PeerHandle, internal val message: Message, val recipients: MessageRecipients) {
         companion object {
             internal fun createMessageTransfer(sender: PeerHandle, message: Message, recipients: MessageRecipients): MessageTransfer {
@@ -199,7 +199,7 @@ class InMemoryMessagingNetwork private constructor(
      * @property id An integer giving the node an ID on the [InMemoryMessagingNetwork].
      * @property name The node's [CordaX500Name].
      */
-    @CordaSerializable
+    @Serializable
     data class PeerHandle(val id: Int, val name: CordaX500Name) : SingleMessageRecipient {
         override fun toString() = name.toString()
         override fun equals(other: Any?) = other is PeerHandle && other.id == id
@@ -211,7 +211,7 @@ class InMemoryMessagingNetwork private constructor(
      *
      * @property party The [Party] offering the service.
      */
-    @CordaSerializable
+    @Serializable
     data class DistributedServiceHandle(val party: Party) : MessageRecipientGroup {
         override fun toString() = "Service($party)"
     }

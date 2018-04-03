@@ -9,9 +9,9 @@ import com.opengamma.strata.product.common.BuySell
 import com.opengamma.strata.product.swap.SwapTrade
 import com.opengamma.strata.product.swap.type.FixedIborSwapConvention
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.identity.AbstractParty
 import net.corda.core.utilities.toBase58String
-import net.corda.annotations.serialization.CordaSerializable
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.time.LocalDate
@@ -37,7 +37,7 @@ data class FloatingLeg(val _notional: BigDecimal, override val notional: BigDeci
 /**
  * Represents a swap between two parties, a buyer and a seller. This class is a builder for OpenGamma SwapTrades.
  */
-@CordaSerializable
+@Serializable
 data class SwapData(
         val id: Pair<String, String>,
         val buyer: Pair<String, PublicKey>,

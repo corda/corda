@@ -1,15 +1,18 @@
 package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
@@ -68,7 +71,7 @@ object CustomVaultQuery {
  */
 
 object TopupIssuerFlow {
-    @CordaSerializable
+    @Serializable
     data class TopupRequest(val issueToParty: Party,
                             val issuerPartyRef: OpaqueBytes,
                             val notaryParty: Party)

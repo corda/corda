@@ -1,9 +1,9 @@
 package net.corda.core.messaging
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.StateMachineRunId
-import net.corda.annotations.serialization.CordaSerializable
 import rx.Observable
 
 /**
@@ -55,7 +55,7 @@ interface FlowProgressHandle<A> : FlowHandle<A> {
 }
 
 
-@CordaSerializable
+@Serializable
 data class FlowHandleImpl<A>(
         override val id: StateMachineRunId,
         override val returnValue: CordaFuture<A>) : FlowHandle<A> {
@@ -66,7 +66,7 @@ data class FlowHandleImpl<A>(
     }
 }
 
-@CordaSerializable
+@Serializable
 data class FlowProgressHandleImpl<A> @JvmOverloads constructor(
         override val id: StateMachineRunId,
         override val returnValue: CordaFuture<A>,

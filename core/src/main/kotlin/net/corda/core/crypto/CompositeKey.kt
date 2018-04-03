@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.utilities.exactAdd
 import net.corda.core.utilities.sequence
 import org.bouncycastle.asn1.*
@@ -26,7 +26,7 @@ import java.util.*
  * @property threshold specifies the minimum total weight required (in the simple case – the minimum number of child
  * signatures required) to satisfy the sub-tree rooted at this node.
  */
-@CordaSerializable
+@Serializable
 class CompositeKey private constructor(val threshold: Int, children: List<NodeAndWeight>) : PublicKey {
     companion object {
         const val KEY_ALGORITHM = "COMPOSITE"
@@ -143,7 +143,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
      * Holds node - weight pairs for a CompositeKey. Ordered first by weight, then by node's hashCode.
      * Each node should be assigned with a positive weight to avoid certain types of weight underflow attacks.
      */
-    @CordaSerializable
+    @Serializable
     data class NodeAndWeight(val node: PublicKey, val weight: Int) : Comparable<NodeAndWeight>, ASN1Object() {
         init {
             // We don't allow zero or negative weights. Minimum weight = 1.

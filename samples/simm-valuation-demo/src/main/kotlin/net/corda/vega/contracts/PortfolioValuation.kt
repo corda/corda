@@ -2,7 +2,7 @@ package net.corda.vega.contracts
 
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount
 import com.opengamma.strata.market.param.CurrencyParameterSensitivities
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import net.corda.vega.analytics.CordaMarketData
 import net.corda.vega.analytics.InitialMarginTriple
 import java.math.BigDecimal
@@ -14,7 +14,7 @@ import java.math.BigDecimal
  * We have to store trade counts in this object because a history is required and
  * we want to avoid walking the transaction chain.
  */
-@CordaSerializable
+@Serializable
 data class PortfolioValuation(val trades: Int,
                               val notional: BigDecimal,
                               val marketData: CordaMarketData,

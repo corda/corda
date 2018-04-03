@@ -1,7 +1,7 @@
 package net.corda.core.contracts
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.identity.AbstractParty
-import net.corda.annotations.serialization.CordaSerializable
 
 // DOCSTART 1
 /**
@@ -11,7 +11,7 @@ import net.corda.annotations.serialization.CordaSerializable
  * notary is responsible for ensuring there is no "double spending" by only signing a transaction if the input states
  * are all free.
  */
-@CordaSerializable
+@Serializable
 interface ContractState {
     /**
      * A _participant_ is any party that is able to consume this state in a valid transaction.

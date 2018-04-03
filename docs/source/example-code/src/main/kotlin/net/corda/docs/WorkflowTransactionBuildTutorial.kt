@@ -1,6 +1,7 @@
 package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
@@ -8,7 +9,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -16,7 +16,7 @@ import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 
 // Minimal state model of a manual approval process
-@CordaSerializable
+@Serializable
 enum class WorkflowState {
     NEW,
     APPROVED,

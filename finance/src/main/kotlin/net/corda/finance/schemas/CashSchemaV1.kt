@@ -1,13 +1,16 @@
 package net.corda.finance.schemas
 
+import net.corda.annotations.serialization.Serializable
+import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
-import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import org.hibernate.annotations.Type
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Index
+import javax.persistence.Table
 
 /**
  * An object used to fully qualify the [CashSchema] family name (i.e. independent of version).
@@ -18,7 +21,7 @@ object CashSchema
  * First version of a cash contract ORM schema that maps all fields of the [Cash] contract state as it stood
  * at the time of writing.
  */
-@CordaSerializable
+@Serializable
 object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
     @Entity
     @Table(name = "contract_cash_states",

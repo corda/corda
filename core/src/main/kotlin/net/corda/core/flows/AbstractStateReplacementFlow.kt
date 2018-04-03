@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -9,7 +10,6 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.excludeHostNode
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -27,7 +27,7 @@ abstract class AbstractStateReplacementFlow {
      *
      * @param M the type of a class representing proposed modification by the instigator.
      */
-    @CordaSerializable
+    @Serializable
     data class Proposal<out M>(val stateRef: StateRef, val modification: M)
 
     /**

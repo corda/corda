@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -45,7 +45,7 @@ class DeserializeAndReturnEnvelopeTests {
 
     @Test
     fun unannotatedInterfaceIsNotInSchema() {
-        @CordaSerializable
+        @Serializable
         data class Foo(val bar: Int) : Comparable<Foo> {
             override fun compareTo(other: Foo): Int = bar.compareTo(other.bar)
         }

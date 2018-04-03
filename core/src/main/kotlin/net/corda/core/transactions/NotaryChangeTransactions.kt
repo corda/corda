@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -7,7 +8,6 @@ import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.NotaryChangeWireTransaction.Component.*
@@ -20,7 +20,7 @@ import java.security.PublicKey
  * old and new notaries. Output states can be computed by applying the notary modification to corresponding inputs
  * on the fly.
  */
-@CordaSerializable
+@Serializable
 data class NotaryChangeWireTransaction(
         /**
          * Contains all of the transaction components in serialized form.

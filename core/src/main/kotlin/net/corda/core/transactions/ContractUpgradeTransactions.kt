@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -10,7 +11,6 @@ import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.combinedHash
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.ContractUpgradeFilteredTransaction.FilteredComponent
 import net.corda.core.transactions.ContractUpgradeWireTransaction.Component.*
@@ -22,7 +22,7 @@ import java.security.PublicKey
 // TODO: check transaction size is within limits
 
 /** A special transaction for upgrading the contract of a state. */
-@CordaSerializable
+@Serializable
 data class ContractUpgradeWireTransaction(
         /**
          * Contains all of the transaction components in serialized form.
@@ -109,7 +109,7 @@ data class ContractUpgradeWireTransaction(
  * is no flexibility on what parts of the transaction to reveal – the inputs and notary field are always visible and the
  * rest of the transaction is always hidden. Its only purpose is to hide transaction data when using a non-validating notary.
  */
-@CordaSerializable
+@Serializable
 data class ContractUpgradeFilteredTransaction(
         /** Transaction components that are exposed. */
         val visibleComponents: Map<Int, FilteredComponent>,
@@ -143,7 +143,7 @@ data class ContractUpgradeFilteredTransaction(
     override val outputs: List<TransactionState<ContractState>> get() = emptyList()
 
     /** Contains the serialized component and the associated nonce for computing the transaction id. */
-    @CordaSerializable
+    @Serializable
     class FilteredComponent(val component: OpaqueBytes, val nonce: SecureHash)
 }
 

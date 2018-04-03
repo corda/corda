@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
@@ -8,7 +9,6 @@ import net.corda.core.internal.Emoji
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
@@ -39,7 +39,7 @@ import java.util.function.Predicate
  * <li>A new component type should always be an "optional value", in the sense that lack of its visibility does not change the transaction and contract logic and details. An example of "optional" components could be a transaction summary or some statistics.
  * </ul></p>
  */
-@CordaSerializable
+@Serializable
 class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt = PrivacySalt()) : TraversableTransaction(componentGroups) {
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.", ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
@@ -277,5 +277,5 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
  * Practically, a group per component type of a transaction is required; thus, there will be a group for input states,
  * a group for all attachments (if there are any) etc.
  */
-@CordaSerializable
+@Serializable
 open class ComponentGroup(open val groupIndex: Int, open val components: List<OpaqueBytes>)

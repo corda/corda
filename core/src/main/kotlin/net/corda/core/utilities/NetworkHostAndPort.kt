@@ -1,6 +1,6 @@
 package net.corda.core.utilities
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import java.net.URI
 import java.net.URISyntaxException
 
@@ -9,7 +9,7 @@ import java.net.URISyntaxException
  * @param host a hostname or IP address. IPv6 addresses must not be enclosed in square brackets.
  * @param port a valid port number.
  */
-@CordaSerializable
+@Serializable
 data class NetworkHostAndPort(val host: String, val port: Int) {
     companion object {
         internal const val INVALID_PORT_FORMAT = "Invalid port: %s"

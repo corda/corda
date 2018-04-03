@@ -2,6 +2,7 @@ package net.corda.finance.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.typesafe.config.ConfigFactory
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.declaredField
@@ -9,7 +10,6 @@ import net.corda.core.internal.div
 import net.corda.core.internal.read
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.finance.CHF
 import net.corda.finance.EUR
@@ -17,7 +17,6 @@ import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.flows.ConfigHolder.Companion.supportedCurrencies
 import java.io.IOException
-import java.nio.file.Path
 import java.util.*
 
 // TODO Until apps have access to their own config, we'll hack things by first getting the baseDirectory, read the node.conf
@@ -66,5 +65,5 @@ class CashConfigDataFlow : FlowLogic<CashConfiguration>() {
     }
 }
 
-@CordaSerializable
+@Serializable
 data class CashConfiguration(val issuableCurrencies: List<Currency>, val supportedCurrencies: List<Currency>)

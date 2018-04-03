@@ -1,8 +1,8 @@
 package net.corda.core.identity
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.uncheckedCast
-import net.corda.annotations.serialization.CordaSerializable
 import java.security.PublicKey
 import java.security.cert.*
 
@@ -11,7 +11,7 @@ import java.security.cert.*
  * [PartyAndCertificate] instances is based on the party only, as certificate and path are data associated with the party,
  * not part of the identifier themselves.
  */
-@CordaSerializable
+@Serializable
 class PartyAndCertificate(val certPath: CertPath) {
     @Transient
     val certificate: X509Certificate

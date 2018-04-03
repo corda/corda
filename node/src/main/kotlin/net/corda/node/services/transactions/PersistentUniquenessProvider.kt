@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -11,7 +12,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
@@ -38,7 +38,7 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_request_log")
-    @CordaSerializable
+    @Serializable
     class Request(
             @Id
             @GeneratedValue

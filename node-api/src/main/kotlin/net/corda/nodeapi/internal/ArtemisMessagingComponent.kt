@@ -1,11 +1,11 @@
 package net.corda.nodeapi.internal
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -87,7 +87,7 @@ class ArtemisMessagingComponent {
      * @param queueName The name of the queue this address is associated with.
      * @param hostAndPort The address of the node.
      */
-    @CordaSerializable
+    @Serializable
     data class NodeAddress(override val queueName: String, override val hostAndPort: NetworkHostAndPort) : ArtemisPeerAddress {
         constructor(peerIdentity: PublicKey, hostAndPort: NetworkHostAndPort) :
                 this("$PEERS_PREFIX${peerIdentity.toStringShort()}", hostAndPort)

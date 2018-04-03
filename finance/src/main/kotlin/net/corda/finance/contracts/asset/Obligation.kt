@@ -1,21 +1,21 @@
 package net.corda.finance.contracts.asset
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.*
-import net.corda.finance.contracts.NetCommand
-import net.corda.finance.contracts.NetType
-import net.corda.finance.contracts.NettableState
-import net.corda.finance.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.VisibleForTesting
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.seconds
+import net.corda.finance.contracts.NetCommand
+import net.corda.finance.contracts.NetType
+import net.corda.finance.contracts.NettableState
+import net.corda.finance.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.finance.utils.sumFungibleOrNull
 import net.corda.finance.utils.sumObligations
 import net.corda.finance.utils.sumObligationsOrNull
@@ -76,7 +76,7 @@ class Obligation<P : Any> : Contract {
      * to the state. Most states will not leave the [NORMAL] lifecycle. Note that settled (as an end lifecycle) is
      * represented by absence of the state on transaction output.
      */
-    @CordaSerializable
+    @Serializable
     enum class Lifecycle {
         /** Default lifecycle state for a contract, in which it can be settled normally */
         NORMAL,
@@ -98,7 +98,7 @@ class Obligation<P : Any> : Contract {
      * @param timeTolerance tolerance value on [dueBefore], to handle clock skew between distributed systems. Generally
      * this would be about 30 seconds.
      */
-    @CordaSerializable
+    @Serializable
     data class Terms<P : Any>(
             /** The hash of the asset contract we're willing to accept in payment for this debt. */
             val acceptableContracts: NonEmptySet<SecureHash>,
@@ -172,7 +172,7 @@ class Obligation<P : Any> : Contract {
     }
 
     // Just for grouping
-    @CordaSerializable
+    @Serializable
     interface Commands : CommandData {
         /**
          * Net two or more obligation states together in a close-out netting style. Limited to bilateral netting

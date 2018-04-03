@@ -8,31 +8,20 @@ import com.opengamma.strata.pricer.curve.CalibrationMeasures
 import com.opengamma.strata.pricer.curve.CurveCalibrator
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.flows.*
 import net.corda.core.flows.AbstractStateReplacementFlow.Proposal
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.StateReplacementException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.TwoPartyDealFlow
-import net.corda.vega.analytics.BimmAnalysisUtils
-import net.corda.vega.analytics.InitialMarginTriple
-import net.corda.vega.analytics.IsdaConfiguration
-import net.corda.vega.analytics.OGSIMMAnalyticsEngine
-import net.corda.vega.analytics.PortfolioNormalizer
-import net.corda.vega.analytics.RwamBimmNotProductClassesCalculator
-import net.corda.vega.analytics.compareIMTriples
+import net.corda.vega.analytics.*
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
 import net.corda.vega.contracts.PortfolioValuation
@@ -53,7 +42,7 @@ object SimmFlow {
      * Represents a new portfolio offer unless the stateRef field is non-null, at which point it represents a
      * portfolio update offer.
      */
-    @CordaSerializable
+    @Serializable
     data class OfferMessage(val notary: Party,
                             val dealBeingOffered: PortfolioState,
                             val stateRef: StateRef?,
@@ -341,6 +330,6 @@ object SimmFlow {
         }
     }
 
-    @CordaSerializable
+    @Serializable
     private object Ack
 }

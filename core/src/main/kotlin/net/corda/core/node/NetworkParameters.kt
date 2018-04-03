@@ -1,8 +1,8 @@
 package net.corda.core.node
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.serialization.CordaSerializable
 import java.time.Instant
 
 /**
@@ -20,7 +20,7 @@ import java.time.Instant
  */
 // TODO Add eventHorizon - how many days a node can be offline before being automatically ejected from the network.
 //  It needs separate design.
-@CordaSerializable
+@Serializable
 data class NetworkParameters(
         val minimumPlatformVersion: Int,
         val notaries: List<NotaryInfo>,
@@ -44,5 +44,5 @@ data class NetworkParameters(
  * @property identity Identity of the notary (note that it can be an identity of the distributed node).
  * @property validating Indicates if the notary is validating.
  */
-@CordaSerializable
+@Serializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)

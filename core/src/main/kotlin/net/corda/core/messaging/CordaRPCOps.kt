@@ -1,5 +1,6 @@
 package net.corda.core.messaging
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.ContractState
@@ -17,7 +18,6 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Try
 import rx.Observable
@@ -31,7 +31,7 @@ import java.time.Instant
  * Represents information about a flow (the name "state machine" is legacy, Kotlin users can use the [FlowInfo] type
  * alias). You can access progress tracking, information about why the flow was started and so on.
  */
-@CordaSerializable
+@Serializable
 data class StateMachineInfo @JvmOverloads constructor(
         /** A univerally unique ID ([java.util.UUID]) representing this particular instance of the named flow. */
         val id: StateMachineRunId,
@@ -61,7 +61,7 @@ data class StateMachineInfo @JvmOverloads constructor(
 /** An alias for [StateMachineInfo] which uses more modern terminology. */
 typealias FlowInfo = StateMachineInfo
 
-@CordaSerializable
+@Serializable
 sealed class StateMachineUpdate {
     abstract val id: StateMachineRunId
 
@@ -81,7 +81,7 @@ sealed class StateMachineUpdate {
  * @property description description of the update
  * @property updateDeadline deadline for accepting this update using [CordaRPCOps.acceptNewNetworkParameters]
  */
-@CordaSerializable
+@Serializable
 data class ParametersUpdateInfo(
         val hash: SecureHash,
         val parameters: NetworkParameters,
@@ -90,7 +90,7 @@ data class ParametersUpdateInfo(
 )
 // DOCEND 1
 
-@CordaSerializable
+@Serializable
 data class StateMachineTransactionMapping(val stateMachineRunId: StateMachineRunId, val transactionId: SecureHash)
 
 /** RPC operations that the node exposes to clients. */
@@ -552,5 +552,5 @@ inline fun <T, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startTrac
 /**
  * The Data feed contains a snapshot of the requested data and an [Observable] of future updates.
  */
-@CordaSerializable
+@Serializable
 data class DataFeed<out A, B>(val snapshot: A, val updates: Observable<B>)

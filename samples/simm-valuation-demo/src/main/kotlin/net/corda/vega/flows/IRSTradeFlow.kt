@@ -1,9 +1,9 @@
 package net.corda.vega.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.finance.flows.TwoPartyDealFlow
@@ -11,7 +11,7 @@ import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.SwapData
 
 object IRSTradeFlow {
-    @CordaSerializable
+    @Serializable
     data class OfferMessage(val notary: Party, val dealBeingOffered: IRSState)
 
     @InitiatingFlow

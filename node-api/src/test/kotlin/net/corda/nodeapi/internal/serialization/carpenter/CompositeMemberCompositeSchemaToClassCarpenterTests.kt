@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
@@ -9,7 +9,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-@CordaSerializable
+@Serializable
 interface I_ {
     val a: Int
 }
@@ -20,10 +20,10 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val testA = 10
         val testB = 20
 
-        @CordaSerializable
+        @Serializable
         data class A(val a: Int)
 
-        @CordaSerializable
+        @Serializable
         data class B(val a: A, var b: Int)
 
         val b = B(A(testA), testB)
@@ -80,10 +80,10 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val testA = 10
         val testB = 20
 
-        @CordaSerializable
+        @Serializable
         data class A(override val a: Int) : I_
 
-        @CordaSerializable
+        @Serializable
         data class B(val a: A, var b: Int)
 
         val b = B(A(testA), testB)
@@ -101,10 +101,10 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val testA = 10
         val testB = 20
 
-        @CordaSerializable
+        @Serializable
         data class A(override val a: Int) : I_
 
-        @CordaSerializable
+        @Serializable
         data class B(val a: A, var b: Int)
 
         val b = B(A(testA), testB)
@@ -129,10 +129,10 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val testA = 10
         val testB = 20
 
-        @CordaSerializable
+        @Serializable
         data class A(override val a: Int) : I_
 
-        @CordaSerializable
+        @Serializable
         data class B(val a: A, var b: Int)
 
         val b = B(A(testA), testB)
@@ -185,13 +185,13 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val testB = 20
         val testC = 30
 
-        @CordaSerializable
+        @Serializable
         open class A(val a: Int)
 
-        @CordaSerializable
+        @Serializable
         class B(a: Int, var b: Int) : A(a)
 
-        @CordaSerializable
+        @Serializable
         data class C(val b: B, var c: Int)
 
         val c = C(B(testA, testB), testC)
@@ -211,13 +211,13 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val testB = 20
         val testC = 30
 
-        @CordaSerializable
+        @Serializable
         open class A(val a: Int)
 
-        @CordaSerializable
+        @Serializable
         class B(a: Int, var b: Int) : A(a)
 
-        @CordaSerializable
+        @Serializable
         data class C(val b: B, var c: Int)
 
         val c = C(B(testA, testB), testC)
@@ -237,13 +237,13 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val testB = 20
         val testC = 30
 
-        @CordaSerializable
+        @Serializable
         open class A(val a: Int)
 
-        @CordaSerializable
+        @Serializable
         class B(a: Int, var b: Int) : A(a)
 
-        @CordaSerializable
+        @Serializable
         data class C(val b: B, var c: Int)
 
         val c = C(B(testA, testB), testC)
@@ -263,10 +263,10 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val testA = 10
         val testB = 20
 
-        @CordaSerializable
+        @Serializable
         open class A(open val a: Int)
 
-        @CordaSerializable
+        @Serializable
         class B(override val a: Int, val b: Int) : A (a)
 
         val b = B(testA, testB)

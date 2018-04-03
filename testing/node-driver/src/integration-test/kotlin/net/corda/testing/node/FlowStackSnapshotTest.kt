@@ -1,6 +1,7 @@
 package net.corda.testing.node
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.*
@@ -8,7 +9,6 @@ import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.read
 import net.corda.core.messaging.startFlow
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -20,7 +20,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-@CordaSerializable
+@Serializable
 data class StackSnapshotFrame(val method: String, val clazz: String, val dataTypes: List<String?>, val flowId: String? = null)
 
 /**

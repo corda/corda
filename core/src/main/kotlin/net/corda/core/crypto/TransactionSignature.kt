@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import java.security.InvalidKeyException
 import java.security.PublicKey
 import java.security.SignatureException
@@ -14,7 +14,7 @@ import java.util.*
  * @property signatureMetadata attached [SignatureMetadata] for this signature.
  * @property partialMerkleTree required when multi-transaction signing is utilised.
  */
-@CordaSerializable
+@Serializable
 class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMetadata: SignatureMetadata, val partialMerkleTree: PartialMerkleTree?) : DigitalSignature(bytes) {
     /**
      * Construct a [TransactionSignature] with [partialMerkleTree] set to null.

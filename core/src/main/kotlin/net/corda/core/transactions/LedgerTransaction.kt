@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
@@ -7,7 +8,6 @@ import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.Try
 import java.util.*
 import java.util.function.Predicate
@@ -26,7 +26,7 @@ import java.util.function.Predicate
 // TODO LedgerTransaction is not supposed to be serialisable as it references attachments, etc. The verification logic
 // currently sends this across to out-of-process verifiers. We'll need to change that first.
 // DOCSTART 1
-@CordaSerializable
+@Serializable
 data class LedgerTransaction @JvmOverloads constructor(
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
         override val inputs: List<StateAndRef<ContractState>>,

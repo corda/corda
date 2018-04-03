@@ -1,11 +1,11 @@
 package net.corda.core.crypto
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.identity.AnonymousParty
-import net.corda.annotations.serialization.CordaSerializable
 import java.security.PublicKey
 
 object NullKeys {
-    @CordaSerializable
+    @Serializable
     object NullPublicKey : PublicKey, Comparable<PublicKey> {
         override fun getAlgorithm() = "NULL"
         override fun getEncoded() = byteArrayOf(0)

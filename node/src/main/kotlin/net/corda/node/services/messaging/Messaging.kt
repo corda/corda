@@ -1,11 +1,11 @@
 package net.corda.node.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import java.time.Instant
@@ -122,7 +122,7 @@ interface MessageHandlerRegistration
  * These IDs and timestamps should not be assumed to be globally unique, although due to the nanosecond precision of
  * the timestamp field they probably will be, even if an implementation just uses a hash prefix as the message id.
  */
-@CordaSerializable
+@Serializable
 interface Message {
     val topic: String
     val data: ByteSequence

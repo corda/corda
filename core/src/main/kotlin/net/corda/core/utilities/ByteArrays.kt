@@ -2,7 +2,7 @@
 
 package net.corda.core.utilities
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import java.io.ByteArrayInputStream
 import java.io.OutputStream
 import java.lang.Math.max
@@ -18,7 +18,7 @@ import javax.xml.bind.DatatypeConverter
  * @property offset The start position of the sequence within the byte array.
  * @property size The number of bytes this sequence represents.
  */
-@CordaSerializable
+@Serializable
 sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val size: Int) : Comparable<ByteSequence> {
     /**
      * The underlying bytes.  Some implementations may choose to make a copy of the underlying [ByteArray] for

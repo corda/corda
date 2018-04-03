@@ -1,6 +1,7 @@
 package net.corda.confidential
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -11,7 +12,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -97,7 +97,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
         return identities
     }
 
-    @CordaSerializable
+    @Serializable
     data class IdentityWithSignature(val identity: SerializedBytes<PartyAndCertificate>, val signature: DigitalSignature)
 }
 
@@ -107,7 +107,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
  * the key represents the named entity) and protects against a malicious party incorrectly claiming others'
  * keys.
  */
-@CordaSerializable
+@Serializable
 data class CertificateOwnershipAssertion(val x500Name: CordaX500Name,
                                          val publicKey: PublicKey)
 

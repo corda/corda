@@ -12,6 +12,7 @@ import bftsmart.tom.core.messages.TOMMessage
 import bftsmart.tom.server.defaultservices.DefaultRecoverable
 import bftsmart.tom.server.defaultservices.DefaultReplier
 import bftsmart.tom.util.Extractor
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.*
@@ -20,7 +21,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.toTypedArray
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -49,18 +49,18 @@ import java.util.*
 //       a "recovering" state and request missing data from their peers.
 object BFTSMaRt {
     /** Sent from [Client] to [Replica]. */
-    @CordaSerializable
+    @Serializable
     data class CommitRequest(val payload: NotarisationPayload, val callerIdentity: Party)
 
     /** Sent from [Replica] to [Client]. */
-    @CordaSerializable
+    @Serializable
     sealed class ReplicaResponse {
         data class Error(val error: SignedData<NotaryError>) : ReplicaResponse()
         data class Signature(val txSignature: TransactionSignature) : ReplicaResponse()
     }
 
     /** An aggregate response from all replica ([Replica]) replies sent from [Client] back to the calling application. */
-    @CordaSerializable
+    @Serializable
     sealed class ClusterResponse {
         data class Error(val errors: List<SignedData<NotaryError>>) : ClusterResponse()
         data class Signatures(val txSignatures: List<TransactionSignature>) : ClusterResponse()

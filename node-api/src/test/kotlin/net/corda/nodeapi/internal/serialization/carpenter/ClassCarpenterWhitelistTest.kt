@@ -50,7 +50,7 @@ class ClassCarpenterWhitelistTest {
     }
 
     // despite now being whitelisted and on the class path, we will carpent this because
-    // it's marked as CordaSerializable
+    // it's marked as Serializable
     @Test
     fun notWhitelistedButAnnotated() {
         @CordaSerializable data class A(val a: Int)
@@ -69,7 +69,8 @@ class ClassCarpenterWhitelistTest {
 
     @Test
     fun notWhitelistedButAnnotatedWithNewAnnotation() {
-        @net.corda.annotations.serialization.CordaSerializable data class A(val a: Int)
+        @net.corda.annotations.serialization.Serializable
+        data class A(val a: Int)
 
         class WL : ClassWhitelist {
             override fun hasListed(type: Class<*>) = false
@@ -113,7 +114,7 @@ class ClassCarpenterWhitelistTest {
 
         val clazz1b = cc.build(schema1b)
 
-        // since schema 1b was created as CordaSerializable this will work
+        // since schema 1b was created as Serializable this will work
         ClassSchema("thing2", mapOf("a" to NonNullableField(clazz1b)))
     }
 }

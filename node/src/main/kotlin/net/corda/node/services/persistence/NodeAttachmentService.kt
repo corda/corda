@@ -18,7 +18,10 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationToken
+import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
@@ -34,6 +37,7 @@ import java.util.*
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
+
 
 /**
  * Stores attachments using Hibernate to database.
@@ -112,7 +116,7 @@ class NodeAttachmentService(
         attachmentCount.inc(count)
     }
 
-    @CordaSerializable
+    @net.corda.annotations.serialization.Serializable
     class HashMismatchException(val expected: SecureHash, val actual: SecureHash) : CordaRuntimeException("File $expected hashed to $actual: corruption in attachment store?")
 
     /**
@@ -124,7 +128,7 @@ class NodeAttachmentService(
      * this will provide an additional safety check against user error.
      */
     @VisibleForTesting
-    @CordaSerializable
+    @net.corda.annotations.serialization.Serializable
     class HashCheckingStream(val expected: SecureHash.SHA256,
                              val expectedSize: Int,
                              input: InputStream,

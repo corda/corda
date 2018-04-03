@@ -2,10 +2,10 @@ package net.corda.client.rpc
 
 import co.paralleluniverse.fibers.Suspendable
 import com.esotericsoftware.kryo.KryoException
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
@@ -24,7 +24,7 @@ class BlacklistKotlinClosureTest {
         override fun call() = Unit
     }
 
-    @CordaSerializable
+    @Serializable
     data class Packet(val x: () -> Long)
 
     @Test

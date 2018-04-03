@@ -1,5 +1,6 @@
 package net.corda.services.messaging
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.map
@@ -7,7 +8,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.randomOrNull
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
@@ -16,7 +16,6 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.send
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
@@ -219,6 +218,6 @@ class P2PMessagingTest {
         }
     }
 
-    @CordaSerializable
+    @Serializable
     private data class TestRequest(val replyTo: SingleMessageRecipient)
 }

@@ -1,15 +1,14 @@
 package net.corda.irs.contract
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.*
-import net.corda.irs.flows.FixingFlow
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
 import org.apache.commons.jexl3.JexlBuilder
 import org.apache.commons.jexl3.MapContext
@@ -21,7 +20,7 @@ import java.util.*
 const val IRS_PROGRAM_ID = "net.corda.irs.contract.InterestRateSwap"
 
 // This is a placeholder for some types that we haven't identified exactly what they are just yet for things still in discussion
-@CordaSerializable
+@Serializable
 open class UnknownType {
     override fun equals(other: Any?): Boolean = other is UnknownType
     override fun hashCode() = 1
@@ -102,7 +101,7 @@ abstract class RatePaymentEvent(date: LocalDate,
  * Basic class for the Fixed Rate Payments on the fixed leg - see [RatePaymentEvent].
  * Assumes that the rate is valid.
  */
-@CordaSerializable
+@Serializable
 @JsonIgnoreProperties(ignoreUnknown = true)
 class FixedRatePaymentEvent(date: LocalDate,
                             accrualStartDate: LocalDate,
@@ -126,7 +125,7 @@ class FixedRatePaymentEvent(date: LocalDate,
  * Basic class for the Floating Rate Payments on the floating leg - see [RatePaymentEvent].
  * If the rate is null returns a zero payment. // TODO: Is this the desired behaviour?
  */
-@CordaSerializable
+@Serializable
 @JsonIgnoreProperties(ignoreUnknown = true)
 class FloatingRatePaymentEvent(date: LocalDate,
                                accrualStartDate: LocalDate,
@@ -192,7 +191,7 @@ class InterestRateSwap : Contract {
     /**
      * This Common area contains all the information that is not leg specific.
      */
-    @CordaSerializable
+    @Serializable
     data class Common(
             val baseCurrency: Currency,
             val eligibleCurrency: Currency,
@@ -218,7 +217,7 @@ class InterestRateSwap : Contract {
      * data that will changed from state to state (Recall that the design insists that everything is immutable, so we actually
      * copy / update for each transition).
      */
-    @CordaSerializable
+    @Serializable
     data class Calculation(
             val expression: Expression,
             val floatingLegPaymentSchedule: Map<LocalDate, FloatingRatePaymentEvent>,
@@ -301,7 +300,7 @@ class InterestRateSwap : Contract {
                 dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment)
     }
 
-    @CordaSerializable
+    @Serializable
     open class FixedLeg(
             var fixedRatePayer: AbstractParty,
             notional: Amount<Currency>,
@@ -362,7 +361,7 @@ class InterestRateSwap : Contract {
                 paymentCalendar, interestPeriodAdjustment, fixedRate, rollConvention)
     }
 
-    @CordaSerializable
+    @Serializable
     open class FloatingLeg(
             var floatingRatePayer: AbstractParty,
             notional: Amount<Currency>,

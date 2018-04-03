@@ -1,11 +1,11 @@
 package net.corda.core.node.services
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.CordaException
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
-import net.corda.annotations.serialization.CordaSerializable
 
 /**
  * A service that records input states of the given transaction and provides conflict information
@@ -18,7 +18,7 @@ interface UniquenessProvider {
     fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature)
 
     /** Specifies the consuming transaction for every conflicting state. */
-    @CordaSerializable
+    @Serializable
     @Deprecated("No longer used due to potential privacy leak")
     @Suppress("DEPRECATION")
     data class Conflict(val stateHistory: Map<StateRef, ConsumingTx>)
@@ -27,7 +27,7 @@ interface UniquenessProvider {
      * Specifies the transaction id, the position of the consumed state in the inputs, and
      * the caller identity requesting the commit.
      */
-    @CordaSerializable
+    @Serializable
     @Deprecated("No longer used")
     data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party)
 }

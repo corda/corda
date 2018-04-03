@@ -1,6 +1,6 @@
 package net.corda.node.services.statemachine
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.serialization.SerializedBytes
@@ -17,11 +17,11 @@ import java.security.SecureRandom
  *                                                 initiatedId=sourceId=1
  *            initiatedId=sinkId=1       <----- send(Confirm(initiatedId=1))
  */
-@CordaSerializable
+@Serializable
 sealed class SessionMessage
 
 
-@CordaSerializable
+@Serializable
 data class SessionId(val toLong: Long) {
     companion object {
         fun createRandom(secureRandom: SecureRandom) = SessionId(secureRandom.nextLong())
@@ -72,7 +72,7 @@ data class ExistingSessionMessage(
 /**
  * The payload of an [ExistingSessionMessage]
  */
-@CordaSerializable
+@Serializable
 sealed class ExistingSessionMessagePayload
 
 /**

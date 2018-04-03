@@ -1,10 +1,10 @@
 package net.corda.vega.contracts
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.DealState
 import java.time.LocalDate
@@ -23,7 +23,7 @@ data class PortfolioState(val portfolio: List<StateRef>,
                           val valuation: PortfolioValuation? = null,
                           override val linearId: UniqueIdentifier = UniqueIdentifier())
     : RevisionedState<PortfolioState.Update>, SchedulableState, DealState {
-    @CordaSerializable
+    @Serializable
     data class Update(val portfolio: List<StateRef>? = null, val valuation: PortfolioValuation? = null)
 
     override val participants: List<AbstractParty> get() = _parties.toList()

@@ -1,9 +1,11 @@
 package net.corda.core.flows
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -25,7 +27,7 @@ import java.security.SignatureException
  * 4) Demonstrate the signature verifies against the serialized request. The provided states are always sorted internally,
  *    to ensure the serialization does not get affected by the order.
  */
-@CordaSerializable
+@Serializable
 class NotarisationRequest(statesToConsume: List<StateRef>, val transactionId: SecureHash) {
     companion object {
         /** Sorts in ascending order first by transaction hash, then by output index. */
@@ -72,14 +74,14 @@ class NotarisationRequest(statesToConsume: List<StateRef>, val transactionId: Se
  * The [platformVersion] is required so the notary can verify the signature against the right version of serialized
  * bytes of the [NotarisationRequest]. Otherwise, the request may be rejected.
  */
-@CordaSerializable
+@Serializable
 data class NotarisationRequestSignature(val digitalSignature: DigitalSignature.WithKey, val platformVersion: Int)
 
 /**
  * Container for the transaction and notarisation request signature.
  * This is the payload that gets sent by a client to a notary service for committing the input states of the [transaction].
  */
-@CordaSerializable
+@Serializable
 data class NotarisationPayload(val transaction: Any, val requestSignature: NotarisationRequestSignature) {
     init {
         require(transaction is SignedTransaction || transaction is CoreTransaction) {
@@ -100,5 +102,5 @@ data class NotarisationPayload(val transaction: Any, val requestSignature: Notar
 }
 
 /** Payload returned by the notary service flow to the client. */
-@CordaSerializable
+@Serializable
 data class NotarisationResponse(val signatures: List<TransactionSignature>)

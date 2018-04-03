@@ -1,6 +1,7 @@
 package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -10,7 +11,6 @@ import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
@@ -19,7 +19,7 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.testing.core.singleIdentity
 import java.util.*
 
-@CordaSerializable
+@Serializable
 private data class FxRequest(val tradeId: String,
                              val amount: Amount<Issued<Currency>>,
                              val owner: Party,

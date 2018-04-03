@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.utilities.OpaqueBytes
 import java.security.InvalidKeyException
 import java.security.PublicKey
@@ -10,7 +10,7 @@ import java.security.SignatureException
 //       actual use-case, we should merge the with key version into the parent class. In that case CompositeSignatureWithKeys
 //       should be renamed to match.
 /** A wrapper around a digital signature. */
-@CordaSerializable
+@Serializable
 open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** A digital signature that identifies who the public key is owned by. */
     open class WithKey(val by: PublicKey, bytes: ByteArray) : DigitalSignature(bytes) {

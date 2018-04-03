@@ -1,9 +1,9 @@
 package net.corda.finance.schemas
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import org.hibernate.annotations.Type
 import java.time.Instant
@@ -21,7 +21,7 @@ object CommercialPaperSchema
  * First version of a commercial paper contract ORM schema that maps all fields of the [CommercialPaper] contract state
  * as it stood at the time of writing.
  */
-@CordaSerializable
+@Serializable
 object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
     @Entity
     @Table(name = "cp_states",

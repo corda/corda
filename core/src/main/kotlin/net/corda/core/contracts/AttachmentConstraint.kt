@@ -1,14 +1,14 @@
 package net.corda.core.contracts
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
-import net.corda.annotations.serialization.CordaSerializable
 
 /** Constrain which contract-code-containing attachment can be used with a [ContractState]. */
-@CordaSerializable
+@Serializable
 @DoNotImplement
 interface AttachmentConstraint {
     /** Returns whether the given contract attachment can be used with the [ContractState] associated with this constraint object. */

@@ -1,9 +1,9 @@
 package net.corda.core.messaging
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 
 /** The interface for a group of message recipients (which may contain only one recipient) */
-@CordaSerializable
+@Serializable
 interface MessageRecipients
 
 /** A base class for the case of point-to-point messages */

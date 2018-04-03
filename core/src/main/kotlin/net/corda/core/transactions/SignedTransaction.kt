@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.CordaException
 import net.corda.core.CordaThrowable
 import net.corda.core.contracts.*
@@ -8,7 +9,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -33,7 +33,7 @@ import java.util.function.Predicate
  * sign.
  */
 // DOCSTART 1
-@CordaSerializable
+@Serializable
 data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                              override val sigs: List<TransactionSignature>
 ) : TransactionWithSignatures {
@@ -253,7 +253,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                 "Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}"
     }
 
-    @CordaSerializable
+    @Serializable
     class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash)
         : NamedByHash, SignatureException(missingSignatureMsg(missing, descriptions, id)), CordaThrowable by CordaException(missingSignatureMsg(missing, descriptions, id))
 

@@ -1,12 +1,12 @@
 package net.corda.finance.utils
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import java.util.*
 
 data class ScreenCoordinate(val screenX: Double, val screenY: Double)
 
 /** A latitude/longitude pair. */
-@CordaSerializable
+@Serializable
 data class WorldCoordinate(val latitude: Double, val longitude: Double) {
     init {
         require(latitude in -90..90)
@@ -44,7 +44,7 @@ data class WorldCoordinate(val latitude: Double, val longitude: Double) {
  * Labels should not refer to non-landmarks, for example, they should not contain the names of organisations.
  * The [countryCode] field is a two letter ISO country code.
  */
-@CordaSerializable
+@Serializable
 data class WorldMapLocation(val coordinate: WorldCoordinate, val description: String, val countryCode: String)
 
 /**

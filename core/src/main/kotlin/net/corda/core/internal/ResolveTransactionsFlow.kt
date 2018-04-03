@@ -1,12 +1,12 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.node.StatesToRecord
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -67,7 +67,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
         }
     }
 
-    @CordaSerializable
+    @Serializable
     class ExcessivelyLargeTransactionGraph : FlowException()
 
     /** Transaction for fetch attachments for */

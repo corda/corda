@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.network
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.DigitalSignatureWithCert
@@ -7,7 +8,6 @@ import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.internal.signWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.security.cert.X509Certificate
@@ -26,7 +26,7 @@ typealias SignedNetworkParameters = SignedDataWithCert<NetworkParameters>
  * @property networkParameterHash hash of the current active [NetworkParameters]
  * @property parametersUpdate if present means that network operator has scheduled an update of the network parameters
  */
-@CordaSerializable
+@Serializable
 data class NetworkMap(
         val nodeInfoHashes: List<SecureHash>,
         val networkParameterHash: SecureHash,
@@ -47,7 +47,7 @@ parametersUpdate=$parametersUpdate)"""
  * @property updateDeadline deadline by which new network parameters need to be accepted, after this date network operator
  *          can switch to new parameters which will result in getting nodes with old parameters out of the network
  */
-@CordaSerializable
+@Serializable
 data class ParametersUpdate(
         val newParametersHash: SecureHash,
         val description: String,

@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import org.objectweb.asm.ClassWriter
@@ -16,7 +17,7 @@ import java.util.*
  * as if `this.class.getMethod("get" + name.capitalize()).invoke(this)` had been called. It is intended as a more
  * convenient alternative to reflection.
  */
-@CordaSerializable
+@Serializable
 interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
@@ -142,7 +143,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
                 if (schema.flags.cordaSerializable()) {
                     visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
-                    visitAnnotation(Type.getDescriptor(net.corda.annotations.serialization.CordaSerializable::class.java), true).visitEnd()
+                    visitAnnotation(Type.getDescriptor(net.corda.annotations.serialization.Serializable::class.java), true).visitEnd()
                 }
 
                 generateFields(schema)
@@ -164,7 +165,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
                 if (schema.flags.cordaSerializable()) {
                     visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
-                    visitAnnotation(Type.getDescriptor(net.corda.annotations.serialization.CordaSerializable::class.java), true).visitEnd()
+                    visitAnnotation(Type.getDescriptor(net.corda.annotations.serialization.Serializable::class.java), true).visitEnd()
                 }
                 generateAbstractGetters(schema)
             }.visitEnd()
@@ -188,7 +189,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
                 if (schema.flags.cordaSerializable()) {
                     visitAnnotation(Type.getDescriptor(CordaSerializable::class.java), true).visitEnd()
-                    visitAnnotation(Type.getDescriptor(net.corda.annotations.serialization.CordaSerializable::class.java), true).visitEnd()
+                    visitAnnotation(Type.getDescriptor(Serializable::class.java), true).visitEnd()
                 }
                 generateFields(schema)
                 generateClassConstructor(schema)

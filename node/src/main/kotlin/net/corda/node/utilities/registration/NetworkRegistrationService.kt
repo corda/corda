@@ -1,7 +1,7 @@
 package net.corda.node.utilities.registration
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.CordaException
-import net.corda.annotations.serialization.CordaSerializable
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -17,5 +17,5 @@ interface NetworkRegistrationService {
 
 data class CertificateResponse(val pollInterval: Duration, val certificates: List<X509Certificate>?)
 
-@CordaSerializable
+@Serializable
 class CertificateRequestException(message: String) : CordaException(message)

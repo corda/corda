@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp;
 
-import net.corda.annotations.serialization.CordaSerializable;
+import net.corda.annotations.serialization.Serializable;
 import net.corda.core.serialization.SerializedBytes;
 import net.corda.nodeapi.internal.serialization.AllWhitelist;
 import org.junit.Assert;
@@ -11,7 +11,7 @@ import java.util.List;
 
 public class ListsSerializationJavaTest {
 
-    @CordaSerializable
+    @Serializable
     interface Parent {
     }
 
@@ -44,7 +44,7 @@ public class ListsSerializationJavaTest {
         }
     }
 
-    @CordaSerializable
+    @Serializable
     public static class CovariantContainer<T extends Parent> {
         private final List<T> content;
 
@@ -75,7 +75,7 @@ public class ListsSerializationJavaTest {
         }
     }
 
-    @CordaSerializable
+    @Serializable
     public static class CovariantContainer2 {
         private final List<? extends Parent> content;
 

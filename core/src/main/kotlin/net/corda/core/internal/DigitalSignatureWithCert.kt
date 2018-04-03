@@ -1,9 +1,9 @@
 package net.corda.core.internal
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.verify
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.OpaqueBytes
@@ -18,7 +18,7 @@ class DigitalSignatureWithCert(val by: X509Certificate, bytes: ByteArray) : Digi
 }
 
 /** Similar to [SignedData] but instead of just attaching the public key, the certificate for the key is attached instead. */
-@CordaSerializable
+@Serializable
 class SignedDataWithCert<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSignatureWithCert) {
     fun verified(): T {
         sig.verify(raw)

@@ -1,7 +1,7 @@
 package net.corda.core.crypto
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.internal.uncheckedCast
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import java.security.SignatureException
@@ -13,7 +13,7 @@ import java.security.SignatureException
  * @param raw the raw serialized data.
  * @param sig the (unverified) signature for the data.
  */
-@CordaSerializable
+@Serializable
 open class SignedData<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSignature.WithKey) {
     /**
      * Return the deserialized data if the signature can be verified.

@@ -2,6 +2,7 @@
 
 package net.corda.core.contracts
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.crypto.toStringShort
@@ -9,7 +10,6 @@ import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
@@ -43,7 +43,7 @@ interface NamedByHash {
  * of product may differentiate different kinds of asset within the same logical class e.g the currency, or
  * it may just be a type marker for a single custom asset.
  */
-@CordaSerializable
+@Serializable
 data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
     init {
         require(issuer.reference.size <= MAX_ISSUER_REF_SIZE) { "Maximum issuer reference size is $MAX_ISSUER_REF_SIZE." }
@@ -95,7 +95,7 @@ interface Scheduled {
  * This is effectively the input to a scheduler, which wakes up at that point in time and asks the contract state what
  * lifecycle processing needs to take place.  e.g. a fixing or a late payment etc.
  */
-@CordaSerializable
+@Serializable
 data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instant) : Scheduled
 
 /**
@@ -148,7 +148,7 @@ fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bytes)
  * A stateref is a pointer (reference) to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which
  * transaction defined the state and where in that transaction it was.
  */
-@CordaSerializable
+@Serializable
 // DOCSTART 8
 data class StateRef(val txhash: SecureHash, val index: Int) {
     override fun toString() = "$txhash($index)"
@@ -156,7 +156,7 @@ data class StateRef(val txhash: SecureHash, val index: Int) {
 // DOCEND 8
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a vault (which holds available assets) contains these. */
-@CordaSerializable
+@Serializable
 // DOCSTART 7
 data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef)
 // DOCEND 7
@@ -170,13 +170,13 @@ inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filt
  * Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
  * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.
  */
-@CordaSerializable
+@Serializable
 data class PartyAndReference(val party: AbstractParty, val reference: OpaqueBytes) {
     override fun toString() = "$party$reference"
 }
 
 /** Marker interface for classes that represent commands */
-@CordaSerializable
+@Serializable
 interface CommandData
 
 /** Commands that inherit from this are intended to have no data items: it's only their presence that matters. */
@@ -186,7 +186,7 @@ abstract class TypeOnlyCommandData : CommandData {
 }
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
-@CordaSerializable
+@Serializable
 data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) {
     // TODO Introduce NonEmptyList?
     init {
@@ -211,7 +211,7 @@ interface MoveCommand : CommandData {
 
 // DOCSTART 6
 /** A [Command] where the signing parties have been looked up if they have a well known/recognised institutional key. */
-@CordaSerializable
+@Serializable
 data class CommandWithParties<out T : CommandData>(
         val signers: List<PublicKey>,
         /** If any public keys were recognised, the looked up institutions are available here */
@@ -229,7 +229,7 @@ data class CommandWithParties<out T : CommandData>(
  *
  * TODO: Contract serialization is likely to change, so the annotation is likely temporary.
  */
-@CordaSerializable
+@Serializable
 interface Contract {
     /**
      * Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
@@ -294,7 +294,7 @@ interface UpgradedContractWithLegacyConstraint<in OldState : ContractState, out 
  * The latter is required in cases where the salt value needs to be pre-generated (agreed between transacting parties),
  * but it is highlighted that one should always ensure it has sufficient entropy.
  */
-@CordaSerializable
+@Serializable
 class PrivacySalt(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** Constructs a salt with a randomly-generated 32 byte value. */
     constructor() : this(secureRandomBytes(32))

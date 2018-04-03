@@ -1,6 +1,7 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.SecureHash
@@ -10,7 +11,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationToken
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializeAsTokenContext
@@ -41,24 +41,24 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         protected val otherSideSession: FlowSession,
         protected val dataType: DataType) : FlowLogic<FetchDataFlow.Result<T>>() {
 
-    @CordaSerializable
+    @Serializable
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : IllegalArgumentException()
 
-    @CordaSerializable
+    @Serializable
     class DownloadedVsRequestedSizeMismatch(val requested: Int, val got: Int) : IllegalArgumentException()
 
     class HashNotFound(val requested: SecureHash) : FlowException()
 
-    @CordaSerializable
+    @Serializable
     data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
 
-    @CordaSerializable
+    @Serializable
     sealed class Request {
         data class Data(val hashes: NonEmptySet<SecureHash>, val dataType: DataType) : Request()
         object End : Request()
     }
 
-    @CordaSerializable
+    @Serializable
     enum class DataType {
         TRANSACTION, ATTACHMENT
     }

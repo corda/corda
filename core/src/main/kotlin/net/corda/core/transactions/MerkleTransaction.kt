@@ -1,11 +1,14 @@
 package net.corda.core.transactions
 
-import net.corda.annotations.serialization.CordaSerializable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.CordaException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
-import net.corda.core.serialization.*
+import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.OpaqueBytes
 import java.security.PublicKey
 import java.util.function.Predicate
@@ -108,7 +111,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
  * @param filteredComponentGroups list of transaction components groups remained after filters are applied to [WireTransaction].
  * @param groupHashes the roots of the transaction component groups.
  */
-@CordaSerializable
+@Serializable
 class FilteredTransaction internal constructor(
         override val id: SecureHash,
         val filteredComponentGroups: List<FilteredComponentGroup>,
@@ -332,7 +335,7 @@ class FilteredTransaction internal constructor(
  * A FilteredComponentGroup is used to store the filtered list of transaction components of the same type in serialised form.
  * This is similar to [ComponentGroup], but it also includes the corresponding nonce per component.
  */
-@CordaSerializable
+@Serializable
 data class FilteredComponentGroup(override val groupIndex: Int, override val components: List<OpaqueBytes>, val nonces: List<SecureHash>, val partialMerkleTree: PartialMerkleTree) : ComponentGroup(groupIndex, components) {
     init {
         check(components.size == nonces.size) { "Size of transaction components and nonces do not match" }
@@ -343,12 +346,12 @@ data class FilteredComponentGroup(override val groupIndex: Int, override val com
  * @param id transaction's id.
  * @param reason information about the exception.
  */
-@CordaSerializable
+@Serializable
 class ComponentVisibilityException(val id: SecureHash, val reason: String) : CordaException("Component visibility error for transaction with id:$id. Reason: $reason")
 
 /** Thrown when [FilteredTransaction.verify] fails.
  * @param id transaction's id.
  * @param reason information about the exception.
  */
-@CordaSerializable
+@Serializable
 class FilteredTransactionVerificationException(val id: SecureHash, val reason: String) : CordaException("Transaction with id:$id cannot be verified. Reason: $reason")

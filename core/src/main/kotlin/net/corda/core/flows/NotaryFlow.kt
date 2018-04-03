@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -12,7 +13,6 @@ import net.corda.core.internal.generateSignature
 import net.corda.core.internal.validateSignatures
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TrustedAuthorityNotaryService
-import net.corda.annotations.serialization.CordaSerializable
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -196,7 +196,7 @@ class NotaryException(
 class NotaryInternalException(val error: NotaryError) : FlowException("Unable to notarise: $error")
 
 /** Specifies the cause for notarisation request failure. */
-@CordaSerializable
+@Serializable
 sealed class NotaryError {
     /** Occurs when one or more input states have already been consumed by another transaction. */
     data class Conflict(
@@ -240,7 +240,7 @@ sealed class NotaryError {
 
 /** Contains information about the consuming transaction for a particular state. */
 // TODO: include notary timestamp?
-@CordaSerializable
+@Serializable
 data class StateConsumptionDetails(
         /**
          * Hash of the consuming transaction id.

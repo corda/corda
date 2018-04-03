@@ -1,5 +1,6 @@
 package net.corda.core.serialization
 
+import net.corda.annotations.serialization.Serializable
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializationToken.Companion.singletonSerializationToken
 
@@ -18,7 +19,7 @@ import net.corda.core.serialization.SingletonSerializationToken.Companion.single
  *
  * This models a similar pattern to the readReplace/writeReplace methods in Java serialization.
  */
-@CordaSerializable
+@Serializable
 interface SerializeAsToken {
     fun toToken(context: SerializeAsTokenContext): SerializationToken
 }
