@@ -10,10 +10,8 @@
 
 package net.corda.bridge.services.artemis
 
-import net.corda.bridge.services.api.BridgeArtemisConnectionService
-import net.corda.bridge.services.api.BridgeAuditService
-import net.corda.bridge.services.api.BridgeConfiguration
-import net.corda.bridge.services.api.ServiceStateSupport
+import net.corda.bridge.services.api.*
+import net.corda.bridge.services.config.BridgeSSLConfigurationImpl
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.internal.ThreadBox
@@ -23,7 +21,6 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.FailoverEventType
 import org.apache.activemq.artemis.api.core.client.ServerLocator
@@ -46,13 +43,13 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
     }
 
     private val state = ThreadBox(InnerState())
-    private val sslConfiguration: SSLConfiguration
+    private val sslConfiguration: BridgeSSLConfiguration
     private val statusFollower: ServiceStateCombiner
     private var statusSubscriber: Subscription? = null
 
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService))
-        sslConfiguration = conf.outboundConfig?.customSSLConfiguration ?: conf
+        sslConfiguration = conf.outboundConfig?.customSSLConfiguration ?: BridgeSSLConfigurationImpl(conf)
     }
 
     override fun start() {

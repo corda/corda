@@ -13,38 +13,47 @@ package net.corda.bridge.services.config
 import com.typesafe.config.Config
 import net.corda.bridge.services.api.*
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import java.nio.file.Path
+import java.nio.file.Paths
 
 
 fun Config.parseAsBridgeConfiguration(): BridgeConfiguration = parseAs<BridgeConfigurationImpl>()
 
-data class CustomSSLConfiguration(override val keyStorePassword: String,
-                                  override val trustStorePassword: String,
-                                  override val certificatesDirectory: Path) : SSLConfiguration
+data class BridgeSSLConfigurationImpl(override val keyStorePassword: String,
+                                      override val trustStorePassword: String,
+                                      override val certificatesDirectory: Path = Paths.get("certificates"),
+                                      override val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
+                                      override val trustStoreFile: Path = certificatesDirectory / "truststore.jks") : BridgeSSLConfiguration {
+    constructor(config: NodeSSLConfiguration) : this(config.keyStorePassword, config.trustStorePassword, config.certificatesDirectory, config.sslKeystore, config.trustStoreFile)
+}
 
 data class BridgeOutboundConfigurationImpl(override val artemisBrokerAddress: NetworkHostAndPort,
-                                           override val customSSLConfiguration: CustomSSLConfiguration?,
+                                           override val customSSLConfiguration: BridgeSSLConfigurationImpl?,
                                            override val socksProxyConfig: SocksProxyConfig? = null) : BridgeOutboundConfiguration
 
 data class BridgeInboundConfigurationImpl(override val listeningAddress: NetworkHostAndPort,
-                                          override val customSSLConfiguration: CustomSSLConfiguration?) : BridgeInboundConfiguration
+                                          override val customSSLConfiguration: BridgeSSLConfigurationImpl?) : BridgeInboundConfiguration
 
 data class FloatInnerConfigurationImpl(override val floatAddresses: List<NetworkHostAndPort>,
                                        override val expectedCertificateSubject: CordaX500Name,
-                                       override val customSSLConfiguration: CustomSSLConfiguration?,
-                                       override val customFloatOuterSSLConfiguration: CustomSSLConfiguration?) : FloatInnerConfiguration
+                                       override val customSSLConfiguration: BridgeSSLConfigurationImpl?,
+                                       override val customFloatOuterSSLConfiguration: BridgeSSLConfigurationImpl?) : FloatInnerConfiguration
 
 data class FloatOuterConfigurationImpl(override val floatAddress: NetworkHostAndPort,
                                        override val expectedCertificateSubject: CordaX500Name,
-                                       override val customSSLConfiguration: CustomSSLConfiguration?) : FloatOuterConfiguration
+                                       override val customSSLConfiguration: BridgeSSLConfigurationImpl?) : FloatOuterConfiguration
 
 data class BridgeConfigurationImpl(
         override val baseDirectory: Path,
+        override val certificatesDirectory: Path = baseDirectory / "certificates",
+        override val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
+        override val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
         override val keyStorePassword: String,
         override val trustStorePassword: String,
         override val bridgeMode: BridgeMode,

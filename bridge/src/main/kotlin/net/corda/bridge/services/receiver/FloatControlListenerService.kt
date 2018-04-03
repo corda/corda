@@ -11,6 +11,7 @@
 package net.corda.bridge.services.receiver
 
 import net.corda.bridge.services.api.*
+import net.corda.bridge.services.config.BridgeSSLConfigurationImpl
 import net.corda.bridge.services.receiver.FloatControlTopics.FLOAT_DATA_TOPIC
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
@@ -21,7 +22,6 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
@@ -47,7 +47,7 @@ class FloatControlListenerService(val conf: BridgeConfiguration,
     private var connectSubscriber: Subscription? = null
     private var receiveSubscriber: Subscription? = null
     private var amqpControlServer: AMQPServer? = null
-    private val sslConfiguration: SSLConfiguration
+    private val sslConfiguration: BridgeSSLConfiguration
     private val keyStore: KeyStore
     private val keyStorePrivateKeyPassword: String
     private val trustStore: KeyStore
@@ -59,7 +59,7 @@ class FloatControlListenerService(val conf: BridgeConfiguration,
 
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService, amqpListener))
-        sslConfiguration = conf.floatOuterConfig?.customSSLConfiguration ?: conf
+        sslConfiguration = conf.floatOuterConfig?.customSSLConfiguration ?: BridgeSSLConfigurationImpl(conf)
         keyStore = sslConfiguration.loadSslKeyStore().internal
         keyStorePrivateKeyPassword = sslConfiguration.keyStorePassword
         trustStore = sslConfiguration.loadTrustStore().internal
