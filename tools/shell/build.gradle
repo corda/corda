@@ -2,6 +2,7 @@ apply plugin: 'kotlin'
 apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
 
 description 'Corda Shell'
 
