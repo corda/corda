@@ -24,9 +24,11 @@ import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.*
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.*
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.expect
+import net.corda.testing.core.expectEvents
+import net.corda.testing.core.sequence
 import net.corda.testing.internal.DEV_ROOT_CA
-import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -56,46 +58,12 @@ class NetworkMapUpdaterTest {
     private val networkParametersHash = SecureHash.randomSHA256()
     private val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
     private val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, networkParametersHash, baseDir)
-    private val nodeInfoBuilder = TestNodeInfoBuilder()
     private var parametersUpdate: ParametersUpdate? = null
 
     @After
     fun cleanUp() {
         updater.close()
         fs.close()
-    }
-
-    @Test
-    fun `publish node info`() {
-        nodeInfoBuilder.addIdentity(ALICE_NAME)
-
-        val nodeInfo1AndSigned = nodeInfoBuilder.buildWithSigned()
-        val sameNodeInfoDifferentTimeAndSigned = nodeInfoBuilder.buildWithSigned(serial = System.currentTimeMillis())
-
-        // Publish node info for the first time.
-        updater.updateNodeInfo(nodeInfo1AndSigned)
-        // Sleep as publish is asynchronous.
-        // TODO: Remove sleep in unit test
-        Thread.sleep(2L * cacheExpiryMs)
-        verify(networkMapClient, times(1)).publish(any())
-
-        networkMapCache.addNode(nodeInfo1AndSigned.nodeInfo)
-
-        // Publish the same node info, but with different serial.
-        updater.updateNodeInfo(sameNodeInfoDifferentTimeAndSigned)
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(2L * cacheExpiryMs)
-
-        // Same node info should not publish twice
-        verify(networkMapClient, times(0)).publish(sameNodeInfoDifferentTimeAndSigned.signed)
-
-        val differentNodeInfoAndSigned = createNodeInfoAndSigned("Bob")
-
-        // Publish different node info.
-        updater.updateNodeInfo(differentNodeInfoAndSigned)
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(200)
-        verify(networkMapClient, times(1)).publish(differentNodeInfoAndSigned.signed)
     }
 
     @Test
