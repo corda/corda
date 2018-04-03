@@ -47,6 +47,7 @@ class NodeRegistrationTest {
         private val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
         private val aliceName = CordaX500Name("Alice", "London", "GB")
         private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
+        private val log = loggerFor<NodeRegistrationTest>()
     }
 
     @Rule
@@ -91,6 +92,9 @@ class NodeRegistrationTest {
                     startNode(providedName = genevieveName),
                     defaultNotaryNode
             ).transpose().getOrThrow()
+
+            log.info("Nodes started")
+
             val (alice, genevieve) = nodes
 
             assertThat(registrationHandler.idsPolled).containsOnly(
