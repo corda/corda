@@ -38,7 +38,21 @@ Submission of the certificate revocation requests expects the following fields t
 
 :legalName: Legal name associated with the certificate that is to be revoked.
 
-:reason: Revocation reason (as specified in the java.security.cert.CRLReason).
+:reason: Revocation reason (as specified in the java.security.cert.CRLReason). The following values are allowed.
+
+    :UNSPECIFIED: This reason indicates that it is unspecified as to why the certificate has been revoked.
+
+    :KEY_COMPROMISE: This reason indicates that it is known or suspected that the certificate subject's private key has been compromised. It applies to end-entity certificates only.
+
+    :CA_COMPROMISE: This reason indicates that it is known or suspected that the certificate subject's private key has been compromised. It applies to certificate authority (CA) certificates only.
+
+    :AFFILIATION_CHANGED: This reason indicates that the subject's name or other information has changed.
+
+    :SUPERSEDED: This reason indicates that the certificate has been superseded.
+
+    :CESSATION_OF_OPERATION: This reason indicates that the certificate is no longer needed.
+    
+    :PRIVILEGE_WITHDRAWN: This reason indicates that the privileges granted to the subject of the certificate have been withdrawn.
 
 :reporter: Issuer of this certificate revocation request.
 

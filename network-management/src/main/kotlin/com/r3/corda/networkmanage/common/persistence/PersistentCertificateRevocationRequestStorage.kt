@@ -10,13 +10,27 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import java.math.BigInteger
+import java.security.cert.CRLReason
 import java.security.cert.X509Certificate
 import java.time.Instant
 
 class PersistentCertificateRevocationRequestStorage(private val database: CordaPersistence) : CertificateRevocationRequestStorage {
+    private companion object {
+        val ALLOWED_REASONS = arrayOf(
+                CRLReason.KEY_COMPROMISE,
+                CRLReason.AFFILIATION_CHANGED,
+                CRLReason.CA_COMPROMISE,
+                CRLReason.CESSATION_OF_OPERATION,
+                CRLReason.PRIVILEGE_WITHDRAWN,
+                CRLReason.SUPERSEDED,
+                CRLReason.UNSPECIFIED
+        )
+    }
+
     override fun saveRevocationRequest(request: CertificateRevocationRequest): String {
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             // Get matching CSR
+            validate(request)
             val csr = retrieveCsr(request.certificateSerialNumber, request.csrRequestId, request.legalName)
             csr ?: throw IllegalArgumentException("No CSR matching the given criteria was found")
             // Check if there is an entry for the given certificate serial number
@@ -43,6 +57,10 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
                 requestId
             }
         }
+    }
+
+    private fun validate(request:CertificateRevocationRequest) {
+        require(request.reason in ALLOWED_REASONS) { "The given revocation reason is not allowed." }
     }
 
     private fun DatabaseTransaction.retrieveCsr(certificateSerialNumber: BigInteger?, csrRequestId: String?, legalName: CordaX500Name?): CertificateSigningRequestEntity? {
