@@ -38,6 +38,14 @@ enum class BridgeMode {
     FloatOuter
 }
 
+interface BridgeSSLConfiguration : SSLConfiguration {
+    override val keyStorePassword: String
+    override val trustStorePassword: String
+    override val sslKeystore: Path
+    override val trustStoreFile: Path
+}
+
+
 /**
  * Details of the local Artemis broker.
  * Required in SenderReceiver and FloatInner modes.
@@ -45,7 +53,7 @@ enum class BridgeMode {
 interface BridgeOutboundConfiguration {
     val artemisBrokerAddress: NetworkHostAndPort
     // Allows override of [KeyStore] details for the artemis connection, otherwise the general top level details are used.
-    val customSSLConfiguration: SSLConfiguration?
+    val customSSLConfiguration: BridgeSSLConfiguration?
     // Allows use of a SOCKS 4/5 proxy
     val socksProxyConfig: SocksProxyConfig?
 }
@@ -58,7 +66,7 @@ interface BridgeOutboundConfiguration {
 interface BridgeInboundConfiguration {
     val listeningAddress: NetworkHostAndPort
     // Allows override of [KeyStore] details for the AMQP listener port, otherwise the general top level details are used.
-    val customSSLConfiguration: SSLConfiguration?
+    val customSSLConfiguration: BridgeSSLConfiguration?
 }
 
 /**
@@ -70,9 +78,9 @@ interface FloatInnerConfiguration {
     val expectedCertificateSubject: CordaX500Name
     // Allows override of [KeyStore] details for the control port, otherwise the general top level details are used.
     // Used for connection to Float in DMZ
-    val customSSLConfiguration: SSLConfiguration?
+    val customSSLConfiguration: BridgeSSLConfiguration?
     // The SSL keystores to provision into the Float in DMZ
-    val customFloatOuterSSLConfiguration: SSLConfiguration?
+    val customFloatOuterSSLConfiguration: BridgeSSLConfiguration?
 }
 
 /**
@@ -83,7 +91,7 @@ interface FloatOuterConfiguration {
     val floatAddress: NetworkHostAndPort
     val expectedCertificateSubject: CordaX500Name
     // Allows override of [KeyStore] details for the control port, otherwise the general top level details are used.
-    val customSSLConfiguration: SSLConfiguration?
+    val customSSLConfiguration: BridgeSSLConfiguration?
 }
 
 interface BridgeConfiguration : NodeSSLConfiguration {
