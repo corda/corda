@@ -25,7 +25,7 @@ class SignedNodeInfo(val raw: SerializedBytes<NodeInfo>, val signatures: List<Di
     fun verified(): NodeInfo {
         val nodeInfo = raw.deserialize()
         val identities = nodeInfo.legalIdentities.filterNot { it.owningKey is CompositeKey }
-
+        require(identities.isNotEmpty()) { "At least one identity with a non-composite key needs to be specified." }
         if (identities.size < signatures.size) {
             throw SignatureException("Extra signatures. Found ${signatures.size} expected ${identities.size}")
         }
