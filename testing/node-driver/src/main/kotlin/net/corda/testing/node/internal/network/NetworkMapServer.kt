@@ -2,7 +2,6 @@ package net.corda.testing.node.internal.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.internal.logElapsedTime
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -11,7 +10,6 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.core.node.NetworkParameters
-import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import org.eclipse.jetty.server.Server
@@ -34,14 +32,13 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 import javax.ws.rs.core.Response.status
 
-class NetworkMapServer(private val responseValidityDuration: Duration,
+class NetworkMapServer(private val pollInterval: Duration,
                        hostAndPort: NetworkHostAndPort,
                        private val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa(),
                        private val myHostNameValue: String = "test.host.name",
                        vararg additionalServices: Any) : Closeable {
     companion object {
         private val stubNetworkParameters = NetworkParameters(1, emptyList(), 10485760, Int.MAX_VALUE, Instant.now(), 10, emptyMap())
-        private val log = loggerFor<NetworkMapServer>()
     }
 
     private val server: Server
@@ -88,14 +85,14 @@ class NetworkMapServer(private val responseValidityDuration: Duration,
         parametersUpdate = ParametersUpdate(nextParameters.serialize().hash, description, updateDeadline)
     }
 
-    fun latestParametersAccepted(publicKey: PublicKey): SecureHash? {
-        return service.latestAcceptedParametersMap[publicKey]
-    }
-
     fun advertiseNewParameters() {
         networkParameters = checkNotNull(nextNetworkParameters) { "Schedule parameters update first" }
         nextNetworkParameters = null
         parametersUpdate = null
+    }
+
+    fun latestParametersAccepted(publicKey: PublicKey): SecureHash? {
+        return service.latestAcceptedParametersMap[publicKey]
     }
 
     override fun close() {
@@ -111,38 +108,36 @@ class NetworkMapServer(private val responseValidityDuration: Duration,
         @POST
         @Path("publish")
         @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-        fun publishNodeInfo(input: InputStream): Response =
-            log.logElapsedTime("Publish") {
-                try {
-                    val signedNodeInfo = input.readBytes().deserialize<SignedNodeInfo>()
-                    signedNodeInfo.verified()
-                    nodeInfoMap[signedNodeInfo.raw.hash] = signedNodeInfo
-                    ok()
-                } catch (e: Exception) {
-                    when (e) {
-                        is SignatureException -> status(Response.Status.FORBIDDEN).entity(e.message)
-                        else -> status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.message)
-                    }
-                }.build()
-            }
+        fun publishNodeInfo(input: InputStream): Response {
+            return try {
+                val signedNodeInfo = input.readBytes().deserialize<SignedNodeInfo>()
+                signedNodeInfo.verified()
+                nodeInfoMap[signedNodeInfo.raw.hash] = signedNodeInfo
+                ok()
+            } catch (e: Exception) {
+                when (e) {
+                    is SignatureException -> status(Response.Status.FORBIDDEN).entity(e.message)
+                    else -> status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.message)
+                }
+            }.build()
+        }
 
         @POST
         @Path("ack-parameters")
         @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-        fun ackNetworkParameters(input: InputStream): Response =
-            log.logElapsedTime("Ack parameters") {
-                val signedParametersHash = input.readBytes().deserialize<SignedData<SecureHash>>()
-                val hash = signedParametersHash.verified()
-                latestAcceptedParametersMap[signedParametersHash.sig.by] = hash
-                ok().build()
-            }
+        fun ackNetworkParameters(input: InputStream): Response {
+            val signedParametersHash = input.readBytes().deserialize<SignedData<SecureHash>>()
+            val hash = signedParametersHash.verified()
+            latestAcceptedParametersMap[signedParametersHash.sig.by] = hash
+            return ok().build()
+        }
 
         @GET
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
-        fun getNetworkMap(): Response = log.logElapsedTime("Get NetworkMap") {
+        fun getNetworkMap(): Response {
             val networkMap = NetworkMap(nodeInfoMap.keys.toList(), signedNetParams.raw.hash, parametersUpdate)
             val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
-            Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${responseValidityDuration.seconds}").build()
+            return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${pollInterval.seconds}").build()
         }
 
         // Remove nodeInfo for testing.
@@ -153,9 +148,9 @@ class NetworkMapServer(private val responseValidityDuration: Duration,
         @GET
         @Path("node-info/{var}")
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
-        fun getNodeInfo(@PathParam("var") nodeInfoHash: String): Response = log.logElapsedTime("NodeInfo by hash") {
+        fun getNodeInfo(@PathParam("var") nodeInfoHash: String): Response {
             val signedNodeInfo = nodeInfoMap[SecureHash.parse(nodeInfoHash)]
-            if (signedNodeInfo != null) {
+            return if (signedNodeInfo != null) {
                 Response.ok(signedNodeInfo.serialize().bytes)
             } else {
                 Response.status(Response.Status.NOT_FOUND)
@@ -165,7 +160,7 @@ class NetworkMapServer(private val responseValidityDuration: Duration,
         @GET
         @Path("network-parameters/{var}")
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
-        fun getNetworkParameter(@PathParam("var") hash: String): Response = log.logElapsedTime("NetworkParams by hash") {
+        fun getNetworkParameter(@PathParam("var") hash: String): Response {
             val requestedHash = SecureHash.parse(hash)
             val requestedParameters = if (requestedHash == signedNetParams.raw.hash) {
                 signedNetParams
@@ -175,13 +170,11 @@ class NetworkMapServer(private val responseValidityDuration: Duration,
                 null
             }
             requireNotNull(requestedParameters)
-            Response.ok(requestedParameters!!.serialize().bytes).build()
+            return Response.ok(requestedParameters!!.serialize().bytes).build()
         }
 
         @GET
         @Path("my-hostname")
-        fun getHostName(): Response = logElapsedTime("My hostname") {
-            Response.ok(myHostNameValue).build()
-        }
+        fun getHostName(): Response = Response.ok(myHostNameValue).build()
     }
 }

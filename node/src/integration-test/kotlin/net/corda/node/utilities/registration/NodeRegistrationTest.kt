@@ -47,7 +47,7 @@ class NodeRegistrationTest {
         private val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
         private val aliceName = CordaX500Name("Alice", "London", "GB")
         private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
-        private val log = loggerFor<NodeRegistrationTest>()
+        private val log = contextLogger()
     }
 
     @Rule
@@ -62,7 +62,7 @@ class NodeRegistrationTest {
     @Before
     fun startServer() {
         server = NetworkMapServer(
-                responseValidityDuration = 1.seconds,
+                pollInterval = 1.seconds,
                 hostAndPort = portAllocation.nextHostAndPort(),
                 myHostNameValue = "localhost",
                 additionalServices = registrationHandler)
