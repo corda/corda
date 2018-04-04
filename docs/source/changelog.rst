@@ -44,8 +44,8 @@ Unreleased
 
 * java.security.cert.X509CRL serialization support added.
 
-* Embedded Shell Terminal connects to the node via RPC instead of using ``CordaRPCOps` object directly.
-  To enable RPC connectivity node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress` setting`` need to be added
+* Embedded Shell connects to the node via RPC instead of using ``CordaRPCOps`` object directly.
+  To enable RPC connectivity node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings need to be added
   (if they are not already present).
 
 .. _changelog_v3:
