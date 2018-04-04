@@ -54,6 +54,8 @@ UNRELEASED
                         JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
                 override var participants: MutableSet<AbstractParty>? = null,
 
+* Shell - to use Shell ensure ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
+
 Testing
 ~~~~~~~
 

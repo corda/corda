@@ -44,6 +44,9 @@ Unreleased
 
 * java.security.cert.X509CRL serialization support added.
 
+* Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
+  To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
+
 .. _changelog_v3:
 
 Version 3.0
