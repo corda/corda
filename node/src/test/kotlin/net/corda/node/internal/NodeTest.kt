@@ -19,7 +19,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -31,7 +30,6 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Files
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 
 class NodeTest {
@@ -77,16 +75,7 @@ class NodeTest {
             val node = Node(configuration, rigorousMock<VersionInfo>().also {
                 doReturn(platformVersion).whenever(it).platformVersion
             }, initialiseSerialization = false)
-            val nodeInfo = node.generateNodeInfo()
-            assertEquals(listOf(nodeAddress), nodeInfo.addresses)
-            assertEquals(listOf(nodeName), nodeInfo.legalIdentitiesAndCerts.map { it.name })
-            assertEquals(platformVersion, nodeInfo.platformVersion)
-            node.generateNodeInfo().let {
-                assertNotEquals(nodeInfo, it) // Different serial.
-                assertEquals(nodeInfo, it.copy(serial = nodeInfo.serial))
-            }
-            PersistentNetworkMapCache(database, emptyList()).addNode(nodeInfo)
-            assertEquals(nodeInfo, node.generateNodeInfo())
+            assertEquals(node.generateNodeInfo(), node.generateNodeInfo())  // Node info doesn't change (including the serial)
         }
     }
 }

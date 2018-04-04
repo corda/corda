@@ -204,7 +204,7 @@ private object RPCPermissionResolver : PermissionResolver {
     }
 }
 
-private class ShiroAuthorizingSubject(
+class ShiroAuthorizingSubject(
         private val subjectId: PrincipalCollection,
         private val manager: DefaultSecurityManager) : AuthorizingSubject {
 
@@ -219,7 +219,7 @@ private fun buildCredentialMatcher(type: PasswordEncryption) = when (type) {
     PasswordEncryption.SHIRO_1_CRYPT -> PasswordMatcher()
 }
 
-private class InMemoryRealm(users: List<User>,
+class InMemoryRealm(users: List<User>,
                             realmId: String,
                             passwordEncryption: PasswordEncryption = PasswordEncryption.NONE) : AuthorizingRealm() {
 

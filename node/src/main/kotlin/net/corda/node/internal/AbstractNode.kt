@@ -134,9 +134,11 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JVMAgentRegistry
+import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.NodeBuildProperties
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.NodeInfoAndSigned
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -222,7 +224,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected val runOnStop = ArrayList<() -> Any?>()
     private val _nodeReadyFuture = openFuture<Unit>()
     protected var networkMapClient: NetworkMapClient? = null
-    protected lateinit var networkMapUpdater: NetworkMapUpdater
+    private lateinit var networkMapUpdater: NetworkMapUpdater
     lateinit var securityManager: RPCSecurityManager
 
     private val shutdownExecutor = Executors.newSingleThreadExecutor()
@@ -261,15 +263,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         return initialiseDatabasePersistence(schemaService, makeIdentityService(identity.certificate)).use {
             it.transaction {
-                // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks like a code smell.
+                // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks
+                // like a design smell.
                 val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
                 persistentNetworkMapCache.start()
-                val (keyPairs, nodeInfo) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
-                val nodeInfoAndSigned = NodeInfoAndSigned(nodeInfo) { publicKey, serialised ->
-                    val privateKey = keyPairs.single { it.public == publicKey }.private
-                    privateKey.sign(serialised.bytes)
-                }
-                NodeInfoWatcher.saveToFile(configuration.baseDirectory, nodeInfoAndSigned)
+                val (_, nodeInfo) = updateNodeInfo(persistentNetworkMapCache, null, identity, identityKeyPair)
                 nodeInfo
             }
         }
@@ -283,15 +281,18 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
+
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
+
         val networkParameters = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory).networkParameters
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
+
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService).transaction {
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService)
-            val (keyPairs, nodeInfo) = initNodeInfo(networkMapCache, identity, identityKeyPair)
+            val (keyPairs, nodeInfo) = updateNodeInfo(networkMapCache, networkMapClient, identity, identityKeyPair)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             val metrics = MetricRegistry()
             val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
@@ -342,6 +343,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             startShell()
             Pair(StartedNodeImpl(this@AbstractNode, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
+
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient,
@@ -349,15 +351,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 configuration.baseDirectory)
         runOnStop += networkMapUpdater::close
 
-        log.info("Node-info for this node: ${services.myInfo}")
-
-        val nodeInfoAndSigned = NodeInfoAndSigned(services.myInfo) { publicKey, serialised ->
-            services.keyManagementService.sign(serialised.bytes, publicKey).withoutKey()
-        }
-        networkMapUpdater.updateNodeInfo(nodeInfoAndSigned)
         networkMapUpdater.subscribeToNetworkMap()
 
-        // If we successfully  loaded network data from database, we set this future to Unit.
+        // If we successfully loaded network data from database, we set this future to Unit.
         _nodeReadyFuture.captureLater(services.networkMapCache.nodeReady.map { Unit })
 
         return startedImpl.apply {
@@ -386,9 +382,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    private fun initNodeInfo(networkMapCache: NetworkMapCacheBaseInternal,
-                             identity: PartyAndCertificate,
-                             identityKeyPair: KeyPair): Pair<Set<KeyPair>, NodeInfo> {
+    private fun updateNodeInfo(networkMapCache: NetworkMapCacheBaseInternal,
+                               networkMapClient: NetworkMapClient?,
+                               identity: PartyAndCertificate,
+                               identityKeyPair: KeyPair): Pair<Set<KeyPair>, NodeInfo> {
         val keyPairs = mutableSetOf(identityKeyPair)
 
         myNotaryIdentity = configuration.notary?.let {
@@ -402,7 +399,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             }
         }
 
-        val nodeInfoWithBlankSerial = NodeInfo(
+        val potentialNodeInfo = NodeInfo(
                 myAddresses(),
                 setOf(identity, myNotaryIdentity).filterNotNull(),
                 versionInfo.platformVersion,
@@ -411,13 +408,47 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
         val nodeInfoFromDb = networkMapCache.getNodeByLegalName(identity.name)
 
-        val nodeInfo = if (nodeInfoWithBlankSerial == nodeInfoFromDb?.copy(serial = 0)) {
+        val nodeInfo = if (potentialNodeInfo == nodeInfoFromDb?.copy(serial = 0)) {
             // The node info hasn't changed. We use the one from the database to preserve the serial.
+            log.debug("Node-info hasn't changed")
             nodeInfoFromDb
         } else {
-            nodeInfoWithBlankSerial.copy(serial = platformClock.millis())
+            log.info("Node-info has changed so submitting update. Old node-info was $nodeInfoFromDb")
+            val newNodeInfo = potentialNodeInfo.copy(serial = platformClock.millis())
+            networkMapCache.addNode(newNodeInfo)
+            log.info("New node-info: $newNodeInfo")
+            newNodeInfo
         }
+
+        val nodeInfoAndSigned = NodeInfoAndSigned(nodeInfo) { publicKey, serialised ->
+            val privateKey = keyPairs.single { it.public == publicKey }.private
+            privateKey.sign(serialised.bytes)
+        }
+
+        // Write the node-info file even if nothing's changed, just in case the file has been deleted.
+        NodeInfoWatcher.saveToFile(configuration.baseDirectory, nodeInfoAndSigned)
+
+        if (networkMapClient != null) {
+            tryPublishNodeInfoAsync(nodeInfoAndSigned.signed, networkMapClient)
+        }
+
         return Pair(keyPairs, nodeInfo)
+    }
+
+    private fun tryPublishNodeInfoAsync(signedNodeInfo: SignedNodeInfo, networkMapClient: NetworkMapClient) {
+        val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater", Executors.defaultThreadFactory()))
+
+        executor.submit(object : Runnable {
+            override fun run() {
+                try {
+                    networkMapClient.publish(signedNodeInfo)
+                } catch (t: Throwable) {
+                    log.warn("Error encountered while publishing node info, will retry again", t)
+                    // TODO: Exponential backoff?
+                    executor.schedule(this, 1, TimeUnit.MINUTES)
+                }
+            }
+        })
     }
 
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
