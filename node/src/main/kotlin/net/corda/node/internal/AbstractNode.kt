@@ -19,16 +19,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sign
-import net.corda.core.flows.ContractUpgradeFlow
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.NotaryChangeFlow
-import net.corda.core.flows.NotaryFlow
-import net.corda.core.flows.StartableByService
+import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -37,24 +28,9 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.FlowHandleImpl
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.FlowProgressHandleImpl
-import net.corda.core.messaging.RPCOps
-import net.corda.core.node.AppServiceHub
-import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NodeInfo
-import net.corda.core.node.ServiceHub
-import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.CordaService
-import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.NotaryService
-import net.corda.core.node.services.TransactionVerifierService
+import net.corda.core.messaging.*
+import net.corda.core.node.*
+import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -74,75 +50,33 @@ import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
-import net.corda.node.services.api.CheckpointStorage
-import net.corda.node.services.api.DummyAuditService
-import net.corda.node.services.api.FlowStarter
-import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.node.services.api.MonitoringService
-import net.corda.node.services.api.NetworkMapCacheBaseInternal
-import net.corda.node.services.api.NetworkMapCacheInternal
-import net.corda.node.services.api.NodePropertiesStore
-import net.corda.node.services.api.SchedulerService
-import net.corda.node.services.api.SchemaService
-import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.api.StartedNodeServices
-import net.corda.node.services.api.VaultServiceInternal
-import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.node.services.config.BFTSMaRtConfiguration
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.api.*
+import net.corda.node.services.config.*
 import net.corda.node.services.config.shell.toShellConfig
-import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.NetworkMapCacheImpl
-import net.corda.node.services.network.NetworkMapClient
-import net.corda.node.services.network.NetworkMapUpdater
-import net.corda.node.services.network.NodeInfoWatcher
-import net.corda.node.services.network.PersistentNetworkMapCache
-import net.corda.node.services.persistence.AbstractPartyDescriptor
-import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
-import net.corda.node.services.persistence.DBCheckpointStorage
-import net.corda.node.services.persistence.DBTransactionMappingStorage
-import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.node.services.persistence.NodePropertiesPersistentStore
-import net.corda.node.services.persistence.RunOnceService
+import net.corda.node.services.network.*
+import net.corda.node.services.persistence.*
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
-import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
-import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.statemachine.appName
-import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
-import net.corda.node.services.transactions.BFTNonValidatingNotaryService
-import net.corda.node.services.transactions.BFTSMaRt
-import net.corda.node.services.transactions.MySQLNonValidatingNotaryService
-import net.corda.node.services.transactions.MySQLValidatingNotaryService
-import net.corda.node.services.transactions.RaftNonValidatingNotaryService
-import net.corda.node.services.transactions.RaftUniquenessProvider
-import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.node.services.statemachine.*
+import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JVMAgentRegistry
+import net.corda.node.utilities.NamedThreadFactory
 import net.corda.node.utilities.NodeBuildProperties
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.NodeInfoAndSigned
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.nodeapi.internal.persistence.SchemaMigration
-import net.corda.nodeapi.internal.persistence.isH2Database
+import net.corda.nodeapi.internal.persistence.*
 import net.corda.nodeapi.internal.storeLegalIdentity
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -165,6 +99,7 @@ import java.time.Duration
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.collections.set
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
@@ -222,7 +157,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected val runOnStop = ArrayList<() -> Any?>()
     private val _nodeReadyFuture = openFuture<Unit>()
     protected var networkMapClient: NetworkMapClient? = null
-    protected lateinit var networkMapUpdater: NetworkMapUpdater
+    private lateinit var networkMapUpdater: NetworkMapUpdater
     lateinit var securityManager: RPCSecurityManager
 
     private val shutdownExecutor = Executors.newSingleThreadExecutor()
@@ -261,15 +196,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         return initialiseDatabasePersistence(schemaService, makeIdentityService(identity.certificate)).use {
             it.transaction {
-                // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks like a code smell.
+                // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks
+                // like a design smell.
                 val persistentNetworkMapCache = PersistentNetworkMapCache(database, notaries = emptyList())
                 persistentNetworkMapCache.start()
-                val (keyPairs, nodeInfo) = initNodeInfo(persistentNetworkMapCache, identity, identityKeyPair)
-                val nodeInfoAndSigned = NodeInfoAndSigned(nodeInfo) { publicKey, serialised ->
-                    val privateKey = keyPairs.single { it.public == publicKey }.private
-                    privateKey.sign(serialised.bytes)
-                }
-                NodeInfoWatcher.saveToFile(configuration.baseDirectory, nodeInfoAndSigned)
+                val (_, nodeInfo) = updateNodeInfo(persistentNetworkMapCache, null, identity, identityKeyPair)
                 nodeInfo
             }
         }
@@ -283,15 +214,18 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
+
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
+
         val networkParameters = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory).networkParameters
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
+
         // Do all of this in a database transaction so anything that might need a connection has one.
         val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService).transaction {
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService)
-            val (keyPairs, nodeInfo) = initNodeInfo(networkMapCache, identity, identityKeyPair)
+            val (keyPairs, nodeInfo) = updateNodeInfo(networkMapCache, networkMapClient, identity, identityKeyPair)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             val metrics = MetricRegistry()
             val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
@@ -342,6 +276,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             startShell()
             Pair(StartedNodeImpl(this@AbstractNode, _services, nodeInfo, checkpointStorage, smm, attachments, network, database, rpcOps, flowStarter, notaryService), schedulerService)
         }
+
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient,
@@ -349,15 +284,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 configuration.baseDirectory)
         runOnStop += networkMapUpdater::close
 
-        log.info("Node-info for this node: ${services.myInfo}")
-
-        val nodeInfoAndSigned = NodeInfoAndSigned(services.myInfo) { publicKey, serialised ->
-            services.keyManagementService.sign(serialised.bytes, publicKey).withoutKey()
-        }
-        networkMapUpdater.updateNodeInfo(nodeInfoAndSigned)
         networkMapUpdater.subscribeToNetworkMap()
 
-        // If we successfully  loaded network data from database, we set this future to Unit.
+        // If we successfully loaded network data from database, we set this future to Unit.
         _nodeReadyFuture.captureLater(services.networkMapCache.nodeReady.map { Unit })
 
         return startedImpl.apply {
@@ -386,9 +315,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    private fun initNodeInfo(networkMapCache: NetworkMapCacheBaseInternal,
-                             identity: PartyAndCertificate,
-                             identityKeyPair: KeyPair): Pair<Set<KeyPair>, NodeInfo> {
+    private fun updateNodeInfo(networkMapCache: NetworkMapCacheBaseInternal,
+                               networkMapClient: NetworkMapClient?,
+                               identity: PartyAndCertificate,
+                               identityKeyPair: KeyPair): Pair<Set<KeyPair>, NodeInfo> {
         val keyPairs = mutableSetOf(identityKeyPair)
 
         myNotaryIdentity = configuration.notary?.let {
@@ -402,7 +332,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             }
         }
 
-        val nodeInfoWithBlankSerial = NodeInfo(
+        val potentialNodeInfo = NodeInfo(
                 myAddresses(),
                 setOf(identity, myNotaryIdentity).filterNotNull(),
                 versionInfo.platformVersion,
@@ -411,13 +341,47 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
         val nodeInfoFromDb = networkMapCache.getNodeByLegalName(identity.name)
 
-        val nodeInfo = if (nodeInfoWithBlankSerial == nodeInfoFromDb?.copy(serial = 0)) {
+        val nodeInfo = if (potentialNodeInfo == nodeInfoFromDb?.copy(serial = 0)) {
             // The node info hasn't changed. We use the one from the database to preserve the serial.
+            log.debug("Node-info hasn't changed")
             nodeInfoFromDb
         } else {
-            nodeInfoWithBlankSerial.copy(serial = platformClock.millis())
+            log.info("Node-info has changed so submitting update. Old node-info was $nodeInfoFromDb")
+            val newNodeInfo = potentialNodeInfo.copy(serial = platformClock.millis())
+            networkMapCache.addNode(newNodeInfo)
+            log.info("New node-info: $newNodeInfo")
+            newNodeInfo
         }
+
+        val nodeInfoAndSigned = NodeInfoAndSigned(nodeInfo) { publicKey, serialised ->
+            val privateKey = keyPairs.single { it.public == publicKey }.private
+            privateKey.sign(serialised.bytes)
+        }
+
+        // Write the node-info file even if nothing's changed, just in case the file has been deleted.
+        NodeInfoWatcher.saveToFile(configuration.baseDirectory, nodeInfoAndSigned)
+
+        if (networkMapClient != null) {
+            tryPublishNodeInfoAsync(nodeInfoAndSigned.signed, networkMapClient)
+        }
+
         return Pair(keyPairs, nodeInfo)
+    }
+
+    private fun tryPublishNodeInfoAsync(signedNodeInfo: SignedNodeInfo, networkMapClient: NetworkMapClient) {
+        val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater", Executors.defaultThreadFactory()))
+
+        executor.submit(object : Runnable {
+            override fun run() {
+                try {
+                    networkMapClient.publish(signedNodeInfo)
+                } catch (t: Throwable) {
+                    log.warn("Error encountered while publishing node info, will retry again", t)
+                    // TODO: Exponential backoff?
+                    executor.schedule(this, 1, TimeUnit.MINUTES)
+                }
+            }
+        })
     }
 
     protected abstract fun myAddresses(): List<NetworkHostAndPort>

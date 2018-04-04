@@ -1,11 +1,11 @@
 Changelog
 =========
 
+Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
+release, see :doc:`upgrade-notes`.
+
 Unreleased
 ----------
-
-Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
-from the previous milestone release.
 
 * Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
 
