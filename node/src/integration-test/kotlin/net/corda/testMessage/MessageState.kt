@@ -1,4 +1,4 @@
-package net.corda
+package net.corda.testMessage
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
@@ -48,7 +48,7 @@ object MessageSchemaV1 : MappedSchema(
     ) : PersistentState()
 }
 
-const val MESSAGE_CONTRACT_PROGRAM_ID = "net.corda.MessageContract"
+const val MESSAGE_CONTRACT_PROGRAM_ID = "net.corda.testMessage.MessageContract"
 
 open class MessageContract : Contract {
     override fun verify(tx: LedgerTransaction) {
