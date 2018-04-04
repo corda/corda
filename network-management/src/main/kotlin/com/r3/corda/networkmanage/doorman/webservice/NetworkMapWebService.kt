@@ -16,6 +16,7 @@ import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
 import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService.Companion.NETWORK_MAP_PATH
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sha256
@@ -92,7 +93,7 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
                 is NetworkMapNotInitialisedException -> status(Response.Status.SERVICE_UNAVAILABLE).entity(e.message)
                 is InvalidPlatformVersionException -> status(Response.Status.BAD_REQUEST).entity(e.message)
                 is InvalidKeyException, is SignatureException -> status(Response.Status.UNAUTHORIZED).entity(e.message)
-                // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
+            // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
                 else -> throw e
             }
         }.build()
@@ -153,11 +154,22 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     }
 
     private fun verifyNodeInfo(nodeInfo: NodeInfo) {
+        checkCompositeKeys(nodeInfo)
         val minimumPlatformVersion = currentNetworkParameters?.minimumPlatformVersion
                 ?: throw NetworkMapNotInitialisedException("Network parameters have not been initialised")
         if (nodeInfo.platformVersion < minimumPlatformVersion) {
             throw InvalidPlatformVersionException("Minimum platform version is $minimumPlatformVersion")
         }
+    }
+
+    private fun checkCompositeKeys(nodeInfo: NodeInfo) {
+        val compositeKeyIdentities = nodeInfo.legalIdentities.filter { it.owningKey is CompositeKey }
+        if (compositeKeyIdentities.isEmpty()) {
+            return
+        }
+        val parameters = checkNotNull(currentNetworkParameters) { "Network parameters not available." }
+        val notaryIdentities = parameters.notaries.map { it.identity }
+        require(notaryIdentities.containsAll(compositeKeyIdentities)) { "A composite key needs to belong to a notary." }
     }
 
     private fun createResponse(payload: Any?, addCacheTimeout: Boolean = false): Response {
