@@ -91,5 +91,10 @@ sealed class FlowIORequest<out R : Any> {
      * Suspend the flow until all Initiating sessions are confirmed.
      */
     object WaitForSessionConfirmations : FlowIORequest<Unit>()
+
+    /**
+     * Execute the specified [operation], suspend the flow until completion.
+     */
+    data class ExecuteAsyncOperation<T : Any>(val operation: FlowAsyncOperation<T>) : FlowIORequest<T>()
 }
 

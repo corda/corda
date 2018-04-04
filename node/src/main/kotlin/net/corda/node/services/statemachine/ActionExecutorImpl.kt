@@ -81,6 +81,7 @@ class ActionExecutorImpl(
             is Action.CreateTransaction -> executeCreateTransaction()
             is Action.RollbackTransaction -> executeRollbackTransaction()
             is Action.CommitTransaction -> executeCommitTransaction()
+            is Action.ExecuteAsyncOperation -> executeAsyncOperation(fiber, action)
         }
     }
 
@@ -216,6 +217,19 @@ class ActionExecutorImpl(
             contextTransaction.close()
             contextTransactionOrNull = null
         }
+    }
+
+    @Suspendable
+    private fun executeAsyncOperation(fiber: FlowFiber, action: Action.ExecuteAsyncOperation) {
+        val operationFuture = action.operation.execute()
+        operationFuture.thenMatch(
+                success = { result ->
+                    fiber.scheduleEvent(Event.AsyncOperationCompletion(result))
+                },
+                failure = { exception ->
+                    fiber.scheduleEvent(Event.Error(exception))
+                }
+        )
     }
 
     private fun serializeCheckpoint(checkpoint: Checkpoint): SerializedBytes<Checkpoint> {

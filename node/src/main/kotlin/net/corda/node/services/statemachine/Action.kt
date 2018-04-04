@@ -13,6 +13,7 @@ package net.corda.node.services.statemachine
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowAsyncOperation
 import net.corda.node.services.messaging.DeduplicationHandler
 import java.time.Instant
 
@@ -121,6 +122,11 @@ sealed class Action {
      * Commit the current database transaction.
      */
     object CommitTransaction : Action() { override fun toString() = "CommitTransaction" }
+
+    /**
+     * Execute the specified [operation].
+     */
+    data class ExecuteAsyncOperation(val operation: FlowAsyncOperation<*>) : Action()
 }
 
 /**

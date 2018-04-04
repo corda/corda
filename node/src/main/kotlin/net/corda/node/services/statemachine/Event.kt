@@ -124,4 +124,13 @@ sealed class Event {
      * @param returnValue the return value of the flow.
      */
     data class FlowFinish(val returnValue: Any?) : Event()
+
+    /**
+     * Signals the completion of a [FlowAsyncOperation].
+     *
+     * Scheduling is triggered by the service that completes the future returned by the async operation.
+     *
+     * @param returnValue the result of the operation.
+     */
+    data class AsyncOperationCompletion(val returnValue: Any?) : Event()
 }

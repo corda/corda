@@ -39,6 +39,7 @@ class TopLevelTransition(
                 is Event.Suspend -> suspendTransition(event)
                 is Event.FlowFinish -> flowFinishTransition(event)
                 is Event.InitiateFlow -> initiateFlowTransition(event)
+                is Event.AsyncOperationCompletion -> asyncOperationCompletionTransition(event)
         }
     }
 
@@ -242,5 +243,11 @@ class TopLevelTransition(
             }
         }
         return null
+    }
+
+    private fun asyncOperationCompletionTransition(event: Event.AsyncOperationCompletion): TransitionResult {
+        return builder {
+            resumeFlowLogic(event.returnValue)
+        }
     }
 }

@@ -49,6 +49,7 @@ class StartedFlowTransition(
             is FlowIORequest.Sleep -> sleepTransition(flowIORequest)
             is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
             is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
+            is FlowIORequest.ExecuteAsyncOperation<*> -> executeAsyncOperation(flowIORequest)
         }
     }
 
@@ -388,6 +389,9 @@ class StartedFlowTransition(
             is FlowIORequest.WaitForSessionConfirmations -> {
                 collectErroredInitiatingSessionErrors(checkpoint)
             }
+            is FlowIORequest.ExecuteAsyncOperation<*> -> {
+                emptyList()
+            }
         }
     }
 
@@ -405,5 +409,12 @@ class StartedFlowTransition(
                 appName = initiatingSubFlow.flowInfo.appName,
                 firstPayload = payload
         )
+    }
+
+    private fun executeAsyncOperation(flowIORequest: FlowIORequest.ExecuteAsyncOperation<*>): TransitionResult {
+        return builder {
+            actions.add(Action.ExecuteAsyncOperation(flowIORequest.operation))
+            FlowContinuation.ProcessEvents
+        }
     }
 }
