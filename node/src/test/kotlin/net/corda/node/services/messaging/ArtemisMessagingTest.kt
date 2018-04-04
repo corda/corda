@@ -191,6 +191,7 @@ class ArtemisMessagingTest {
         try {
             val messagingClient2 = createMessagingClient()
             startNodeMessagingClient()
+
             val fakeMsg2 = messagingClient2.messagingExecutor!!.cordaToArtemisMessage(message)
             fakeMsg2!!.putStringProperty(HDR_VALIDATED_USER, SimpleString("O=Bank A, L=New York, C=US"))
 
@@ -229,6 +230,51 @@ class ArtemisMessagingTest {
             assertThat(String(received.data.bytes, Charsets.UTF_8)).isEqualTo("first msg")
             val received2 = receivedMessages.poll()
             assertThat(received2).isNull()
+        } finally {
+            messagingClient1.stop()
+        }
+    }
+
+    // Redelivery to a receiver who stops and restarts (some re-deliveries from Artemis, but with receiver state reset), but the original
+    // messages were recorded as consumed out of order, and only the *second* message was acked.
+    @Test
+    fun `re-receive from different client is not ignored when acked out of order`() {
+        // Don't ack first message, pretend we exit before that happens (but after second message is acked).
+        val (messagingClient1, receivedMessages) = createAndStartClientAndServer(dontAckCondition = { received -> String(received.data.bytes, Charsets.UTF_8) == "first msg" })
+        val message1 = messagingClient1.createMessage(TOPIC, data = "first msg".toByteArray())
+        val message2 = messagingClient1.createMessage(TOPIC, data = "second msg".toByteArray())
+        val fakeMsg1 = messagingClient1.messagingExecutor!!.cordaToArtemisMessage(message1)
+        val fakeMsg2 = messagingClient1.messagingExecutor!!.cordaToArtemisMessage(message2)
+        fakeMsg1!!.putStringProperty(HDR_VALIDATED_USER, SimpleString("O=Bank A, L=New York, C=US"))
+        fakeMsg2!!.putStringProperty(HDR_VALIDATED_USER, SimpleString("O=Bank A, L=New York, C=US"))
+
+        messagingClient1.deliver(fakeMsg1)
+        messagingClient1.deliver(fakeMsg2)
+
+        // Now change the receiver
+        try {
+            val messagingClient2 = createMessagingClient()
+            messagingClient2.addMessageHandler(TOPIC) { msg, _, handle ->
+                // The try-finally causes the test to fail if there's a duplicate insert (which, naturally, is an error but otherwise gets swallowed).
+                try {
+                    database.transaction { handle.insideDatabaseTransaction() }
+                } finally {
+                    handle.afterDatabaseTransaction() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
+                    receivedMessages.add(msg)
+                }
+            }
+            startNodeMessagingClient()
+
+            messagingClient2.deliver(fakeMsg1)
+            messagingClient2.deliver(fakeMsg2)
+
+            // Should receive 2 and then 1 (and not 2 again).
+            val received = receivedMessages.take()
+            assertThat(received.senderSeqNo).isEqualTo(1)
+            val received2 = receivedMessages.poll()
+            assertThat(received2.senderSeqNo).isEqualTo(0)
+            val received3 = receivedMessages.poll()
+            assertThat(received3).isNull()
         } finally {
             messagingClient1.stop()
         }
@@ -274,13 +320,14 @@ class ArtemisMessagingTest {
         messagingClient!!.start()
     }
 
-    private fun createAndStartClientAndServer(platformVersion: Int = 1): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
+    private fun createAndStartClientAndServer(platformVersion: Int = 1, dontAckCondition: (msg: ReceivedMessage) -> Boolean = { false }): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
         val receivedMessages = LinkedBlockingQueue<ReceivedMessage>()
 
         createMessagingServer().start()
 
         val messagingClient = createMessagingClient(platformVersion = platformVersion)
         messagingClient.addMessageHandler(TOPIC) { message, _, handle ->
+            if (dontAckCondition(message)) return@addMessageHandler
             database.transaction { handle.insideDatabaseTransaction() }
             handle.afterDatabaseTransaction() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
             receivedMessages.add(message)

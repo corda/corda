@@ -11,18 +11,22 @@
 package net.corda.node.services.messaging
 
 import com.github.benmanes.caffeine.cache.Caffeine
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.apache.mina.util.ConcurrentHashSet
+import java.io.Serializable
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
+
+typealias SenderHashToSeqNo = Pair<String, Long?>
 
 /**
  * Encapsulate the de-duplication logic.
@@ -30,23 +34,26 @@ import javax.persistence.Id
 class P2PMessageDeduplicator(private val database: CordaPersistence) {
     val ourSenderUUID = UUID.randomUUID().toString()
 
-    // A temporary in-memory set of deduplication IDs. When we receive a message we don't persist the ID immediately,
+    // A temporary in-memory set of deduplication IDs and associated high water mark details.
+    // When we receive a message we don't persist the ID immediately,
     // so we store the ID here in the meantime (until the persisting db tx has committed). This is because Artemis may
     // redeliver messages to the same consumer if they weren't ACKed.
-    private val beingProcessedMessages = ConcurrentHashSet<DeduplicationId>()
+    private val beingProcessedMessages = ConcurrentHashMap<DeduplicationId, MessageMeta>()
     private val processedMessages = createProcessedMessages()
     // We add the peer to the key, so other peers cannot attempt malicious meddling with sequence numbers.
     // Expire after 7 days since we last touched an entry, to avoid infinite growth.
-    private val senderUUIDSeqNoHWM: MutableMap<Triple<String, CordaX500Name, Boolean>, Long> = Caffeine.newBuilder().expireAfterAccess(7, TimeUnit.DAYS).build<Triple<String, CordaX500Name, Boolean>, Long>().asMap()
+    private val senderUUIDSeqNoHWM: MutableMap<SenderKey, SenderHashToSeqNo> = Caffeine.newBuilder().expireAfterAccess(7, TimeUnit.DAYS).build<SenderKey, SenderHashToSeqNo>().asMap()
 
-    private fun createProcessedMessages(): AppendOnlyPersistentMap<DeduplicationId, Instant, ProcessedMessage, String> {
+    private fun createProcessedMessages(): AppendOnlyPersistentMap<DeduplicationId, MessageMeta, ProcessedMessage, String> {
         return AppendOnlyPersistentMap(
                 toPersistentEntityKey = { it.toString },
-                fromPersistentEntity = { Pair(DeduplicationId(it.id), it.insertionTime) },
-                toPersistentEntity = { key: DeduplicationId, value: Instant ->
+                fromPersistentEntity = { Pair(DeduplicationId(it.id), MessageMeta(it.insertionTime, it.hash, it.seqNo)) },
+                toPersistentEntity = { key: DeduplicationId, value: MessageMeta ->
                     ProcessedMessage().apply {
                         id = key.toString
-                        insertionTime = value
+                        insertionTime = value.insertionTime
+                        hash = value.senderHash
+                        seqNo = value.senderSeqNo
                     }
                 },
                 persistentEntityClass = ProcessedMessage::class.java
@@ -67,24 +74,40 @@ class P2PMessageDeduplicator(private val database: CordaPersistence) {
      * We also ensure the UUID cannot be spoofed, by incorporating the authenticated sender into the key of the map/cache.
      */
     private fun isDuplicateWithPotentialOptimization(receivedSenderUUID: String, receivedSenderSeqNo: Long, msg: ReceivedMessage): Boolean {
-        return senderUUIDSeqNoHWM.compute(Triple(receivedSenderUUID, msg.peer, msg.isSessionInit)) { key, existingSeqNoHWM ->
-            val isNewHWM = (existingSeqNoHWM != null && existingSeqNoHWM < receivedSenderSeqNo)
-            if (isNewHWM) {
-                // If we are the new HWM, set the HWM to us.
-                receivedSenderSeqNo
-            } else {
-                // If we are a duplicate, unset the HWM, since it seems like re-delivery is happening for traffic from that sender.
-                // else if we are not a duplicate, (re)set the HWM to us.
-                if (isDuplicateInDatabase(msg)) null else receivedSenderSeqNo
-            }
-        } != receivedSenderSeqNo
+        val senderKey = SenderKey(receivedSenderUUID, msg.peer, msg.isSessionInit)
+        val (senderHash, existingSeqNoHWM) = senderUUIDSeqNoHWM.computeIfAbsent(senderKey) {
+            highestSeqNoHWMInDatabaseFor(senderKey)
+        }
+        val isNewHWM = (existingSeqNoHWM == null || existingSeqNoHWM < receivedSenderSeqNo)
+        return if (isNewHWM) {
+            senderUUIDSeqNoHWM[senderKey] = senderHash to receivedSenderSeqNo
+            false
+        } else isDuplicateInDatabase(msg)
     }
+
+    /**
+     * Work out the highest sequence number for the given sender, as persisted last time we ran.
+     *
+     * TODO: consider the performance of doing this per sender vs. one big load at startup, vs. adding an index (and impact on inserts).
+     */
+    private fun highestSeqNoHWMInDatabaseFor(senderKey: SenderKey): SenderHashToSeqNo {
+        val senderHash = senderHash(senderKey)
+        return senderHash to database.transaction {
+            val cb1 = session.criteriaBuilder
+            val cq1 = cb1.createQuery(Long::class.java)
+            val root = cq1.from(ProcessedMessage::class.java)
+            session.createQuery(cq1.select(cb1.max(root.get<Long>(ProcessedMessage::seqNo.name))).where(cb1.equal(root.get<String>(ProcessedMessage::hash.name), senderHash))).singleResult
+        }
+    }
+
+    // We need to incorporate the sending party, and the sessionInit flag as per the in-memory cache.
+    private fun senderHash(senderKey: SenderKey) = SecureHash.sha256(senderKey.peer.toString() + senderKey.isSessionInit.toString() + senderKey.senderUUID).toString()
 
     /**
      * @return true if we have seen this message before.
      */
     fun isDuplicate(msg: ReceivedMessage): Boolean {
-        if (msg.uniqueMessageId in beingProcessedMessages) {
+        if (beingProcessedMessages.containsKey(msg.uniqueMessageId)) {
             return true
         }
         val receivedSenderUUID = msg.senderUUID
@@ -102,15 +125,20 @@ class P2PMessageDeduplicator(private val database: CordaPersistence) {
     /**
      * Called the first time we encounter [deduplicationId].
      */
-    fun signalMessageProcessStart(deduplicationId: DeduplicationId) {
-        beingProcessedMessages.add(deduplicationId)
+    fun signalMessageProcessStart(msg: ReceivedMessage) {
+        val receivedSenderUUID = msg.senderUUID
+        val receivedSenderSeqNo = msg.senderSeqNo
+        // We don't want a mix of nulls and values so we ensure that here.
+        val senderHash: String? = if (receivedSenderUUID != null && receivedSenderSeqNo != null) senderUUIDSeqNoHWM[SenderKey(receivedSenderUUID, msg.peer, msg.isSessionInit)]?.first else null
+        val senderSeqNo: Long? = if (senderHash != null) msg.senderSeqNo else null
+        beingProcessedMessages[msg.uniqueMessageId] = MessageMeta(Instant.now(), senderHash, senderSeqNo)
     }
 
     /**
      * Called inside a DB transaction to persist [deduplicationId].
      */
     fun persistDeduplicationId(deduplicationId: DeduplicationId) {
-        processedMessages[deduplicationId] = Instant.now()
+        processedMessages[deduplicationId] = beingProcessedMessages[deduplicationId]!!
     }
 
     /**
@@ -129,6 +157,16 @@ class P2PMessageDeduplicator(private val database: CordaPersistence) {
             var id: String = "",
 
             @Column(name = "insertion_time")
-            var insertionTime: Instant = Instant.now()
-    )
+            var insertionTime: Instant = Instant.now(),
+
+            @Column(name = "sender", length = 64)
+            var hash: String? = "",
+
+            @Column(name = "sequence_number")
+            var seqNo: Long? = null
+    ) : Serializable
+
+    private data class MessageMeta(val insertionTime: Instant, val senderHash: String?, val senderSeqNo: Long?)
+
+    private data class SenderKey(val senderUUID: String, val peer: CordaX500Name, val isSessionInit: Boolean)
 }

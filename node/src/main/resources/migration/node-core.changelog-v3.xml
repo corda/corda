@@ -29,4 +29,10 @@
         </addColumn>
     </changeSet>
 
+    <changeSet author="R3.Corda" id="add_dedup_columns">
+        <addColumn tableName="node_message_ids">
+            <column name="sender" type="NVARCHAR(64)"/>
+            <column name="sequence_number" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
