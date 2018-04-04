@@ -52,6 +52,7 @@ import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.ThreadPoolExecutor
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.ArrayList
 import kotlin.streams.toList
@@ -132,7 +133,8 @@ class MultiThreadedStateMachineManager(
         this.actionExecutor = makeActionExecutor(checkpointSerializationContext)
         fiberDeserializationChecker?.start(checkpointSerializationContext)
         val fibers = restoreFlowsFromCheckpoints()
-        metrics.register("Flows.InFlight", Gauge<Int> { concurrentBox.content.flows.size })
+        metrics.register("Flows.ActiveThreads", Gauge { (executor as? ThreadPoolExecutor)?.activeCount })
+        metrics.register("Flows.InFlight", Gauge { concurrentBox.content.flows.size })
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
             (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
         }
@@ -625,6 +627,7 @@ class MultiThreadedStateMachineManager(
         interceptors.add { HospitalisingInterceptor(PropagatingFlowHospital, it) }
         if (serviceHub.configuration.devMode) {
             interceptors.add { DumpHistoryOnErrorInterceptor(it) }
+            interceptors.add { MetricInterceptor(metrics, it) }
         }
         if (serviceHub.configuration.shouldCheckCheckpoints()) {
             interceptors.add { FiberDeserializationCheckingInterceptor(fiberDeserializationChecker!!, it) }
