@@ -14,21 +14,23 @@ import net.corda.core.serialization.CordaSerializable
 abstract class CoreTransaction : BaseTransaction() {
     /** The inputs of this transaction, containing state references only **/
     abstract override val inputs: List<StateRef>
+    abstract override val references: List<StateRef>
 }
 
 /** A transaction with fully resolved components, such as input states. */
 abstract class FullTransaction : BaseTransaction() {
     abstract override val inputs: List<StateAndRef<ContractState>>
+    abstract override val references: List<StateAndRef<ContractState>>
 
     override fun checkBaseInvariants() {
         super.checkBaseInvariants()
-        checkInputsHaveSameNotary()
+        checkInputsAndReferencesHaveSameNotary()
     }
 
-    private fun checkInputsHaveSameNotary() {
-        if (inputs.isEmpty()) return
-        val inputNotaries = inputs.map { it.state.notary }.toHashSet()
-        check(inputNotaries.size == 1) { "All inputs must point to the same notary" }
-        check(inputNotaries.single() == notary) { "The specified notary must be the one specified by all inputs" }
+    private fun checkInputsAndReferencesHaveSameNotary() {
+        if (inputs.isEmpty() && references.isEmpty()) return
+        val notaries = (inputs + references).map { it.state.notary }.toHashSet()
+        check(notaries.size == 1) { "All inputs and references must point to the same notary" }
+        check(notaries.single() == notary) { "The specified notary must be the one specified by all inputs and references" }
     }
 }

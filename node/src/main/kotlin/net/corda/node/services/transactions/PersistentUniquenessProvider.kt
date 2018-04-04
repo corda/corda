@@ -94,9 +94,14 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
     }
 
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
+        commit(states, txId, callerIdentity, emptyList())
+    }
+
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, references: List<StateRef>) {
+        val allStates = states + references
         val conflict = mutex.locked {
             val conflictingStates = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
-            for (inputState in states) {
+            for (inputState in allStates) {
                 val consumingTx = committedStates.get(inputState)
                 if (consumingTx != null) conflictingStates[inputState] = consumingTx
             }
@@ -105,6 +110,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
                 val conflict = conflictingStates.mapValues { StateConsumptionDetails(it.value.id.sha256()) }
                 conflict
             } else {
+                // We do not commit unspendable states.
                 states.forEachIndexed { i, stateRef ->
                     committedStates[stateRef] = UniquenessProvider.ConsumingTx(txId, i, callerIdentity)
                 }

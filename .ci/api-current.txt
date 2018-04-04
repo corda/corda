@@ -3345,7 +3345,7 @@ public class net.corda.core.transactions.TransactionBuilder extends java.lang.Ob
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction toSignedTransaction(net.corda.core.node.services.KeyManagementService, java.security.PublicKey, net.corda.core.crypto.SignatureMetadata, net.corda.core.node.ServicesForResolution)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.WireTransaction toWireTransaction(net.corda.core.node.ServicesForResolution)
   public final void verify(net.corda.core.node.ServiceHub)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.TransactionBuilder withItems(Object...)
+  @kotlin.Deprecated @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.TransactionBuilder withItems(Object...)
 ##
 @net.corda.core.DoNotImplement public interface net.corda.core.transactions.TransactionWithSignatures extends net.corda.core.contracts.NamedByHash
   public abstract void checkSignaturesAreValid()

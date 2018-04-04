@@ -13,6 +13,8 @@ import java.util.function.Predicate
  */
 @DoNotImplement
 abstract class BaseTransaction : NamedByHash {
+    /** A list of reusable reference data states which can be referred to by other contacts in this transaction. */
+    abstract val references: List<*>
     /** The inputs of this transaction. Note that in BaseTransaction subclasses the type of this list may change! */
     abstract val inputs: List<*>
     /** Ordered list of states defined by this transaction, along with the associated notaries. */
@@ -30,13 +32,15 @@ abstract class BaseTransaction : NamedByHash {
     }
 
     private fun checkNotarySetIfInputsPresent() {
-        if (inputs.isNotEmpty()) {
+        // References must use the same notary as input states as we need to check references are current.
+        if (inputs.isNotEmpty() || references.isNotEmpty()) {
             check(notary != null) { "The notary must be specified explicitly for any transaction that has inputs" }
         }
     }
 
     private fun checkNoDuplicateInputs() {
         check(inputs.size == inputs.toSet().size) { "Duplicate input states detected" }
+        check(references.size == references.toSet().size) { "Duplicate reference states detected" }
     }
 
     /**

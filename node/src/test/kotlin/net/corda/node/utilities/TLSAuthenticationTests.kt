@@ -4,7 +4,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.div
 import net.corda.nodeapi.internal.crypto.*
 import org.junit.Rule
 import org.junit.Test
@@ -20,7 +20,9 @@ import java.security.KeyStore
 import javax.net.ssl.*
 import javax.security.auth.x500.X500Principal
 import kotlin.concurrent.thread
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Various tests for mixed-scheme mutual TLS authentication, such as:

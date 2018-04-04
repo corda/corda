@@ -29,6 +29,7 @@ data class NotaryChangeWireTransaction(
          */
         val serializedComponents: List<OpaqueBytes>
 ) : CoreTransaction() {
+    override val references: List<StateRef> = emptyList()
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
     override val notary: Party = serializedComponents[NOTARY.ordinal].deserialize()
     /** Identity of the notary service to reassign the states to.*/
@@ -60,7 +61,7 @@ data class NotaryChangeWireTransaction(
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
-    fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
+    fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>) : NotaryChangeLedgerTransaction {
         val resolvedInputs = services.loadStates(inputs.toSet()).toList()
         return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs)
     }
@@ -81,12 +82,13 @@ data class NotaryChangeWireTransaction(
  * signatures are checked against the signers specified by input states' *participants* fields, so full resolution is
  * needed for signature verification.
  */
-data class NotaryChangeLedgerTransaction(
+data class NotaryChangeLedgerTransaction @JvmOverloads constructor(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,
         val newNotary: Party,
         override val id: SecureHash,
-        override val sigs: List<TransactionSignature>
+        override val sigs: List<TransactionSignature>,
+        override val references: List<StateAndRef<ContractState>> = emptyList()
 ) : FullTransaction(), TransactionWithSignatures {
     init {
         checkEncumbrances()
@@ -124,5 +126,15 @@ data class NotaryChangeLedgerTransaction(
                 }
             }
         }
+    }
+
+    fun copy(
+            inputs: List<StateAndRef<ContractState>>,
+            notary: Party,
+            newNotary: Party,
+            id: SecureHash,
+            sigs: List<TransactionSignature>
+    ): NotaryChangeLedgerTransaction {
+        return NotaryChangeLedgerTransaction(inputs, notary, newNotary, id, sigs)
     }
 }

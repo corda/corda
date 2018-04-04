@@ -40,7 +40,9 @@ data class LedgerTransaction @JvmOverloads constructor(
         override val notary: Party?,
         val timeWindow: TimeWindow?,
         val privacySalt: PrivacySalt,
-        private val networkParameters: NetworkParameters? = null
+        private val networkParameters: NetworkParameters? = null,
+        /** The resolved reference states. */
+        override val references: List<StateAndRef<ContractState>> = emptyList()
 ) : FullTransaction() {
     //DOCEND 1
     init {
@@ -57,10 +59,12 @@ data class LedgerTransaction @JvmOverloads constructor(
         }
     }
 
+    /** We don't refer to reference state contracts. */
     private val contracts: Map<ContractClassName, Try<Contract>> = (inputs.map { it.state.contract } + outputs.map { it.contract })
             .toSet().map { it to createContractFor(it) }.toMap()
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
+    val referenceStates: List<ContractState> get() = references.map { it.state.data }
 
     /**
      * Returns the typed input StateAndRef at the specified index
@@ -139,7 +143,8 @@ data class LedgerTransaction @JvmOverloads constructor(
      *       flexible on output notaries.
      */
     private fun checkNoNotaryChange() {
-        if (notary != null && inputs.isNotEmpty()) {
+        // References, also, must have the same notary as inputs and outputs.
+        if (notary != null && (inputs.isNotEmpty() || references.isNotEmpty())) {
             outputs.forEach {
                 if (it.notary != notary) {
                     throw TransactionVerificationException.NotaryChangeInWrongTransactionType(id, notary, it.notary)
@@ -233,9 +238,16 @@ data class LedgerTransaction @JvmOverloads constructor(
     /**
      * Helper to simplify getting an indexed input [ContractState].
      * @param index the position of the item in the inputs.
-     * @return The [StateAndRef] at the requested index
+     * @return The [StateAndRef] at the requested index.
      */
     fun getInput(index: Int): ContractState = inputs[index].state.data
+
+    /**
+     * Helper to simplify getting an indexed reference [ContractState].
+     * @param index the position of the item in the references.
+     * @return The [StateAndRef] at the requested index.
+     */
+    fun getReference(index: Int): ContractState = references[index].state.data
 
     /**
      * Helper to simplify getting all inputs states of a particular class, interface, or base class.
@@ -248,6 +260,16 @@ data class LedgerTransaction @JvmOverloads constructor(
     inline fun <reified T : ContractState> inputsOfType(): List<T> = inputsOfType(T::class.java)
 
     /**
+     * Helper to simplify getting all reference states of a particular class, interface, or base class.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of [ContractState].
+     * @return the possibly empty list of inputs matching the clazz restriction.
+     */
+    fun <T : ContractState> referencesOfType(clazz: Class<T>): List<T> = references.mapNotNull { clazz.castIfPossible(it.state.data) }
+
+    inline fun <reified T : ContractState> referencesOfType(): List<T> = referencesOfType(T::class.java)
+
+    /**
      * Helper to simplify getting all inputs states of a particular class, interface, or base class.
      * @param clazz The class type used for filtering via an [Class.isInstance] check.
      * [clazz] must be an extension of [ContractState].
@@ -258,6 +280,18 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     inline fun <reified T : ContractState> inRefsOfType(): List<StateAndRef<T>> = inRefsOfType(T::class.java)
+
+    /**
+     * Helper to simplify getting all reference states of a particular class, interface, or base class.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of [ContractState].
+     * @return the possibly empty list of inputs [StateAndRef] matching the clazz restriction.
+     */
+    fun <T : ContractState> refRefsOfType(clazz: Class<T>): List<StateAndRef<T>> {
+        return references.mapNotNull { if (clazz.isInstance(it.state.data)) uncheckedCast<StateAndRef<ContractState>, StateAndRef<T>>(it) else null }
+    }
+
+    inline fun <reified T : ContractState> refRefsOfType(): List<StateAndRef<T>> = refRefsOfType(T::class.java)
 
     /**
      * Helper to simplify filtering inputs according to a [Predicate].
@@ -276,6 +310,22 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     /**
+     * Helper to simplify filtering references according to a [Predicate].
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of [ContractState].
+     * @param predicate A filtering function taking a state of type T and returning true if it should be included in the list.
+     * The class filtering is applied before the predicate.
+     * @return the possibly empty list of reference states matching the predicate and clazz restrictions.
+     */
+    fun <T : ContractState> filterReferences(clazz: Class<T>, predicate: Predicate<T>): List<T> {
+        return referencesOfType(clazz).filter { predicate.test(it) }
+    }
+
+    inline fun <reified T : ContractState> filterReferences(crossinline predicate: (T) -> Boolean): List<T> {
+        return filterReferences(T::class.java, Predicate { predicate(it) })
+    }
+
+    /**
      * Helper to simplify filtering inputs according to a [Predicate].
      * @param predicate A filtering function taking a state of type T and returning true if it should be included in the list.
      * The class filtering is applied before the predicate.
@@ -289,6 +339,22 @@ data class LedgerTransaction @JvmOverloads constructor(
 
     inline fun <reified T : ContractState> filterInRefs(crossinline predicate: (T) -> Boolean): List<StateAndRef<T>> {
         return filterInRefs(T::class.java, Predicate { predicate(it) })
+    }
+
+    /**
+     * Helper to simplify filtering references according to a [Predicate].
+     * @param predicate A filtering function taking a state of type T and returning true if it should be included in the list.
+     * The class filtering is applied before the predicate.
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of [ContractState].
+     * @return the possibly empty list of references [StateAndRef] matching the predicate and clazz restrictions.
+     */
+    fun <T : ContractState> filterRefRefs(clazz: Class<T>, predicate: Predicate<T>): List<StateAndRef<T>> {
+        return refRefsOfType(clazz).filter { predicate.test(it.state.data) }
+    }
+
+    inline fun <reified T : ContractState> filterRefRefs(crossinline predicate: (T) -> Boolean): List<StateAndRef<T>> {
+        return filterRefRefs(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -309,6 +375,23 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     /**
+     * Helper to simplify finding a single reference [ContractState] matching a [Predicate].
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of ContractState.
+     * @param predicate A filtering function taking a state of type T and returning true if this is the desired item.
+     * The class filtering is applied before the predicate.
+     * @return the single item matching the predicate.
+     * @throws IllegalArgumentException if no item, or multiple items are found matching the requirements.
+     */
+    fun <T : ContractState> findReference(clazz: Class<T>, predicate: Predicate<T>): T {
+        return referencesOfType(clazz).single { predicate.test(it) }
+    }
+
+    inline fun <reified T : ContractState> findReference(crossinline predicate: (T) -> Boolean): T {
+        return findReference(T::class.java, Predicate { predicate(it) })
+    }
+
+    /**
      * Helper to simplify finding a single input matching a [Predicate].
      * @param clazz The class type used for filtering via an [Class.isInstance] check.
      * [clazz] must be an extension of ContractState.
@@ -323,6 +406,23 @@ data class LedgerTransaction @JvmOverloads constructor(
 
     inline fun <reified T : ContractState> findInRef(crossinline predicate: (T) -> Boolean): StateAndRef<T> {
         return findInRef(T::class.java, Predicate { predicate(it) })
+    }
+
+    /**
+     * Helper to simplify finding a single reference matching a [Predicate].
+     * @param clazz The class type used for filtering via an [Class.isInstance] check.
+     * [clazz] must be an extension of ContractState.
+     * @param predicate A filtering function taking a state of type T and returning true if this is the desired item.
+     * The class filtering is applied before the predicate.
+     * @return the single item matching the predicate.
+     * @throws IllegalArgumentException if no item, or multiple items are found matching the requirements.
+     */
+    fun <T : ContractState> findRefRef(clazz: Class<T>, predicate: Predicate<T>): StateAndRef<T> {
+        return refRefsOfType(clazz).single { predicate.test(it.state.data) }
+    }
+
+    inline fun <reified T : ContractState> findRefRef(crossinline predicate: (T) -> Boolean): StateAndRef<T> {
+        return findRefRef(T::class.java, Predicate { predicate(it) })
     }
 
     /**
@@ -392,14 +492,19 @@ data class LedgerTransaction @JvmOverloads constructor(
      */
     fun getAttachment(id: SecureHash): Attachment = attachments.first { it.id == id }
 
-    fun copy(inputs: List<StateAndRef<ContractState>>,
-             outputs: List<TransactionState<ContractState>>,
-             commands: List<CommandWithParties<CommandData>>,
-             attachments: List<Attachment>,
-             id: SecureHash,
-             notary: Party?,
-             timeWindow: TimeWindow?,
-             privacySalt: PrivacySalt
-    ) = copy(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null)
+    @JvmOverloads
+    fun copy(inputs: List<StateAndRef<ContractState>> = this.inputs,
+             outputs: List<TransactionState<ContractState>> = this.outputs,
+             commands: List<CommandWithParties<CommandData>> = this.commands,
+             attachments: List<Attachment> = this.attachments,
+             id: SecureHash = this.id,
+             notary: Party? = this.notary,
+             timeWindow: TimeWindow? = this.timeWindow,
+             privacySalt: PrivacySalt = this.privacySalt,
+             networkParameters: NetworkParameters? = this.networkParameters
+    ): LedgerTransaction {
+        return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references)
+    }
+
 }
 

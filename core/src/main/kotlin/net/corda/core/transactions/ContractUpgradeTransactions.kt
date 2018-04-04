@@ -33,7 +33,8 @@ data class ContractUpgradeWireTransaction(
         /** Required for hiding components in [ContractUpgradeFilteredTransaction]. */
         val privacySalt: PrivacySalt = PrivacySalt()
 ) : CoreTransaction() {
-    override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
+    override val inputs: List<StateRef> = emptyList()
+    override val references: List<StateRef> = emptyList()
     override val notary: Party by lazy { serializedComponents[NOTARY.ordinal].deserialize<Party>() }
     val legacyContractAttachmentId: SecureHash by lazy { serializedComponents[LEGACY_ATTACHMENT.ordinal].deserialize<SecureHash>() }
     val upgradedContractClassName: ContractClassName by lazy { serializedComponents[UPGRADED_CONTRACT.ordinal].deserialize<ContractClassName>() }
@@ -53,7 +54,7 @@ data class ContractUpgradeWireTransaction(
                 "outputs can only be obtained from a resolved ContractUpgradeLedgerTransaction")
 
     override val id: SecureHash by lazy {
-        val componentHashes =serializedComponents.mapIndexed { index, component ->
+        val componentHashes = serializedComponents.mapIndexed { index, component ->
             componentHash(nonces[index], component)
         }
         combinedHash(componentHashes)
@@ -123,6 +124,9 @@ data class ContractUpgradeFilteredTransaction(
         visibleComponents[INPUTS.ordinal]?.component?.deserialize<List<StateRef>>()
                 ?: throw IllegalArgumentException("Inputs not specified")
     }
+
+    override val references: List<StateRef> = emptyList()
+
     override val notary: Party by lazy {
         visibleComponents[NOTARY.ordinal]?.component?.deserialize<Party>()
                 ?: throw IllegalArgumentException("Notary not specified")
@@ -157,7 +161,7 @@ data class ContractUpgradeFilteredTransaction(
  * In contrast with a regular transaction, signatures are checked against the signers specified by input states'
  * *participants* fields, so full resolution is needed for signature verification.
  */
-data class ContractUpgradeLedgerTransaction(
+data class ContractUpgradeLedgerTransaction @JvmOverloads constructor(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,
         val legacyContractAttachment: Attachment,
@@ -166,7 +170,8 @@ data class ContractUpgradeLedgerTransaction(
         override val id: SecureHash,
         val privacySalt: PrivacySalt,
         override val sigs: List<TransactionSignature>,
-        private val networkParameters: NetworkParameters
+        private val networkParameters: NetworkParameters,
+        override val references: List<StateAndRef<ContractState>> = emptyList()
 ) : FullTransaction(), TransactionWithSignatures {
     /** The legacy contract class name is determined by the first input state. */
     private val legacyContractClassName = inputs.first().state.contract
@@ -244,5 +249,29 @@ data class ContractUpgradeLedgerTransaction(
                 .asSubclass(Contract::class.java)
                 .getConstructor()
                 .newInstance() as UpgradedContract<ContractState, *>
+    }
+
+    fun copy(
+            inputs: List<StateAndRef<ContractState>>,
+            notary: Party,
+            legacyContractAttachment: Attachment,
+            upgradedContractClassName: ContractClassName,
+            upgradedContractAttachment: Attachment,
+            id: SecureHash,
+            privacySalt: PrivacySalt,
+            sigs: List<TransactionSignature>,
+            networkParameters: NetworkParameters
+    ): ContractUpgradeLedgerTransaction {
+        return ContractUpgradeLedgerTransaction(
+                inputs,
+                notary,
+                legacyContractAttachment,
+                upgradedContractClassName,
+                upgradedContractAttachment,
+                id,
+                privacySalt,
+                sigs,
+                networkParameters
+        )
     }
 }
