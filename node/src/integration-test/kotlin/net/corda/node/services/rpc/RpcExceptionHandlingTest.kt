@@ -9,20 +9,28 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.exceptions.InternalNodeException
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.hibernate.exception.GenericJDBCException
+import org.junit.ClassRule
 import org.junit.Test
 import java.sql.SQLException
 
-class RpcExceptionHandlingTest {
+class RpcExceptionHandlingTest : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
+    }
 
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
