@@ -59,6 +59,8 @@ object, or by using named paramters in Kotlin:
    .. sourcecode:: kotlin
 
         val network = MockNetwork(
+                // A list of packages to be scanned for CorDapps to register. Any flows or corda services within these
+                // packages will be automatically available to any nodes within the mock network
                 cordappPackages = listOf("my.cordapp.package", "my.other.cordapp.package"),
                 // If true then each node will be run in its own thread. This can result in race conditions in your
                 // code if not carefully written, but is more realistic and may help if you have flows in your app that
@@ -77,7 +79,10 @@ object, or by using named paramters in Kotlin:
                 // notary implementations.
                 servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random())
 
-        val network2 = MockNetwork(listOf("my.cordapp.package", "my.other.cordapp.package"), MockNetworkParameters(
+        val network2 = MockNetwork(
+                // A list of packages to be scanned for CorDapps to register. Any flows or corda services within these
+                // packages will be automatically available to any nodes within the mock network
+                listOf("my.cordapp.package", "my.other.cordapp.package"), MockNetworkParameters(
                 // If true then each node will be run in its own thread. This can result in race conditions in your
                 // code if not carefully written, but is more realistic and may help if you have flows in your app that
                 // do long blocking operations.
@@ -98,7 +103,10 @@ object, or by using named paramters in Kotlin:
 
    .. sourcecode:: java
 
-        MockNetwork network = MockNetwork(ImmutableList.of("my.cordapp.package", "my.other.cordapp.package"),
+        MockNetwork network = MockNetwork(
+                // A list of packages to be scanned for CorDapps to register. Any flows or corda services within these
+                // packages will be automatically available to any nodes within the mock network
+                ImmutableList.of("my.cordapp.package", "my.other.cordapp.package"),
                 new MockNetworkParameters()
                         // If true then each node will be run in its own thread. This can result in race conditions in
                         // your code if not carefully written, but is more realistic and may help if you have flows in
@@ -294,6 +302,7 @@ Further examples
 ^^^^^^^^^^^^^^^^
 
 * See the flow testing tutorial :doc:`here <flow-testing>`
+* See the oracle tutorial :doc:`here <oracles>` for information on testing ``@CordaService`` classes
 * Further examples are available in the Example CorDapp in
   `Java <https://github.com/corda/cordapp-example/blob/release-V3/java-source/src/test/java/com/example/flow/IOUFlowTests.java>`_ and
   `Kotlin <https://github.com/corda/cordapp-example/blob/release-V3/kotlin-source/src/test/kotlin/com/example/flow/IOUFlowTests.kt>`_
