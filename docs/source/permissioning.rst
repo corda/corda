@@ -1,4 +1,4 @@
-Network permissioning
+ Network permissioning
 =====================
 
 .. contents::
@@ -59,8 +59,8 @@ We can visualise the permissioning structure as follows:
 
 Keypair and certificate formats
 -------------------------------
-You can use any standard key tools or Corda's ``X509Utilities`` (which uses Bouncy Castle) to create the required
-public/private keypairs and certificates. The keypairs and certificates should obey the following restrictions:
+You can use any standard key tools to create the required public/private keypairs and certificates. The keypairs and
+certificates must obey the following restrictions:
 
 * The certificates must follow the `X.509 standard <https://tools.ietf.org/html/rfc5280>`_
 
@@ -74,6 +74,10 @@ public/private keypairs and certificates. The keypairs and certificates should o
     * ECDSA using the NIST P-256 curve (secp256r1)
 
     * RSA with 3072-bit key size
+
+.. note:: Corda's ``X509Utilities`` show how to generate the required public/private keypairs and certificates using
+   Bouncy Castle. You can find the ``X509Utilities`` in the `Corda repository <https://github.com/corda/corda>`_, under
+   ``/node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto/X509Utilities.kt``.
 
 Certificate role extension
 --------------------------
