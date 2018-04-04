@@ -26,6 +26,7 @@ import java.security.PublicKey
 import java.security.SignatureException
 import java.time.Duration
 import java.time.Instant
+import java.util.*
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
@@ -95,13 +96,22 @@ class NetworkMapServer(private val pollInterval: Duration,
         return service.latestAcceptedParametersMap[publicKey]
     }
 
+    fun addNodeToPrivateNetwork(signedNodeInfo: SignedNodeInfo, uuid: UUID) {
+        service.addToPrivateMap(signedNodeInfo, uuid)
+    }
+
     override fun close() {
         server.stop()
     }
 
     @Path("network-map")
     inner class InMemoryNetworkMapService {
-        private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
+        // Private maps
+        private val uuidInfosMap = mutableMapOf<UUID, MutableSet<SecureHash>>()
+        // Nodes not visible in global map
+        private val privateNodes = mutableMapOf<SecureHash, SignedNodeInfo>()
+        // Global network map
+        private val globalMap = mutableMapOf<SecureHash, SignedNodeInfo>()
         val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()
         private val signedNetParams by lazy { networkMapCertAndKeyPair.sign(networkParameters) }
 
@@ -112,7 +122,7 @@ class NetworkMapServer(private val pollInterval: Duration,
             return try {
                 val signedNodeInfo = input.readObject<SignedNodeInfo>()
                 signedNodeInfo.verified()
-                nodeInfoMap[signedNodeInfo.raw.hash] = signedNodeInfo
+                globalMap[signedNodeInfo.raw.hash] = signedNodeInfo
                 ok()
             } catch (e: Exception) {
                 when (e) {
@@ -134,22 +144,48 @@ class NetworkMapServer(private val pollInterval: Duration,
 
         @GET
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
-        fun getNetworkMap(): Response {
-            val networkMap = NetworkMap(nodeInfoMap.keys.toList(), signedNetParams.raw.hash, parametersUpdate)
+        fun getFullNetworkMap(): Response {
+            val nodeInfoHashes = globalMap.keys.toList()
+            return networkMapResponse(nodeInfoHashes)
+        }
+
+        @GET
+        @Path("private/{var}")
+        @Produces(MediaType.APPLICATION_OCTET_STREAM)
+        fun getPrivateNetworkMap(@PathParam("var") extraUUID: String): Response {
+            val uuid = UUID.fromString(extraUUID)
+            val nodeInfoHashes = uuidInfosMap.computeIfAbsent(uuid, { mutableSetOf() })
+            return networkMapResponse(nodeInfoHashes.toList())
+        }
+
+        private fun networkMapResponse(nodeInfoHashes: List<SecureHash>): Response {
+            val networkMap = NetworkMap(nodeInfoHashes, signedNetParams.raw.hash, parametersUpdate)
             val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
             return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${pollInterval.seconds}").build()
         }
 
         // Remove nodeInfo for testing.
         fun removeNodeInfo(nodeInfo: NodeInfo) {
-            nodeInfoMap.remove(nodeInfo.serialize().hash)
+            globalMap.remove(nodeInfo.serialize().hash)
+        }
+
+        // All nodes that are added through publish go to main network map, this is work-around for testing private maps
+        fun addToPrivateMap(signedNodeInfo: SignedNodeInfo, uuid: UUID) {
+            val hash = signedNodeInfo.raw.hash
+            privateNodes[hash] = signedNodeInfo
+            if (uuidInfosMap.containsKey(uuid)) {
+                uuidInfosMap[uuid]!!.add(hash)
+            } else {
+                uuidInfosMap[uuid] = mutableSetOf(hash)
+            }
         }
 
         @GET
         @Path("node-info/{var}")
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getNodeInfo(@PathParam("var") nodeInfoHash: String): Response {
-            val signedNodeInfo = nodeInfoMap[SecureHash.parse(nodeInfoHash)]
+            val hash = SecureHash.parse(nodeInfoHash)
+            val signedNodeInfo = globalMap[hash] ?: privateNodes[hash]
             return if (signedNodeInfo != null) {
                 Response.ok(signedNodeInfo.serialize().bytes)
             } else {

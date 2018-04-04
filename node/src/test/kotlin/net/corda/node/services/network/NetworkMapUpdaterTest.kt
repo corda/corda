@@ -2,10 +2,7 @@ package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.times
-import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.*
 import net.corda.cordform.CordformNode.NODE_INFO_DIRECTORY
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -35,8 +32,10 @@ import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import rx.schedulers.TestScheduler
+import java.net.URL
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
@@ -57,7 +56,8 @@ class NetworkMapUpdaterTest {
     private val scheduler = TestScheduler()
     private val networkParametersHash = SecureHash.randomSHA256()
     private val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
-    private val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, networkParametersHash, baseDir)
+    private val privateNetUUID = UUID.randomUUID()
+    private val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, networkParametersHash, baseDir, listOf(privateNetUUID))
     private var parametersUpdate: ParametersUpdate? = null
 
     @After
@@ -199,6 +199,30 @@ class NetworkMapUpdaterTest {
         assertEquals(newParameters, paramsFromFile)
     }
 
+    @Test
+    fun `process nodes from different networks`() {
+        val (nodeInfo1, signedNodeInfo1) = createNodeInfoAndSigned("Info 1")
+        val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned("Info 2")
+        val hash1 = signedNodeInfo1.raw.hash
+        val hash2 = signedNodeInfo2.raw.hash
+        whenever(networkMapClient.getNetworkMap(URL("${networkMapClient.compatibilityZoneURL}/network-map/private/$privateNetUUID"))).then {
+            NetworkMapResponse(NetworkMap(listOf(hash1), networkParametersHash, parametersUpdate), cacheExpiryMs.millis)
+        }
+        whenever(networkMapClient.getNodeInfo(hash1)).then {
+            nodeInfo1
+        }
+        updater.subscribeToNetworkMap()
+        Thread.sleep(2L * cacheExpiryMs)
+        // Downloads only from private URL
+        verify(networkMapCache, times(1)).addNode(any())
+        verify(networkMapCache, times(1)).addNode(nodeInfo1)
+        networkMapClient.publish(signedNodeInfo2)
+        Thread.sleep(2L * cacheExpiryMs)
+        verify(networkMapClient, times(1)).publish(any())
+        verify(networkMapCache, times(1)).addNode(nodeInfo2)
+        assertThat(networkMapCache.allNodeHashes).contains(hash1, hash2)
+    }
+
     private fun scheduleParametersUpdate(nextParameters: NetworkParameters, description: String, updateDeadline: Instant) {
         val nextParamsHash = nextParameters.serialize().hash
         networkParamsMap[nextParamsHash] = nextParameters
@@ -207,6 +231,7 @@ class NetworkMapUpdaterTest {
 
     private fun createMockNetworkMapClient(): NetworkMapClient {
         return mock {
+            on { compatibilityZoneURL }.then { URL("http://test") }
             on { trustedRoot }.then {
                 DEV_ROOT_CA.certificate
             }

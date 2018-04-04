@@ -278,7 +278,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient,
                 networkParameters.serialize().hash,
-                configuration.baseDirectory)
+                configuration.baseDirectory,
+                configuration.extraNetworkMapKeys)
         runOnStop += networkMapUpdater::close
 
         networkMapUpdater.subscribeToNetworkMap()

@@ -108,6 +108,7 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         NetworkHostAndPort::class -> NetworkHostAndPort.parse(getString(path))
         Path::class -> Paths.get(getString(path))
         URL::class -> URL(getString(path))
+        UUID::class -> UUID.fromString(getString(path))
         CordaX500Name::class -> {
             when (getValue(path).valueType()) {
                 ConfigValueType.OBJECT -> getConfig(path).parseAs()
@@ -142,6 +143,7 @@ private fun Config.getCollectionValue(path: String, type: KType): Collection<Any
         NetworkHostAndPort::class -> getStringList(path).map(NetworkHostAndPort.Companion::parse)
         Path::class -> getStringList(path).map { Paths.get(it) }
         URL::class -> getStringList(path).map(::URL)
+        UUID::class -> getStringList(path).map { UUID.fromString(it) }
         CordaX500Name::class -> getStringList(path).map(CordaX500Name.Companion::parse)
         Properties::class -> getConfigList(path).map(Config::toProperties)
         else -> if (elementClass.java.isEnum) {
