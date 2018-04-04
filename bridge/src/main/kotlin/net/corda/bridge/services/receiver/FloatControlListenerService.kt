@@ -176,8 +176,8 @@ class FloatControlListenerService(val conf: BridgeConfiguration,
                             controlMessage.keyStorePrivateKeyPassword,
                             controlMessage.trustStoreBytes,
                             controlMessage.trustStorePassword)
-                    forwardAddress = receivedMessage.destinationLink
-                    forwardLegalName = receivedMessage.destinationLegalName
+                    forwardAddress = receivedMessage.sourceLink
+                    forwardLegalName = receivedMessage.sourceLegalName
                 }
                 is DeactivateFloat -> {
                     log.info("Received Tunnel Deactivate message")
