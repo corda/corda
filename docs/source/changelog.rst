@@ -85,6 +85,9 @@ Unreleased
 * JDBC drivers for SQL server and PostgresSQL are no longer bundled as part of Corda releases. If you are running a node
   on such databases you need to provide the associated driver as described in :doc:`node-database`.
 
+* Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
+  To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
+
 R3 Corda 3.0 Developer Preview
 ------------------------------
 
