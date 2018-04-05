@@ -7,14 +7,13 @@
  *
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
-
-package net.corda.node
+package net.corda.node.persistence
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.MESSAGE_CONTRACT_PROGRAM_ID
-import net.corda.Message
-import net.corda.MessageContract
-import net.corda.MessageState
+import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
+import net.corda.testMessage.Message
+import net.corda.testMessage.MessageContract
+import net.corda.testMessage.MessageState
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
@@ -56,13 +55,10 @@ class NodeStatePersistenceTests : IntegrationTest() {
     }
     @Test
     fun `persistent state survives node restart`() {
-        // Temporary disable this test when executed on Windows. It is known to be sporadically failing.
-        // More investigation is needed to establish why.
-        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
-
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(),
+                portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
@@ -125,7 +121,7 @@ class NodeStatePersistenceTests : IntegrationTest() {
 
 fun isQuasarAgentSpecified(): Boolean {
     val jvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments
-    return jvmArgs.any { it.startsWith("-javaagent:") && it.endsWith("quasar.jar") }
+    return jvmArgs.any { it.startsWith("-javaagent:") && it.contains("quasar") }
 }
 
 @StartableByRPC

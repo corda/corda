@@ -120,6 +120,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         confidentialIdentities.forEach {
             principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it), false)
         }
+        log.debug("Identities loaded")
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
