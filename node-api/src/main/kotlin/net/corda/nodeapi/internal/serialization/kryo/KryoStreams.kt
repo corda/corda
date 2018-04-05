@@ -66,5 +66,5 @@ internal fun Output.substitute(transform: (OutputStream) -> OutputStream) {
 }
 
 internal fun Input.substitute(transform: (InputStream) -> InputStream) {
-    inputStream = transform(SequenceInputStream(ByteArrayInputStream(buffer.copyOfRange(position(), limit())), inputStream))
+    inputStream = transform(SequenceInputStream(buffer.copyOfRange(position(), limit()).inputStream(), inputStream))
 }

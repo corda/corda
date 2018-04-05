@@ -28,7 +28,6 @@ import net.corda.nodeapi.internal.serialization.serializationContextKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Observable
-import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.lang.reflect.InvocationTargetException
 import java.security.PrivateKey
@@ -208,7 +207,7 @@ object InputStreamSerializer : Serializer<InputStream>() {
             System.arraycopy(chunk, 0, flattened, offset, chunk.size)
             offset += chunk.size
         }
-        return ByteArrayInputStream(flattened)
+        return flattened.inputStream()
     }
 
 }
