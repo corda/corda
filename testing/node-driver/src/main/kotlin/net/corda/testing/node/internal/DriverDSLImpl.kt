@@ -77,7 +77,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import net.corda.nodeapi.internal.config.User as InternalUser
 
@@ -582,17 +581,16 @@ class DriverDSLImpl(
      * @return a [ConnectableObservable] which emits a new [Int] every time the number of registered nodes changes
      *   the initial value emitted is always [initial]
      */
-    private fun nodeCountObservable(nodeName: CordaX500Name, initial: Int, networkMapCacheChangeObservable: Observable<NetworkMapCache.MapChange>):
-            ConnectableObservable<Int> {
-        val count = AtomicInteger(initial)
-        return networkMapCacheChangeObservable.map {
-            log.debug("nodeCountObservable for '$nodeName' received '$it'")
-            when (it) {
-                is NetworkMapCache.MapChange.Added -> count.incrementAndGet()
-                is NetworkMapCache.MapChange.Removed -> count.decrementAndGet()
-                is NetworkMapCache.MapChange.Modified -> count.get()
+    private fun nodeCountObservable(nodeName: CordaX500Name, initial: Int, networkMapCacheChangeObservable: Observable<NetworkMapCache.MapChange>): ConnectableObservable<Int> {
+        val reduced = networkMapCacheChangeObservable.reduce(initial) { count: Int, changeEvent: NetworkMapCache.MapChange ->
+            log.debug("nodeCountObservable for '$nodeName' received '$changeEvent'")
+            when (changeEvent) {
+                is NetworkMapCache.MapChange.Added -> count + 1
+                is NetworkMapCache.MapChange.Removed -> count - 1
+                is NetworkMapCache.MapChange.Modified -> count
             }
-        }.startWith(initial).replay()
+        }
+        return reduced.startWith(initial).replay()
     }
 
     /**
