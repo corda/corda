@@ -116,8 +116,7 @@ the --addresses flag and the region:
 **STEP 4: Download and set up your Corda node**
 
 Now your environment is configured you can switch to the Explore
-application and click on the copy to clipboard button to get your
-dedicated download bundle.
+application and click on the copy to clipboard button to get the installation command.
 
 In your cloud VM terminal run the following command to download the
 bundle to your instance:
@@ -135,30 +134,19 @@ Make a directory and unzip the file in this directory:
     cd corda
     unzip node.zip
 
-now you need to make some edits to the node.conf file:
-
-
-EDITS
-
-
-Now run screen so the node keeps running if your session disconnects:
+Make sure the run-corda.sh script is executable
 
 .. code:: bash
 
-    screen
+    chmod +x run-corda.sh
 
-then run the corda node and webserver:
+and then run the script to start Corda:
 
 .. code:: bash
 
-    java -jar corda.jar
-    CTL-A c 
-    java -jar corda-webserver.jar
-
+    ./run-corda.sh
 
 You can now navigate to the external web address of the instance and
 see the cordapps running on port 8080.
 
- 
-Next Steps
-----------
+
