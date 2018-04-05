@@ -7,6 +7,7 @@ import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.internal.hash
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.NodeAttachmentService
@@ -72,7 +73,7 @@ class AttachmentTests {
             bobNode.attachments.openAttachment(id)!!
         }
 
-        assertEquals(id, attachment.open().readBytes().sha256())
+        assertEquals(id, attachment.open().hash())
 
         // Shut down node zero and ensure node one can still resolve the attachment.
         aliceNode.dispose()
