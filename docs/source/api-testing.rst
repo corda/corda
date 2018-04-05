@@ -59,7 +59,7 @@ object, or by using named paramters in Kotlin:
    .. sourcecode:: kotlin
 
         val network = MockNetwork(
-                // A list of packages to be scanned for CorDapps to register. Any flows or corda services within these
+                // A list of packages to scan. Any contracts, flows and Corda services within these
                 // packages will be automatically available to any nodes within the mock network
                 cordappPackages = listOf("my.cordapp.package", "my.other.cordapp.package"),
                 // If true then each node will be run in its own thread. This can result in race conditions in your
@@ -80,7 +80,7 @@ object, or by using named paramters in Kotlin:
                 servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random())
 
         val network2 = MockNetwork(
-                // A list of packages to be scanned for CorDapps to register. Any flows or corda services within these
+                // A list of packages to scan. Any contracts, flows and Corda services within these
                 // packages will be automatically available to any nodes within the mock network
                 listOf("my.cordapp.package", "my.other.cordapp.package"), MockNetworkParameters(
                 // If true then each node will be run in its own thread. This can result in race conditions in your
@@ -104,7 +104,7 @@ object, or by using named paramters in Kotlin:
    .. sourcecode:: java
 
         MockNetwork network = MockNetwork(
-                // A list of packages to be scanned for CorDapps to register. Any flows or corda services within these
+                // A list of packages to scan. Any contracts, flows and Corda services within these
                 // packages will be automatically available to any nodes within the mock network
                 ImmutableList.of("my.cordapp.package", "my.other.cordapp.package"),
                 new MockNetworkParameters()
