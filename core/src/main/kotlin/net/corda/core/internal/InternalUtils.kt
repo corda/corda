@@ -2,6 +2,8 @@
 
 package net.corda.core.internal
 
+import com.google.common.hash.Hashing
+import com.google.common.hash.HashingInputStream
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
@@ -150,7 +152,30 @@ fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, var
 
 inline fun <reified T : Any> Path.readObject(): T = readAll().deserialize()
 
+/** Calculate the hash of the contents of this file. */
+val Path.hash: SecureHash get() = read { it.hash() }
+
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
+
+/** Same as [InputStream.readBytes] but also closes the stream. */
+fun InputStream.readFully(): ByteArray = use { it.readBytes() }
+
+/** Calculate the hash of the remaining bytes in this input stream. The stream is closed at the end. */
+fun InputStream.hash(): SecureHash {
+    return use {
+        val his = HashingInputStream(Hashing.sha256(), it)
+        his.copyTo(NullOutputStream)  // To avoid reading in the entire stream into memory just write out the bytes to /dev/null
+        SecureHash.SHA256(his.hash().asBytes())
+    }
+}
+
+inline fun <reified T : Any> InputStream.readObject(): T = readFully().deserialize()
+
+object NullOutputStream : OutputStream() {
+    override fun write(b: Int) = Unit
+    override fun write(b: ByteArray) = Unit
+    override fun write(b: ByteArray, off: Int, len: Int) = Unit
+}
 
 fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
 
@@ -333,7 +358,7 @@ fun URL.post(serializedData: OpaqueBytes): ByteArray {
         setRequestProperty("Content-Type", "application/octet-stream")
         outputStream.use { serializedData.open().copyTo(it) }
         checkOkResponse()
-        inputStream.use { it.readBytes() }
+        inputStream.readFully()
     }
 }
 
@@ -346,7 +371,7 @@ fun HttpURLConnection.checkOkResponse() {
 
 inline fun <reified T : Any> HttpURLConnection.responseAs(): T {
     checkOkResponse()
-    return inputStream.use { it.readBytes() }.deserialize()
+    return inputStream.readObject()
 }
 
 /** Analogous to [Thread.join]. */
