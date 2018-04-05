@@ -10,7 +10,7 @@ Cloud Platform to deploy your pre-generated Corda node on.
 
 Pre-requisites
 --------------
-* Ensure you have a registered Microsoft Azure account with an R3 Member subscription which can create virtual machines and you are logged on to the Azure portal: `<https://portal.azure.com>`.
+* Ensure you have a registered Microsoft Azure account which can create virtual machines and you are logged on to the Azure portal: `<https://portal.azure.com>`.
 
 
 Deploy Corda node
@@ -21,6 +21,7 @@ Browse to `<https://portal.azure.com>` and log in with your Microsoft account.
 
 **STEP 1: Create a Resource Group**
 
+Create a resource group. 
 
 
 **STEP 2: Launch the VM**
@@ -147,30 +148,17 @@ Make a directory and unzip the file in this directory:
     cd corda
     unzip node.zip
 
-now you need to make some edits to the node.conf file:
-
-
-EDITS
-
-
-Now run screen so the node keeps running if your session disconnects:
+Make sure the run-corda.sh script is executable
 
 .. code:: bash
 
-    screen
+    chmod +x run-corda.sh
 
-then run the corda node and webserver:
+and then run the script to start Corda:
 
 .. code:: bash
 
-    java -jar corda.jar
-    CTL-A c 
-    java -jar corda-webserver.jar
-
+    ./run-corda.sh
 
 You can now navigate to the external web address of the instance and
 see the cordapps running on port 8080.
-
- 
-Next Steps
-----------
