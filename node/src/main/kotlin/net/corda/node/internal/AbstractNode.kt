@@ -218,8 +218,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             val metrics = MetricRegistry()
             val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
+            log.debug("Transaction storage created")
             attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
+            log.debug("Attachment service created")
             val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments, networkParameters.whitelistedContractImplementations)
+            log.debug("Cordapp provider created")
             val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParameters, transactionStorage)
             val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database)
             val nodeServices = makeServices(
