@@ -14,6 +14,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
+import java.security.PublicKey
 import java.security.cert.CertPath
 
 data class CertificateData(val certStatus: CertificateStatus, val certPath: CertPath)
@@ -83,6 +84,14 @@ interface CertificateSigningRequestStorage {
      * @throws IllegalArgumentException if request is not found or not in Approved state.
      */
     fun putCertificatePath(requestId: String, certPath: CertPath, signedBy: String)
+
+    /**
+     * Retrieves the certificate path for the given public key hash if such exists and its certificate is considered to be valid.
+     *
+     * @param publicKey public key corresponding to the certificate being searched.
+     * @return certificate path for the given public key hash or null if such certificate does not exist or is not valid.
+     */
+    fun getValidCertificatePath(publicKey: PublicKey): CertPath?
 }
 
 sealed class CertificateResponse {

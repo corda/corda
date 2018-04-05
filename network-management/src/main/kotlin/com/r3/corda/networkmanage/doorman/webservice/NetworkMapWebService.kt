@@ -12,6 +12,7 @@ package com.r3.corda.networkmanage.doorman.webservice
 
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
+import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
@@ -20,6 +21,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sha256
+import net.corda.core.internal.CertRole
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.deserialize
@@ -29,10 +31,14 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.crypto.X509Utilities.validateCertPath
+import net.corda.nodeapi.internal.crypto.x509
+import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.network.SignedNetworkMap
 import java.io.InputStream
 import java.security.InvalidKeyException
 import java.security.SignatureException
+import java.security.cert.CertPathValidatorException
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import javax.servlet.http.HttpServletRequest
@@ -46,6 +52,7 @@ import javax.ws.rs.core.Response.status
 @Path(NETWORK_MAP_PATH)
 class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
                            private val networkMapStorage: NetworkMapStorage,
+                           private val certificateSigningRequestStorage: CertificateSigningRequestStorage,
                            private val config: NetworkMapConfig) {
 
     companion object {
@@ -91,7 +98,7 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
             logger.warn("Unable to process node-info: $nodeInfo", e)
             when (e) {
                 is NetworkMapNotInitialisedException -> status(Response.Status.SERVICE_UNAVAILABLE).entity(e.message)
-                is InvalidPlatformVersionException -> status(Response.Status.BAD_REQUEST).entity(e.message)
+                is RequestException -> status(Response.Status.BAD_REQUEST).entity(e.message)
                 is InvalidKeyException, is SignatureException -> status(Response.Status.UNAUTHORIZED).entity(e.message)
             // Rethrow e if its not one of the expected exception, the server will return http 500 internal error.
                 else -> throw e
@@ -154,11 +161,12 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     }
 
     private fun verifyNodeInfo(nodeInfo: NodeInfo) {
+        checkCertificates(nodeInfo)
         checkCompositeKeys(nodeInfo)
         val minimumPlatformVersion = currentNetworkParameters?.minimumPlatformVersion
                 ?: throw NetworkMapNotInitialisedException("Network parameters have not been initialised")
         if (nodeInfo.platformVersion < minimumPlatformVersion) {
-            throw InvalidPlatformVersionException("Minimum platform version is $minimumPlatformVersion")
+            throw RequestException("Minimum platform version is $minimumPlatformVersion")
         }
     }
 
@@ -169,7 +177,9 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
         }
         val parameters = checkNotNull(currentNetworkParameters) { "Network parameters not available." }
         val notaryIdentities = parameters.notaries.map { it.identity }
-        require(notaryIdentities.containsAll(compositeKeyIdentities)) { "A composite key needs to belong to a notary." }
+        if (!notaryIdentities.containsAll(compositeKeyIdentities)) {
+            throw RequestException("A composite key needs to belong to a notary.")
+        }
     }
 
     private fun createResponse(payload: Any?, addCacheTimeout: Boolean = false): Response {
@@ -184,8 +194,23 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
         }.build()
     }
 
+    private fun checkCertificates(nodeInfo: NodeInfo) {
+        val nodeCaCert = nodeInfo.legalIdentitiesAndCerts.first().certPath.x509Certificates.find { CertRole.extract(it) == CertRole.NODE_CA }
+        nodeCaCert ?: throw RequestException("The node certificate path does not contain the node CA certificate type in it.")
+        val nodeCertPath = certificateSigningRequestStorage.getValidCertificatePath(nodeCaCert.publicKey)
+        nodeCertPath ?: throw RequestException("Node certificate is either no longer valid or was never registered.")
+        val rootCert = nodeCertPath.certificates.last().x509
+        try {
+            nodeInfo.legalIdentitiesAndCerts.forEach {
+                validateCertPath(rootCert, it.certPath)
+            }
+        } catch (e: CertPathValidatorException) {
+            throw RequestException("Invalid certificate path.")
+        }
+    }
+
     class NetworkMapNotInitialisedException(message: String?) : Exception(message)
-    class InvalidPlatformVersionException(message: String?) : Exception(message)
+    class RequestException(message: String) : Exception(message)
 
     private data class CachedData(val signedNetworkMap: SignedNetworkMap,
                                   val nodeInfoHashes: Set<SecureHash>,

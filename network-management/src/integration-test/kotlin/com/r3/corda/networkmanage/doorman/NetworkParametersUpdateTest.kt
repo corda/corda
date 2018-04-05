@@ -141,12 +141,11 @@ class NetworkParametersUpdateTest : IntegrationTest() {
     }
 
     private fun startServer(startNetworkMap: Boolean = true): NetworkManagementServer {
-        val server = NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true))
+        val doormanConfig = DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis)
+        val server = NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true), doormanConfig, null)
         server.start(
                 serverAddress,
                 CertPathAndKey(listOf(doormanCa.certificate, rootCaCert), doormanCa.keyPair.private),
-                DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis),
-                null,
                 if (startNetworkMap) {
                     NetworkMapStartParams(
                             LocalSigner(networkMapCa),
@@ -161,7 +160,11 @@ class NetworkParametersUpdateTest : IntegrationTest() {
 
     private fun applyNetworkParametersAndStart(networkParametersCmd: NetworkParametersCmd) {
         server?.close()
-        NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true)).use {
+        NetworkManagementServer(
+                makeTestDataSourceProperties(dbName),
+                DatabaseConfig(runMigration = true),
+                DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis),
+                null).use {
             it.processNetworkParameters(networkParametersCmd)
         }
         server = startServer(startNetworkMap = true)

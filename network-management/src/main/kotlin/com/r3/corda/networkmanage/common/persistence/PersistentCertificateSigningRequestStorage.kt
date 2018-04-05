@@ -23,6 +23,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
+import java.security.PublicKey
 import java.security.cert.CertPath
 import java.time.Instant
 import javax.security.auth.x500.X500Principal
@@ -66,15 +67,14 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
             } catch (e: RequestValidationException) {
                 e.rejectMessage
             }
-
             val requestEntity = CertificateSigningRequestEntity(
-                        requestId = requestId,
-                        legalName = legalNameOrRejectMessage as? CordaX500Name,
-                        publicKeyHash = toSupportedPublicKey(request.subjectPublicKeyInfo).hashString(),
-                        request = request,
-                        remark = legalNameOrRejectMessage as? String,
-                        modifiedBy = CertificateSigningRequestStorage.DOORMAN_SIGNATURE,
-                        status = if (legalNameOrRejectMessage is CordaX500Name) RequestStatus.NEW else RequestStatus.REJECTED
+                    requestId = requestId,
+                    legalName = legalNameOrRejectMessage as? CordaX500Name,
+                    publicKeyHash = toSupportedPublicKey(request.subjectPublicKeyInfo).hashString(),
+                    request = request,
+                    remark = legalNameOrRejectMessage as? String,
+                    modifiedBy = CertificateSigningRequestStorage.DOORMAN_SIGNATURE,
+                    status = if (legalNameOrRejectMessage is CordaX500Name) RequestStatus.NEW else RequestStatus.REJECTED
             )
             session.save(requestEntity)
         }
@@ -128,6 +128,16 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
                     remark = rejectReason
             )
             session.merge(update)
+        }
+    }
+
+    override fun getValidCertificatePath(publicKey: PublicKey): CertPath? {
+        return database.transaction {
+            session.createQuery(
+                    "select a.certificateData.certPath from ${CertificateSigningRequestEntity::class.java.name} a " +
+                            "where a.publicKeyHash = :publicKeyHash and a.status = 'DONE' and a.certificateData.certificateStatus = 'VALID'", CertPath::class.java)
+                    .setParameter("publicKeyHash", publicKey.hashString())
+                    .uniqueResult()
         }
     }
 

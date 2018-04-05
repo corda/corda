@@ -125,6 +125,39 @@ class PersistentCertificateRequestStorageTest : TestBase() {
     }
 
     @Test
+    fun `get valid certificate path returns correct value`() {
+        // given
+        val (csr, nodeKeyPair) = createRequest("LegalName", certRole = CertRole.NODE_CA)
+        val requestId = storage.saveRequest(csr)
+        storage.markRequestTicketCreated(requestId)
+        storage.approveRequest(requestId, DOORMAN_SIGNATURE)
+        val certPath = generateSignedCertPath(csr, nodeKeyPair)
+        storage.putCertificatePath(
+                requestId,
+                certPath,
+                DOORMAN_SIGNATURE
+        )
+
+        // when
+        val storedCertPath = storage.getValidCertificatePath(nodeKeyPair.public)
+
+        // then
+        assertEquals(certPath, storedCertPath)
+    }
+
+    @Test
+    fun `get valid certificate path returns null if the certificate path cannot be found`() {
+        // given
+        val (_, nodeKeyPair) = createRequest("LegalName", certRole = CertRole.NODE_CA)
+
+        // when
+        val storedCertPath = storage.getValidCertificatePath(nodeKeyPair.public)
+
+        // then
+        assertNull(storedCertPath)
+    }
+
+    @Test
     fun `sign request ignores subsequent sign requests`() {
         val (csr, nodeKeyPair) = createRequest("LegalName", certRole = CertRole.NODE_CA)
         // Add request to DB.

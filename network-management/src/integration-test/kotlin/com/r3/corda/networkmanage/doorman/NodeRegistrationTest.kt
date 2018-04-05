@@ -73,6 +73,18 @@ class NodeRegistrationTest : IntegrationTest() {
 
     private var server: NetworkManagementServer? = null
 
+    private val doormanConfig: DoormanConfig get() = DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis)
+    private val revocationConfig: CertificateRevocationConfig
+        get() = CertificateRevocationConfig(
+                approveAll = true,
+                jira = null,
+                approveInterval = timeoutMillis,
+                crlCacheTimeout = timeoutMillis,
+                localSigning = CertificateRevocationConfig.LocalSigning(
+                        crlEndpoint = URL("http://test.com/crl"),
+                        crlUpdateInterval = timeoutMillis)
+        )
+
     @Before
     fun init() {
         dbName = random63BitValue().toString()
@@ -108,7 +120,6 @@ class NodeRegistrationTest : IntegrationTest() {
                 },
                 rootCert = rootCaCert
         )
-
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
@@ -157,20 +168,10 @@ class NodeRegistrationTest : IntegrationTest() {
     }
 
     private fun startServer(startNetworkMap: Boolean = true): NetworkManagementServer {
-        val server = NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true))
+        val server = NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true), doormanConfig, revocationConfig)
         server.start(
                 serverAddress,
                 CertPathAndKey(listOf(doormanCa.certificate, rootCaCert), doormanCa.keyPair.private),
-                DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis),
-                CertificateRevocationConfig(
-                        approveAll = true,
-                        jira = null,
-                        approveInterval = timeoutMillis,
-                        crlCacheTimeout = timeoutMillis,
-                        localSigning = CertificateRevocationConfig.LocalSigning(
-                                crlEndpoint = URL("http://test.com/crl"),
-                                crlUpdateInterval = timeoutMillis)
-                ),
                 if (startNetworkMap) {
                     NetworkMapStartParams(
                             LocalSigner(networkMapCa),
@@ -185,7 +186,7 @@ class NodeRegistrationTest : IntegrationTest() {
 
     private fun applyNetworkParametersAndStart(networkParametersCmd: NetworkParametersCmd) {
         server?.close()
-        NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true)).use {
+        NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true), doormanConfig, revocationConfig).use {
             it.processNetworkParameters(networkParametersCmd)
         }
         server = startServer(startNetworkMap = true)

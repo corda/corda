@@ -66,6 +66,20 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
 
     private lateinit var dbName: String
 
+    private val doormanConfig: DoormanConfig get() = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jira = null)
+    private val revocationConfig: CertificateRevocationConfig
+        get() = CertificateRevocationConfig(
+                approveAll = true,
+                jira = null,
+                crlCacheTimeout = 30.minutes.toMillis(),
+                approveInterval = 10.minutes.toMillis(),
+                localSigning = CertificateRevocationConfig.LocalSigning(
+                        crlEndpoint = URL("http://test.com/crl"),
+                        crlUpdateInterval = 2.hours.toMillis()
+                )
+        )
+
+
     @Before
     fun setUp() {
         dbName = random63BitValue().toString()
@@ -99,21 +113,10 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
     @Test
     fun `Signing service signs approved CSRs`() {
         //Start doorman server
-        NetworkManagementServer(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true)).use { server ->
+        NetworkManagementServer(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), doormanConfig, revocationConfig).use { server ->
             server.start(
                     hostAndPort = NetworkHostAndPort(HOST, 0),
                     csrCertPathAndKey = null,
-                    doormanConfig = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jira = null),
-                    revocationConfig = CertificateRevocationConfig(
-                            approveAll = true,
-                            jira = null,
-                            crlCacheTimeout = 30.minutes.toMillis(),
-                            approveInterval = 10.minutes.toMillis(),
-                            localSigning = CertificateRevocationConfig.LocalSigning(
-                                    crlEndpoint = URL("http://test.com/crl"),
-                                    crlUpdateInterval = 2.hours.toMillis()
-                            )
-                    ),
                     startNetworkMap = null)
             val doormanHostAndPort = server.hostAndPort
             // Start Corda network registration.

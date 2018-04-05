@@ -87,7 +87,7 @@ private fun caKeyGenMode(config: NetworkManagementServerConfig) {
 }
 
 private fun doormanMode(cmdLineOptions: DoormanCmdLineOptions, config: NetworkManagementServerConfig) {
-    val networkManagementServer = NetworkManagementServer(config.dataSourceProperties, config.database)
+    val networkManagementServer = NetworkManagementServer(config.dataSourceProperties, config.database, config.doorman, config.revocation)
 
     if (cmdLineOptions.networkParametersCmd == null) {
         // TODO: move signing to signing server.
@@ -103,8 +103,6 @@ private fun doormanMode(cmdLineOptions: DoormanCmdLineOptions, config: NetworkMa
         networkManagementServer.start(
                 config.address,
                 csrAndNetworkMap?.first,
-                config.doorman,
-                config.revocation,
                 networkMapStartParams)
 
         Runtime.getRuntime().addShutdownHook(object : Thread("ShutdownHook") {

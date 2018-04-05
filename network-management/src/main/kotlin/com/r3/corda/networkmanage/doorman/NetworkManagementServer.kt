@@ -21,7 +21,6 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.io.Closeable
 import java.net.URI
@@ -31,7 +30,10 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: DatabaseConfig) : Closeable {
+class NetworkManagementServer(dataSourceProperties: Properties,
+                              databaseConfig: DatabaseConfig,
+                              private val doormanConfig: DoormanConfig?, // TODO Doorman config shouldn't be optional as the doorman is always required to run
+                              private val revocationConfig: CertificateRevocationConfig?) : Closeable {
     companion object {
         private val logger = contextLogger()
     }
@@ -40,7 +42,21 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
     private val database = configureDatabase(dataSourceProperties, databaseConfig).also { closeActions += it::close }
     private val networkMapStorage = PersistentNetworkMapStorage(database)
     private val nodeInfoStorage = PersistentNodeInfoStorage(database)
-
+    private val crlStorage = PersistentCertificateRevocationListStorage(database)
+    private val csrStorage = doormanConfig?.let {
+        if (it.approveAll) {
+            ApproveAllCertificateSigningRequestStorage(PersistentCertificateSigningRequestStorage(database))
+        } else {
+            PersistentCertificateSigningRequestStorage(database)
+        }
+    }
+    private val crrStorage = revocationConfig?.let {
+        if (it.approveAll) {
+            ApproveAllCertificateRevocationRequestStorage(PersistentCertificateRevocationRequestStorage(database))
+        } else {
+            PersistentCertificateRevocationRequestStorage(database)
+        }
+    }
     lateinit var hostAndPort: NetworkHostAndPort
 
     override fun close() {
@@ -55,6 +71,8 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
     }
 
     private fun getNetworkMapService(config: NetworkMapConfig, signer: LocalSigner?): NetworkMapWebService {
+        logger.info("Starting Network Map server.")
+        csrStorage ?: throw IllegalStateException("Certificate signing request storage cannot be null when creating the network map service.")
         val localNetworkMapSigner = signer?.let { NetworkMapSigner(networkMapStorage, it) }
         val latestParameters = networkMapStorage.getLatestNetworkParameters()?.networkParameters ?:
                 throw IllegalStateException("No network parameters were found. Please upload new network parameters before starting network map service")
@@ -75,28 +93,21 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
             closeActions += scheduledExecutor::shutdown
         }
 
-        return NetworkMapWebService(nodeInfoStorage, networkMapStorage, config)
+        return NetworkMapWebService(nodeInfoStorage, networkMapStorage, csrStorage, config)
     }
 
     private fun getDoormanService(config: DoormanConfig,
-                                  database: CordaPersistence,
                                   csrCertPathAndKey: CertPathAndKey?,
                                   serverStatus: NetworkManagementServerStatus): RegistrationWebService {
         logger.info("Starting Doorman server.")
-        val requestService = if (config.approveAll) {
-            logger.warn("Doorman server is in 'Approve All' mode, this will approve all incoming certificate signing requests.")
-            ApproveAllCertificateSigningRequestStorage(PersistentCertificateSigningRequestStorage(database))
-        } else {
-            PersistentCertificateSigningRequestStorage(database)
-        }
-
+        csrStorage ?: throw IllegalStateException("Certificate signing request storage cannot be null when creating the doorman service.")
         val jiraConfig = config.jira
         val requestProcessor = if (jiraConfig != null) {
             val jiraWebAPI = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
             val jiraClient = CsrJiraClient(jiraWebAPI, jiraConfig.projectCode)
-            JiraCsrHandler(jiraClient, requestService, DefaultCsrHandler(requestService, csrCertPathAndKey))
+            JiraCsrHandler(jiraClient, csrStorage, DefaultCsrHandler(csrStorage, csrCertPathAndKey))
         } else {
-            DefaultCsrHandler(requestService, csrCertPathAndKey)
+            DefaultCsrHandler(csrStorage, csrCertPathAndKey)
         }
 
         val scheduledExecutor = Executors.newScheduledThreadPool(1)
@@ -117,17 +128,9 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
     }
 
     private fun getRevocationServices(config: CertificateRevocationConfig,
-                                      database: CordaPersistence,
                                       csrCertPathAndKeyPair: CertPathAndKey?): Pair<CertificateRevocationRequestWebService, CertificateRevocationListWebService> {
         logger.info("Starting Revocation server.")
-        val crrStorage = if (config.approveAll) {
-            logger.warn("Revocation server is in 'Approve All' mode, this will approve all incoming certificate signing requests.")
-            ApproveAllCertificateRevocationRequestStorage(PersistentCertificateRevocationRequestStorage(database))
-        } else {
-            PersistentCertificateRevocationRequestStorage(database)
-        }
-        val crlStorage = PersistentCertificateRevocationListStorage(database)
-
+        crrStorage ?: throw IllegalStateException("Certificate revocation request storage cannot be null when creating the revocation service.")
         val crlHandler = csrCertPathAndKeyPair?.let {
             LocalCrlHandler(crrStorage,
                     crlStorage,
@@ -163,17 +166,15 @@ class NetworkManagementServer(dataSourceProperties: Properties, databaseConfig: 
 
     fun start(hostAndPort: NetworkHostAndPort,
               csrCertPathAndKey: CertPathAndKey?,
-              doormanConfig: DoormanConfig?,  // TODO Doorman config shouldn't be optional as the doorman is always required to run
-              revocationConfig: CertificateRevocationConfig?,
               startNetworkMap: NetworkMapStartParams?
     ) {
         val services = mutableListOf<Any>()
         val serverStatus = NetworkManagementServerStatus()
 
         startNetworkMap?.let { services += getNetworkMapService(it.config, it.signer) }
-        doormanConfig?.let { services += getDoormanService(it, database, csrCertPathAndKey, serverStatus) }
+        doormanConfig?.let { services += getDoormanService(it, csrCertPathAndKey, serverStatus) }
         revocationConfig?.let {
-            val revocationServices = getRevocationServices(it, database, csrCertPathAndKey)
+            val revocationServices = getRevocationServices(it, csrCertPathAndKey)
             services += revocationServices.first
             services += revocationServices.second
         }
