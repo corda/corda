@@ -79,22 +79,21 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
 
     private fun updateNetworkMapCache(networkMapClient: NetworkMapClient): Duration {
-        val (mainNetworkMap, cacheTimeout) = networkMapClient.getNetworkMap()
-        mainNetworkMap.parametersUpdate?.let { handleUpdateNetworkParameters(networkMapClient, it) }
-        val additionalUrls = extraNetworkMapKeys.map { uuid -> URL("${networkMapClient.compatibilityZoneURL}/network-map/private/$uuid") }
-        val additionalHashes = additionalUrls.flatMap {
+        val (globalNetworkMap, cacheTimeout) = networkMapClient.getNetworkMap()
+        globalNetworkMap.parametersUpdate?.let { handleUpdateNetworkParameters(networkMapClient, it) }
+        val additionalHashes = extraNetworkMapKeys.flatMap {
             try {
                 networkMapClient.getNetworkMap(it).payload.nodeInfoHashes
             } catch (e: Exception) {
                 // Failure to retrieve one network map using UUID shouldn't stop the whole update.
-                logger.warn("Error encountered when downloading network map with url '$it', skipping...", e)
+                logger.warn("Error encountered when downloading network map with uuid '$it', skipping...", e)
                 emptyList<SecureHash>()
             }
         }
-        val allHashesFromNetworkMap = (mainNetworkMap.nodeInfoHashes + additionalHashes).toSet()
+        val allHashesFromNetworkMap = (globalNetworkMap.nodeInfoHashes + additionalHashes).toSet()
 
-        if (currentParametersHash != mainNetworkMap.networkParameterHash) {
-            exitOnParametersMismatch(mainNetworkMap)
+        if (currentParametersHash != globalNetworkMap.networkParameterHash) {
+            exitOnParametersMismatch(globalNetworkMap)
         }
 
         val currentNodeHashes = networkMapCache.allNodeHashes

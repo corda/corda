@@ -205,7 +205,7 @@ class NetworkMapUpdaterTest {
         val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned("Info 2")
         val hash1 = signedNodeInfo1.raw.hash
         val hash2 = signedNodeInfo2.raw.hash
-        whenever(networkMapClient.getNetworkMap(URL("${networkMapClient.compatibilityZoneURL}/network-map/private/$privateNetUUID"))).then {
+        whenever(networkMapClient.getNetworkMap(privateNetUUID)).then {
             NetworkMapResponse(NetworkMap(listOf(hash1), networkParametersHash, parametersUpdate), cacheExpiryMs.millis)
         }
         whenever(networkMapClient.getNodeInfo(hash1)).then {
