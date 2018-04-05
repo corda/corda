@@ -2,6 +2,7 @@ package net.corda.testing.node.internal.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -12,6 +13,7 @@ import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.testing.core.singleIdentity
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -96,8 +98,8 @@ class NetworkMapServer(private val pollInterval: Duration,
         return service.latestAcceptedParametersMap[publicKey]
     }
 
-    fun addNodeToPrivateNetwork(signedNodeInfo: SignedNodeInfo, uuid: UUID) {
-        service.addToPrivateMap(signedNodeInfo, uuid)
+    fun addNodesToPrivateNetwork(networkUUID: UUID, nodesNames: List<CordaX500Name>) {
+        service.addNodesToPrivateNetwork(networkUUID, nodesNames)
     }
 
     override fun close() {
@@ -106,12 +108,10 @@ class NetworkMapServer(private val pollInterval: Duration,
 
     @Path("network-map")
     inner class InMemoryNetworkMapService {
-        // Private maps
-        private val uuidInfosMap = mutableMapOf<UUID, MutableSet<SecureHash>>()
-        // Nodes not visible in global map
-        private val privateNodes = mutableMapOf<SecureHash, SignedNodeInfo>()
-        // Global network map
-        private val globalMap = mutableMapOf<SecureHash, SignedNodeInfo>()
+        private val uuidNodeNames = mutableMapOf<UUID, MutableSet<CordaX500Name>>()
+        private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
+        // Mapping from the name of the network ("global" for global one, or uuid for private ones) to hashes of the nodes in network
+        private val networkMaps = mutableMapOf<String, MutableSet<SecureHash>>()
         val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()
         private val signedNetParams by lazy { networkMapCertAndKeyPair.sign(networkParameters) }
 
@@ -121,8 +121,17 @@ class NetworkMapServer(private val pollInterval: Duration,
         fun publishNodeInfo(input: InputStream): Response {
             return try {
                 val signedNodeInfo = input.readObject<SignedNodeInfo>()
-                signedNodeInfo.verified()
-                globalMap[signedNodeInfo.raw.hash] = signedNodeInfo
+                val hash = signedNodeInfo.raw.hash
+                val nodeInfo = signedNodeInfo.verified()
+                val privateNetwork = uuidNodeNames.filter {
+                    entry -> nodeInfo.legalIdentities[0].name in entry.value
+                }.keys.singleOrNull()
+                if (privateNetwork == null) {
+                    networkMaps.computeIfAbsent("global", { mutableSetOf() }).add(hash)
+                } else {
+                    networkMaps.computeIfAbsent(privateNetwork.toString(), { mutableSetOf() }).add(hash)
+                }
+                nodeInfoMap[hash] = signedNodeInfo
                 ok()
             } catch (e: Exception) {
                 when (e) {
@@ -145,7 +154,7 @@ class NetworkMapServer(private val pollInterval: Duration,
         @GET
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getGlobalNetworkMap(): Response {
-            val nodeInfoHashes = globalMap.keys.toList()
+            val nodeInfoHashes = networkMaps.computeIfAbsent("global", { mutableSetOf() }).toList()
             return networkMapResponse(nodeInfoHashes)
         }
 
@@ -154,7 +163,7 @@ class NetworkMapServer(private val pollInterval: Duration,
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getPrivateNetworkMap(@PathParam("var") extraUUID: String): Response {
             val uuid = UUID.fromString(extraUUID)
-            val nodeInfoHashes = uuidInfosMap[uuid] ?: return Response.status(Response.Status.NOT_FOUND).build()
+            val nodeInfoHashes = networkMaps[uuid.toString()] ?: return Response.status(Response.Status.NOT_FOUND).build()
             return networkMapResponse(nodeInfoHashes.toList())
         }
 
@@ -166,14 +175,20 @@ class NetworkMapServer(private val pollInterval: Duration,
 
         // Remove nodeInfo for testing.
         fun removeNodeInfo(nodeInfo: NodeInfo) {
-            globalMap.remove(nodeInfo.serialize().hash)
+            val hash = nodeInfo.serialize().hash
+            networkMaps.forEach {
+                it.value.remove(hash)
+            }
+            nodeInfoMap.remove(hash)
         }
 
-        // All nodes that are added through publish go to main network map, this is work-around for testing private maps
-        fun addToPrivateMap(signedNodeInfo: SignedNodeInfo, uuid: UUID) {
-            val hash = signedNodeInfo.raw.hash
-            privateNodes[hash] = signedNodeInfo
-            uuidInfosMap.computeIfAbsent(uuid, { mutableSetOf() }).add(hash)
+        fun addNodesToPrivateNetwork(networkUUID: UUID, nodesNames: List<CordaX500Name>) {
+            for (name in nodesNames) {
+                check(name !in nodeInfoMap.values.flatMap { it.verified().legalIdentities.map { it.name } }) {
+                    throw IllegalArgumentException("Node with name: $name was already published to global network map")
+                }
+            }
+            uuidNodeNames.computeIfAbsent(networkUUID, { mutableSetOf() }).addAll(nodesNames)
         }
 
         @GET
@@ -181,7 +196,7 @@ class NetworkMapServer(private val pollInterval: Duration,
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getNodeInfo(@PathParam("var") nodeInfoHash: String): Response {
             val hash = SecureHash.parse(nodeInfoHash)
-            val signedNodeInfo = globalMap[hash] ?: privateNodes[hash]
+            val signedNodeInfo = nodeInfoMap[hash]
             return if (signedNodeInfo != null) {
                 Response.ok(signedNodeInfo.serialize().bytes)
             } else {
