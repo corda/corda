@@ -847,7 +847,6 @@ class DriverDSLImpl(
                     arguments = arguments,
                     jdwpPort = debugPort,
                     extraJvmArguments = extraJvmArguments + listOfNotNull(jolokiaAgent),
-                    errorLogPath = config.corda.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "error.log",
                     workingDirectory = config.corda.baseDirectory,
                     maximumHeapSize = maximumHeapSize
             )
@@ -864,7 +863,6 @@ class DriverDSLImpl(
                             "-Dname=node-${handle.p2pAddress}-webserver",
                             "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
                     ),
-                    errorLogPath = Paths.get("error.$className.log"),
                     workingDirectory = null,
                     maximumHeapSize = maximumHeapSize
             )
