@@ -42,6 +42,7 @@ import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
 import java.security.KeyPair
 import java.security.PrivateKey
+import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
@@ -230,7 +231,7 @@ fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T 
 /** Convert a [ByteArrayOutputStream] to [InputStreamAndHash]. */
 fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {
     val bytes = toByteArray()
-    return InputStreamAndHash(ByteArrayInputStream(bytes), bytes.sha256())
+    return InputStreamAndHash(bytes.inputStream(), bytes.sha256())
 }
 
 data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHash.SHA256) {
@@ -442,3 +443,5 @@ fun NotarisationRequest.generateSignature(serviceHub: ServiceHub): NotarisationR
     }
     return NotarisationRequestSignature(signature, serviceHub.myInfo.platformVersion)
 }
+
+val PublicKey.hash: SecureHash get() = encoded.sha256()

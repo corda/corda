@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.hash
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
@@ -62,7 +63,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
             )
         }
 
-        private fun mapToKey(owningKey: PublicKey) = SecureHash.sha256(owningKey.encoded)
+        private fun mapToKey(owningKey: PublicKey) = owningKey.hash
         private fun mapToKey(party: PartyAndCertificate) = mapToKey(party.owningKey)
     }
 
