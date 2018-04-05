@@ -3,6 +3,7 @@ package net.corda.node.utilities.registration
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.logElapsedTime
+import net.corda.core.internal.readFully
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.*
 import net.corda.finance.DOLLARS
@@ -130,7 +131,7 @@ class RegistrationHandler(private val rootCertAndKeyPair: CertificateAndKeyPair)
     @Produces(MediaType.TEXT_PLAIN)
     fun registration(input: InputStream): Response {
         return log.logElapsedTime("Registration") {
-            val certificationRequest = input.use { JcaPKCS10CertificationRequest(it.readBytes()) }
+            val certificationRequest = JcaPKCS10CertificationRequest(input.readFully())
             val (certPath, name) = createSignedClientCertificate(
                     certificationRequest,
                     rootCertAndKeyPair.keyPair,
