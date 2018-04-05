@@ -28,9 +28,6 @@ Create a resource group.
 
 At the top of the left sidenav click on the button with the green cross "Create a resource".
 
-.. image:: resources/azure-create-resource.png
-   :scale: 50 %
-
 In this example we are going to use an Ubuntu server so select the "Ubuntu Server 17.10 VM" option.
 
 .. image:: resources/azure-select-ubuntu.png
