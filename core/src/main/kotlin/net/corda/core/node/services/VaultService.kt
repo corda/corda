@@ -53,19 +53,33 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
              */
             val type: UpdateType = UpdateType.GENERAL
     ) {
-        /** Checks whether the update contains a state of the specified type. */
-        inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T }
+        /** Filters an update by [clazz]. */
+        fun <T : ContractState> filterByType(clazz: Class<T>) =
+                copy(
+                        consumed = consumed.filterTo(LinkedHashSet()) { clazz.isAssignableFrom(it.state.data.javaClass) },
+                        produced = produced.filterTo(LinkedHashSet()) { clazz.isAssignableFrom(it.state.data.javaClass) }
+                )
 
-        /** Checks whether the update contains a state of the specified type and state status */
-        fun <T : ContractState> containsType(clazz: Class<T>, status: StateStatus) =
+        /**
+         * Filters an update based on the query's [status] parameter.
+         * This only has an effect if [status]=[StateStatus.CONSUMED].
+         */
+        fun filterByStatus(status: StateStatus) =
                 when (status) {
-                    StateStatus.UNCONSUMED -> produced.any { clazz.isAssignableFrom(it.state.data.javaClass) }
-                    StateStatus.CONSUMED -> consumed.any { clazz.isAssignableFrom(it.state.data.javaClass) }
-                    else -> consumed.any { clazz.isAssignableFrom(it.state.data.javaClass) }
-                            || produced.any { clazz.isAssignableFrom(it.state.data.javaClass) }
+                    StateStatus.CONSUMED -> copy(produced = emptySet())
+                    else -> this
                 }
 
         fun isEmpty() = consumed.isEmpty() && produced.isEmpty()
+
+        /** Checks whether the update contains a state of the specified type and state status */
+        fun <T : ContractState> containsType(clazz: Class<T>, status: StateStatus) =
+            when (status) {
+                StateStatus.UNCONSUMED -> produced.any { clazz.isAssignableFrom(it.state.data.javaClass) }
+                StateStatus.CONSUMED -> consumed.any { clazz.isAssignableFrom(it.state.data.javaClass) }
+                else -> consumed.any { clazz.isAssignableFrom(it.state.data.javaClass) }
+                        || produced.any { clazz.isAssignableFrom(it.state.data.javaClass) }
+            }
 
         /**
          * Combine two updates into a single update with the combined inputs and outputs of the two updates but net

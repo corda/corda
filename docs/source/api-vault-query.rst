@@ -488,6 +488,21 @@ Behavioural notes
    is a separate SQL query on the underlying database, and it is entirely conceivable that state modifications are
    taking place in between and/or in parallel to paging requests. When using pagination, always check the value of the
    ``totalStatesAvailable`` (from the ``Vault.Page`` result) and adjust further paging requests appropriately.
+3. In the case where ``TrackBy`` is used, ``QueryCriteria`` filters are only applied to the initial snapshot query.
+   Subsequent updates reflect all changes since that initial filtered query.
+   For example if a ``trackBy`` queries UNCONSUMED states the returned snapshot will only contain UNCONSUMED states,
+   however updates will contain both consumed and unconsumed states related to the change in case a previously
+   UNCONSUMED state got consumed.
+
+   An example scenario:
+     Alice issues $1
+     Alice moves $1 to Bob
+     Bob moves $1 back to Alice
+   If Alice tracks the vault for UNCONSUMED states before this interchange then she will see:
+     Update($1 produced, nothing consumed)
+     Update(nothing produced, $1 consumed)
+     Update($1 produced, nothing consumed)
+   If we didn't send the second update Alice would think she has $2!
 
 Other use case scenarios
 ------------------------
