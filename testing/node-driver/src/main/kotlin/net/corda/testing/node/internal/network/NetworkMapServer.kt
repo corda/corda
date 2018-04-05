@@ -12,14 +12,14 @@ package net.corda.testing.node.internal.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.internal.readObject
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import org.eclipse.jetty.server.Server
@@ -120,7 +120,7 @@ class NetworkMapServer(private val pollInterval: Duration,
         @Consumes(MediaType.APPLICATION_OCTET_STREAM)
         fun publishNodeInfo(input: InputStream): Response {
             return try {
-                val signedNodeInfo = input.readBytes().deserialize<SignedNodeInfo>()
+                val signedNodeInfo = input.readObject<SignedNodeInfo>()
                 signedNodeInfo.verified()
                 nodeInfoMap[signedNodeInfo.raw.hash] = signedNodeInfo
                 ok()
@@ -136,7 +136,7 @@ class NetworkMapServer(private val pollInterval: Duration,
         @Path("ack-parameters")
         @Consumes(MediaType.APPLICATION_OCTET_STREAM)
         fun ackNetworkParameters(input: InputStream): Response {
-            val signedParametersHash = input.readBytes().deserialize<SignedData<SecureHash>>()
+            val signedParametersHash = input.readObject<SignedData<SecureHash>>()
             val hash = signedParametersHash.verified()
             latestAcceptedParametersMap[signedParametersHash.sig.by] = hash
             return ok().build()

@@ -30,9 +30,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x509.BasicConstraints
-import org.bouncycastle.asn1.x509.Extension
-import org.bouncycastle.asn1.x509.KeyUsage
+import org.bouncycastle.asn1.x509.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -110,6 +108,28 @@ class X509UtilitiesTest {
             val keyUsage = KeyUsage.getInstance(getExtension(Extension.keyUsage).parsedValue)
             assertFalse { keyUsage.hasUsages(5) } // Bit 5 == keyCertSign according to ASN.1 spec (see full comment on KeyUsage property)
             assertNull(basicConstraints.pathLenConstraint) // Non-CA certificate
+        }
+    }
+
+    @Test
+    fun `create valid server certificate chain includes CRL info`() {
+        val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val caCert = X509Utilities.createSelfSignedCACertificate(X500Principal("CN=Test CA Cert,O=R3 Ltd,L=London,C=GB"), caKey)
+        val caSubjectKeyIdentifier = SubjectKeyIdentifier.getInstance(caCert.toBc().getExtension(Extension.subjectKeyIdentifier).parsedValue)
+        val keyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val crlDistPoint = "http://test.com"
+        val serverCert = X509Utilities.createCertificate(
+                CertificateType.TLS,
+                caCert,
+                caKey,
+                X500Principal("CN=Server Cert,O=R3 Ltd,L=London,C=GB"),
+                keyPair.public,
+                crlDistPoint = crlDistPoint)
+        serverCert.toBc().run {
+            val certCrlDistPoint = CRLDistPoint.getInstance(getExtension(Extension.cRLDistributionPoints).parsedValue)
+            assertTrue(certCrlDistPoint.distributionPoints.first().distributionPoint.toString().contains(crlDistPoint))
+            val certCaAuthorityKeyIdentifier = AuthorityKeyIdentifier.getInstance(getExtension(Extension.authorityKeyIdentifier).parsedValue)
+            assertTrue(Arrays.equals(caSubjectKeyIdentifier.keyIdentifier, certCaAuthorityKeyIdentifier.keyIdentifier))
         }
     }
 

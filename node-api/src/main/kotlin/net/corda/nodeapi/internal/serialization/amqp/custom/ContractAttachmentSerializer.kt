@@ -13,6 +13,7 @@ package net.corda.nodeapi.internal.serialization.amqp.custom
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.internal.readFully
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.nodeapi.internal.serialization.amqp.CustomSerializer
@@ -27,7 +28,7 @@ class ContractAttachmentSerializer(factory: SerializerFactory) : CustomSerialize
         ContractAttachmentProxy::class.java, factory) {
     override fun toProxy(obj: ContractAttachment): ContractAttachmentProxy {
         val bytes = try {
-            obj.attachment.open().readBytes()
+            obj.attachment.open().readFully()
         } catch (e: Exception) {
             throw MissingAttachmentsException(listOf(obj.id))
         }

@@ -46,6 +46,6 @@ object InputStreamSerializer : CustomSerializer.Implements<InputStream>(InputStr
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): InputStream {
         val bits = input.readObject(obj, schemas, ByteArray::class.java) as ByteArray
-        return ByteArrayInputStream(bits)
+        return bits.inputStream()
     }
 }

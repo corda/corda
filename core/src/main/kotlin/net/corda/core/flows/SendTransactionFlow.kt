@@ -13,6 +13,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.internal.readFully
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 
@@ -70,7 +71,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                     serviceHub.validatedTransactions.getTransaction(it) ?: throw FetchDataFlow.HashNotFound(it)
                 }
                 FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
-                    serviceHub.attachments.openAttachment(it)?.open()?.readBytes() ?: throw FetchDataFlow.HashNotFound(it)
+                    serviceHub.attachments.openAttachment(it)?.open()?.readFully() ?: throw FetchDataFlow.HashNotFound(it)
                 }
             }
         }

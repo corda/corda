@@ -50,6 +50,7 @@ fun freshCertificate(identityService: IdentityService,
     val ourCertificate = X509Utilities.createCertificate(
             CertificateType.CONFIDENTIAL_LEGAL_IDENTITY,
             issuerCert.subjectX500Principal,
+            issuerCert.publicKey,
             issuerSigner,
             issuer.name.x500Principal,
             subjectPublicKey,

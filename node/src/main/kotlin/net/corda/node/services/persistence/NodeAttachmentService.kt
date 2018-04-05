@@ -21,9 +21,11 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.readFully
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
@@ -37,7 +39,10 @@ import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
-import java.io.*
+import java.io.FilterInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.Serializable
 import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
@@ -272,14 +277,6 @@ class NodeAttachmentService(
         return import(jar, uploader, filename)
     }
 
-    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> {
-        val hs = HashingInputStream(Hashing.sha256(), jar)
-        val bytes = hs.readBytes()
-        checkIsAValidJAR(ByteArrayInputStream(bytes))
-        val id = SecureHash.SHA256(hs.hash().asBytes())
-        return Pair(id, bytes)
-    }
-
     override fun hasAttachment(attachmentId: AttachmentId): Boolean =
             currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
 
@@ -288,15 +285,16 @@ class NodeAttachmentService(
         return withContractsInJar(jar) { contractClassNames, inputStream ->
             require(inputStream !is JarInputStream)
 
-            // Read the file into RAM, hashing it to find the ID as we go. The attachment must fit into memory.
+            // Read the file into RAM and then calculate its hash. The attachment must fit into memory.
             // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
             // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
             // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
             // set the hash field of the new attachment record.
 
-            val (id, bytes) = getAttachmentIdAndBytes(inputStream)
+            val bytes = inputStream.readFully()
+            val id = bytes.sha256()
             if (!hasAttachment(id)) {
-                checkIsAValidJAR(ByteArrayInputStream(bytes))
+                checkIsAValidJAR(bytes.inputStream())
                 val session = currentDBSession()
                 val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename, contractClassNames = contractClassNames)
                 session.save(attachment)

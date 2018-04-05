@@ -45,24 +45,26 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.*
-import net.corda.testing.internal.LogHelper
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
+import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.VaultFiller
-import net.corda.testing.node.*
+import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.pumpReceive
 import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.ledger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -70,7 +72,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import rx.Observable
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.jar.JarOutputStream
@@ -357,7 +358,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 it.closeEntry()
             }
             val attachmentID = aliceNode.database.transaction {
-                attachment(ByteArrayInputStream(stream.toByteArray()))
+                attachment(stream.toByteArray().inputStream())
             }
 
             val bobsFakeCash = bobNode.database.transaction {
@@ -461,7 +462,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 it.closeEntry()
             }
             val attachmentID = aliceNode.database.transaction {
-                attachment(ByteArrayInputStream(stream.toByteArray()))
+                attachment(stream.toByteArray().inputStream())
             }
 
             val bobsKey = bobNode.services.keyManagementService.keys.single()

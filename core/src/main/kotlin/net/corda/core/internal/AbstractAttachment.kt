@@ -38,7 +38,7 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
         fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
             return {
                 val a = serviceHub.attachments.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
-                (a as? AbstractAttachment)?.attachmentData ?: a.open().use { it.readBytes() }
+                (a as? AbstractAttachment)?.attachmentData ?: a.open().readFully()
             }
         }
 

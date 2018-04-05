@@ -15,10 +15,7 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.read
-import net.corda.core.internal.readAll
-import net.corda.core.internal.write
-import net.corda.core.internal.writeLines
+import net.corda.core.internal.*
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
@@ -240,7 +237,7 @@ class NodeAttachmentStorageTest {
         database.transaction {
             val storage = NodeAttachmentService(MetricRegistry())
             val e = assertFailsWith<NodeAttachmentService.HashMismatchException> {
-                storage.openAttachment(id)!!.open().use { it.readBytes() }
+                storage.openAttachment(id)!!.open().readFully()
             }
             assertEquals(e.expected, id)
 
