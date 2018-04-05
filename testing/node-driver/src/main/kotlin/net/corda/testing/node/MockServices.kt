@@ -2,28 +2,26 @@ package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.VersionInfo
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.api.SchemaService
-import net.corda.node.services.api.VaultServiceInternal
-import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
@@ -108,9 +106,19 @@ open class MockServices private constructor(
                     override val vaultService: VaultService = makeVaultService(database.hibernateConfig, schemaService)
 
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-                        super.recordTransactions(statesToRecord, txs)
-                        // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                        (vaultService as VaultServiceInternal).notifyAll(statesToRecord, txs.map { it.coreTransaction })
+                        ServiceHubInternal.recordTransactions(statesToRecord, txs,
+                                validatedTransactions as WritableTransactionStorage,
+                                object : StateMachineRecordedTransactionMappingStorage {
+                                    override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
+                                        throw UnsupportedOperationException()
+                                    }
+
+                                    override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
+                                        throw UnsupportedOperationException()
+                                    }
+
+                                },
+                                vaultService as VaultServiceInternal)
                     }
 
                     override fun jdbcSession(): Connection = database.createSession()
