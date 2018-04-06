@@ -1,5 +1,6 @@
 package net.corda.behave.scenarios
 
+import cucumber.api.java.After
 import net.corda.behave.logging.getLogger
 import net.corda.behave.network.Network
 import net.corda.behave.node.Distribution
@@ -78,6 +79,7 @@ class ScenarioState {
         }
     }
 
+    @After
     fun stopNetwork() {
         val network = network ?: return
         for (node in network) {

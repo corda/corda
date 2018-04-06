@@ -3,6 +3,7 @@ package net.corda.behave.node.configuration
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.logging.getLogger
 import net.corda.behave.node.*
+import net.corda.core.identity.CordaX500Name
 import org.apache.commons.io.FileUtils
 import java.io.File
 
@@ -26,6 +27,10 @@ class Configuration(
 ) {
 
     private val developerMode = (distribution.type == Distribution.Type.CORDA)
+
+    val cordaX500Name: CordaX500Name by lazy({
+        CordaX500Name(name, location, country)
+    })
 
     private val basicConfig = """
             |myLegalName="C=$country,L=$location,O=$name"
