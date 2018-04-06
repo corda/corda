@@ -1,9 +1,11 @@
 Creating nodes locally
 ======================
 
+.. contents::
+
 Node structure
 --------------
-Each Corda node has the following structure:
+A Corda node has the following structure:
 
 .. sourcecode:: none
 
@@ -171,7 +173,7 @@ Following the previous example ``PartyB`` node will have additional configuratio
     }
 
 Specifying a custom webserver
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 By default, any node listing a webport will use the default development webserver, which is not production-ready. You
 can use your own webserver JAR instead by using the ``webserverJar`` argument in a ``Cordform`` ``node`` configuration
 block:
@@ -189,8 +191,8 @@ The webserver JAR will be copied into the node's ``build`` folder with the name 
 .. warning:: This is an experimental feature. There is currently no support for reading the webserver's port from the
    node's ``node.conf`` file.
 
-Running deployNodes
-~~~~~~~~~~~~~~~~~~~
+Running the Cordform task
+^^^^^^^^^^^^^^^^^^^^^^^^^
 To create the nodes defined in our ``deployNodes`` task, run the following command in a terminal window from the root
 of the project where the ``deployNodes`` task is defined:
 
