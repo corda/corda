@@ -53,11 +53,11 @@ Major Bug Fixes
 Issues Fixed
 ~~~~~~~~~~~~
 
-* CORDA-1295
-* CORDA-1276
-* CORDA-1264
-* CORDA-1267
-* CORDA-1178
+* `CORDA-1295 <https://r3-cev.atlassian.net/browse/CORDA-1295>`_
+* `CORDA-1276 <https://r3-cev.atlassian.net/browse/CORDA-1276>`_
+* `CORDA-1264 <https://r3-cev.atlassian.net/browse/CORDA-1264>`_
+* `CORDA-1267 <https://r3-cev.atlassian.net/browse/CORDA-1267>`_
+* `CORDA-1178 <https://r3-cev.atlassian.net/browse/CORDA-1178>`_
 * ENT-1686
 * ENT-1564
 * ENT-1665
