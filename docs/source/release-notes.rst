@@ -6,7 +6,7 @@ Release notes
 Release 3.1
 -----------
 
-Alas software is never delivered as we would wish, functioning perfectly under all edbe cases; as
+Alas software is never delivered as we would wish, functioning perfectly under all edge cases; as
 humans we have to settle for a mere "*as good as we can make it*". Thus, having had a month in the
 hands of our users we are delivering Corda 3.1 in response to a few critical issues that unfortunately
 weren't caught prior to release. As ever, our commitment to delivering a robust, quality, open source
@@ -24,8 +24,8 @@ Major Bug Fixes
 
 * **Corda Serialization fails with "Unknown constant pool tag"**
 
-  This issue is most often seen when running a CordApp with a Rest or Web API deployed using ``Spring Boot``
-  a implementation. The fundamental cause was ``Corda 3.0`` shipping with an out of date dependency on
+  This issue is most often seen when running a CordApp with a Rest or Web API deployed using a ``Spring Boot``
+  wrapper. The fundamental cause was ``Corda 3.0`` shipping with an out of date dependency on
   a `Java Classpath scanning library <https://github.com/lukehutch/fast-classpath-scanner>`_. As such, we've
   updated our dependent version.
 
