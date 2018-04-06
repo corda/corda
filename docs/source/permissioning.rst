@@ -185,7 +185,7 @@ Connecting to a compatibility zone
 To connect to a compatibility zone you need to register with their certificate signing authority (doorman) by submitting
 a certificate signing request (CSR) to obtain a valid identity for the zone.
 
-Before you can register, you must first have received the trust store file containing the root certificate form the zone
+Before you can register, you must first have received the trust store file containing the root certificate from the zone
 operator. Then run the following command:
 
 ``java -jar corda.jar --initial-registration --network-root-truststore-password <trust store password>``
