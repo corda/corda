@@ -37,6 +37,8 @@ import java.security.KeyPair
 import java.security.cert.CertPath
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentSkipListSet
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.ws.rs.*
@@ -119,8 +121,8 @@ class NodeRegistrationTest {
 
 @Path("certificate")
 class RegistrationHandler(private val rootCertAndKeyPair: CertificateAndKeyPair) {
-    private val certPaths = HashMap<String, CertPath>()
-    val idsPolled = HashSet<String>()
+    private val certPaths = ConcurrentHashMap<String, CertPath>()
+    val idsPolled = ConcurrentSkipListSet<String>()
 
     companion object {
         val log = loggerFor<RegistrationHandler>()
