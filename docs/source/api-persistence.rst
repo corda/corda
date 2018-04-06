@@ -144,3 +144,5 @@ which is then referenced within a custom flow:
   :start-after: DOCSTART TopupIssuer
   :end-before: DOCEND TopupIssuer
 
+For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`
+
