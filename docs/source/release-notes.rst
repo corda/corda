@@ -36,6 +36,20 @@ Major Bug Fixes
   Masking is now applied to ensure clearer delineation of where helpful errors are returned to the caller but specific
   information retained within the Node handling the failing RPC call.
 
+* **Versioning number endian swap**
+
+  Those eagle eyed amongst you will have noticed for the 3.0 release we altered the versioning scheme from previous
+  releases (1.0.0, 2.0.0, etc) to ``corda-3.0``. The reasons for this was an R3 internal desire to distinguish
+  between *Corda*, the open source project, and *R3 Corda*, the enterprise equivalent. However, we have heard the complaints
+  and feel the pain that's caused with various tools not coping well with that. As such, from now on the versioning scheme
+  will be inverted, thus this release is ``3.1-corda``.
+
+  As to those curious as to why we dropped the patch number from the version string, the reason is very simple, there won't
+  be any patches applied to a release of Corda. Either a release will be a collection of bug fixes and non API breaking
+  changes, thus eliciting a minor version bump as with this release, or major functional changes or API additions and warrant
+  a major version bump. Thus, rather than leave a dangling ``.0`` patch version on every release we've just dropped it. In the
+  case where a major security flaw needed addressing, for example, then that would generate a release of a new minor version.
+
 Issues Fixed
 ~~~~~~~~~~~~
 
