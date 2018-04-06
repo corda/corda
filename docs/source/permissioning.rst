@@ -15,7 +15,7 @@ Most production deployments will use an existing certificate authority or constr
 made available in the coming months. Until then, the documentation below can be used to create your own certificate
 authority.
 
-.. note:: If you are looking for information on how to connect to the existing compatibility zone go to the section: `Connecting to the existing compatibility zone`_
+.. note:: If you are looking for information on how to connect to the existing compatibility zone go to the section: `Connecting to a compatibility zone`_
 
 Certificate hierarchy
 ---------------------
@@ -180,9 +180,18 @@ For each node, copy the following files to the node's certificate directory (``<
 2. The node's ``sslkeystore.jks`` keystore
 3. The root network CA's ``truststore.jks`` keystore
 
-Connecting to the existing compatibility zone
----------------------------------------------
-To connect to existing compatibility zone you need to register with the certificate signing authority first.
+Connecting to a compatibility zone
+----------------------------------
+To connect to a compatibility zone you need to register with their certificate signing authority (doorman) by submitting
+a certificate signing request (CSR) to obtain a valid identity for the zone.
+
+Before you can register, you must first have received the trust store file containing the root certificate form the zone
+operator. Then run the following command:
+
+``java -jar corda.jar --initial-registration --network-root-truststore-password <trust store password>``
+
+By default it will expect the trust store file to be in the location ``certificates/network-root-truststore.jks``.
+This can be overridden with the additional ``--network-root-truststore`` flag.
 
 The certificate signing request will be created based on node information obtained from the node configuration.
 The following information from the node configuration file is needed to generate the request.
@@ -194,7 +203,7 @@ The following information from the node configuration file is needed to generate
 
 :emailAddress: e.g. "admin@company.com"
 
-:devMode: should be set to false
+:devMode: must be set to false
 
 :compatibilityZoneURL: Corda compatibility zone network management service root URL.
 
@@ -206,10 +215,3 @@ The following information from the node configuration file is needed to generate
 .. note:: You can exit the utility at any time if the approval process is taking longer than expected. The request process will resume on restart.
 
 This process only is needed when the node connects to the network for the first time, or when the certificate expires.
-
-To register you need to run the following command:
-
-``java -jar corda.jar --initial-registration --network-root-truststore-password <trust store password>``
-
-By default it will expect trust store file received from the doorman to be in the location ``certificates/network-root-truststore.jks``.
-This can be overridden with the additional ``--network-root-truststore`` flag.
