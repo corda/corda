@@ -60,6 +60,7 @@ data class NetworkMapCertificateConfig(val username: String,
 data class DoormanCertificateConfig(val crlDistributionPoint: URL,
                                     val crlServerSocketAddress: NetworkHostAndPort,
                                     val crlUpdatePeriod: Long,
+                                    val mode: ManualMode,
                                     val keyGroup:String,
                                     val validDays: Int,
                                     val rootKeyStoreFile: Path,
@@ -68,6 +69,11 @@ data class DoormanCertificateConfig(val crlDistributionPoint: URL,
     fun loadRootKeyStore(createNew: Boolean = false): X509KeyStore {
         return X509KeyStore.fromFile(rootKeyStoreFile, rootKeyStorePassword, createNew)
     }
+}
+
+enum class ManualMode {
+    CRL, // Run manual mode for the certificate revocation list.
+    CSR  // Run manual mode for the certificate signing requests.
 }
 
 /**

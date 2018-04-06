@@ -15,10 +15,7 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.networkmanage.HsmSimulator
 import com.r3.corda.networkmanage.hsm.authentication.InputReader
-import com.r3.corda.networkmanage.hsm.configuration.AuthParametersConfig
-import com.r3.corda.networkmanage.hsm.configuration.DoormanCertificateConfig
-import com.r3.corda.networkmanage.hsm.configuration.NetworkMapCertificateConfig
-import com.r3.corda.networkmanage.hsm.configuration.SigningServiceConfig
+import com.r3.corda.networkmanage.hsm.configuration.*
 import com.r3.corda.networkmanage.hsm.generator.CertificateConfiguration
 import com.r3.corda.networkmanage.hsm.generator.GeneratorParameters
 import com.r3.corda.networkmanage.hsm.generator.UserAuthenticationParameters
@@ -149,6 +146,7 @@ abstract class HsmBaseTest {
                 crlDistributionPoint = URL("http://test.com/revoked.crl"),
                 crlServerSocketAddress = NetworkHostAndPort("test.com", 4555),
                 crlUpdatePeriod = 1000,
+                mode = ManualMode.CSR,
                 authParameters = AuthParametersConfig(
                         mode = SigningServiceAuthMode.PASSWORD,
                         threshold = 2
@@ -165,7 +163,6 @@ abstract class HsmBaseTest {
                         password = "INTEGRATION_TEST",
                         threshold = 2
                 )
-
         )
     }
 

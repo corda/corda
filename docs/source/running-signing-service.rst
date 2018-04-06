@@ -34,7 +34,7 @@ Allowed parameters are:
 
 :dataSourceProperties: Data source properties. It should describe (or point to) the Doorman database.
 
-:doorman: CSR signing process configuration parameters. If specified, the signing service will sign approved CSRs.
+:doorman: CSR signing process configuration parameters. If specified, the signing service will sign CRL or approved CSRs depending on the operating mode defined in the mode parameter.
 
     :validDays: Number of days issued signatures are valid for.
 
@@ -43,6 +43,12 @@ Allowed parameters are:
     :rootKeyStorePassword: Password for the key store (trust store) containing the root certificate.
 
     :keyGroup: HSM key group for the doorman certificate key. This parameter is vendor specific (see Utimaco docs).
+
+    :mode: Manual HSM signing mode. Allowed values:
+
+        :CSR: Run the signing service for the certificate signing requests.
+
+        :CRL: Run the signing service for the certificate revocation list.
 
     :crlDistributionPoint: Certificate revocation list location for the node CA certificate.
 

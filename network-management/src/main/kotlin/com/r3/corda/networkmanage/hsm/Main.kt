@@ -15,6 +15,7 @@ import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import com.r3.corda.networkmanage.common.utils.initialiseSerialization
 import com.r3.corda.networkmanage.common.utils.parseConfig
+import com.r3.corda.networkmanage.hsm.configuration.ManualMode
 import com.r3.corda.networkmanage.hsm.configuration.SigningServiceArgsParser
 import com.r3.corda.networkmanage.hsm.configuration.SigningServiceConfig
 import com.r3.corda.networkmanage.hsm.processor.CrrProcessor
@@ -60,8 +61,9 @@ fun main(args: Array<String>) {
     if (config.networkMap != null) {
         NetworkMapProcessor(config.networkMap, config.device, config.keySpecifier, persistence).run()
     } else if (config.doorman != null) {
-        CsrProcessor(config.doorman, config.device, config.keySpecifier, persistence).showMenu()
-    } else if (config.doorman != null) {
-        CrrProcessor(config.doorman, config.device, config.keySpecifier).showMenu()
+        when (config.doorman.mode) {
+            ManualMode.CSR -> CsrProcessor(config.doorman, config.device, config.keySpecifier, persistence).showMenu()
+            ManualMode.CRL -> CrrProcessor(config.doorman, config.device, config.keySpecifier).showMenu()
+        }
     }
 }
