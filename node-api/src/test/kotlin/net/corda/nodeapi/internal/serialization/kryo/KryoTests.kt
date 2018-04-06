@@ -39,7 +39,6 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
 import org.slf4j.LoggerFactory
-import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
 import java.util.*
@@ -200,7 +199,11 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
     @Test
     fun `HashCheckingStream (de)serialize`() {
         val rubbish = ByteArray(12345, { (it * it * 0.12345).toByte() })
-        val readRubbishStream: InputStream = NodeAttachmentService.HashCheckingStream(SecureHash.sha256(rubbish), rubbish.size, ByteArrayInputStream(rubbish)).serialize(factory, context).deserialize(factory, context)
+        val readRubbishStream: InputStream = NodeAttachmentService.HashCheckingStream(
+                SecureHash.sha256(rubbish),
+                rubbish.size,
+                rubbish.inputStream()
+        ).serialize(factory, context).deserialize(factory, context)
         for (i in 0..12344) {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())
         }

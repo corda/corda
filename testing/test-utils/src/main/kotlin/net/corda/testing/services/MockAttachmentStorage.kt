@@ -17,13 +17,13 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.UNKNOWN_UPLOADER
+import net.corda.core.internal.readFully
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.nodeapi.internal.withContractsInJar
-import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util.*
 import java.util.jar.JarInputStream
@@ -63,7 +63,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     fun importContractAttachment(contractClassNames: List<ContractClassName>, uploader: String, jar: InputStream): AttachmentId = importAttachmentInternal(jar, uploader, null, contractClassNames)
 
-    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> = jar.readBytes().let { bytes -> Pair(bytes.sha256(), bytes) }
+    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> = jar.readFully().let { bytes -> Pair(bytes.sha256(), bytes) }
 
     private class MockAttachment(dataLoader: () -> ByteArray, override val id: SecureHash) : AbstractAttachment(dataLoader)
 
@@ -71,7 +71,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
         require(jar !is JarInputStream)
 
-        val bytes = jar.readBytes()
+        val bytes = jar.readFully()
 
         val sha256 = bytes.sha256()
         if (sha256 !in files.keys) {

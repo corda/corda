@@ -28,6 +28,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.readFully
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
@@ -233,7 +234,7 @@ object DefaultKryoCustomizer {
                 val lazyAttachment = object : AbstractAttachment({
                     val attachment = attachmentStorage.openAttachment(attachmentHash)
                             ?: throw MissingAttachmentsException(listOf(attachmentHash))
-                    attachment.open().readBytes()
+                    attachment.open().readFully()
                 }) {
                     override val id = attachmentHash
                 }

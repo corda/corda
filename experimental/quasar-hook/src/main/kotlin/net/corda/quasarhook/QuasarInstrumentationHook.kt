@@ -12,7 +12,6 @@ package net.corda.quasarhook
 
 import javassist.ClassPool
 import javassist.CtClass
-import java.io.ByteArrayInputStream
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
 import java.security.ProtectionDomain
@@ -193,9 +192,9 @@ object QuasarInstrumentationHook : ClassFileTransformer {
             classfileBuffer: ByteArray
     ): ByteArray {
         return try {
-            val instrument = instrumentMap.get(className)
+            val instrument = instrumentMap[className]
             return instrument?.let {
-                val clazz = classPool.makeClass(ByteArrayInputStream(classfileBuffer))
+                val clazz = classPool.makeClass(classfileBuffer.inputStream())
                 it(clazz)
                 clazz.toBytecode()
             } ?: classfileBuffer

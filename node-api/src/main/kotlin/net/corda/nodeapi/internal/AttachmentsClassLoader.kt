@@ -15,7 +15,6 @@ import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.serialization.CordaSerializable
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.FileNotFoundException
 import java.io.InputStream
@@ -111,12 +110,12 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         if (url.protocol != "attachment") return null
         val attachment = idsToAttachments[SecureHash.parse(url.host)] ?: return null
         val path = url.path?.substring(1) ?: return null   // Chop off the leading slash.
-        try {
+        return try {
             val stream = ByteArrayOutputStream()
             attachment.extractFile(path, stream)
-            return ByteArrayInputStream(stream.toByteArray())
+            stream.toByteArray().inputStream()
         } catch (e: FileNotFoundException) {
-            return null
+            null
         }
     }
 }
