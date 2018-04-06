@@ -94,7 +94,6 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
                 ),
                 classpath = ProcessUtilities.defaultClassPath,
                 workingDirectory = handle.baseDirectory,
-                errorLogPath = Paths.get("error.$className.log"),
                 arguments = listOf(
                         "--base-directory", handle.baseDirectory.toString(),
                         "--server.port=${(handle as NodeHandleInternal).webAddress.port}",
