@@ -1,6 +1,56 @@
 Release notes
 =============
 
+.. _release_notes_v3_1:
+
+Release 3.1
+-----------
+
+Alas software is never delivered as we would wish, functioning perfectly under all edbe cases; as
+humans we have to settle for a mere "*as good as we can make it*". Thus, having had a month in the
+hands of our users we are delivering Corda 3.1 in response to a few critical issues that unfortunately
+weren't caught prior to release. As ever, our commitment to delivering a robust, quality, open source
+DLT platform that is activly maintained remains strong.
+
+Special Thanks
+~~~~~~~~~~~~~~
+
+Without passionate and engaged users Corda would be all the poorer. As such, we are extremely grateful to
+`Bret Lichtenwald <https://github.com/bret540>`_ for helping nail down a reproducible test case for the
+Spring Boot issue.
+
+Major Bug Fixes
+~~~~~~~~~~~~~~~
+
+* **Corda Serialization fails with "Unknown constant pool tag"**
+
+  This issue is most often seen when running a CordApp with a Rest or Web API deployed using ``Spring Boot``
+  a implementation. The fundamental cause was ``Corda 3.0`` shipping with an out of date dependency on
+  a `Java Classpath scanning library <https://github.com/lukehutch/fast-classpath-scanner>`_. As such, we've
+  updated our dependent version.
+
+* **Potential privacy leak within exception handling over RPC**
+
+  Due to the way Exceptions in Corda are propagated across RPC calls from one node to another there was potential
+  for information to be leaked from the failing node to the caller within the serialised Stack Trace.
+  Masking is now applied to ensure clearer delineation of where helpful errors are returned to the caller but specific
+  information retained within the Node handling the failing RPC call.
+
+Issues Fixed
+~~~~~~~~~~~~
+
+* CORDA-1295
+* CORDA-1276
+* CORDA-1264
+* CORDA-1267
+* CORDA-1178
+* ENT-1686
+* ENT-1564
+* ENT-1665
+* ENT-1668
+
+.. _release_notes_v3_0:
+
 Release 3.0
 -----------
 
@@ -294,6 +344,8 @@ Minor Changes
   * Numerous bug fixes and documentation tweaks.
   * Removed dependency on Jolokia WAR file.
 
+.. _release_notes_v2_0:
+
 Release 2.0
 -----------
 Following quickly on the heels of the release of Corda 1.0, Corda version 2.0 consolidates
@@ -312,6 +364,8 @@ and via the versioning APIs.
 Adds the facility for transparent forwarding of transactions to some third party observer, such as a regulator. By having
 that entity simply run an Observer node they can simply recieve a stream of digitally signed, de-duplicated reports that
 can be used for reporting.
+
+.. _release_notes_v1_0:
 
 Release 1.0
 -----------
