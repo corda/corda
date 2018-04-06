@@ -5,15 +5,22 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.Fix
+import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
+import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
+import net.corda.testing.internal.withoutTestSerialization
+import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -203,10 +210,50 @@ class NodeInterestRatesTest {
         assertFailsWith<IllegalArgumentException> { oracle.sign(ftx) } // It throws failed requirement (as it is empty there is no command to check and sign).
     }
 
+    @Test
+    fun `network tearoff`() = withoutTestSerialization {
+        val mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
+        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        val oracleNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME)).apply {
+            registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
+            registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
+            database.transaction {
+                services.cordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
+            }
+        }
+        val oracle = oracleNode.services.myInfo.singleIdentity()
+        val tx = makePartialTX()
+        val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
+        val flow = FilteredRatesFlow(tx, oracle, fixOf, BigDecimal("0.675"), BigDecimal("0.1"))
+        LogHelper.setLevel("rates")
+        mockNet.runNetwork()
+        val future = aliceNode.startFlow(flow)
+        mockNet.runNetwork()
+        future.getOrThrow()
+        // We should now have a valid fix of our tx from the oracle.
+        val fix = tx.toWireTransaction(services).commands.map { it.value as Fix }.first()
+        assertEquals(fixOf, fix.of)
+        assertEquals(BigDecimal("0.678"), fix.value)
+        mockNet.stopNodes()
+    }
+
+    class FilteredRatesFlow(tx: TransactionBuilder,
+                            oracle: Party,
+                            fixOf: FixOf,
+                            expectedRate: BigDecimal,
+                            rateTolerance: BigDecimal,
+                            progressTracker: ProgressTracker = RatesFixFlow.tracker(fixOf.name))
+        : RatesFixFlow(tx, oracle, fixOf, expectedRate, rateTolerance, progressTracker) {
+        override fun filtering(elem: Any): Boolean {
+            return when (elem) {
+                is Command<*> -> oracle.owningKey in elem.signers && elem.value is Fix
+                else -> false
+            }
+        }
+    }
+
     private fun makePartialTX() = TransactionBuilder(DUMMY_NOTARY).withItems(
             TransactionState(1000.DOLLARS.CASH issuedBy dummyCashIssuer.party ownedBy ALICE, Cash.PROGRAM_ID, DUMMY_NOTARY))
 
     private fun makeFullTx() = makePartialTX().withItems(dummyCommand())
 }
-
-
