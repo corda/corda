@@ -23,6 +23,8 @@ In development mode (i.e. when ``devMode = true``, see :doc:`corda-configuration
 directory is filled with pre-configured keystores if the required keystores do not exist. This ensures that developers
 can get the nodes working as quickly as possible. However, these pre-configured keystores are not secure. To learn more see :doc:`permissioning`.
 
+.. _node_naming:
+
 Node naming
 -----------
 A node's name must be a valid X.500 distinguished name. In order to be compatible with other implementations
