@@ -10,6 +10,7 @@
 
 package com.r3.corda.networkmanage.common.persistence.entity
 
+import net.corda.core.crypto.SecureHash
 import net.corda.nodeapi.internal.SignedNodeInfo
 import java.io.Serializable
 import java.time.Instant
@@ -21,10 +22,12 @@ data class NodeInfoEntity(
         // Hash of serialized [NodeInfo] without signatures.
         @Id
         @Column(name = "node_info_hash", length = 64)
+        // AttributeConverters can't be used on @Id attributes, otherwise this would be SecureHash
         val nodeInfoHash: String,
 
         @Column(name = "public_key_hash", length = 64)
-        val publicKeyHash: String,
+        @Convert(converter = SecureHashAttributeConverter::class)
+        val publicKeyHash: SecureHash,
 
         @ManyToOne(optional = false, fetch = FetchType.LAZY)
         @JoinColumn(name = "cert_signing_request", nullable = false)

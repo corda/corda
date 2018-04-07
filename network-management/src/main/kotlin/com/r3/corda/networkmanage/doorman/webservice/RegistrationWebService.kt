@@ -12,6 +12,7 @@ package com.r3.corda.networkmanage.doorman.webservice
 
 import com.r3.corda.networkmanage.common.persistence.CertificateResponse
 import com.r3.corda.networkmanage.doorman.signer.CsrHandler
+import net.corda.core.internal.readFully
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
@@ -45,7 +46,7 @@ class RegistrationWebService(private val csrHandler: CsrHandler, private val cli
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     @Produces(MediaType.TEXT_PLAIN)
     fun submitRequest(input: InputStream): Response {
-        val csr = input.use { JcaPKCS10CertificationRequest(it.readBytes()) }
+        val csr = JcaPKCS10CertificationRequest(input.readFully())
         if (!csr.isSignatureValid()) {
             return status(Response.Status.BAD_REQUEST).entity("Invalid CSR signature").build()
         }

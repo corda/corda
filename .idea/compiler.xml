@@ -28,12 +28,14 @@
       <module name="business-network-demo_integrationTest" target="1.8" />
       <module name="business-network-demo_main" target="1.8" />
       <module name="business-network-demo_test" target="1.8" />
+      <module name="canonicalizer_main" target="1.8" />
+      <module name="canonicalizer_test" target="1.8" />
+      <module name="capsule-crr-submission_main" target="1.8" />
+      <module name="capsule-crr-submission_test" target="1.8" />
       <module name="capsule-hsm-cert-generator_main" target="1.8" />
       <module name="capsule-hsm-cert-generator_test" target="1.8" />
       <module name="capsule-hsm_main" target="1.8" />
       <module name="capsule-hsm_test" target="1.8" />
-      <module name="canonicalizer_main" target="1.8" />
-      <module name="canonicalizer_test" target="1.8" />
       <module name="client_main" target="1.8" />
       <module name="client_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />

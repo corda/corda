@@ -24,6 +24,7 @@ import javax.persistence.*
 class NetworkParametersEntity(
         @Id
         @Column(name = "hash", length = 64, nullable = false)
+        // AttributeConverters can't be used on @Id attributes, otherwise this would be SecureHash
         val hash: String,
 
         @Column(nullable = false)

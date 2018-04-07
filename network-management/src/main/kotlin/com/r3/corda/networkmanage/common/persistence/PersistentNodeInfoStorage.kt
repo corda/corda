@@ -14,12 +14,12 @@ import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRe
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
 import com.r3.corda.networkmanage.common.persistence.entity.ParametersUpdateEntity
 import com.r3.corda.networkmanage.common.persistence.entity.UpdateStatus
-import com.r3.corda.networkmanage.common.utils.hashString
 import com.r3.corda.networkmanage.common.utils.logger
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.CertRole.NODE_CA
+import net.corda.core.internal.hash
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -67,7 +67,7 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
 
             session.saveOrUpdate(NodeInfoEntity(
                     nodeInfoHash = nodeInfoHash.toString(),
-                    publicKeyHash = nodeInfo.legalIdentities[0].owningKey.hashString(),
+                    publicKeyHash = nodeInfo.legalIdentities[0].owningKey.hash,
                     certificateSigningRequest = request,
                     signedNodeInfo = signedNodeInfo,
                     isCurrent = true,
@@ -101,7 +101,7 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
         return database.transaction {
             val nodeInfoEntity = session.fromQuery<NodeInfoEntity>(
                     "n where n.publicKeyHash = :publicKeyHash and isCurrent = true")
-                    .setParameter("publicKeyHash", publicKey.hashString())
+                    .setParameter("publicKeyHash", publicKey.hash)
                     .singleResult
             val parametersUpdateEntity = session.fromQuery<ParametersUpdateEntity>(
                     "u where u.networkParameters.hash = :acceptedParametersHash").
@@ -116,7 +116,7 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
 
     private fun DatabaseTransaction.getSignedRequestByPublicHash(publicKeyHash: SecureHash): CertificateSigningRequestEntity? {
         return uniqueEntityWhere { builder, path ->
-            val publicKeyEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::publicKeyHash.name), publicKeyHash.toString())
+            val publicKeyEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::publicKeyHash.name), publicKeyHash)
             val statusEq = builder.equal(path.get<RequestStatus>(CertificateSigningRequestEntity::status.name), RequestStatus.DONE)
             builder.and(publicKeyEq, statusEq)
         }

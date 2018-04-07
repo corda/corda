@@ -13,11 +13,11 @@ package com.r3.corda.networkmanage.common.persistence
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateDataEntity
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRequestEntity
 import com.r3.corda.networkmanage.common.utils.getCertRole
-import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.Crypto.toSupportedPublicKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.hash
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
@@ -70,7 +70,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
             val requestEntity = CertificateSigningRequestEntity(
                     requestId = requestId,
                     legalName = legalNameOrRejectMessage as? CordaX500Name,
-                    publicKeyHash = toSupportedPublicKey(request.subjectPublicKeyInfo).hashString(),
+                    publicKeyHash = toSupportedPublicKey(request.subjectPublicKeyInfo).hash,
                     request = request,
                     remark = legalNameOrRejectMessage as? String,
                     modifiedBy = CertificateSigningRequestStorage.DOORMAN_SIGNATURE,
@@ -136,7 +136,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
             session.createQuery(
                     "select a.certificateData.certPath from ${CertificateSigningRequestEntity::class.java.name} a " +
                             "where a.publicKeyHash = :publicKeyHash and a.status = 'DONE' and a.certificateData.certificateStatus = 'VALID'", CertPath::class.java)
-                    .setParameter("publicKeyHash", publicKey.hashString())
+                    .setParameter("publicKeyHash", publicKey.hash.toString())
                     .uniqueResult()
         }
     }
@@ -175,7 +175,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
         // What if we approved something by mistake.
             nonRejectedRequestExists(CertificateSigningRequestEntity::legalName.name, legalName) -> throw RequestValidationException(legalName.toString(), "Duplicate legal name")
         //TODO Consider following scenario: There is a CSR that is signed but the certificate itself has expired or was revoked
-            nonRejectedRequestExists(CertificateSigningRequestEntity::publicKeyHash.name, toSupportedPublicKey(request.subjectPublicKeyInfo).hashString()) -> throw RequestValidationException(legalName.toString(), "Duplicate public key")
+            nonRejectedRequestExists(CertificateSigningRequestEntity::publicKeyHash.name, toSupportedPublicKey(request.subjectPublicKeyInfo).hash) -> throw RequestValidationException(legalName.toString(), "Duplicate public key")
             else -> legalName
         }
     }

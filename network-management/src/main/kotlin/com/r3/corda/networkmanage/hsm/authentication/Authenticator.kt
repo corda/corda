@@ -12,7 +12,6 @@ package com.r3.corda.networkmanage.hsm.authentication
 
 import CryptoServerJCE.CryptoServerProvider
 import com.r3.corda.networkmanage.common.signer.AuthenticationException
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
 import kotlin.reflect.full.memberProperties
@@ -155,9 +154,6 @@ fun createProvider(config: CryptoServerProviderConfig): CryptoServerProvider {
         writer.write("${property.name} = ${property.get(config)}\n")
     }
     writer.close()
-    val cfg = ByteArrayInputStream(cfgBuffer.toByteArray())
-    cfgBuffer.close()
-    val provider = CryptoServerProvider(cfg)
-    cfg.close()
-    return provider
+    val cfg = cfgBuffer.toByteArray().inputStream()
+    return CryptoServerProvider(cfg)
 }

@@ -14,9 +14,7 @@ import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
 import com.r3.corda.networkmanage.common.persistence.entity.ParametersUpdateEntity
 import com.r3.corda.networkmanage.common.persistence.entity.UpdateStatus
-import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.createDevNetworkMapCa

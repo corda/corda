@@ -38,7 +38,8 @@ data class CertificateSigningRequestEntity(
         val legalName: CordaX500Name?,
 
         @Column(name = "public_key_hash", length = 64, nullable = false)
-        val publicKeyHash: String,
+        @Convert(converter = SecureHashAttributeConverter::class)
+        val publicKeyHash: SecureHash,
 
         // Setting [columnDefinition] is a work around for a hibernate problem when using SQL database.
         // TODO: Remove this when we find out the cause of the problem.
@@ -75,7 +76,7 @@ data class CertificateSigningRequestEntity(
         return CertificateSigningRequest(
                 requestId = requestId,
                 legalName = legalName,
-                publicKeyHash = SecureHash.parse(publicKeyHash),
+                publicKeyHash = publicKeyHash,
                 status = status,
                 request = request,
                 remark = remark,

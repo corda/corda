@@ -12,12 +12,11 @@ package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
-import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.hash
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.NodeInfoAndSigned
@@ -86,14 +85,14 @@ class PersistentNodeInfoStorageTest : TestBase() {
         requestStorage.markRequestTicketCreated(requestId)
         requestStorage.approveRequest(requestId, CertificateSigningRequestStorage.DOORMAN_SIGNATURE)
 
-        assertNull(nodeInfoStorage.getCertificatePath(SecureHash.parse(keyPair.public.hashString())))
+        assertNull(nodeInfoStorage.getCertificatePath(keyPair.public.hash))
 
         requestStorage.putCertificatePath(
                 requestId,
                 X509Utilities.buildCertPath(nodeCaCert, doormanCertAndKeyPair.certificate, rootCaCert),
                 CertificateSigningRequestStorage.DOORMAN_SIGNATURE)
 
-        val storedCertPath = nodeInfoStorage.getCertificatePath(SecureHash.parse(keyPair.public.hashString()))
+        val storedCertPath = nodeInfoStorage.getCertificatePath(keyPair.public.hash)
         assertNotNull(storedCertPath)
 
         assertEquals(nodeCaCert, storedCertPath!!.certificates.first())

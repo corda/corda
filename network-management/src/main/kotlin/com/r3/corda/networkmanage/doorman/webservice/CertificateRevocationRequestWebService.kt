@@ -2,7 +2,7 @@ package com.r3.corda.networkmanage.doorman.webservice
 
 import com.r3.corda.networkmanage.doorman.signer.CrrHandler
 import com.r3.corda.networkmanage.doorman.webservice.CertificateRevocationRequestWebService.Companion.CRR_PATH
-import net.corda.core.serialization.deserialize
+import net.corda.core.internal.readObject
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.CertificateRevocationRequest
 import java.io.InputStream
@@ -28,7 +28,7 @@ class CertificateRevocationRequestWebService(private val crrHandler: CrrHandler)
     @Produces(MediaType.TEXT_PLAIN)
     fun submitRequest(input: InputStream): Response {
         return try {
-            val request = input.readBytes().deserialize<CertificateRevocationRequest>()
+            val request = input.readObject<CertificateRevocationRequest>()
             val requestId = crrHandler.saveRevocationRequest(request)
             ok(requestId)
         } catch (e: Exception) {

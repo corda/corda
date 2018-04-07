@@ -46,12 +46,6 @@ data class CertPathAndKey(val certPath: List<X509Certificate>, val key: PrivateK
     fun toKeyPair(): KeyPair = KeyPair(certPath[0].publicKey, key)
 }
 
-// TODO: replace this with Crypto.hash when its available.
-/**
- * Returns SHA256 hash of this public key
- */
-fun PublicKey.hashString() = encoded.sha256().toString()
-
 inline fun <reified T : Any> parseConfig(file: Path): T {
     val config = ConfigFactory.parseFile(file.toFile(), ConfigParseOptions.defaults().setAllowMissing(true)).resolve()
     logger.info(config.root().render(ConfigRenderOptions.defaults()))

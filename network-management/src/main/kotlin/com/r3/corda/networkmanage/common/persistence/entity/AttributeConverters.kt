@@ -1,6 +1,8 @@
 package com.r3.corda.networkmanage.common.persistence.entity
 
 import com.r3.corda.networkmanage.common.utils.buildCertPath
+import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.serialize
@@ -13,7 +15,6 @@ import java.security.cert.CertPath
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import javax.persistence.AttributeConverter
-import net.corda.core.identity.CordaX500Name
 
 class PKCS10CertificationRequestConverter : AttributeConverter<PKCS10CertificationRequest, ByteArray> {
     override fun convertToEntityAttribute(dbData: ByteArray?): PKCS10CertificationRequest? = dbData?.let(::PKCS10CertificationRequest)
@@ -45,7 +46,11 @@ class NetworkMapConverter : CordaSerializationConverter<NetworkMap>(NetworkMap::
 
 class SignedNodeInfoConverter : CordaSerializationConverter<SignedNodeInfo>(SignedNodeInfo::class.java)
 
-sealed class CordaSerializationConverter<T : Any>(private val clazz: Class<T>) : AttributeConverter<T, ByteArray> {
+class CordaX500NameAttributeConverter : ToStringConverter<CordaX500Name>(CordaX500Name.Companion::parse)
+
+class SecureHashAttributeConverter : ToStringConverter<SecureHash>(SecureHash.Companion::parse)
+
+abstract class CordaSerializationConverter<T : Any>(private val clazz: Class<T>) : AttributeConverter<T, ByteArray> {
     override fun convertToEntityAttribute(dbData: ByteArray?): T? {
         return dbData?.let {
             val serializationFactory = SerializationFactory.defaultFactory
@@ -56,14 +61,7 @@ sealed class CordaSerializationConverter<T : Any>(private val clazz: Class<T>) :
     override fun convertToDatabaseColumn(attribute: T?): ByteArray? = attribute?.serialize()?.bytes
 }
 
-class CordaX500NameAttributeConverter : AttributeConverter<CordaX500Name, String> {
-    override fun convertToDatabaseColumn(attribute: CordaX500Name?): String? = attribute?.toString()
-    override fun convertToEntityAttribute(dbData: String?): CordaX500Name? = dbData?.let { CordaX500Name.parse(it) }
+abstract class ToStringConverter<T : Any>(private val parser: (String) -> T) : AttributeConverter<T, String> {
+    override fun convertToDatabaseColumn(attribute: T?): String? = attribute?.toString()
+    override fun convertToEntityAttribute(dbData: String?): T? = dbData?.let { parser(it) }
 }
-
-// TODO Use SecureHash in entities
-//class SecureHashAttributeConverter : AttributeConverter<SecureHash, String> {
-//    override fun convertToDatabaseColumn(attribute: SecureHash?): String? = attribute?.toString()
-//    override fun convertToEntityAttribute(dbData: String?): SecureHash? = dbData?.let { SecureHash.parse(it) }
-//}
-

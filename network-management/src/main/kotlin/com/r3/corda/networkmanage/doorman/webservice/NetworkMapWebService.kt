@@ -22,9 +22,9 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -84,7 +84,7 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     @Path("publish")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     fun registerNode(input: InputStream): Response {
-        val signedNodeInfo = input.readBytes().deserialize<SignedNodeInfo>()
+        val signedNodeInfo = input.readObject<SignedNodeInfo>()
         var nodeInfo: NodeInfo? = null
         return try {
             // Store the NodeInfo
@@ -111,7 +111,7 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     fun ackNetworkParameters(input: InputStream): Response {
         return try {
-            val signedParametersHash = input.readBytes().deserialize<SignedData<SecureHash>>()
+            val signedParametersHash = input.readObject<SignedData<SecureHash>>()
             val hash = signedParametersHash.verified()
             networkMapStorage.getSignedNetworkParameters(hash) ?: throw IllegalArgumentException("No network parameters with hash $hash")
             logger.debug { "Received ack-parameters with $hash from ${signedParametersHash.sig.by}" }
