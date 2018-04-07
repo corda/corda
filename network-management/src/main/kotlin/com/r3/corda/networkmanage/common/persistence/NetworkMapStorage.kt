@@ -36,6 +36,7 @@ interface NetworkMapStorage {
 
     /**
      * Retrieves node info hashes where [NodeInfoEntity.isCurrent] is true and the certificate status is [CertificateStatus.VALID]
+     * Nodes should have declared that they are using correct set of parameters.
      */
     // TODO "Active" is the wrong word here
     fun getActiveNodeInfoHashes(): List<SecureHash>
@@ -70,4 +71,11 @@ interface NetworkMapStorage {
     fun getCurrentParametersUpdate(): ParametersUpdateEntity?
 
     fun setParametersUpdateStatus(update: ParametersUpdateEntity, newStatus: UpdateStatus)
+
+    /**
+     * Perform the switch of parameters on the flagDay.
+     * 1. Change status of ParametersUpdateEntity to [UpdateStatus.APPLIED]
+     * 2. Mark all the node infos that didn't accept the update as not current (so they won't be advertised in the network map)
+     */
+    fun switchFlagDay(update: ParametersUpdateEntity)
 }

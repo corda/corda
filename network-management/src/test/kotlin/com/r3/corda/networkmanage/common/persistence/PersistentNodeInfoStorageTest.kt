@@ -165,6 +165,24 @@ class PersistentNodeInfoStorageTest : TestBase() {
     }
 
     @Test
+    fun `publish same node info twice after isCurrent change`() {
+        fun singleNodeInfo() = persistence.transaction { session.fromQuery<NodeInfoEntity>("").singleResult }
+
+        val (nodeInfoAndSigned) = createValidSignedNodeInfo("Test", requestStorage)
+        nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
+        // Change isCurrent to false (that happens on flagDay change)
+        persistence.transaction {
+            val ni = singleNodeInfo()
+            session.merge(ni.copy(isCurrent = false))
+        }
+        assertThat(singleNodeInfo().isCurrent).isFalse()
+        val nodeInfo = singleNodeInfo()
+        nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
+        assertThat(nodeInfo.publishedAt).isBeforeOrEqualTo(singleNodeInfo().publishedAt)
+        assertThat(singleNodeInfo().isCurrent).isTrue()
+    }
+
+    @Test
     fun `accept parameters updates node info correctly`() {
         // given
         val (nodeInfoAndSigned) = createValidSignedNodeInfo("Test", requestStorage)
@@ -174,7 +192,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
         val netParamsHash = networkParameters.serialize().hash
         networkMapStorage.saveNewParametersUpdate(networkParameters, "Update", Instant.now() + 1.days)
         val nodeInfoHash = nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
-        nodeInfoStorage.ackNodeInfoParametersUpdate(nodeInfoAndSigned.nodeInfo.legalIdentities[0].owningKey.encoded.sha256(), netParamsHash)
+        nodeInfoStorage.ackNodeInfoParametersUpdate(nodeInfoAndSigned.nodeInfo.legalIdentities[0].owningKey, netParamsHash)
 
         // then
         val acceptedUpdate = nodeInfoStorage.getAcceptedParametersUpdate(nodeInfoHash)
@@ -190,7 +208,7 @@ class PersistentNodeInfoStorageTest : TestBase() {
         val (nodeInfoAndSigned, privateKey) = createValidSignedNodeInfo("Test", requestStorage)
         nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
 
-        nodeInfoStorage.ackNodeInfoParametersUpdate(nodeInfoAndSigned.nodeInfo.legalIdentities[0].owningKey.encoded.sha256(), netParamsHash)
+        nodeInfoStorage.ackNodeInfoParametersUpdate(nodeInfoAndSigned.nodeInfo.legalIdentities[0].owningKey, netParamsHash)
 
         val nodeInfo2 = nodeInfoAndSigned.nodeInfo.copy(serial = 2)
         val nodeInfoAndSigned2 = NodeInfoAndSigned(nodeInfo2.signWith(listOf(privateKey)))

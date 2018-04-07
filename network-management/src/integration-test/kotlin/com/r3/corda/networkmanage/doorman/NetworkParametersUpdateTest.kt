@@ -94,6 +94,7 @@ class NetworkParametersUpdateTest : IntegrationTest() {
         ) {
             var (alice) = listOf(
                     startNode(providedName = ALICE_NAME),
+                    startNode(providedName = BOB_NAME),
                     defaultNotaryNode
             ).transpose().getOrThrow()
             alice as NodeHandleInternal
@@ -137,6 +138,8 @@ class NetworkParametersUpdateTest : IntegrationTest() {
                     .readObject<SignedNetworkParameters>().verified()
             assertEquals(networkParameters, paramUpdateInfo.parameters)
             assertThat(alice.rpc.networkParametersFeed().snapshot).isNull() // Check that NMS doesn't advertise updates anymore.
+            // Check that Bob is no longer on the network as it didn't accept the new parameteres.
+            assertThat(alice.rpc.networkMapSnapshot().map { it.legalIdentities[0].name }).doesNotContain(BOB_NAME)
         }
     }
 

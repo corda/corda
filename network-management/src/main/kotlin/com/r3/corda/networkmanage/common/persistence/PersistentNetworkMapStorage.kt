@@ -156,6 +156,15 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
             session.merge(update.copy(status = newStatus))
         }
     }
+
+    override fun switchFlagDay(update: ParametersUpdateEntity) {
+        database.transaction {
+            setParametersUpdateStatus(update, UpdateStatus.APPLIED)
+            session.createQuery("update ${NodeInfoEntity::class.java.name} n set n.isCurrent = false " +
+                    "where (n.acceptedParametersUpdate != :acceptedParamUp or n.acceptedParametersUpdate is null) and n.isCurrent = true")
+                    .setParameter("acceptedParamUp", update).executeUpdate()
+        }
+    }
 }
 
 internal fun DatabaseTransaction.getNetworkParametersEntity(hash: SecureHash): NetworkParametersEntity? {

@@ -25,6 +25,7 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import java.security.PublicKey
 import java.security.cert.CertPath
 
 /**
@@ -39,7 +40,7 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
 
         database.transaction {
             val count = session.createQuery(
-                    "select count(*) from ${NodeInfoEntity::class.java.name} where nodeInfoHash = :nodeInfoHash", java.lang.Long::class.java)
+                    "select count(*) from ${NodeInfoEntity::class.java.name} where nodeInfoHash = :nodeInfoHash and isCurrent = true", java.lang.Long::class.java)
                     .setParameter("nodeInfoHash", nodeInfoHash.toString())
                     .singleResult
                     .toLong()
@@ -64,7 +65,7 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
             // Update any [NodeInfoEntity] instance for this CSR as not current.
             existingNodeInfos.forEach { session.merge(it.copy(isCurrent = false)) }
 
-            session.save(NodeInfoEntity(
+            session.saveOrUpdate(NodeInfoEntity(
                     nodeInfoHash = nodeInfoHash.toString(),
                     publicKeyHash = nodeInfo.legalIdentities[0].owningKey.hashString(),
                     certificateSigningRequest = request,
@@ -96,11 +97,11 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
         }
     }
 
-    override fun ackNodeInfoParametersUpdate(publicKeyHash: SecureHash, acceptedParametersHash: SecureHash) {
+    override fun ackNodeInfoParametersUpdate(publicKey: PublicKey, acceptedParametersHash: SecureHash) {
         return database.transaction {
             val nodeInfoEntity = session.fromQuery<NodeInfoEntity>(
                     "n where n.publicKeyHash = :publicKeyHash and isCurrent = true")
-                    .setParameter("publicKeyHash", publicKeyHash.toString())
+                    .setParameter("publicKeyHash", publicKey.hashString())
                     .singleResult
             val parametersUpdateEntity = session.fromQuery<ParametersUpdateEntity>(
                     "u where u.networkParameters.hash = :acceptedParametersHash").

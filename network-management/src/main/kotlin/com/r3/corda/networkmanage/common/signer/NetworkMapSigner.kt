@@ -51,9 +51,6 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private
         val activeNetworkParameters = activeNetworkMap?.networkParameters
         logger.debug { "Current network map parameters: ${activeNetworkParameters?.networkParameters}" }
 
-        val nodeInfoHashes = networkMapStorage.getActiveNodeInfoHashes()
-        logger.debug { "Retrieved node info hashes:\n${nodeInfoHashes.joinToString("\n")}" }
-
         // We persist signed parameters only if they were not persisted before (they are not in currentSignedNetworkMap as
         // normal parameters or as an update)
         if (!latestNetworkParameters.isSigned) {
@@ -63,11 +60,14 @@ class NetworkMapSigner(private val networkMapStorage: NetworkMapStorage, private
         }
 
         val parametersToNetworkMap = if (parametersUpdate?.status == FLAG_DAY || activeNetworkParameters == null) {
-            parametersUpdate?.let { networkMapStorage.setParametersUpdateStatus(it, APPLIED) }
+            parametersUpdate?.let { networkMapStorage.switchFlagDay(it) }
             latestNetworkParameters
         } else {
             activeNetworkParameters
         }
+
+        val nodeInfoHashes = networkMapStorage.getActiveNodeInfoHashes()
+        logger.debug { "Retrieved node info hashes:\n${nodeInfoHashes.joinToString("\n")}" }
 
         val newNetworkMap = NetworkMap(
                 nodeInfoHashes,

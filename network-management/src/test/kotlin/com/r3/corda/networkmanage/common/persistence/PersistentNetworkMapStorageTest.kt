@@ -14,7 +14,10 @@ import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
 import com.r3.corda.networkmanage.common.persistence.entity.ParametersUpdateEntity
 import com.r3.corda.networkmanage.common.persistence.entity.UpdateStatus
+import com.r3.corda.networkmanage.common.utils.hashString
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -148,5 +151,55 @@ class PersistentNetworkMapStorageTest : TestBase() {
         }
         assertThat(firstUpdate.status).isEqualTo(UpdateStatus.CANCELLED)
         assertThat(networkMapStorage.getCurrentParametersUpdate()?.description).isEqualTo("Update of update")
+    }
+
+    @Test
+    fun `switch ParametersUpdate on flag day`() {
+        // Update
+        val networkParameters1 = testNetworkParameters()
+        val updateDeadline = Instant.now() + 10.days
+        networkMapStorage.saveNewParametersUpdate(networkParameters1, "Update 1", updateDeadline)
+        // given
+        val (signedNodeInfoA) = createValidSignedNodeInfo("TestA", requestStorage) // null as acceptedParametersUpdate
+        val (signedNodeInfoB) = createValidSignedNodeInfo("TestB", requestStorage) // accepts update
+
+        // Put signed node info data
+        nodeInfoStorage.putNodeInfo(signedNodeInfoA)
+        val nodeInfoHashB = nodeInfoStorage.putNodeInfo(signedNodeInfoB)
+
+        nodeInfoStorage.ackNodeInfoParametersUpdate(signedNodeInfoB.nodeInfo.legalIdentities[0].owningKey, networkParameters1.serialize().hash)
+        val parameterUpdate = networkMapStorage.getCurrentParametersUpdate()!!
+        networkMapStorage.switchFlagDay(parameterUpdate)
+        // when
+        val validNodeInfoHashes = networkMapStorage.getActiveNodeInfoHashes()
+        // then
+        assertThat(validNodeInfoHashes).containsOnly(nodeInfoHashB)
+    }
+
+    @Test
+    fun `accept second set of parameters and switch on flag day`() {
+        // Update 1
+        val networkParameters1 = testNetworkParameters()
+        val updateDeadline = Instant.now() + 10.days
+        networkMapStorage.saveNewParametersUpdate(networkParameters1, "Update 1", updateDeadline)
+        // given
+        val (signedNodeInfoA) = createValidSignedNodeInfo("TestA", requestStorage) // Update 1 as acceptedParametersUpdate
+        val (signedNodeInfoB) = createValidSignedNodeInfo("TestB", requestStorage) // Update 2 as acceptedParametersUpdate
+
+        // Put signed node info data
+        nodeInfoStorage.putNodeInfo(signedNodeInfoA)
+        val nodeInfoHashB = nodeInfoStorage.putNodeInfo(signedNodeInfoB)
+
+        nodeInfoStorage.ackNodeInfoParametersUpdate(signedNodeInfoA.nodeInfo.legalIdentities[0].owningKey, networkParameters1.serialize().hash)
+        // Update 2
+        val networkParameters2 = testNetworkParameters(epoch = 2)
+        networkMapStorage.saveNewParametersUpdate(networkParameters2, "Update 2", updateDeadline + 10.days)
+        nodeInfoStorage.ackNodeInfoParametersUpdate(signedNodeInfoB.nodeInfo.legalIdentities[0].owningKey, networkParameters2.serialize().hash)
+        val parameterUpdate = networkMapStorage.getCurrentParametersUpdate()!!
+        networkMapStorage.switchFlagDay(parameterUpdate)
+        // when
+        val validNodeInfoHashes = networkMapStorage.getActiveNodeInfoHashes()
+        // then
+        assertThat(validNodeInfoHashes).containsOnly(nodeInfoHashB)
     }
 }

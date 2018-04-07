@@ -217,7 +217,7 @@ class NetworkMapWebServiceTest {
             val keyPair = Crypto.generateKeyPair()
             val signedHash = hash.serialize().sign { keyPair.sign(it) }
             it.doPost("ack-parameters", signedHash.serialize())
-            verify(nodeInfoStorage).ackNodeInfoParametersUpdate(keyPair.public.encoded.sha256(), hash)
+            verify(nodeInfoStorage).ackNodeInfoParametersUpdate(keyPair.public, hash)
             val randomSigned = SecureHash.randomSHA256().serialize().sign { keyPair.sign(it) }
             assertThatThrownBy { it.doPost("ack-parameters", randomSigned.serialize()) }
                     .hasMessageContaining("HTTP ERROR 500")

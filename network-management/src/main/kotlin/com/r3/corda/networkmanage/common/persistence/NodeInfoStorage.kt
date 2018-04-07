@@ -15,6 +15,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NodeInfo
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
+import java.security.PublicKey
 import java.security.cert.CertPath
 
 /**
@@ -48,8 +49,8 @@ interface NodeInfoStorage {
 
     /**
      * Store information about latest accepted [NetworkParameters] hash.
-     * @param publicKeyHash Hash of public key that accepted network parameters. This public key should belong to [NodeInfo]
+     * @param publicKey Public key that accepted network parameters. This public key should belong to [NodeInfo]
      * @param acceptedParametersHash Hash of latest accepted network parameters.
      */
-    fun ackNodeInfoParametersUpdate(publicKeyHash: SecureHash, acceptedParametersHash: SecureHash)
+    fun ackNodeInfoParametersUpdate(publicKey: PublicKey, acceptedParametersHash: SecureHash)
 }
