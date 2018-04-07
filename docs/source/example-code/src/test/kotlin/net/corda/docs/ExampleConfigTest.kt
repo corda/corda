@@ -29,8 +29,7 @@ class ExampleConfigTest {
     fun `example node_confs parses fine`() {
         readAndCheckConfigurations<NodeConfiguration>(
                 "example-node.conf",
-                "example-out-of-process-verifier-node.conf",
-                "example-network-map-node.conf"
+                "example-out-of-process-verifier-node.conf"
         ) {
             val baseDirectory = Paths.get("some-example-base-dir")
             ConfigHelper.loadConfig(
