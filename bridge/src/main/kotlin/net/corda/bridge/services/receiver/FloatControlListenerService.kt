@@ -153,18 +153,18 @@ class FloatControlListenerService(val conf: BridgeConfiguration,
     private fun onControlMessage(receivedMessage: ReceivedMessage) {
         if (!receivedMessage.checkTunnelControlTopic()) {
             auditService.packetDropEvent(receivedMessage, "Invalid control topic packet received on topic ${receivedMessage.topic}!!")
-            receivedMessage.complete(false)
+            receivedMessage.complete(true)
             return
         }
         val controlMessage = try {
             if (CordaX500Name.parse(receivedMessage.sourceLegalName) != floatClientName) {
                 auditService.packetDropEvent(receivedMessage, "Invalid control source legal name!!")
-                receivedMessage.complete(false)
+                receivedMessage.complete(true)
                 return
             }
             receivedMessage.payload.deserialize<TunnelControlMessage>()
         } catch (ex: Exception) {
-            receivedMessage.complete(false)
+            receivedMessage.complete(true)
             return
         }
         lock.withLock {
@@ -206,12 +206,12 @@ class FloatControlListenerService(val conf: BridgeConfiguration,
             }
         }
         if (amqpControl == null) {
-            message.complete(false)
+            message.complete(true) // consume message so it isn't resent forever
             return
         }
         if (!message.topic.startsWith(P2P_PREFIX)) {
             auditService.packetDropEvent(message, "Message topic is not a valid peer namespace ${message.topic}")
-            message.complete(false)
+            message.complete(true) // consume message so it isn't resent forever
             return
         }
         val appProperties = message.applicationProperties.map { Pair(it.key!!.toString(), it.value) }.toList()
