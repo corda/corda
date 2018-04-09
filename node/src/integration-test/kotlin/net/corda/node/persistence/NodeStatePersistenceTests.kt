@@ -42,8 +42,6 @@ class NodeStatePersistenceTests {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
-                // Ensure the notary node has finished starting up, before starting a flow that needs a notary
-                defaultNotaryNode.getOrThrow()
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::SendMessageFlow, message, defaultNotaryIdentity).returnValue.getOrThrow()
                 }
@@ -76,8 +74,6 @@ class NodeStatePersistenceTests {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
-                // Ensure the notary node has finished starting up, before starting a flow that needs a notary
-                defaultNotaryNode.getOrThrow()
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::SendMessageFlow, message, defaultNotaryIdentity).returnValue.getOrThrow()
                 }
