@@ -35,7 +35,16 @@ object ConfigHelper {
                 .withFallback(appConfig)
                 .withFallback(defaultConfig)
                 .resolve()
+
+
         log.info("Config:\n${finalConfig.root().render(ConfigRenderOptions.defaults())}")
+
+        val entrySet = finalConfig.entrySet().filter { entry -> entry.key.contains("\"") }
+        for (mutableEntry in entrySet) {
+            val key = mutableEntry.key
+            log.error("Config files should not contain \" in property names. Please fix: ${key}")
+        }
+
         return finalConfig
     }
 }

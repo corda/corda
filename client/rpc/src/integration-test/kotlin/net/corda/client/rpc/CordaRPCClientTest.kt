@@ -12,13 +12,13 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.USD
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.contracts.getCashBalances
-import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.all
+import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.core.*
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
@@ -158,7 +158,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     fun `sub-type of FlowException thrown by flow`() {
         login(rpcUser.username, rpcUser.password)
         val handle = connection!!.proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, identity)
-        assertThatExceptionOfType(CashException::class.java).isThrownBy {
+        assertThatExceptionOfType(InternalNodeException::class.java).isThrownBy {
             handle.returnValue.getOrThrow()
         }
     }

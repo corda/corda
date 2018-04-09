@@ -9,6 +9,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.slf4j.Logger
 import rx.subjects.PublishSubject
+import java.io.Serializable
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
@@ -34,7 +35,7 @@ class NodePropertiesPersistentStore(readPhysicalNodeId: () -> String, persistenc
 
             @Column(name = "property_value")
             var value: String? = ""
-    )
+    ) : Serializable
 }
 
 private class FlowsDrainingModeOperationsImpl(readPhysicalNodeId: () -> String, private val persistence: CordaPersistence, logger: Logger) : FlowsDrainingModeOperations {

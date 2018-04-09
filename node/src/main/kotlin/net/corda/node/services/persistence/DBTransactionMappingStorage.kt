@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import rx.subjects.PublishSubject
+import java.io.Serializable
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
@@ -33,7 +34,7 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
 
             @Column(name = "state_machine_run_id", length = 36)
             var stateMachineRunId: String = ""
-    )
+    ) : Serializable
 
     private companion object {
         fun createMap(): AppendOnlyPersistentMap<SecureHash, StateMachineRunId, DBTransactionMapping, String> {

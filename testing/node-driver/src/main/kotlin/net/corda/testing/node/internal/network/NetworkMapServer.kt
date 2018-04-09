@@ -2,15 +2,14 @@ package net.corda.testing.node.internal.network
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.internal.signWithCert
+import net.corda.core.internal.readObject
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
 import org.eclipse.jetty.server.Server
@@ -33,7 +32,7 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 import javax.ws.rs.core.Response.status
 
-class NetworkMapServer(private val cacheTimeout: Duration,
+class NetworkMapServer(private val pollInterval: Duration,
                        hostAndPort: NetworkHostAndPort,
                        private val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa(),
                        private val myHostNameValue: String = "test.host.name",
@@ -111,7 +110,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
         @Consumes(MediaType.APPLICATION_OCTET_STREAM)
         fun publishNodeInfo(input: InputStream): Response {
             return try {
-                val signedNodeInfo = input.readBytes().deserialize<SignedNodeInfo>()
+                val signedNodeInfo = input.readObject<SignedNodeInfo>()
                 signedNodeInfo.verified()
                 nodeInfoMap[signedNodeInfo.raw.hash] = signedNodeInfo
                 ok()
@@ -127,7 +126,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
         @Path("ack-parameters")
         @Consumes(MediaType.APPLICATION_OCTET_STREAM)
         fun ackNetworkParameters(input: InputStream): Response {
-            val signedParametersHash = input.readBytes().deserialize<SignedData<SecureHash>>()
+            val signedParametersHash = input.readObject<SignedData<SecureHash>>()
             val hash = signedParametersHash.verified()
             latestAcceptedParametersMap[signedParametersHash.sig.by] = hash
             return ok().build()
@@ -138,7 +137,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
         fun getNetworkMap(): Response {
             val networkMap = NetworkMap(nodeInfoMap.keys.toList(), signedNetParams.raw.hash, parametersUpdate)
             val signedNetworkMap = networkMapCertAndKeyPair.sign(networkMap)
-            return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${cacheTimeout.seconds}").build()
+            return Response.ok(signedNetworkMap.serialize().bytes).header("Cache-Control", "max-age=${pollInterval.seconds}").build()
         }
 
         // Remove nodeInfo for testing.

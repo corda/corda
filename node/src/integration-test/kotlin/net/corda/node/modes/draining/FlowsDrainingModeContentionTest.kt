@@ -1,10 +1,10 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.MESSAGE_CONTRACT_PROGRAM_ID
-import net.corda.Message
-import net.corda.MessageContract
-import net.corda.MessageState
+import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
+import net.corda.testMessage.Message
+import net.corda.testMessage.MessageContract
+import net.corda.testMessage.MessageState
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.flows.*

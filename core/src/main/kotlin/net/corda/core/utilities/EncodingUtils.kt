@@ -4,7 +4,7 @@ package net.corda.core.utilities
 
 import net.corda.core.crypto.Base58
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.sha256
+import net.corda.core.internal.hash
 import java.nio.charset.Charset
 import java.security.PublicKey
 import java.util.*
@@ -85,4 +85,4 @@ fun parsePublicKeyBase58(base58String: String): PublicKey = Crypto.decodePublicK
 fun PublicKey.toBase58String(): String = this.encoded.toBase58()
 
 /** Return the bytes of the SHA-256 output for this public key. */
-fun PublicKey.toSHA256Bytes(): ByteArray = this.encoded.sha256().bytes
+fun PublicKey.toSHA256Bytes(): ByteArray = this.hash.bytes

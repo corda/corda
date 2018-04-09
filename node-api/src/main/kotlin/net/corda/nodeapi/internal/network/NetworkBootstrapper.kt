@@ -1,11 +1,7 @@
 package net.corda.nodeapi.internal.network
 
-import com.google.common.hash.Hashing
-import com.google.common.hash.HashingInputStream
 import com.typesafe.config.ConfigFactory
 import net.corda.cordform.CordformNode
-import net.corda.core.contracts.ContractClassName
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.parse
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -27,7 +23,6 @@ import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
-import java.io.File
 import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -191,7 +186,7 @@ class NetworkBootstrapper {
     private fun generateWhitelist(whitelistFile: Path, excludeWhitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
         val existingWhitelist = if (whitelistFile.exists()) readContractWhitelist(whitelistFile) else emptyMap()
 
-        println(if (existingWhitelist.isEmpty()) "No existing whitelist file found." else "Found existing whitelist: ${whitelistFile}")
+        println(if (existingWhitelist.isEmpty()) "No existing whitelist file found." else "Found existing whitelist: $whitelistFile")
 
         val excludeContracts = if (excludeWhitelistFile.exists()) readExcludeWhitelist(excludeWhitelistFile) else emptyList()
         if (excludeContracts.isNotEmpty()) {
@@ -199,7 +194,7 @@ class NetworkBootstrapper {
         }
 
         val newWhiteList = cordapps?.flatMap { cordappJarPath ->
-            val jarHash = getJarHash(cordappJarPath)
+            val jarHash = Paths.get(cordappJarPath).hash
             scanJarForContracts(cordappJarPath).map { contract ->
                 contract to jarHash
             }
@@ -213,29 +208,25 @@ class NetworkBootstrapper {
             contractClassName to (if (newHash == null || newHash in existing) existing else existing + newHash)
         }.toMap()
 
-        println("CorDapp whitelist " + (if (existingWhitelist.isEmpty()) "generated" else "updated") + " in ${whitelistFile}")
+        println("CorDapp whitelist " + (if (existingWhitelist.isEmpty()) "generated" else "updated") + " in $whitelistFile")
         return merged
     }
 
     private fun overwriteWhitelist(whitelistFile: Path, mergedWhiteList: Map<String, List<AttachmentId>>) {
         PrintStream(whitelistFile.toFile().outputStream()).use { out ->
             mergedWhiteList.forEach { (contract, attachments) ->
-                out.println("${contract}:${attachments.joinToString(",")}")
+                out.println("$contract:${attachments.joinToString(",")}")
             }
         }
     }
 
-    private fun getJarHash(cordappPath: String): AttachmentId = File(cordappPath).inputStream().use { jar ->
-        val hs = HashingInputStream(Hashing.sha256(), jar)
-        hs.readBytes()
-        SecureHash.SHA256(hs.hash().asBytes())
+    private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> {
+        return file.readAllLines()
+                .map { line -> line.split(":") }
+                .map { (contract, attachmentIds) ->
+                    contract to (attachmentIds.split(",").map(::parse))
+                }.toMap()
     }
-
-    private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> = file.readAllLines()
-            .map { line -> line.split(":") }
-            .map { (contract, attachmentIds) ->
-                contract to (attachmentIds.split(",").map(::parse))
-            }.toMap()
 
     private fun readExcludeWhitelist(file: Path): List<String> = file.readAllLines().map(String::trim)
 

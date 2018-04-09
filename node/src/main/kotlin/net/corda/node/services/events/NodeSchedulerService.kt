@@ -31,6 +31,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
+import java.io.Serializable
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.*
@@ -154,7 +155,7 @@ class NodeSchedulerService(private val clock: CordaClock,
 
             @Column(name = "scheduled_at", nullable = false)
             var scheduledAt: Instant = Instant.now()
-    )
+    ) : Serializable
 
     private class InnerState {
         //var scheduledStatesQueue: PriorityQueue<ScheduledStateRef> = PriorityQueue({ a, b -> a.scheduledAt.compareTo(b.scheduledAt) })

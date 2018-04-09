@@ -5,13 +5,10 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.io.Output
 import javassist.ClassPool
 import javassist.CtClass
-import java.io.ByteArrayInputStream
-import java.lang.StringBuilder
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
 import java.security.ProtectionDomain
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 
 class KryoHookAgent {
     companion object {
@@ -69,7 +66,7 @@ object KryoHook : ClassFileTransformer {
             return null
         }
         return try {
-            val clazz = classPool.makeClass(ByteArrayInputStream(classfileBuffer))
+            val clazz = classPool.makeClass(classfileBuffer.inputStream())
             instrumentClass(clazz)?.toBytecode()
         } catch (throwable: Throwable) {
             println("SOMETHING WENT WRONG")

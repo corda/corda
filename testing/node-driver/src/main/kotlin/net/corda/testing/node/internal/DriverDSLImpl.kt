@@ -73,6 +73,7 @@ import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -101,7 +102,7 @@ class DriverDSLImpl(
     override val shutdownManager get() = _shutdownManager!!
     private val cordappPackages = extraCordappPackagesToScan + getCallerPackage()
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
-    private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
+    private val countObservables = ConcurrentHashMap<CordaX500Name, Observable<Int>>()
     private val nodeNames = mutableSetOf<CordaX500Name>()
     /**
      * Future which completes when the network map is available, whether a local one or one from the CZ. This future acts
@@ -246,7 +247,8 @@ class DriverDSLImpl(
                 configOverrides = configOf(
                         "p2pAddress" to "localhost:1222", // required argument, not really used
                         "compatibilityZoneURL" to compatibilityZoneURL.toString(),
-                        "myLegalName" to providedName.toString())
+                        "myLegalName" to providedName.toString(),
+                        "devMode" to false)
         ))
 
         config.corda.certificatesDirectory.createDirectories()
@@ -574,15 +576,17 @@ class DriverDSLImpl(
     }
 
     /**
+     * @nodeName the name of the node which performs counting
      * @param initial number of nodes currently in the network map of a running node.
      * @param networkMapCacheChangeObservable an observable returning the updates to the node network map.
      * @return a [ConnectableObservable] which emits a new [Int] every time the number of registered nodes changes
      *   the initial value emitted is always [initial]
      */
-    private fun nodeCountObservable(initial: Int, networkMapCacheChangeObservable: Observable<NetworkMapCache.MapChange>):
+    private fun nodeCountObservable(nodeName: CordaX500Name, initial: Int, networkMapCacheChangeObservable: Observable<NetworkMapCache.MapChange>):
             ConnectableObservable<Int> {
         val count = AtomicInteger(initial)
         return networkMapCacheChangeObservable.map {
+            log.debug("nodeCountObservable for '$nodeName' received '$it'")
             when (it) {
                 is NetworkMapCache.MapChange.Added -> count.incrementAndGet()
                 is NetworkMapCache.MapChange.Removed -> count.decrementAndGet()
@@ -598,8 +602,9 @@ class DriverDSLImpl(
      */
     private fun allNodesConnected(rpc: CordaRPCOps): CordaFuture<Int> {
         val (snapshot, updates) = rpc.networkMapFeed()
-        val counterObservable = nodeCountObservable(snapshot.size, updates)
-        countObservables[rpc.nodeInfo().legalIdentities[0].name] = counterObservable
+        val nodeName = rpc.nodeInfo().legalIdentities[0].name
+        val counterObservable = nodeCountObservable(nodeName, snapshot.size, updates)
+        countObservables[nodeName] = counterObservable
         /* TODO: this might not always be the exact number of nodes one has to wait for,
          * for example in the following sequence
          * 1 start 3 nodes in order, A, B, C.
@@ -610,6 +615,7 @@ class DriverDSLImpl(
 
         // This is an observable which yield the minimum number of nodes in each node network map.
         val smallestSeenNetworkMapSize = Observable.combineLatest(countObservables.values.toList()) { args: Array<Any> ->
+            log.debug("smallestSeenNetworkMapSize for '$nodeName' is: ${args.toList()}")
             args.map { it as Int }.min() ?: 0
         }
         val future = smallestSeenNetworkMapSize.filter { it >= requiredNodes }.toFuture()
@@ -700,7 +706,8 @@ class DriverDSLImpl(
                         if (it == processDeathFuture) {
                             throw ListenProcessDeathException(config.corda.p2pAddress, process)
                         }
-                        processDeathFuture.cancel(false)
+                        // Will interrupt polling for process death as this is no longer relevant since the process been successfully started and reflected itself in the NetworkMap.
+                        processDeathFuture.cancel(true)
                         log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: $webAddress")
                         OutOfProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
                     }
@@ -840,7 +847,6 @@ class DriverDSLImpl(
                     arguments = arguments,
                     jdwpPort = debugPort,
                     extraJvmArguments = extraJvmArguments + listOfNotNull(jolokiaAgent),
-                    errorLogPath = config.corda.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "error.log",
                     workingDirectory = config.corda.baseDirectory,
                     maximumHeapSize = maximumHeapSize
             )
@@ -857,7 +863,6 @@ class DriverDSLImpl(
                             "-Dname=node-${handle.p2pAddress}-webserver",
                             "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
                     ),
-                    errorLogPath = Paths.get("error.$className.log"),
                     workingDirectory = null,
                     maximumHeapSize = maximumHeapSize
             )

@@ -23,12 +23,16 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.cordapp.CordappLoader
+import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.*
-import net.corda.node.services.config.shell.shellUser
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.shell.localShellUser
+import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -159,7 +163,9 @@ open class Node(configuration: NodeConfiguration,
         val securityManagerConfig = configuration.security?.authService ?:
         SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
-        securityManager = RPCSecurityManagerImpl(if (configuration.shouldInitCrashShell()) securityManagerConfig.copyWithAdditionalUser(configuration.shellUser()) else securityManagerConfig)
+        securityManager = with(RPCSecurityManagerImpl(securityManagerConfig)) {
+            if (configuration.shouldInitCrashShell()) RPCSecurityManagerWithAdditionalUser(this, localShellUser()) else this
+        }
 
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker(networkParameters)
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
@@ -281,7 +287,11 @@ open class Node(configuration: NodeConfiguration,
         // Start up the MQ clients.
         rpcMessagingClient?.run {
             runOnStop += this::close
-            start(rpcOps, securityManager)
+            when (rpcOps) {
+                // not sure what this RPCOps base interface is for
+                is SecureCordaRPCOps -> start(RpcExceptionHandlingProxy(rpcOps), securityManager)
+                else -> start(rpcOps, securityManager)
+            }
         }
         verifierMessagingClient?.run {
             runOnStop += this::stop

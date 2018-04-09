@@ -1,11 +1,13 @@
 Changelog
 =========
 
+Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
+release, see :doc:`upgrade-notes`.
+
 Unreleased
 ----------
 
-Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
-from the previous milestone release.
+* Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
 
 * Serializing an inner class (non-static nested class in Java, inner class in Kotlin) will be rejected explicitly by the serialization
   framework. Prior to this change it didn't work, but the error thrown was opaque (complaining about too few arguments
@@ -34,11 +36,16 @@ from the previous milestone release.
 
 * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
 
+* Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
+
 * java.math.BigInteger serialization support added.
 
 * java.security.cert.CRLReason added to the default Whitelist.
 
 * java.security.cert.X509CRL serialization support added.
+
+* Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
+  To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
 
 .. _changelog_v3:
 
