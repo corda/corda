@@ -6,11 +6,11 @@ Release notes
 Release 3.1
 -----------
 
-Alas software is never delivered as we would wish, functioning perfectly under all edge cases; as
-humans we have to settle for a mere "*as good as we can make it*". Thus, having had a month in the
-hands of our users we are delivering Corda 3.1 in response to a few critical issues that unfortunately
-weren't caught prior to release. As ever, our commitment to delivering a robust, quality, open source
-DLT platform that is activly maintained remains strong.
+It's been a little under a month since the release of Corda 3.0. As with all software projects released since
+the dawn of time, following shortly afterward its users have unearthered a few issues that, in some cases,
+detract greatly from the developer and user experience; leaving it short of the extermely high standard we
+set ourselves. As such, we are delivering Corda 3.1 to address these and reafirm our commitment to delivering a robust,
+high quality, open source DLT platform.
 
 Special Thanks
 ~~~~~~~~~~~~~~
@@ -24,10 +24,12 @@ Major Bug Fixes
 
 * **Corda Serialization fails with "Unknown constant pool tag"**
 
-  This issue is most often seen when running a CordApp with a Rest or Web API deployed using a ``Spring Boot``
-  wrapper. The fundamental cause was ``Corda 3.0`` shipping with an out of date dependency on
-  a `Java Classpath scanning library <https://github.com/lukehutch/fast-classpath-scanner>`_. As such, we've
-  updated our dependent version.
+  This issue is most often seen when running a CordApp with a Rest API using / provided by ``Spring Boot``.
+
+  The fundamental cause was ``Corda 3.0`` shipping with an out of date dependency on a
+  `Java Classpath scanning library <https://github.com/lukehutch/fast-classpath-scanner>`_ where the manifesting
+  bug was aleady fixed in a released version newer than our dependency. In response, we've updated our dependent version
+  to one including that bugfix.
 
 * **Potential privacy leak within exception handling over RPC**
 
@@ -38,11 +40,11 @@ Major Bug Fixes
 
 * **Versioning number endian swap**
 
-  Those eagle eyed amongst you will have noticed for the 3.0 release we altered the versioning scheme from previous
-  releases (1.0.0, 2.0.0, etc) to ``corda-3.0``. The reasons for this was an R3 internal desire to distinguish
-  between *Corda*, the open source project, and *R3 Corda*, the enterprise equivalent. However, we have heard the complaints
-  and feel the pain that's caused with various tools not coping well with that. As such, from now on the versioning scheme
-  will be inverted, thus this release is ``3.1-corda``.
+  Those eagle eyed amongst you will have noticed for the 3.0 release we altered the versioning scheme from that used by previous Corda
+  releases (1.0.0, 2.0.0, etc) with the addition of an appended product name, resulting in ``corda-3.0``. The reason for this was an
+  R3 internal desire to distinguish between *Corda*, the open source project, and *R3 Corda*, the enterprise equivalent.
+  However, we have heard the complaints and feel the pain that's caused with various tools not coping well with this change.
+  As such, from now on the versioning scheme will be inverted, with this release being ``3.1-corda``.
 
   As to those curious as to why we dropped the patch number from the version string, the reason is very simple, there won't
   be any patches applied to a release of Corda. Either a release will be a collection of bug fixes and non API breaking
@@ -53,15 +55,20 @@ Major Bug Fixes
 Issues Fixed
 ~~~~~~~~~~~~
 
-* `CORDA-1295 <https://r3-cev.atlassian.net/browse/CORDA-1295>`_
-* `CORDA-1276 <https://r3-cev.atlassian.net/browse/CORDA-1276>`_
-* `CORDA-1264 <https://r3-cev.atlassian.net/browse/CORDA-1264>`_
-* `CORDA-1267 <https://r3-cev.atlassian.net/browse/CORDA-1267>`_
-* `CORDA-1178 <https://r3-cev.atlassian.net/browse/CORDA-1178>`_
-* ENT-1686
-* ENT-1564
-* ENT-1665
-* ENT-1668
+Tracked on public Jira
+
+* `CORDA-1295 <https://r3-cev.atlassian.net/browse/CORDA-1295>`_ - RPC server leaks if a single client submits a lot of requests over time
+* `CORDA-1276 <https://r3-cev.atlassian.net/browse/CORDA-1276>`_ - Flaky startup, no db transaction in context, when using postgresql
+* `CORDA-1264 <https://r3-cev.atlassian.net/browse/CORDA-1264>`_ - Ensure RPC communication doesn't leak server-side errors
+* `CORDA-1267 <https://r3-cev.atlassian.net/browse/CORDA-1267>`_ - Corda's JPA classes should not be final or have final methods
+* `CORDA-1178 <https://r3-cev.atlassian.net/browse/CORDA-1178>`_ - Backport api-scanner changes
+
+Tracked internally
+
+* Misleading error message shown when node is restarted after the flag day
+* Hash constraints not working from Corda 3.0 onwards
+* Serialisation Error between Corda 3 RC01 and Corda 3
+* Nodes don't start when network-map/doorman is down
 
 .. _release_notes_v3_0:
 
