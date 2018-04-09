@@ -48,7 +48,7 @@ class NetworkMapClient(compatibilityZoneURL: URL, val trustedRoot: X509Certifica
         val connection = networkMapUrl.openHttpConnection()
         val signedNetworkMap = connection.responseAs<SignedNetworkMap>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustedRoot)
-        val timeout = connection.cacheControl().maxAgeSeconds().seconds
+        val timeout = connection.cacheControl.maxAgeSeconds().seconds
         logger.trace { "Fetched network map update from $networkMapUrl successfully: $networkMap" }
         return NetworkMapResponse(networkMap, timeout)
     }
