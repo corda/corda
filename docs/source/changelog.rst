@@ -24,7 +24,7 @@ Version 3.1
   referenced in a transaction were deployed on the node.
 
 * Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
-all the needed network data, waiting in the background for network map to become available.
+  all the needed network data, waiting in the background for network map to become available.
 
 .. _changelog_v3:
 

@@ -6,11 +6,8 @@ Release notes
 Release 3.1
 -----------
 
-It's been a little under a month since the release of Corda 3.0. As with all software projects released since
-the dawn of time, following shortly afterward its users have unearthered a few issues that, in some cases,
-detract greatly from the developer and user experience; leaving it short of the extermely high standard we
-set ourselves. As such, we are delivering Corda 3.1 to address these and reafirm our commitment to delivering a robust,
-high quality, open source DLT platform.
+This rapid follow-up to Corda 3.0 corrects an issue discovered by some users of Spring Boot and a number of other
+smaller issues discovered post release. All users are recommended to upgrade.
 
 Special Thanks
 ~~~~~~~~~~~~~~
@@ -26,25 +23,25 @@ Major Bug Fixes
 
   This issue is most often seen when running a CordApp with a Rest API using / provided by ``Spring Boot``.
 
-  The fundamental cause was ``Corda 3.0`` shipping with an out of date dependency on a
-  `Java Classpath scanning library <https://github.com/lukehutch/fast-classpath-scanner>`_ where the manifesting
-  bug was aleady fixed in a released version newer than our dependency. In response, we've updated our dependent version
-  to one including that bugfix.
+  The fundamental cause was ``Corda 3.0`` shipping with an out of date dependency for the
+  `fast-classpath-scanner <https://github.com/lukehutch/fast-classpath-scanner>`_ library, where the manifesting
+  bug was already fixed in a released version newer than our dependant one. In response, we've updated our dependent
+  version to one including that bug fix.
 
 * **Potential privacy leak within exception handling over RPC**
 
-  Due to the way Exceptions in Corda are propagated across RPC calls from one node to another there was potential
+  Due to the way exceptions in Corda are propagated across RPC calls from a node to the invoking client here was potential
   for information to be leaked from the failing node to the caller within the serialised Stack Trace.
   Masking is now applied to ensure clearer delineation of where helpful errors are returned to the caller but specific
-  information retained within the Node handling the failing RPC call.
+  information retained within the node handling the failing RPC call.
 
-* **Versioning number endian swap**
+* **Corda Versioning**
 
   Those eagle eyed amongst you will have noticed for the 3.0 release we altered the versioning scheme from that used by previous Corda
-  releases (1.0.0, 2.0.0, etc) with the addition of an appended product name, resulting in ``corda-3.0``. The reason for this was an
-  R3 internal desire to distinguish between *Corda*, the open source project, and *R3 Corda*, the enterprise equivalent.
-  However, we have heard the complaints and feel the pain that's caused with various tools not coping well with this change.
-  As such, from now on the versioning scheme will be inverted, with this release being ``3.1-corda``.
+  releases (1.0.0, 2.0.0, etc) with the addition of an prepended product name, resulting in ``corda-3.0``. The reason for this was so
+  that developers could clearly distinguish between the base open source platform and any distributions basedon on Corda that may
+  be shipped in the future (including from R3), However, we have heard the complaints and feel the pain that's caused with various
+  tools not coping well with this change. As such, from now on the versioning scheme will be inverted, with this release being ``3.1-corda``.
 
   As to those curious as to why we dropped the patch number from the version string, the reason is very simple, there won't
   be any patches applied to a release of Corda. Either a release will be a collection of bug fixes and non API breaking
