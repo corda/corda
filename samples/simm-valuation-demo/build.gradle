@@ -75,7 +75,7 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Scenarios / End-to-End Tests
-    testCompile "${corda_release_group}.behave:behave-scenario-api:${corda_release_version}"
+    testCompile "${corda_release_group}.behave:corda-behave-api:${corda_release_version}"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
