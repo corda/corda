@@ -7,6 +7,7 @@ import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
 import net.corda.core.messaging.CordaRPCOps
 import org.assertj.core.api.Assertions.assertThat
+import java.time.Duration
 
 class ScenarioState {
 
@@ -38,7 +39,7 @@ class ScenarioState {
         return nodes.firstOrNull { it.name == nodeName(name) } ?: newNode(name)
     }
 
-    fun ensureNetworkIsRunning() {
+    fun ensureNetworkIsRunning(timeout: Duration? = null) {
         if (network != null) {
             // Network is already running
             return
@@ -55,7 +56,7 @@ class ScenarioState {
         }
         network = networkBuilder.generate()
         network?.start()
-        assertThat(network?.waitUntilRunning()).isTrue()
+        assertThat(network?.waitUntilRunning(timeout)).isTrue()
     }
 
     inline fun <T> withNetwork(action: ScenarioState.() -> T): T {
