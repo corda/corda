@@ -44,9 +44,7 @@ class Cash(state: ScenarioState) : Substeps(state) {
                 if (notaryList.isEmpty())
                     throw CordaRuntimeException("No Notaries configured in this network.")
                 val notaryParty = notaryList[0]
-
-                return@withClientProxy it.startFlow(::CashIssueFlow, Amount(amount, Currency.getInstance(currency)), OpaqueBytes.of(1), notaryParty) as SignedTransaction
-                //.returnValue.getOrThrow().stx
+                return@withClientProxy it.startFlow(::CashIssueFlow, Amount(amount, Currency.getInstance(currency)), OpaqueBytes.of(1), notaryParty).returnValue.getOrThrow().stx //as SignedTransaction
             } catch (ex: Exception) {
                 log.warn("Failed to issue $amount $currency cash to $issueToNode", ex)
                 throw ex
@@ -55,13 +53,13 @@ class Cash(state: ScenarioState) : Substeps(state) {
     }
 
     fun transferCash(senderNode: String, sendToNode: String, amount: Long, currency: String):  SignedTransaction {
-        return withClient(senderNode) {
+        return withClientProxy(senderNode) {
             try {
                 val sendToX500Name = CordaX500Name("EntityB", "London", "GB")
                 val sendToParty = node(sendToNode).rpc {
                     it.wellKnownPartyFromX500Name(sendToX500Name) ?: throw IllegalStateException("Unable to locate $sendToX500Name in Network Map Service")
                 }
-                return@withClient it.startFlow(::CashPaymentFlow, Amount(amount, Currency.getInstance(currency)), sendToParty).returnValue.getOrThrow().stx
+                return@withClientProxy it.startFlow(::CashPaymentFlow, Amount(amount, Currency.getInstance(currency)), sendToParty).returnValue.getOrThrow().stx
             } catch (ex: Exception) {
                 log.warn("Failed to transfer $amount cash from $senderNode to $sendToNode", ex)
                 throw ex
