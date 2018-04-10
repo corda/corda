@@ -97,12 +97,21 @@ class MockScheduledFlowRepository : ScheduledFlowRepository {
         }
     }
 
-    override fun merge(value: ScheduledStateRef) {
+    override fun merge(value: ScheduledStateRef): Boolean {
+        var result = false
+        if (map.containsKey(value.ref)) {
+            result = true
+        }
         map.put(value.ref, value)
+        return result
     }
 
-    override fun delete(key: StateRef) {
-        map.remove(key)
+    override fun delete(key: StateRef): Boolean {
+        if (map.containsKey(key)) {
+            map.remove(key)
+            return true
+        }
+        return false
     }
 }
 

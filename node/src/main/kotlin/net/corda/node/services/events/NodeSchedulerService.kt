@@ -176,7 +176,10 @@ class NodeSchedulerService(private val clock: CordaClock,
 
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
-        schedulerRepo.merge(action)
+        if (!schedulerRepo.merge(action)) {
+            // Only increase the number of unfinished schedules if the state didn't already exist on the queue
+            unfinishedSchedules.countUp()
+        }
         mutex.locked {
             if (action.scheduledAt < nextScheduledAction?.scheduledAt ?: Instant.MAX) {
                 // We are earliest
@@ -192,7 +195,10 @@ class NodeSchedulerService(private val clock: CordaClock,
     override fun unscheduleStateActivity(ref: StateRef) {
         log.trace { "Unschedule $ref" }
         mutex.locked {
-            schedulerRepo.delete(ref)
+            if (schedulerRepo.delete(ref)) {
+                // Only reduce the number of unfinished schedules if the state was still on the queue
+                unfinishedSchedules.countDown()
+            }
             if (nextScheduledAction != null) {
                 if (nextScheduledAction?.ref == ref) {
                     rescheduleWakeUp()
@@ -254,10 +260,7 @@ class NodeSchedulerService(private val clock: CordaClock,
                         flowName = scheduledFlow.javaClass.name
                         // TODO refactor the scheduler to store and propagate the original invocation context
                         val context = InvocationContext.newInstance(InvocationOrigin.Scheduled(scheduledState))
-                        val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
-                        future.then {
-                            unfinishedSchedules.countDown()
-                        }
+                        flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
                     }
                 }
             } catch (e: Exception) {
@@ -273,11 +276,9 @@ class NodeSchedulerService(private val clock: CordaClock,
             // need to remove us from those scheduled, but only if we are still next
             if (nextScheduledAction != null && nextScheduledAction === scheduledState) {
                 if (scheduledActivity == null) {
-                    log.info("Scheduled state $scheduledState has rescheduled to never.")
                     unfinishedSchedules.countDown()
                     schedulerRepo.delete(scheduledState.ref)
                 } else if (scheduledActivity.scheduledAt.isAfter(clock.instant())) {
-                    log.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
                     val newState = ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
                     schedulerRepo.merge(newState)
                 } else {
@@ -290,6 +291,7 @@ class NodeSchedulerService(private val clock: CordaClock,
                         }
                         else -> {
                             log.trace { "Scheduler starting FlowLogic $flowLogic" }
+                            unfinishedSchedules.countDown()
                             schedulerRepo.delete(scheduledState.ref)
                             flowLogic
                         }
