@@ -56,7 +56,7 @@ Click "Launch Instances".
 
 Click on the link to go to the Instances pages in the AWS console where after a few minutes you will be able to see your instance running.
 
-.. image:: resources/aws-instances-connect.png
+.. image:: resources/aws-instances.png
 
 **STEP 2: Set up static IP address**
 
@@ -66,41 +66,17 @@ Click on the link to go to the Instances pages in the AWS console where after a 
 
 **STEP 3: Connect to your VM and set up the environment**
 
-Click on "Connect" and follow the instructions to connect to your instance using ssh.
+In the instances console click on "Connect" and follow the instructions to connect to your instance using ssh.
 
-.. image:: resources/aws-instances.png
+.. image:: resources/aws-instances-connect.png
 
 
-We need a few utilities so go ahead and install the following with apt-get:
+Once you are logged in to a shell on the instance we need a few utilities so go ahead and install the following with apt-get:
 
 .. code:: bash
 
     sudo apt-get update
     sudo apt-get install -y unzip  screen wget openjdk-8-jdk
-
-
-We need to configure the firewall to allow Corda traffic.
-
-Back in the portal click on networking:
-
-.. image:: resources/azure-networking.png
-   :scale: 50 %
-
-Click on add inbound port rule
-
-.. image:: resources/azure-port-rule.png
-   :scale: 50 %
-
-
-Add 3 rules with the following port, name and priorities:
-
-.. code:: bash
-
-    Port range: 10002, Priority: 1041  Name: Port_10002
-    Port range: 10003, Priority: 1042  Name: Port_10003
-    Port range: 8080, Priority: 1043  Name: Port_8080
-
-.. note:: The priority has to be unique number in the range 900 (highest) and 4096 (lowest) priority.
 
 
 **STEP 4: Download and set up your Corda node**
