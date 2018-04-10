@@ -28,16 +28,6 @@ Major Bug Fixes
   bug was already fixed in a released version newer than our dependant one. In response, we've updated our dependent
   version to one including that bug fix.
 
-* **Potential privacy leak within exception handling over RPC**
-
-  Prior to this change all exceptions would be propagated back to the calling RPC client. This would include the
-  complete stack trace, effectively leaking server side information to a client. Whilst RPC calls are permissioned,
-  that doesn't guarantee a failure and the resultant stack wouldn't reveal some information, such as a type being
-  whitelisted or not, to the caller.
-
-  The origional information is still logged to a node's logfile. However, the information sent to the calling
-  client is now obfuscated.
-
 * **Corda Versioning**
 
   Those eagle eyed amongst you will have noticed for the 3.0 release we altered the versioning scheme from that used by previous Corda
@@ -59,7 +49,6 @@ Tracked on public Jira
 
 * `CORDA-1295 <https://r3-cev.atlassian.net/browse/CORDA-1295>`_ - RPC server leaks if a single client submits a lot of requests over time
 * `CORDA-1276 <https://r3-cev.atlassian.net/browse/CORDA-1276>`_ - Flaky startup, no db transaction in context, when using postgresql
-* `CORDA-1264 <https://r3-cev.atlassian.net/browse/CORDA-1264>`_ - Ensure RPC communication doesn't leak server-side errors
 * `CORDA-1267 <https://r3-cev.atlassian.net/browse/CORDA-1267>`_ - Corda's JPA classes should not be final or have final methods
 * `CORDA-1178 <https://r3-cev.atlassian.net/browse/CORDA-1178>`_ - Backport api-scanner changes
 
