@@ -21,11 +21,27 @@ Browse to `https://console.aws.amazon.com` and log in with your AWS account.
 
 **STEP 1: Launch a new virtual machine**
 
-Click on Launch a virtual machgine with EC2.
+Click on Launch a virtual machine with EC2.
 
 .. image:: resources/aws-launch.png
 
+In the quick start wizard scroll down and select "Ubuntu Server 16.04 LTS" as the Amazon Machine Image (AMI).
 
+.. image:: resources/aws_select_ubuntu.png
+
+Select the instance type (for example t2.xlarge). 
+
+.. image:: resources/aws-instance-type.png
+
+
+
+
+
+Click on the Review and Launch button then if everything looks ok click Launch.
+
+You will be prompted to set up keys to securely access the VM remotely over ssh. Select "Create a new key pair" from the drop down and enter a name for the key file. Click download to get the keys and keep them safe on your local machine. 
+
+.. image:: resources/aws-keys.png
 
 
 **STEP 2: Launch the VM**
