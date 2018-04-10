@@ -35,23 +35,24 @@ Select the instance type (for example t2.xlarge).
 
 Lets configure a couple of other settings before we review and launch
 
-Under the storage tab increase the storage to 40GB:
+Under the storage tab (Step 4) increase the storage to 40GB:
 
 .. image:: resources/aws-storage.png
 
+Next we consifure the security group (Step 6) to open the firewall ports which Corda uses.
 
+.. image:: resources/aws-firewall.png
 
-.. image:: resources/aws-firewayy.png
-
+Add a firewall rule for port range 10002-10003 and allow connection from Anywhere. Add another rule for the webserver on port 8080. 
 
 Click on the Review and Launch button then if everything looks ok click Launch.
 
 You will be prompted to set up keys to securely access the VM remotely over ssh. Select "Create a new key pair" from the drop down and enter a name for the key file. Click download to get the keys and keep them safe on your local machine. 
 
 .. image:: resources/aws-keys.png
-   :scale: 50 %
+   :width: 200 px
 
-Click launch.
+Click "Launch Instances".
 
 
 
