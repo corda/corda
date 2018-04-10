@@ -13,6 +13,8 @@ package com.r3.corda.networkmanage.doorman
 import com.jcabi.manifests.Manifests
 import com.r3.corda.networkmanage.common.utils.*
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
+import net.corda.core.crypto.CordaSecurityProvider
+import net.corda.core.crypto.Crypto
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -24,6 +26,7 @@ import kotlin.system.exitProcess
 private val logger = LoggerFactory.getLogger("com.r3.corda.networkmanage.doorman")
 
 fun main(args: Array<String>) {
+    Crypto.findProvider(CordaSecurityProvider.PROVIDER_NAME) // Required to register Providers first thing on boot.
     if (Manifests.exists("Doorman-Version")) {
         println("Version: ${Manifests.read("Doorman-Version")}")
     }
