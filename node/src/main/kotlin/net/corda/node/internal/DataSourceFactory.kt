@@ -58,7 +58,7 @@ object DataSourceFactory {
     }
 
     fun createDatasourceFromDriverJarFolders(dataSourceProperties: Properties, baseClassLoader: ClassLoader, driverJarsPath: List<Path>): DataSource {
-        return URLClassLoader(driverJarsPath.flatMap { Files.newDirectoryStream(it, "*.jar") }.map { it.toUri().toURL() }.toTypedArray(), baseClassLoader).use { driversClassLoader ->
+        return URLClassLoader(driverJarsPath.flatMap { Files.newDirectoryStream(it, "*.jar") }.map { it.toUri().toURL() }.toTypedArray(), baseClassLoader).let { driversClassLoader ->
             val dataSourceClassName = dataSourceProperties["dataSourceClassName"] as String?
             val dataSourceClass = driversClassLoader.loadClass(dataSourceClassName)
             val dataSourceInstance = dataSourceClass.newInstance() as DataSource
