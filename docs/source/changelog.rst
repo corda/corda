@@ -7,8 +7,6 @@ from the previous milestone release.
 Unreleased
 ----------
 
-* Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
-
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
   .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
