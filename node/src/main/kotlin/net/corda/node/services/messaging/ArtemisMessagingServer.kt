@@ -68,11 +68,12 @@ import javax.security.auth.spi.LoginModule
  */
 @ThreadSafe
 class ArtemisMessagingServer(private val config: NodeConfiguration,
-                             private val messagingServerAddress:NetworkHostAndPort,
+                             private val messagingServerAddress: NetworkHostAndPort,
                              val maxMessageSize: Int) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
     }
+
     private class InnerState {
         var running = false
     }

@@ -160,14 +160,13 @@ open class Node(configuration: NodeConfiguration,
                                       networkParameters: NetworkParameters): MessagingService {
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
-        val securityManagerConfig = configuration.security?.authService ?:
-        SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
+        val securityManagerConfig = configuration.security?.authService ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
         securityManager = with(RPCSecurityManagerImpl(securityManagerConfig)) {
             if (configuration.shouldInitCrashShell()) RPCSecurityManagerWithAdditionalUser(this, localShellUser()) else this
         }
 
-        if(!configuration.messagingServerExternal) {
+        if (!configuration.messagingServerExternal) {
             val brokerBindAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
             messageBroker = ArtemisMessagingServer(configuration, brokerBindAddress, MAX_FILE_SIZE)
         }
@@ -188,7 +187,7 @@ open class Node(configuration: NodeConfiguration,
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }
         verifierMessagingClient = when (configuration.verifierType) {
-            VerifierType.OutOfProcess ->  throw IllegalArgumentException("OutOfProcess verifier not supported") //VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
+            VerifierType.OutOfProcess -> throw IllegalArgumentException("OutOfProcess verifier not supported") //VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
             VerifierType.InMemory -> null
         }
         require(info.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
