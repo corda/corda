@@ -54,74 +54,22 @@ You will be prompted to set up keys to securely access the VM remotely over ssh.
 
 Click "Launch Instances".
 
+Click on the link to go to the Instances pages in the AWS console where after a few minutes you will be able to see your instance running.
+
+.. image:: resources/aws-instances-connect.png
+
+**STEP 2: Set up static IP address**
 
 
-**STEP 2: Launch the VM**
-
-At the top of the left sidenav click on the button with the green cross "Create a resource".
-
-In this example we are going to use an Ubuntu server so select the "Ubuntu Server 17.10 VM" option.
-
-.. image:: resources/azure-select-ubuntu.png
-   :scale: 50 %
-
-
-Fill in the form:
-
-.. image:: resources/azure-vm-form.png
-   :scale: 50 %
-
-Add a username (to log into the VM) and choose and enter a password.
-
-Choose the resource group we created earlier from the "Use existing" dropdown.
-
-Select a cloud region geographically near to your location to host your VM.
-
-Click on OK.
-
-Choose the "D4S_V3 Standard" option and click "Select":
-
-.. image:: resources/azure-vm-spec.png
-   :scale: 50 %
-
-Click on "Public IP address" to open the settings panel
-
-.. image:: resources/azure-vm-settings.png
-   :scale: 50 %
-
-Set the IP address to "Static" under Assignment. (Note this is so the IP address for your node does not change rapidly and need to update the network map.)
-
-.. image:: resources/azure-set-static-ip.png
-   :scale: 50 %
-
-Click OK and OK again on the Settings panel.
-
-.. image:: resources/azure-settings-ok.png
-   :scale: 50 %
-
-
-Click Create and wait a few minutes for your instance to provision
-and start running.
-
-.. image:: resources/azure-create-vm.png
-   :scale: 50 %
 
 
 
 **STEP 3: Connect to your VM and set up the environment**
 
-Once your instance is running click on the "Connect" button and copy the ssh command:
+Click on "Connect" and follow the instructions to connect to your instance using ssh.
 
-.. image:: resources/azure-connect.png
-   :scale: 50 %
+.. image:: resources/aws-instances.png
 
-.. image:: resources/azure-connect-ssh.png
-   :scale: 50 %
-
-Enter the ssh command into your terminal. At the prompt to continue connecting type yes and then enter the password you configured earlier to log into the remote VM:
-
-.. image:: resources/azure-shell.png
-   :scale: 50 %
 
 We need a few utilities so go ahead and install the following with apt-get:
 
