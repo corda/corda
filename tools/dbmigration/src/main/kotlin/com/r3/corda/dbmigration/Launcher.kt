@@ -22,7 +22,7 @@ import net.corda.core.internal.MigrationHelpers
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.schemas.MappedSchema
-import net.corda.node.internal.DataSourceFactory.createDatasourceFromDriverJars
+import net.corda.node.internal.DataSourceFactory.createDatasourceFromDriverJarFolders
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.configOf
@@ -108,7 +108,7 @@ fun main(args: Array<String>) {
     }
 }
 
-data class Configuration(val dataSourceProperties: Properties, val database: DatabaseConfig)
+data class Configuration(val dataSourceProperties: Properties, val database: DatabaseConfig, val jarDirs: List<String> = emptyList())
 
 private fun runCommand(options: OptionSet, parser: OptionParser) {
 
@@ -222,8 +222,8 @@ private fun getMigrationOutput(baseDirectory: Path, options: OptionSet): Writer 
 }
 
 private fun runWithDataSource(config: Configuration, baseDirectory: Path, classLoader: ClassLoader, withDatasource: (DataSource) -> Unit) {
-    val driversFolder = baseDirectory / "drivers"
-    return withDatasource(createDatasourceFromDriverJars(config.dataSourceProperties, classLoader, driversFolder))
+    val driversFolder = (baseDirectory / "drivers")
+    return withDatasource(createDatasourceFromDriverJarFolders(config.dataSourceProperties, classLoader, listOf(driversFolder) + config.jarDirs.map { Paths.get(it) }))
 }
 
 private fun errorAndExit(message: String?) {

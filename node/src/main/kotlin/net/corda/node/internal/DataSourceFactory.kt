@@ -14,7 +14,6 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import com.zaxxer.hikari.util.PropertyElf
 import net.corda.core.internal.declaredField
-import net.corda.core.internal.div
 import org.h2.engine.Database
 import org.h2.engine.Engine
 import org.slf4j.LoggerFactory
@@ -58,8 +57,8 @@ object DataSourceFactory {
         }
     }
 
-    fun createDatasourceFromDriverJars(dataSourceProperties: Properties, baseClassLoader: ClassLoader, driverJarsPath: Path): DataSource {
-        return URLClassLoader(Files.newDirectoryStream(driverJarsPath, "*.jar").map { it.toUri().toURL() }.toTypedArray(), baseClassLoader).use { driversClassLoader ->
+    fun createDatasourceFromDriverJarFolders(dataSourceProperties: Properties, baseClassLoader: ClassLoader, driverJarsPath: List<Path>): DataSource {
+        return URLClassLoader(driverJarsPath.flatMap { Files.newDirectoryStream(it, "*.jar") }.map { it.toUri().toURL() }.toTypedArray(), baseClassLoader).use { driversClassLoader ->
             val dataSourceClassName = dataSourceProperties["dataSourceClassName"] as String?
             val dataSourceClass = driversClassLoader.loadClass(dataSourceClassName)
             val dataSourceInstance = dataSourceClass.newInstance() as DataSource
@@ -75,8 +74,8 @@ object DataSourceFactory {
         }
     }
 
-    fun createHikariDatasourceFromDriverJars(dataSourceProperties: Properties, baseClassLoader: ClassLoader, driverJarsPath: Path): DataSource {
-        val dataSource = createDatasourceFromDriverJars(dataSourceProperties, baseClassLoader, driverJarsPath)
+    fun createHikariDatasourceFromDriverJarFolders(dataSourceProperties: Properties, baseClassLoader: ClassLoader, driverJarsPath: List<Path>): DataSource {
+        val dataSource = createDatasourceFromDriverJarFolders(dataSourceProperties, baseClassLoader, driverJarsPath)
         val cfg = HikariConfig(dataSourceProperties)
         cfg.dataSource = dataSource
         return HikariDataSource(cfg)
