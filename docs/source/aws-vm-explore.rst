@@ -33,8 +33,15 @@ Select the instance type (for example t2.xlarge).
 
 .. image:: resources/aws-instance-type.png
 
+Lets configure a couple of other settings before we review and launch
+
+Under the storage tab increase the storage to 40GB:
+
+.. image:: resources/aws-storage.png
 
 
+
+.. image:: resources/aws-firewayy.png
 
 
 Click on the Review and Launch button then if everything looks ok click Launch.
@@ -42,6 +49,10 @@ Click on the Review and Launch button then if everything looks ok click Launch.
 You will be prompted to set up keys to securely access the VM remotely over ssh. Select "Create a new key pair" from the drop down and enter a name for the key file. Click download to get the keys and keep them safe on your local machine. 
 
 .. image:: resources/aws-keys.png
+   :scale: 50 %
+
+Click launch.
+
 
 
 **STEP 2: Launch the VM**
