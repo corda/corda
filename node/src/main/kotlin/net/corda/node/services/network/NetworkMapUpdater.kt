@@ -16,6 +16,12 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
 import net.corda.nodeapi.internal.network.*
+import net.corda.nodeapi.internal.NodeInfoAndSigned
+import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import rx.Subscription
 import rx.subjects.PublishSubject
 import java.nio.file.Path
@@ -154,7 +160,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                     .copyTo(baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME, StandardCopyOption.REPLACE_EXISTING)
             networkMapClient.ackNetworkParametersUpdate(sign(parametersHash))
         } else {
-            throw throw OutdatedNetworkParameterHashException(parametersHash, newParametersHash)
+            throw IllegalArgumentException("Refused to accept parameters with hash $parametersHash because network map " +
+                    "advertises update with hash $newParametersHash. Please check newest version")
         }
     }
 }

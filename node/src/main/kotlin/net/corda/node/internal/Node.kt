@@ -295,11 +295,7 @@ open class Node(configuration: NodeConfiguration,
         // Start up the MQ clients.
         rpcMessagingClient?.run {
             runOnStop += this::close
-            when (rpcOps) {
-            // not sure what this RPCOps base interface is for
-                is SecureCordaRPCOps -> start(RpcExceptionHandlingProxy(rpcOps), securityManager)
-                else -> start(rpcOps, securityManager)
-            }
+            start(rpcOps, securityManager)
         }
         verifierMessagingClient?.run {
             runOnStop += this::stop
