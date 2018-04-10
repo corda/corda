@@ -21,7 +21,7 @@ Major Bug Fixes
 
 * **Corda Serialization fails with "Unknown constant pool tag"**
 
-  This issue is most often seen when running a CordApp with a Rest API using / provided by ``Spring Boot``.
+  This issue is most often seen when running a CorDapp with a Rest API using / provided by ``Spring Boot``.
 
   The fundamental cause was ``Corda 3.0`` shipping with an out of date dependency for the
   `fast-classpath-scanner <https://github.com/lukehutch/fast-classpath-scanner>`_ library, where the manifesting
@@ -30,20 +30,23 @@ Major Bug Fixes
 
 * **Potential privacy leak within exception handling over RPC**
 
-  Due to the way exceptions in Corda are propagated across RPC calls from a node to the invoking client here was potential
-  for information to be leaked from the failing node to the caller within the serialised Stack Trace.
-  Masking is now applied to ensure clearer delineation of where helpful errors are returned to the caller but specific
-  information retained within the node handling the failing RPC call.
+  Prior to this change all exceptions would be propagated back to the calling RPC client. This would include the
+  complete stack trace, effectively leaking server side information to a client. Whilst RPC calls are permissioned,
+  that doesn't guarantee a failure and the resultant stack wouldn't reveal some information, such as a type being
+  whitelisted or not, to the caller.
+
+  The origional information is still logged to a node's logfile. However, the information sent to the calling
+  client is now obfuscated.
 
 * **Corda Versioning**
 
   Those eagle eyed amongst you will have noticed for the 3.0 release we altered the versioning scheme from that used by previous Corda
   releases (1.0.0, 2.0.0, etc) with the addition of an prepended product name, resulting in ``corda-3.0``. The reason for this was so
-  that developers could clearly distinguish between the base open source platform and any distributions basedon on Corda that may
-  be shipped in the future (including from R3), However, we have heard the complaints and feel the pain that's caused with various
+  that developers could clearly distinguish between the base open source platform and any distributions based on on Corda that may
+  be shipped in the future (including from R3), However, we have heard the complaints and feel the pain that's caused by various
   tools not coping well with this change. As such, from now on the versioning scheme will be inverted, with this release being ``3.1-corda``.
 
-  As to those curious as to why we dropped the patch number from the version string, the reason is very simple, there won't
+  As to those curious as to why we dropped the patch number from the version string, the reason is very simple: there won't
   be any patches applied to a release of Corda. Either a release will be a collection of bug fixes and non API breaking
   changes, thus eliciting a minor version bump as with this release, or major functional changes or API additions and warrant
   a major version bump. Thus, rather than leave a dangling ``.0`` patch version on every release we've just dropped it. In the
