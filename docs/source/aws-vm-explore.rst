@@ -1,27 +1,31 @@
-Deploying a Corda Node to an Azure Cloud Platform VM
+Deploying a Corda Node to an AWS Cloud Platform VM
 ====================================================
 
 .. contents::
 
 Corda Connect Explore will allow you to create a self service download
 link with a node preconfigured to join the Explore environment. This
-document will describe how to set up a virtual machine on the Azure
+document will describe how to set up a virtual machine on the AWS
 Cloud Platform to deploy your pre-generated Corda node on.
 
 Pre-requisites
 --------------
-* Ensure you have a registered Microsoft Azure account which can create virtual machines and you are logged on to the Azure portal: `https://portal.azure.com`.
+* Ensure you have a registered Amazon AWS account which can create virtual machines and you are logged on to the AWS console: `https://console.aws.amazon.com`.
 
 
 Deploy Corda node
 -----------------
 
-Browse to `https://portal.azure.com` and log in with your Microsoft account.
+Browse to `https://console.aws.amazon.com` and log in with your AWS account.
 
 
-**STEP 1: Create a Resource Group**
+**STEP 1: Launch a new virtual machine**
 
-Create a resource group. 
+Click on Launch a virtual machgine with EC2.
+
+.. image:: resources/aws-launch.png
+
+
 
 
 **STEP 2: Launch the VM**
