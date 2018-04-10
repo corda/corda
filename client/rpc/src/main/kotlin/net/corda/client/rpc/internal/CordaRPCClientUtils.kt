@@ -25,12 +25,25 @@ fun createCordaRPCClientWithSsl(
         sslConfiguration: SSLConfiguration? = null
 ) = CordaRPCClient.createWithSsl(hostAndPort, configuration, sslConfiguration)
 
+fun createCordaRPCClientWithSsl(
+        haAddressPool: List<NetworkHostAndPort>,
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+        sslConfiguration: SSLConfiguration? = null
+) = CordaRPCClient.createWithSsl(haAddressPool, configuration, sslConfiguration)
+
 fun createCordaRPCClientWithSslAndClassLoader(
         hostAndPort: NetworkHostAndPort,
         configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
         sslConfiguration: SSLConfiguration? = null,
         classLoader: ClassLoader? = null
 ) = CordaRPCClient.createWithSslAndClassLoader(hostAndPort, configuration, sslConfiguration, classLoader)
+
+fun createCordaRPCClientWithSslAndClassLoader(
+        haAddressPool: List<NetworkHostAndPort>,
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+        sslConfiguration: SSLConfiguration? = null,
+        classLoader: ClassLoader? = null
+) = CordaRPCClient.createWithSslAndClassLoader(haAddressPool, configuration, sslConfiguration, classLoader)
 
 fun CordaRPCOps.drainAndShutdown(): Observable<Unit> {
 
