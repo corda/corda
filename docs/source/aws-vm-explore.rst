@@ -70,6 +70,8 @@ In the instances console click on "Connect" and follow the instructions to conne
 
 .. image:: resources/aws-instances-connect.png
 
+.. image:: resources/aws-connect.png
+
 
 Once you are logged in to a shell on the instance we need a few utilities so go ahead and install the following with apt-get:
 
