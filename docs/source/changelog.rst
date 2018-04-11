@@ -7,6 +7,9 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Fix CORDA-1229. Setter based serialization was broken with generic types when the property was stored
+  as the interface type, List for example. 
+
 * java.security.cert.CRLReason added to the default Whitelist.
 
 * java.security.cert.X509CRL serialization support added.
