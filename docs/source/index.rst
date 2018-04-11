@@ -34,6 +34,7 @@ We look forward to seeing what you can do with Corda!
 
    quickstart-index.rst
    key-concepts.rst
+   operations-guide.rst
    building-a-cordapp-index.rst
    corda-nodes-index.rst
    corda-networks-index.rst

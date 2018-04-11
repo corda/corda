@@ -81,7 +81,7 @@ private fun initOptionParser(): OptionParser = OptionParser().apply {
             .withOptionalArg()
 
     accepts(RUN_MIGRATION,
-            "This option will run the db migration on the configured database")
+            "This option will run the db migration on the configured database. This is the only command that will actually write to the database.")
 
     accepts(DRY_RUN, """Output the database migration to the specified output file.
         |The output directory is the base-directory.
@@ -89,7 +89,7 @@ private fun initOptionParser(): OptionParser = OptionParser().apply {
             .withOptionalArg()
 
     accepts(CREATE_MIGRATION_CORDAPP, """Create migration files for a CorDapp.
-        |You can specify the fully qualified of the `MappedSchema` class. If not specified it will generate foll all schemas that don't have migrations.
+        |You can specify the fully qualified name of the `MappedSchema` class. If not specified it will generate the migration for all schemas that don't have migrations.
         |The output directory is the base-directory, where a `migration` folder is created.""".trimMargin())
             .withOptionalArg()
 
