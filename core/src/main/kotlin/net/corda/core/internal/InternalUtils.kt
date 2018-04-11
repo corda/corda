@@ -43,6 +43,7 @@ import java.io.*
 import java.lang.reflect.Field
 import java.math.BigDecimal
 import java.net.HttpURLConnection
+import java.net.HttpURLConnection.HTTP_OK
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
@@ -362,10 +363,11 @@ val KClass<*>.packageName: String get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 
-fun URL.post(serializedData: OpaqueBytes): ByteArray {
+fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String>): ByteArray {
     return openHttpConnection().run {
         doOutput = true
         requestMethod = "POST"
+        properties.forEach { (key, value) -> setRequestProperty(key, value) }
         setRequestProperty("Content-Type", "application/octet-stream")
         outputStream.use { serializedData.open().copyTo(it) }
         checkOkResponse()
@@ -374,11 +376,12 @@ fun URL.post(serializedData: OpaqueBytes): ByteArray {
 }
 
 fun HttpURLConnection.checkOkResponse() {
-    if (responseCode != 200) {
-        val message = errorStream.use { it.reader().readText() }
-        throw IOException("Response Code $responseCode: $message")
+    if (responseCode != HTTP_OK) {
+        throw IOException("Response Code $responseCode: $errorMessage")
     }
 }
+
+val HttpURLConnection.errorMessage: String? get() = errorStream?.let { it.use { it.reader().readText() } }
 
 inline fun <reified T : Any> HttpURLConnection.responseAs(): T {
     checkOkResponse()
