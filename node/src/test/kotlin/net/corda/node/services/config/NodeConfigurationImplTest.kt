@@ -17,6 +17,7 @@ import net.corda.tools.shell.SSHDConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.tools.shell.SSHDConfiguration
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.nio.file.Paths

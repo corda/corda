@@ -18,7 +18,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.node.internal.Node
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.artemis.CertificateChainCheckPolicy
@@ -79,11 +78,12 @@ import javax.security.auth.spi.LoginModule
  */
 @ThreadSafe
 class ArtemisMessagingServer(private val config: NodeConfiguration,
-                             private val p2pPort: Int,
+                             private val messagingServerAddress: NetworkHostAndPort,
                              val maxMessageSize: Int) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
     }
+
     private class InnerState {
         var running = false
     }
@@ -129,7 +129,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         }
         // Config driven switch between legacy CORE bridges and the newer AMQP protocol bridges.
         activeMQServer.start()
-        log.info("P2P messaging server listening on port $p2pPort")
+        log.info("P2P messaging server listening on $messagingServerAddress")
     }
 
     private fun createArtemisConfig() = SecureArtemisConfiguration().apply {
@@ -140,7 +140,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         val connectionDirection = ConnectionDirection.Inbound(
                 acceptorFactoryClassName = NettyAcceptorFactory::class.java.name
         )
-        val acceptors = mutableSetOf(createTcpTransport(connectionDirection, "0.0.0.0", p2pPort))
+        val acceptors = mutableSetOf(createTcpTransport(connectionDirection, messagingServerAddress.host, messagingServerAddress.port))
         acceptorConfigurations = acceptors
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
         // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
