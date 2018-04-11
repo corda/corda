@@ -112,7 +112,7 @@ data class Configuration(val dataSourceProperties: Properties, val database: Dat
 
 private fun runCommand(options: OptionSet, parser: OptionParser) {
 
-    fun baseDirectory() = Paths.get(options.valueOf(BASE_DIRECTORY) as String).normalize()
+    fun baseDirectory() = Paths.get(options.valueOf(BASE_DIRECTORY) as String).toAbsolutePath().normalize()
     val mode = options.valueOf(MODE) as Mode
     fun configFile(defaultCfgName: String) = baseDirectory() / ((options.valueOf(CONFIG) as String?) ?: defaultCfgName)
 
