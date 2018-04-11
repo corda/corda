@@ -186,10 +186,10 @@ task smokeTest(type: Test) {
 }
 
 task rpcProxyJar(type: Jar) {
+    baseName "corda-rpcProxy"
     from {
         configurations.rpcProxyRuntime.collect { it.isDirectory() ? it : zipTree(it) }
     }
-//    zip64 true
     with jar
     exclude("META-INF/*.DSA")
     exclude("META-INF/*.RSA")
@@ -197,17 +197,16 @@ task rpcProxyJar(type: Jar) {
     manifest {
         attributes 'Main-Class': 'net.corda.behave.service.proxy.RPCProxyServerKt'
     }
-    archiveName "corda-rpcProxy.jar"
 }
 
 task behaveJar(type: Jar) {
+    baseName "corda-behave"
     from sourceSets.behave.output
     from {
         configurations.behaveCompile.collect {
             it.isDirectory() ? it : zipTree(it)
         }
     }
-//    include 'net/corda/behave/**'
     zip64 true
     exclude("META-INF/*.DSA")
     exclude("META-INF/*.RSA")
@@ -215,7 +214,6 @@ task behaveJar(type: Jar) {
     manifest {
         attributes 'Main-Class': 'net.corda.behave.scenarios.ScenarioRunner'
     }
-    archiveName "corda-behave.jar"
 }
 
 jar {
@@ -225,8 +223,7 @@ jar {
 }
 
 task apiJar(type: Jar, dependsOn: classes) {
-//    baseName "corda-behave-api"
-    archiveName "corda-behave-api.jar"
+    baseName "corda-behave-api"
     from sourceSets.scenario.output
     from {
         configurations.scenarioCompile.collect {
@@ -236,8 +233,6 @@ task apiJar(type: Jar, dependsOn: classes) {
     from project(':client:rpc').configurations.compile.collect { zipTree it }
     with jar
     include 'net/corda/behave/scenarios/**'
-//    include 'net/corda/client/rpc/**'
-//    include 'net/corda/core/**'
     include 'cucumber/**'
     include 'org/reflections/**'
     exclude '**/features/**'
