@@ -133,10 +133,65 @@ cordaCompile, cordaRuntime, cordapp
                         JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
                 override var participants: MutableSet<AbstractParty>? = null,
 
-* Shell - to use Shell ensure ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
+AMQP
+^^^^
+
+Whilst the enablement of AMQP is a transparent change, as noted in the :doc:`serialization` documentation
+the way classes, and states in particular, should be written to work with this new library may require some
+alteration to your current implementation.
+
+  * With AMQP enabled Java classes must be compiled with the -parameter flag.
+
+    * If they aren't, then the error message will complain about ``arg<N>`` being an unknown parameter.
+    * If recompilation is not viable, a custom serializer can be written as per :doc:`cordapp-custom-serializers`
+    * It is important to bear in mind that with AMQP there must be an implicit mapping between constructor
+      parameters and properties you wish included in the serialized form of a class.
+
+      * See :doc:`serialization` for more information
+
+  * Error messages of the form
+
+    ``Constructor parameter - "<some parameter of a constructor>" - doesn't refer to a property of "class <some.class.being.serialized>"``
+
+    indicate that a class, in the above example ``some.class.being.serialized``, has a parameter on its primary constructor that
+    doesn't correlate to a property of the class. This is a problem because the Corda AMQP serialization library uses a class's
+    constructor (default, primary, or annotated) as the means by which instances of the serialized form are reconstituted.
+
+    See the section "Mismatched Class Properties / Constructor Parameters" in the :doc:`serialization` documentation
+
+Database schema changes
+^^^^^^^^^^^^^^^^^^^^^^^
+
+An H2 database instance (represented on the filesystem as a file called `persistence.mv.db`) used in Corda 1.0 or 2.0
+cannot be directly reused with Corda 3.0 due to minor improvements and additions to stabilise the underlying schemas.
+
+Configuration
+^^^^^^^^^^^^^
+
+Nodes that do not require SSL to be enabled for RPC clients now need an additional port to be specified as part of their configuration.
+To do this, add a block as follows to the nodes configuraiton:
+
+  .. sourcecode:: script
+
+    rpcSettings {
+        adminAddress "localhost:10007"
+    }
+
+to `node.conf` files.
+
+Also, the property `rpcPort` is now deprecated, so it would be preferable to substitute properties specified that way e.g., `rpcPort=10006` with a block as follows:
+
+  .. sourcecode:: script
+
+    rpcSettings {
+        address "localhost:10006"
+        adminAddress "localhost:10007"
+    }
+
+Equivalent changes should be performed on classes extending `CordformDefinition`.
 
 Testing
-~~~~~~~
+^^^^^^^
 
 * The registration mechanism for CorDapps in ``MockNetwork`` unit tests has changed:
 
@@ -145,6 +200,47 @@ Testing
     verification code you wish to load
 
   * The ``unsetCordappPackages`` method is now redundant and has been removed
+
+* Many classes have been moved between packages, so you will need to update your imports
+
+  .. tip:: We have provided a several scripts (depending upon your operating system of choice) to smooth the upgrade
+     process for existing projects. This can be found at ``tools\scripts\update-test-packages.sh`` for the Bash shell and
+     ``tools/scripts/upgrade-test-packages.ps1`` for Windows Power Shell users in the source tree
+
+* setCordappPackages and unsetCordappPackages have been removed from the ledger/transaction DSL and the flow test framework,
+  and are now set via a constructor parameter or automatically when constructing the MockServices or MockNetwork object
+
+* Key constants e.g. ``ALICE_KEY`` have been removed; you can now use TestIdentity to make your own
+
+* The ledger/transaction DSL must now be provided with MockServices as it no longer makes its own
+  * In transaction blocks, input and output take their arguments as ContractStates rather than lambdas
+  * Also in transaction blocks, command takes its arguments as CommandDatas rather than lambdas
+
+* The MockServices API has changed; please refer to its API documentation
+
+* TestDependencyInjectionBase has been retired in favour of a JUnit Rule called SerializationEnvironmentRule
+  * This replaces the initialiseSerialization parameter of ledger/transaction and verifierDriver
+  * The withTestSerialization method is obsoleted by SerializationEnvironmentRule and has been retired
+
+* MockNetwork now takes a MockNetworkParameters builder to make it more Java-friendly, like driver's DriverParameters
+    * Similarly, the MockNetwork.createNode methods now take a MockNodeParameters builder
+
+* MockNode constructor parameters are now aggregated in MockNodeArgs for easier subclassing
+
+* MockNetwork.Factory has been retired as you can simply use a lambda
+
+* testNodeConfiguration has been retired, please use a mock object framework of your choice instead
+
+* MockNetwork.createSomeNodes and IntegrationTestCategory have been retired with no replacement
+
+* Starting a flow can now be done directly from a node object. Change calls of the form ``node.getServices().startFlow(...)``
+  to ``node.startFlow(...)``
+
+* Similarly a tranaction can be executed directly from a node object. Change calls of the form ``node.getDatabase().transaction({ it -> ... })``
+  to ``node.transaction({() -> ... })``
+
+* ``startFlow`` now returns a ``CordaFuture``, there is no need to call ``startFlow(...).getResultantFuture()``
+
 
 V1.0 to V2.0
 ------------
