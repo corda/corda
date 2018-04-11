@@ -31,6 +31,85 @@ We also strongly recommend cross referencing with the :doc:`changelog` to confir
 UNRELEASED
 ----------
 
+<<< Fill this in >>>
+
+v3.0 to v3.1
+------------
+
+Gradle Plugin Version
+^^^^^^^^^^^^^^^^^^^^^
+
+Corda 3.1 uses version 3.1.0 of the gradle plugins and your ``build.gradle`` file should be updated to reflect this.
+
+.. sourcecode:: shell
+
+    ext.corda_gradle_plugins_version = '3.1.0'
+
+You will also need to update the ``corda_release_version`` identifier in your project gradle file.
+
+.. sourcecode:: shell
+
+  ext.corda_release_version = '3.1-corda'
+
+V2.0 to V3.0
+------------
+
+Gradle Plugin Version
+^^^^^^^^^^^^^^^^^^^^^
+
+Corda 3.0 uses version 3.0.9 of the gradle plugins and your ``build.gradle`` file should be updated to reflect this.
+
+.. sourcecode:: shell
+
+    ext.corda_gradle_plugins_version = '3.0.9'
+
+You will also need to update the ``corda_release_version`` identifier in your project gradle file.
+
+.. sourcecode:: shell
+
+  ext.corda_release_version = 'corda-3.0'
+
+Network Map Service
+^^^^^^^^^^^^^^^^^^^
+
+With the re-designed network map service the following changes need to be made:
+
+* The network map is no longer provided by a node and thus the ``networkMapService`` config is ignored. Instead the
+  network map is either provided by the compatibility zone (CZ) operator (who operates the doorman) and available
+  using the ``compatibilityZoneURL`` config, or is provided using signed node info files which are copied locally.
+  See :doc:`network-map` for more details, and :doc:`setting-up-a-corda-network.rst` on how to use the network
+  bootstrapper for deploying a local network.
+
+* Configuration for a notary has been simplified. ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses``
+  and ``bftSMaRt`` configs have been replaced by a single ``notary`` config object. See :doc:`corda-configuration-file`
+  for more details.
+
+* The advertisement of the notary to the rest of the network, and its validation type, is no longer determined by the
+  ``extraAdvertisedServiceIds`` config. Instead it has been moved to the control of the network operator via
+  the introduction of network parameters. The network bootstrapper automatically includes the configured notaries
+  when generating the network parameters file for a local deployment.
+
+* Any nodes defined in a ``deployNodes`` gradle task performing the function of the network map can be removed, or the
+  ``NetworkMap`` parameter can be removed for any "controller" node which is both the network map and a notary.
+
+* For registering a node with the doorman the ``certificateSigningService`` config has been replaced by ``compatibilityZoneURL``.
+
+Corda Plugins
+^^^^^^^^^^^^^
+
+* Corda plugins have been modularised further so the following additional gradle entries are necessary:
+  For example:
+
+    .. sourcecode:: groovy
+        dependencies {
+            classpath "net.corda.plugins:cordapp:$corda_gradle_plugins_version"
+        }
+
+        apply plugin: 'net.corda.plugins.cordapp'
+
+The plugin needs to be applied in all gradle build files where there is a dependency on Corda using any of:
+cordaCompile, cordaRuntime, cordapp
+
 * For existing contract ORM schemas that extend from ``CommonSchemaV1.LinearState`` or ``CommonSchemaV1.FungibleState``,
   you will need to explicitly map the ``participants`` collection to a database table. Previously this mapping was done
   in the superclass, but that makes it impossible to properly configure the table name. The required changes are to:
