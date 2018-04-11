@@ -18,7 +18,7 @@ object Settings {
     private val CORDA_RUNTIME_SETTINGS = LAUNCHER_PATH.resolve("runtime.properties")
 
     // The application working directory
-    val WORKING_DIR: Path = System.getenv("CORDA_LAUNCHER_CWD")?.let {Paths.get(it)} ?: LAUNCHER_PATH
+    val WORKING_DIR: String = System.getenv("CORDA_LAUNCHER_CWD") ?: ".."
 
     // Application classpath
     val CLASSPATH: List<URL>
