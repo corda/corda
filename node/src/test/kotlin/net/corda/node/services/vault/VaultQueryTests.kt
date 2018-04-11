@@ -9,15 +9,14 @@ import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.days
-import net.corda.core.utilities.seconds
-import net.corda.core.utilities.toHexString
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.*
 import net.corda.finance.*
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.DealState
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
@@ -2056,6 +2055,39 @@ class VaultQueryTests {
         }
     }
 
+    @Test
+    fun `unconsumedCashStatesForSpending_single_issuer_reference`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(1000.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
+        }
+        database.transaction {
+            val builder = TransactionBuilder()
+            val issuer = DUMMY_CASH_ISSUER
+            val exitStates = AbstractCashSelection
+                    .getInstance { services.jdbcSession().metaData }
+                    .unconsumedCashStatesForSpending(services, 300.DOLLARS, setOf(issuer.party),
+                            builder.notary, builder.lockId, setOf(issuer.reference))
+
+            assertThat(exitStates).hasSize(1)
+            assertThat(exitStates[0].state.data.amount.quantity).isEqualTo(100000)
+        }
+    }
+
+    @Test
+    fun `unconsumedCashStatesForSpending_single_issuer_reference_not_matching`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(1000.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
+        }
+        database.transaction {
+            val builder = TransactionBuilder()
+            val issuer = DUMMY_CASH_ISSUER
+            val exitStates = AbstractCashSelection
+                    .getInstance { services.jdbcSession().metaData }
+                    .unconsumedCashStatesForSpending(services, 300.DOLLARS, setOf(issuer.party),
+                            builder.notary, builder.lockId, setOf(OpaqueBytes.of(13)))
+            assertThat(exitStates).hasSize(0)
+        }
+    }
     /**
      *  USE CASE demonstrations (outside of mainline Corda)
      *
