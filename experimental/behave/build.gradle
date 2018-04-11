@@ -113,6 +113,8 @@ dependencies {
     compile "com.spotify:docker-client:$docker_client_version"
     compile "io.kubernetes:client-java:$kubernetes_client_version"
     compile "io.reactivex:rxjava:$rxjava_version"
+    compile 'com.github.davidmoten:rxjava-extras:0.8.0.15'
+
 
     compileOnly project(':finance')
     compileOnly project(':node-api')

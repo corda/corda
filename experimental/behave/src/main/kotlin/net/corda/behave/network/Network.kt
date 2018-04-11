@@ -4,6 +4,7 @@ import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.*
 import net.corda.behave.logging.getLogger
 import net.corda.behave.minutes
+import net.corda.behave.monitoring.PatternWatch
 import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
 import net.corda.behave.node.configuration.NotaryType
@@ -56,7 +57,7 @@ class Network private constructor(
         private val nodes = mutableMapOf<String, Node>()
 
         private val startTime = DateTimeFormatter
-                .ofPattern("yyyyMMDD-HHmmss")
+                .ofPattern("yyyyMMdd-HHmmss")
                 .withZone(ZoneId.of("UTC"))
                 .format(Instant.now())
 
@@ -220,9 +221,19 @@ class Network private constructor(
         doormanNMS = JarCommand(distribution.doormanJar,
                             arrayOf("--config-file", "$doormanConfigDirectory/node.conf"),
                             doormanTargetDirectory, timeout)
-        runCommand(doormanNMS, noWait = true)
+
+        // if doorman command is null, we are in deep trouble anyway
+        val doormanNMSCommand = runCommand(doormanNMS, noWait = true)!!
+
+        println("Waiting for DoormanNMS to be alive")
+
+        PatternWatch(doormanNMSCommand.output, "Network management web services started on").await(30.seconds)
+
+        println("DoormanNMS up and running")
+
+
         // give time for process to be ready
-        sleep(10.seconds.toMillis())
+//        sleep(10.seconds.toMillis())
 
         // 8. Register other participant nodes
         val partyNodes = nodes.values.filter { it.config.notary.notaryType == NotaryType.NONE }
@@ -242,10 +253,10 @@ class Network private constructor(
         isDoormanNMSRunning = true
     }
 
-    private fun runCommand(command: JarCommand, noWait: Boolean = false) {
+    private fun runCommand(command: JarCommand, noWait: Boolean = false):Command? {
         if (!command.jarFile.exists()) {
             log.warn("Jar file does not exist: ${command.jarFile}")
-            return
+            return null
         }
         log.info("Running command: {}", command)
         command.output.subscribe {
@@ -270,6 +281,7 @@ class Network private constructor(
                 log.info("Command executed successfully")
             }
         }
+        return command
     }
 
     private fun bootstrapLocalNetwork() {
@@ -402,6 +414,7 @@ class Network private constructor(
         }
         isRunning = true
         for (node in nodes.values) {
+            log.info("Starting node [{}]", node.config.name)
             node.start()
             if (node.rpcProxy)
                 bootstrapRPCProxy(node)
@@ -409,6 +422,9 @@ class Network private constructor(
     }
 
     fun waitUntilRunning(waitDuration: Duration? = null): Boolean {
+
+        log.info("Network.waitUntilRunning")
+
         if (hasError) {
             return false
         }

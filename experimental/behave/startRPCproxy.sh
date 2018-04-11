@@ -36,5 +36,7 @@ echo "/usr/bin/java -cp $DISTRO_DIR/corda-rpcProxy.jar:\
 /usr/bin/java -cp $DISTRO_DIR/corda-rpcProxy.jar:\
 $(ls $DISTRO_DIR/proxy/*.jar | tr '\n' ':'):\
 $(ls $DISTRO_DIR/apps/*.jar | tr '\n' ':') \
-net.corda.behave.service.proxy.RPCProxyServerKt ${PORT} & echo $! > /tmp/rpcProxy-pid-${PORT} &
+net.corda.behave.service.proxy.RPCProxyServerKt ${PORT} &> rpcproxy-${PORT}.log &
+
+echo $! > /tmp/rpcProxy-pid-${PORT}
 echo "RPCProxyServer PID: $(cat /tmp/rpcProxy-pid-${PORT})"

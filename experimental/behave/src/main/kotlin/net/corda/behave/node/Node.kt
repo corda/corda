@@ -58,7 +58,7 @@ class Node(
 //            baseImage = config.distribution.baseImage!!,
 //            imageTag = config.distribution.version)
 
-    private val isAliveLatch = PatternWatch("Node for \".*\" started up and registered")
+    private val isAliveLatch = PatternWatch(command.output, "Node for \".*\" started up and registered")
 
     private var isConfigured = false
 
@@ -117,7 +117,7 @@ class Node(
         return try {
             // initialise database via DB migration tool
             if (config.distribution.type == Distribution.Type.R3_CORDA &&
-                config.database.type != DatabaseType.H2) {
+                    config.database.type != DatabaseType.H2) {
                 initialiseDatabase(config.database)
             }
             // launch node itself
@@ -132,7 +132,7 @@ class Node(
     }
 
     fun waitUntilRunning(waitDuration: Duration? = null): Boolean {
-        val ok = isAliveLatch.await(command.output, waitDuration ?: settings.timeout)
+        val ok = isAliveLatch.await(waitDuration ?: settings.timeout)
         if (!ok) {
             log.warn("{} did not start up as expected within the given time frame", this)
         } else {
@@ -394,13 +394,13 @@ class Node(
                             country = country,
                             notary = NotaryConfiguration(notaryType),
                             cordapps = CordappConfiguration(
-                                apps = apps,
-                                includeFinance = includeFinance
+                                    apps = apps,
+                                    includeFinance = includeFinance
                             ),
                             configElements = *arrayOf(
-                                NotaryConfiguration(notaryType),
-                                NetworkMapConfiguration(compatibilityZoneURL),
-                                CurrencyConfiguration(issuableCurrencies)
+                                    NotaryConfiguration(notaryType),
+                                    NetworkMapConfiguration(compatibilityZoneURL),
+                                    CurrencyConfiguration(issuableCurrencies)
                             )
                     ),
                     directory,
