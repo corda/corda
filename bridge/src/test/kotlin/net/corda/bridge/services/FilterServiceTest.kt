@@ -76,7 +76,7 @@ class FilterServiceTest {
         filterService.start()
         // Not ready so packet dropped
         val fakeMessage = rigorousMock<ReceivedMessage>().also {
-            doNothing().whenever(it).complete(false) // NAK'd
+            doNothing().whenever(it).complete(true) // ACK was called
         }
         filterService.sendMessageToLocalBroker(fakeMessage)
         assertEquals(TestAuditService.AuditEvent.PACKET_DROP, auditFollower.next()) // Dropped as not ready
@@ -154,7 +154,7 @@ class FilterServiceTest {
 
         // empty legal name
         val badMessage1 = rigorousMock<ReceivedMessage>().also {
-            doNothing().whenever(it).complete(false) // NAK was called
+            doNothing().whenever(it).complete(true) // ACK was called
             doReturn("").whenever(it).sourceLegalName
             doReturn(inboxTopic).whenever(it).topic
             doReturn(ByteArray(1)).whenever(it).payload
@@ -165,7 +165,7 @@ class FilterServiceTest {
         verify(dummyProducer, times(0)).send(ArgumentMatchers.any(), eq(dummyMessage), ArgumentMatchers.any()) // not sent
         // bad legal name
         val badMessage2 = rigorousMock<ReceivedMessage>().also {
-            doNothing().whenever(it).complete(false) // NAK was called
+            doNothing().whenever(it).complete(true) // ACK was called
             doReturn("CN=Test").whenever(it).sourceLegalName
             doReturn(inboxTopic).whenever(it).topic
             doReturn(ByteArray(1)).whenever(it).payload
@@ -176,7 +176,7 @@ class FilterServiceTest {
         verify(dummyProducer, times(0)).send(ArgumentMatchers.any(), eq(dummyMessage), ArgumentMatchers.any()) // not sent
         // empty payload
         val badMessage3 = rigorousMock<ReceivedMessage>().also {
-            doNothing().whenever(it).complete(false) // NAK was called
+            doNothing().whenever(it).complete(true) // ACK was called
             doReturn(DUMMY_BANK_B_NAME.toString()).whenever(it).sourceLegalName
             doReturn(inboxTopic).whenever(it).topic
             doReturn(ByteArray(0)).whenever(it).payload
@@ -187,7 +187,7 @@ class FilterServiceTest {
         verify(dummyProducer, times(0)).send(ArgumentMatchers.any(), eq(dummyMessage), ArgumentMatchers.any()) // not sent
         // bad topic
         val badMessage4 = rigorousMock<ReceivedMessage>().also {
-            doNothing().whenever(it).complete(false) // NAK was called
+            doNothing().whenever(it).complete(true) // ACK was called
             doReturn(DUMMY_BANK_B_NAME.toString()).whenever(it).sourceLegalName
             doReturn("bridge.control").whenever(it).topic
             doReturn(ByteArray(1)).whenever(it).payload
@@ -198,7 +198,7 @@ class FilterServiceTest {
         verify(dummyProducer, times(0)).send(ArgumentMatchers.any(), eq(dummyMessage), ArgumentMatchers.any()) // not sent
         // Non-whitelist header header
         val badMessage5 = rigorousMock<ReceivedMessage>().also {
-            doNothing().whenever(it).complete(false) // NAK was called
+            doNothing().whenever(it).complete(true) // ACK was called
             doReturn(DUMMY_BANK_B_NAME.toString()).whenever(it).sourceLegalName
             doReturn(inboxTopic).whenever(it).topic
             doReturn(ByteArray(1)).whenever(it).payload

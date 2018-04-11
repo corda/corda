@@ -22,6 +22,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
@@ -172,17 +173,17 @@ class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
     private fun onFloatMessage(receivedMessage: ReceivedMessage) {
         if (!receivedMessage.checkTunnelDataTopic()) {
             auditService.packetDropEvent(receivedMessage, "Invalid float inbound topic received ${receivedMessage.topic}!!")
-            receivedMessage.complete(false)
+            receivedMessage.complete(true)
             return
         }
         val innerMessage = try {
             receivedMessage.payload.deserialize<FloatDataPacket>()
         } catch (ex: Exception) {
             auditService.packetDropEvent(receivedMessage, "Unable to decode Float Control message")
-            receivedMessage.complete(false)
+            receivedMessage.complete(true)
             return
         }
-        log.info("Received $innerMessage")
+        log.debug { "Received message from ${innerMessage.sourceLegalName}" }
         val onwardMessage = object : ReceivedMessage {
             override val topic: String = innerMessage.topic
             override val applicationProperties: Map<Any?, Any?> = innerMessage.originalHeaders.toMap()

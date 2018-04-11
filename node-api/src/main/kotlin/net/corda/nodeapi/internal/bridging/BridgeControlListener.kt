@@ -27,6 +27,8 @@ import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
+import rx.Observable
+import rx.subjects.PublishSubject
 import java.util.*
 
 class BridgeControlListener(val config: NodeSSLConfiguration,
@@ -46,6 +48,13 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
     companion object {
         private val log = contextLogger()
     }
+
+    val active: Boolean
+        get() = validInboundQueues.isNotEmpty()
+
+    private val _activeChange = PublishSubject.create<Boolean>().toSerialized()
+    val activeChange: Observable<Boolean>
+        get() = _activeChange
 
     fun start() {
         stop()
@@ -73,6 +82,9 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
     }
 
     fun stop() {
+        if (active) {
+            _activeChange.onNext(false)
+        }
         validInboundQueues.clear()
         controlConsumer?.close()
         controlConsumer = null
@@ -112,7 +124,11 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
                 for (outQueue in controlMessage.sendQueues) {
                     bridgeManager.deployBridge(outQueue.queueName, outQueue.targets.first(), outQueue.legalNames.toSet())
                 }
+                val wasActive = active
                 validInboundQueues.addAll(controlMessage.inboxQueues)
+                if (!wasActive && active) {
+                    _activeChange.onNext(true)
+                }
             }
             is BridgeControl.BridgeToNodeSnapshotRequest -> {
                 log.error("Message from Bridge $controlMessage detected on wrong topic!")
