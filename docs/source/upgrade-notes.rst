@@ -44,7 +44,7 @@ You will also need to update the ``corda_release_version`` identifier in your pr
 
 .. sourcecode:: shell
 
-  ext.corda_release_version = 'corda-3.1'
+  ext.corda_release_version = '3.1-corda'
 
 V2.0 to V3.0
 ------------

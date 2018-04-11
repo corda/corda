@@ -1,6 +1,61 @@
 Release notes
 =============
 
+.. _release_notes_v3_1:
+
+Release 3.1
+-----------
+
+This rapid follow-up to Corda 3.0 corrects an issue discovered by some users of Spring Boot and a number of other
+smaller issues discovered post release. All users are recommended to upgrade.
+
+Special Thanks
+~~~~~~~~~~~~~~
+
+Without passionate and engaged users Corda would be all the poorer. As such, we are extremely grateful to
+`Bret Lichtenwald <https://github.com/bret540>`_ for helping nail down a reproducible test case for the
+Spring Boot issue.
+
+Major Bug Fixes
+~~~~~~~~~~~~~~~
+
+* **Corda Serialization fails with "Unknown constant pool tag"**
+
+  This issue is most often seen when running a CorDapp with a Rest API using / provided by ``Spring Boot``.
+
+  The fundamental cause was ``Corda 3.0`` shipping with an out of date dependency for the
+  `fast-classpath-scanner <https://github.com/lukehutch/fast-classpath-scanner>`_ library, where the manifesting
+  bug was already fixed in a released version newer than our dependant one. In response, we've updated our dependent
+  version to one including that bug fix.
+
+* **Corda Versioning**
+
+  Those eagle eyed amongst you will have noticed for the 3.0 release we altered the versioning scheme from that used by previous Corda
+  releases (1.0.0, 2.0.0, etc) with the addition of an prepended product name, resulting in ``corda-3.0``. The reason for this was so
+  that developers could clearly distinguish between the base open source platform and any distributions based on on Corda that may
+  be shipped in the future (including from R3), However, we have heard the complaints and feel the pain that's caused by various
+  tools not coping well with this change. As such, from now on the versioning scheme will be inverted, with this release being ``3.1-corda``.
+
+  As to those curious as to why we dropped the patch number from the version string, the reason is very simple: there won't
+  be any patches applied to a release of Corda. Either a release will be a collection of bug fixes and non API breaking
+  changes, thus eliciting a minor version bump as with this release, or major functional changes or API additions and warrant
+  a major version bump. Thus, rather than leave a dangling ``.0`` patch version on every release we've just dropped it. In the
+  case where a major security flaw needed addressing, for example, then that would generate a release of a new minor version.
+
+Issues Fixed
+~~~~~~~~~~~~
+
+* RPC server leaks if a single client submits a lot of requests over time [`CORDA-1295 <https://r3-cev.atlassian.net/browse/CORDA-1295>`_]
+* Flaky startup, no db transaction in context, when using postgresql [`CORDA-1276 <https://r3-cev.atlassian.net/browse/CORDA-1276>`_]
+* Corda's JPA classes should not be final or have final methods [`CORDA-1267 <https://r3-cev.atlassian.net/browse/CORDA-1267>`_]
+* Backport api-scanner changes [`CORDA-1178 <https://r3-cev.atlassian.net/browse/CORDA-1178>`_]
+* Misleading error message shown when node is restarted after the flag day
+* Hash constraints not working from Corda 3.0 onwards
+* Serialisation Error between Corda 3 RC01 and Corda 3
+* Nodes don't start when network-map/doorman is down
+
+.. _release_notes_v3_0:
+
 Release 3.0
 -----------
 
@@ -294,6 +349,8 @@ Minor Changes
   * Numerous bug fixes and documentation tweaks.
   * Removed dependency on Jolokia WAR file.
 
+.. _release_notes_v2_0:
+
 Release 2.0
 -----------
 Following quickly on the heels of the release of Corda 1.0, Corda version 2.0 consolidates
@@ -312,6 +369,8 @@ and via the versioning APIs.
 Adds the facility for transparent forwarding of transactions to some third party observer, such as a regulator. By having
 that entity simply run an Observer node they can simply recieve a stream of digitally signed, de-duplicated reports that
 can be used for reporting.
+
+.. _release_notes_v1_0:
 
 Release 1.0
 -----------

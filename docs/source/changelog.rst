@@ -4,8 +4,10 @@ Changelog
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
 from the previous milestone release.
 
-Unreleased
-----------
+.. _changelog_v3.1:
+
+Version 3.1
+-----------
 
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
@@ -22,7 +24,7 @@ Unreleased
   referenced in a transaction were deployed on the node.
 
 * Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
-all the needed network data, waiting in the background for network map to become available.
+  all the needed network data, waiting in the background for network map to become available.
 
 .. _changelog_v3:
 
