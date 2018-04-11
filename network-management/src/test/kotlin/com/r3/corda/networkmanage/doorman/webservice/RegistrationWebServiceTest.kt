@@ -20,6 +20,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.errorMessage
 import net.corda.core.internal.post
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
@@ -28,7 +29,6 @@ import net.corda.node.utilities.registration.cacheControl
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import net.corda.testing.internal.createDevIntermediateCaCertPath
-import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.DERUTF8String
@@ -47,7 +47,6 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.*
 import java.net.URL
-import java.nio.charset.StandardCharsets.UTF_8
 import java.security.KeyPair
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
@@ -252,8 +251,8 @@ class RegistrationWebServiceTest : TestBase() {
                 }
                 PollResponse.Ready(certificates)
             }
-            HTTP_NO_CONTENT -> PollResponse.NotReady(conn.cacheControl().maxAgeSeconds())
-            HTTP_UNAUTHORIZED -> PollResponse.Unauthorised(IOUtils.toString(conn.errorStream, UTF_8))
+            HTTP_NO_CONTENT -> PollResponse.NotReady(conn.cacheControl.maxAgeSeconds())
+            HTTP_UNAUTHORIZED -> PollResponse.Unauthorised(conn.errorMessage)
             else -> throw IOException("Cannot connect to Certificate Signing Server, HTTP response code : ${conn.responseCode}")
         }
     }
@@ -269,6 +268,6 @@ class RegistrationWebServiceTest : TestBase() {
     private interface PollResponse {
         data class NotReady(val pollInterval: Int) : PollResponse
         data class Ready(val certChain: List<X509Certificate>) : PollResponse
-        data class Unauthorised(val message: String) : PollResponse
+        data class Unauthorised(val message: String?) : PollResponse
     }
 }
