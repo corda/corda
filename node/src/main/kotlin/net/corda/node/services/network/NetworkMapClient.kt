@@ -45,7 +45,7 @@ class NetworkMapClient(val compatibilityZoneURL: URL, val trustedRoot: X509Certi
     }
 
     fun getNetworkMap(networkMapKey: UUID? = null): NetworkMapResponse {
-        val url = networkMapKey?.let { URL("$networkMapUrl/private/$networkMapKey") } ?: networkMapUrl
+        val url = networkMapKey?.let { URL("$networkMapUrl/$networkMapKey") } ?: networkMapUrl
         logger.trace { "Fetching network map update from $url." }
         val connection = url.openHttpConnection()
         val signedNetworkMap = connection.responseAs<SignedNetworkMap>()

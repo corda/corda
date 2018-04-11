@@ -25,6 +25,7 @@ import java.io.IOException
 import java.net.URL
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.*
 import kotlin.test.assertEquals
 
 class NetworkMapClientTest {
@@ -68,6 +69,23 @@ class NetworkMapClientTest {
         assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(nodeInfoHash, nodeInfoHash2)
         assertEquals(cacheTimeout, networkMapClient.getNetworkMap().cacheMaxAge)
         assertEquals(nodeInfo2, networkMapClient.getNodeInfo(nodeInfoHash2))
+    }
+
+    @Test
+    fun `fetch nodes from private network`() {
+        val networkUUID = UUID.randomUUID()
+        server.addNodesToPrivateNetwork(networkUUID, listOf(ALICE_NAME))
+        assertThatThrownBy { networkMapClient.getNetworkMap(networkUUID).payload.nodeInfoHashes }
+                .isInstanceOf(IOException::class.java)
+                .hasMessageContaining("Response Code 404")
+        val (aliceInfo, signedAliceInfo) = createNodeInfoAndSigned(ALICE_NAME) // Goes to private network map
+        val aliceHash = aliceInfo.serialize().hash
+        val (bobInfo, signedBobInfo) = createNodeInfoAndSigned(BOB_NAME) // Goes to global network map
+        networkMapClient.publish(signedAliceInfo)
+        networkMapClient.publish(signedBobInfo)
+        assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(bobInfo.serialize().hash)
+        assertThat(networkMapClient.getNetworkMap(networkUUID).payload.nodeInfoHashes).containsExactly(aliceHash)
+        assertEquals(aliceInfo, networkMapClient.getNodeInfo(aliceHash))
     }
 
     @Test

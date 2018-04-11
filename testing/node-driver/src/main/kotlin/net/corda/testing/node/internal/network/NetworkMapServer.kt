@@ -13,7 +13,6 @@ import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
-import net.corda.testing.core.singleIdentity
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -108,10 +107,10 @@ class NetworkMapServer(private val pollInterval: Duration,
 
     @Path("network-map")
     inner class InMemoryNetworkMapService {
-        private val uuidNodeNames = mutableMapOf<UUID, MutableSet<CordaX500Name>>()
+        private val nodeNamesUUID = mutableMapOf<CordaX500Name, UUID>()
         private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
-        // Mapping from the name of the network ("global" for global one, or uuid for private ones) to hashes of the nodes in network
-        private val networkMaps = mutableMapOf<String, MutableSet<SecureHash>>()
+        // Mapping from the UUID of the network (null for global one) to hashes of the nodes in network
+        private val networkMaps = mutableMapOf<UUID?, MutableSet<SecureHash>>()
         val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()
         private val signedNetParams by lazy { networkMapCertAndKeyPair.sign(networkParameters) }
 
@@ -123,13 +122,11 @@ class NetworkMapServer(private val pollInterval: Duration,
                 val signedNodeInfo = input.readObject<SignedNodeInfo>()
                 val hash = signedNodeInfo.raw.hash
                 val nodeInfo = signedNodeInfo.verified()
-                val privateNetwork = uuidNodeNames.filter {
-                    entry -> nodeInfo.legalIdentities[0].name in entry.value
-                }.keys.singleOrNull()
+                val privateNetwork = nodeNamesUUID[nodeInfo.legalIdentities[0].name]
                 if (privateNetwork == null) {
-                    networkMaps.computeIfAbsent("global", { mutableSetOf() }).add(hash)
+                    networkMaps.computeIfAbsent(null, { mutableSetOf() }).add(hash)
                 } else {
-                    networkMaps.computeIfAbsent(privateNetwork.toString(), { mutableSetOf() }).add(hash)
+                    networkMaps.computeIfAbsent(privateNetwork, { mutableSetOf() }).add(hash)
                 }
                 nodeInfoMap[hash] = signedNodeInfo
                 ok()
@@ -154,16 +151,16 @@ class NetworkMapServer(private val pollInterval: Duration,
         @GET
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getGlobalNetworkMap(): Response {
-            val nodeInfoHashes = networkMaps.computeIfAbsent("global", { mutableSetOf() }).toList()
+            val nodeInfoHashes = networkMaps.computeIfAbsent(null, { mutableSetOf() }).toList()
             return networkMapResponse(nodeInfoHashes)
         }
 
         @GET
-        @Path("private/{var}")
+        @Path("{var}")
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getPrivateNetworkMap(@PathParam("var") extraUUID: String): Response {
             val uuid = UUID.fromString(extraUUID)
-            val nodeInfoHashes = networkMaps[uuid.toString()] ?: return Response.status(Response.Status.NOT_FOUND).build()
+            val nodeInfoHashes = networkMaps[uuid] ?: return Response.status(Response.Status.NOT_FOUND).build()
             return networkMapResponse(nodeInfoHashes.toList())
         }
 
@@ -182,13 +179,13 @@ class NetworkMapServer(private val pollInterval: Duration,
             nodeInfoMap.remove(hash)
         }
 
-        fun addNodesToPrivateNetwork(networkUUID: UUID, nodesNames: List<CordaX500Name>) {
-            for (name in nodesNames) {
+        fun addNodesToPrivateNetwork(networkUUID: UUID, nodeNames: List<CordaX500Name>) {
+            for (name in nodeNames) {
                 check(name !in nodeInfoMap.values.flatMap { it.verified().legalIdentities.map { it.name } }) {
                     throw IllegalArgumentException("Node with name: $name was already published to global network map")
                 }
             }
-            uuidNodeNames.computeIfAbsent(networkUUID, { mutableSetOf() }).addAll(nodesNames)
+            nodeNames.forEach { nodeNamesUUID[it] = networkUUID }
         }
 
         @GET
