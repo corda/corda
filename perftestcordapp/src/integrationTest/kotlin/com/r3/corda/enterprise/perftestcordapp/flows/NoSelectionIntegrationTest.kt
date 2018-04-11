@@ -35,7 +35,6 @@ class NoSelectionIntegrationTest {
                 portAllocation = PortAllocation.Incremental(20000)
         )) {
             val alice = startNode(rpcUsers = listOf(aliceUser)).get()
-            defaultNotaryNode.get()
             CordaRPCClient(alice.rpcAddress).use("A", "A") { connection ->
                 connection.proxy.startFlow(::CashIssueAndPaymentNoSelection, 1.DOLLARS, OpaqueBytes.of(0), alice.nodeInfo.legalIdentities[0], false, defaultNotaryIdentity).returnValue.getOrThrow()
             }

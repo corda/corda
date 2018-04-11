@@ -258,8 +258,8 @@ class NetworkManagementServer(dataSourceProperties: Properties,
             "Parameters we are trying to switch to haven't been signed yet"
         }
         logger.info("""Flag day has occurred, however the new network parameters won't be active until the new network map is signed.
-From: $activeNetParams
-To: ${parametersUpdate.networkParameters}""")
+From: ${activeNetParams?.networkParameters}
+To: ${parametersUpdate.networkParameters.networkParameters}""")
         networkMapStorage.setParametersUpdateStatus(parametersUpdate, UpdateStatus.FLAG_DAY)
     }
 
