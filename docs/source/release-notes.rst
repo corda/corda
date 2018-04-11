@@ -45,15 +45,10 @@ Major Bug Fixes
 Issues Fixed
 ~~~~~~~~~~~~
 
-Tracked on public Jira
-
-* `CORDA-1295 <https://r3-cev.atlassian.net/browse/CORDA-1295>`_ - RPC server leaks if a single client submits a lot of requests over time
-* `CORDA-1276 <https://r3-cev.atlassian.net/browse/CORDA-1276>`_ - Flaky startup, no db transaction in context, when using postgresql
-* `CORDA-1267 <https://r3-cev.atlassian.net/browse/CORDA-1267>`_ - Corda's JPA classes should not be final or have final methods
-* `CORDA-1178 <https://r3-cev.atlassian.net/browse/CORDA-1178>`_ - Backport api-scanner changes
-
-Tracked internally
-
+* RPC server leaks if a single client submits a lot of requests over time [`CORDA-1295 <https://r3-cev.atlassian.net/browse/CORDA-1295>`_]
+* Flaky startup, no db transaction in context, when using postgresql [`CORDA-1276 <https://r3-cev.atlassian.net/browse/CORDA-1276>`_]
+* Corda's JPA classes should not be final or have final methods [`CORDA-1267 <https://r3-cev.atlassian.net/browse/CORDA-1267>`_]
+* Backport api-scanner changes [`CORDA-1178 <https://r3-cev.atlassian.net/browse/CORDA-1178>`_]
 * Misleading error message shown when node is restarted after the flag day
 * Hash constraints not working from Corda 3.0 onwards
 * Serialisation Error between Corda 3 RC01 and Corda 3
