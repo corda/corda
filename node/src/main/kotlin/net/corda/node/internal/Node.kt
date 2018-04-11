@@ -33,8 +33,8 @@ import net.corda.node.VersionInfo
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
 import net.corda.node.internal.security.RPCSecurityManagerImpl
+import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
@@ -171,14 +171,18 @@ open class Node(configuration: NodeConfiguration,
                                       networkParameters: NetworkParameters): MessagingService {
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
-        val securityManagerConfig = configuration.security?.authService ?:
-        SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
+        val securityManagerConfig = configuration.security?.authService ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
         securityManager = with(RPCSecurityManagerImpl(securityManagerConfig)) {
             if (configuration.shouldInitCrashShell()) RPCSecurityManagerWithAdditionalUser(this, localShellUser()) else this
         }
 
-        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker(networkParameters)
+        if (!configuration.messagingServerExternal) {
+            val brokerBindAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
+            messageBroker = ArtemisMessagingServer(configuration, brokerBindAddress, MAX_FILE_SIZE)
+        }
+
+        val serverAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port)
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
             BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress)
         } else {
@@ -200,7 +204,7 @@ open class Node(configuration: NodeConfiguration,
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }
         verifierMessagingClient = when (configuration.verifierType) {
-            VerifierType.OutOfProcess ->  throw IllegalArgumentException("OutOfProcess verifier not supported") //VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
+            VerifierType.OutOfProcess -> throw IllegalArgumentException("OutOfProcess verifier not supported") //VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
             VerifierType.InMemory -> null
         }
         require(info.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
@@ -236,13 +240,6 @@ open class Node(configuration: NodeConfiguration,
                 }
                 return rpcBroker!!.addresses
             }
-        }
-    }
-
-    private fun makeLocalMessageBroker(networkParameters: NetworkParameters): NetworkHostAndPort {
-        with(configuration) {
-            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
-            return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
 
