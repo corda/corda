@@ -1,13 +1,10 @@
 package net.corda.finance.flows
 
-import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
-import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.getCashBalance
-import net.corda.finance.schemas.CashSchemaV1
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -31,11 +28,8 @@ class CashSelectionTest : IntegrationTest() {
     }
 
     @Test
-    fun unconsumed_cash_states() {
-
-        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf(Cash::class, CashSchemaV1::class).map { it.packageName })) {
-
-            defaultNotaryNode.getOrThrow()
+    fun `unconsumed cash states`() {
+        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val node = startNode().getOrThrow() as InProcessImpl
             val issuerRef = OpaqueBytes.of(0)
             val issuedAmount = 1000.DOLLARS

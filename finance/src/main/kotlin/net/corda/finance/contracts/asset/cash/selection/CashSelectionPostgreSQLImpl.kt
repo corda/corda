@@ -11,6 +11,7 @@
 package net.corda.finance.contracts.asset.cash.selection
 
 import net.corda.core.contracts.Amount
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.*
@@ -54,8 +55,12 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
                     " AND vs.notary_name = ?" else "") +
                 (if (onlyFromIssuerParties.isNotEmpty())
                     " AND ccs.issuer_key_hash = ANY (?)" else "") +
-                (if (withIssuerRefs.isNotEmpty())
-                    " AND ccs.issuer_ref = ANY (?)" else "") +
+                (if (withIssuerRefs.isNotEmpty()) {
+                    val repeats = generateSequence { "?" }
+                            .take(withIssuerRefs.size)
+                            .joinToString(",")
+                    " AND ccs.issuer_ref IN ($repeats)"
+                } else "") +
                 """)
                         nested WHERE nested.total < ?
                      """
@@ -70,14 +75,12 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
             }
             if (onlyFromIssuerParties.isNotEmpty()) {
                 val issuerKeys = connection.createArrayOf("VARCHAR", onlyFromIssuerParties.map
-                { it.owningKey.toBase58String() }.toTypedArray())
+                { it.owningKey.toStringShort() }.toTypedArray())
                 statement.setArray(3 + paramOffset, issuerKeys)
                 paramOffset += 1
             }
-            if (withIssuerRefs.isNotEmpty()) {
-                val issuerRefs = connection.createArrayOf("BYTEA", withIssuerRefs.map
-                { it.bytes }.toTypedArray())
-                statement.setArray(3 + paramOffset, issuerRefs)
+            withIssuerRefs.map { it.bytes }.forEach {
+                statement.setBytes( 3 + paramOffset, it)
                 paramOffset += 1
             }
             statement.setLong(3 + paramOffset, amount.quantity)

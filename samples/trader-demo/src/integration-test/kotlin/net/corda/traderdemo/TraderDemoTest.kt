@@ -54,7 +54,6 @@ class TraderDemoTest : IntegrationTest() {
                 startFlow<CommercialPaperIssueFlow>(),
                 all()))
         driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
-            defaultNotaryNode.getOrThrow()
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),

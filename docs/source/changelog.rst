@@ -44,9 +44,15 @@ Unreleased
 
 * java.security.cert.X509CRL serialization support added.
 
-* Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
-  where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
-  one node with the legal name is found.
+* Upgraded H2 to v1.4.197.
+
+* Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
+  To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
+
+.. _changelog_v3:
+
+Version 3.0
+-----------
 
 * Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
   at CorDapp context creation time from a file source during runtime.

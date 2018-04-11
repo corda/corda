@@ -69,7 +69,7 @@ buildscript {
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
-    ext.h2_version = '1.4.194' // Update docs if renamed or removed.
+    ext.h2_version = '1.4.197' // Update docs if renamed or removed.
     ext.postgresql_version = '42.1.4'
     ext.rxjava_version = '1.2.4'
     ext.dokka_version = '0.9.16-eap-2'
