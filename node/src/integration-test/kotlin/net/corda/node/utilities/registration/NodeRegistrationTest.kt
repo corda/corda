@@ -90,15 +90,10 @@ class NodeRegistrationTest {
                 notarySpecs = listOf(NotarySpec(notaryName)),
                 extraCordappPackagesToScan = listOf("net.corda.finance")
         ) {
-            val nodes = listOf(
+            val (alice, genevieve) = listOf(
                     startNode(providedName = aliceName),
-                    startNode(providedName = genevieveName),
-                    defaultNotaryNode
+                    startNode(providedName = genevieveName)
             ).transpose().getOrThrow()
-
-            log.info("Nodes started")
-
-            val (alice, genevieve) = nodes
 
             assertThat(registrationHandler.idsPolled).containsOnly(
                     aliceName.organisation,
