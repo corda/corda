@@ -63,8 +63,8 @@ open class Command(
                     } catch (_: IOException) {
                         break
                     } catch (ex: Exception) {
-                        println("Magic exception during reading input!!")
-                        ex.printStackTrace()
+                        log.error("Unexpected exception during reading input", ex)
+                        break
                     }
                 }
                 input.close()
