@@ -314,7 +314,7 @@ fun propertiesForSerializationFromSetters(
                         "${property.value.field?.genericType!!}")
             }
 
-            // make sure the getter returns the same type (within inheritance bounds) the setter accepts
+            // Make sure the getter returns the same type (within inheritance bounds) the setter accepts.
             if (!(TypeToken.of (getter.genericReturnType).isSupertypeOf(setterType))) {
                 throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
                         "takes parameter of type $setterType yet the defined getter returns a value of type " +
