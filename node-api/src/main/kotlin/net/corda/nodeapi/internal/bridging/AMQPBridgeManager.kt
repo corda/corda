@@ -18,7 +18,6 @@ import net.corda.nodeapi.internal.bridging.AMQPBridgeManager.AMQPBridge.Companio
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
-import net.corda.nodeapi.internal.requireMessageSize
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -131,7 +130,12 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val maxMessageSize
         }
 
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
-            requireMessageSize(artemisMessage.bodySize, maxMessageSize)
+            if (artemisMessage.bodySize > maxMessageSize) {
+                log.warn("Message exceeds maxMessageSize network parameter, maxMessageSize: [$maxMessageSize], message size: [${artemisMessage.bodySize}], dropping message.")
+                // Ack the message to prevent same message being sent to us again.
+                artemisMessage.acknowledge()
+                return
+            }
             val data = ByteArray(artemisMessage.bodySize).apply { artemisMessage.bodyBuffer.readBytes(this) }
             val properties = HashMap<String, Any?>()
             for (key in P2PMessagingHeaders.whitelistedHeaders) {
