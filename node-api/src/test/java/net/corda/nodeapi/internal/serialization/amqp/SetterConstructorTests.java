@@ -347,6 +347,6 @@ public class SetterConstructorTests {
 
         // if we've got super / sub types on the setter vs the underlying type the wrong way around this will
         // explode. See CORDA-1229 (https://r3-cev.atlassian.net/browse/CORDA-1229)
-        new SerializationOutput(factory1).serialize(cil);
+        new DeserializationInput(factory1).deserialize(new SerializationOutput(factory1).serialize(cil), CIntList.class);
     }
 }
