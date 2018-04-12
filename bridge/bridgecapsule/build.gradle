@@ -12,6 +12,7 @@
  */
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda bridge server capsule'
 
@@ -32,6 +33,10 @@ dependencies {
 // its own module so its target can be controlled individually, but for now this suffices.
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
+
+jar {
+    baseName 'corda-bridgeserver'
+}
 
 task buildBridgeServerJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
     applicationClass 'net.corda.bridge.Bridge'
@@ -69,5 +74,5 @@ artifacts {
 
 publish {
     disableDefaultJar = true
-    name 'corda-bridgeserver'
+    name jar.baseName
 }
