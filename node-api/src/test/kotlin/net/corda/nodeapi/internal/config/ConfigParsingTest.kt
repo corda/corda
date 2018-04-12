@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal.config
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions.defaults
 import com.typesafe.config.ConfigValueFactory
@@ -16,8 +15,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.util.*
 import kotlin.reflect.full.primaryConstructor
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class ConfigParsingTest {
     @Test
@@ -232,22 +229,21 @@ class ConfigParsingTest {
 
     @Test
     fun `parse with provided parser`() {
-        val configuration = config("values" to listOf(mapOf("type" to "1", "value" to "type 1 value"), mapOf("type" to "2", "value" to "type 2 value")))
-        val objects = configuration.parseAs<TestObjects>()
-        assertTrue { objects.values.first() is TestObject.Type1 }
-        assertTrue { objects.values.last() is TestObject.Type2 }
+        val type1Config = mapOf("type" to "1", "value" to "type 1 value")
+        val type2Config = mapOf("type" to "2", "value" to "type 2 value")
 
-        assertEquals("type 1 value", (objects.values.first() as TestObject.Type1).value)
-        assertEquals("type 2 value", (objects.values.last() as TestObject.Type2).value)
+        val configuration = config("values" to listOf(type1Config, type2Config))
+        val objects = configuration.parseAs<TestObjects>()
+
+        assertThat(objects.values).containsExactly(TestObject.Type1("type 1 value"), TestObject.Type2("type 2 value"))
     }
 
     class TestParser : ConfigParser<TestObject> {
         override fun parse(config: Config): TestObject {
             val type = config.getInt("type")
-            val newConfig = ConfigFactory.parseProperties(config.toProperties().apply { remove("type") })
             return when (type) {
-                1 -> newConfig.parseAs<TestObject.Type1>()
-                2 -> newConfig.parseAs<TestObject.Type2>()
+                1 -> config.parseAs<TestObject.Type1>(onUnknownKeys = UnknownConfigKeysPolicy.IGNORE::handle)
+                2 -> config.parseAs<TestObject.Type2>(onUnknownKeys = UnknownConfigKeysPolicy.IGNORE::handle)
                 else -> throw IllegalArgumentException("Unsupported Object type : '$type'")
             }
         }
