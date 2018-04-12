@@ -91,6 +91,9 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
         onSuccess(keyPair, certificates)
         // All done, clean up temp files.
         requestIdStore.deleteIfExists()
+
+        println("Successfully registered Corda node with compatibility zone, node identity certificates are stored in '${config.certificatesDirectory}', it is advised to backup the certificates folder.")
+        println("Corda node will now terminate.")
     }
 
     private fun validateCertificates(registeringPublicKey: PublicKey, certificates: List<X509Certificate>) {
@@ -115,7 +118,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
             throw CertificateRequestException("Received certificate contains invalid cert role, expected '$certRole', got '$nodeCaCertRole'.")
         }
 
-        // Validate returned certificate is for the correct public key
+        // Validate returned certificate is for the correct public key.
         if (Crypto.toSupportedPublicKey(certificates.first().publicKey) != Crypto.toSupportedPublicKey(registeringPublicKey)) {
             throw CertificateRequestException("Received certificate contains incorrect public key, expected '$registeringPublicKey', got '${certificates.first().publicKey}'.")
         }
