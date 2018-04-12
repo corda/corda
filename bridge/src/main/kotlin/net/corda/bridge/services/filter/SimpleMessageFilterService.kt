@@ -86,6 +86,12 @@ class SimpleMessageFilterService(val conf: BridgeConfiguration,
     override fun sendMessageToLocalBroker(inboundMessage: ReceivedMessage) {
         try {
             validateMessage(inboundMessage)
+        } catch (ex: Exception) {
+            auditService.packetDropEvent(inboundMessage, "Packet Failed validation checks: " + ex.message)
+            inboundMessage.complete(true) // consume the bad message, so that it isn't redelivered forever.
+            return
+        }
+        try {
             val session = inboundSession
             val producer = inboundProducer
             if (session == null || producer == null) {
@@ -102,8 +108,8 @@ class SimpleMessageFilterService(val conf: BridgeConfiguration,
             producer.send(SimpleString(inboundMessage.topic), artemisMessage, { _ -> inboundMessage.complete(true) })
             auditService.packetAcceptedEvent(inboundMessage)
         } catch (ex: Exception) {
-            auditService.packetDropEvent(inboundMessage, "Packet Failed validation checks: " + ex.message)
-            inboundMessage.complete(false)
+            log.error("Error trying to forward message", ex)
+            inboundMessage.complete(false) // delivery failure. NAK back to source and await re-delivery attempts
         }
     }
 }

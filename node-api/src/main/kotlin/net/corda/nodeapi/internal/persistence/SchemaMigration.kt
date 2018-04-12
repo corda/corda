@@ -133,7 +133,7 @@ class SchemaMigration(
                 check && !run -> {
                     val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
                     if (unRunChanges.isNotEmpty()) {
-                        throw IllegalStateException("There are ${unRunChanges.size} outstanding database changes that need to be run. Please use the provided tools to update the database.")
+                        throw IllegalStateException("There are ${unRunChanges.size} outstanding database changes that need to be run. Please use the advanced migration tool. See: https://http://docs.corda.r3.com/database-migration.html")
                     }
                 }
                 (outputWriter != null) && !check && !run -> liquibase.update(Contexts(), outputWriter)

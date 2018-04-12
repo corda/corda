@@ -13,10 +13,10 @@ package com.r3.corda.networkmanage.common.persistence
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.hash
+import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.NodeInfoAndSigned
@@ -31,6 +31,7 @@ import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.signWith
 import net.corda.testing.node.MockServices
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -216,17 +217,66 @@ class PersistentNodeInfoStorageTest : TestBase() {
         val acceptedUpdate = nodeInfoStorage.getAcceptedParametersUpdate(nodeInfoHash2)
         assertThat(acceptedUpdate?.networkParameters?.hash).isEqualTo(netParamsHash.toString())
     }
+
+    @Test
+    fun `persist node info with multiple node CA identities`() {
+        val (nodeInfo1, nodeKeyPair1) = createValidNodeInfo("Alice", requestStorage)
+        val (nodeInfo2, nodeKeyPair2) = createValidNodeInfo("Bob", requestStorage)
+
+        val multiIdentityNodeInfo = nodeInfo1.copy(legalIdentitiesAndCerts = nodeInfo1.legalIdentitiesAndCerts + nodeInfo2.legalIdentitiesAndCerts)
+        val signedNodeInfo = multiIdentityNodeInfo.signWith(listOf(nodeKeyPair1, nodeKeyPair2))
+
+        assertThatThrownBy { nodeInfoStorage.putNodeInfo(NodeInfoAndSigned(signedNodeInfo)) }
+                .isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("Require exactly 1 Node CA identity in the node-info.")
+    }
+
+    @Test
+    fun `persist node info with service identity`() {
+        val (nodeInfo, nodeKeyPairs) = createValidNodeInfo(requestStorage, CertRole.NODE_CA to "Alice",  CertRole.SERVICE_IDENTITY to "Alice Notary")
+        val signedNodeInfo = nodeInfo.signWith(nodeKeyPairs)
+        nodeInfoStorage.putNodeInfo(NodeInfoAndSigned(signedNodeInfo))
+    }
+
+    @Test
+    fun `persist node info with unregistered service identity`() {
+        val (nodeInfo1, nodeKeyPair1) = createValidNodeInfo("Alice", requestStorage)
+        // Create a unregistered cert path with valid intermediate cert.
+        val (identity, key) = TestNodeInfoBuilder().addServiceIdentity(CordaX500Name("Test", "London", "GB"), Crypto.generateKeyPair())
+
+        val multiIdentityNodeInfo = nodeInfo1.copy(legalIdentitiesAndCerts = nodeInfo1.legalIdentitiesAndCerts + identity)
+        val signedNodeInfo = multiIdentityNodeInfo.signWith(listOf(nodeKeyPair1, key))
+
+        assertThatThrownBy { nodeInfoStorage.putNodeInfo(NodeInfoAndSigned(signedNodeInfo)) }
+                .isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("Node-info not registered with us")
+    }
 }
 
-internal fun createValidSignedNodeInfo(organisation: String,
-                                       storage: CertificateSigningRequestStorage): Pair<NodeInfoAndSigned, PrivateKey> {
-    val (csr, nodeKeyPair) = createRequest(organisation, certRole = CertRole.NODE_CA)
-    val requestId = storage.saveRequest(csr)
-    storage.markRequestTicketCreated(requestId)
-    storage.approveRequest(requestId, "TestUser")
+private fun createValidNodeInfo(organisation: String, storage: CertificateSigningRequestStorage): Pair<NodeInfo, PrivateKey> {
+    val (nodeInfo, keys) = createValidNodeInfo(storage, CertRole.NODE_CA to organisation)
+    return Pair(nodeInfo, keys.single())
+}
+
+private fun createValidNodeInfo(storage: CertificateSigningRequestStorage, vararg identities: Pair<CertRole, String>): Pair<NodeInfo, List<PrivateKey>> {
     val nodeInfoBuilder = TestNodeInfoBuilder()
-    val (identity, key) = nodeInfoBuilder.addIdentity(CordaX500Name.build(X500Principal(csr.subject.encoded)), nodeKeyPair)
-    storage.putCertificatePath(requestId, identity.certPath, "Test")
-    val (_, signedNodeInfo) = nodeInfoBuilder.buildWithSigned(1)
-    return Pair(NodeInfoAndSigned(signedNodeInfo), key)
+    val keys = identities.map { (certRole, name) ->
+        val (csr, nodeKeyPair) = createRequest(name, certRole = certRole)
+        val requestId = storage.saveRequest(csr)
+        storage.markRequestTicketCreated(requestId)
+        storage.approveRequest(requestId, "TestUser")
+        val (identity, key) = when (certRole) {
+            CertRole.NODE_CA -> nodeInfoBuilder.addLegalIdentity(CordaX500Name.build(X500Principal(csr.subject.encoded)), nodeKeyPair)
+            CertRole.SERVICE_IDENTITY -> nodeInfoBuilder.addServiceIdentity(CordaX500Name.build(X500Principal(csr.subject.encoded)), nodeKeyPair)
+            else -> throw IllegalArgumentException("Unsupported cert role $certRole.")
+        }
+        storage.putCertificatePath(requestId, identity.certPath, "Test")
+        key
+    }
+    return Pair(nodeInfoBuilder.build(), keys)
+}
+
+internal fun createValidSignedNodeInfo(organisation: String, storage: CertificateSigningRequestStorage): Pair<NodeInfoAndSigned, PrivateKey> {
+    val (nodeInfo, key) = createValidNodeInfo(organisation, storage)
+    return Pair(NodeInfoAndSigned(nodeInfo.signWith(listOf(key))), key)
 }

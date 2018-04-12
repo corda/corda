@@ -34,9 +34,10 @@ import java.security.cert.CertPath
 class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeInfoStorage {
     override fun putNodeInfo(nodeInfoAndSigned: NodeInfoAndSigned): SecureHash {
         val (nodeInfo, signedNodeInfo) = nodeInfoAndSigned
-        val nodeCaCert = nodeInfo.legalIdentitiesAndCerts[0].certPath.x509Certificates.find { CertRole.extract(it) == NODE_CA }
-        nodeCaCert ?: throw IllegalArgumentException("Missing Node CA")
         val nodeInfoHash = signedNodeInfo.raw.hash
+
+        // Extract identities issued by the intermediate CAs (doorman).
+        val registeredIdentities = nodeInfo.legalIdentitiesAndCerts.map { it.certPath.x509Certificates.single { CertRole.extract(it) in setOf(CertRole.SERVICE_IDENTITY, NODE_CA) } }
 
         database.transaction {
             val count = session.createQuery(
@@ -50,12 +51,20 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
             }
 
             // TODO Move these checks out of data access layer
-            val request = requireNotNull(getSignedRequestByPublicHash(nodeCaCert.publicKey.encoded.sha256())) {
-                "Node-info not registered with us"
+            // For each identity known by the doorman, validate against it's CSR.
+            val requests = registeredIdentities.map {
+                val request = requireNotNull(getSignedRequestByPublicHash(it.publicKey.hash)) {
+                    "Node-info not registered with us"
+                }
+                request.certificateData?.certificateStatus.let {
+                    require(it == CertificateStatus.VALID) { "Certificate is no longer valid: $it" }
+                }
+                CertRole.extract(it) to request
             }
-            request.certificateData?.certificateStatus.let {
-                require(it == CertificateStatus.VALID) { "Certificate is no longer valid: $it" }
-            }
+
+            // Ensure only 1 NodeCA identity.
+            // TODO: make this support multiple node identities.
+            val (_, request) = requireNotNull(requests.singleOrNull { it.first == CertRole.NODE_CA }) { "Require exactly 1 Node CA identity in the node-info." }
 
             val existingNodeInfos = session.fromQuery<NodeInfoEntity>(
                     "n where n.certificateSigningRequest = :csr and n.isCurrent = true order by n.publishedAt desc")

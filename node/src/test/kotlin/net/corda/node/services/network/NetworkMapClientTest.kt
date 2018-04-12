@@ -83,8 +83,8 @@ class NetworkMapClientTest {
     @Test
     fun `errors return a meaningful error message`() {
         val nodeInfoBuilder = TestNodeInfoBuilder()
-        val (_, aliceKey) = nodeInfoBuilder.addIdentity(ALICE_NAME)
-        nodeInfoBuilder.addIdentity(BOB_NAME)
+        val (_, aliceKey) = nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
+        nodeInfoBuilder.addLegalIdentity(BOB_NAME)
         val nodeInfo3 = nodeInfoBuilder.build()
         val signedNodeInfo3 = nodeInfo3.signWith(listOf(aliceKey))
 

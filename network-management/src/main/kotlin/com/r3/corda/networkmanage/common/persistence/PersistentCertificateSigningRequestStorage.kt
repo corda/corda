@@ -60,25 +60,27 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
     }
 
     override fun saveRequest(request: PKCS10CertificationRequest): String {
-        val requestId = SecureHash.randomSHA256().toString()
-        database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
-            val legalNameOrRejectMessage = try {
-                validateRequestAndParseLegalName(request)
+        return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
+            val (legalName, exception) = try {
+                val legalName = parseLegalName(request)
+                // Return existing request ID, if request already exists for the same request.
+                validateRequest(legalName, request)?.let { return@transaction it }
+                Pair(legalName, null)
             } catch (e: RequestValidationException) {
-                e.rejectMessage
+                Pair(e.legalName, e)
             }
+
             val requestEntity = CertificateSigningRequestEntity(
-                    requestId = requestId,
-                    legalName = legalNameOrRejectMessage as? CordaX500Name,
+                    requestId = SecureHash.randomSHA256().toString(),
+                    legalName = legalName,
                     publicKeyHash = toSupportedPublicKey(request.subjectPublicKeyInfo).hash,
                     request = request,
-                    remark = legalNameOrRejectMessage as? String,
+                    remark = exception?.rejectMessage,
                     modifiedBy = CertificateSigningRequestStorage.DOORMAN_SIGNATURE,
-                    status = if (legalNameOrRejectMessage is CordaX500Name) RequestStatus.NEW else RequestStatus.REJECTED
+                    status = if (exception == null) RequestStatus.NEW else RequestStatus.REJECTED
             )
-            session.save(requestEntity)
+            session.save(requestEntity) as String
         }
-        return requestId
     }
 
     private fun DatabaseTransaction.findRequest(requestId: String,
@@ -159,41 +161,56 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
         }
     }
 
-    private fun DatabaseTransaction.validateRequestAndParseLegalName(request: PKCS10CertificationRequest): CordaX500Name {
-        // It's important that we always use the toString() output of CordaX500Name as it standardises the string format
-        // to make querying possible.
-        val legalName = try {
+    private fun parseLegalName(request: PKCS10CertificationRequest): CordaX500Name {
+        return try {
             CordaX500Name.build(X500Principal(request.subject.encoded))
         } catch (e: IllegalArgumentException) {
-            throw RequestValidationException(request.subject.toString(), "Name validation failed: ${e.message}")
-        }
-        return when {
-        // Check if requested role is valid.
-            request.getCertRole() !in allowedCertRoles -> throw RequestValidationException(legalName.toString(), "Requested certificate role ${request.getCertRole()} is not allowed.")
-        // TODO consider scenario: There is a CSR that is signed but the certificate itself has expired or was revoked
-        // Also, at the moment we assume that once the CSR is approved it cannot be rejected.
-        // What if we approved something by mistake.
-            nonRejectedRequestExists(CertificateSigningRequestEntity::legalName.name, legalName) -> throw RequestValidationException(legalName.toString(), "Duplicate legal name")
-        //TODO Consider following scenario: There is a CSR that is signed but the certificate itself has expired or was revoked
-            nonRejectedRequestExists(CertificateSigningRequestEntity::publicKeyHash.name, toSupportedPublicKey(request.subjectPublicKeyInfo).hash) -> throw RequestValidationException(legalName.toString(), "Duplicate public key")
-            else -> legalName
+            throw RequestValidationException(null, request.subject.toString(), rejectMessage = "Name validation failed: ${e.message}")
         }
     }
 
     /**
-     * Check if "non-rejected" request exists with provided column and value.
+     * Validate certificate signing request, returns request ID if same request already exists.
      */
-    private fun DatabaseTransaction.nonRejectedRequestExists(columnName: String, value: Any): Boolean {
+    private fun DatabaseTransaction.validateRequest(legalName: CordaX500Name, request: PKCS10CertificationRequest): String? {
+        // Check if the same request exists and returns the request id.
+        val existingRequestByPubKeyHash = nonRejectedRequest(CertificateSigningRequestEntity::publicKeyHash.name, toSupportedPublicKey(request.subjectPublicKeyInfo).hash)
+
+        existingRequestByPubKeyHash?.let {
+            // Compare subject, attribute.
+            // We cannot compare the request directly because it contains nonce.
+            if (it.request.subject == request.subject && it.request.attributes.asList() == request.attributes.asList()) {
+                return it.requestId
+            } else {
+                //TODO Consider following scenario: There is a CSR that is signed but the certificate itself has expired or was revoked
+                throw RequestValidationException(legalName, rejectMessage = "Duplicate public key")
+            }
+        }
+        // Check if requested role is valid.
+        if (request.getCertRole() !in allowedCertRoles)
+            throw RequestValidationException(legalName, rejectMessage = "Requested certificate role ${request.getCertRole()} is not allowed.")
+        // TODO consider scenario: There is a CSR that is signed but the certificate itself has expired or was revoked
+        // Also, at the moment we assume that once the CSR is approved it cannot be rejected.
+        // What if we approved something by mistake.
+        if (nonRejectedRequest(CertificateSigningRequestEntity::legalName.name, legalName) != null) throw RequestValidationException(legalName, rejectMessage = "Duplicate legal name")
+
+        return null
+    }
+
+    /**
+     * Retrieve "non-rejected" request which matches provided column and value predicate.
+     */
+    private fun <T : Any> DatabaseTransaction.nonRejectedRequest(columnName: String, value: T): CertificateSigningRequestEntity? {
         val query = session.criteriaBuilder.run {
             val criteriaQuery = createQuery(CertificateSigningRequestEntity::class.java)
             criteriaQuery.from(CertificateSigningRequestEntity::class.java).run {
-                val valueQuery = equal(get<CordaX500Name>(columnName), value)
+                val valueQuery = equal(get<T>(columnName), value)
                 val statusQuery = notEqual(get<RequestStatus>(CertificateSigningRequestEntity::status.name), RequestStatus.REJECTED)
                 criteriaQuery.where(and(valueQuery, statusQuery))
             }
         }
-        return session.createQuery(query).setMaxResults(1).resultList.isNotEmpty()
+        return session.createQuery(query).setMaxResults(1).uniqueResult()
     }
 
-    private class RequestValidationException(subjectName: String, val rejectMessage: String) : Exception("Validation failed for $subjectName. $rejectMessage.")
+    private data class RequestValidationException(val legalName: CordaX500Name?, val subjectName: String = legalName.toString(), val rejectMessage: String) : Exception("Validation failed for $subjectName. $rejectMessage.")
 }
