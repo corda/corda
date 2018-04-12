@@ -41,23 +41,23 @@ class SignedNodeInfoTest {
 
     @Test
     fun `verifying single identity`() {
-        nodeInfoBuilder.addIdentity(ALICE_NAME)
+        nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
         val (nodeInfo, signedNodeInfo) = nodeInfoBuilder.buildWithSigned()
         assertThat(signedNodeInfo.verified()).isEqualTo(nodeInfo)
     }
 
     @Test
     fun `verifying multiple identities`() {
-        nodeInfoBuilder.addIdentity(ALICE_NAME)
-        nodeInfoBuilder.addIdentity(BOB_NAME)
+        nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
+        nodeInfoBuilder.addLegalIdentity(BOB_NAME)
         val (nodeInfo, signedNodeInfo) = nodeInfoBuilder.buildWithSigned()
         assertThat(signedNodeInfo.verified()).isEqualTo(nodeInfo)
     }
 
     @Test
     fun `verifying missing signature`() {
-        val (_, aliceKey) = nodeInfoBuilder.addIdentity(ALICE_NAME)
-        nodeInfoBuilder.addIdentity(BOB_NAME)
+        val (_, aliceKey) = nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
+        nodeInfoBuilder.addLegalIdentity(BOB_NAME)
         val nodeInfo = nodeInfoBuilder.build()
         val signedNodeInfo = nodeInfo.signWith(listOf(aliceKey))
         assertThatThrownBy { signedNodeInfo.verified() }
@@ -80,7 +80,7 @@ class SignedNodeInfoTest {
 
     @Test
     fun `verifying extra signature`() {
-        val (_, aliceKey) = nodeInfoBuilder.addIdentity(ALICE_NAME)
+        val (_, aliceKey) = nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
         val nodeInfo = nodeInfoBuilder.build()
         val signedNodeInfo = nodeInfo.signWith(listOf(aliceKey, generateKeyPair().private))
         assertThatThrownBy { signedNodeInfo.verified() }
@@ -90,7 +90,7 @@ class SignedNodeInfoTest {
 
     @Test
     fun `verifying incorrect signature`() {
-        nodeInfoBuilder.addIdentity(ALICE_NAME)
+        nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
         val nodeInfo = nodeInfoBuilder.build()
         val signedNodeInfo = nodeInfo.signWith(listOf(generateKeyPair().private))
         assertThatThrownBy { signedNodeInfo.verified() }
@@ -100,8 +100,8 @@ class SignedNodeInfoTest {
 
     @Test
     fun `verifying with signatures in wrong order`() {
-        val (_, aliceKey) = nodeInfoBuilder.addIdentity(ALICE_NAME)
-        val (_, bobKey) = nodeInfoBuilder.addIdentity(BOB_NAME)
+        val (_, aliceKey) = nodeInfoBuilder.addLegalIdentity(ALICE_NAME)
+        val (_, bobKey) = nodeInfoBuilder.addLegalIdentity(BOB_NAME)
         val nodeInfo = nodeInfoBuilder.build()
         val signedNodeInfo = nodeInfo.signWith(listOf(bobKey, aliceKey))
         assertThatThrownBy { signedNodeInfo.verified() }
