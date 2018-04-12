@@ -12,6 +12,7 @@
  */
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda bridge server capsule'
 
