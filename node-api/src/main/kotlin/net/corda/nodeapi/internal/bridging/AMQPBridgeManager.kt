@@ -78,7 +78,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val maxMessageSize
 
         private val log = LoggerFactory.getLogger("$bridgeName:${legalNames.first()}")
 
-        val amqpClient = AMQPClient(listOf(target), legalNames, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, crlCheckSoftFail, sharedThreadPool = sharedEventGroup)
+        val amqpClient = AMQPClient(listOf(target), legalNames, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, crlCheckSoftFail, sharedThreadPool = sharedEventGroup, maxMessageSize = maxMessageSize)
         val bridgeName: String get() = getBridgeName(queueName, target)
         private val lock = ReentrantLock() // lock to serialise session level access
         private var session: ClientSession? = null
@@ -131,7 +131,8 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val maxMessageSize
 
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
             if (artemisMessage.bodySize > maxMessageSize) {
-                log.warn("Message exceeds maxMessageSize network parameter, maxMessageSize: [$maxMessageSize], message size: [${artemisMessage.bodySize}], dropping message.")
+                log.warn("Message exceeds maxMessageSize network parameter, maxMessageSize: [$maxMessageSize], message size: [${artemisMessage.bodySize}], " +
+                        "dropping message, uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
                 // Ack the message to prevent same message being sent to us again.
                 artemisMessage.acknowledge()
                 return
