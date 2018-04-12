@@ -18,6 +18,7 @@ import java.io.StringWriter
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStore
+import java.security.PublicKey
 import java.security.cert.X509Certificate
 
 /**
@@ -85,14 +86,14 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
             requestIdStore.deleteIfExists()
             throw certificateRequestException
         }
-        validateCertificates(certificates)
+        validateCertificates(keyPair.public, certificates)
         storePrivateKeyWithCertificates(nodeKeyStore, keyPair, certificates, keyAlias)
         onSuccess(keyPair, certificates)
         // All done, clean up temp files.
         requestIdStore.deleteIfExists()
     }
 
-    private fun validateCertificates(certificates: List<X509Certificate>) {
+    private fun validateCertificates(registeringPublicKey: PublicKey, certificates: List<X509Certificate>) {
         val nodeCACertificate = certificates.first()
 
         val nodeCaSubject = try {
@@ -112,6 +113,11 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
 
         if (certRole != nodeCaCertRole) {
             throw CertificateRequestException("Received certificate contains invalid cert role, expected '$certRole', got '$nodeCaCertRole'.")
+        }
+
+        // Validate returned certificate is for the correct public key
+        if (Crypto.toSupportedPublicKey(certificates.first().publicKey) != Crypto.toSupportedPublicKey(registeringPublicKey)) {
+            throw CertificateRequestException("Received certificate contains incorrect public key, expected '$registeringPublicKey', got '${certificates.first().publicKey}'.")
         }
 
         // Validate certificate chain returned from the doorman with the root cert obtained via out-of-band process, to prevent MITM attack on doorman server.
