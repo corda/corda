@@ -174,7 +174,6 @@ class NodePerformanceTests : IntegrationTest() {
         )) {
             val aliceFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val alice = aliceFuture.getOrThrow() as InProcess
-            defaultNotaryNode.getOrThrow()
             val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, alice.internalServices.monitoringService.metrics)
             CordaRPCClient(alice.rpcAddress).use("A", "A") { connection ->
                 startPublishingFixedRateInjector(
@@ -202,7 +201,6 @@ class NodePerformanceTests : IntegrationTest() {
             val bobFuture = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
             val alice = aliceFuture.getOrThrow() as InProcess
             val bob = bobFuture.getOrThrow() as InProcess
-            defaultNotaryNode.getOrThrow()
             CordaRPCClient(alice.rpcAddress).use("A", "A") { connection ->
                 connection.proxy.startFlow(::CashIssueAndPaymentNoSelection, 1.DOLLARS, OpaqueBytes.of(0), bob.nodeInfo.legalIdentities[0], false, defaultNotaryIdentity).returnValue.getOrThrow()
             }

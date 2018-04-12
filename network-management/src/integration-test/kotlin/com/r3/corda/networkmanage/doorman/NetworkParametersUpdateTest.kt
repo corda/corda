@@ -5,7 +5,6 @@ import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.div
 import net.corda.core.internal.readObject
 import net.corda.core.messaging.ParametersUpdateInfo
@@ -90,15 +89,19 @@ class NetworkParametersUpdateTest : IntegrationTest() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
+                notarySpecs = emptyList(),
                 initialiseSerialization = false,
                 extraCordappPackagesToScan = listOf("net.corda.finance")
         ) {
-            var (alice) = listOf(
+            var (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME),
-                    startNode(providedName = BOB_NAME),
-                    defaultNotaryNode
-            ).transpose().getOrThrow()
-            alice as NodeHandleInternal
+                    startNode(providedName = BOB_NAME)
+            ).map { it.getOrThrow() as NodeHandleInternal }
+
+            // Make sure that stopping Bob doesn't remove him from the network map
+            bob.stop()
+            Thread.sleep(timeoutMillis * 2)
+            assertThat(alice.rpc.networkMapSnapshot().map { it.legalIdentities[0].name }).contains(BOB_NAME)
 
             val snapshot = alice.rpc.networkParametersFeed().snapshot
             val updates = alice.rpc.networkParametersFeed().updates.bufferUntilSubscribed()

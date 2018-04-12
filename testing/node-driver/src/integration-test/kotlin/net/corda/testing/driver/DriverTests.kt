@@ -21,6 +21,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -90,8 +91,19 @@ class DriverTests : IntegrationTest() {
     }
 
     @Test
+    fun `default notary is visible when the startNode future completes`() {
+        // Based on local testing, running this 3 times gives us a high confidence that we'll spot if the feature is not working
+        repeat(3) {
+            driver(DriverParameters(startNodesInProcess = true)) {
+                val bob = startNode(providedName = BOB_NAME).getOrThrow()
+                assertThat(bob.rpc.networkMapSnapshot().flatMap { it.legalIdentities }).contains(defaultNotaryIdentity)
+            }
+        }
+    }
+
+    @Test
     fun `random free port allocation`() {
-        val nodeHandle = driver(DriverParameters(portAllocation = RandomFree)) {
+        val nodeHandle = driver(DriverParameters(portAllocation = RandomFree, notarySpecs = emptyList())) {
             val nodeInfo = startNode(providedName = DUMMY_BANK_A_NAME)
             nodeMustBeUp(nodeInfo)
         }
@@ -103,10 +115,7 @@ class DriverTests : IntegrationTest() {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(DriverParameters(
-                isDebug = true,
-                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
-        )) {
+        driver(DriverParameters(isDebug = true,notarySpecs = emptyList(), systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
             val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
@@ -116,7 +125,7 @@ class DriverTests : IntegrationTest() {
 
     @Test
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        driver(DriverParameters(startNodesInProcess = false, jmxPolicy = JmxPolicy(true))) {
+        driver(DriverParameters(startNodesInProcess = false, jmxPolicy = JmxPolicy(true), notarySpecs = emptyList())) {
             // start another node so we gain access to node JMX metrics
             val webAddress = NetworkHostAndPort("localhost", 7006)
             startNode(providedName = DUMMY_REGULATOR_NAME,
@@ -145,33 +154,32 @@ class DriverTests : IntegrationTest() {
 
     @Test
     fun `driver rejects multiple nodes with the same name`() {
-
-        driver(DriverParameters(startNodesInProcess = true)) {
-
-            assertThatThrownBy { listOf(newNode(DUMMY_BANK_A_NAME)(), newNode(DUMMY_BANK_B_NAME)(), newNode(DUMMY_BANK_A_NAME)()).transpose().getOrThrow() }.isInstanceOf(IllegalArgumentException::class.java)
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            assertThatThrownBy {
+                listOf(
+                        newNode(DUMMY_BANK_A_NAME)(),
+                        newNode(DUMMY_BANK_B_NAME)(),
+                        newNode(DUMMY_BANK_A_NAME)()
+                ).transpose().getOrThrow()
+            }.isInstanceOf(IllegalArgumentException::class.java)
         }
     }
 
     @Test
     fun `driver rejects multiple nodes with the same name parallel`() {
-
-        driver(DriverParameters(startNodesInProcess = true)) {
-
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val nodes = listOf(newNode(DUMMY_BANK_A_NAME), newNode(DUMMY_BANK_B_NAME), newNode(DUMMY_BANK_A_NAME))
-
-            assertThatThrownBy { nodes.parallelStream().map { it.invoke() }.toList().transpose().getOrThrow() }.isInstanceOf(IllegalArgumentException::class.java)
+            assertThatThrownBy {
+                nodes.parallelStream().map { it.invoke() }.toList().transpose().getOrThrow()
+            }.isInstanceOf(IllegalArgumentException::class.java)
         }
     }
 
     @Test
     fun `driver allows reusing names of nodes that have been stopped`() {
-
-        driver(DriverParameters(startNodesInProcess = true)) {
-
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
-
             nodeA.stop()
-
             assertThatCode { newNode(DUMMY_BANK_A_NAME)().getOrThrow() }.doesNotThrowAnyException()
         }
     }

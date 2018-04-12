@@ -117,8 +117,8 @@ class NodeSchemaServiceTest {
     @Test
     fun `check node runs inclusive of notary node schema set using driverDSL`() {
         driver(DriverParameters(startNodesInProcess = true)) {
-            val notaryNode = defaultNotaryNode.getOrThrow().rpc.startFlow(::MappedSchemasFlow)
-            val mappedSchemas = notaryNode.returnValue.getOrThrow()
+            val notary = defaultNotaryNode.getOrThrow()
+            val mappedSchemas = notary.rpc.startFlow(::MappedSchemasFlow).returnValue.getOrThrow()
             // check against NodeCore + NodeNotary Schemas
             assertTrue(mappedSchemas.contains(NodeCoreV1.name))
             assertTrue(mappedSchemas.contains(NodeNotaryV1.name))
