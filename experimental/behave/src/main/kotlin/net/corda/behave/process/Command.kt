@@ -58,7 +58,7 @@ open class Command(
                 while (true) {
                     try {
                         val line = input.readLine()?.trimEnd() ?: break
-                        //println(">>> $line")
+                        log.trace(line)
                         outputListener?.onNewLine(line)
                     } catch (_: IOException) {
                         break
@@ -100,7 +100,6 @@ open class Command(
     })
 
     fun start() {
-//        output.subscribe()
         thread.start()
     }
 

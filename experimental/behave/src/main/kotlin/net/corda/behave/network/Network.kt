@@ -222,18 +222,13 @@ class Network private constructor(
                             arrayOf("--config-file", "$doormanConfigDirectory/node.conf"),
                             doormanTargetDirectory, timeout)
 
-        // if doorman command is null, we are in deep trouble anyway
-        val doormanNMSCommand = runCommand(doormanNMS, noWait = true)!!
+        val doormanNMSCommand = runCommand(doormanNMS, noWait = true)
 
-        println("Waiting for DoormanNMS to be alive")
+        log.info("Waiting for DoormanNMS to be alive")
 
         PatternWatch(doormanNMSCommand.output, "Network management web services started on").await(30.seconds)
 
-        println("DoormanNMS up and running")
-
-
-        // give time for process to be ready
-//        sleep(10.seconds.toMillis())
+        log.info("DoormanNMS up and running")
 
         // 8. Register other participant nodes
         val partyNodes = nodes.values.filter { it.config.notary.notaryType == NotaryType.NONE }
@@ -253,10 +248,9 @@ class Network private constructor(
         isDoormanNMSRunning = true
     }
 
-    private fun runCommand(command: JarCommand, noWait: Boolean = false):Command? {
+    private fun runCommand(command: JarCommand, noWait: Boolean = false):Command {
         if (!command.jarFile.exists()) {
-            log.warn("Jar file does not exist: ${command.jarFile}")
-            return null
+            throw IllegalStateException("\"Jar file does not exist: ${command.jarFile}\"")
         }
         log.info("Running command: {}", command)
         command.output.subscribe {
