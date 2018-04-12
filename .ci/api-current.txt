@@ -1895,7 +1895,7 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   @org.jetbrains.annotations.NotNull public final List getNotaries()
   @org.jetbrains.annotations.NotNull public final Map getWhitelistedContractImplementations()
   public int hashCode()
-  public String toString()
+  @org.jetbrains.annotations.NotNull public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.NodeInfo extends java.lang.Object
   public <init>(List, List, int, long)

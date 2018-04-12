@@ -17,6 +17,8 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import java.io.NotSerializableException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SetterConstructorTests {
 
@@ -72,6 +74,13 @@ public class SetterConstructorTests {
         private void setA(int a) { this.a = a; }
         public void setB(int b) { this.b = b; }
         public void setC(int c) { this.c = c; }
+    }
+
+    static class CIntList {
+        private List<Integer> l;
+
+        public List getL() { return l; }
+        public void setL(List<Integer> l) { this.l = l; }
     }
 
     static class Inner1 {
@@ -324,5 +333,30 @@ public class SetterConstructorTests {
 
         Assertions.assertThatThrownBy(() -> new SerializationOutput(factory1).serialize(tm)).isInstanceOf(
                 NotSerializableException.class);
+    }
+
+    // This not blowing up means it's working
+    @Test
+    public void intList() throws NotSerializableException {
+        CIntList cil = new CIntList();
+
+        List<Integer> l = new ArrayList<>();
+        l.add(1);
+        l.add(2);
+        l.add(3);
+
+        cil.setL(l);
+
+        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
+        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
+        SerializerFactory factory1 = new SerializerFactory(
+                AllWhitelist.INSTANCE,
+                ClassLoader.getSystemClassLoader(),
+                evolutionSerialiserGetter,
+                fingerPrinter);
+
+        // if we've got super / sub types on the setter vs the underlying type the wrong way around this will
+        // explode. See CORDA-1229 (https://r3-cev.atlassian.net/browse/CORDA-1229)
+        new DeserializationInput(factory1).deserialize(new SerializationOutput(factory1).serialize(cil), CIntList.class);
     }
 }
