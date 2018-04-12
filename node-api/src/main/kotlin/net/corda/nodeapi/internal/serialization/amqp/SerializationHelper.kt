@@ -304,8 +304,7 @@ fun propertiesForSerializationFromSetters(
                 throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
                         "takes too many arguments")
             }
-
-            //val setterType = setter.parameterTypes[0]!!
+            
             val setterType = setter.genericParameterTypes[0]!!
 
             if ((property.value.field != null) &&
