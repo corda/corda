@@ -294,17 +294,10 @@ class ProtonWrapperTests {
             amqpClient.createMessage(largeData, sendAddress, CHARLIE_NAME.toString(), testProperty)
         }.hasMessageContaining("Message exceeds maxMessageSize network parameter")
 
-        // Create a message larger then the limit using a different client.
-        val bodgedMessage = createClient(maxMessageSize + 1).createMessage(largeData, sendAddress, CHARLIE_NAME.toString(), testProperty)
-
-        // Write should fail.
-        assertThatThrownBy {
-            amqpClient.write(bodgedMessage)
-        }.hasMessageContaining("Message exceeds maxMessageSize network parameter")
-
         // Send normal message again to confirm the large message didn't reach the server and client is not killed by the message.
-        amqpClient.write(message)
-        assertEquals(MessageStatus.Acknowledged, message.onComplete.get())
+        val message2 = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
+        amqpClient.write(message2)
+        assertEquals(MessageStatus.Acknowledged, message2.onComplete.get())
         val received2 = consumer.receive()
         assertEquals("1", received2.getStringProperty("TestProp"))
         assertArrayEquals(testData, ByteArray(received2.bodySize).apply { received2.bodyBuffer.readBytes(this) })

@@ -43,7 +43,7 @@ class AMQPServer(val hostName: String,
                  private val trustStore: KeyStore,
                  private val crlCheckSoftFail: Boolean,
                  private val trace: Boolean = false,
-                 val maxMessageSize: Int) : AutoCloseable {
+                 private val maxMessageSize: Int) : AutoCloseable {
 
     companion object {
         init {

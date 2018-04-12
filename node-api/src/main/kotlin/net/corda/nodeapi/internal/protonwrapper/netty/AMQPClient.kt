@@ -43,7 +43,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                  private val crlCheckSoftFail: Boolean,
                  private val trace: Boolean = false,
                  private val sharedThreadPool: EventLoopGroup? = null,
-                 val maxMessageSize: Int) : AutoCloseable {
+                 private val maxMessageSize: Int) : AutoCloseable {
     companion object {
         init {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)

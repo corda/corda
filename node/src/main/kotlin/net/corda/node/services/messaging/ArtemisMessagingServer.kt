@@ -19,6 +19,8 @@ import net.corda.node.services.messaging.NodeLoginModule.Companion.VERIFIER_ROLE
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.VerifierApi
+import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
+import net.corda.nodeapi.internal.ArtemisMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
@@ -118,8 +120,11 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             registerPostQueueCreationCallback { log.debug { "Queue Created: $it" } }
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
-        // Config driven switch between legacy CORE bridges and the newer AMQP protocol bridges.
+
         activeMQServer.start()
+        activeMQServer.remotingService.addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
+        activeMQServer.remotingService.addIncomingInterceptor(AmqpMessageSizeChecksInterceptor(maxMessageSize))
+        // Config driven switch between legacy CORE bridges and the newer AMQP protocol bridges.
         log.info("P2P messaging server listening on $messagingServerAddress")
     }
 
