@@ -148,7 +148,7 @@ class ArtemisMessagingTest {
         assertThatThrownBy {
             messagingClient.send(tooLagerMessage, messagingClient.myAddress)
         }.isInstanceOf(IllegalArgumentException::class.java)
-                .hasMessageContaining("Message is larger then the maximum size limit")
+                .hasMessageContaining("Message exceeds maxMessageSize network parameter")
 
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }

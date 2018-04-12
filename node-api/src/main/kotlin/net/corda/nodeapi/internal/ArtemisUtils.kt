@@ -14,5 +14,5 @@ fun Path.requireOnDefaultFileSystem() {
 }
 
 fun requireMessageSize(messageSize: Int, limit: Int) {
-    require(messageSize <= limit) { "Message exceeds maxMessageSize network parameter, maxMessageSize: [$messageSize], message size: [$limit]" }
+    require(messageSize <= limit) { "Message exceeds maxMessageSize network parameter, maxMessageSize: [$limit], message size: [$messageSize]" }
 }
