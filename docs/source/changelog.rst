@@ -1,8 +1,14 @@
 Changelog
 =========
 
-Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
-from the previous milestone release.
+Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
+release, see :doc:`upgrade-notes`.
+
+Unreleased
+==========
+
+* Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
+  as the raw type, List for example.
 
 .. _changelog_v3.1:
 
