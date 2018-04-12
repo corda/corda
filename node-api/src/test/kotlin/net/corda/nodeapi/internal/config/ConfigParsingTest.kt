@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.config
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions.defaults
 import com.typesafe.config.ConfigValueFactory
@@ -15,6 +16,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.util.*
 import kotlin.reflect.full.primaryConstructor
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ConfigParsingTest {
     @Test
@@ -227,6 +230,37 @@ class ConfigParsingTest {
         }
     }
 
+    @Test
+    fun `parse with provided parser`() {
+        val configuration = config("values" to listOf(mapOf("type" to "1", "value" to "type 1 value"), mapOf("type" to "2", "value" to "type 2 value")))
+        val objects = configuration.parseAs<TestObjects>()
+        assertTrue { objects.values.first() is TestObject.Type1 }
+        assertTrue { objects.values.last() is TestObject.Type2 }
+
+        assertEquals("type 1 value", (objects.values.first() as TestObject.Type1).value)
+        assertEquals("type 2 value", (objects.values.last() as TestObject.Type2).value)
+    }
+
+    class TestParser : ConfigParser<TestObject> {
+        override fun parse(config: Config): TestObject {
+            val type = config.getInt("type")
+            val newConfig = ConfigFactory.parseProperties(config.toProperties().apply { remove("type") })
+            return when (type) {
+                1 -> newConfig.parseAs<TestObject.Type1>()
+                2 -> newConfig.parseAs<TestObject.Type2>()
+                else -> throw IllegalArgumentException("Unsupported Object type : '$type'")
+            }
+        }
+    }
+
+    data class TestObjects(val values: List<TestObject>)
+
+    @CustomConfigParser(TestParser::class)
+    sealed class TestObject {
+        data class Type1(val value: String) : TestObject()
+        data class Type2(val value: String) : TestObject()
+    }
+
     private inline fun <reified S : SingleData<V>, reified L : ListData<V>, V : Any> testPropertyType(
             value1: V,
             value2: V,
@@ -310,6 +344,7 @@ class ConfigParsingTest {
             require(positive > 0) { "$positive is not positive" }
         }
     }
+
     data class OldData(
             @OldConfig("oldValue")
             val newValue: String)

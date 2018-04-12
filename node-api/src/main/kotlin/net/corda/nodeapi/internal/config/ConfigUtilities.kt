@@ -25,12 +25,21 @@ import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KType
+import kotlin.reflect.full.createInstance
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.jvmErasure
 
 @Target(AnnotationTarget.PROPERTY)
 annotation class OldConfig(val value: String)
+
+@Target(AnnotationTarget.CLASS)
+annotation class CustomConfigParser(val parser:  KClass<out ConfigParser<*>>)
+
+interface ConfigParser<T> {
+    fun parse(config: Config): T
+}
 
 const val CUSTOM_NODE_PROPERTIES_ROOT = "custom"
 
@@ -40,6 +49,9 @@ operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T
 }
 
 fun <T : Any> Config.parseAs(clazz: KClass<T>, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle, nestedPath: String? = null): T {
+    // Use custom parser if provided, instead of treating the object as data class.
+    clazz.findAnnotation<CustomConfigParser>()?.let { return uncheckedCast(it.parser.createInstance().parse(this)) }
+
     require(clazz.isData) { "Only Kotlin data classes can be parsed. Offending: ${clazz.qualifiedName}" }
     val constructor = clazz.primaryConstructor!!
     val parameters = constructor.parameters
