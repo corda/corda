@@ -70,6 +70,28 @@ class PersistentCertificateRequestStorageTest : TestBase() {
     }
 
     @Test
+    fun `submit same request twice returns the first request ID`() {
+        val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val request = createRequest("LegalName", keyPair, certRole = CertRole. NODE_CA).first
+        val firstRequestId = storage.saveRequest(request)
+
+        assertNotNull(storage.getRequest(firstRequestId)).apply {
+            assertEquals(request, this.request)
+        }
+        assertThat(storage.getRequests(RequestStatus.NEW).map { it.requestId }).containsOnly(firstRequestId)
+
+        val request2 = createRequest("LegalName", keyPair, certRole = CertRole.NODE_CA).first
+        val secondRequestId = storage.saveRequest(request2)
+
+        assertEquals(firstRequestId, secondRequestId)
+
+        assertNotNull(storage.getRequest(secondRequestId)).apply {
+            assertEquals(request, this.request)
+        }
+        assertThat(storage.getRequests(RequestStatus.NEW).map { it.requestId }).containsOnly(firstRequestId)
+    }
+
+    @Test
     fun `invalid cert role request`() {
         val request = createRequest("LegalName", certRole = CertRole.INTERMEDIATE_CA).first
         val requestId = storage.saveRequest(request)
