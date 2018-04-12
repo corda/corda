@@ -18,6 +18,7 @@ import net.corda.nodeapi.internal.bridging.AMQPBridgeManager.AMQPBridge.Companio
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
+import net.corda.nodeapi.internal.requireMessageSize
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -37,7 +38,7 @@ import kotlin.concurrent.withLock
  *  The Netty thread pool used by the AMQPBridges is also shared and managed by the AMQPBridgeManager.
  */
 @VisibleForTesting
-class AMQPBridgeManager(config: NodeSSLConfiguration, private val artemisMessageClientFactory: () -> ArtemisSessionProvider) : BridgeManager {
+class AMQPBridgeManager(config: NodeSSLConfiguration, private val maxMessageSize: Int, private val artemisMessageClientFactory: () -> ArtemisSessionProvider) : BridgeManager {
 
     private val lock = ReentrantLock()
     private val bridgeNameToBridgeMap = mutableMapOf<String, AMQPBridge>()
@@ -48,7 +49,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val artemisMessage
     private var artemis: ArtemisSessionProvider? = null
     private val crlCheckSoftFail: Boolean = config.crlCheckSoftFail
 
-    constructor(config: NodeSSLConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int) : this(config, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+    constructor(config: NodeSSLConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int) : this(config, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private const val NUM_BRIDGE_THREADS = 0 // Default sized pool
@@ -70,7 +71,8 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val artemisMessage
                              trustStore: KeyStore,
                              crlCheckSoftFail: Boolean,
                              sharedEventGroup: EventLoopGroup,
-                             private val artemis: ArtemisSessionProvider) {
+                             private val artemis: ArtemisSessionProvider,
+                             private val maxMessageSize: Int) {
         companion object {
             fun getBridgeName(queueName: String, hostAndPort: NetworkHostAndPort): String = "$queueName -> $hostAndPort"
         }
@@ -129,6 +131,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val artemisMessage
         }
 
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
+            requireMessageSize(artemisMessage.bodySize, maxMessageSize)
             val data = ByteArray(artemisMessage.bodySize).apply { artemisMessage.bodyBuffer.readBytes(this) }
             val properties = HashMap<String, Any?>()
             for (key in P2PMessagingHeaders.whitelistedHeaders) {
@@ -171,7 +174,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val artemisMessage
         if (bridgeExists(getBridgeName(queueName, target))) {
             return
         }
-        val newBridge = AMQPBridge(queueName, target, legalNames, keyStore, keyStorePrivateKeyPassword, trustStore, crlCheckSoftFail, sharedEventLoopGroup!!, artemis!!)
+        val newBridge = AMQPBridge(queueName, target, legalNames, keyStore, keyStorePrivateKeyPassword, trustStore, crlCheckSoftFail, sharedEventLoopGroup!!, artemis!!, maxMessageSize)
         lock.withLock {
             bridgeNameToBridgeMap[newBridge.bridgeName] = newBridge
         }

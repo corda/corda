@@ -42,7 +42,6 @@ class ArtemisMessagingClient(private val config: SSLConfiguration,
             // would be the default and the two lines below can be deleted.
             connectionTTL = -1
             clientFailureCheckPeriod = -1
-            minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
             isUseGlobalPools = nodeSerializationEnv != null
         }
         val sessionFactory = locator.createSessionFactory()

@@ -45,6 +45,7 @@ import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.requireMessageSize
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
@@ -378,7 +379,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private fun artemisToCordaMessage(message: ClientMessage): ReceivedMessage? {
         try {
-            require(message.bodySize <= maxMessageSize) { "Message exceed limit : ${message.bodySize}" }
+            requireMessageSize(message.bodySize, maxMessageSize)
             val topic = message.required(P2PMessagingHeaders.topicProperty) { getStringProperty(it) }
             val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
             val platformVersion = message.required(P2PMessagingHeaders.platformVersionProperty) { getIntProperty(it) }
@@ -507,7 +508,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     @Suspendable
     override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
-        require(message.data.size <= maxMessageSize) { "Message is larger then the maximum size limit [$maxMessageSize], message size: [${message.data.size}]" }
+        requireMessageSize(message.data.size, maxMessageSize)
         messagingExecutor!!.send(message, target)
         retryId?.let {
             database.transaction {
@@ -542,7 +543,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
         scheduledMessageRedeliveries[retryId] = nodeExecutor.schedule({
             sendWithRetry(retryCount + 1, message, target, retryId)
-        },messageRedeliveryDelaySeconds * Math.pow(backoffBase, retryCount.toDouble()).toLong(), TimeUnit.SECONDS)
+        }, messageRedeliveryDelaySeconds * Math.pow(backoffBase, retryCount.toDouble()).toLong(), TimeUnit.SECONDS)
     }
 
     override fun cancelRedelivery(retryId: Long) {
