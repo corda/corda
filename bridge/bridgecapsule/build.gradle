@@ -34,6 +34,10 @@ dependencies {
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
+jar {
+    baseName 'corda-bridgeserver'
+}
+
 task buildBridgeServerJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
     applicationClass 'net.corda.bridge.Bridge'
     archiveName "corda-bridgeserver-${corda_release_version}.jar"
@@ -70,5 +74,5 @@ artifacts {
 
 publish {
     disableDefaultJar = true
-    name 'corda-bridgeserver'
+    name jar.baseName
 }
