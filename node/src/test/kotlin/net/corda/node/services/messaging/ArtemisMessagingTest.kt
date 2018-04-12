@@ -136,7 +136,7 @@ class ArtemisMessagingTest {
     }
 
     @Test
-    fun `client should fail if massage exceed maxMessageSize limit`() {
+    fun `client should fail if message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer()
         val message = messagingClient.createMessage(TOPIC, data = ByteArray(MAX_MESSAGE_SIZE))
         messagingClient.send(message, messagingClient.myAddress)
@@ -154,7 +154,7 @@ class ArtemisMessagingTest {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
     @Test
-    fun `server should not process if incoming massage exceed maxMessageSize limit`() {
+    fun `server should not process if incoming message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
         val message = messagingClient.createMessage(TOPIC, data = ByteArray(50_000))
         messagingClient.send(message, messagingClient.myAddress)
