@@ -123,11 +123,7 @@ class NetworkMapServer(private val pollInterval: Duration,
                 val hash = signedNodeInfo.raw.hash
                 val nodeInfo = signedNodeInfo.verified()
                 val privateNetwork = nodeNamesUUID[nodeInfo.legalIdentities[0].name]
-                if (privateNetwork == null) {
-                    networkMaps.computeIfAbsent(null, { mutableSetOf() }).add(hash)
-                } else {
-                    networkMaps.computeIfAbsent(privateNetwork, { mutableSetOf() }).add(hash)
-                }
+                networkMaps.computeIfAbsent(privateNetwork, { mutableSetOf() }).add(hash)
                 nodeInfoMap[hash] = signedNodeInfo
                 ok()
             } catch (e: Exception) {
@@ -151,7 +147,7 @@ class NetworkMapServer(private val pollInterval: Duration,
         @GET
         @Produces(MediaType.APPLICATION_OCTET_STREAM)
         fun getGlobalNetworkMap(): Response {
-            val nodeInfoHashes = networkMaps.computeIfAbsent(null, { mutableSetOf() }).toList()
+            val nodeInfoHashes = networkMaps[null]?.toList() ?: emptyList()
             return networkMapResponse(nodeInfoHashes)
         }
 

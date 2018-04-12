@@ -23,7 +23,7 @@ import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.*
 
-class NetworkMapClient(val compatibilityZoneURL: URL, val trustedRoot: X509Certificate) {
+class NetworkMapClient(compatibilityZoneURL: URL, val trustedRoot: X509Certificate) {
     companion object {
         private val logger = contextLogger()
     }

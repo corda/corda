@@ -72,23 +72,6 @@ class NetworkMapClientTest {
     }
 
     @Test
-    fun `fetch nodes from private network`() {
-        val networkUUID = UUID.randomUUID()
-        server.addNodesToPrivateNetwork(networkUUID, listOf(ALICE_NAME))
-        assertThatThrownBy { networkMapClient.getNetworkMap(networkUUID).payload.nodeInfoHashes }
-                .isInstanceOf(IOException::class.java)
-                .hasMessageContaining("Response Code 404")
-        val (aliceInfo, signedAliceInfo) = createNodeInfoAndSigned(ALICE_NAME) // Goes to private network map
-        val aliceHash = aliceInfo.serialize().hash
-        val (bobInfo, signedBobInfo) = createNodeInfoAndSigned(BOB_NAME) // Goes to global network map
-        networkMapClient.publish(signedAliceInfo)
-        networkMapClient.publish(signedBobInfo)
-        assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(bobInfo.serialize().hash)
-        assertThat(networkMapClient.getNetworkMap(networkUUID).payload.nodeInfoHashes).containsExactly(aliceHash)
-        assertEquals(aliceInfo, networkMapClient.getNodeInfo(aliceHash))
-    }
-
-    @Test
     fun `errors return a meaningful error message`() {
         val nodeInfoBuilder = TestNodeInfoBuilder()
         val (_, aliceKey) = nodeInfoBuilder.addIdentity(ALICE_NAME)
@@ -102,11 +85,11 @@ class NetworkMapClientTest {
     }
 
     @Test
-    fun `download NetworkParameter correctly`() {
+    fun `download NetworkParameters correctly`() {
         // The test server returns same network parameter for any hash.
         val parametersHash = server.networkParameters.serialize().hash
-        val networkParameter = networkMapClient.getNetworkParameters(parametersHash).verified()
-        assertEquals(server.networkParameters, networkParameter)
+        val networkParameters = networkMapClient.getNetworkParameters(parametersHash).verified()
+        assertEquals(server.networkParameters, networkParameters)
     }
 
     @Test
