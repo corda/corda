@@ -34,7 +34,7 @@ class DockerContainerService(
                     DockerClient.ExecCreateParam.attachStdout(),
                     DockerClient.ExecCreateParam.attachStderr())
             val logStream = client.execStart(execCreation.id())
-//            command.outputListener.onNewLine(logStream.readFully())
+            //TODO Turn logStream into Observable for command
             true
         } catch (e: Exception) {
             log.warn("Failed to execute command {}", commandStrArray)
