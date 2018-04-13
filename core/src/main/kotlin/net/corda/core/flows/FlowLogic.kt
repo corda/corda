@@ -6,20 +6,17 @@ import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.abbreviate
-import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.UntrustworthyData
-import net.corda.core.utilities.debug
+import net.corda.core.utilities.*
 import org.slf4j.Logger
 import java.time.Duration
-import java.time.Instant
 
 /**
  * A sub-class of [FlowLogic<T>] implements a flow using direct, straight line blocking code. Thus you
@@ -77,12 +74,19 @@ abstract class FlowLogic<out T> {
          */
         @Suspendable
         @JvmStatic
+        @JvmOverloads
         @Throws(FlowException::class)
-        fun sleep(duration: Duration) {
+        fun sleep(duration: Duration, maySkipCheckpoint: Boolean = false) {
             if (duration > Duration.ofMinutes(5)) {
                 throw FlowException("Attempt to sleep for longer than 5 minutes is not supported.  Consider using SchedulableState.")
             }
-            (Strand.currentStrand() as? FlowStateMachine<*>)?.sleepUntil(Instant.now() + duration) ?: Strand.sleep(duration.toMillis())
+            val fiber = (Strand.currentStrand() as? FlowStateMachine<*>)
+            if (fiber == null) {
+                Strand.sleep(duration.toMillis())
+            } else {
+                val request = FlowIORequest.Sleep(wakeUpAfter = fiber.serviceHub.clock.instant() + duration)
+                fiber.suspend(request, maySkipCheckpoint = maySkipCheckpoint)
+            }
         }
     }
 
@@ -94,7 +98,7 @@ abstract class FlowLogic<out T> {
 
     /**
      * Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts. It is
-     * only available once the flow has started, which means it cannnot be accessed in the constructor. Either
+     * only available once the flow has started, which means it cannot be accessed in the constructor. Either
      * access this lazily or from inside [call].
      */
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
@@ -104,7 +108,7 @@ abstract class FlowLogic<out T> {
      * that this function does not communicate in itself, the counter-flow will be kicked off by the first send/receive.
      */
     @Suspendable
-    fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party, flowUsedForSessions)
+    fun initiateFlow(party: Party): FlowSession = stateMachine.initiateFlow(party)
 
     /**
      * Specifies the identity, with certificate, to use for this flow. This will be one of the multiple identities that
@@ -114,7 +118,10 @@ abstract class FlowLogic<out T> {
      * Note: The current implementation returns the single identity of the node. This will change once multiple identities
      * is implemented.
      */
-    val ourIdentityAndCert: PartyAndCertificate get() = stateMachine.ourIdentityAndCert
+    val ourIdentityAndCert: PartyAndCertificate get() {
+        return serviceHub.myInfo.legalIdentitiesAndCerts.find { it.party == stateMachine.ourIdentity }
+                ?: throw IllegalStateException("Identity specified by ${stateMachine.id} (${stateMachine.ourIdentity}) is not one of ours!")
+    }
 
     /**
      * Specifies the identity to use for this flow. This will be one of the multiple identities that belong to this node.
@@ -124,102 +131,23 @@ abstract class FlowLogic<out T> {
      * Note: The current implementation returns the single identity of the node. This will change once multiple identities
      * is implemented.
      */
-    val ourIdentity: Party get() = ourIdentityAndCert.party
 
-    /**
-     * Returns a [FlowInfo] object describing the flow [otherParty] is using. With [FlowInfo.flowVersion] it
-     * provides the necessary information needed for the evolution of flows and enabling backwards compatibility.
-     *
-     * This method can be called before any send or receive has been done with [otherParty]. In such a case this will force
-     * them to start their flow.
-     */
-    @Deprecated("Use FlowSession.getFlowInfo()", level = DeprecationLevel.WARNING)
-    @Suspendable
-    fun getFlowInfo(otherParty: Party): FlowInfo = stateMachine.getFlowInfo(otherParty, flowUsedForSessions, maySkipCheckpoint = false)
-
-    /**
-     * Serializes and queues the given [payload] object for sending to the [otherParty]. Suspends until a response
-     * is received, which must be of the given [R] type.
-     *
-     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
-     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
-     * corrupted data in order to exploit your code.
-     *
-     * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
-     * use this when you expect to do a message swap than do use [send] and then [receive] in turn.
-     *
-     * @return an [UntrustworthyData] wrapper around the received object.
-     */
-    @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
-    inline fun <reified R : Any> sendAndReceive(otherParty: Party, payload: Any): UntrustworthyData<R> {
-        return sendAndReceive(R::class.java, otherParty, payload)
-    }
-
-    /**
-     * Serializes and queues the given [payload] object for sending to the [otherParty]. Suspends until a response
-     * is received, which must be of the given [receiveType]. Remember that when receiving data from other parties the data
-     * should not be trusted until it's been thoroughly verified for consistency and that all expectations are
-     * satisfied, as a malicious peer may send you subtly corrupted data in order to exploit your code.
-     *
-     * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
-     * use this when you expect to do a message swap than do use [send] and then [receive] in turn.
-     *
-     * @return an [UntrustworthyData] wrapper around the received object.
-     */
-    @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
-    @Suspendable
-    open fun <R : Any> sendAndReceive(receiveType: Class<R>, otherParty: Party, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(receiveType, otherParty, payload, flowUsedForSessions, retrySend = false, maySkipCheckpoint = false)
-    }
-
-    /**
-     * Similar to [sendAndReceive] but also instructs the `payload` to be redelivered until the expected message is received.
-     *
-     * Note that this method should NOT be used for regular party-to-party communication, use [sendAndReceive] instead.
-     * It is only intended for the case where the [otherParty] is running a distributed service with an idempotent
-     * flow which only accepts a single request and sends back a single response – e.g. a notary or certain types of
-     * oracle services. If one or more nodes in the service cluster go down mid-session, the message will be redelivered
-     * to a different one, so there is no need to wait until the initial node comes back up to obtain a response.
-     */
-    @Deprecated("Use FlowSession.sendAndReceiveWithRetry()", level = DeprecationLevel.WARNING)
-    internal inline fun <reified R : Any> sendAndReceiveWithRetry(otherParty: Party, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(R::class.java, otherParty, payload, flowUsedForSessions, retrySend = true, maySkipCheckpoint = false)
-    }
+    val ourIdentity: Party get() = stateMachine.ourIdentity
 
     @Suspendable
     internal fun <R : Any> FlowSession.sendAndReceiveWithRetry(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(receiveType, counterparty, payload, flowUsedForSessions, retrySend = true, maySkipCheckpoint = false)
+        val request = FlowIORequest.SendAndReceive(
+                sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
+                shouldRetrySend = true
+        )
+        return stateMachine.suspend(request, maySkipCheckpoint = false)[this]!!.checkPayloadIs(receiveType)
     }
 
     @Suspendable
     internal inline fun <reified R : Any> FlowSession.sendAndReceiveWithRetry(payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(R::class.java, counterparty, payload, flowUsedForSessions, retrySend = true, maySkipCheckpoint = false)
+        return sendAndReceiveWithRetry(R::class.java, payload)
     }
 
-    /**
-     * Suspends until the specified [otherParty] sends us a message of type [R].
-     *
-     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
-     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
-     * corrupted data in order to exploit your code.
-     */
-    @Deprecated("Use FlowSession.receive()", level = DeprecationLevel.WARNING)
-    inline fun <reified R : Any> receive(otherParty: Party): UntrustworthyData<R> = receive(R::class.java, otherParty)
-
-    /**
-     * Suspends until the specified [otherParty] sends us a message of type [receiveType].
-     *
-     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
-     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
-     * corrupted data in order to exploit your code.
-     *
-     * @return an [UntrustworthyData] wrapper around the received object.
-     */
-    @Deprecated("Use FlowSession.receive()", level = DeprecationLevel.WARNING)
-    @Suspendable
-    open fun <R : Any> receive(receiveType: Class<R>, otherParty: Party): UntrustworthyData<R> {
-        return stateMachine.receive(receiveType, otherParty, flowUsedForSessions, maySkipCheckpoint = false)
-    }
 
     /** Suspends until a message has been received for each session in the specified [sessions].
      *
@@ -232,8 +160,14 @@ abstract class FlowLogic<out T> {
      * @returns a [Map] containing the objects received, wrapped in an [UntrustworthyData], by the [FlowSession]s who sent them.
      */
     @Suspendable
-    open fun receiveAllMap(sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>> {
-        return stateMachine.receiveAll(sessions, this)
+    @JvmOverloads
+    open fun receiveAllMap(sessions: Map<FlowSession, Class<out Any>>, maySkipCheckpoint: Boolean = false): Map<FlowSession, UntrustworthyData<Any>> {
+        enforceNoPrimitiveInReceive(sessions.values)
+        val replies = stateMachine.suspend(
+                ioRequest = FlowIORequest.Receive(sessions.keys.toNonEmptySet()),
+                maySkipCheckpoint = maySkipCheckpoint
+        )
+        return replies.mapValues { (session, payload) -> payload.checkPayloadIs(sessions[session]!!) }
     }
 
     /**
@@ -248,22 +182,11 @@ abstract class FlowLogic<out T> {
      * @returns a [List] containing the objects received, wrapped in an [UntrustworthyData], with the same order of [sessions].
      */
     @Suspendable
-    open fun <R : Any> receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>> {
+    @JvmOverloads
+    open fun <R : Any> receiveAll(receiveType: Class<R>, sessions: List<FlowSession>, maySkipCheckpoint: Boolean = false): List<UntrustworthyData<R>> {
+        enforceNoPrimitiveInReceive(listOf(receiveType))
         enforceNoDuplicates(sessions)
         return castMapValuesToKnownType(receiveAllMap(associateSessionsToReceiveType(receiveType, sessions)))
-    }
-
-    /**
-     * Queues the given [payload] for sending to the [otherParty] and continues without suspending.
-     *
-     * Note that the other party may receive the message at some arbitrary later point or not at all: if [otherParty]
-     * is offline then message delivery will be retried until it comes back or until the message is older than the
-     * network's event horizon time.
-     */
-    @Deprecated("Use FlowSession.send()", level = DeprecationLevel.WARNING)
-    @Suspendable
-    open fun send(otherParty: Party, payload: Any) {
-        stateMachine.send(otherParty, payload, flowUsedForSessions, maySkipCheckpoint = false)
     }
 
     /**
@@ -283,11 +206,8 @@ abstract class FlowLogic<out T> {
     open fun <R> subFlow(subLogic: FlowLogic<R>): R {
         subLogic.stateMachine = stateMachine
         maybeWireUpProgressTracking(subLogic)
-        if (!subLogic.javaClass.isAnnotationPresent(InitiatingFlow::class.java)) {
-            subLogic.flowUsedForSessions = flowUsedForSessions
-        }
         logger.debug { "Calling subflow: $subLogic" }
-        val result = subLogic.call()
+        val result = stateMachine.subFlow(subLogic)
         logger.debug { "Subflow finished with result ${result.toString().abbreviate(300)}" }
         // It's easy to forget this when writing flows so we just step it to the DONE state when it completes.
         subLogic.progressTracker?.currentStep = ProgressTracker.DONE
@@ -384,7 +304,8 @@ abstract class FlowLogic<out T> {
     @Suspendable
     @JvmOverloads
     fun waitForLedgerCommit(hash: SecureHash, maySkipCheckpoint: Boolean = false): SignedTransaction {
-        return stateMachine.waitForLedgerCommit(hash, this, maySkipCheckpoint = maySkipCheckpoint)
+        val request = FlowIORequest.WaitForLedgerCommit(hash)
+        return stateMachine.suspend(request, maySkipCheckpoint = maySkipCheckpoint)
     }
 
     /**
@@ -427,11 +348,6 @@ abstract class FlowLogic<out T> {
             _stateMachine = value
         }
 
-    // This is the flow used for managing sessions. It defaults to the current flow but if this is an inlined sub-flow
-    // then it will point to the flow it's been inlined to.
-    @Suppress("LeakingThis")
-    private var flowUsedForSessions: FlowLogic<*> = this
-
     private fun maybeWireUpProgressTracking(subLogic: FlowLogic<*>) {
         val ours = progressTracker
         val theirs = subLogic.progressTracker
@@ -446,6 +362,11 @@ abstract class FlowLogic<out T> {
 
     private fun enforceNoDuplicates(sessions: List<FlowSession>) {
         require(sessions.size == sessions.toSet().size) { "A flow session can only appear once as argument." }
+    }
+
+    private fun enforceNoPrimitiveInReceive(types: Collection<Class<*>>) {
+        val primitiveTypes = types.filter { it.isPrimitive }
+        require(primitiveTypes.isEmpty()) { "Cannot receive primitive type(s) $primitiveTypes" }
     }
 
     private fun <R> associateSessionsToReceiveType(receiveType: Class<R>, sessions: List<FlowSession>): Map<FlowSession, Class<R>> {

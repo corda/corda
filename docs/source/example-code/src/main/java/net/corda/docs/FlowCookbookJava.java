@@ -582,13 +582,6 @@ public class FlowCookbookJava {
             SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()));
             // DOCEND 10
 
-            // DOCSTART FlowSession porting
-            send(regulator, new Object()); // Old API
-            // becomes
-            FlowSession session = initiateFlow(regulator);
-            session.send(new Object());
-            // DOCEND FlowSession porting
-
             return null;
         }
     }

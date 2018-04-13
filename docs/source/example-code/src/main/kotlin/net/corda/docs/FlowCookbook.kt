@@ -572,13 +572,6 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         val additionalParties: Set<Party> = setOf(regulator)
         val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()))
         // DOCEND 10
-
-        // DOCSTART FlowSession porting
-        send(regulator, Any()) // Old API
-        // becomes
-        val session = initiateFlow(regulator)
-        session.send(Any())
-        // DOCEND FlowSession porting
     }
 }
 

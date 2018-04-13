@@ -151,7 +151,9 @@ class ArtemisMessagingTest {
         createMessagingServer().start()
 
         val messagingClient = createMessagingClient(platformVersion = platformVersion)
-        messagingClient.addMessageHandler(TOPIC) { message, _ ->
+        messagingClient.addMessageHandler(TOPIC) { message, _, handle ->
+            database.transaction { handle.insideDatabaseTransaction() }
+            handle.afterDatabaseTransaction() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
             receivedMessages.add(message)
         }
         startNodeMessagingClient()

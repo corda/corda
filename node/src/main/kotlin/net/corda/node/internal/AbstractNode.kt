@@ -8,6 +8,7 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
@@ -47,6 +48,7 @@ import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.*
 import net.corda.node.services.persistence.*
@@ -131,7 +133,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     // We will run as much stuff in this single thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
-    protected abstract val serverThread: AffinityExecutor
+    protected abstract val serverThread: AffinityExecutor.ServiceAffinityExecutor
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
     private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
@@ -248,7 +250,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     flowStarter,
                     servicesForResolution,
                     unfinishedSchedules = busyNodeLatch,
-                    serverThread = serverThread,
                     flowLogicRefFactory = flowLogicRefFactory,
                     drainingModePollPeriod = configuration.drainingModePollPeriod,
                     nodeProperties = nodeProperties)
@@ -385,11 +386,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
     protected open fun makeStateMachineManager(database: CordaPersistence): StateMachineManager {
-        return StateMachineManagerImpl(
+        return SingleThreadedStateMachineManager(
                 services,
                 checkpointStorage,
                 serverThread,
                 database,
+                newSecureRandom(),
                 busyNodeLatch,
                 cordappLoader.appClassLoader
         )
@@ -894,8 +896,8 @@ internal fun logVendorString(database: CordaPersistence, log: Logger) {
 }
 
 internal class FlowStarterImpl(private val serverThread: AffinityExecutor, private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
-    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
-        return serverThread.fetchFrom { smm.startFlow(logic, context) }
+    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext, deduplicationHandler: DeduplicationHandler?): CordaFuture<FlowStateMachine<T>> {
+        return smm.startFlow(logic, context, ourIdentity = null, deduplicationHandler = deduplicationHandler)
     }
 
     override fun <T> invokeFlowAsync(
