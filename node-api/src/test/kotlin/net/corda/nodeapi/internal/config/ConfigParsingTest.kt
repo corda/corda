@@ -85,6 +85,11 @@ class ConfigParsingTest {
     }
 
     @Test
+    fun `UUID`() {
+        testPropertyType<UUIDData, UUIDListData, UUID>(UUID.randomUUID(), UUID.randomUUID(), valuesToString = true)
+    }
+
+    @Test
     fun CordaX500Name() {
         val name1 = CordaX500Name(organisation = "Mock Party", locality = "London", country = "GB")
         testPropertyType<CordaX500NameData, CordaX500NameListData, CordaX500Name>(
@@ -289,6 +294,8 @@ class ConfigParsingTest {
     data class PathListData(override val values: List<Path>) : ListData<Path>
     data class URLData(override val value: URL) : SingleData<URL>
     data class URLListData(override val values: List<URL>) : ListData<URL>
+    data class UUIDData(override val value: UUID) : SingleData<UUID>
+    data class UUIDListData(override val values: List<UUID>) : ListData<UUID>
     data class CordaX500NameData(override val value: CordaX500Name) : SingleData<CordaX500Name>
     data class CordaX500NameListData(override val values: List<CordaX500Name>) : ListData<CordaX500Name>
     data class PropertiesData(override val value: Properties) : SingleData<Properties>

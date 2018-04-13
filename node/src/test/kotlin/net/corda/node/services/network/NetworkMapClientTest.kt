@@ -25,6 +25,7 @@ import java.io.IOException
 import java.net.URL
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.*
 import kotlin.test.assertEquals
 
 class NetworkMapClientTest {
@@ -84,11 +85,11 @@ class NetworkMapClientTest {
     }
 
     @Test
-    fun `download NetworkParameter correctly`() {
+    fun `download NetworkParameters correctly`() {
         // The test server returns same network parameter for any hash.
         val parametersHash = server.networkParameters.serialize().hash
-        val networkParameter = networkMapClient.getNetworkParameters(parametersHash).verified()
-        assertEquals(server.networkParameters, networkParameter)
+        val networkParameters = networkMapClient.getNetworkParameters(parametersHash).verified()
+        assertEquals(server.networkParameters, networkParameters)
     }
 
     @Test

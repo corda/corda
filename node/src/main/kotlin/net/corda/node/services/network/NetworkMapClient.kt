@@ -21,6 +21,7 @@ import java.io.BufferedReader
 import java.net.URL
 import java.security.cert.X509Certificate
 import java.time.Duration
+import java.util.*
 
 class NetworkMapClient(compatibilityZoneURL: URL, val trustedRoot: X509Certificate) {
     companion object {
@@ -43,13 +44,14 @@ class NetworkMapClient(compatibilityZoneURL: URL, val trustedRoot: X509Certifica
         logger.trace { "Sent network parameters approval to $ackURL successfully." }
     }
 
-    fun getNetworkMap(): NetworkMapResponse {
-        logger.trace { "Fetching network map update from $networkMapUrl." }
-        val connection = networkMapUrl.openHttpConnection()
+    fun getNetworkMap(networkMapKey: UUID? = null): NetworkMapResponse {
+        val url = networkMapKey?.let { URL("$networkMapUrl/$networkMapKey") } ?: networkMapUrl
+        logger.trace { "Fetching network map update from $url." }
+        val connection = url.openHttpConnection()
         val signedNetworkMap = connection.responseAs<SignedNetworkMap>()
         val networkMap = signedNetworkMap.verifiedNetworkMapCert(trustedRoot)
         val timeout = connection.cacheControl.maxAgeSeconds().seconds
-        logger.trace { "Fetched network map update from $networkMapUrl successfully: $networkMap" }
+        logger.trace { "Fetched network map update from $url successfully: $networkMap" }
         return NetworkMapResponse(networkMap, timeout)
     }
 
