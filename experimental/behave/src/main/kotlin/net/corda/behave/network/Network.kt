@@ -248,9 +248,9 @@ class Network private constructor(
         isDoormanNMSRunning = true
     }
 
-    private fun runCommand(command: JarCommand, noWait: Boolean = false):Command {
+    private fun runCommand(command: JarCommand, noWait: Boolean = false): Command {
         if (!command.jarFile.exists()) {
-            throw IllegalStateException("\"Jar file does not exist: ${command.jarFile}\"")
+            throw IllegalStateException("Jar file does not exist: ${command.jarFile}")
         }
         log.info("Running command: {}", command)
         command.output.subscribe {
