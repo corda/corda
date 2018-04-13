@@ -16,6 +16,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -377,6 +378,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_$id","net_$networkId")).whenever(it).dataSourceProperties
             doReturn(makeTestDatabaseProperties("node_$id")).whenever(it).database
+            doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             parameters.configOverrides(it)
         }
         val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version))

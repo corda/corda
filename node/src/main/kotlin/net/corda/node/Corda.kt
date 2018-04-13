@@ -19,7 +19,9 @@ import kotlin.system.exitProcess
 import net.corda.node.internal.EnterpriseNode
 
 fun main(args: Array<String>) {
-    Crypto.findProvider(CordaSecurityProvider.PROVIDER_NAME) // Install our SecureRandom before e.g. UUID asks for one.
+    // Register all cryptography [Provider]s first thing on boot.
+    // Required to install our [SecureRandom] before e.g., UUID asks for one.
+    Crypto.registerProviders()
     // Pass the arguments to the Node factory. In the Enterprise edition, this line is modified to point to a subclass.
     // It will exit the process in case of startup failure and is not intended to be used by embedders. If you want
     // to embed Node in your own container, instantiate it directly and set up the configuration objects yourself.
