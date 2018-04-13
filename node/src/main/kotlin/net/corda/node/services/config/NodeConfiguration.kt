@@ -68,6 +68,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
 
     // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
     val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
+    val extraNetworkMapKeys: List<UUID>
 
     fun validate(): List<String>
 
@@ -181,6 +182,7 @@ data class NodeConfigurationImpl(
         private val attachmentContentCacheSizeMegaBytes: Int? = null,
         override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
         override val graphiteOptions: GraphiteOptions? = null,
+        override val extraNetworkMapKeys: List<UUID> = emptyList(),
         // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
         private val h2port: Int = 0,
         // do not use or remove (used by Capsule)
