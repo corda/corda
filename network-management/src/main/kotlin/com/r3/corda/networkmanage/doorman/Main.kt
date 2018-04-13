@@ -19,7 +19,6 @@ import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.slf4j.LoggerFactory
-import java.nio.file.NoSuchFileException
 import java.time.Instant
 import kotlin.system.exitProcess
 
@@ -71,7 +70,7 @@ private fun processKeyStore(config: NetworkManagementServerConfig): Pair<CertPat
 
 private fun rootKeyGenMode(cmdLineOptions: DoormanCmdLineOptions, config: NetworkManagementServerConfig) {
     generateRootKeyPair(
-            config.rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),
+            requireNotNull(config.rootStorePath) { "The 'rootStorePath' parameter must be specified when generating keys!" },
             config.rootKeystorePassword,
             config.rootPrivateKeyPassword,
             cmdLineOptions.trustStorePassword
@@ -80,8 +79,8 @@ private fun rootKeyGenMode(cmdLineOptions: DoormanCmdLineOptions, config: Networ
 
 private fun caKeyGenMode(config: NetworkManagementServerConfig) {
     generateSigningKeyPairs(
-            config.keystorePath ?: throw IllegalArgumentException("The 'keystorePath' parameter must be specified when generating keys!"),
-            config.rootStorePath ?: throw IllegalArgumentException("The 'rootStorePath' parameter must be specified when generating keys!"),
+            requireNotNull(config.keystorePath) { "The 'keystorePath' parameter must be specified when generating keys!" },
+            requireNotNull(config.rootStorePath) { "The 'rootStorePath' parameter must be specified when generating keys!" },
             config.rootKeystorePassword,
             config.rootPrivateKeyPassword,
             config.keystorePassword,

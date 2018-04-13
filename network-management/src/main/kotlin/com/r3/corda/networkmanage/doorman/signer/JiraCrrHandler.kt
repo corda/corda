@@ -16,6 +16,7 @@ import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import com.r3.corda.networkmanage.doorman.ApprovedRequest
 import com.r3.corda.networkmanage.doorman.CrrJiraClient
 import com.r3.corda.networkmanage.doorman.RejectedRequest
+import com.r3.corda.networkmanage.doorman.forEachWithExceptionLogging
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.CertificateRevocationRequest
 
@@ -50,24 +51,21 @@ class JiraCrrHandler(private val jiraClient: CrrJiraClient,
     private fun updateRequestStatuses(): Pair<List<ApprovedRequest>, List<RejectedRequest>> {
         // Update local request statuses.
         val approvedRequest = jiraClient.getApprovedRequests()
-        approvedRequest.forEach { (id, approvedBy) -> crrStorage.approveRevocationRequest(id, approvedBy) }
+        approvedRequest.forEachWithExceptionLogging(logger) { (id, approvedBy) -> crrStorage.approveRevocationRequest(id, approvedBy) }
         val rejectedRequest = jiraClient.getRejectedRequests()
-        rejectedRequest.forEach { (id, rejectedBy, reason) -> crrStorage.rejectRevocationRequest(id, rejectedBy, reason) }
+        rejectedRequest.forEachWithExceptionLogging(logger) { (id, rejectedBy, reason) -> crrStorage.rejectRevocationRequest(id, rejectedBy, reason) }
         return Pair(approvedRequest, rejectedRequest)
     }
 
     private fun updateJiraTickets(approvedRequest: List<ApprovedRequest>, rejectedRequest: List<RejectedRequest>) {
         // Reconfirm request status and update jira status
-        val doneRequests = approvedRequest.mapNotNull { crrStorage.getRevocationRequest(it.requestId) }
+        approvedRequest.mapNotNull { crrStorage.getRevocationRequest(it.requestId) }
                 .filter { it.status == RequestStatus.DONE }
-                .map { it.requestId }
+                .forEachWithExceptionLogging(logger) { jiraClient.updateDoneCertificateRevocationRequest(it.requestId) }
 
-        jiraClient.updateDoneCertificateRevocationRequests(doneRequests)
-
-        val rejectedRequestIDs = rejectedRequest.mapNotNull { crrStorage.getRevocationRequest(it.requestId) }
+        rejectedRequest.mapNotNull { crrStorage.getRevocationRequest(it.requestId) }
                 .filter { it.status == RequestStatus.REJECTED }
-                .map { it.requestId }
-        jiraClient.updateRejectedRequests(rejectedRequestIDs)
+                .forEachWithExceptionLogging(logger) { jiraClient.updateRejectedRequest(it.requestId) }
     }
 
     /**
@@ -77,12 +75,8 @@ class JiraCrrHandler(private val jiraClient: CrrJiraClient,
      * they might be left in the [RequestStatus.NEW] state if Jira is down.
      */
     private fun createTickets() {
-        crrStorage.getRevocationRequests(RequestStatus.NEW).forEach {
-            try {
-                createTicket(it)
-            } catch (e: Exception) {
-                logger.warn("There were errors while creating Jira tickets for request '${it.requestId}'", e)
-            }
+        crrStorage.getRevocationRequests(RequestStatus.NEW).forEachWithExceptionLogging(logger) {
+            createTicket(it)
         }
     }
 

@@ -50,17 +50,19 @@ class CsrJiraClientTest {
 
     @Test
     fun updateSignedRequests() {
-        val requests = jiraClient.getApprovedRequests()
         val selfSignedCaCertPath = X509Utilities.buildCertPath(X509Utilities.createSelfSignedCACertificate(
                 X500Principal("O=test,L=london,C=GB"),
                 Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)))
-        jiraClient.updateDoneCertificateSigningRequests(requests.associateBy({ it.requestId }, { selfSignedCaCertPath }))
+        jiraClient.getApprovedRequests().forEach {
+            jiraClient.updateDoneCertificateSigningRequest(it.requestId, selfSignedCaCertPath)
+        }
     }
 
     @Test
     fun updateRejectedRequests() {
-        val requests = jiraClient.getRejectedRequests()
-        jiraClient.updateRejectedRequests(requests.map { it.requestId })
+        jiraClient.getRejectedRequests().forEach {
+            jiraClient.updateRejectedRequest(it.requestId)
+        }
 
         assert(jiraClient.getRejectedRequests().isEmpty())
     }

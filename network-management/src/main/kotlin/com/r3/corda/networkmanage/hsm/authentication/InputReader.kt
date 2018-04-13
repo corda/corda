@@ -35,7 +35,7 @@ class ConsoleInputReader : InputReader {
             String(console.readPassword(format))
         } else {
             print(format)
-            kotlin.io.readLine() ?: throw IllegalArgumentException("Password required")
+            requireNotNull(kotlin.io.readLine()) { "Password required" }
         }
     }
 

@@ -113,7 +113,7 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
         return try {
             val signedParametersHash = input.readObject<SignedData<SecureHash>>()
             val hash = signedParametersHash.verified()
-            networkMapStorage.getSignedNetworkParameters(hash) ?: throw IllegalArgumentException("No network parameters with hash $hash")
+            requireNotNull(networkMapStorage.getSignedNetworkParameters(hash)) { "No network parameters with hash $hash" }
             logger.debug { "Received ack-parameters with $hash from ${signedParametersHash.sig.by}" }
             nodeInfoStorage.ackNodeInfoParametersUpdate(signedParametersHash.sig.by, hash)
             ok()

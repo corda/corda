@@ -44,14 +44,8 @@ class CrrJiraClient(restClient: JiraRestClient, projectCode: String) : JiraClien
                 .fail { CsrJiraClient.logger.error("Error processing request '${createdIssue.key}' : Exception when uploading attachment to JIRA.", it) }.claim()
     }
 
-    fun updateDoneCertificateRevocationRequests(doneRequests: List<String>) {
-        doneRequests.forEach { id ->
-            val issue = getIssueById(id)
-            issue ?: throw IllegalStateException("Missing the JIRA ticket for the request ID: $id")
-            if (doneTransitionId == -1) {
-                doneTransitionId = restClient.issueClient.getTransitions(issue.transitionsUri).claim().single { it.name == "Done" }.id
-            }
-            restClient.issueClient.transition(issue, TransitionInput(doneTransitionId)).fail { logger.error("Exception when transiting JIRA status.", it) }.claim()
-        }
+    fun updateDoneCertificateRevocationRequest(requestId: String) {
+        val issue = requireNotNull(getIssueById(requestId)) { "Missing the JIRA ticket for the request ID: $requestId" }
+        restClient.issueClient.transition(issue, TransitionInput(getTransitionId(DONE_TRANSITION_KEY, issue))).fail { logger.error("Exception when transiting JIRA status.", it) }.claim()
     }
 }

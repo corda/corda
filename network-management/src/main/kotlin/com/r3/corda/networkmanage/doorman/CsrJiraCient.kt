@@ -75,19 +75,12 @@ class CsrJiraClient(restClient: JiraRestClient, projectCode: String) : JiraClien
         restClient.issueClient.createIssue(issue.build()).fail { logger.error("Exception when creating JIRA issue.", it) }.claim()
     }
 
-    fun updateDoneCertificateSigningRequests(signedRequests: Map<String, CertPath>) {
+    fun updateDoneCertificateSigningRequest(requestId: String, certPath: CertPath) {
         // Retrieving certificates for signed CSRs to attach to the jira tasks.
-        signedRequests.forEach { (id, certPath) ->
-            val certificate = certPath.certificates.first()
-            val issue = getIssueById(id)
-            if (issue != null) {
-                if (doneTransitionId == -1) {
-                    doneTransitionId = restClient.issueClient.getTransitions(issue.transitionsUri).claim().single { it.name == "Done" }.id
-                }
-                restClient.issueClient.transition(issue, TransitionInput(doneTransitionId)).fail { logger.error("Exception when transiting JIRA status.", it) }.claim()
-                restClient.issueClient.addAttachment(issue.attachmentsUri, certificate.encoded.inputStream(), "${X509Utilities.CORDA_CLIENT_CA}.cer")
-                        .fail { logger.error("Error processing request '${issue.key}' : Exception when uploading attachment to JIRA.", it) }.claim()
-            }
-        }
+        val certificate = certPath.certificates.first()
+        val issue = requireNotNull(getIssueById(requestId)) { "Cannot find the JIRA ticket `request ID` = $requestId" }
+        restClient.issueClient.transition(issue, TransitionInput(getTransitionId(DONE_TRANSITION_KEY, issue))).fail { logger.error("Exception when transiting JIRA status.", it) }.claim()
+        restClient.issueClient.addAttachment(issue.attachmentsUri, certificate.encoded.inputStream(), "${X509Utilities.CORDA_CLIENT_CA}.cer")
+                .fail { logger.error("Error processing request '${issue.key}' : Exception when uploading attachment to JIRA.", it) }.claim()
     }
 }

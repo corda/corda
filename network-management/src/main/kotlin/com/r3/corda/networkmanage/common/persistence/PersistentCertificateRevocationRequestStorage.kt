@@ -31,8 +31,9 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             // Get matching CSR
             validate(request)
-            val csr = retrieveCsr(request.certificateSerialNumber, request.csrRequestId, request.legalName)
-            csr ?: throw IllegalArgumentException("No CSR matching the given criteria was found")
+            val csr = requireNotNull(retrieveCsr(request.certificateSerialNumber, request.csrRequestId, request.legalName)) {
+                "No CSR matching the given criteria was found"
+            }
             // Check if there is an entry for the given certificate serial number
             val revocation = uniqueEntityWhere<CertificateRevocationRequestEntity> { builder, path ->
                 val serialNumberEqual = builder.equal(path.get<BigInteger>(CertificateRevocationRequestEntity::certificateSerialNumber.name), request.certificateSerialNumber)
@@ -168,8 +169,9 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
         // Even though, we have an assumption that there is always a single instance of the doorman service running,
         // the SERIALIZABLE isolation level is used here just to ensure data consistency between the updates.
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
-            val request = getRevocationRequestEntity(requestId, RequestStatus.NEW)
-            request ?: throw IllegalArgumentException("Error when creating request ticket with id: $requestId. Request does not exist or its status is not NEW.")
+            val request = requireNotNull(getRevocationRequestEntity(requestId, RequestStatus.NEW)) {
+                "Error when creating request ticket with id: $requestId. Request does not exist or its status is not NEW."
+            }
             val update = request.copy(
                     modifiedAt = Instant.now(),
                     status = RequestStatus.TICKET_CREATED)

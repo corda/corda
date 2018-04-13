@@ -39,12 +39,11 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
 
     override fun putCertificatePath(requestId: String, certPath: CertPath, signedBy: String) {
         return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
-            val request = uniqueEntityWhere<CertificateSigningRequestEntity> { builder, path ->
+            val request = requireNotNull(uniqueEntityWhere<CertificateSigningRequestEntity> { builder, path ->
                 val requestIdEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::requestId.name), requestId)
                 val statusEq = builder.equal(path.get<String>(CertificateSigningRequestEntity::status.name), RequestStatus.APPROVED)
                 builder.and(requestIdEq, statusEq)
-            }
-            request ?: throw IllegalArgumentException("Cannot retrieve 'APPROVED' certificate signing request for request id: $requestId")
+            }) { "Cannot retrieve 'APPROVED' certificate signing request for request id: $requestId" }
             val certificateSigningRequest = request.copy(
                     modifiedBy = signedBy,
                     modifiedAt = Instant.now(),
@@ -97,9 +96,8 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
     }
 
     override fun markRequestTicketCreated(requestId: String) {
-        return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
-            val request = findRequest(requestId, RequestStatus.NEW)
-            request ?: throw IllegalArgumentException("Error when creating request ticket with id: $requestId. Request does not exist or its status is not NEW.")
+        database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
+            val request = requireNotNull(findRequest(requestId, RequestStatus.NEW)) { "Error when creating request ticket with id: $requestId. Request does not exist or its status is not NEW." }
             val update = request.copy(
                     modifiedAt = Instant.now(),
                     status = RequestStatus.TICKET_CREATED)
@@ -108,7 +106,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
     }
 
     override fun approveRequest(requestId: String, approvedBy: String) {
-        return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
+        database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
             findRequest(requestId, RequestStatus.TICKET_CREATED)?.let {
                 val update = it.copy(
                         modifiedBy = approvedBy,
@@ -121,8 +119,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
 
     override fun rejectRequest(requestId: String, rejectedBy: String, rejectReason: String?) {
         database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
-            val request = findRequest(requestId)
-            request ?: throw IllegalArgumentException("Error when rejecting request with id: $requestId. Request does not exist.")
+            val request = requireNotNull(findRequest(requestId)) { "Error when rejecting request with id: $requestId. Request does not exist." }
             val update = request.copy(
                     modifiedBy = rejectedBy,
                     modifiedAt = Instant.now(),

@@ -53,7 +53,7 @@ class DefaultCsrHandler(private val storage: CertificateSigningRequestStorage,
         return when (response?.status) {
             RequestStatus.NEW, RequestStatus.APPROVED, RequestStatus.TICKET_CREATED, null -> CertificateResponse.NotReady
             RequestStatus.REJECTED -> CertificateResponse.Unauthorised(response.remark ?: "Unknown reason")
-            RequestStatus.DONE -> CertificateResponse.Ready(response.certData?.certPath ?: throw IllegalArgumentException("Certificate should not be null."))
+            RequestStatus.DONE -> CertificateResponse.Ready(requireNotNull(response.certData?.certPath) { "Certificate should not be null." })
         }
     }
 

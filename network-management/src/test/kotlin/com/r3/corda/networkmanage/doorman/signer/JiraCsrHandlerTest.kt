@@ -144,8 +144,8 @@ class JiraCsrHandlerTest : TestBase() {
         assertEquals(RequestStatus.REJECTED, requests[id2]!!.status)
 
         // Verify jira client get the correct call.
-        verify(jiraClient).updateRejectedRequests(listOf(id2))
-        verify(jiraClient).updateDoneCertificateSigningRequests(emptyMap())
+        verify(jiraClient).updateRejectedRequest(id2)
+        verify(jiraClient, never()).updateDoneCertificateSigningRequest(any(), any())
 
         // Sign request 1
         val certPath = mock<CertPath>()
@@ -156,6 +156,6 @@ class JiraCsrHandlerTest : TestBase() {
         jiraCsrHandler.processRequests()
 
         // Update signed request should be called.
-        verify(jiraClient).updateDoneCertificateSigningRequests(mapOf(id1 to certPath))
+        verify(jiraClient).updateDoneCertificateSigningRequest(id1, certPath)
     }
 }

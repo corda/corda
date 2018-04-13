@@ -17,12 +17,13 @@ import com.r3.corda.networkmanage.common.persistence.RequestStatus
 import com.r3.corda.networkmanage.doorman.ApprovedRequest
 import com.r3.corda.networkmanage.doorman.CsrJiraClient
 import com.r3.corda.networkmanage.doorman.RejectedRequest
+import com.r3.corda.networkmanage.doorman.forEachWithExceptionLogging
 import net.corda.core.utilities.contextLogger
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 
 class JiraCsrHandler(private val jiraClient: CsrJiraClient, private val storage: CertificateSigningRequestStorage, private val delegate: CsrHandler) : CsrHandler by delegate {
     private companion object {
-        val log = contextLogger()
+        val logger = contextLogger()
     }
 
     override fun saveRequest(rawRequest: PKCS10CertificationRequest): String {
@@ -34,7 +35,7 @@ class JiraCsrHandler(private val jiraClient: CsrJiraClient, private val storage:
                 storage.markRequestTicketCreated(requestId)
             }
         } catch (e: Exception) {
-            log.warn("There was an error while creating Jira tickets", e)
+            logger.warn("There was an error while creating Jira tickets", e)
         } finally {
             return requestId
         }
@@ -50,24 +51,28 @@ class JiraCsrHandler(private val jiraClient: CsrJiraClient, private val storage:
     private fun updateRequestStatus(): Pair<List<ApprovedRequest>, List<RejectedRequest>> {
         // Update local request statuses.
         val approvedRequest = jiraClient.getApprovedRequests()
-        approvedRequest.forEach { (id, approvedBy) -> storage.approveRequest(id, approvedBy) }
+        approvedRequest.forEachWithExceptionLogging(logger) { (id, approvedBy) ->
+            storage.approveRequest(id, approvedBy)
+        }
         val rejectedRequest = jiraClient.getRejectedRequests()
-        rejectedRequest.forEach { (id, rejectedBy, reason) -> storage.rejectRequest(id, rejectedBy, reason) }
+        rejectedRequest.forEachWithExceptionLogging(logger) { (id, rejectedBy, reason) ->
+            storage.rejectRequest(id, rejectedBy, reason)
+        }
         return Pair(approvedRequest, rejectedRequest)
     }
 
     private fun updateJiraTickets(approvedRequest: List<ApprovedRequest>, rejectedRequest: List<RejectedRequest>) {
         // Reconfirm request status and update jira status
-        val signedRequests = approvedRequest.mapNotNull { storage.getRequest(it.requestId) }
+        approvedRequest.mapNotNull { storage.getRequest(it.requestId) }
                 .filter { it.status == RequestStatus.DONE && it.certData != null }
-                .associateBy { it.requestId }
-                .mapValues { it.value.certData!!.certPath }
-        jiraClient.updateDoneCertificateSigningRequests(signedRequests)
-
-        val rejectedRequestIDs = rejectedRequest.mapNotNull { storage.getRequest(it.requestId) }
+                .forEachWithExceptionLogging(logger) {
+                    jiraClient.updateDoneCertificateSigningRequest(it.requestId, it.certData!!.certPath)
+                }
+        rejectedRequest.mapNotNull { storage.getRequest(it.requestId) }
                 .filter { it.status == RequestStatus.REJECTED }
-                .map { it.requestId }
-        jiraClient.updateRejectedRequests(rejectedRequestIDs)
+                .forEachWithExceptionLogging(logger) {
+                    jiraClient.updateRejectedRequest(it.requestId)
+                }
     }
 
     /**
@@ -77,12 +82,8 @@ class JiraCsrHandler(private val jiraClient: CsrJiraClient, private val storage:
      * they might be left in the [RequestStatus.NEW] state if Jira is down.
      */
     private fun createTickets() {
-        storage.getRequests(RequestStatus.NEW).forEach {
-            try {
-                createTicket(it)
-            } catch (e: Exception) {
-                log.warn("There were errors while creating Jira tickets for request '${it.requestId}'", e)
-            }
+        storage.getRequests(RequestStatus.NEW).forEachWithExceptionLogging(logger) {
+            createTicket(it)
         }
     }
 
