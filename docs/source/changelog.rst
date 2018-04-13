@@ -7,6 +7,12 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
+  as the raw type, List for example.
+
+* The network bootstrapper uses the existing network parameters file to update the current contracts whitelist, and no longer
+  needs the whitelist.txt file.
+
 * Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
 
 * Serializing an inner class (non-static nested class in Java, inner class in Kotlin) will be rejected explicitly by the serialization
@@ -23,6 +29,12 @@ Unreleased
 
   .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
   than 2.12.3 (including 2.12.4) exhibit a different issue.
+
+* Fixed security vulnerability when using the ``HashAttachmentConstraint``. Added strict check that the contract JARs
+  referenced in a transaction were deployed on the node.
+
+* Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
+  all the needed network data, waiting in the background for network map to become available.
 
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
@@ -85,6 +97,7 @@ Unreleased
 
 * Shell (embedded shell available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
   To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
+
 
 R3 Corda 3.0 Developer Preview
 ------------------------------

@@ -1320,6 +1320,5 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
             C(12).serializeE()
         }.withMessageContaining("has synthetic fields and is likely a nested inner class")
     }
-
 }
 

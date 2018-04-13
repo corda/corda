@@ -315,7 +315,7 @@ fun propertiesForSerializationFromSetters(
                         "takes too many arguments")
             }
 
-            val setterType = setter.parameterTypes[0]!!
+            val setterType = setter.genericParameterTypes[0]!!
 
             if ((property.value.field != null) &&
                     (!(TypeToken.of(property.value.field?.genericType!!).isSupertypeOf(setterType)))) {
@@ -324,11 +324,11 @@ fun propertiesForSerializationFromSetters(
                         "${property.value.field?.genericType!!}")
             }
 
-            // make sure the setter returns the same type (within inheritance bounds) the getter accepts
-            if (!(TypeToken.of (setterType).isSupertypeOf(getter.returnType))) {
+            // Make sure the getter returns the same type (within inheritance bounds) the setter accepts.
+            if (!(TypeToken.of (getter.genericReturnType).isSupertypeOf(setterType))) {
                 throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
                         "takes parameter of type $setterType yet the defined getter returns a value of type " +
-                        "${getter.returnType}")
+                        "${getter.returnType} [${getter.genericReturnType}]")
             }
             this += PropertyAccessorGetterSetter(
                     idx++,

@@ -47,6 +47,20 @@ data class NetworkParameters(
         require(maxMessageSize > 0) { "maxMessageSize must be at least 1" }
         require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
     }
+
+    override fun toString(): String {
+        return """NetworkParameters {
+  minimumPlatformVersion=$minimumPlatformVersion
+  notaries=$notaries
+  maxMessageSize=$maxMessageSize
+  maxTransactionSize=$maxTransactionSize
+  whitelistedContractImplementations {
+    ${whitelistedContractImplementations.entries.joinToString("\n    ")}
+  }
+  modifiedTime=$modifiedTime
+  epoch=$epoch
+}"""
+    }
 }
 
 /**
