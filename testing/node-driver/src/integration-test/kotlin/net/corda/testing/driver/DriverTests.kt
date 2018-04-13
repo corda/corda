@@ -62,7 +62,7 @@ class DriverTests : IntegrationTest() {
         @ClassRule
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName(),
-                DUMMY_REGULATOR_NAME.toDatabaseSchemaName())
+                DUMMY_REGULATOR_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName())
     }
 
     @Test
@@ -94,10 +94,12 @@ class DriverTests : IntegrationTest() {
     fun `default notary is visible when the startNode future completes`() {
         // Based on local testing, running this 3 times gives us a high confidence that we'll spot if the feature is not working
         repeat(3) {
+            setUp() // R3.Corda only: Schema setup for standalone database, does nothing for H2
             driver(DriverParameters(startNodesInProcess = true)) {
                 val bob = startNode(providedName = BOB_NAME).getOrThrow()
                 assertThat(bob.rpc.networkMapSnapshot().flatMap { it.legalIdentities }).contains(defaultNotaryIdentity)
             }
+            tearDown() // R3.Corda only: Schema cleanup for standalone database, does nothing for H2
         }
     }
 
