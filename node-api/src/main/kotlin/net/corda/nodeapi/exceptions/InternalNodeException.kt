@@ -1,12 +1,14 @@
 package net.corda.nodeapi.exceptions
 
 import net.corda.core.CordaRuntimeException
+import net.corda.core.contracts.TransactionVerificationException
 import java.io.InvalidClassException
 
 // could change to use package name matching but trying to avoid reflection for now
 private val whitelisted = setOf(
         InvalidClassException::class,
-        RpcSerializableError::class
+        RpcSerializableError::class,
+        TransactionVerificationException::class
 )
 
 /**
