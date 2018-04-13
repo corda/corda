@@ -1001,9 +1001,6 @@ object Crypto {
     // TODO: perform all cryptographic operations via Crypto.
     @JvmStatic
     fun registerProviders() {
-        Security.insertProviderAt(cordaSecurityProvider, 1) // The position is 1-based.
-        // This registration is needed for reading back EdDSA key from java keystore.
-        Security.addProvider(cordaBouncyCastleProvider)
-        Security.addProvider(bouncyCastlePQCProvider)
+        providerMap
     }
 }

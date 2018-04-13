@@ -15,9 +15,11 @@ import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import java.security.SecureRandom
+import java.security.Security
 
-internal val cordaSecurityProvider = CordaSecurityProvider()
-
+internal val cordaSecurityProvider = CordaSecurityProvider().also {
+    Security.insertProviderAt(it, 1) // The position is 1-based.
+}
 // OID taken from https://tools.ietf.org/html/draft-ietf-curdle-pkix-00
 internal val `id-Curve25519ph` = ASN1ObjectIdentifier("1.3.101.112")
 internal val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
@@ -28,12 +30,16 @@ internal val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
         override fun generatePublic(keyInfo: SubjectPublicKeyInfo) = decodePublicKey(EDDSA_ED25519_SHA512, keyInfo.encoded)
         override fun generatePrivate(keyInfo: PrivateKeyInfo) = decodePrivateKey(EDDSA_ED25519_SHA512, keyInfo.encoded)
     })
+}.also {
+    // This registration is needed for reading back EdDSA key from java keystore.
+    // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
+    Security.addProvider(it)
 }
-
 internal val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
     require(name == "BCPQC") // The constant it comes from is not final.
+}.also {
+    Security.addProvider(it)
 }
-
 // This map is required to defend against users that forcibly call Security.addProvider / Security.removeProvider
 // that could cause unexpected and suspicious behaviour.
 // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
