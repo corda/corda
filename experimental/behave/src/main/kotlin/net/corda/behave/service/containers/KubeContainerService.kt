@@ -19,7 +19,7 @@ import java.io.InputStreamReader
 import io.kubernetes.client.proto.V1.Pod
 
 
-class KubeContainerService(name: String, port: Int) : ContainerService(name, port) {
+class KubeContainerService(name: String, port: Int, startupStatement: String) : ContainerService(name, port, startupStatement) {
 
     val apiClient = Config.defaultClient()
 

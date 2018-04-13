@@ -61,7 +61,7 @@ Feature: QA Interoperability
     And node PartyC uses database of type <Database-Type-3>
     And node PartyC has the finance app installed
     And a nonvalidating notary Notary of version <R3-Corda-Node-Version>
-    When the network is ready within 2 minutes
+    When the network is ready within 4 minutes
     Then node PartyA can issue 1000 <Currency>
     And node PartyA can transfer 100 <Currency> to node PartyB
     And node PartyB can transfer 100 <Currency> to node PartyC

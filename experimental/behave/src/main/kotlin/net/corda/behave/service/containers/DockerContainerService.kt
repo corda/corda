@@ -9,8 +9,10 @@ class DockerContainerService(
         port: Int = 12345,
         override val internalPort: Int,
         override val baseImage: String = "",
-        override val imageTag: String = "latest"
-) : ContainerService(name, port) {
+        override val imageTag: String = "latest",
+        startupStatement: String
+
+) : ContainerService(name, port, startupStatement) {
 
     init {
         log.info("DOCKER_HOST ${System.getenv("DOCKER_HOST")}")
@@ -32,7 +34,7 @@ class DockerContainerService(
                     DockerClient.ExecCreateParam.attachStdout(),
                     DockerClient.ExecCreateParam.attachStderr())
             val logStream = client.execStart(execCreation.id())
-            command.outputListener.onNewLine(logStream.readFully())
+            //TODO Turn logStream into Observable for command
             true
         } catch (e: Exception) {
             log.warn("Failed to execute command {}", commandStrArray)

@@ -12,15 +12,11 @@ class PostgreSQLService(
         port: Int,
         private val password: String,
         settings: ServiceSettings = ServiceSettings()
-) : ContainerService(name, port, settings) {
+) : ContainerService(name, port, "database system is ready to accept connections", settings) {
 
     override val baseImage = "postgres"
 
     override val internalPort = 5432
-
-    init {
-        setStartupStatement("database system is ready to accept connections")
-    }
 
     override fun verify(): Boolean {
         val config = DatabaseConfiguration(

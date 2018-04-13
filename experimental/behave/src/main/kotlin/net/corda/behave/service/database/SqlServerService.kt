@@ -12,7 +12,7 @@ class SqlServerService(
         port: Int,
         private val password: String,
         settings: ServiceSettings = ServiceSettings()
-) : ContainerService(name, port, settings) {
+) : ContainerService(name, port, "SQL Server is now ready for client connections", settings) {
 
     override val baseImage = "microsoft/mssql-server-linux"
 
@@ -21,7 +21,6 @@ class SqlServerService(
     init {
         addEnvironmentVariable("ACCEPT_EULA", "Y")
         addEnvironmentVariable("SA_PASSWORD", password)
-        setStartupStatement("SQL Server is now ready for client connections")
     }
 
     override fun verify(): Boolean {
