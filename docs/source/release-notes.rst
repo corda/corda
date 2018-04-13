@@ -154,62 +154,8 @@ Please note this release is distributed under license and should not be used in 
 
 We look forward to hearing your feedback on this Developer Preview.
 
-<<<<<<< HEAD
 Corda 2.0
 ---------
-=======
-  Documentation can be found in :doc:`cordapp-custom-serializers`
-
-
-Security Auditing
-~~~~~~~~~~~~~~~~~
-
-  This version of Corda is the first to have had select components subjected to the newly established security review process
-  by R3's internal security team. Security review will be an on-going process that seeks to provide assurance that the
-  security model of Corda has been implemented to the highest standard, and is in line with industry best practice.
-
-  As part of this security review process, an independent external security audit of the HTTP based components of the code
-  was undertaken and its recommendations were acted upon. The security assurance process will develop in parallel to the
-  Corda platform and will combine code review, automated security testing and secure development practices to ensure Corda
-  fulfils its security guarantees.
-
-Security fixes
-~~~~~~~~~~~~~~
-
-  * Due to a potential privacy leak, there has been a breaking change in the error object returned by the
-    notary service when trying to consume the same state twice: `NotaryError.Conflict` no longer contains the identity
-    of the party that initiated the first spend of the state, and specifies the hash of the consuming transaction id for
-    a state instead of the id itself.
-
-    Without this change, knowing the reference of a particular state, an attacker could construct an invalid
-    double-spend transaction, and obtain the information on the transaction and the party that consumed it. It could
-    repeat this process with the newly obtained transaction id by guessing its output indexes to obtain the forward
-    transaction graph with associated identities. When anonymous identities are used, this could also reveal the identity
-    of the owner of an asset.
-
-Minor Changes
-~~~~~~~~~~~~~
-
-  * Upgraded gradle to 4.4.1.
-
-    .. note:: To avoid potential incompatibility issues we recommend you also upgrade your CorDapp's gradle
-      plugin to match. Details on how to do this can be found on the official
-      `gradle website <https://docs.gradle.org/current/userguide/gradle_wrapper.html#sec:upgrading_wrapper>`_
-
-  * Cash Spending now allows for sending multiple amounts to multiple parties with a single API call
-
-    - documentation can be found within the JavaDocs on ``TwoPartyTradeFlow``.
-  * Overall improvements to error handling (RPC, Flows, Network Client).
-  * TLS authentication now supports mixed RSA and ECDSA keys.
-  * PrivacySalt computation is faster as it does not depend on the OS's entropy pool directly.
-  * Numerous bug fixes and documentation tweaks.
-  * Removed dependency on Jolokia WAR file.
-
-.. _release_notes_v2_0:
-
-Release 2.0
------------
->>>>>>> open/master
 Following quickly on the heels of the release of Corda 1.0, Corda version 2.0 consolidates
 a number of security updates for our dependent libraries alongside the reintroduction of the Observer node functionality.
 This was absent from version 1 but based on user feedback its re-introduction removes the need for complicated "isRelevant()" checks.
@@ -227,15 +173,8 @@ Adds the facility for transparent forwarding of transactions to some third party
 that entity simply run an Observer node they can simply receive a stream of digitally signed, de-duplicated reports that
 can be used for reporting.
 
-<<<<<<< HEAD
 Corda 1.0
 ---------
-=======
-.. _release_notes_v1_0:
-
-Release 1.0
------------
->>>>>>> open/master
 Corda 1.0 is finally here!
 
 This critical step in the Corda journey enables the developer community, clients, and partners to build on Corda with confidence.
