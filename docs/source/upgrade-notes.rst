@@ -140,85 +140,6 @@ Applies to both gradle deployNodes tasks and/or corda node configuration (node.c
 
     notary = [validating : true]
 
-<<< Fill this in >>>
-
-v3.0 to v3.1
-------------
-
-Gradle Plugin Version
-^^^^^^^^^^^^^^^^^^^^^
-
-Corda 3.1 uses version 3.1.0 of the gradle plugins and your ``build.gradle`` file should be updated to reflect this.
-
-.. sourcecode:: shell
-
-    ext.corda_gradle_plugins_version = '3.1.0'
-
-You will also need to update the ``corda_release_version`` identifier in your project gradle file.
-
-.. sourcecode:: shell
-
-  ext.corda_release_version = '3.1-corda'
-
-V2.0 to V3.0
-------------
-
-Gradle Plugin Version
-^^^^^^^^^^^^^^^^^^^^^
-
-Corda 3.0 uses version 3.0.9 of the gradle plugins and your ``build.gradle`` file should be updated to reflect this.
-
-.. sourcecode:: shell
-
-    ext.corda_gradle_plugins_version = '3.0.9'
-
-You will also need to update the ``corda_release_version`` identifier in your project gradle file.
-
-.. sourcecode:: shell
-
-  ext.corda_release_version = 'corda-3.0'
-
-Network Map Service
-^^^^^^^^^^^^^^^^^^^
-
-With the re-designed network map service the following changes need to be made:
-
-* The network map is no longer provided by a node and thus the ``networkMapService`` config is ignored. Instead the
-  network map is either provided by the compatibility zone (CZ) operator (who operates the doorman) and available
-  using the ``compatibilityZoneURL`` config, or is provided using signed node info files which are copied locally.
-  See :doc:`network-map` for more details, and :doc:`setting-up-a-corda-network.rst` on how to use the network
-  bootstrapper for deploying a local network.
-
-* Configuration for a notary has been simplified. ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses``
-  and ``bftSMaRt`` configs have been replaced by a single ``notary`` config object. See :doc:`corda-configuration-file`
-  for more details.
-
-* The advertisement of the notary to the rest of the network, and its validation type, is no longer determined by the
-  ``extraAdvertisedServiceIds`` config. Instead it has been moved to the control of the network operator via
-  the introduction of network parameters. The network bootstrapper automatically includes the configured notaries
-  when generating the network parameters file for a local deployment.
-
-* Any nodes defined in a ``deployNodes`` gradle task performing the function of the network map can be removed, or the
-  ``NetworkMap`` parameter can be removed for any "controller" node which is both the network map and a notary.
-
-* For registering a node with the doorman the ``certificateSigningService`` config has been replaced by ``compatibilityZoneURL``.
-
-Corda Plugins
-^^^^^^^^^^^^^
-
-* Corda plugins have been modularised further so the following additional gradle entries are necessary:
-  For example:
-
-    .. sourcecode:: groovy
-        dependencies {
-            classpath "net.corda.plugins:cordapp:$corda_gradle_plugins_version"
-        }
-
-        apply plugin: 'net.corda.plugins.cordapp'
-
-The plugin needs to be applied in all gradle build files where there is a dependency on Corda using any of:
-cordaCompile, cordaRuntime, cordapp
-
 * For existing contract ORM schemas that extend from ``CommonSchemaV1.LinearState`` or ``CommonSchemaV1.FungibleState``,
   you will need to explicitly map the ``participants`` collection to a database table. Previously this mapping was done
   in the superclass, but that makes it impossible to properly configure the table name. The required changes are to:
@@ -242,65 +163,83 @@ cordaCompile, cordaRuntime, cordapp
                         JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
                 override var participants: MutableSet<AbstractParty>? = null,
 
-AMQP
-^^^^
-
-Whilst the enablement of AMQP is a transparent change, as noted in the :doc:`serialization` documentation
-the way classes, and states in particular, should be written to work with this new library may require some
-alteration to your current implementation.
-
-  * With AMQP enabled Java classes must be compiled with the -parameter flag.
-
-    * If they aren't, then the error message will complain about ``arg<N>`` being an unknown parameter.
-    * If recompilation is not viable, a custom serializer can be written as per :doc:`cordapp-custom-serializers`
-    * It is important to bear in mind that with AMQP there must be an implicit mapping between constructor
-      parameters and properties you wish included in the serialized form of a class.
-
-      * See :doc:`serialization` for more information
-
-  * Error messages of the form
-
-    ``Constructor parameter - "<some parameter of a constructor>" - doesn't refer to a property of "class <some.class.being.serialized>"``
-
-    indicate that a class, in the above example ``some.class.being.serialized``, has a parameter on its primary constructor that
-    doesn't correlate to a property of the class. This is a problem because the Corda AMQP serialization library uses a class's
-    constructor (default, primary, or annotated) as the means by which instances of the serialized form are reconstituted.
-
-    See the section "Mismatched Class Properties / Constructor Parameters" in the :doc:`serialization` documentation
-
-Database schema changes
-^^^^^^^^^^^^^^^^^^^^^^^
-
-An H2 database instance (represented on the filesystem as a file called `persistence.mv.db`) used in Corda 1.0 or 2.0
-cannot be directly reused with Corda 3.0 due to minor improvements and additions to stabilise the underlying schemas.
-
-Configuration
-^^^^^^^^^^^^^
-
-Nodes that do not require SSL to be enabled for RPC clients now need an additional port to be specified as part of their configuration.
-To do this, add a block as follows to the nodes configuraiton:
-
-  .. sourcecode:: script
-
-    rpcSettings {
-        adminAddress "localhost:10007"
-    }
-
-to `node.conf` files.
-
-Also, the property `rpcPort` is now deprecated, so it would be preferable to substitute properties specified that way e.g., `rpcPort=10006` with a block as follows:
-
-  .. sourcecode:: script
-
-    rpcSettings {
-        address "localhost:10006"
-        adminAddress "localhost:10007"
-    }
-
-Equivalent changes should be performed on classes extending `CordformDefinition`.
+* Shell - to use Shell ensure ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
 
 Testing
 ^^^^^^^
+
+Contract tests
+~~~~~~~~~~~~~~
+
+* You must now create a ``MockServices`` object.
+
+  ``MockServices`` provides a mock identity, key and storage service. ``MockServices`` takes as its first argument a
+  list of the CorDapp packages to scan:
+
+  .. sourcecode:: kotlin
+
+    private val ledgerServices = MockServices(listOf("net.corda.examples.obligation", "net.corda.testing.contracts"))
+
+  ``MockServices`` replaces the use of ``setCordappPackages`` and ``unsetCordappPackages``.
+
+* ``ledger`` is now defined as a ``MockServices`` method. This means that:
+
+  .. sourcecode:: kotlin
+
+     ledger {
+
+  Becomes:
+
+  .. sourcecode:: kotlin
+
+     ledgerServices.ledger {
+
+* Within a mock ledger transaction, ``ContractState`` instances are passed to ``input`` and ``output`` as objects
+  rather than lambdas. For example:
+
+  .. sourcecode:: kotlin
+
+     ledgerServices.ledger {
+         transaction {
+             input(OBLIGATION_CONTRACT_ID, DummyState())
+             output(OBLIGATION_CONTRACT_ID, oneDollarObligation)
+         }
+     }
+
+* Within a mock ledger transaction, ``CommandData`` instances are passed to ``input`` and ``output`` as objects
+  rather than lambdas, and the public keys must be passed as a list if there is more than one. For example:
+
+  .. sourcecode:: kotlin
+
+     ledgerServices.ledger {
+         transaction {
+             command(alice.publicKey, ObligationContract.Commands.Issue())
+             command(listOf(alice.publicKey, bob.publicKey), ObligationContract.Commands.Issue())
+         }
+     }
+
+* The predefined test identities (e.g. ``ALICE`` and ``MINI_CORP``) have been removed.
+
+  You must now define the test identities explicitly. For example:
+
+  .. sourcecode:: kotlin
+
+     val alice = TestIdentity(CordaX500Name(organisation = "Alice", locality = "TestLand", country = "GB"))
+
+  ``TestIdentity`` exposes methods to get the ``name``, ``keyPair``, ``publicKey``, ``party`` and ``identity`` of the
+  underlying ``TestIdentity``
+
+* Explicit invocation of transaction transformation (ie. using ``TransactionBuilder``) requires serialization engine
+  to be initialized. In unit test this can be achieved by using the following jUnit rule:
+
+  .. sourcecode:: kotlin
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
+
+Flow tests
+~~~~~~~~~~
 
 * The registration mechanism for CorDapps in ``MockNetwork`` unit tests has changed:
 
@@ -459,47 +398,6 @@ Finance
 
 * ``CASH_PROGRAM_ID`` has been moved to ``Cash.PROGRAM_ID``, where ``Cash`` is defined in the
   ``import net.corda.finance.contracts.asset`` package
-
-* Many classes have been moved between packages, so you will need to update your imports
-
-  .. tip:: We have provided a several scripts (depending upon your operating system of choice) to smooth the upgrade
-     process for existing projects. This can be found at ``tools\scripts\update-test-packages.sh`` for the Bash shell and
-     ``tools/scripts/upgrade-test-packages.ps1`` for Windows Power Shell users in the source tree
-
-* setCordappPackages and unsetCordappPackages have been removed from the ledger/transaction DSL and the flow test framework,
-  and are now set via a constructor parameter or automatically when constructing the MockServices or MockNetwork object
-
-* Key constants e.g. ``ALICE_KEY`` have been removed; you can now use TestIdentity to make your own
-
-* The ledger/transaction DSL must now be provided with MockServices as it no longer makes its own
-  * In transaction blocks, input and output take their arguments as ContractStates rather than lambdas
-  * Also in transaction blocks, command takes its arguments as CommandDatas rather than lambdas
-
-* The MockServices API has changed; please refer to its API documentation
-
-* TestDependencyInjectionBase has been retired in favour of a JUnit Rule called SerializationEnvironmentRule
-  * This replaces the initialiseSerialization parameter of ledger/transaction and verifierDriver
-  * The withTestSerialization method is obsoleted by SerializationEnvironmentRule and has been retired
-
-* MockNetwork now takes a MockNetworkParameters builder to make it more Java-friendly, like driver's DriverParameters
-    * Similarly, the MockNetwork.createNode methods now take a MockNodeParameters builder
-
-* MockNode constructor parameters are now aggregated in MockNodeArgs for easier subclassing
-
-* MockNetwork.Factory has been retired as you can simply use a lambda
-
-* testNodeConfiguration has been retired, please use a mock object framework of your choice instead
-
-* MockNetwork.createSomeNodes and IntegrationTestCategory have been retired with no replacement
-
-* Starting a flow can now be done directly from a node object. Change calls of the form ``node.getServices().startFlow(...)``
-  to ``node.startFlow(...)``
-
-* Similarly a tranaction can be executed directly from a node object. Change calls of the form ``node.getDatabase().transaction({ it -> ... })``
-  to ``node.transaction({() -> ... })``
-
-* ``startFlow`` now returns a ``CordaFuture``, there is no need to call ``startFlow(...).getResultantFuture()``
-
 
 V1.0 to V2.0
 ------------
