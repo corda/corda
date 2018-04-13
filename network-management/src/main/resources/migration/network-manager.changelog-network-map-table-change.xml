@@ -1,0 +1,69 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="R3.Corda" id="1522853587063-1">
+        <dropTable tableName="network_map"/>
+        <createTable tableName="network_map">
+            <column name="id" type="NVARCHAR(64)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK__NM_ID"/>
+            </column>
+            <column name="cert" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="serialized_network_map" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="signature" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="network_parameters" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timestamp" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="network_parameters" baseTableName="network_map"
+                                 constraintName="FK__NM__NP"
+                                 referencedColumnNames="hash" referencedTableName="network_parameters"/>
+
+        <createTable tableName="network_map_AUD">
+            <column name="id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="REV" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="REVTYPE" type="TINYINT"/>
+            <column name="cert" type="BLOB"/>
+            <column name="serialized_network_map" type="BLOB"/>
+            <column name="signature" type="BLOB"/>
+            <column name="network_parameters" type="NVARCHAR(64)"/>
+            <column name="timestamp" type="TIMESTAMP"/>
+        </createTable>
+
+        <addPrimaryKey columnNames="id, rev" constraintName="PK__NMA__RID"
+                       tableName="network_map_AUD"/>
+
+        <createIndex indexName="IDX__NMA__REV" tableName="network_map_AUD">
+            <column name="REV"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseColumnNames="REV" baseTableName="network_map_AUD"
+                                 constraintName="FK__NMA__REV"
+                                 referencedColumnNames="REV" referencedTableName="REVINFO"/>
+    </changeSet>
+</databaseChangeLog>

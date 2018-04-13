@@ -55,7 +55,7 @@ class NetworkMapProcessor(private val config: NetworkMapCertificateConfig,
             val networkMapSigner = NetworkMapSigner(networkMapStorage, signer)
             try {
                 logger.info("Executing network map signing...")
-                networkMapSigner.signNetworkMap()
+                networkMapSigner.signNetworkMaps()
             } catch (e: Exception) {
                 logger.error("Exception thrown while signing network map", e)
             }

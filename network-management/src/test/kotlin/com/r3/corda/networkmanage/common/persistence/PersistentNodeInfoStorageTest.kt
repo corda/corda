@@ -11,6 +11,7 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.TestBase
+import com.r3.corda.networkmanage.common.persistence.entity.NetworkMapEntity
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
@@ -127,14 +128,14 @@ class PersistentNodeInfoStorageTest : TestBase() {
 
         val nodeInfo1Hash = nodeInfoStorage.putNodeInfo(node1)
         assertEquals(node1.nodeInfo, nodeInfoStorage.getNodeInfo(nodeInfo1Hash)?.verified())
-        assertTrue(networkMapStorage.getActiveNodeInfoHashes().contains(nodeInfo1Hash))
+        assertTrue(networkMapStorage.getNodeInfoHashes().publicNodeInfoHashes.contains(nodeInfo1Hash))
 
         // This should replace the node info.
         val nodeInfo2Hash = nodeInfoStorage.putNodeInfo(node2)
 
         // Old node info should be removed from list of current node info hashes, but still accessible if required.
-        assertThat(networkMapStorage.getActiveNodeInfoHashes()).doesNotContain(nodeInfo1Hash)
-        assertThat(networkMapStorage.getActiveNodeInfoHashes()).contains(nodeInfo2Hash)
+        assertThat(networkMapStorage.getNodeInfoHashes().publicNodeInfoHashes).doesNotContain(nodeInfo1Hash)
+        assertThat(networkMapStorage.getNodeInfoHashes().publicNodeInfoHashes).contains(nodeInfo2Hash)
         assertNotNull(nodeInfoStorage.getNodeInfo(nodeInfo1Hash))
         assertEquals(nodeInfo2, nodeInfoStorage.getNodeInfo(nodeInfo2.serialize().hash)?.verified())
     }

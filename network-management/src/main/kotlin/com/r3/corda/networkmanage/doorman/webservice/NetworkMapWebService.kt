@@ -14,13 +14,14 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
+import com.r3.corda.networkmanage.common.persistence.NetworkMaps
 import com.r3.corda.networkmanage.common.persistence.NodeInfoStorage
+import com.r3.corda.networkmanage.common.persistence.entity.NetworkMapEntity
 import com.r3.corda.networkmanage.doorman.NetworkMapConfig
 import com.r3.corda.networkmanage.doorman.webservice.NetworkMapWebService.Companion.NETWORK_MAP_PATH
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.sha256
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
@@ -34,12 +35,14 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities.validateCertPath
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.crypto.x509Certificates
-import net.corda.nodeapi.internal.network.SignedNetworkMap
 import java.io.InputStream
 import java.security.InvalidKeyException
 import java.security.SignatureException
 import java.security.cert.CertPathValidatorException
 import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.*
@@ -60,15 +63,11 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
         const val NETWORK_MAP_PATH = "network-map"
     }
 
-    private val networkMapCache: LoadingCache<Boolean, CachedData> = Caffeine.newBuilder()
+    private val networkMapCache: LoadingCache<Boolean, NetworkMaps> = Caffeine.newBuilder()
             .expireAfterWrite(config.cacheTimeout, TimeUnit.MILLISECONDS)
             .build {
-                networkMapStorage.getActiveNetworkMap()?.let {
-                    logger.info("Re-publishing network map")
-                    val networkMap = it.networkMap
-                    val signedNetworkMap = it.toSignedNetworkMap()
-                    CachedData(signedNetworkMap, networkMap.nodeInfoHashes.toSet(), it.networkParameters.networkParameters)
-                }
+                logger.info("Re-publishing network map")
+                networkMapStorage.getNetworkMaps()
             }
 
     private val nodeInfoCache: LoadingCache<SecureHash, SignedNodeInfo> = Caffeine.newBuilder()
@@ -76,9 +75,9 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
             .softValues()
             .build(nodeInfoStorage::getNodeInfo)
 
-    private val currentSignedNetworkMap: SignedNetworkMap? get() = networkMapCache.get(true)?.signedNetworkMap
-    private val currentNodeInfoHashes: Set<SecureHash> get() = networkMapCache.get(true)?.nodeInfoHashes ?: emptySet()
-    private val currentNetworkParameters: NetworkParameters? get() = networkMapCache.get(true)?.networkParameters
+    private val networkMaps: NetworkMaps? get() = networkMapCache[true]
+    private val currentNodeInfoHashes: Set<SecureHash> get() = networkMaps?.allNodeInfoHashes ?: emptySet()
+    private val currentNetworkParameters: NetworkParameters? get() = networkMaps?.publicNetworkMap?.networkParameters?.networkParameters
 
     @POST
     @Path("publish")
@@ -124,7 +123,14 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     @GET
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    fun getNetworkMap(): Response = createResponse(currentSignedNetworkMap, addCacheTimeout = true)
+    fun getNetworkMap(): Response = createNetworkMapResponse(networkMaps?.publicNetworkMap)
+
+    @GET
+    @Path("{id}")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    fun getNetworkMap(@PathParam("id") privateNetworkID: String?): Response = createNetworkMapResponse(networkMaps?.privateNetworkMap?.get(privateNetworkID))
+
+    private fun createNetworkMapResponse(networkMap: NetworkMapEntity?) = createResponse(networkMap?.toSignedNetworkMap(), addCacheTimeout = true, timestamp = networkMap?.timestamp)
 
     @GET
     @Path("node-info/{nodeInfoHash}")
@@ -182,11 +188,14 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
         }
     }
 
-    private fun createResponse(payload: Any?, addCacheTimeout: Boolean = false): Response {
+    private fun createResponse(payload: Any?, addCacheTimeout: Boolean = false, timestamp: Instant? = null): Response {
         return if (payload != null) {
             val ok = Response.ok(payload.serialize().bytes)
             if (addCacheTimeout) {
                 ok.header("Cache-Control", "max-age=${Duration.ofMillis(config.cacheTimeout).seconds}")
+            }
+            timestamp?.let {
+                ok.header("Last-Modified", DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneId.of("GMT")).format(it))
             }
             ok
         } else {
@@ -211,8 +220,4 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
 
     class NetworkMapNotInitialisedException(message: String?) : Exception(message)
     class RequestException(message: String) : Exception(message)
-
-    private data class CachedData(val signedNetworkMap: SignedNetworkMap,
-                                  val nodeInfoHashes: Set<SecureHash>,
-                                  val networkParameters: NetworkParameters)
 }

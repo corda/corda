@@ -84,7 +84,7 @@ class NetworkManagementServer(dataSourceProperties: Properties,
             val scheduledExecutor = Executors.newScheduledThreadPool(1)
             scheduledExecutor.scheduleAtFixedRate({
                 try {
-                    localNetworkMapSigner.signNetworkMap()
+                    localNetworkMapSigner.signNetworkMaps()
                 } catch (e: Exception) {
                     // Log the error and carry on.
                     logger.error("Unable to sign network map", e)
@@ -201,7 +201,7 @@ class NetworkManagementServer(dataSourceProperties: Properties,
 
     private fun handleSetNetworkParameters(setNetParams: NetworkParametersCmd.Set) {
         logger.info("maxMessageSize is not currently wired in the nodes")
-        val activeNetParams = networkMapStorage.getActiveNetworkMap()?.networkParameters?.networkParameters
+        val activeNetParams = networkMapStorage.getNetworkMaps().publicNetworkMap?.networkParameters?.networkParameters
         if (activeNetParams == null) {
             require(setNetParams.parametersUpdate == null) {
                 "'parametersUpdate' specified in network parameters file but there are no network parameters to update"
@@ -253,7 +253,7 @@ class NetworkManagementServer(dataSourceProperties: Properties,
         check(parametersUpdate.networkParameters.hash == networkMapStorage.getLatestNetworkParameters()?.hash) {
             "The latest network parameters is not the scheduled one:\n${latestNetParamsEntity?.networkParameters}\n${parametersUpdate.toParametersUpdate()}"
         }
-        val activeNetParams = networkMapStorage.getActiveNetworkMap()?.networkParameters
+        val activeNetParams = networkMapStorage.getNetworkMaps().publicNetworkMap?.networkParameters
         check(parametersUpdate.networkParameters.isSigned) {
             "Parameters we are trying to switch to haven't been signed yet"
         }

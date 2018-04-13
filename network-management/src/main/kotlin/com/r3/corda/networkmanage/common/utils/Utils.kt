@@ -86,3 +86,5 @@ fun PKCS10CertificationRequest.getCertRole(): CertRole {
  * Helper method to extract email from certificate signing request.
  */
 fun PKCS10CertificationRequest.getEmail(): String = firstAttributeValue(BCStyle.E).toString()
+
+fun <K, V, U> Map<K, V>.join(otherMap: Map<K, U>): Map<K, Pair<V?, U?>> = (keys + otherMap.keys).map { it to Pair(get(it), otherMap[it]) }.toMap()

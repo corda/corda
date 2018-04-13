@@ -22,24 +22,25 @@ import java.time.Instant
  * Data access object interface for NetworkMap persistence layer
  */
 // TODO This storage abstraction needs some thought. Some of the methods clearly don't make sense e.g. setParametersUpdateStatus.
+// TODO: We should avoid exposing entity objects.
 // The NetworkMapSignerTest uses a mock of this which means we need to provide methods for every trivial db operation.
 interface NetworkMapStorage {
     /**
-     * Returns the active network map, or null
+     * Returns the network maps containing public network map and private network maps.
      */
-    fun getActiveNetworkMap(): NetworkMapEntity?
+    fun getNetworkMaps(): NetworkMaps
 
     /**
-     * Persist the new active network map, replacing any existing network map.
+     * Persist the new network map for provided network ID, replacing any existing network map.
+     * The map will be stored as public network map if [networkId] = null.
      */
-    fun saveNewActiveNetworkMap(networkMapAndSigned: NetworkMapAndSigned)
+    fun saveNewNetworkMap(networkId: String? = null, networkMapAndSigned: NetworkMapAndSigned)
 
     /**
-     * Retrieves node info hashes where [NodeInfoEntity.isCurrent] is true and the certificate status is [CertificateStatus.VALID]
+     * Retrieves node info hashes for both public and private networks where [NodeInfoEntity.isCurrent] is true and the certificate status is [CertificateStatus.VALID]
      * Nodes should have declared that they are using correct set of parameters.
      */
-    // TODO "Active" is the wrong word here
-    fun getActiveNodeInfoHashes(): List<SecureHash>
+    fun getNodeInfoHashes(): NodeInfoHashes
 
     /**
      * Retrieve the signed with certificate network parameters by their hash. The hash is that of the underlying
@@ -79,3 +80,9 @@ interface NetworkMapStorage {
      */
     fun switchFlagDay(update: ParametersUpdateEntity)
 }
+
+data class NetworkMaps(val publicNetworkMap: NetworkMapEntity?, val privateNetworkMap: Map<String, NetworkMapEntity>) {
+    val allNodeInfoHashes: Set<SecureHash> = privateNetworkMap.flatMap { it.value.networkMap.nodeInfoHashes }.toSet() + (publicNetworkMap?.networkMap?.nodeInfoHashes ?: emptySet())
+}
+
+data class NodeInfoHashes(val publicNodeInfoHashes: List<SecureHash>, val privateNodeInfoHashes: Map<String, List<SecureHash>>)

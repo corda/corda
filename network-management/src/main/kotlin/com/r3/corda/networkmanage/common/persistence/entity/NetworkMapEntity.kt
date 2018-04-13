@@ -14,16 +14,20 @@ import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.SignedNetworkMap
+import org.hibernate.envers.Audited
+import org.hibernate.envers.RelationTargetAuditMode
 import java.io.Serializable
 import java.security.cert.X509Certificate
+import java.time.Instant
 import javax.persistence.*
 
 @Entity
+@Audited
 @Table(name = "network_map")
 class NetworkMapEntity(
         @Id
-        @GeneratedValue(strategy = GenerationType.SEQUENCE)
-        val version: Long? = null,
+        @Column(name = "id")
+        val id: String,
 
         @Lob
         @Column(name = "serialized_network_map", nullable = false)
@@ -41,7 +45,11 @@ class NetworkMapEntity(
 
         @ManyToOne(optional = false, fetch = FetchType.EAGER)
         @JoinColumn(name = "network_parameters", nullable = false)
-        val networkParameters: NetworkParametersEntity
+        @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
+        val networkParameters: NetworkParametersEntity,
+
+        @Column(nullable = false)
+        val timestamp: Instant = Instant.now()
 ) : Serializable {
     fun toSignedNetworkMap(): SignedNetworkMap {
         return SignedNetworkMap(networkMap.serialize(), DigitalSignatureWithCert(certificate, signature))

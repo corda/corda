@@ -13,6 +13,7 @@ package com.r3.corda.networkmanage.common.persistence
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
 import com.r3.corda.networkmanage.common.persistence.entity.ParametersUpdateEntity
+import com.r3.corda.networkmanage.common.persistence.entity.PrivateNetworkEntity
 import com.r3.corda.networkmanage.common.persistence.entity.UpdateStatus
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.serialize
@@ -33,6 +34,7 @@ import org.junit.Before
 import org.junit.Test
 import java.security.cert.X509Certificate
 import java.time.Instant
+import java.util.*
 
 class PersistentNetworkMapStorageTest : TestBase() {
     private lateinit var persistence: CordaPersistence
@@ -74,23 +76,15 @@ class PersistentNetworkMapStorageTest : TestBase() {
         val networkMapAndSigned = NetworkMapAndSigned(networkMap) { networkMapCertAndKeyPair.sign(networkMap).sig }
 
         // when
-        networkMapStorage.saveNewActiveNetworkMap(networkMapAndSigned)
+        networkMapStorage.saveNewNetworkMap(networkMapAndSigned = networkMapAndSigned)
 
         // then
-        val activeNetworkMapEntity = networkMapStorage.getActiveNetworkMap()!!
-        val activeSignedNetworkMap = activeNetworkMapEntity.toSignedNetworkMap()
+        val networkMaps = networkMapStorage.getNetworkMaps()
+        val activeSignedNetworkMap = networkMaps.publicNetworkMap!!.toSignedNetworkMap()
         val activeNetworkMap = activeSignedNetworkMap.verifiedNetworkMapCert(rootCaCert)
-        val activeNetworkParametersEntity = activeNetworkMapEntity.networkParameters
-        val activeSignedNetworkParameters = activeNetworkParametersEntity.toSignedNetworkParameters()
-        val activeNetworkParameters = activeSignedNetworkParameters.verifiedNetworkMapCert(rootCaCert)
 
         assertThat(activeNetworkMap).isEqualTo(networkMap)
         assertThat(activeSignedNetworkMap.sig).isEqualTo(networkMapAndSigned.signed.sig)
-        assertThat(activeNetworkParameters).isEqualTo(networkParameters)
-        assertThat(activeSignedNetworkParameters.sig).isEqualTo(networkParametersSig)
-        assertThat(activeNetworkParametersEntity.hash)
-                .isEqualTo(activeNetworkMap.networkParameterHash.toString())
-                .isEqualTo(networkParametersHash)
     }
 
     @Test
@@ -105,26 +99,40 @@ class PersistentNetworkMapStorageTest : TestBase() {
     }
 
     @Test
-    fun `getValidNodeInfoHashes returns only for current node-infos`() {
+    fun `getValidNodeInfoHashes returns node-infos for public and private networks`() {
         // given
         // Create node infos.
-        val (signedNodeInfoA) = createValidSignedNodeInfo("TestA", requestStorage)
-        val (signedNodeInfoB) = createValidSignedNodeInfo("TestB", requestStorage)
+
+        val nodes = listOf("TestA", "TestB", "TestC", "TestD", "TestE")
+
+        val nodeInfos = nodes.map { it to createValidSignedNodeInfo(it, requestStorage) }.toMap()
 
         // Put signed node info data
-        val nodeInfoHashA = nodeInfoStorage.putNodeInfo(signedNodeInfoA)
-        val nodeInfoHashB = nodeInfoStorage.putNodeInfo(signedNodeInfoB)
 
-        persistence.transaction {
-            val entity = session.find(NodeInfoEntity::class.java, nodeInfoHashA.toString())
-            session.merge(entity.copy(isCurrent = false))
+        val storedNodeInfos = nodeInfos.mapValues { nodeInfoStorage.putNodeInfo(it.value.first) }
+
+        val (testNet1, testNet2) = persistence.transaction {
+            val testNet1 = PrivateNetworkEntity(UUID.randomUUID().toString(), "TestNet1").apply { session.save(this) }
+            val testNet2 = PrivateNetworkEntity(UUID.randomUUID().toString(), "TestNet2").apply { session.save(this) }
+
+            // set different private network for node info
+            session.find(NodeInfoEntity::class.java, storedNodeInfos["TestA"].toString()).apply {
+                session.merge(certificateSigningRequest.copy(privateNetwork = testNet1))
+            }
+            session.find(NodeInfoEntity::class.java, storedNodeInfos["TestC"].toString()).apply {
+                session.merge(certificateSigningRequest.copy(privateNetwork = testNet2))
+            }
+            Pair(testNet1, testNet2)
         }
 
         // when
-        val validNodeInfoHashes = networkMapStorage.getActiveNodeInfoHashes()
+        val nodeInfoHashes = networkMapStorage.getNodeInfoHashes()
 
         // then
-        assertThat(validNodeInfoHashes).containsOnly(nodeInfoHashB)
+        assertThat(nodeInfoHashes.publicNodeInfoHashes).containsOnlyElementsOf(storedNodeInfos.filterKeys { it !in setOf("TestA", "TestC") }.values)
+        assertThat(nodeInfoHashes.privateNodeInfoHashes.keys).containsOnlyElementsOf(listOf(testNet1.networkId, testNet2.networkId))
+        assertThat(nodeInfoHashes.privateNodeInfoHashes[testNet1.networkId]).containsOnlyElementsOf(listOf(storedNodeInfos["TestA"]))
+        assertThat(nodeInfoHashes.privateNodeInfoHashes[testNet2.networkId]).containsOnlyElementsOf(listOf(storedNodeInfos["TestC"]))
     }
 
     @Test
@@ -169,7 +177,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         val parameterUpdate = networkMapStorage.getCurrentParametersUpdate()!!
         networkMapStorage.switchFlagDay(parameterUpdate)
         // when
-        val validNodeInfoHashes = networkMapStorage.getActiveNodeInfoHashes()
+        val validNodeInfoHashes = networkMapStorage.getNodeInfoHashes().publicNodeInfoHashes
         // then
         assertThat(validNodeInfoHashes).containsOnly(nodeInfoHashB)
     }
@@ -196,7 +204,7 @@ class PersistentNetworkMapStorageTest : TestBase() {
         val parameterUpdate = networkMapStorage.getCurrentParametersUpdate()!!
         networkMapStorage.switchFlagDay(parameterUpdate)
         // when
-        val validNodeInfoHashes = networkMapStorage.getActiveNodeInfoHashes()
+        val validNodeInfoHashes = networkMapStorage.getNodeInfoHashes().publicNodeInfoHashes
         // then
         assertThat(validNodeInfoHashes).containsOnly(nodeInfoHashB)
     }

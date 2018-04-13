@@ -26,20 +26,21 @@ import java.time.Instant
  * Database implementation of the [NetworkMapStorage] interface
  */
 class PersistentNetworkMapStorage(private val database: CordaPersistence) : NetworkMapStorage {
-    override fun getActiveNetworkMap(): NetworkMapEntity? {
+    companion object {
+        // Used internally to identify global network map in database table.
+        private const val PUBLIC_NETWORK_ID = "PUBLIC_NETWORK"
+    }
+
+    override fun getNetworkMaps(): NetworkMaps {
         return database.transaction {
-            val builder = session.criteriaBuilder
-            val query = builder.createQuery(NetworkMapEntity::class.java).run {
-                from(NetworkMapEntity::class.java).run {
-                    orderBy(builder.desc(get<Long>(NetworkMapEntity::version.name)))
-                }
-            }
-            // We want the latest signed entry
-            session.createQuery(query).setMaxResults(1).uniqueResult()
+            val networkMapEntities = session.createQuery("from ${NetworkMapEntity::class.java.name}", NetworkMapEntity::class.java)
+                    .resultList
+                    .associateBy { it.id }
+            NetworkMaps(networkMapEntities[PUBLIC_NETWORK_ID], networkMapEntities.filterKeys { it != PUBLIC_NETWORK_ID })
         }
     }
 
-    override fun saveNewActiveNetworkMap(networkMapAndSigned: NetworkMapAndSigned) {
+    override fun saveNewNetworkMap(networkId: String?, networkMapAndSigned: NetworkMapAndSigned) {
         val (networkMap, signedNetworkMap) = networkMapAndSigned
         database.transaction {
             val networkParametersEntity = checkNotNull(getNetworkParametersEntity(networkMap.networkParameterHash)) {
@@ -48,7 +49,8 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
             check(networkParametersEntity.isSigned) {
                 "Network parameters ${networkMap.networkParameterHash} are not signed"
             }
-            session.save(NetworkMapEntity(
+            session.merge(NetworkMapEntity(
+                    id = networkId ?: PUBLIC_NETWORK_ID,
                     networkMap = networkMap,
                     signature = signedNetworkMap.sig.bytes,
                     certificate = signedNetworkMap.sig.by,
@@ -65,10 +67,10 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
         }
     }
 
-    override fun getActiveNodeInfoHashes(): List<SecureHash> {
+    override fun getNodeInfoHashes(): NodeInfoHashes {
         return database.transaction {
             val builder = session.criteriaBuilder
-            val query = builder.createQuery(String::class.java).run {
+            val query = builder.createTupleQuery().run {
                 from(NodeInfoEntity::class.java).run {
                     val certStatusExpression = get<CertificateSigningRequestEntity>(NodeInfoEntity::certificateSigningRequest.name)
                             .get<CertificateDataEntity>(CertificateSigningRequestEntity::certificateData.name)
@@ -77,10 +79,16 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
                     // isn't needed.
                     val certStatusEq = builder.equal(certStatusExpression, CertificateStatus.VALID)
                     val isCurrentNodeInfo = builder.isTrue(get<Boolean>(NodeInfoEntity::isCurrent.name))
-                    select(get<String>(NodeInfoEntity::nodeInfoHash.name)).where(builder.and(certStatusEq, isCurrentNodeInfo))
+
+                    val networkIdSelector = get<CertificateSigningRequestEntity>(NodeInfoEntity::certificateSigningRequest.name)
+                            .get<PrivateNetworkEntity>(CertificateSigningRequestEntity::privateNetwork.name)
+                            .get<String>(PrivateNetworkEntity::networkId.name)
+
+                    multiselect(networkIdSelector, get<String>(NodeInfoEntity::nodeInfoHash.name)).where(builder.and(certStatusEq, isCurrentNodeInfo))
                 }
             }
-            session.createQuery(query).resultList.map { SecureHash.parse(it) }
+            val allNodeInfos = session.createQuery(query).resultList.groupBy { it[0]?.toString() ?: PUBLIC_NETWORK_ID }.mapValues { it.value.map { SecureHash.parse(it.get(1, String::class.java)) } }
+            NodeInfoHashes(allNodeInfos[PUBLIC_NETWORK_ID] ?: emptyList(), allNodeInfos.filterKeys { it != PUBLIC_NETWORK_ID })
         }
     }
 
@@ -90,19 +98,15 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
         val hash = serialized.hash
         return database.transaction {
             val entity = getNetworkParametersEntity(hash)
-            val newNetworkParamsEntity = if (entity != null) {
-                entity.copy(
-                        signature = signature?.bytes,
-                        certificate = signature?.by
-                )
-            } else {
-                NetworkParametersEntity(
-                        networkParameters = networkParameters,
-                        hash = hash.toString(),
-                        signature = signature?.bytes,
-                        certificate = signature?.by
-                )
-            }
+            val newNetworkParamsEntity = entity?.copy(
+                    signature = signature?.bytes,
+                    certificate = signature?.by
+            ) ?: NetworkParametersEntity(
+                    networkParameters = networkParameters,
+                    hash = hash.toString(),
+                    signature = signature?.bytes,
+                    certificate = signature?.by
+            )
             session.merge(newNetworkParamsEntity) as NetworkParametersEntity
         }
     }

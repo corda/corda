@@ -13,9 +13,11 @@ package com.r3.corda.networkmanage.common.signer
 import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.NetworkMapStorage
+import com.r3.corda.networkmanage.common.persistence.NetworkMaps
+import com.r3.corda.networkmanage.common.persistence.NodeInfoHashes
 import com.r3.corda.networkmanage.common.persistence.entity.ParametersUpdateEntity
 import com.r3.corda.networkmanage.common.persistence.entity.UpdateStatus
-import com.r3.corda.networkmanage.createNetworkMapEntity
+import com.r3.corda.networkmanage.createNetworkMaps
 import com.r3.corda.networkmanage.createNetworkParametersEntity
 import com.r3.corda.networkmanage.createNetworkParametersEntityUnsigned
 import net.corda.core.crypto.Crypto
@@ -67,29 +69,29 @@ class NetworkMapSignerTest : TestBase() {
     @Test
     fun `signNetworkMap builds and signs network map and network parameters`() {
         // given
-        val nodeInfoHashes = listOf(SecureHash.randomSHA256(), SecureHash.randomSHA256())
+        val nodeInfoHashes = NodeInfoHashes(listOf(SecureHash.randomSHA256(), SecureHash.randomSHA256()), emptyMap())
         val latestNetParams = testNetworkParameters(epoch = 3)
         val latestNetParamsEntity = createNetworkParametersEntityUnsigned(latestNetParams)
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(latestNetParamsEntity)
-        whenever(networkMapStorage.getActiveNodeInfoHashes()).thenReturn(nodeInfoHashes)
-        whenever(networkMapStorage.getActiveNetworkMap()).thenReturn(null)
+        whenever(networkMapStorage.getNodeInfoHashes()).thenReturn(nodeInfoHashes)
+        whenever(networkMapStorage.getNetworkMaps()).thenReturn(NetworkMaps(null, emptyMap()))
         whenever(networkMapStorage.getCurrentParametersUpdate()).thenReturn(null)
 
         // when
-        networkMapSigner.signNetworkMap()
+        networkMapSigner.signNetworkMaps()
 
         // then
         // Verify networkMapStorage calls
-        verify(networkMapStorage).getActiveNodeInfoHashes()
-        verify(networkMapStorage).getActiveNetworkMap()
+        verify(networkMapStorage).getNodeInfoHashes()
+        verify(networkMapStorage).getNetworkMaps()
         verify(networkMapStorage).getCurrentParametersUpdate()
         verify(networkMapStorage).getLatestNetworkParameters()
         argumentCaptor<NetworkMapAndSigned>().apply {
-            verify(networkMapStorage).saveNewActiveNetworkMap(capture())
+            verify(networkMapStorage).saveNewNetworkMap(anyOrNull(), capture())
             val capturedNetworkMap = firstValue.networkMap
             // Parameters in network map got swapped for latest ones.
             assertEquals(latestNetParams.serialize().hash, capturedNetworkMap.networkParameterHash)
-            assertThat(capturedNetworkMap.nodeInfoHashes).isEqualTo(nodeInfoHashes)
+            assertThat(capturedNetworkMap.nodeInfoHashes).isEqualTo(nodeInfoHashes.publicNodeInfoHashes)
         }
         val paramsCaptor = argumentCaptor<NetworkParameters>()
         val signatureCaptor = argumentCaptor<DigitalSignatureWithCert>()
@@ -102,17 +104,17 @@ class NetworkMapSignerTest : TestBase() {
     fun `signNetworkMap does NOT create a new network map if there are no changes`() {
         // given
         val netParamsEntity = createNetworkParametersEntity(signingCertAndKeyPair)
-        val netMapEntity = createNetworkMapEntity(signingCertAndKeyPair, netParamsEntity, emptyList())
+        val netMapEntity = createNetworkMaps(signingCertAndKeyPair, netParamsEntity, emptyList())
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(netParamsEntity)
-        whenever(networkMapStorage.getActiveNodeInfoHashes()).thenReturn(emptyList())
-        whenever(networkMapStorage.getActiveNetworkMap()).thenReturn(netMapEntity)
+        whenever(networkMapStorage.getNodeInfoHashes()).thenReturn(NodeInfoHashes(emptyList(), emptyMap()))
+        whenever(networkMapStorage.getNetworkMaps()).thenReturn(netMapEntity)
 
         // when
-        networkMapSigner.signNetworkMap()
+        networkMapSigner.signNetworkMaps()
 
         // then
         // Verify networkMapStorage is not called
-        verify(networkMapStorage, never()).saveNewActiveNetworkMap(any())
+        verify(networkMapStorage, never()).saveNewNetworkMap(any(), any())
         verify(networkMapStorage, never()).saveNetworkParameters(any(), any())
     }
 
@@ -121,21 +123,21 @@ class NetworkMapSignerTest : TestBase() {
         // given
         val netParams = testNetworkParameters()
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(createNetworkParametersEntityUnsigned(netParams))
-        whenever(networkMapStorage.getActiveNodeInfoHashes()).thenReturn(emptyList())
-        whenever(networkMapStorage.getActiveNetworkMap()).thenReturn(null)
+        whenever(networkMapStorage.getNodeInfoHashes()).thenReturn(NodeInfoHashes(emptyList(), emptyMap()))
+        whenever(networkMapStorage.getNetworkMaps()).thenReturn(NetworkMaps(null, emptyMap()))
         whenever(networkMapStorage.getCurrentParametersUpdate()).thenReturn(null)
 
         // when
-        networkMapSigner.signNetworkMap()
+        networkMapSigner.signNetworkMaps()
 
         // then
         // Verify networkMapStorage calls
-        verify(networkMapStorage).getActiveNodeInfoHashes()
-        verify(networkMapStorage).getActiveNetworkMap()
+        verify(networkMapStorage).getNodeInfoHashes()
+        verify(networkMapStorage).getNetworkMaps()
         verify(networkMapStorage).getLatestNetworkParameters()
         verify(networkMapStorage).getCurrentParametersUpdate()
         argumentCaptor<NetworkMapAndSigned>().apply {
-            verify(networkMapStorage).saveNewActiveNetworkMap(capture())
+            verify(networkMapStorage).saveNewNetworkMap(anyOrNull(), capture())
             assertEquals(netParams.serialize().hash, firstValue.networkMap.networkParameterHash)
         }
         val paramsCaptor = argumentCaptor<NetworkParameters>()
@@ -150,20 +152,20 @@ class NetworkMapSignerTest : TestBase() {
         // given
         val currentNetworkParameters = createNetworkParametersEntity(signingCertAndKeyPair)
         val updateNetworkParameters = createNetworkParametersEntityUnsigned(testNetworkParameters(epoch = 2))
-        val parametersUpdate = ParametersUpdateEntity(0, updateNetworkParameters,"Update time", Instant.ofEpochMilli(random63BitValue()))
-        val netMapEntity = createNetworkMapEntity(signingCertAndKeyPair, currentNetworkParameters, emptyList(), null)
-        whenever(networkMapStorage.getActiveNetworkMap()).thenReturn(netMapEntity)
+        val parametersUpdate = ParametersUpdateEntity(0, updateNetworkParameters, "Update time", Instant.ofEpochMilli(random63BitValue()))
+        val netMapEntity = createNetworkMaps(signingCertAndKeyPair, currentNetworkParameters)
+        whenever(networkMapStorage.getNetworkMaps()).thenReturn(netMapEntity)
         whenever(networkMapStorage.getCurrentParametersUpdate()).thenReturn(parametersUpdate)
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(updateNetworkParameters)
-        whenever(networkMapStorage.getActiveNodeInfoHashes()).thenReturn(emptyList())
+        whenever(networkMapStorage.getNodeInfoHashes()).thenReturn(NodeInfoHashes(emptyList(), emptyMap()))
 
         // when
-        networkMapSigner.signNetworkMap()
+        networkMapSigner.signNetworkMaps()
 
         // then
         // Verify networkMapStorage calls
-        verify(networkMapStorage).getActiveNetworkMap()
-        verify(networkMapStorage).getActiveNodeInfoHashes()
+        verify(networkMapStorage).getNetworkMaps()
+        verify(networkMapStorage).getNodeInfoHashes()
         verify(networkMapStorage).getLatestNetworkParameters()
         verify(networkMapStorage).getCurrentParametersUpdate()
 
@@ -177,34 +179,34 @@ class NetworkMapSignerTest : TestBase() {
     @Test
     fun `signNetworkMap fails if there is parameter update without relevant parameters stored`() {
         val updateNetworkParameters = createNetworkParametersEntityUnsigned(testNetworkParameters(epoch = 2))
-        val parametersUpdate = ParametersUpdateEntity(0, updateNetworkParameters,"Update time", Instant.ofEpochMilli(random63BitValue()))
-        whenever(networkMapStorage.getActiveNetworkMap()).thenReturn(null)
+        val parametersUpdate = ParametersUpdateEntity(0, updateNetworkParameters, "Update time", Instant.ofEpochMilli(random63BitValue()))
+        whenever(networkMapStorage.getNetworkMaps()).thenReturn(NetworkMaps(null, emptyMap()))
         whenever(networkMapStorage.getCurrentParametersUpdate()).thenReturn(parametersUpdate)
-        whenever(networkMapStorage.getActiveNodeInfoHashes()).thenReturn(emptyList())
+        whenever(networkMapStorage.getNodeInfoHashes()).thenReturn(NodeInfoHashes(emptyList(), emptyMap()))
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(createNetworkParametersEntity())
 
         verify(networkMapStorage, never()).saveNetworkParameters(any(), any())
-        verify(networkMapStorage, never()).saveNewActiveNetworkMap(any())
+        verify(networkMapStorage, never()).saveNewNetworkMap(any(), any())
     }
 
     @Test
     fun `setting flag day on parameters update changes parameters inside network map`() {
         val activeNetworkParameters = createNetworkParametersEntity(signingCertAndKeyPair, testNetworkParameters(epoch = 1))
         val updateNetworkParameters = createNetworkParametersEntity(signingCertAndKeyPair, testNetworkParameters(epoch = 2))
-        val parametersUpdate = ParametersUpdateEntity(0, updateNetworkParameters,"Update time", Instant.ofEpochMilli(random63BitValue()))
-        val activeNetworkMap = createNetworkMapEntity(signingCertAndKeyPair, activeNetworkParameters, emptyList(), parametersUpdate.toParametersUpdate())
+        val parametersUpdate = ParametersUpdateEntity(0, updateNetworkParameters, "Update time", Instant.ofEpochMilli(random63BitValue()))
+        val activeNetworkMaps = createNetworkMaps(signingCertAndKeyPair, activeNetworkParameters, parametersUpdate = parametersUpdate.toParametersUpdate())
 
-        whenever(networkMapStorage.getActiveNetworkMap()).thenReturn(activeNetworkMap)
-        whenever(networkMapStorage.getActiveNodeInfoHashes()).thenReturn(emptyList())
+        whenever(networkMapStorage.getNetworkMaps()).thenReturn(activeNetworkMaps)
+        whenever(networkMapStorage.getNodeInfoHashes()).thenReturn(NodeInfoHashes(emptyList(), emptyMap()))
         whenever(networkMapStorage.getCurrentParametersUpdate()).thenReturn(parametersUpdate.copy(status = UpdateStatus.FLAG_DAY))
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(updateNetworkParameters)
 
         // when
-        networkMapSigner.signNetworkMap()
+        networkMapSigner.signNetworkMaps()
 
         //then
         argumentCaptor<NetworkMapAndSigned>().apply {
-            verify(networkMapStorage).saveNewActiveNetworkMap(capture())
+            verify(networkMapStorage).saveNewNetworkMap(anyOrNull(), capture())
             val netMap = firstValue.networkMap
             assertEquals(SecureHash.parse(updateNetworkParameters.hash), netMap.networkParameterHash)
             assertEquals(emptyList(), netMap.nodeInfoHashes)
@@ -216,20 +218,20 @@ class NetworkMapSignerTest : TestBase() {
     fun `cancel update test`() {
         val activeNetworkParameters = createNetworkParametersEntity(signingCertAndKeyPair, testNetworkParameters(epoch = 1))
         val updateNetworkParameters = createNetworkParametersEntityUnsigned(testNetworkParameters(epoch = 2))
-        val parametersUpdate = ParametersUpdateEntity(0, updateNetworkParameters,"Update time", Instant.ofEpochMilli(random63BitValue()))
-        val activeNetworkMap = createNetworkMapEntity(signingCertAndKeyPair, activeNetworkParameters, emptyList(), parametersUpdate.toParametersUpdate())
+        val parametersUpdate = ParametersUpdateEntity(0, updateNetworkParameters, "Update time", Instant.ofEpochMilli(random63BitValue()))
+        val activeNetworkMaps = createNetworkMaps(signingCertAndKeyPair, activeNetworkParameters, parametersUpdate = parametersUpdate.toParametersUpdate())
 
-        whenever(networkMapStorage.getActiveNetworkMap()).thenReturn(activeNetworkMap)
-        whenever(networkMapStorage.getActiveNodeInfoHashes()).thenReturn(emptyList())
+        whenever(networkMapStorage.getNetworkMaps()).thenReturn(activeNetworkMaps)
+        whenever(networkMapStorage.getNodeInfoHashes()).thenReturn(NodeInfoHashes(emptyList(), emptyMap()))
         whenever(networkMapStorage.getCurrentParametersUpdate()).thenReturn(null)
         whenever(networkMapStorage.getLatestNetworkParameters()).thenReturn(createNetworkParametersEntity())
 
         // when
-        networkMapSigner.signNetworkMap()
+        networkMapSigner.signNetworkMaps()
 
         //then
         argumentCaptor<NetworkMapAndSigned>().apply {
-            verify(networkMapStorage).saveNewActiveNetworkMap(capture())
+            verify(networkMapStorage).saveNewNetworkMap(anyOrNull(), capture())
             val netMap = firstValue.networkMap
             assertEquals(SecureHash.parse(activeNetworkParameters.hash), netMap.networkParameterHash)
             assertEquals(emptyList(), netMap.nodeInfoHashes)
