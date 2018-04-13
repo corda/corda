@@ -990,5 +990,17 @@ object Crypto {
         } else {
             txId
         }
-     }
+    }
+
+    /**
+     * Method to force registering all [Crypto]-related cryptography [Provider]s.
+     * It is recommended that it is invoked first thing on `main` functions, so the [Provider]s are in place before any
+     * cryptographic operation is requested outside [Crypto] (i.e., SecureRandom, KeyStore, cert-path validation,
+     * CRL & CSR checks etc.).
+     */
+    // TODO: perform all cryptographic operations via Crypto.
+    @JvmStatic
+    fun registerProviders() {
+        providerMap
+    }
 }
