@@ -130,30 +130,19 @@ class TopLevelTransition(
                     flowState = FlowState.Started(event.ioRequest, event.fiber),
                     numberOfSuspends = currentState.checkpoint.numberOfSuspends + 1
             )
-            if (event.maySkipCheckpoint) {
-                actions.addAll(arrayOf(
-                        Action.CommitTransaction,
-                        Action.ScheduleEvent(Event.DoRemainingWork)
-                ))
-                currentState = currentState.copy(
-                        checkpoint = newCheckpoint,
-                        isFlowResumed = false
-                )
-            } else {
-                actions.addAll(arrayOf(
-                        Action.PersistCheckpoint(context.id, newCheckpoint),
-                        Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                        Action.CommitTransaction,
-                        Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
-                        Action.ScheduleEvent(Event.DoRemainingWork)
-                ))
-                currentState = currentState.copy(
-                        checkpoint = newCheckpoint,
-                        pendingDeduplicationHandlers = emptyList(),
-                        isFlowResumed = false,
-                        isAnyCheckpointPersisted = true
-                )
-            }
+            actions.addAll(arrayOf(
+                    Action.PersistCheckpoint(context.id, newCheckpoint),
+                    Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
+                    Action.CommitTransaction,
+                    Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
+                    Action.ScheduleEvent(Event.DoRemainingWork)
+            ))
+            currentState = currentState.copy(
+                    checkpoint = newCheckpoint,
+                    pendingDeduplicationHandlers = emptyList(),
+                    isFlowResumed = false,
+                    isAnyCheckpointPersisted = true
+            )
             FlowContinuation.ProcessEvents
         }
     }
