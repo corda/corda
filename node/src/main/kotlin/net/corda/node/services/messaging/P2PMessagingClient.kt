@@ -5,7 +5,6 @@ import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -333,8 +332,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private val shutdownLatch = CountDownLatch(1)
 
-    var runningFuture = openFuture<Unit>()
-
     /**
      * Starts the p2p event loop: this method only returns once [stop] has been called.
      */
@@ -345,7 +342,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 check(started) { "start must be called first" }
                 check(!running) { "run can't be called twice" }
                 running = true
-                runningFuture.set(Unit)
                 // If it's null, it means we already called stop, so return immediately.
                 if (p2pConsumer == null) {
                     return
@@ -457,7 +453,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
             check(started)
             val prevRunning = running
             running = false
-            runningFuture = openFuture()
             networkChangeSubscription?.unsubscribe()
             require(p2pConsumer != null, { "stop can't be called twice" })
             require(producer != null, { "stop can't be called twice" })

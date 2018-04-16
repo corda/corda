@@ -242,7 +242,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
             val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
-            val flowStarter = FlowStarterImpl(serverThread, smm, flowLogicRefFactory)
+            val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
             val schedulerService = NodeSchedulerService(
                     platformClock,
                     database,
@@ -893,7 +893,7 @@ internal fun logVendorString(database: CordaPersistence, log: Logger) {
     }
 }
 
-internal class FlowStarterImpl(private val serverThread: AffinityExecutor, private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
+internal class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
     override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext, deduplicationHandler: DeduplicationHandler?): CordaFuture<FlowStateMachine<T>> {
         return smm.startFlow(logic, context, ourIdentity = null, deduplicationHandler = deduplicationHandler)
     }
