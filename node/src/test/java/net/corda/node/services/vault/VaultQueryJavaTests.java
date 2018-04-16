@@ -485,4 +485,46 @@ public class VaultQueryJavaTests {
             return tx;
         });
     }
+
+    private List<StateAndRef<Cash.State>> queryStatesWithPaging(VaultService vaultService, int p) {
+        // DOCSTART VaultQueryExample24
+        int pageNumber = DEFAULT_PAGE_NUM;
+        List<StateAndRef<Cash.State>> states = new ArrayList<>();
+        long totalResults;
+        do {
+            PageSpecification pageSpec = new PageSpecification(pageNumber, p);
+            Vault.Page<Cash.State> results = vaultService.queryBy(Cash.State.class, new VaultQueryCriteria(), pageSpec);
+            totalResults = results.getTotalStatesAvailable();
+            List<StateAndRef<Cash.State>> newStates = results.getStates();
+            System.out.println(newStates.size());
+            states.addAll(results.getStates());
+            pageNumber++;
+        } while ((p * (pageNumber - 1) <= totalResults));
+        // DOCEND VaultQueryExample24
+        return states;
+    }
+
+    @Test
+    public void testExampleOfQueryingStatesWithPagingWorksCorrectly() {
+        Amount<Currency> dollars100 = new Amount<>(100, Currency.getInstance("USD"));
+        database.transaction(tx -> {
+            vaultFiller.fillWithSomeTestCash(dollars100, issuerServices, 4, DUMMY_CASH_ISSUER);
+            return tx;
+        });
+        database.transaction(tx -> {
+            assertThat(queryStatesWithPaging(vaultService, 5).size()).isEqualTo(4);
+            vaultFiller.fillWithSomeTestCash(dollars100, issuerServices, 1, DUMMY_CASH_ISSUER);
+            return tx;
+        });
+        database.transaction(tx -> {
+            assertThat(queryStatesWithPaging(vaultService, 5).size()).isEqualTo(5);
+            vaultFiller.fillWithSomeTestCash(dollars100, issuerServices, 1, DUMMY_CASH_ISSUER);
+            return tx;
+        });
+
+        database.transaction(tx -> {
+            assertThat(queryStatesWithPaging(vaultService, 5).size()).isEqualTo(6);
+            return tx;
+        });
+    }
 }

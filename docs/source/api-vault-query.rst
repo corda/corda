@@ -264,8 +264,8 @@ pages available:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/events/ScheduledFlowTests.kt
     :language: kotlin
-    :start-after: DOCSTART VaultQueryExamplePaging
-    :end-before: DOCEND VaultQueryExamplePaging
+    :start-after: DOCSTART VaultQueryExample24
+    :end-before: DOCEND VaultQueryExample24
     :dedent: 8
 
 **LinearState and DealState queries using** ``LinearStateQueryCriteria``:
@@ -424,6 +424,14 @@ Query for consumed deal states or linear ids, specify a paging specification and
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample2
     :end-before: DOCEND VaultJavaQueryExample2
+    :dedent: 12
+
+Query for all states using pagination specification and iterate using `totalStatesAvailable` field until no further pages available:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/events/VaultQueryJavaTests.kt
+    :language: java
+    :start-after: DOCSTART VaultQueryExample24
+    :end-before: DOCEND VaultQueryExample24
     :dedent: 12
 
 **Aggregate Function queries using** ``VaultCustomQueryCriteria``:
