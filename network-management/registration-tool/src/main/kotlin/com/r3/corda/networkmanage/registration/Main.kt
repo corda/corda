@@ -88,7 +88,7 @@ private fun OptionSpecBuilder.requireOnlyIf(option: OptionSpecBuilder): OptionSp
 sealed class ToolOption {
     data class RegistrationOption(val configFile: Path) : ToolOption()
     data class KeyCopierOption(val sourceFile: Path,
-                               val desinationFile: Path,
+                               val destinationFile: Path,
                                val sourcePassword: String?,
                                val destinationPassword: String?,
                                val sourceAlias: String,

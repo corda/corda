@@ -65,7 +65,7 @@ class OptionParserTest {
                 "--destalias", "testalias2")
         assertThat(parseOptions(*keyCopyArgs)).isEqualTo(ToolOption.KeyCopierOption(
                 sourceFile = tempDir / "source.jks",
-                desinationFile = tempDir / "target.jks",
+                destinationFile = tempDir / "target.jks",
                 sourcePassword = "password1",
                 destinationPassword = "password2",
                 sourceAlias = "testalias",
@@ -82,7 +82,7 @@ class OptionParserTest {
                 "--srcalias", "testalias")
         assertThat(parseOptions(*keyCopyArgs)).isEqualTo(ToolOption.KeyCopierOption(
                 sourceFile = tempDir / "source.jks",
-                desinationFile = tempDir / "target.jks",
+                destinationFile = tempDir / "target.jks",
                 sourcePassword = null,
                 destinationPassword = null,
                 sourceAlias = "testalias",

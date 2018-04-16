@@ -1,6 +1,6 @@
-#Network Registration Tool
+#Distributed Notary Registration Tool
 
-The network registration tool creates a CSR (Certificate Signing Request) and sent to compatibility zone doorman for approval.
+The notary registration tool creates a CSR (Certificate Signing Request) with ``SERVICE_IDENTITY`` certificate role and sent to compatibility zone doorman for approval.
 A keystore and a trust store will be created once the request is approved.  
 
 ##Configuration file
@@ -19,8 +19,6 @@ email                           Requester's e-mail address.
 compatibilityZoneURL            Compatibility zone URL.
 
 networkRootTrustStorePath       Path to the network root trust store.
-
-certRole                        Requested cert role, it should be one of [NODE_CA, SERVICE_IDENTITY].
 
 networkRootTrustStorePassword   Network root trust store password, to be provided by the network operator. Optional, the tool will prompt for password input if not provided. 
 
@@ -41,7 +39,6 @@ legalName {
 email = "test@email.com"
 compatibilityZoneURL = "http://doorman.url.com"
 networkRootTrustStorePath = "networkRootTrustStore.jks"
-certRole = "NODE_CA"
 
 networkRootTrustStorePassword = "password"
 keyStorePassword = "password"

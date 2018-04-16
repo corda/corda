@@ -24,9 +24,9 @@ fun KeyCopierOption.copyKeystore() {
     val srcPrivateKey = srcKeystore.getPrivateKey(sourceAlias)
     val srcCertChain = srcKeystore.getCertificateChain(sourceAlias)
 
-    X509KeyStore.fromFile(desinationFile, destinationPassword ?: readPassword("Destination key store password:")).update {
+    X509KeyStore.fromFile(destinationFile, destinationPassword ?: readPassword("Destination key store password:")).update {
         val keyAlias = destinationAlias ?: sourceAlias
         setPrivateKey(keyAlias, srcPrivateKey, srcCertChain)
-        println("Added '$keyAlias' to keystore : $desinationFile")
+        println("Added '$keyAlias' to keystore : $destinationFile")
     }
 }

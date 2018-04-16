@@ -20,7 +20,6 @@ import org.junit.Test
 import java.nio.file.Paths
 
 class RegistrationConfigTest {
-
     @Test
     fun `parse config file correctly`() {
         val testConfig = """
@@ -33,7 +32,6 @@ legalName {
 email = "test@email.com"
 compatibilityZoneURL = "http://doorman.url.com"
 networkRootTrustStorePath = "networkRootTrustStore.jks"
-certRole = "NODE_CA"
 
 networkRootTrustStorePassword = "password"
 keyStorePassword = "password"
@@ -42,9 +40,8 @@ trustStorePassword = "password"
 
         val config = ConfigFactory.parseString(testConfig, ConfigParseOptions.defaults().setAllowMissing(false))
                 .resolve()
-                .parseAs<RegistrationConfig>()
+                .parseAs<NotaryRegistrationConfig>()
 
-        assertEquals(CertRole.NODE_CA, config.certRole)
         assertEquals(CordaX500Name.parse("OU=R3 Corda, O=R3 LTD, L=London, C=GB"), config.legalName)
         assertEquals("http://doorman.url.com", config.compatibilityZoneURL.toString())
         assertEquals("test@email.com", config.email)

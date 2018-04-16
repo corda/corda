@@ -25,16 +25,24 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 fun RegistrationOption.runRegistration() {
+    println("**********************************************************")
+    println("*                                                        *")
+    println("*           Notary identity registration tool            *")
+    println("*                                                        *")
+    println("**********************************************************")
+    println()
+    println("This tool will create a notary identity certificate signing request using information found in '$configFile'")
+    println()
+
     val config = ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(false))
             .resolve()
-            .parseAs<RegistrationConfig>()
+            .parseAs<NotaryRegistrationConfig>()
 
     val sslConfig = object : SSLConfiguration {
         override val keyStorePassword: String  by lazy { config.keyStorePassword ?: readPassword("Node Keystore password:") }
         override val trustStorePassword: String by lazy { config.trustStorePassword ?: readPassword("Node TrustStore password:") }
         val parent = configFile.parent
-        override val certificatesDirectory: Path = if (parent != null) parent / "certificates"
-                                                   else Paths.get("certificates")
+        override val certificatesDirectory: Path = if (parent != null) parent / "certificates" else Paths.get("certificates")
     }
 
     NetworkRegistrationHelper(sslConfig,
@@ -42,14 +50,13 @@ fun RegistrationOption.runRegistration() {
             config.email,
             HTTPNetworkRegistrationService(config.compatibilityZoneURL),
             config.networkRootTrustStorePath,
-            config.networkRootTrustStorePassword ?: readPassword("Network trust root password:"), config.certRole).buildKeystore()
+            config.networkRootTrustStorePassword ?: readPassword("Network trust root password:"), CertRole.SERVICE_IDENTITY).buildKeystore()
 }
 
-data class RegistrationConfig(val legalName: CordaX500Name,
-                              val email: String,
-                              val compatibilityZoneURL: URL,
-                              val networkRootTrustStorePath: Path,
-                              val certRole: CertRole,
-                              val keyStorePassword: String?,
-                              val networkRootTrustStorePassword: String?,
-                              val trustStorePassword: String?)
+data class NotaryRegistrationConfig(val legalName: CordaX500Name,
+                                    val email: String,
+                                    val compatibilityZoneURL: URL,
+                                    val networkRootTrustStorePath: Path,
+                                    val keyStorePassword: String?,
+                                    val networkRootTrustStorePassword: String?,
+                                    val trustStorePassword: String?)

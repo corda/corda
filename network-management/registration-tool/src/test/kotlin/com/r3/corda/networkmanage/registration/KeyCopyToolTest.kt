@@ -21,7 +21,7 @@ class KeyCopyToolTest {
     fun `key copy correctly`() {
         val keyCopyOption = ToolOption.KeyCopierOption(
                 sourceFile = tempDir / "srcKeystore.jks",
-                desinationFile = tempDir / "destKeystore.jks",
+                destinationFile = tempDir / "destKeystore.jks",
                 sourcePassword = "srctestpass",
                 destinationPassword = "desttestpass",
                 sourceAlias = "TestKeyAlias",
@@ -34,13 +34,13 @@ class KeyCopyToolTest {
         X509KeyStore.fromFile(keyCopyOption.sourceFile, keyCopyOption.sourcePassword!!, createNew = true).update {
             setPrivateKey(keyCopyOption.sourceAlias, keyPair.private, listOf(cert))
         }
-        X509KeyStore.fromFile(keyCopyOption.desinationFile, keyCopyOption.destinationPassword!!, createNew = true)
+        X509KeyStore.fromFile(keyCopyOption.destinationFile, keyCopyOption.destinationPassword!!, createNew = true)
 
         // Copy private key from src keystore to dest keystore using the tool
         keyCopyOption.copyKeystore()
 
         // Verify key copied correctly
-        val destKeystore = X509KeyStore.fromFile(keyCopyOption.desinationFile, keyCopyOption.destinationPassword!!)
+        val destKeystore = X509KeyStore.fromFile(keyCopyOption.destinationFile, keyCopyOption.destinationPassword!!)
         assertEquals(keyPair.private, destKeystore.getPrivateKey(keyCopyOption.sourceAlias, keyCopyOption.destinationPassword!!))
         assertEquals(cert, destKeystore.getCertificate(keyCopyOption.sourceAlias))
     }
