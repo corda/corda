@@ -167,6 +167,7 @@ class TopLevelTransition(
                     }
                     actions.addAll(arrayOf(
                             Action.PersistDeduplicationFacts(pendingDeduplicationHandlers),
+                            Action.ReleaseSoftLocks(event.softLocksId),
                             Action.CommitTransaction,
                             Action.AcknowledgeMessages(pendingDeduplicationHandlers),
                             Action.RemoveSessionBindings(allSourceSessionIds),

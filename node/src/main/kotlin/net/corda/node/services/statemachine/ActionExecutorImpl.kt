@@ -72,7 +72,12 @@ class ActionExecutorImpl(
             is Action.RollbackTransaction -> executeRollbackTransaction()
             is Action.CommitTransaction -> executeCommitTransaction()
             is Action.ExecuteAsyncOperation -> executeAsyncOperation(fiber, action)
+            is Action.ReleaseSoftLocks -> executeReleaseSoftLocks(action)
         }
+    }
+
+    private fun executeReleaseSoftLocks(action: Action.ReleaseSoftLocks) {
+        if (action.uuid != null) services.vaultService.softLockRelease(action.uuid)
     }
 
     @Suspendable
