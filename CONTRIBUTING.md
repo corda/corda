@@ -4,10 +4,6 @@
 
 We welcome contributions to Corda. To start contributing you can fork our repo and begin making pull requests. Please use descriptive commit messages and follow our [coding style guidelines](https://docs.corda.net/codestyle.html). All contributions to this project are subject to the terms of the Developer Certificate of Origin, reproduced at the bottom of this page.
 
-## Community Locations
-
-The Corda maintainers, developers and extended community make active use of the [Corda Slack](http://slack.corda.net/). We also support a very active community of question askers and answerers on [Stack Overflow](https://stackoverflow.com/questions/tagged/corda).
-
 ## Mission
 
 Corda is an open source project with the aim of developing an enterprise grade distributed ledger platform for use across a variety of industries.  Corda was designed and developed to apply the concepts of blockchain and smart contract technologies to the requirements of modern business transactions.  It is unique in its aim to build a platform for businesses to transact freely with any counter-party while retaining strict privacy. Corda provides an implementation of this vision in a code base which others are free to build on, contribute to or innovate around. The mission of Corda is further detailed in the [Corda introductory white paper](https://docs.corda.net/_static/corda-introductory-whitepaper.pdf).
@@ -18,7 +14,7 @@ The scope of the Corda open source project is to build the capabilities required
 
 ## Support
 
-The project is supported and maintained by R3, an alliance of over two hundred firms working together to build and maintain this open source enterprise blockchain platform.  R3 also maintains and distributes a commercial distribution of Corda and we expect other firms also to develop commercial distributions in the future on this open base. Our vision is that these distributions be compatible and interoperable, and our contribution and code review guidelines are designed in part to enable this.
+The project is supported and maintained by [R3](https://www.r3.com), an alliance of over two hundred firms working together to build and maintain this open source enterprise blockchain platform.  R3 also maintains and distributes a commercial distribution of Corda and we expect other firms also to develop commercial distributions in the future on this open base. Our vision is that these distributions be compatible and interoperable, and our contribution and code review guidelines are designed in part to enable this.
 
 ## Acceptance Criteria for Contributions
 
@@ -39,6 +35,10 @@ At any given time, some R3 staff may be working on features for R3's commercial 
 ## Project Leadership and Maintainers
 
 The leader of this project is Mike Hearn, who is also the Lead Platform Engineer at R3. The project leader will appoint a primary maintainer of the project, to whom responsibility is delegated for merging community contributions into the code base and acting as a central point of contact for the community. In addition, developers employed by R3 who have passed our technical interview process have commit privileges to the repo. All R3 contributions undergo peer review, which is documented in public in GitHub, before they can be merged. The community is encouraged both to observe and participate in this review process.
+
+## Community Locations
+
+The Corda maintainers, developers and extended community make active use of the [Corda Slack](http://slack.corda.net/). We also support a very active community of question askers and answerers on [Stack Overflow](https://stackoverflow.com/questions/tagged/corda).
 
 ## Developer Certificate of Origin
 
