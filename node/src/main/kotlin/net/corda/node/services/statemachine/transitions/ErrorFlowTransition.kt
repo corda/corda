@@ -72,6 +72,7 @@ class ErrorFlowTransition(
                 }
                 actions.addAll(arrayOf(
                         Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
+                        Action.ReleaseSoftLocks(context.id.uuid),
                         Action.CommitTransaction,
                         Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
                         Action.RemoveSessionBindings(currentState.checkpoint.sessions.keys)

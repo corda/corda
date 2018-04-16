@@ -16,6 +16,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowAsyncOperation
 import net.corda.node.services.messaging.DeduplicationHandler
 import java.time.Instant
+import java.util.*
 
 /**
  * [Action]s are reified IO actions to execute as part of state machine transitions.
@@ -127,6 +128,11 @@ sealed class Action {
      * Execute the specified [operation].
      */
     data class ExecuteAsyncOperation(val operation: FlowAsyncOperation<*>) : Action()
+
+    /**
+     * Release soft locks associated with given ID (currently the flow ID).
+     */
+    data class ReleaseSoftLocks(val uuid: UUID?) : Action()
 }
 
 /**

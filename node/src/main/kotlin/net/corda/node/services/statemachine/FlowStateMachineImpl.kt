@@ -150,9 +150,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             logger.warn("Flow threw exception", throwable)
             Try.Failure<R>(throwable)
         }
+        val softLocksId = if (hasSoftLockedStates) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
             is Try.Success -> {
-                Event.FlowFinish(resultOrError.value)
+                Event.FlowFinish(resultOrError.value, softLocksId)
             }
             is Try.Failure -> {
                 Event.Error(resultOrError.exception)

@@ -16,6 +16,7 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.messaging.DeduplicationHandler
+import java.util.*
 
 /**
  * Transitions in the flow state machine are triggered by [Event]s that may originate from the flow itself or from
@@ -122,8 +123,9 @@ sealed class Event {
      * Scheduled by the flow.
      *
      * @param returnValue the return value of the flow.
+     * @param softLocksId the flow ID of the flow if it is holding soft locks, else null.
      */
-    data class FlowFinish(val returnValue: Any?) : Event()
+    data class FlowFinish(val returnValue: Any?, val softLocksId: UUID?) : Event()
 
     /**
      * Signals the completion of a [FlowAsyncOperation].
