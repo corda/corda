@@ -1,4 +1,4 @@
-package net.corda.core.internal.cordapp
+package net.corda.node.internal.cordapp
 
 import com.typesafe.config.Config
 
