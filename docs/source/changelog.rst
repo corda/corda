@@ -7,8 +7,7 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
-* Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
-  as the raw type, List for example.
+* Upgraded H2 to v1.4.197.
 
 * The network bootstrapper uses the existing network parameters file to update the current contracts whitelist, and no longer
   needs the whitelist.txt file.
@@ -30,13 +29,25 @@ Unreleased
   .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
   than 2.12.3 (including 2.12.4) exhibit a different issue.
 
-* Fixed security vulnerability when using the ``HashAttachmentConstraint``. Added strict check that the contract JARs
-  referenced in a transaction were deployed on the node.
-
 * Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
   all the needed network data, waiting in the background for network map to become available.
 
-* Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
+.. _changelog_r3_v3:
+
+R3 Corda 3.0 Developer Preview
+------------------------------
+
+* Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored as the raw type, List for example.
+
+* Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
+
+  .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
+than 2.12.3 (including 2.12.4) exhibit a different issue.
+
+* Fixed security vulnerability when using the ``HashAttachmentConstraint``. Added strict check that the contract JARs
+  referenced in a transaction were deployed on the node.
+
+* Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell. Please refer to ::doc:`shell.rst` for more.
 
 * Carpenter Exceptions will be caught internally by the Serializer and rethrown as a ``NotSerializableException``
 
@@ -56,7 +67,9 @@ Unreleased
 
 * java.security.cert.X509CRL serialization support added.
 
-* Upgraded H2 to v1.4.197.
+* Added ``NetworkMapCache.getNodesByLegalName`` for querying nodes belonging to a distributed service such as a notary cluster
+  where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
+  one node with the legal name is found.
 
 * Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
   at CorDapp context creation time from a file source during runtime.
@@ -94,13 +107,6 @@ Unreleased
 
 * JDBC drivers for SQL server and PostgresSQL are no longer bundled as part of Corda releases. If you are running a node
   on such databases you need to provide the associated driver as described in :doc:`node-database`.
-
-* Shell (embedded shell available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
-  To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
-
-
-R3 Corda 3.0 Developer Preview
-------------------------------
 
 * X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
   hierarchy is now enforced in the validation code. See ``net.corda.core.internal.CertRole`` for the current implementation
@@ -289,6 +295,9 @@ R3 Corda 3.0 Developer Preview
   ``net.corda.testing.services`` package. Moving existing classes out of the ``net.corda.testing.*`` package
   will help make it clearer which parts of the api are stable. Scripts have been provided to smooth the upgrade
   process for existing projects in the ``tools\scripts`` directory of the Corda repo.
+
+* Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
+  To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
 
 .. _changelog_v2:
 
