@@ -40,9 +40,6 @@ Version 3.0
   where they all share a common identity. ``NetworkMapCache.getNodeByLegalName`` has been tightened to throw if more than
   one node with the legal name is found.
 
-* Per CorDapp configuration is now exposed. ``CordappContext`` now exposes a ``CordappConfig`` object that is populated
-  at CorDapp context creation time from a file source during runtime.
-
 * Introduced Flow Draining mode, in which a node continues executing existing flows, but does not start new. This is to support graceful node shutdown/restarts.
   In particular, when this mode is on, new flows through RPC will be rejected, scheduled flows will be ignored, and initial session messages will not be consumed.
   This will ensure that the number of checkpoints will strictly diminish with time, allowing for a clean shutdown.
