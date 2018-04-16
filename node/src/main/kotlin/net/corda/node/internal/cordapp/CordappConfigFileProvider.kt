@@ -12,7 +12,6 @@ package net.corda.node.internal.cordapp
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import net.corda.core.internal.cordapp.CordappConfigProvider
 import net.corda.core.utilities.loggerFor
 import java.io.File
 
