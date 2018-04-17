@@ -98,8 +98,7 @@ class NullableField(field: Class<out Any?>) : ClassField(field) {
 
     init {
         if (field.isPrimitive) {
-            throw NullablePrimitiveException(
-                    "Field $name is primitive type ${Type.getDescriptor(field)} and thus cannot be nullable")
+            throw NullablePrimitiveException(name, field)
         }
     }
 

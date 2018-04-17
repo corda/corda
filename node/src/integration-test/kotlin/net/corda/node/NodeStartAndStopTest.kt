@@ -1,4 +1,4 @@
-package net.corda.test.node
+package net.corda.node
 
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME

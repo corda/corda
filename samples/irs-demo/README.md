@@ -33,8 +33,8 @@ the time controls at the top left of the home page to run the fixings. Click any
 view it.
 
 *Note:* The IRS web UI currently has a bug when changing the clock time where it may show no numbers or apply fixings
-inconsistently. The issues will be addressed in a future milestone release. Meanwhile, you can take a look at a simpler
-oracle example here: https://github.com/corda/oracle-example.
+inconsistently. The issues will be addressed in a future release. Meanwhile, you can take a look at a simpler oracle
+example here: https://github.com/corda/oracle-example.
 
 ## Running the system test
 

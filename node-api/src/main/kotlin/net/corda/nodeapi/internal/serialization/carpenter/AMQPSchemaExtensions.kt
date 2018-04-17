@@ -133,11 +133,12 @@ fun AMQPField.getTypeAsClass(classloader: ClassLoader) = typeStrToType[Pair(type
     else -> classloader.loadClass(type.stripGenerics())
 }
 
-fun AMQPField.validateType(classloader: ClassLoader) = when (type) {
-    "byte", "int", "string", "short", "long", "char", "boolean", "double", "float" -> true
-    "*" -> classloader.exists(requires[0])
-    else -> classloader.exists(type)
-}
+fun AMQPField.validateType(classloader: ClassLoader) =
+        when (type) {
+            "byte", "int", "string", "short", "long", "char", "boolean", "double", "float" -> true
+            "*" -> classloader.exists(requires[0])
+            else -> classloader.exists(type)
+        }
 
 private fun ClassLoader.exists(clazz: String) = run {
     try {

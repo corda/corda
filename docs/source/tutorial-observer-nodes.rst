@@ -38,10 +38,10 @@ reports from their database and observe new transactions coming in via RPC.
 Caveats
 -------
 
-* Nodes which act as both observers and direct participants in the ledger are not supported at this time. In
-  particular, coin selection may return states which you do not have the private keys to be able to sign for. Future
-  versions of Corda may address this issue, but for now, if you wish to both participate in the ledger and also observe
-  transactions that you can't sign for you will need to run two nodes and have two separate identities
+* By default, vault queries do not differentiate between states you recorded as a participant/owner, and states you 
+  recorded as an observer. You will have to write custom vault queries that only return states for which you are a 
+  participant/owner. See https://docs.corda.net/api-vault-query.html#example-usage for information on how to do this. 
+  This also means that ``Cash.generateSpend`` should not be used when recording ``Cash.State`` states as an observer
 
 * Nodes only record each transaction once. If a node has already recorded a transaction in non-observer mode, it cannot
   later re-record the same transaction as an observer. This issue is tracked here:

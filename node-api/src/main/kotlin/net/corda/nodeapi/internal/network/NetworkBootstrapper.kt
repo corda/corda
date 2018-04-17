@@ -1,12 +1,7 @@
 package net.corda.nodeapi.internal.network
 
-import com.google.common.hash.Hashing
-import com.google.common.hash.HashingInputStream
 import com.typesafe.config.ConfigFactory
 import net.corda.cordform.CordformNode
-import net.corda.core.contracts.ContractClassName
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SecureHash.Companion.parse
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
@@ -15,10 +10,13 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.scanJarForContracts
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
@@ -27,12 +25,10 @@ import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
-import java.io.File
-import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
@@ -52,12 +48,11 @@ class NetworkBootstrapper {
         )
 
         private const val LOGS_DIR_NAME = "logs"
-        private const val WHITELIST_FILE_NAME = "whitelist.txt"
         private const val EXCLUDE_WHITELIST_FILE_NAME = "exclude_whitelist.txt"
 
         @JvmStatic
         fun main(args: Array<String>) {
-            val baseNodeDirectory = args.firstOrNull() ?: throw IllegalArgumentException("Expecting first argument which is the nodes' parent directory")
+            val baseNodeDirectory = requireNotNull(args.firstOrNull()) { "Expecting first argument which is the nodes' parent directory" }
             val cordapps = if (args.size > 1) args.toList().drop(1) else null
             NetworkBootstrapper().bootstrap(Paths.get(baseNodeDirectory).toAbsolutePath().normalize(), cordapps)
         }
@@ -75,15 +70,17 @@ class NetworkBootstrapper {
         try {
             println("Waiting for all nodes to generate their node-info files...")
             val nodeInfoFiles = gatherNodeInfoFiles(processes, nodeDirs)
-            println("Distributing all node info-files to all nodes")
+            println("Distributing all node-info files to all nodes")
             distributeNodeInfos(nodeDirs, nodeInfoFiles)
+            print("Loading existing network parameters... ")
+            val existingNetParams = loadNetworkParameters(nodeDirs)
+            println(existingNetParams ?: "none found")
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
-            println("Notary identities to be used in network parameters: ${notaryInfos.joinToString("; ") { it.prettyPrint() }}")
-            val mergedWhiteList = generateWhitelist(directory / WHITELIST_FILE_NAME, directory / EXCLUDE_WHITELIST_FILE_NAME, cordapps?.distinct())
-            println("Updating whitelist")
-            overwriteWhitelist(directory / WHITELIST_FILE_NAME, mergedWhiteList)
-            installNetworkParameters(notaryInfos, nodeDirs, mergedWhiteList)
+            println("Generating contract implementations whitelist")
+            val newWhitelist = generateWhitelist(existingNetParams, directory / EXCLUDE_WHITELIST_FILE_NAME, cordapps?.distinct())
+            val netParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs)
+            println("${if (existingNetParams == null) "New" else "Updated"} $netParams")
             println("Bootstrapping complete!")
         } finally {
             _contextSerializationEnv.set(null)
@@ -101,15 +98,15 @@ class NetworkBootstrapper {
             val nodeName = confFile.fileName.toString().removeSuffix("_node.conf")
             println("Generating directory for $nodeName")
             val nodeDir = (directory / nodeName).createDirectories()
-            confFile.moveTo(nodeDir / "node.conf", StandardCopyOption.REPLACE_EXISTING)
-            webServerConfFiles.firstOrNull { directory.relativize(it).toString().removeSuffix("_web-server.conf") == nodeName }?.moveTo(nodeDir / "web-server.conf", StandardCopyOption.REPLACE_EXISTING)
-            Files.copy(cordaJar, (nodeDir / "corda.jar"), StandardCopyOption.REPLACE_EXISTING)
+            confFile.moveTo(nodeDir / "node.conf", REPLACE_EXISTING)
+            webServerConfFiles.firstOrNull { directory.relativize(it).toString().removeSuffix("_web-server.conf") == nodeName }?.moveTo(nodeDir / "web-server.conf", REPLACE_EXISTING)
+            cordaJar.copyToDirectory(nodeDir, REPLACE_EXISTING)
         }
         Files.delete(cordaJar)
     }
 
     private fun extractCordaJarTo(directory: Path): Path {
-        val cordaJarPath = (directory / "corda.jar")
+        val cordaJarPath = directory / "corda.jar"
         if (!cordaJarPath.exists()) {
             println("No corda jar found in root directory. Extracting from jar")
             Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar").copyTo(cordaJarPath)
@@ -142,7 +139,7 @@ class NetworkBootstrapper {
         }
 
         return try {
-            future.getOrThrow(60.seconds)
+            future.getOrThrow(timeout = 60.seconds)
         } catch (e: TimeoutException) {
             println("...still waiting. If this is taking longer than usual, check the node logs.")
             future.getOrThrow()
@@ -153,7 +150,7 @@ class NetworkBootstrapper {
         for (nodeDir in nodeDirs) {
             val additionalNodeInfosDir = (nodeDir / CordformNode.NODE_INFO_DIRECTORY).createDirectories()
             for (nodeInfoFile in nodeInfoFiles) {
-                nodeInfoFile.copyToDirectory(additionalNodeInfosDir, StandardCopyOption.REPLACE_EXISTING)
+                nodeInfoFile.copyToDirectory(additionalNodeInfosDir, REPLACE_EXISTING)
             }
         }
     }
@@ -173,25 +170,67 @@ class NetworkBootstrapper {
         }.distinct() // We need distinct as nodes part of a distributed notary share the same notary identity
     }
 
-    private fun installNetworkParameters(notaryInfos: List<NotaryInfo>, nodeDirs: List<Path>, whitelist: Map<String, List<AttachmentId>>) {
-        // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
-        val copier = NetworkParametersCopier(NetworkParameters(
-                minimumPlatformVersion = 1,
-                notaries = notaryInfos,
-                modifiedTime = Instant.now(),
-                maxMessageSize = 10485760,
-                maxTransactionSize = Int.MAX_VALUE,
-                epoch = 1,
-                whitelistedContractImplementations = whitelist
-        ), overwriteFile = true)
+    private fun loadNetworkParameters(nodeDirs: List<Path>): NetworkParameters? {
+        val netParamsFilesGrouped = nodeDirs.mapNotNull {
+            val netParamsFile = it / NETWORK_PARAMS_FILE_NAME
+            if (netParamsFile.exists()) netParamsFile else null
+        }.groupBy { SerializedBytes<SignedNetworkParameters>(it.readAll()) }
 
-        nodeDirs.forEach { copier.install(it) }
+        when (netParamsFilesGrouped.size) {
+            0 -> return null
+            1 -> return netParamsFilesGrouped.keys.first().deserialize().verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
+        }
+
+        val msg = StringBuilder("Differing sets of network parameters were found. Make sure all the nodes have the same " +
+                "network parameters by copying over the correct $NETWORK_PARAMS_FILE_NAME file.\n\n")
+
+        netParamsFilesGrouped.forEach { bytes, netParamsFiles ->
+            netParamsFiles.map { it.parent.fileName }.joinTo(msg, ", ")
+            msg.append(":\n")
+            val netParamsString = try {
+                bytes.deserialize().verifiedNetworkMapCert(DEV_ROOT_CA.certificate).toString()
+            } catch (e: Exception) {
+                "Invalid network parameters file: $e"
+            }
+            msg.append(netParamsString)
+            msg.append("\n\n")
+        }
+
+        throw IllegalStateException(msg.toString())
     }
 
-    private fun generateWhitelist(whitelistFile: Path, excludeWhitelistFile: Path, cordapps: List<String>?): Map<String, List<AttachmentId>> {
-        val existingWhitelist = if (whitelistFile.exists()) readContractWhitelist(whitelistFile) else emptyMap()
+    private fun installNetworkParameters(notaryInfos: List<NotaryInfo>,
+                                         whitelist: Map<String, List<AttachmentId>>,
+                                         existingNetParams: NetworkParameters?,
+                                         nodeDirs: List<Path>): NetworkParameters {
+        val networkParameters = if (existingNetParams != null) {
+            existingNetParams.copy(
+                    notaries = notaryInfos,
+                    modifiedTime = Instant.now(),
+                    whitelistedContractImplementations = whitelist,
+                    epoch = existingNetParams.epoch + 1
+            )
+        } else {
+            NetworkParameters(
+                    minimumPlatformVersion = 1,
+                    notaries = notaryInfos,
+                    modifiedTime = Instant.now(),
+                    maxMessageSize = 10485760,
+                    maxTransactionSize = Int.MAX_VALUE,
+                    whitelistedContractImplementations = whitelist,
+                    epoch = 1
+            )
+        }
+        // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
+        val copier = NetworkParametersCopier(networkParameters, overwriteFile = true)
+        nodeDirs.forEach { copier.install(it) }
+        return networkParameters
+    }
 
-        println(if (existingWhitelist.isEmpty()) "No existing whitelist file found." else "Found existing whitelist: ${whitelistFile}")
+    private fun generateWhitelist(networkParameters: NetworkParameters?,
+                                  excludeWhitelistFile: Path,
+                                  cordapps: List<String>?): Map<String, List<AttachmentId>> {
+        val existingWhitelist = networkParameters?.whitelistedContractImplementations ?: emptyMap()
 
         val excludeContracts = if (excludeWhitelistFile.exists()) readExcludeWhitelist(excludeWhitelistFile) else emptyList()
         if (excludeContracts.isNotEmpty()) {
@@ -199,47 +238,20 @@ class NetworkBootstrapper {
         }
 
         val newWhiteList = cordapps?.flatMap { cordappJarPath ->
-            val jarHash = getJarHash(cordappJarPath)
+            val jarHash = Paths.get(cordappJarPath).hash
             scanJarForContracts(cordappJarPath).map { contract ->
                 contract to jarHash
             }
         }?.filter { (contractClassName, _) -> contractClassName !in excludeContracts }?.toMap() ?: emptyMap()
 
-        println("Calculating whitelist for current installed CorDapps..")
-
-        val merged = (newWhiteList.keys + existingWhitelist.keys).map { contractClassName ->
+        return (newWhiteList.keys + existingWhitelist.keys).map { contractClassName ->
             val existing = existingWhitelist[contractClassName] ?: emptyList()
             val newHash = newWhiteList[contractClassName]
             contractClassName to (if (newHash == null || newHash in existing) existing else existing + newHash)
         }.toMap()
-
-        println("CorDapp whitelist " + (if (existingWhitelist.isEmpty()) "generated" else "updated") + " in ${whitelistFile}")
-        return merged
     }
-
-    private fun overwriteWhitelist(whitelistFile: Path, mergedWhiteList: Map<String, List<AttachmentId>>) {
-        PrintStream(whitelistFile.toFile().outputStream()).use { out ->
-            mergedWhiteList.forEach { (contract, attachments) ->
-                out.println("${contract}:${attachments.joinToString(",")}")
-            }
-        }
-    }
-
-    private fun getJarHash(cordappPath: String): AttachmentId = File(cordappPath).inputStream().use { jar ->
-        val hs = HashingInputStream(Hashing.sha256(), jar)
-        hs.readBytes()
-        SecureHash.SHA256(hs.hash().asBytes())
-    }
-
-    private fun readContractWhitelist(file: Path): Map<String, List<AttachmentId>> = file.readAllLines()
-            .map { line -> line.split(":") }
-            .map { (contract, attachmentIds) ->
-                contract to (attachmentIds.split(",").map(::parse))
-            }.toMap()
 
     private fun readExcludeWhitelist(file: Path): List<String> = file.readAllLines().map(String::trim)
-
-    private fun NotaryInfo.prettyPrint(): String = "${identity.name} (${if (validating) "" else "non-"}validating)"
 
     private fun NodeInfo.notaryIdentity(): Party {
         return when (legalIdentities.size) {

@@ -1,9 +1,6 @@
 package net.corda.behave.scenarios.helpers
 
 import net.corda.behave.scenarios.ScenarioState
-import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.Amount
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
@@ -45,7 +42,6 @@ class Cash(state: ScenarioState) : Substeps(state) {
                     throw CordaRuntimeException("No Notaries configured in this network.")
                 val notaryParty = notaryList[0]
                 return@withClientProxy it.startFlow(::CashIssueFlow, Amount(amount, Currency.getInstance(currency)), OpaqueBytes.of(1), notaryParty).returnValue.getOrThrow().stx
-                //.returnValue.getOrThrow().stx
             } catch (ex: Exception) {
                 log.warn("Failed to issue $amount $currency cash to $issueToNode", ex)
                 throw ex

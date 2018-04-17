@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.serialization
+package net.corda.nodeapi.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
@@ -16,7 +16,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
 import net.corda.node.serialization.KryoServerSerializationScheme
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
+import net.corda.nodeapi.internal.serialization.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
@@ -29,7 +29,6 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
 import org.slf4j.LoggerFactory
-import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.Instant
 import java.util.*
@@ -190,7 +189,11 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
     @Test
     fun `HashCheckingStream (de)serialize`() {
         val rubbish = ByteArray(12345, { (it * it * 0.12345).toByte() })
-        val readRubbishStream: InputStream = NodeAttachmentService.HashCheckingStream(SecureHash.sha256(rubbish), rubbish.size, ByteArrayInputStream(rubbish)).serialize(factory, context).deserialize(factory, context)
+        val readRubbishStream: InputStream = NodeAttachmentService.HashCheckingStream(
+                SecureHash.sha256(rubbish),
+                rubbish.size,
+                rubbish.inputStream()
+        ).serialize(factory, context).deserialize(factory, context)
         for (i in 0..12344) {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())
         }

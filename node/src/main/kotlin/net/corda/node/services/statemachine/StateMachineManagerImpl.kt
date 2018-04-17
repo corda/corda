@@ -12,6 +12,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.context.InvocationOrigin
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.FlowException
@@ -640,9 +641,16 @@ class StateMachineManagerImpl(
             }
         }
 
+        // This prevents a "deadlock" in case an initiated flow tries to start a session against a draining node that is also the initiator.
+        // It does not help in case more than 2 nodes are involved in a circle, so the kill switch via RPC should be used in that case.
+        val additionalHeaders = if (mightDeadlockDrainingSender(fiber, party)) emptyMap() else message.additionalHeaders()
         serviceHub.networkService.apply {
-            send(createMessage(sessionTopic, serialized.bytes), address, retryId = retryId, additionalHeaders = message.additionalHeaders())
+            send(createMessage(sessionTopic, serialized.bytes), address, retryId = retryId, additionalHeaders = additionalHeaders)
         }
+    }
+
+    private fun mightDeadlockDrainingSender(fiber: FlowStateMachineImpl<*>?, target: Party): Boolean {
+        return fiber?.context?.origin.let { it is InvocationOrigin.Peer && it.party == target.name }
     }
 }
 

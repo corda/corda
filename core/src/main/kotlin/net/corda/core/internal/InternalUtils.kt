@@ -2,6 +2,8 @@
 
 package net.corda.core.internal
 
+import com.google.common.hash.Hashing
+import com.google.common.hash.HashingInputStream
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
@@ -31,6 +33,7 @@ import java.io.*
 import java.lang.reflect.Field
 import java.math.BigDecimal
 import java.net.HttpURLConnection
+import java.net.HttpURLConnection.HTTP_OK
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
@@ -40,6 +43,7 @@ import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
 import java.security.KeyPair
 import java.security.PrivateKey
+import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
@@ -150,7 +154,30 @@ fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, var
 
 inline fun <reified T : Any> Path.readObject(): T = readAll().deserialize()
 
+/** Calculate the hash of the contents of this file. */
+val Path.hash: SecureHash get() = read { it.hash() }
+
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
+
+/** Same as [InputStream.readBytes] but also closes the stream. */
+fun InputStream.readFully(): ByteArray = use { it.readBytes() }
+
+/** Calculate the hash of the remaining bytes in this input stream. The stream is closed at the end. */
+fun InputStream.hash(): SecureHash {
+    return use {
+        val his = HashingInputStream(Hashing.sha256(), it)
+        his.copyTo(NullOutputStream)  // To avoid reading in the entire stream into memory just write out the bytes to /dev/null
+        SecureHash.SHA256(his.hash().asBytes())
+    }
+}
+
+inline fun <reified T : Any> InputStream.readObject(): T = readFully().deserialize()
+
+object NullOutputStream : OutputStream() {
+    override fun write(b: Int) = Unit
+    override fun write(b: ByteArray) = Unit
+    override fun write(b: ByteArray, off: Int, len: Int) = Unit
+}
 
 fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
 
@@ -205,7 +232,7 @@ fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T 
 /** Convert a [ByteArrayOutputStream] to [InputStreamAndHash]. */
 fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {
     val bytes = toByteArray()
-    return InputStreamAndHash(ByteArrayInputStream(bytes), bytes.sha256())
+    return InputStreamAndHash(bytes.inputStream(), bytes.sha256())
 }
 
 data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHash.SHA256) {
@@ -326,27 +353,29 @@ val KClass<*>.packageName: String get() = java.`package`.name
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 
-fun URL.post(serializedData: OpaqueBytes): ByteArray {
+fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String>): ByteArray {
     return openHttpConnection().run {
         doOutput = true
         requestMethod = "POST"
+        properties.forEach { (key, value) -> setRequestProperty(key, value) }
         setRequestProperty("Content-Type", "application/octet-stream")
         outputStream.use { serializedData.open().copyTo(it) }
         checkOkResponse()
-        inputStream.use { it.readBytes() }
+        inputStream.readFully()
     }
 }
 
 fun HttpURLConnection.checkOkResponse() {
-    if (responseCode != 200) {
-        val message = errorStream.use { it.reader().readText() }
-        throw IOException("Response Code $responseCode: $message")
+    if (responseCode != HTTP_OK) {
+        throw IOException("Response Code $responseCode: $errorMessage")
     }
 }
 
+val HttpURLConnection.errorMessage: String? get() = errorStream?.let { it.use { it.reader().readText() } }
+
 inline fun <reified T : Any> HttpURLConnection.responseAs(): T {
     checkOkResponse()
-    return inputStream.use { it.readBytes() }.deserialize()
+    return inputStream.readObject()
 }
 
 /** Analogous to [Thread.join]. */
@@ -417,3 +446,5 @@ fun NotarisationRequest.generateSignature(serviceHub: ServiceHub): NotarisationR
     }
     return NotarisationRequestSignature(signature, serviceHub.myInfo.platformVersion)
 }
+
+val PublicKey.hash: SecureHash get() = encoded.sha256()

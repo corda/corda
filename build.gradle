@@ -56,7 +56,7 @@ buildscript {
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
-    ext.h2_version = '1.4.194' // Update docs if renamed or removed.
+    ext.h2_version = '1.4.197' // Update docs if renamed or removed.
     ext.postgresql_version = '42.1.4'
     ext.rxjava_version = '1.2.4'
     ext.dokka_version = '0.9.16-eap-2'
@@ -93,6 +93,7 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
@@ -140,6 +141,15 @@ allprojects {
     apply plugin: 'java'
     apply plugin: 'jacoco'
     apply plugin: 'org.owasp.dependencycheck'
+    apply plugin: 'kotlin-allopen'
+
+    allOpen {
+        annotations(
+                "javax.persistence.Entity",
+                "javax.persistence.Embeddable",
+                "javax.persistence.MappedSuperclass"
+        )
+    }
 
     dependencyCheck {
         suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
@@ -283,7 +293,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities']
+    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities', 'corda-shell']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'

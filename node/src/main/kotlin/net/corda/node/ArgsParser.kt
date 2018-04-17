@@ -4,7 +4,6 @@ import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import joptsimple.util.PathConverter
-import net.corda.core.internal.CertRole
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.node.services.config.ConfigHelper
@@ -99,18 +98,23 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val help: Boolean,
                           val loggingLevel: Level,
                           val logToConsole: Boolean,
-                          val nodeRegistrationConfig: NodeRegistrationOption?,
+                          val nodeRegistrationOption: NodeRegistrationOption?,
                           val isVersion: Boolean,
                           val noLocalShell: Boolean,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean,
                           val bootstrapRaftCluster: Boolean) {
     fun loadConfig(): NodeConfiguration {
-        val config = ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(
-                mapOf("noLocalShell" to this.noLocalShell)
-        )).parseAsNodeConfiguration()
-        if (nodeRegistrationConfig != null) {
-            requireNotNull(config.compatibilityZoneURL) { "Compatibility Zone URL (compatibilityZoneURL) must be present in node configuration file in registration mode." }
+        val config = ConfigHelper.loadConfig(
+                baseDirectory,
+                configFile,
+                configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell))
+        ).parseAsNodeConfiguration()
+        if (nodeRegistrationOption != null) {
+            require(!config.devMode) { "registration cannot occur in devMode" }
+            requireNotNull(config.compatibilityZoneURL) {
+                "compatibilityZoneURL must be present in node configuration file in registration mode."
+            }
         }
         return config
     }

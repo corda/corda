@@ -19,14 +19,12 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.internal.Node
-import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
@@ -57,8 +55,7 @@ import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.NON_VALIDATING_
 import net.corda.testing.node.internal.DriverDSLImpl.ClusterType.VALIDATING_RAFT
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import rx.Observable
-import rx.observables.ConnectableObservable
+import rx.Subscription
 import rx.schedulers.Schedulers
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
@@ -76,7 +73,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
+import kotlin.collections.HashMap
 import kotlin.concurrent.thread
 import net.corda.nodeapi.internal.config.User as InternalUser
 
@@ -101,12 +98,11 @@ class DriverDSLImpl(
     override val shutdownManager get() = _shutdownManager!!
     private val cordappPackages = extraCordappPackagesToScan + getCallerPackage()
     // Map from a nodes legal name to an observable emitting the number of nodes in its network map.
-    private val countObservables = mutableMapOf<CordaX500Name, Observable<Int>>()
-    private val nodeNames = mutableSetOf<CordaX500Name>()
+    private val networkVisibilityController = NetworkVisibilityController()
     /**
-     * Future which completes when the network map is available, whether a local one or one from the CZ. This future acts
-     * as a gate to prevent nodes from starting too early. The value of the future is a [LocalNetworkMap] object, which
-     * is null if the network map is being provided by the CZ.
+     * Future which completes when the network map infrastructure is available, whether a local one or one from the CZ.
+     * This future acts as a gate to prevent nodes from starting too early. The value of the future is a [LocalNetworkMap]
+     * object, which is null if the network map is being provided by the CZ.
      */
     private lateinit var networkMapAvailability: CordaFuture<LocalNetworkMap?>
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
@@ -119,13 +115,9 @@ class DriverDSLImpl(
     private val state = ThreadBox(State())
 
     //TODO: remove this once we can bundle quasar properly.
-    private val quasarJarPath: String by lazy {
-        resolveJar(".*quasar.*\\.jar$")
-    }
+    private val quasarJarPath: String by lazy { resolveJar(".*quasar.*\\.jar$") }
 
-    private val jolokiaJarPath: String by lazy {
-        resolveJar(".*jolokia-jvm-.*-agent\\.jar$")
-    }
+    private val jolokiaJarPath: String by lazy { resolveJar(".*jolokia-jvm-.*-agent\\.jar$") }
 
     private fun resolveJar(jarNamePattern: String): String {
         return try {
@@ -188,12 +180,7 @@ class DriverDSLImpl(
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
-        synchronized(nodeNames) {
-            val wasANewNode = nodeNames.add(name)
-            if (!wasANewNode) {
-                throw IllegalArgumentException("Node with name $name is already started or starting.")
-            }
-        }
+
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
             startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.url)
@@ -215,7 +202,7 @@ class DriverDSLImpl(
                                     verifierType: VerifierType,
                                     customOverrides: Map<String, Any?>,
                                     startInSameProcess: Boolean? = null,
-                                    maximumHeapSize: String = "200m",
+                                    maximumHeapSize: String = "512m",
                                     p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort()): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
         val rpcAdminAddress = portAllocation.nextHostAndPort()
@@ -246,7 +233,8 @@ class DriverDSLImpl(
                 configOverrides = configOf(
                         "p2pAddress" to "localhost:1222", // required argument, not really used
                         "compatibilityZoneURL" to compatibilityZoneURL.toString(),
-                        "myLegalName" to providedName.toString())
+                        "myLegalName" to providedName.toString(),
+                        "devMode" to false)
         ))
 
         config.corda.certificatesDirectory.createDirectories()
@@ -260,14 +248,20 @@ class DriverDSLImpl(
 
         return if (startNodesInProcess) {
             executorService.fork {
-                NetworkRegistrationHelper(config.corda, HTTPNetworkRegistrationService(compatibilityZoneURL), NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)).buildKeystore()
+                NetworkRegistrationHelper(
+                        config.corda,
+                        HTTPNetworkRegistrationService(compatibilityZoneURL),
+                        NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
+                ).buildKeystore()
                 config
             }
         } else {
-            startOutOfProcessMiniNode(config,
+            startOutOfProcessMiniNode(
+                    config,
                     "--initial-registration",
                     "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
-                    "--network-root-truststore-password=$rootTruststorePassword").map { config }
+                    "--network-root-truststore-password=$rootTruststorePassword"
+            ).map { config }
         }
     }
 
@@ -366,7 +360,7 @@ class DriverDSLImpl(
         )
         val cordaConfig = typesafe.parseAsNodeConfiguration()
         val config = NodeConfig(rawConfig, cordaConfig)
-        return startNodeInternal(config, webAddress, null, "200m", localNetworkMap)
+        return startNodeInternal(config, webAddress, null, "512m", localNetworkMap)
     }
 
     private fun queryWebserver(handle: NodeHandle, process: Process): WebserverHandle {
@@ -574,50 +568,6 @@ class DriverDSLImpl(
     }
 
     /**
-     * @param initial number of nodes currently in the network map of a running node.
-     * @param networkMapCacheChangeObservable an observable returning the updates to the node network map.
-     * @return a [ConnectableObservable] which emits a new [Int] every time the number of registered nodes changes
-     *   the initial value emitted is always [initial]
-     */
-    private fun nodeCountObservable(initial: Int, networkMapCacheChangeObservable: Observable<NetworkMapCache.MapChange>):
-            ConnectableObservable<Int> {
-        val count = AtomicInteger(initial)
-        return networkMapCacheChangeObservable.map {
-            when (it) {
-                is NetworkMapCache.MapChange.Added -> count.incrementAndGet()
-                is NetworkMapCache.MapChange.Removed -> count.decrementAndGet()
-                is NetworkMapCache.MapChange.Modified -> count.get()
-            }
-        }.startWith(initial).replay()
-    }
-
-    /**
-     * @param rpc the [CordaRPCOps] of a newly started node.
-     * @return a [CordaFuture] which resolves when every node started by driver has in its network map a number of nodes
-     *   equal to the number of running nodes. The future will yield the number of connected nodes.
-     */
-    private fun allNodesConnected(rpc: CordaRPCOps): CordaFuture<Int> {
-        val (snapshot, updates) = rpc.networkMapFeed()
-        val counterObservable = nodeCountObservable(snapshot.size, updates)
-        countObservables[rpc.nodeInfo().legalIdentities[0].name] = counterObservable
-        /* TODO: this might not always be the exact number of nodes one has to wait for,
-         * for example in the following sequence
-         * 1 start 3 nodes in order, A, B, C.
-         * 2 before the future returned by this function resolves, kill B
-         * At that point this future won't ever resolve as it will wait for nodes to know 3 other nodes.
-         */
-        val requiredNodes = countObservables.size
-
-        // This is an observable which yield the minimum number of nodes in each node network map.
-        val smallestSeenNetworkMapSize = Observable.combineLatest(countObservables.values.toList()) { args: Array<Any> ->
-            args.map { it as Int }.min() ?: 0
-        }
-        val future = smallestSeenNetworkMapSize.filter { it >= requiredNodes }.toFuture()
-        counterObservable.connect()
-        return future
-    }
-
-    /**
      * Start the node with the given flag which is expected to start the node for some function, which once complete will
      * terminate the node.
      */
@@ -632,7 +582,7 @@ class DriverDSLImpl(
                 monitorPort,
                 systemProperties,
                 cordappPackages,
-                "200m",
+                "512m",
                 *extraCmdLineFlag
         )
 
@@ -646,16 +596,14 @@ class DriverDSLImpl(
                                   startInProcess: Boolean?,
                                   maximumHeapSize: String,
                                   localNetworkMap: LocalNetworkMap?): CordaFuture<NodeHandle> {
+        val visibilityHandle = networkVisibilityController.register(config.corda.myLegalName)
         val baseDirectory = config.corda.baseDirectory.createDirectories()
         localNetworkMap?.networkParametersCopier?.install(baseDirectory)
         localNetworkMap?.nodeInfosCopier?.addConfig(baseDirectory)
 
         val onNodeExit: () -> Unit = {
             localNetworkMap?.nodeInfosCopier?.removeConfig(baseDirectory)
-            countObservables.remove(config.corda.myLegalName)
-            synchronized(nodeNames) {
-                nodeNames.remove(config.corda.myLegalName)
-            }
+            visibilityHandle.close()
         }
 
         val useHTTPS = config.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
@@ -672,7 +620,7 @@ class DriverDSLImpl(
             )
             return nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(config, openFuture()).flatMap { rpc ->
-                    allNodesConnected(rpc).map {
+                    visibilityHandle.listen(rpc).map {
                         InProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit, node)
                     }
                 }
@@ -695,12 +643,14 @@ class DriverDSLImpl(
                 }
                 establishRpc(config, processDeathFuture).flatMap { rpc ->
                     // Check for all nodes to have all other nodes in background in case RPC is failing over:
-                    val networkMapFuture = executorService.fork { allNodesConnected(rpc) }.flatMap { it }
+                    val networkMapFuture = executorService.fork { visibilityHandle.listen(rpc) }.flatMap { it }
                     firstOf(processDeathFuture, networkMapFuture) {
                         if (it == processDeathFuture) {
                             throw ListenProcessDeathException(config.corda.p2pAddress, process)
                         }
-                        processDeathFuture.cancel(false)
+                        // Will interrupt polling for process death as this is no longer relevant since the process been
+                        // successfully started and reflected itself in the NetworkMap.
+                        processDeathFuture.cancel(true)
                         log.info("Node handle is ready. NodeInfo: ${rpc.nodeInfo()}, WebAddress: $webAddress")
                         OutOfProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, debugPort, process, onNodeExit)
                     }
@@ -718,7 +668,7 @@ class DriverDSLImpl(
     /**
      * The local version of the network map, which is a bunch of classes that copy the relevant files to the node directories.
      */
-    private inner class LocalNetworkMap(notaryInfos: List<NotaryInfo>) {
+    inner class LocalNetworkMap(notaryInfos: List<NotaryInfo>) {
         val networkParametersCopier = NetworkParametersCopier(networkParameters.copy(notaries = notaryInfos))
         // TODO: this object will copy NodeInfo files from started nodes to other nodes additional-node-infos/
         // This uses the FileSystem and adds a delay (~5 seconds) given by the time we wait before polling the file system.
@@ -730,12 +680,12 @@ class DriverDSLImpl(
      * Simple holder class to capture the node configuration both as the raw [Config] object and the parsed [NodeConfiguration].
      * Keeping [Config] around is needed as the user may specify extra config options not specified in [NodeConfiguration].
      */
-    private class NodeConfig(val typesafe: Config, val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration().also { nodeConfiguration ->
-        val errors = nodeConfiguration.validate()
-        if (errors.isNotEmpty()) {
-            throw IllegalStateException("Invalid node configuration. Errors where:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
+    private class NodeConfig(val typesafe: Config, val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration()) {
+        init {
+            val errors = corda.validate()
+            require(errors.isEmpty()) { "Invalid node configuration. Errors where:\n${errors.joinToString("\n")}" }
         }
-    })
+    }
 
     companion object {
         internal val log = contextLogger()
@@ -840,7 +790,6 @@ class DriverDSLImpl(
                     arguments = arguments,
                     jdwpPort = debugPort,
                     extraJvmArguments = extraJvmArguments + listOfNotNull(jolokiaAgent),
-                    errorLogPath = config.corda.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME / "error.log",
                     workingDirectory = config.corda.baseDirectory,
                     maximumHeapSize = maximumHeapSize
             )
@@ -857,7 +806,6 @@ class DriverDSLImpl(
                             "-Dname=node-${handle.p2pAddress}-webserver",
                             "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
                     ),
-                    errorLogPath = Paths.get("error.$className.log"),
                     workingDirectory = null,
                     maximumHeapSize = maximumHeapSize
             )
@@ -901,6 +849,63 @@ class DriverDSLImpl(
          */
         private fun Map<String, Any>.removeResolvedClasspath(): Map<String, Any> {
             return filterNot { it.key == "java.class.path" }
+        }
+    }
+}
+
+/**
+ * Keeps track of how many nodes each node sees and gates nodes from completing their startNode [CordaFuture] until all
+ * current nodes see everyone.
+ */
+private class NetworkVisibilityController {
+    private val nodeVisibilityHandles = ThreadBox(HashMap<CordaX500Name, VisibilityHandle>())
+
+    fun register(name: CordaX500Name): VisibilityHandle {
+        val handle = VisibilityHandle()
+        nodeVisibilityHandles.locked {
+            require(putIfAbsent(name, handle) == null) { "Node with name $name is already started or starting" }
+        }
+        return handle
+    }
+
+    private fun checkIfAllVisible() {
+        nodeVisibilityHandles.locked {
+            val minView = values.stream().mapToInt { it.visibleNodeCount }.min().orElse(0)
+            if (minView >= size) {
+                values.forEach { it.future.set(Unit) }
+            }
+        }
+    }
+
+    inner class VisibilityHandle : AutoCloseable {
+        internal val future = openFuture<Unit>()
+        internal var visibleNodeCount = 0
+        private var subscription: Subscription? = null
+
+        fun listen(rpc: CordaRPCOps): CordaFuture<Unit> {
+            check(subscription == null)
+            val (snapshot, updates) = rpc.networkMapFeed()
+            visibleNodeCount = snapshot.size
+            checkIfAllVisible()
+            subscription = updates.subscribe { when (it) {
+                is NetworkMapCache.MapChange.Added -> {
+                    visibleNodeCount++
+                    checkIfAllVisible()
+                }
+                is NetworkMapCache.MapChange.Removed -> {
+                    visibleNodeCount--
+                    checkIfAllVisible()
+                }
+            } }
+            return future
+        }
+
+        override fun close() {
+            subscription?.unsubscribe()
+            nodeVisibilityHandles.locked {
+                values -= this@VisibilityHandle
+                checkIfAllVisible()
+            }
         }
     }
 }

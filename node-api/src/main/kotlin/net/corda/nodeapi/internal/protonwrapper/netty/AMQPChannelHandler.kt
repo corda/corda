@@ -122,10 +122,10 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                     is SendableMessageImpl -> {
                         val inetAddress = InetSocketAddress(msg.destinationLink.host, msg.destinationLink.port)
                         require(inetAddress == remoteAddress) {
-                            "Message for incorrect endpoint"
+                            "Message for incorrect endpoint $inetAddress expected $remoteAddress"
                         }
                         require(CordaX500Name.parse(msg.destinationLegalName) == CordaX500Name.build(remoteCert!!.subjectX500Principal)) {
-                            "Message for incorrect legal identity"
+                            "Message for incorrect legal identity ${msg.destinationLegalName} expected ${remoteCert!!.subjectX500Principal}"
                         }
                         log.debug { "channel write ${msg.applicationProperties["_AMQ_DUPL_ID"]}" }
                         eventProcessor!!.transportWriteMessage(msg)
