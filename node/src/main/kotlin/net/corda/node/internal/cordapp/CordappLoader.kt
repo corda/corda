@@ -133,7 +133,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                 logger.info("Generating a test-only cordapp of classes discovered in $scanPackage at $cordappJAR")
                 JarOutputStream(cordappJAR.outputStream()).use { jos ->
                     val scanDir = url.toPath()
-                    scanDir.walk { it.forEach {
+                    scanDir.listFiles().filter { it.isFile }.forEach {
                         val entryPath = "$jarPackageName/${scanDir.relativize(it).toString().replace('\\', '/')}"
                         val time = FileTime.from(Instant.EPOCH)
                         val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
@@ -142,7 +142,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                             it.copyTo(jos)
                         }
                         jos.closeEntry()
-                    } }
+                    }
                 }
                 cordappJAR.toUri()
             }

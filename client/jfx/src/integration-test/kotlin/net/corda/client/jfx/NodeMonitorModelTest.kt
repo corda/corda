@@ -23,6 +23,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.USD
+import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
@@ -53,7 +54,7 @@ class NodeMonitorModelTest {
     private lateinit var newNode: (CordaX500Name) -> NodeInfo
 
     private fun setup(runTest: () -> Unit) {
-        driver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf(Cash::class.java.`package`.name))) {
             val cashUser = User("user1", "test", permissions = setOf(
                     startFlow<CashIssueFlow>(),
                     startFlow<CashPaymentFlow>(),

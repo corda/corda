@@ -50,7 +50,7 @@ fun main(args: Array<String>) {
             startFlow<CashExitFlow>(),
             invokeRpc(CordaRPCOps::nodeInfo)
     ))
-    driver(DriverParameters(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true)) {
+    driver(DriverParameters(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf(Cash::class.java.`package`.name), waitForAllNodesToFinish = true)) {
         val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).get()
         // END 1
 

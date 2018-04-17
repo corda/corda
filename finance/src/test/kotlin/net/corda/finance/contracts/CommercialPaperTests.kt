@@ -88,6 +88,8 @@ class KotlinCommercialPaperLegacyTest : ICommercialPaperTestTemplate {
     override fun getContract() = CommercialPaper.CP_PROGRAM_ID
 }
 
+private val cordappPackages = listOf(Cash::class.java.`package`.name, CommercialPaper::class.java.`package`.name)
+
 @RunWith(Parameterized::class)
 class CommercialPaperTestsGeneric {
     companion object {
@@ -99,6 +101,14 @@ class CommercialPaperTestsGeneric {
         private val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         private val alice = TestIdentity(ALICE_NAME, 70)
         private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+
+        private fun createMockServices(firstIdentity: TestIdentity, vararg moreIdentities: TestIdentity) : MockServices {
+            return MockServices(
+                    cordappPackages,
+                    firstIdentity,
+                    makeTestIdentityService(*listOf(firstIdentity, *moreIdentities).map { it.identity }.toTypedArray()),
+                    firstIdentity.keyPair)
+        }
     }
 
     @Parameterized.Parameter
@@ -109,7 +119,7 @@ class CommercialPaperTestsGeneric {
     val testSerialization = SerializationEnvironmentRule()
 
     private val megaCorpRef = megaCorp.ref(123)
-    private val ledgerServices = MockServices(megaCorp, miniCorp)
+    private val ledgerServices = createMockServices(megaCorp, miniCorp)
 
     @Test
     fun `trade lifecycle test`() {
@@ -245,10 +255,10 @@ class CommercialPaperTestsGeneric {
         // of the dummy cash issuer.
 
         val allIdentities = arrayOf(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity)
-        val notaryServices = MockServices(dummyNotary)
-        val issuerServices = MockServices(dummyCashIssuer, dummyNotary)
+        val notaryServices = createMockServices(dummyNotary)
+        val issuerServices = createMockServices(dummyCashIssuer, dummyNotary)
         val (aliceDatabase, aliceServices) = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts"),
+                cordappPackages,
                 makeTestIdentityService(*allIdentities),
                 alice
         )
@@ -257,7 +267,7 @@ class CommercialPaperTestsGeneric {
         }
 
         val (megaCorpDatabase, megaCorpServices) = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts"),
+                cordappPackages,
                 makeTestIdentityService(*allIdentities),
                 megaCorp
         )
