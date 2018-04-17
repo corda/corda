@@ -21,7 +21,8 @@ interface Watch {
 /**
  * @param autostart Sometime starting of Watch can be deffered - it helps in case of initialization
  *  order problems (like match() using fields from subclass which won't get initialized before superclass
- *  constructor finishes. It's the subclass responsibility to manually call run method if disabled this!
+ *  constructor finishes. It is the responsibility of the subclass to manually call the run method
+ *  if autostart is false.
  */
 abstract class AbstractWatch<T>(val observable: Observable<T>, autostart: Boolean = true) : Watch {
 
