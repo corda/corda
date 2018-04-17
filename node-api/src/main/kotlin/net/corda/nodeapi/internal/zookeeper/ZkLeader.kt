@@ -10,7 +10,27 @@
 
 package net.corda.nodeapi.internal.zookeeper
 
-import org.apache.curator.framework.recipes.leader.LeaderLatchListener
+
+/**
+ * Listener interface for leader election results, to avoid public reference to shadowed curator classes.
+ */
+interface CordaLeaderListener {
+    /**
+     * This is called when the LeaderLatch's state goes from hasLeadership = false to hasLeadership = true.
+     *
+     * Note that it is possible that by the time this method call happens, hasLeadership has fallen back to false.  If
+     * this occurs, you can expect {@link #notLeader()} to also be called.
+     */
+    fun notLeader()
+
+    /**
+     * This is called when the LeaderLatch's state goes from hasLeadership = true to hasLeadership = false.
+     *
+     * Note that it is possible that by the time this method call happens, hasLeadership has become true.  If
+     * this occurs, you can expect {@link #isLeader()} to also be called.
+     */
+    fun isLeader()
+}
 
 interface ZkLeader {
     /**
@@ -38,14 +58,14 @@ interface ZkLeader {
     fun relinquishLeadership()
 
     /**
-     * @param listener an instance of [LeaderLatchListener] that will be used for election notifications
+     * @param listener an instance of [CordaLeaderListener] that will be used for election notifications
      */
-    fun addLeadershipListener(listener: LeaderLatchListener)
+    fun addLeadershipListener(listener: CordaLeaderListener)
 
     /**
-     * @param listener the [LeaderLatchListener] instance to be removed
+     * @param listener the [CordaLeaderListener] instance to be removed
      */
-    fun removeLeaderShipListener(listener: LeaderLatchListener)
+    fun removeLeadershipListener(listener: CordaLeaderListener)
 
     /**
      * @return [true] if client is the current leader, [false] otherwise

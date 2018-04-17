@@ -23,6 +23,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREF
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
+import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -35,6 +36,7 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
                             socksProxyConfig: SocksProxyConfig? = null,
                             val artemisMessageClientFactory: () -> ArtemisSessionProvider) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
+    private val bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
     private val bridgeManager: BridgeManager = AMQPBridgeManager(config, socksProxyConfig, artemisMessageClientFactory)
     private val validInboundQueues = mutableSetOf<String>()
     private var artemis: ArtemisSessionProvider? = null
@@ -64,8 +66,11 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
         artemis.start()
         val artemisClient = artemis.started!!
         val artemisSession = artemisClient.session
-        val bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
-        artemisSession.createTemporaryQueue(BRIDGE_CONTROL, RoutingType.MULTICAST, bridgeControlQueue)
+        try {
+            artemisSession.createTemporaryQueue(BRIDGE_CONTROL, RoutingType.MULTICAST, bridgeControlQueue)
+        } catch (ex: ActiveMQQueueExistsException) {
+            // Ignore if there is a queue still not cleaned up
+        }
         val control = artemisSession.createConsumer(bridgeControlQueue)
         controlConsumer = control
         control.setMessageHandler { msg ->
@@ -88,7 +93,10 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
         validInboundQueues.clear()
         controlConsumer?.close()
         controlConsumer = null
-        artemis?.stop()
+        artemis?.apply {
+            started?.session?.deleteQueue(bridgeControlQueue)
+            stop()
+        }
         artemis = null
         bridgeManager.stop()
     }

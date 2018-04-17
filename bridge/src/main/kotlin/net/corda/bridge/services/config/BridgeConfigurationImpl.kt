@@ -49,6 +49,8 @@ data class FloatOuterConfigurationImpl(override val floatAddress: NetworkHostAnd
                                        override val expectedCertificateSubject: CordaX500Name,
                                        override val customSSLConfiguration: BridgeSSLConfigurationImpl?) : FloatOuterConfiguration
 
+data class BridgeHAConfigImpl(override val haConnectionString: String, override val haPriority: Int = 10) : BridgeHAConfig
+
 data class BridgeConfigurationImpl(
         override val baseDirectory: Path,
         override val certificatesDirectory: Path = baseDirectory / "certificates",
@@ -62,7 +64,7 @@ data class BridgeConfigurationImpl(
         override val inboundConfig: BridgeInboundConfigurationImpl?,
         override val floatInnerConfig: FloatInnerConfigurationImpl?,
         override val floatOuterConfig: FloatOuterConfigurationImpl?,
-        override val haConfig: String?,
+        override val haConfig: BridgeHAConfigImpl?,
         override val enableAMQPPacketTrace: Boolean,
         override val artemisReconnectionInterval: Int = 5000,
         override val politeShutdownPeriod: Int = 1000,

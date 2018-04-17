@@ -49,6 +49,10 @@ class InProcessBridgeReceiverService(val conf: BridgeConfiguration,
                         sslConfiguration.keyStorePassword.toCharArray(),
                         trustStoreBytes,
                         sslConfiguration.trustStorePassword.toCharArray())
+            } else {
+                if (amqpListenerService.running) {
+                    amqpListenerService.wipeKeysAndDeactivate()
+                }
             }
             stateHelper.active = it
         }

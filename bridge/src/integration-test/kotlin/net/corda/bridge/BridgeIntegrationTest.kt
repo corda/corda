@@ -14,6 +14,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.bridge.internal.BridgeInstance
 import net.corda.bridge.services.api.BridgeMode
+import net.corda.bridge.services.config.BridgeHAConfigImpl
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
@@ -28,6 +29,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CON
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.bridging.BridgeControl
+import net.corda.nodeapi.internal.zookeeper.ZkClient
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
@@ -35,6 +37,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.apache.curator.test.TestingServer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -132,6 +135,127 @@ class BridgeIntegrationTest {
             artemisServer.stop()
         }
 
+    }
+
+    @Test
+    fun `Run HA all in one mode`() {
+        val configResource = "/net/corda/bridge/hasingleprocess/bridge.conf"
+        createNetworkParams(tempFolder.root.toPath())
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(BridgeHAConfigImpl("zk//:localhost:11105", 10), config.haConfig)
+        config.createBridgeKeyStores(DUMMY_BANK_A_NAME)
+        val (artemisServer, artemisClient) = createArtemis()
+        val zkServer = TestingServer(11105, false)
+        try {
+            installBridgeControlResponder(artemisClient)
+            val bridge = BridgeInstance(config, BridgeVersionInfo(1, "1.1", "Dummy", "Test"))
+            val stateFollower = bridge.activeChange.toBlocking().iterator
+            assertEquals(false, stateFollower.next())
+            assertEquals(false, bridge.active)
+            bridge.start()
+            assertEquals(false, bridge.active) // Starting the bridge insufficient to go active
+            zkServer.start() // Now start zookeeper and we should be able to become active
+            assertEquals(true, stateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, serverListening("localhost", 10005))
+            val higherPriorityClient = ZkClient("localhost:11105", "/bridge/ha", "Test", 5)
+            higherPriorityClient.start()
+            higherPriorityClient.requestLeadership() // should win leadership and kick out our bridge
+            assertEquals(false, stateFollower.next())
+            assertEquals(false, bridge.active)
+            var socketState = true
+            for (i in 0 until 5) { // The event signalling bridge down is pretty immediate, but the cascade of events leading to socket close can take a while
+                socketState = serverListening("localhost", 10005)
+                if (!socketState) break
+                Thread.sleep(100)
+            }
+            assertEquals(false, socketState)
+            higherPriorityClient.relinquishLeadership() // let our bridge back as leader
+            higherPriorityClient.close()
+            assertEquals(true, stateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, serverListening("localhost", 10005))
+            bridge.stop() // Finally check shutdown
+            assertEquals(false, stateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(false, serverListening("localhost", 10005))
+        } finally {
+            artemisClient.stop()
+            artemisServer.stop()
+            zkServer.stop()
+        }
+    }
+
+    @Test
+    fun `Run HA float and bridge mode`() {
+        val bridgeFolder = tempFolder.root.toPath()
+        val bridgeConfigResource = "/net/corda/bridge/hawithfloat/bridge/bridge.conf"
+        val bridgeConfig = createAndLoadConfigFromResource(bridgeFolder, bridgeConfigResource)
+        assertEquals(BridgeHAConfigImpl("zk//:localhost:11105", 10), bridgeConfig.haConfig)
+        bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
+        createNetworkParams(bridgeFolder)
+        val floatFolder = tempFolder.root.toPath() / "float"
+        val floatConfigResource = "/net/corda/bridge/hawithfloat/float/bridge.conf"
+        val floatConfig = createAndLoadConfigFromResource(floatFolder, floatConfigResource)
+        assertNull(floatConfig.haConfig)
+        floatConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
+        createNetworkParams(floatFolder)
+        val (artemisServer, artemisClient) = createArtemis()
+        val zkServer = TestingServer(11105, false)
+        try {
+            installBridgeControlResponder(artemisClient)
+            val bridge = BridgeInstance(bridgeConfig, BridgeVersionInfo(1, "1.1", "Dummy", "Test"))
+            val bridgeStateFollower = bridge.activeChange.toBlocking().iterator
+            val float = BridgeInstance(floatConfig, BridgeVersionInfo(1, "1.1", "Dummy", "Test"))
+            val floatStateFollower = float.activeChange.toBlocking().iterator
+            assertEquals(false, bridgeStateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(false, floatStateFollower.next())
+            assertEquals(false, float.active)
+            float.start()
+            assertEquals(true, floatStateFollower.next()) // float goes active, but not listening
+            assertEquals(true, float.active)
+            assertEquals(false, serverListening("localhost", 10005))
+            bridge.start()
+            assertEquals(false, bridge.active) // Starting the bridge/float insufficient to go active
+            assertEquals(true, float.active) // still active, but not listening
+            assertEquals(false, serverListening("localhost", 10005))
+            zkServer.start() // Now start zookeeper and we should be able to become active on float listener
+            assertEquals(true, bridgeStateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, float.active)
+            assertEquals(true, serverListening("localhost", 10005))
+            val higherPriorityClient = ZkClient("localhost:11105", "/bridge/ha", "Test", 5)
+            higherPriorityClient.start()
+            higherPriorityClient.requestLeadership() // should win leadership and kick out our bridge
+            assertEquals(false, bridgeStateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(true, float.active)
+            var socketState = true
+            for (i in 0 until 5) { // The event signalling bridge down is pretty immediate, but the cascade of events leading to socket close can take a while
+                socketState = serverListening("localhost", 10005)
+                if (!socketState) break
+                Thread.sleep(100)
+            }
+            assertEquals(false, socketState)
+            higherPriorityClient.relinquishLeadership() // let our bridge back as leader
+            higherPriorityClient.close()
+            assertEquals(true, bridgeStateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, float.active)
+            assertEquals(true, serverListening("localhost", 10005))
+            bridge.stop() // Finally check shutdown
+            float.stop()
+            assertEquals(false, bridgeStateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(false, floatStateFollower.next())
+            assertEquals(false, float.active)
+            assertEquals(false, serverListening("localhost", 10005))
+        } finally {
+            artemisClient.stop()
+            artemisServer.stop()
+            zkServer.stop()
+        }
     }
 
     private fun createArtemis(): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {

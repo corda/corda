@@ -52,8 +52,8 @@ class SimmValuationTest : IntegrationTest() {
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }
-            val nodeAWebServerFuture = startWebserver(nodeA)
-            val nodeBWebServerFuture = startWebserver(nodeB)
+            val nodeAWebServerFuture = startWebserver(nodeA, maximumHeapSize = "300m")
+            val nodeBWebServerFuture = startWebserver(nodeB, maximumHeapSize = "300m")
             val nodeAApi = HttpApi.fromHostAndPort(nodeAWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
             val nodeBApi = HttpApi.fromHostAndPort(nodeBWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
             val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)

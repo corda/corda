@@ -48,6 +48,7 @@ dependencies {
     compile "com.jcabi:jcabi-manifests:1.1"
 
     integrationTestCompile project(':node-driver')
+    integrationTestCompile "org.apache.curator:curator-test:${curator_version}"
     testCompile "junit:junit:$junit_version"
     testCompile project(':test-utils')
 }
