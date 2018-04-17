@@ -13,6 +13,7 @@ package com.r3.corda.networkmanage.doorman
 import com.google.common.primitives.Booleans
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.internal.config.OldConfig
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.net.URL
 import java.nio.file.Path
@@ -21,9 +22,12 @@ import java.util.*
 data class NetworkManagementServerConfig( // TODO: Move local signing to signing server.
         val address: NetworkHostAndPort,
         val dataSourceProperties: Properties,
+        @OldConfig("databaseConfig")
         val database: DatabaseConfig = DatabaseConfig(),
 
+        @OldConfig("doormanConfig")
         val doorman: DoormanConfig?,
+        @OldConfig("networkMapConfig")
         val networkMap: NetworkMapConfig?,
         val revocation: CertificateRevocationConfig?,
 
@@ -47,6 +51,7 @@ data class NetworkManagementServerConfig( // TODO: Move local signing to signing
 }
 
 data class DoormanConfig(val approveAll: Boolean = false,
+                         @OldConfig("jiraConfig")
                          val jira: JiraConfig? = null,
                          val approveInterval: Long = NetworkManagementServerConfig.DEFAULT_APPROVE_INTERVAL.toMillis()) {
     init {
