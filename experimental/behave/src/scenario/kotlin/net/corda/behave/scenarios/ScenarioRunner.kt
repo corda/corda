@@ -26,11 +26,15 @@ fun main(args: Array<out String>) {
         exitProcess(1)
     }
 
-    val cliArgs = listOf("--glue", options.valueOf(glue),"--plugin", options.valueOf(plugin), options.valueOf(featurePath)) +
-        (if (options.hasArgument("tags"))
-            listOf("--tags", options.valueOf(tags))
-        else emptyList()) +
-            if (options.has(dryRun)) listOf("-d") else emptyList()
+    val cliArgs = listOf("--glue",
+                        options.valueOf(glue),
+                        "--plugin",
+                        options.valueOf(plugin),
+                        options.valueOf(featurePath)) +
+                        (if (options.hasArgument("tags"))
+                            listOf("--tags", options.valueOf(tags))
+                        else emptyList()) +
+                        if (options.has(dryRun)) listOf("-d") else emptyList()
 
     println("Cucumber CLI scenario runner args: $cliArgs")
     cucumber.api.cli.Main.main(cliArgs.toTypedArray())

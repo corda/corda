@@ -98,18 +98,17 @@ class Startup(state: ScenarioState) : Substeps(state) {
 
     fun runCordapp(nodeName: String, cordapp: String, vararg args: String) {
         withNetwork {
-            val cordaApp = node(nodeName).config.cordapps.apps.find { it.contains(cordapp) } ?: fail("Unable to locate cordapp: $cordapp")
+            val cordaApp = node(nodeName).config.cordapps.apps.find { it.contains(cordapp) } ?: fail("Unable to locate CorDapp: $cordapp")
             // launch cordapp jar
             // assumption is there is a Main() method declared in the manifest of the JAR
             // eg. Main-Class: net.corda.notaryhealthcheck.MainKt
-            val cordaDistribution = node(nodeName).config.distribution.path
             val cordappDirectory = node(nodeName).config.distribution.cordappDirectory
             val cordappJar : File = cordappDirectory / "$cordapp.jar"
             // Execute
             val command = JarCommand(cordappJar, args as Array<String>, cordappDirectory, 1.minutes)
             command.start()
             if (!command.waitFor())
-                fail("Failed to successfully run the cordapp jar: $cordaApp")
+                fail("Failed to successfully run the CorDapp jar: $cordaApp")
         }
     }
 }

@@ -9,7 +9,7 @@ import java.io.File
 
 class Configuration(
         val name: String,
-        val distribution: Distribution = Distribution.LATEST_MASTER,
+        val distribution: Distribution = Distribution.MASTER,
         val databaseType: DatabaseType = DatabaseType.H2,
         val location: String = "London",
         val country: String = "GB",

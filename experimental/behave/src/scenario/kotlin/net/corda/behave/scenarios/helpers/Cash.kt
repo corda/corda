@@ -13,8 +13,7 @@ import net.corda.finance.flows.CashPaymentFlow
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class
-Cash(state: ScenarioState) : Substeps(state) {
+class Cash(state: ScenarioState) : Substeps(state) {
 
     fun numberOfIssuableCurrencies(nodeName: String): Int {
         return withClient(nodeName) {

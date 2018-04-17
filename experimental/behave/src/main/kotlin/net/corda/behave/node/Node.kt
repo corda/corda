@@ -78,7 +78,7 @@ class Node(
         log.info("Configuring {} ...", this)
         serviceDependencies.addAll(config.database.type.dependencies(config))
         config.distribution.ensureAvailable()
-        config.writeToFile(rootDirectory / "${config.name}" / "node.conf")
+        config.writeToFile(rootDirectory / "${config.name}.conf")
         installApps()
     }
 
@@ -231,7 +231,7 @@ class Node(
         var name: String? = null
             private set
 
-        private var distribution = Distribution.V3
+        private var distribution = Distribution.MASTER
 
         private var databaseType = DatabaseType.H2
 

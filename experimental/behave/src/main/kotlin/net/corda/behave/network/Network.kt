@@ -55,7 +55,7 @@ class Network private constructor(
 
         fun addNode(
                 name: String,
-                distribution: Distribution = Distribution.LATEST_MASTER,
+                distribution: Distribution = Distribution.MASTER,
                 databaseType: DatabaseType = DatabaseType.H2,
                 notaryType: NotaryType = NotaryType.NONE,
                 issuableCurrencies: List<String> = emptyList()

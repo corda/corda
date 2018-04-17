@@ -13,21 +13,6 @@ class NetworkTests {
 
     @Ignore
     @Test
-    fun `OS Corda network of single node can be spun up`() {
-        val distribution = Distribution.LATEST_MASTER
-        val network = Network
-                .new()
-                .addNode(name = "Foo", distribution = distribution, notaryType = NotaryType.NON_VALIDATING)
-                .generate()
-        network.use {
-            it.waitUntilRunning(300.seconds)
-            it.keepAlive(300.seconds)
-            it.signal()
-        }
-    }
-
-    @Ignore
-    @Test
     fun `network of two nodes can be spun up`() {
         val network = Network
                 .new()

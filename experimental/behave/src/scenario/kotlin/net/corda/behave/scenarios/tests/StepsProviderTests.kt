@@ -1,28 +1,19 @@
 package net.corda.behave.scenarios.tests
 
 import net.corda.behave.scenarios.ScenarioState
+import net.corda.behave.scenarios.StepsContainer
 import net.corda.behave.scenarios.api.StepsBlock
 import net.corda.behave.scenarios.api.StepsProvider
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import org.reflections.Reflections
-import kotlin.test.assertEquals
 
 class StepsProviderTests {
 
     @Test
     fun `module can discover steps providers`() {
-        val reflections = Reflections("net.corda.behave")
 
-        val foundProviders = mutableListOf<String>()
-        reflections.getSubTypesOf(StepsProvider::class.java).forEach {
-            foundProviders.add(it.simpleName)
-            val instance = it.newInstance()
-            val name = instance.name
-            assert(it.simpleName.contains(name))
-        }
-
-        assertEquals(1, foundProviders.size)
-        assert(foundProviders.contains("FooStepsProvider"))
+        val foundProviders = StepsContainer.Companion.stepsProviders
+        assertThat(foundProviders).hasOnlyElementsOfType(FooStepsProvider::class.java).hasSize(1)
     }
 
     class FooStepsProvider : StepsProvider {

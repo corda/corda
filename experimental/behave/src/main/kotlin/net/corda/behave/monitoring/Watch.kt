@@ -19,7 +19,7 @@ interface Watch {
 }
 
 /**
- * @param autostart Sometime starting of Watch can be deffered - it helps in case of initialization
+ * @param if [autostart] is true starting of Watch can be deferred - it helps in case of initialization
  *  order problems (like match() using fields from subclass which won't get initialized before superclass
  *  constructor finishes. It is the responsibility of the subclass to manually call the run method
  *  if autostart is false.

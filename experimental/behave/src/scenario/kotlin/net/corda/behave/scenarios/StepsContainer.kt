@@ -1,14 +1,24 @@
 package net.corda.behave.scenarios
 
 import cucumber.api.java8.En
+import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import net.corda.behave.scenarios.api.StepsBlock
 import net.corda.behave.scenarios.api.StepsProvider
 import net.corda.behave.scenarios.steps.*
+import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.utilities.loggerFor
-import org.reflections.Reflections
 
 @Suppress("KDocMissingDocumentation")
 class StepsContainer(val state: ScenarioState) : En {
+
+    companion object {
+         val stepsProviders: List<StepsProvider> by lazy {
+            FastClasspathScanner().addClassLoader(this::class.java.classLoader).scan()
+                    .getNamesOfClassesImplementing(StepsProvider::class.java)
+                    .mapNotNull { this::class.java.classLoader.loadClass(it).asSubclass(StepsProvider::class.java) }
+                    .map { it.kotlin.objectOrNewInstance() }
+        }
+    }
 
     private val log = loggerFor<StepsContainer>()
 
@@ -26,18 +36,10 @@ class StepsContainer(val state: ScenarioState) : En {
     init {
         log.info("Initialising common Steps Provider ...")
         stepDefinitions.forEach { it.initialize(state) }
-
         log.info("Searching and registering custom Steps Providers ...")
-        // TODO: revisit with regex package specification (eg. **/scenario/**) using http://software.clapper.org/javautil/api/org/clapper/util/classutil/ClassFinder.html
-        val reflections = Reflections("net.corda")
-        val foundProviders = mutableListOf<String>()
-        reflections.getSubTypesOf(StepsProvider::class.java).forEach {
-            foundProviders.add(it.simpleName)
-            val instance = it.newInstance()
-            val name = instance.name
-            val stepsDefinition = instance.stepsDefinition
-            assert(it.simpleName.contains(name))
-            println("Registering: $stepsDefinition")
+        stepsProviders.forEach { stepsProvider ->
+            val stepsDefinition = stepsProvider.stepsDefinition
+            log.info("Registering: $stepsDefinition")
             stepsDefinition.initialize(state)
         }
     }

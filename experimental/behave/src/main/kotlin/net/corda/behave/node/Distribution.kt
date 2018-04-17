@@ -90,18 +90,10 @@ class Distribution private constructor(
 
         private val nodePrefix = stagingRoot / "deps/corda"
 
-        /**
-         * Corda Open Source, version 3.0.0
-         */
-        val V3 = fromJarFile("corda-3.0")
         val MASTER = fromJarFile("corda-master")
-
-
-        val LATEST_MASTER = MASTER
 
         /**
          * Get representation of a Corda distribution from Artifactory based on its version string.
-         * @param type The Corda distribution type.
          * @param version The version of the Corda distribution.
          */
         fun fromArtifactory(version: String): Distribution {
@@ -114,7 +106,6 @@ class Distribution private constructor(
 
         /**
          * Get representation of a Corda distribution based on its version string and fat JAR path.
-         * @param type The Corda distribution type.
          * @param version The version of the Corda distribution.
          * @param jarFile The path to the Corda fat JAR.
          */
@@ -124,6 +115,11 @@ class Distribution private constructor(
             return distribution
         }
 
+        /**
+         * Get Corda distribution from a Docker image file.
+         * @param baseImage The name (eg. corda) of the Corda distribution.
+         * @param imageTag The version (github commit id or corda version) of the Corda distribution.
+         */
         fun fromDockerImage(baseImage: String, imageTag: String): Distribution {
             val distribution = Distribution(version = imageTag, baseImage = baseImage)
             distributions.add(distribution)
@@ -135,7 +131,7 @@ class Distribution private constructor(
          * @param version The version of the Corda distribution
          */
         fun fromVersionString(version: String): Distribution = when (version) {
-            "master"  -> LATEST_MASTER
+            "master"  -> MASTER
             "corda-3.0" -> fromArtifactory(version)
             else -> fromJarFile(version)
         }
