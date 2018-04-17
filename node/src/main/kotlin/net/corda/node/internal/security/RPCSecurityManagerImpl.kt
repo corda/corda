@@ -45,17 +45,12 @@ private typealias AuthServiceConfig = SecurityConfiguration.AuthService
  * Default implementation of [RPCSecurityManager] adapting
  * [org.apache.shiro.mgt.SecurityManager]
  */
-class RPCSecurityManagerImpl(private val config: AuthServiceConfig) : RPCSecurityManager {
+class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
 
     override val id = config.id
-    private var manager: DefaultSecurityManager
+    private val manager: DefaultSecurityManager
 
     init {
-        manager = buildImpl(config)
-    }
-
-    override fun resume() {
-        close()
         manager = buildImpl(config)
     }
 
@@ -91,12 +86,8 @@ class RPCSecurityManagerImpl(private val config: AuthServiceConfig) : RPCSecurit
         /**
          * Instantiate RPCSecurityManager initialised with users data from a list of [User]
          */
-        fun fromUserList(id: AuthServiceId, users: List<User>): RPCSecurityManagerImpl {
-            val rpcSecurityManagerImpl = RPCSecurityManagerImpl(
-                    AuthServiceConfig.fromUsers(users).copy(id = id))
-            return rpcSecurityManagerImpl
-        }
-
+        fun fromUserList(id: AuthServiceId, users: List<User>) =
+                RPCSecurityManagerImpl(AuthServiceConfig.fromUsers(users).copy(id = id))
 
         // Build internal Shiro securityManager instance
         private fun buildImpl(config: AuthServiceConfig): DefaultSecurityManager {

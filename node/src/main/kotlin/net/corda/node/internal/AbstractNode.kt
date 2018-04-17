@@ -146,8 +146,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
-    protected lateinit var smm: StateMachineManager
-    protected lateinit var schedulerService: NodeSchedulerService
     protected var myNotaryIdentity: PartyAndCertificate? = null
     protected lateinit var checkpointStorage: CheckpointStorage
     private lateinit var tokenizableServices: List<Any>
@@ -255,10 +253,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                         mutualExclusionConfiguration.updateInterval, mutualExclusionConfiguration.waitInterval).start()
             }
             val notaryService = makeNotaryService(nodeServices, database)
-            smm = makeStateMachineManager(database)
+            val smm = makeStateMachineManager(database)
             val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
             val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
-            schedulerService = NodeSchedulerService(
+            val schedulerService = NodeSchedulerService(
                     platformClock,
                     database,
                     flowStarter,

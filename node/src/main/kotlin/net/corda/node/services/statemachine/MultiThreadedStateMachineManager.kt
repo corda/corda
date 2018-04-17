@@ -149,19 +149,6 @@ class MultiThreadedStateMachineManager(
         lifeCycle.transition(State.UNSTARTED, State.STARTED)
     }
 
-    override fun resume() {
-        lifeCycle.requireState(State.STOPPED)
-        fiberDeserializationChecker?.start(checkpointSerializationContext!!)
-        val fibers = restoreFlowsFromCheckpoints()
-        Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
-            (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
-        }
-        serviceHub.networkMapCache.nodeReady.then {
-            resumeRestoredFlows(fibers)
-        }
-        lifeCycle.transition(State.STOPPED, State.STARTED)
-    }
-
     override fun <A : FlowLogic<*>> findStateMachines(flowClass: Class<A>): List<Pair<A, CordaFuture<*>>> {
         return concurrentBox.content.flows.values.mapNotNull {
             flowClass.castIfPossible(it.fiber.logic)?.let { it to it.stateMachine.resultFuture }

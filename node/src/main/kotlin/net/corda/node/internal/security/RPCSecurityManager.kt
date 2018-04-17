@@ -24,11 +24,6 @@ interface RPCSecurityManager : AutoCloseable {
     val id: AuthServiceId
 
     /**
-     * Resume
-     */
-    fun resume()
-
-    /**
      * Perform user authentication from principal and password. Return an [AuthorizingSubject] containing
      * the permissions of the user identified by the given [principal] if authentication via password succeeds,
      * otherwise a [FailedLoginException] is thrown.

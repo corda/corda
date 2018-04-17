@@ -396,24 +396,6 @@ open class Node(configuration: NodeConfiguration,
         return started
     }
 
-    /**
-     * Resume services stopped after [suspend].
-     */
-    fun resume() {
-        if (started == null) {
-            start()
-        } else if (suspended) {
-            bridgeControlListener?.start()
-            rpcMessagingClient?.resume(started!!.rpcOps, securityManager)
-            (network as P2PMessagingClient).start()
-            started!!.database.transaction {
-                smm.resume()
-                schedulerService.resume()
-            }
-            suspended = false
-        }
-    }
-
     override fun getRxIoScheduler(): Scheduler = Schedulers.io()
 
     private fun initialiseSerialization() {
@@ -463,21 +445,5 @@ open class Node(configuration: NodeConfiguration,
         shutdown = false
 
         log.info("Shutdown complete")
-    }
-
-    private var suspended = false
-
-    /**
-     * Suspend the minimum number of services([schedulerService], [smm], [network], [rpcMessagingClient], and [bridgeControlListener]).
-     */
-    fun suspend() {
-        if(started != null && !suspended) {
-            schedulerService.stop()
-            smm.stop(0)
-            (network as P2PMessagingClient).stop()
-            rpcMessagingClient?.stop()
-            bridgeControlListener?.stop()
-            suspended = true
-        }
     }
 }
