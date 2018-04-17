@@ -12,15 +12,12 @@ package net.corda.node.internal.cordapp
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import junit.framework.Assert.assertNull
-import net.corda.core.internal.cordapp.CordappConfigProvider
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.net.URL
@@ -29,9 +26,9 @@ class CordappProviderImplTests {
     private companion object {
         val isolatedJAR = this::class.java.getResource("isolated.jar")!!
         // TODO: Cordapp name should differ from the JAR name
-        val isolatedCordappName = "isolated"
+        const val isolatedCordappName = "isolated"
         val emptyJAR = this::class.java.getResource("empty.jar")!!
-        val validConfig = ConfigFactory.parseString("key=value")
+        val validConfig: Config = ConfigFactory.parseString("key=value")
 
         val stubConfigProvider = object : CordappConfigProvider {
             override fun getConfigByName(name: String): Config = ConfigFactory.empty()
@@ -87,7 +84,7 @@ class CordappProviderImplTests {
     @Test
     fun `test cordapp configuration`() {
         val configProvider = MockCordappConfigProvider()
-        configProvider.cordappConfigs.put(isolatedCordappName, validConfig)
+        configProvider.cordappConfigs[isolatedCordappName] = validConfig
         val loader = CordappLoader.createDevMode(listOf(isolatedJAR))
         val provider = CordappProviderImpl(loader, configProvider, attachmentStore, whitelistedContractImplementations)
 
