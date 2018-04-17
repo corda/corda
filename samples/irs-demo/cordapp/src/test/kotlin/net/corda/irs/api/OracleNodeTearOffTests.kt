@@ -1,6 +1,5 @@
 package net.corda.irs.api
 
-import com.google.common.collect.testing.Helpers
 import com.google.common.collect.testing.Helpers.assertContains
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TransactionState
@@ -50,7 +49,7 @@ class OracleNodeTearOffTests {
     @Before
     // DOCSTART 1
     fun setUp() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
+        mockNet = MockNetwork(cordappPackages = listOf(Cash::class.java.`package`.name, NodeInterestRates::class.java.`package`.name))
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         oracleNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME)).apply {
             transaction {
