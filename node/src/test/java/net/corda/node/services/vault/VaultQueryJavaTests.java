@@ -486,20 +486,20 @@ public class VaultQueryJavaTests {
         });
     }
 
-    private List<StateAndRef<Cash.State>> queryStatesWithPaging(VaultService vaultService, int p) {
+    private List<StateAndRef<Cash.State>> queryStatesWithPaging(VaultService vaultService, int pageSize) {
         // DOCSTART VaultQueryExample24
         int pageNumber = DEFAULT_PAGE_NUM;
         List<StateAndRef<Cash.State>> states = new ArrayList<>();
         long totalResults;
         do {
-            PageSpecification pageSpec = new PageSpecification(pageNumber, p);
+            PageSpecification pageSpec = new PageSpecification(pageNumber, pageSize);
             Vault.Page<Cash.State> results = vaultService.queryBy(Cash.State.class, new VaultQueryCriteria(), pageSpec);
             totalResults = results.getTotalStatesAvailable();
             List<StateAndRef<Cash.State>> newStates = results.getStates();
             System.out.println(newStates.size());
             states.addAll(results.getStates());
             pageNumber++;
-        } while ((p * (pageNumber - 1) <= totalResults));
+        } while ((pageSize * (pageNumber - 1) <= totalResults));
         // DOCEND VaultQueryExample24
         return states;
     }

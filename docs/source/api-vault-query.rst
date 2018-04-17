@@ -259,10 +259,10 @@ Query for all states with pagination specification (10 results per page):
 .. note:: The result set metadata field `totalStatesAvailable` allows you to further paginate accordingly as
    demonstrated in the following example.
 
-Query for all states using pagination specification and iterate using `totalStatesAvailable` field until no further
+Query for all states using a pagination specification and iterate using the `totalStatesAvailable` field until no further
 pages available:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/events/ScheduledFlowTests.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample24
     :end-before: DOCEND VaultQueryExample24
@@ -426,13 +426,13 @@ Query for consumed deal states or linear ids, specify a paging specification and
     :end-before: DOCEND VaultJavaQueryExample2
     :dedent: 12
 
-Query for all states using pagination specification and iterate using `totalStatesAvailable` field until no further pages available:
+Query for all states using a pagination specification and iterate using the `totalStatesAvailable` field until no further pages available:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/events/VaultQueryJavaTests.kt
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
     :language: java
     :start-after: DOCSTART VaultQueryExample24
     :end-before: DOCEND VaultQueryExample24
-    :dedent: 12
+    :dedent: 8
 
 **Aggregate Function queries using** ``VaultCustomQueryCriteria``:
 
@@ -473,8 +473,8 @@ identifier):
 
 .. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
     :language: java
-    :start-after: DOCSTART VaultJavaQueryExample4
-    :end-before: DOCEND VaultJavaQueryExample4
+    :start-after: DOCSTART VaultJavaQueryExample5
+    :end-before: DOCEND VaultJavaQueryExample5
     :dedent: 12
 
 Troubleshooting

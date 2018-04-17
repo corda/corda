@@ -1002,12 +1002,12 @@ class VaultQueryTests {
     }
 
     // example of querying states with paging using totalStatesAvailable
-    private fun queryStatesWithPaging(vaultService: VaultService, p: Int): List<StateAndRef<ContractState>> {
+    private fun queryStatesWithPaging(vaultService: VaultService, pageSize: Int): List<StateAndRef<ContractState>> {
         // DOCSTART VaultQueryExample24
         var pageNumber = DEFAULT_PAGE_NUM
         val states = mutableListOf<StateAndRef<ContractState>>()
         do {
-            val pageSpec = PageSpecification(pageSize = p, pageNumber = pageNumber)
+            val pageSpec = PageSpecification(pageNumber = pageNumber, pageSize = pageSize)
             val results = vaultService.queryBy<ContractState>(VaultQueryCriteria(), pageSpec)
             states.addAll(results.states)
             pageNumber++
