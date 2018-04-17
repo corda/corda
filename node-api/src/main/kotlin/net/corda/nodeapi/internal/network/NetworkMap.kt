@@ -33,10 +33,14 @@ data class NetworkMap(
         val parametersUpdate: ParametersUpdate?
 ) {
     override fun toString(): String {
-        return """${NetworkMap::class.java.simpleName}(nodeInfoHashes=
-${nodeInfoHashes.joinToString("\n")}
-networkParameterHash=$networkParameterHash
-parametersUpdate=$parametersUpdate)"""
+        return """NetworkMap {
+  nodeInfoHashes {
+    ${nodeInfoHashes.asSequence().take(10).joinToString("\n    ")}
+    ${if (nodeInfoHashes.size > 10) "... ${nodeInfoHashes.size - 10} more" else ""}
+  }
+  networkParameterHash=$networkParameterHash
+  parametersUpdate=$parametersUpdate
+}"""
     }
 }
 
