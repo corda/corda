@@ -19,8 +19,10 @@ Unreleased
 * Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
   To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
 
-* The network bootstrapper uses the existing network parameters file to update the current contracts whitelist, and no longer
-  needs the whitelist.txt file.
+* Changes to the network bootstrapper:
+  * The whitelist.txt file is no longer needed. The existing network parameters file is used to update the current contracts
+    whitelist.
+  * The CorDapp jars are also copied to each nodes' `cordapps` directory.
 
 * Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
 
