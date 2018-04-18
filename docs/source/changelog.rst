@@ -9,8 +9,10 @@ Unreleased
 
 * Upgraded H2 to v1.4.197.
 
-* The network bootstrapper uses the existing network parameters file to update the current contracts whitelist, and no longer
-  needs the whitelist.txt file.
+* Changes to the network bootstrapper:
+  * The whitelist.txt file is no longer needed. The existing network parameters file is used to update the current contracts
+    whitelist.
+  * The CorDapp jars are also copied to each nodes' `cordapps` directory.
 
 * Errors thrown by a Corda node will now reported to a calling RPC client with attention to serialization and obfuscation of internal data.
 
