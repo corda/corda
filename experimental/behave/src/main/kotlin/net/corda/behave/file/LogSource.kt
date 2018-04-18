@@ -23,16 +23,15 @@ class LogSource(
         }
         val logFiles = directory.listFiles({ file ->
             (!filePatternUsedForExclusion && file.name.matches(fileRegex)) ||
-                    (filePatternUsedForExclusion && file.name.matches(fileRegex))
+                    (filePatternUsedForExclusion && !file.name.matches(fileRegex))
         })
         val result = mutableListOf<MatchedLogContent>()
         for (file in logFiles) {
             val contents = file.readText()
             if (regex != null) {
-                val match = regex.find(contents)
-                match?.let {
-                    result.add(MatchedLogContent(file, match.value))
-                }
+                result.addAll(regex.findAll(contents).map { match ->
+                    MatchedLogContent(file, match.value)
+                })
             } else {
                 result.add(MatchedLogContent(file, contents))
             }
