@@ -118,10 +118,15 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
      */
     private fun List<Cordapp>.deDupeSameContractClassNames(): List<CorDappLight> {
 
-        return this.map { CorDappLight(it) }.fold(Pair(ArrayList<CorDappLight>(), HashSet<String>())) { (acc, notedContracts), corDapp ->
-            if ((notedContracts - corDapp.contractClassNames).size == notedContracts.size) {
+        val foldResult = this.map { CorDappLight(it) }.fold(Pair(HashMap<URL, CorDappLight>(), HashSet<String>())) { (acc, notedContracts), corDapp ->
+            val existingEntry = acc[corDapp.jarPath]
+            if(existingEntry != null) {
+                // This URL path already been seen. Amend existing entry with contract list.
+                acc[corDapp.jarPath] = existingEntry.copy(contractClassNames = existingEntry.contractClassNames + corDapp.contractClassNames)
+                notedContracts += corDapp.contractClassNames
+            } else if ((notedContracts - corDapp.contractClassNames).size == notedContracts.size) {
                 // Complete disconnect or "notedContracts" is empty.
-                acc += corDapp
+                acc += Pair(corDapp.jarPath, corDapp)
                 notedContracts += corDapp.contractClassNames
             } else if (notedContracts.containsAll(corDapp.contractClassNames)) {
                 log.warn("Skipping $corDapp as all of it is contracts already included")
@@ -129,11 +134,12 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
                 val modifiedContractsList = corDapp.contractClassNames - notedContracts
                 val modifiedCordapp = corDapp.copy(contractClassNames = modifiedContractsList)
                 log.warn("Cordapp $corDapp has it contracts list modified to: $modifiedContractsList")
-                acc += modifiedCordapp
+                acc += Pair(modifiedCordapp.jarPath, modifiedCordapp)
                 notedContracts += modifiedContractsList
             }
             Pair(acc, notedContracts)
-        }.first
+        }
+        return foldResult.first.values.toList()
     }
 
     /**
