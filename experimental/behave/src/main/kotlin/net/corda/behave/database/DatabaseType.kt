@@ -20,6 +20,7 @@ enum class DatabaseType(val settings: DatabaseSettings) {
     ),
 
     POSTGRES(DatabaseSettings()
+            .withDatabase(PostgreSQLService.database)
             .withDriver(PostgreSQLService.driver)
             .withSchema(PostgreSQLService.schema)
             .withUser(PostgreSQLService.username)

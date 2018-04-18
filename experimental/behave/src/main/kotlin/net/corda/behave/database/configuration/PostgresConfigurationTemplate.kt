@@ -19,7 +19,6 @@ class PostgresConfigurationTemplate : DatabaseConfigurationTemplate() {
             |}
             |database = {
             |    transactionIsolationLevel = READ_COMMITTED
-            |    schema="${it.schema}"
             |}
             """
         }
