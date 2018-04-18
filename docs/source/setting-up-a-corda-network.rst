@@ -91,36 +91,18 @@ Whitelisting Contracts
 
 If you want to create a *Zone whitelist* (see :doc:`api-contract-constraints`), you can pass in a list of CorDapp jars:
 
-``java -jar network-bootstrapper.jar <nodes-root-dir> <path-to-first-corDapp> <path-to-second-corDapp> ..``
+``java -jar network-bootstrapper.jar <nodes-root-dir> <1st CorDapp jar> <2nd CorDapp jar> ..``
 
-The CorDapp jars will be hashed and scanned for ``Contract`` classes.
-By default the tool would generate a file named ``whitelist.txt`` containing an entry for each contract with the hash of the jar.
+The CorDapp jars will be hashed and scanned for ``Contract`` classes. These contract class implementations will become part
+of the whitelisted contracts in the network parameters (see ``NetworkParameters.whitelistedContractImplementations`` :doc:`network-map`).
+If the network already has a set of network parameters defined (i.e. the node directories all contain the same network-parameters
+file) then the new set of contracts will be appended to the current whitelist.
 
-For example:
+.. note:: The whitelist can only ever be appended to. Once added a contract implementation can never be removed.
 
-.. sourcecode:: none
-
-    net.corda.finance.contracts.asset.Obligation:decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de8
-    net.corda.finance.contracts.asset.Cash:decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9
-
-These will be added to the ``NetworkParameters.whitelistedContractImplementations``. See :doc:`network-map`.
-
-This means that by default the Network bootstrapper tool will whitelist all contracts found in all passed CorDapps.
-
-In case there is a ``whitelist.txt`` file in the root dir already, the tool will append the new jar hashes or contracts to it.
-
-The zone operator will maintain this whitelist file, and, using the tool, will append new versions of CorDapps to it.
-
-.. warning::
-    - The zone operator must ensure that this file is *append only*.
-    - If the operator removes hashes from the list, all transactions pointing to that version will suddenly fail the constraint verification, and the entire chain is compromised.
-    - If a contract is removed from the whitelist, then all states created from that moment on will be constrained by the HashAttachmentConstraint.
-
-    Note: In future releases, we will provider a tamper-proof way of maintaining the contract whitelist.
-
-For fine-grained control of constraints, in case multiple contracts live in the same jar, the tool reads from another file:
-``exclude_whitelist.txt``, which contains a list of contracts that should not be whitelisted, and thus default to the very restrictive:
-``HashAttachmentConstraint``
+By default the bootstrapper tool will whitelist all the contracts found in all the CorDapp jars. To prevent certain
+contracts from being whitelisted, add their fully qualified class name in the ``exclude_whitelist.txt``. These will instead
+use the more restrictive ``HashAttachmentConstraint``.
 
 For example:
 
@@ -129,6 +111,8 @@ For example:
     net.corda.finance.contracts.asset.Cash
     net.corda.finance.contracts.asset.CommercialPaper
 
+In addition to using the CorDapp jars to update the whitelist, the bootstrapper will also copy them to all the nodes'
+``cordapps`` directory.
 
 Starting the nodes
 ~~~~~~~~~~~~~~~~~~

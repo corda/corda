@@ -130,6 +130,18 @@ class NodeVaultServiceTest {
         return tryLockFungibleStatesForSpending(lockId, baseCriteria, amount, Cash.State::class.java)
     }
 
+    @Test
+    fun `duplicate insert of transaction does not fail`() {
+        database.transaction {
+            val cash = Cash()
+            val howMuch = 100.DOLLARS
+            val issuance = TransactionBuilder(null as Party?)
+            cash.generateIssue(issuance, Amount(howMuch.quantity, Issued(DUMMY_CASH_ISSUER, howMuch.token)), services.myInfo.singleIdentity(), dummyNotary.party)
+            val transaction = issuerServices.signInitialTransaction(issuance, DUMMY_CASH_ISSUER.party.owningKey)
+            services.recordTransactions(transaction)
+            services.recordTransactions(transaction)
+        }
+    }
 
     @Test
     fun `states not local to instance`() {

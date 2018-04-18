@@ -6,18 +6,18 @@ This sample shows a simple example of how to use per-cordapp configuration. It i
 * Gradle build file to show how to install your Cordapp configuration
 * A flow that consumes the Cordapp configuration
 
-## Usage
+To run from the command line in Unix:
 
-To run the sample you must first build it from the project root with;
+1. Run ``./gradlew samples:cordapp-configuration:deployNodes`` to create a set of configs and installs under 
+   ``samples/cordapp-configuration/build/nodes``
+2. Run ``./samples/cordapp-configuration/build/nodes/runnodes`` to open up three new terminals with the three nodes
+3. At the shell prompt for Bank A or Bank B run ``start net.corda.configsample.GetStringConfigFlow configKey: someStringValue``.
+   This will start the flow and read the `someStringValue` CorDapp config.
 
-    ./gradlew deployNodes
-    
-This will deploy the node with the configuration installed. 
-The relevant section is the ``deployNodes`` task.
+To run from the command line in Windows:
 
-## Running
-
-* Windows: `build\nodes\runnodes`
-* Mac/Linux: `./build/nodes/runnodes`
-
-Once the nodes have started up and show a prompt you can now run your flow. 
+1. Run ``gradlew samples:cordapp-configuration:deployNodes`` to create a set of configs and installs under 
+   ``samples\cordapp-configuration\build\nodes``
+2. Run ``samples\cordapp-configuration\build\nodes\runnodes`` to open up three new terminals with the three nodes
+3. At the shell prompt for Bank A or Bank B run ``start net.corda.configsample.GetStringConfigFlow configKey: someStringValue``.
+   This will start the flow and read the `someStringValue` CorDapp config.

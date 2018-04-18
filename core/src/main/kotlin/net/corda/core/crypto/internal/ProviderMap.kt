@@ -37,6 +37,8 @@ internal val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
 }
 internal val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
     require(name == "BCPQC") // The constant it comes from is not final.
+}.also {
+    Security.addProvider(it)
 }
 // This map is required to defend against users that forcibly call Security.addProvider / Security.removeProvider
 // that could cause unexpected and suspicious behaviour.

@@ -22,8 +22,12 @@ If you have questions or comments, then get in touch on `Slack <https://slack.co
 
 We look forward to seeing what you can do with Corda!
 
+.. note:: You can read this site offline. Either `download the PDF`_ or download the Corda source code, run ``gradle buildDocs`` and you will have
+   a copy of this site in the ``docs/build/html`` directory.
+
 .. _`introductory white paper`: _static/corda-introductory-whitepaper.pdf
 .. _`technical white paper`: _static/corda-technical-whitepaper.pdf
+.. _`download the PDF`: _static/corda-developer-site.pdf
 
 .. toctree::
    :maxdepth: 1

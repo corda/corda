@@ -2,39 +2,37 @@ package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.times
-import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.*
 import net.corda.cordform.CordformNode.NODE_INFO_DIRECTORY
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.messaging.ParametersUpdateInfo
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.NodeInfoAndSigned
-import net.corda.nodeapi.internal.SignedNodeInfo
-import net.corda.nodeapi.internal.createDevNetworkMapCa
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.*
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
-import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
+import net.corda.testing.node.internal.network.NetworkMapServer
+import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import rx.schedulers.TestScheduler
+import java.io.IOException
+import java.net.URL
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
@@ -44,58 +42,30 @@ class NetworkMapUpdaterTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
+    private val cacheExpiryMs = 1000
+    private val privateNetUUID = UUID.randomUUID()
     private val fs = Jimfs.newFileSystem(unix())
     private val baseDir = fs.getPath("/node")
-    private val networkMapCache = createMockNetworkMapCache()
-    private val nodeInfoMap = ConcurrentHashMap<SecureHash, SignedNodeInfo>()
-    private val networkParamsMap = HashMap<SecureHash, NetworkParameters>()
-    private val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa()
-    private val cacheExpiryMs = 100
-    private val networkMapClient = createMockNetworkMapClient()
     private val scheduler = TestScheduler()
-    private val networkParametersHash = SecureHash.randomSHA256()
     private val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
-    private val updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, networkParametersHash, baseDir)
-    private val nodeInfoBuilder = TestNodeInfoBuilder()
-    private var parametersUpdate: ParametersUpdate? = null
+    private val networkMapCache = createMockNetworkMapCache()
+    private lateinit var server: NetworkMapServer
+    private lateinit var networkMapClient: NetworkMapClient
+    private lateinit var updater: NetworkMapUpdater
+
+    @Before
+    fun setUp() {
+        server = NetworkMapServer(cacheExpiryMs.millis, PortAllocation.Incremental(10000).nextHostAndPort())
+        val hostAndPort = server.start()
+        networkMapClient = NetworkMapClient(URL("http://${hostAndPort.host}:${hostAndPort.port}"), DEV_ROOT_CA.certificate)
+        updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, server.networkParameters.serialize().hash, baseDir, listOf(privateNetUUID))
+    }
 
     @After
     fun cleanUp() {
         updater.close()
         fs.close()
-    }
-
-    @Test
-    fun `publish node info`() {
-        nodeInfoBuilder.addIdentity(ALICE_NAME)
-
-        val nodeInfo1AndSigned = nodeInfoBuilder.buildWithSigned()
-        val sameNodeInfoDifferentTimeAndSigned = nodeInfoBuilder.buildWithSigned(serial = System.currentTimeMillis())
-
-        // Publish node info for the first time.
-        updater.updateNodeInfo(nodeInfo1AndSigned)
-        // Sleep as publish is asynchronous.
-        // TODO: Remove sleep in unit test
-        Thread.sleep(2L * cacheExpiryMs)
-        verify(networkMapClient, times(1)).publish(any())
-
-        networkMapCache.addNode(nodeInfo1AndSigned.nodeInfo)
-
-        // Publish the same node info, but with different serial.
-        updater.updateNodeInfo(sameNodeInfoDifferentTimeAndSigned)
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(2L * cacheExpiryMs)
-
-        // Same node info should not publish twice
-        verify(networkMapClient, times(0)).publish(sameNodeInfoDifferentTimeAndSigned.signed)
-
-        val differentNodeInfoAndSigned = createNodeInfoAndSigned("Bob")
-
-        // Publish different node info.
-        updater.updateNodeInfo(differentNodeInfoAndSigned)
-        // TODO: Remove sleep in unit test.
-        Thread.sleep(200)
-        verify(networkMapClient, times(1)).publish(differentNodeInfoAndSigned.signed)
+        server.close()
     }
 
     @Test
@@ -123,11 +93,9 @@ class NetworkMapUpdaterTest {
         NodeInfoWatcher.saveToFile(baseDir / NODE_INFO_DIRECTORY, fileNodeInfoAndSigned)
         networkMapClient.publish(signedNodeInfo3)
         networkMapClient.publish(signedNodeInfo4)
-
         scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
-
         // 4 node info from network map, and 1 from file.
         verify(networkMapCache, times(5)).addNode(any())
         verify(networkMapCache, times(1)).addNode(nodeInfo3)
@@ -156,12 +124,13 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
 
         // 4 node info from network map, and 1 from file.
-        assertThat(nodeInfoMap).hasSize(4)
         verify(networkMapCache, times(5)).addNode(any())
         verify(networkMapCache, times(1)).addNode(fileNodeInfoAndSigned.nodeInfo)
 
         // Test remove node.
-        nodeInfoMap.clear()
+        listOf(nodeInfo1, nodeInfo2, nodeInfo3, nodeInfo4).forEach {
+            server.removeNodeInfo(it)
+        }
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         verify(networkMapCache, times(4)).removeNode(any())
@@ -200,15 +169,15 @@ class NetworkMapUpdaterTest {
         assertEquals(null, snapshot)
         val newParameters = testNetworkParameters(epoch = 2)
         val updateDeadline = Instant.now().plus(1, ChronoUnit.DAYS)
-        scheduleParametersUpdate(newParameters, "Test update", updateDeadline)
+        server.scheduleParametersUpdate(newParameters, "Test update", updateDeadline)
         updater.subscribeToNetworkMap()
         updates.expectEvents(isStrict = false) {
             sequence(
                     expect { update: ParametersUpdateInfo ->
-                        assertThat(update.updateDeadline == updateDeadline)
-                        assertThat(update.description == "Test update")
-                        assertThat(update.hash == newParameters.serialize().hash)
-                        assertThat(update.parameters == newParameters)
+                        assertEquals(update.updateDeadline, updateDeadline)
+                        assertEquals(update.description,"Test update")
+                        assertEquals(update.hash, newParameters.serialize().hash)
+                        assertEquals(update.parameters, newParameters)
                     }
             )
         }
@@ -217,49 +186,33 @@ class NetworkMapUpdaterTest {
     @Test
     fun `ack network parameters update`() {
         val newParameters = testNetworkParameters(epoch = 314)
-        scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
+        server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         updater.subscribeToNetworkMap()
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         val newHash = newParameters.serialize().hash
         val keyPair = Crypto.generateKeyPair()
         updater.acceptNewNetworkParameters(newHash, { hash -> hash.serialize().sign(keyPair)})
-        verify(networkMapClient).ackNetworkParametersUpdate(any())
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
         val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
     }
 
-    private fun scheduleParametersUpdate(nextParameters: NetworkParameters, description: String, updateDeadline: Instant) {
-        val nextParamsHash = nextParameters.serialize().hash
-        networkParamsMap[nextParamsHash] = nextParameters
-        parametersUpdate = ParametersUpdate(nextParamsHash, description, updateDeadline)
-    }
-
-    private fun createMockNetworkMapClient(): NetworkMapClient {
-        return mock {
-            on { trustedRoot }.then {
-                DEV_ROOT_CA.certificate
-            }
-            on { publish(any()) }.then {
-                val signedNodeInfo: SignedNodeInfo = uncheckedCast(it.arguments[0])
-                nodeInfoMap.put(signedNodeInfo.verified().serialize().hash, signedNodeInfo)
-            }
-            on { getNetworkMap() }.then {
-                NetworkMapResponse(NetworkMap(nodeInfoMap.keys.toList(), networkParametersHash, parametersUpdate), cacheExpiryMs.millis)
-            }
-            on { getNodeInfo(any()) }.then {
-                nodeInfoMap[it.arguments[0]]?.verified()
-            }
-            on { getNetworkParameters(any()) }.then {
-                val paramsHash: SecureHash = uncheckedCast(it.arguments[0])
-                networkParamsMap[paramsHash]?.let { networkMapCertAndKeyPair.sign(it) }
-            }
-            on { ackNetworkParametersUpdate(any()) }.then {
-                Unit
-            }
-        }
+    @Test
+    fun `fetch nodes from private network`() {
+        server.addNodesToPrivateNetwork(privateNetUUID, listOf(ALICE_NAME))
+        Assertions.assertThatThrownBy { networkMapClient.getNetworkMap(privateNetUUID).payload.nodeInfoHashes }
+                .isInstanceOf(IOException::class.java)
+                .hasMessageContaining("Response Code 404")
+        val (aliceInfo, signedAliceInfo) = createNodeInfoAndSigned(ALICE_NAME) // Goes to private network map
+        val aliceHash = aliceInfo.serialize().hash
+        val (bobInfo, signedBobInfo) = createNodeInfoAndSigned(BOB_NAME) // Goes to global network map
+        networkMapClient.publish(signedAliceInfo)
+        networkMapClient.publish(signedBobInfo)
+        assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(bobInfo.serialize().hash)
+        assertThat(networkMapClient.getNetworkMap(privateNetUUID).payload.nodeInfoHashes).containsExactly(aliceHash)
+        assertEquals(aliceInfo, networkMapClient.getNodeInfo(aliceHash))
     }
 
     private fun createMockNetworkMapCache(): NetworkMapCacheInternal {

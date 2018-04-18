@@ -9,15 +9,14 @@ import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.days
-import net.corda.core.utilities.seconds
-import net.corda.core.utilities.toHexString
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.*
 import net.corda.finance.*
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.DealState
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
@@ -1002,14 +1001,39 @@ class VaultQueryTests {
         }
     }
 
+    // example of querying states with paging using totalStatesAvailable
+    private fun queryStatesWithPaging(vaultService: VaultService, pageSize: Int): List<StateAndRef<ContractState>> {
+        // DOCSTART VaultQueryExample24
+        var pageNumber = DEFAULT_PAGE_NUM
+        val states = mutableListOf<StateAndRef<ContractState>>()
+        do {
+            val pageSpec = PageSpecification(pageNumber = pageNumber, pageSize = pageSize)
+            val results = vaultService.queryBy<ContractState>(VaultQueryCriteria(), pageSpec)
+            states.addAll(results.states)
+            pageNumber++
+        } while ((pageSpec.pageSize * (pageNumber - 1)) <= results.totalStatesAvailable)
+        // DOCEND VaultQueryExample24
+        return states.toList()
+    }
+
+    // test paging query example works
+    @Test
+    fun `test example of querying states with paging works correctly`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(25.DOLLARS, notaryServices, 4, DUMMY_CASH_ISSUER)
+            assertThat(queryStatesWithPaging(vaultService, 5).count()).isEqualTo(4)
+            vaultFiller.fillWithSomeTestCash(25.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
+            assertThat(queryStatesWithPaging(vaultService, 5).count()).isEqualTo(5)
+            vaultFiller.fillWithSomeTestCash(25.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
+            assertThat(queryStatesWithPaging(vaultService, 5).count()).isEqualTo(6)
+        }
+    }
+
     // sorting
     @Test
     fun `sorting - all states sorted by contract type, state status, consumed time`() {
-
         setUpDb(database)
-
         database.transaction {
-
             val sortCol1 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.CONTRACT_STATE_TYPE), Sort.Direction.DESC)
             val sortCol2 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.STATE_STATUS), Sort.Direction.ASC)
             val sortCol3 = Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.CONSUMED_TIME), Sort.Direction.DESC)
@@ -2056,6 +2080,39 @@ class VaultQueryTests {
         }
     }
 
+    @Test
+    fun `unconsumedCashStatesForSpending_single_issuer_reference`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(1000.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
+        }
+        database.transaction {
+            val builder = TransactionBuilder()
+            val issuer = DUMMY_CASH_ISSUER
+            val exitStates = AbstractCashSelection
+                    .getInstance { services.jdbcSession().metaData }
+                    .unconsumedCashStatesForSpending(services, 300.DOLLARS, setOf(issuer.party),
+                            builder.notary, builder.lockId, setOf(issuer.reference))
+
+            assertThat(exitStates).hasSize(1)
+            assertThat(exitStates[0].state.data.amount.quantity).isEqualTo(100000)
+        }
+    }
+
+    @Test
+    fun `unconsumedCashStatesForSpending_single_issuer_reference_not_matching`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(1000.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
+        }
+        database.transaction {
+            val builder = TransactionBuilder()
+            val issuer = DUMMY_CASH_ISSUER
+            val exitStates = AbstractCashSelection
+                    .getInstance { services.jdbcSession().metaData }
+                    .unconsumedCashStatesForSpending(services, 300.DOLLARS, setOf(issuer.party),
+                            builder.notary, builder.lockId, setOf(OpaqueBytes.of(13)))
+            assertThat(exitStates).hasSize(0)
+        }
+    }
     /**
      *  USE CASE demonstrations (outside of mainline Corda)
      *

@@ -11,8 +11,6 @@ import net.corda.core.flows.SchedulableFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
-import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
-import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
@@ -141,7 +139,7 @@ class ScheduledFlowTests {
 
     @Test
     fun `run a whole batch of scheduled flows`() {
-        val N = 100
+        val N = 99
         val futures = mutableListOf<CordaFuture<*>>()
         for (i in 0 until N) {
             futures.add(aliceNode.services.startFlow(InsertInitialStateFlow(bob, notary)).resultFuture)
@@ -154,10 +152,10 @@ class ScheduledFlowTests {
 
         // Convert the states into maps to make error reporting easier
         val statesFromA: List<StateAndRef<ScheduledState>> = aliceNode.database.transaction {
-            queryStatesWithPaging(aliceNode.services.vaultService)
+            queryStates(aliceNode.services.vaultService)
         }
         val statesFromB: List<StateAndRef<ScheduledState>> = bobNode.database.transaction {
-            queryStatesWithPaging(bobNode.services.vaultService)
+            queryStates(bobNode.services.vaultService)
         }
         assertEquals("Expect all states to be present", 2 * N, statesFromA.count())
         statesFromA.forEach { ref ->
@@ -174,23 +172,6 @@ class ScheduledFlowTests {
         assertTrue("Expect all states have run the scheduled task", statesFromB.all { it.state.data.processed })
     }
 
-    /**
-     * Query all states from the Vault, fetching results as a series of pages with ordered states in order to perform
-     * integration testing of that functionality.
-     *
-     * @return states ordered by the transaction ID.
-     */
-    private fun queryStatesWithPaging(vaultService: VaultService): List<StateAndRef<ScheduledState>> {
-        // DOCSTART VaultQueryExamplePaging
-        var pageNumber = DEFAULT_PAGE_NUM
-        val states = mutableListOf<StateAndRef<ScheduledState>>()
-        do {
-            val pageSpec = PageSpecification(pageSize = PAGE_SIZE, pageNumber = pageNumber)
-            val results = vaultService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec, SORTING)
-            states.addAll(results.states)
-            pageNumber++
-        } while ((pageSpec.pageSize * (pageNumber)) <= results.totalStatesAvailable)
-        // DOCEND VaultQueryExamplePaging
-        return states.toList()
-    }
+    private fun queryStates(vaultService: VaultService): List<StateAndRef<ScheduledState>> =
+        vaultService.queryBy<ScheduledState>(VaultQueryCriteria(), sorting = SORTING).states
 }

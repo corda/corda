@@ -1,9 +1,11 @@
 Creating nodes locally
 ======================
 
+.. contents::
+
 Node structure
 --------------
-Each Corda node has the following structure:
+A Corda node has the following structure:
 
 .. sourcecode:: none
 
@@ -22,6 +24,8 @@ into the ``cordapps`` folder.
 In development mode (i.e. when ``devMode = true``, see :doc:`corda-configuration-file` for more information), the ``certificates``
 directory is filled with pre-configured keystores if the required keystores do not exist. This ensures that developers
 can get the nodes working as quickly as possible. However, these pre-configured keystores are not secure, to learn more see :doc:`permissioning`.
+
+.. _node_naming:
 
 Node naming
 -----------
@@ -101,7 +105,10 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
             // The notary will offer a validating notary service.
             notary = [validating : true]
             p2pPort  10002
-            rpcPort  10003
+            rpcSettings {
+                port 10003
+                adminPort 10023
+            }
             // No webport property, so no webserver will be created.
             h2Port   10004
             // Includes the corda-finance CorDapp on our node.
@@ -110,7 +117,10 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
         node {
             name "O=PartyA,L=London,C=GB"
             p2pPort  10005
-            rpcPort  10006
+            rpcSettings {
+                port 10006
+                adminPort 10026
+            }
             webPort  10007
             h2Port   10008
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
@@ -120,7 +130,10 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
         node {
             name "O=PartyB,L=New York,C=US"
             p2pPort  10009
-            rpcPort  10010
+            rpcSettings {
+                port 10010
+                adminPort 10030
+            }
             webPort  10011
             h2Port   10012
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
@@ -171,7 +184,7 @@ Following the previous example ``PartyB`` node will have additional configuratio
     }
 
 Specifying a custom webserver
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 By default, any node listing a webport will use the default development webserver, which is not production-ready. You
 can use your own webserver JAR instead by using the ``webserverJar`` argument in a ``Cordform`` ``node`` configuration
 block:
@@ -189,8 +202,72 @@ The webserver JAR will be copied into the node's ``build`` folder with the name 
 .. warning:: This is an experimental feature. There is currently no support for reading the webserver's port from the
    node's ``node.conf`` file.
 
-Running deployNodes
-~~~~~~~~~~~~~~~~~~~
+The Dockerform task
+-------------------
+
+The ```Dockerform``` is a sister task of ```Cordform```. It has nearly the same syntax and produces very
+similar results - enhanced by an extra file to enable easy spin up of nodes using ```docker-compose```.
+Below you can find the example task from the ```IRS Demo<https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>```
+included in the samples directory of main Corda GitHub repository:
+
+.. sourcecode:: groovy
+
+    def rpcUsersList = [
+        ['username' : "user",
+         'password' : "password",
+         'permissions' : [
+                 "StartFlow.net.corda.irs.flows.AutoOfferFlow\$Requester",
+                 "StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow\$Broadcast",
+                 "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow",
+                 "InvokeRpc.vaultQueryBy",
+                 "InvokeRpc.networkMapSnapshot",
+                 "InvokeRpc.currentNodeTime",
+                 "InvokeRpc.wellKnownPartyFromX500Name"
+         ]]
+    ]
+
+    // (...)
+
+    task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar']) {
+
+        node {
+            name "O=Notary Service,L=Zurich,C=CH"
+            notary = [validating : true]
+            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+        node {
+            name "O=Bank A,L=London,C=GB"
+            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+        node {
+            name "O=Bank B,L=New York,C=US"
+            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+        node {
+            name "O=Regulator,L=Moscow,C=RU"
+            cordapps = ["${project.group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+    }
+
+There is no need to specify the ports, as every node is a separated container, so no ports conflict will occur.
+Running the task will create the same folders structure as described in :ref:`The Cordform task` with an additional
+```Dockerfile`` in each node directory, and ```docker-compose.yml``` in ```build/nodes``` directory. Every node
+by default exposes port 10003 which is the default one for RPC connections.
+
+.. warning:: Webserver is not supported by this task!
+
+.. warning:: Nodes are run without the local shell enabled!
+
+Running the Cordform/Dockerform tasks
+-------------------------------------
 To create the nodes defined in our ``deployNodes`` task, run the following command in a terminal window from the root
 of the project where the ``deployNodes`` task is defined:
 

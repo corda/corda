@@ -37,11 +37,11 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val verifierType: VerifierType
     val messageRedeliveryDelaySeconds: Int
     val notary: NotaryConfig?
-    val activeMQServer: ActiveMqServerConfiguration
     val additionalNodeInfoPollingFrequencyMsec: Long
     val p2pAddress: NetworkHostAndPort
     val rpcOptions: NodeRpcOptions
     val messagingServerAddress: NetworkHostAndPort?
+    val messagingServerExternal: Boolean
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
     val detectPublicIp: Boolean get() = true
@@ -53,6 +53,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
     // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
     val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
+    val extraNetworkMapKeys: List<UUID>
 
     fun validate(): List<String>
 
@@ -107,12 +108,6 @@ data class BFTSMaRtConfiguration(
     }
 }
 
-data class BridgeConfiguration(val retryIntervalMs: Long,
-                               val maxRetryIntervalMin: Long,
-                               val retryIntervalMultiplier: Double)
-
-data class ActiveMqServerConfiguration(val bridge: BridgeConfiguration)
-
 fun Config.parseAsNodeConfiguration(): NodeConfiguration = parseAs<NodeConfigurationImpl>()
 
 data class NodeConfigurationImpl(
@@ -134,9 +129,8 @@ data class NodeConfigurationImpl(
         override val p2pAddress: NetworkHostAndPort,
         private val rpcAddress: NetworkHostAndPort? = null,
         private val rpcSettings: NodeRpcSettings,
-        // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
-        // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         override val messagingServerAddress: NetworkHostAndPort?,
+        override val messagingServerExternal: Boolean = (messagingServerAddress != null),
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
@@ -144,7 +138,6 @@ data class NodeConfigurationImpl(
         override val devModeOptions: DevModeOptions? = null,
         override val useTestClock: Boolean = false,
         override val detectPublicIp: Boolean = true,
-        override val activeMQServer: ActiveMqServerConfiguration,
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
@@ -152,6 +145,7 @@ data class NodeConfigurationImpl(
         private val transactionCacheSizeMegaBytes: Int? = null,
         private val attachmentContentCacheSizeMegaBytes: Int? = null,
         override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
+        override val extraNetworkMapKeys: List<UUID> = emptyList(),
         // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
         private val h2port: Int  = 0,
         // do not use or remove (used by Capsule)

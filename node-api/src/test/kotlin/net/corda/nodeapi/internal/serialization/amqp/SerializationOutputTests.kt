@@ -43,7 +43,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
-import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.NotSerializableException
 import java.math.BigDecimal
@@ -1083,9 +1082,9 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         factory2.register(net.corda.nodeapi.internal.serialization.amqp.custom.InputStreamSerializer)
         val bytes = ByteArray(10) { it.toByte() }
-        val obj = ByteArrayInputStream(bytes)
+        val obj = bytes.inputStream()
         val obj2 = serdes(obj, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
-        val obj3 = ByteArrayInputStream(bytes)  // Can't use original since the stream pointer has moved.
+        val obj3 = bytes.inputStream()  // Can't use original since the stream pointer has moved.
         assertEquals(obj3.available(), obj2.available())
         assertEquals(obj3.read(), obj2.read())
     }
@@ -1231,7 +1230,85 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         val testExcp = TestException("hello", Throwable().apply { stackTrace = Thread.currentThread().stackTrace })
         val factory = testDefaultFactoryNoEvolution()
         SerializationOutput(factory).serialize(testExcp)
+    }
 
+    @Test
+    fun nestedInner() {
+        class C(val a: Int) {
+            inner class D(val b: Int)
+
+            fun serialize() {
+                val factory = testDefaultFactoryNoEvolution()
+                SerializationOutput(factory).serialize(D(4))
+            }
+        }
+
+        // By the time we escape the serializer we should just have a general
+        // NotSerializable Exception
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            C(12).serialize()
+        }.withMessageContaining("has synthetic fields and is likely a nested inner class")
+    }
+
+    @Test
+    fun nestedNestedInner() {
+        class C(val a: Int) {
+            inner class D(val b: Int) {
+                inner class E(val c: Int)
+
+                fun serialize() {
+                    val factory = testDefaultFactoryNoEvolution()
+                    SerializationOutput(factory).serialize(E(4))
+                }
+            }
+
+            fun serializeD() {
+                val factory = testDefaultFactoryNoEvolution()
+                SerializationOutput(factory).serialize(D(4))
+            }
+
+            fun serializeE() {
+                D(1).serialize()
+            }
+        }
+
+        // By the time we escape the serializer we should just have a general
+        // NotSerializable Exception
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            C(12).serializeD()
+        }.withMessageContaining("has synthetic fields and is likely a nested inner class")
+
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            C(12).serializeE()
+        }.withMessageContaining("has synthetic fields and is likely a nested inner class")
+    }
+
+    @Test
+    fun multiNestedInner() {
+        class C(val a: Int) {
+            inner class D(val b: Int)
+            inner class E(val c: Int)
+
+            fun serializeD() {
+                val factory = testDefaultFactoryNoEvolution()
+                SerializationOutput(factory).serialize(D(4))
+            }
+
+            fun serializeE() {
+                val factory = testDefaultFactoryNoEvolution()
+                SerializationOutput(factory).serialize(E(4))
+            }
+        }
+
+        // By the time we escape the serializer we should just have a general
+        // NotSerializable Exception
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            C(12).serializeD()
+        }.withMessageContaining("has synthetic fields and is likely a nested inner class")
+
+        assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
+            C(12).serializeE()
+        }.withMessageContaining("has synthetic fields and is likely a nested inner class")
     }
 }
 

@@ -45,7 +45,6 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
                     NodeAttachmentService.DBAttachment::class.java,
                     P2PMessagingClient.ProcessedMessage::class.java,
                     P2PMessagingClient.RetryMessage::class.java,
-                    NodeAttachmentService.DBAttachment::class.java,
                     PersistentIdentityService.PersistentIdentity::class.java,
                     PersistentIdentityService.PersistentIdentityNames::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java

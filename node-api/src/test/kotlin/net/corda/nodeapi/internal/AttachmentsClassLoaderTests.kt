@@ -2,7 +2,8 @@ package net.corda.nodeapi.internal
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.Contract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.declaredField
@@ -22,9 +23,9 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.internal.kryoSpecific
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.*
@@ -127,8 +128,8 @@ class AttachmentsClassLoaderTests {
     fun `test overlapping file exception`() {
         val storage = attachments
         val att0 = attachmentId
-        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file.txt", "some data")))
-        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file.txt", "some other data")))
+        val att1 = storage.importAttachment(fakeAttachment("file.txt", "some data").inputStream())
+        val att2 = storage.importAttachment(fakeAttachment("file.txt", "some other data").inputStream())
 
         assertFailsWith(AttachmentsClassLoader.OverlappingAttachments::class) {
             AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
@@ -139,8 +140,8 @@ class AttachmentsClassLoaderTests {
     fun `basic`() {
         val storage = attachments
         val att0 = attachmentId
-        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
-        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
+        val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream())
+        val att2 = storage.importAttachment(fakeAttachment("file2.txt", "some other data").inputStream())
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
         val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
@@ -151,8 +152,8 @@ class AttachmentsClassLoaderTests {
     fun `Check platform independent path handling in attachment jars`() {
         val storage = MockAttachmentStorage()
 
-        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("/folder1/foldera/file1.txt", "some data")))
-        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("\\folder1\\folderb\\file2.txt", "some other data")))
+        val att1 = storage.importAttachment(fakeAttachment("/folder1/foldera/file1.txt", "some data").inputStream())
+        val att2 = storage.importAttachment(fakeAttachment("\\folder1\\folderb\\file2.txt", "some other data").inputStream())
 
         val data1a = readAttachment(storage.openAttachment(att1)!!, "/folder1/foldera/file1.txt")
         assertArrayEquals("some data".toByteArray(), data1a)
@@ -171,8 +172,8 @@ class AttachmentsClassLoaderTests {
     fun `loading class AnotherDummyContract`() {
         val storage = attachments
         val att0 = attachmentId
-        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
-        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
+        val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream())
+        val att2 = storage.importAttachment(fakeAttachment("file2.txt", "some other data").inputStream())
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
         val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, cl)
@@ -195,8 +196,8 @@ class AttachmentsClassLoaderTests {
         val bytes = contract.serialize()
         val storage = attachments
         val att0 = attachmentId
-        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
-        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
+        val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream())
+        val att2 = storage.importAttachment(fakeAttachment("file2.txt", "some other data").inputStream())
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
@@ -221,8 +222,8 @@ class AttachmentsClassLoaderTests {
         val bytes = data.serialize(context = context2)
         val storage = attachments
         val att0 = attachmentId
-        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
-        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
+        val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream())
+        val att2 = storage.importAttachment(fakeAttachment("file2.txt", "some other data").inputStream())
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 

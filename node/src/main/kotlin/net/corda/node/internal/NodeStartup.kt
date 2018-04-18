@@ -104,9 +104,9 @@ open class NodeStartup(val args: Array<String>) {
         try {
             banJavaSerialisation(conf)
             preNetworkRegistration(conf)
-            if (cmdlineOptions.nodeRegistrationConfig != null) {
+            if (cmdlineOptions.nodeRegistrationOption != null) {
                 // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-                registerWithNetwork(conf, cmdlineOptions.nodeRegistrationConfig)
+                registerWithNetwork(conf, cmdlineOptions.nodeRegistrationOption)
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)

@@ -31,7 +31,18 @@ data class NetworkMap(
         val nodeInfoHashes: List<SecureHash>,
         val networkParameterHash: SecureHash,
         val parametersUpdate: ParametersUpdate?
-)
+) {
+    override fun toString(): String {
+        return """NetworkMap {
+  nodeInfoHashes {
+    ${nodeInfoHashes.asSequence().take(10).joinToString("\n    ")}
+    ${if (nodeInfoHashes.size > 10) "... ${nodeInfoHashes.size - 10} more" else ""}
+  }
+  networkParameterHash=$networkParameterHash
+  parametersUpdate=$parametersUpdate
+}"""
+    }
+}
 
 /**
  * Data class representing scheduled network parameters update.
