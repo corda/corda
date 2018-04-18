@@ -19,8 +19,9 @@ interface Watch {
 }
 
 /**
- * @param if [autostart] is true starting of Watch can be deferred - it helps in case of initialization
- *  order problems (like match() using fields from subclass which won't get initialized before superclass
+ * @param [observable] refers to an observable stream of events
+ * @param [autostart] is true starting of Watch can be deferred - it helps in case of initialization
+ *  order problems (like match()) using fields from subclass which won't get initialized before superclass
  *  constructor finishes. It is the responsibility of the subclass to manually call the run method
  *  if autostart is false.
  */
@@ -35,7 +36,7 @@ abstract class AbstractWatch<T>(val observable: Observable<T>, autostart: Boolea
     }
 
     fun run() {
-        observable.exists { match(it) }.filter{ it }.subscribe {
+        observable.exists { match(it) }.filter { it }.subscribe {
             latch.countDown()
         }
     }

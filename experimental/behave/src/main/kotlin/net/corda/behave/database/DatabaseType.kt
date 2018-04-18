@@ -40,7 +40,7 @@ enum class DatabaseType(val settings: DatabaseSettings) {
         fun fromName(name: String): DatabaseType? = when (name.toLowerCase()) {
             "h2" -> H2
             "postgres" -> POSTGRES
-            "postgreSQL" -> POSTGRES
+            "postgresql" -> POSTGRES
             else -> null
         }
 

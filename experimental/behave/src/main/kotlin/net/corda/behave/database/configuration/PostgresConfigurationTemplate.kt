@@ -6,7 +6,7 @@ import net.corda.behave.node.configuration.DatabaseConfiguration
 class PostgresConfigurationTemplate : DatabaseConfigurationTemplate() {
 
     override val connectionString: (DatabaseConfiguration) -> String
-        get() = { "jdbc:postgresql://${it.host}:${it.port}/postgres" }
+        get() = { "jdbc:postgresql://${it.host}:${it.port}/${it.database}" }
 
     override val config: (DatabaseConfiguration) -> String
         get() = {

@@ -95,8 +95,10 @@ open class Command(
             log.warn("Error occurred when trying to run process", e)
             throw e
         }
-        process = null
-        terminationLatch.countDown()
+        finally {
+            process = null
+            terminationLatch.countDown()
+        }
     })
 
     fun start() {

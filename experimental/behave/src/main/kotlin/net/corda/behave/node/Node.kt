@@ -129,7 +129,7 @@ class Node(
 
     val logOutput: LogSource by lazy {
         val hostname = InetAddress.getLocalHost().hostName
-        LogSource(logDirectory, "node-$hostname.*.log", filePatternUsedForExclusion = true)
+        LogSource(logDirectory, "node-$hostname.*.log")
     }
 
     val database: DatabaseConnection by lazy {

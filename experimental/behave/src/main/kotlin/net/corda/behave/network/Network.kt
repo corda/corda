@@ -83,7 +83,7 @@ class Network private constructor(
 
             network.copyDatabaseDrivers()
             if (!network.configureNodes()) {
-                throw CordaException("Unable to configure nodes in Corda network")
+                throw CordaException("Unable to configure nodes in Corda network. Please check logs in $directory")
             }
             network.bootstrapLocalNetwork()
 
@@ -120,15 +120,14 @@ class Network private constructor(
     }
 
     private fun bootstrapLocalNetwork() {
-        // WARNING!! Need to use the correct bootstrapper
-        // only if using OS nodes (need to choose the latest version)
         val bootstrapper = nodes.values
                 .sortedByDescending { it.config.distribution.version }
                 .first()
                 .config.distribution.networkBootstrapper
 
         if (!bootstrapper.exists()) {
-            signalFailure("Network bootstrapping tool does not exist; continuing ...")
+            signalFailure("Network bootstrapping tool does not exist; exiting ...")
+            return
         }
 
         log.info("Bootstrapping network, please wait ...")

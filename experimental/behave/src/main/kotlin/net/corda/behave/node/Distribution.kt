@@ -42,17 +42,17 @@ class Distribution private constructor(
     /**
      * The path to the distribution fat JAR.
      */
-    val cordaJar: File = file ?: nodePrefix / "$version/corda.jar"
+    val cordaJar: File = path / "corda.jar"
 
     /**
      * The path to available Cordapps for this distribution.
      */
-    val cordappDirectory: File = nodePrefix / "$version/apps"
+    val cordappDirectory: File = path / "apps"
 
     /**
      * The path to network bootstrapping tool.
      */
-    val networkBootstrapper: File = nodePrefix / "$version/network-bootstrapper.jar"
+    val networkBootstrapper: File = path / "network-bootstrapper.jar"
 
     /**
      * Ensure that the distribution is available on disk.

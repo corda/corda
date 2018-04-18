@@ -4,7 +4,7 @@ Feature: Startup Information - Logging
   configure / connect relevant software to said node.
 
   Scenario: Node shows logging information on startup
-    Given a node PartyA of version corda-3.0
+    Given a node PartyA of version master
     And node PartyA uses database of type H2
     And node PartyA is located in London, GB
     When the network is ready
