@@ -2,7 +2,7 @@ package net.corda.behave.service.database
 
 import net.corda.behave.database.DatabaseConnection
 import net.corda.behave.database.DatabaseType
-import net.corda.behave.database.configuration.SqlServerConfigurationTemplate
+import net.corda.behave.database.configuration.PostgresConfigurationTemplate
 import net.corda.behave.node.configuration.DatabaseConfiguration
 import net.corda.behave.service.ContainerService
 import net.corda.behave.service.ServiceSettings
@@ -20,7 +20,7 @@ class PostgreSQLService(
 
     override fun verify(): Boolean {
         val config = DatabaseConfiguration(
-                type = DatabaseType.SQL_SERVER,
+                type = DatabaseType.POSTGRES,
                 host = host,
                 port = port,
                 database = database,
@@ -28,7 +28,7 @@ class PostgreSQLService(
                 username = username,
                 password = password
         )
-        val connection = DatabaseConnection(config, SqlServerConfigurationTemplate())
+        val connection = DatabaseConnection(config, PostgresConfigurationTemplate())
         try {
             connection.use {
                 return true

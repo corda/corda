@@ -24,7 +24,6 @@ cp -v $(ls finance/build/libs/corda-finance-*.jar | tail -n1) experimental/behav
 
 # Download database drivers
 curl "https://search.maven.org/remotecontent?filepath=com/h2database/h2/1.4.196/h2-1.4.196.jar" > experimental/behave/${DRIVERS_DIR}/h2-1.4.196.jar
-curl -L "https://github.com/Microsoft/mssql-jdbc/releases/download/v6.2.2/mssql-jdbc-6.2.2.jre8.jar" > experimental/behave/${DRIVERS_DIR}/mssql-jdbc-6.2.2.jre8.jar
 curl -L "http://central.maven.org/maven2/org/postgresql/postgresql/42.1.4/postgresql-42.1.4.jar" > experimental/behave/${DRIVERS_DIR}/postgresql-42.1.4.jar
 
 # Build Network Bootstrapper

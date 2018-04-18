@@ -11,4 +11,4 @@ Feature: Database - Connection
     Examples:
       | Node-Version    | Database-Type     |
       | master          | H2                |
-     #| master          | SQL Server        |
+     #| master          | postgreSQL        |
