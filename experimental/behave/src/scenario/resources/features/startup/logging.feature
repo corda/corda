@@ -17,5 +17,5 @@ Feature: Startup Information - Logging
 
   Scenario: Node shows version information on startup
     Given a node PartyA of version master
-    Then node PartyA is on platform version 2
-    And node PartyA is on release version master
+    Then node PartyA is on platform version 4
+    And node PartyA is on release version corda-4.0-snapshot
