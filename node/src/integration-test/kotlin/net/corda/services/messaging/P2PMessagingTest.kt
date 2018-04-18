@@ -118,7 +118,8 @@ class P2PMessagingTest {
     }
 
     private fun DriverDSL.startAlice(): InProcess {
-        return startNode(providedName = ALICE_NAME, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
+        return startNode(providedName = ALICE_NAME, customOverrides = mapOf("p2pMessagingRetry" to mapOf(
+                "messageRedeliveryDelay" to 1.seconds, "backoffBase" to 1.0, "maxRetryCount" to 3)))
                 .map { (it as InProcess) }
                 .getOrThrow()
     }
