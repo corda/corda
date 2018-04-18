@@ -26,6 +26,7 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.time.Instant
+import javax.persistence.LockModeType
 import javax.security.auth.x500.X500Principal
 
 /**
@@ -206,7 +207,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
                 criteriaQuery.where(and(valueQuery, statusQuery))
             }
         }
-        return session.createQuery(query).setMaxResults(1).uniqueResult()
+        return session.createQuery(query).setLockMode(LockModeType.PESSIMISTIC_WRITE).setMaxResults(1).uniqueResult()
     }
 
     private data class RequestValidationException(val legalName: CordaX500Name?, val subjectName: String = legalName.toString(), val rejectMessage: String) : Exception("Validation failed for $subjectName. $rejectMessage.")
