@@ -91,7 +91,7 @@ Whitelisting Contracts
 
 If you want to create a *Zone whitelist* (see :doc:`api-contract-constraints`), you can pass in a list of CorDapp jars:
 
-``java -jar network-bootstrapper.jar <nodes-root-dir> <path-to-first-corDapp> <path-to-second-corDapp> ..``
+``java -jar network-bootstrapper.jar <nodes-root-dir> <1st CorDapp jar> <2nd CorDapp jar> ..``
 
 The CorDapp jars will be hashed and scanned for ``Contract`` classes. These contract class implementations will become part
 of the whitelisted contracts in the network parameters (see ``NetworkParameters.whitelistedContractImplementations`` :doc:`network-map`).
@@ -110,6 +110,9 @@ For example:
 
     net.corda.finance.contracts.asset.Cash
     net.corda.finance.contracts.asset.CommercialPaper
+
+In addition to using the CorDapp jars to update the whitelist, the bootstrapper will also copy them to all the nodes'
+``cordapps`` directory.
 
 Starting the nodes
 ~~~~~~~~~~~~~~~~~~

@@ -28,6 +28,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.nodeapi.internal.scanJarForContracts
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
@@ -63,15 +64,15 @@ class NetworkBootstrapper {
         @JvmStatic
         fun main(args: Array<String>) {
             val baseNodeDirectory = requireNotNull(args.firstOrNull()) { "Expecting first argument which is the nodes' parent directory" }
-            val cordapps = if (args.size > 1) args.toList().drop(1) else null
-            NetworkBootstrapper().bootstrap(Paths.get(baseNodeDirectory).toAbsolutePath().normalize(), cordapps)
+            val cordappJars = if (args.size > 1) args.asList().drop(1).map { Paths.get(it) } else emptyList()
+            NetworkBootstrapper().bootstrap(Paths.get(baseNodeDirectory).toAbsolutePath().normalize(), cordappJars)
         }
     }
 
-    fun bootstrap(directory: Path, cordapps: List<String>?) {
+    fun bootstrap(directory: Path, cordappJars: List<Path>) {
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
-        generateDirectoriesIfNeeded(directory)
+        generateDirectoriesIfNeeded(directory, cordappJars)
         val nodeDirs = directory.list { paths -> paths.filter { (it / "corda.jar").exists() }.toList() }
         require(nodeDirs.isNotEmpty()) { "No nodes found" }
         println("Nodes found in the following sub-directories: ${nodeDirs.map { it.fileName }}")
@@ -88,7 +89,7 @@ class NetworkBootstrapper {
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
             println("Generating contract implementations whitelist")
-            val newWhitelist = generateWhitelist(existingNetParams, directory / EXCLUDE_WHITELIST_FILE_NAME, cordapps?.distinct())
+            val newWhitelist = generateWhitelist(existingNetParams, directory / EXCLUDE_WHITELIST_FILE_NAME, cordappJars)
             val netParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs)
             println("${if (existingNetParams == null) "New" else "Updated"} $netParams")
             println("Bootstrapping complete!")
@@ -98,11 +99,11 @@ class NetworkBootstrapper {
         }
     }
 
-    private fun generateDirectoriesIfNeeded(directory: Path) {
+    private fun generateDirectoriesIfNeeded(directory: Path, cordappJars: List<Path>) {
         val confFiles = directory.list { it.filter { it.toString().endsWith("_node.conf") }.toList() }
         val webServerConfFiles = directory.list { it.filter { it.toString().endsWith("_web-server.conf") }.toList() }
         if (confFiles.isEmpty()) return
-        println("Node config files found in the root directory - generating node directories")
+        println("Node config files found in the root directory - generating node directories and copying CorDapp jars into them")
         val cordaJar = extractCordaJarTo(directory)
         for (confFile in confFiles) {
             val nodeName = confFile.fileName.toString().removeSuffix("_node.conf")
@@ -111,6 +112,8 @@ class NetworkBootstrapper {
             confFile.moveTo(nodeDir / "node.conf", REPLACE_EXISTING)
             webServerConfFiles.firstOrNull { directory.relativize(it).toString().removeSuffix("_web-server.conf") == nodeName }?.moveTo(nodeDir / "web-server.conf", REPLACE_EXISTING)
             cordaJar.copyToDirectory(nodeDir, REPLACE_EXISTING)
+            val cordappsDir = (nodeDir / "cordapps").createDirectories()
+            cordappJars.forEach { it.copyToDirectory(cordappsDir) }
         }
         Files.delete(cordaJar)
     }
@@ -118,7 +121,6 @@ class NetworkBootstrapper {
     private fun extractCordaJarTo(directory: Path): Path {
         val cordaJarPath = directory / "corda.jar"
         if (!cordaJarPath.exists()) {
-            println("No corda jar found in root directory. Extracting from jar")
             Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar").copyTo(cordaJarPath)
         }
         return cordaJarPath
@@ -144,7 +146,7 @@ class NetworkBootstrapper {
                 check(process.waitFor() == 0) {
                     "Node in ${nodeDir.fileName} exited with ${process.exitValue()} when generating its node-info - see logs in ${nodeDir / LOGS_DIR_NAME}"
                 }
-                nodeDir.list { paths -> paths.filter { it.fileName.toString().startsWith("nodeInfo-") }.findFirst().get() }
+                nodeDir.list { paths -> paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get() }
             }
         }
 
@@ -192,7 +194,7 @@ class NetworkBootstrapper {
         }
 
         val msg = StringBuilder("Differing sets of network parameters were found. Make sure all the nodes have the same " +
-                "network parameters by copying over the correct $NETWORK_PARAMS_FILE_NAME file.\n\n")
+                "network parameters by copying the correct $NETWORK_PARAMS_FILE_NAME file across.\n\n")
 
         netParamsFilesGrouped.forEach { bytes, netParamsFiles ->
             netParamsFiles.map { it.parent.fileName }.joinTo(msg, ", ")
@@ -221,6 +223,7 @@ class NetworkBootstrapper {
                     epoch = existingNetParams.epoch + 1
             )
         } else {
+            // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
             NetworkParameters(
                     minimumPlatformVersion = 1,
                     notaries = notaryInfos,
@@ -231,28 +234,25 @@ class NetworkBootstrapper {
                     epoch = 1
             )
         }
-        // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
         val copier = NetworkParametersCopier(networkParameters, overwriteFile = true)
-        nodeDirs.forEach { copier.install(it) }
+        nodeDirs.forEach(copier::install)
         return networkParameters
     }
 
     private fun generateWhitelist(networkParameters: NetworkParameters?,
                                   excludeWhitelistFile: Path,
-                                  cordapps: List<String>?): Map<String, List<AttachmentId>> {
+                                  cordappJars: List<Path>): Map<String, List<AttachmentId>> {
         val existingWhitelist = networkParameters?.whitelistedContractImplementations ?: emptyMap()
 
-        val excludeContracts = if (excludeWhitelistFile.exists()) readExcludeWhitelist(excludeWhitelistFile) else emptyList()
+        val excludeContracts = readExcludeWhitelist(excludeWhitelistFile)
         if (excludeContracts.isNotEmpty()) {
-            println("Exclude contracts from whitelist: ${excludeContracts.joinToString()}}")
+            println("Exclude contracts from whitelist: ${excludeContracts.joinToString()}")
         }
 
-        val newWhiteList = cordapps?.flatMap { cordappJarPath ->
-            val jarHash = Paths.get(cordappJarPath).hash
-            scanJarForContracts(cordappJarPath).map { contract ->
-                contract to jarHash
-            }
-        }?.filter { (contractClassName, _) -> contractClassName !in excludeContracts }?.toMap() ?: emptyMap()
+        val newWhiteList = cordappJars.flatMap { cordappJar ->
+            val jarHash = cordappJar.hash
+            scanJarForContracts(cordappJar).map { contract -> contract to jarHash }
+        }.filter { (contractClassName, _) -> contractClassName !in excludeContracts }.toMap()
 
         return (newWhiteList.keys + existingWhitelist.keys).map { contractClassName ->
             val existing = existingWhitelist[contractClassName] ?: emptyList()
@@ -261,7 +261,9 @@ class NetworkBootstrapper {
         }.toMap()
     }
 
-    private fun readExcludeWhitelist(file: Path): List<String> = file.readAllLines().map(String::trim)
+    private fun readExcludeWhitelist(file: Path): List<String> {
+        return if (file.exists()) file.readAllLines().map(String::trim) else emptyList()
+    }
 
     private fun NodeInfo.notaryIdentity(): Party {
         return when (legalIdentities.size) {

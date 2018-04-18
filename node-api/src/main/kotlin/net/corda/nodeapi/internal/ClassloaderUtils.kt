@@ -16,11 +16,11 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.read
-import java.io.File
 import java.io.InputStream
 import java.lang.reflect.Modifier
 import java.net.URLClassLoader
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 
@@ -28,13 +28,16 @@ import java.nio.file.StandardCopyOption
  * Scans the jar for contracts.
  * @returns: found contract class names or null if none found
  */
-fun scanJarForContracts(cordappJarPath: String): List<ContractClassName> {
+fun scanJarForContracts(cordappJar: Path): List<ContractClassName> {
     val currentClassLoader = Contract::class.java.classLoader
-    val scanResult = FastClasspathScanner().addClassLoader(currentClassLoader).overrideClasspath(cordappJarPath, Paths.get(Contract::class.java.protectionDomain.codeSource.location.toURI()).toString()).scan()
+    val scanResult = FastClasspathScanner()
+            .addClassLoader(currentClassLoader)
+            .overrideClasspath(cordappJar, Paths.get(Contract::class.java.protectionDomain.codeSource.location.toURI()))
+            .scan()
     val contracts = (scanResult.getNamesOfClassesImplementing(Contract::class.qualifiedName) ).distinct()
 
     // Only keep instantiable contracts
-    return URLClassLoader(arrayOf(File(cordappJarPath).toURL()), currentClassLoader).use {
+    return URLClassLoader(arrayOf(cordappJar.toUri().toURL()), currentClassLoader).use {
         contracts.map(it::loadClass).filter { !it.isInterface && !Modifier.isAbstract(it.modifiers) }
     }.map { it.name }
 }
@@ -43,7 +46,7 @@ fun <T> withContractsInJar(jarInputStream: InputStream, withContracts: (List<Con
     val tempFile = Files.createTempFile("attachment", ".jar")
     try {
         jarInputStream.copyTo(tempFile, StandardCopyOption.REPLACE_EXISTING)
-        val contracts = scanJarForContracts(tempFile.toAbsolutePath().toString())
+        val contracts = scanJarForContracts(tempFile.toAbsolutePath())
         return tempFile.read { withContracts(contracts, it) }
     } finally {
         tempFile.deleteIfExists()
