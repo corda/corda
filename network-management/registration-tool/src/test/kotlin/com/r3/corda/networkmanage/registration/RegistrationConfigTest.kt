@@ -32,6 +32,7 @@ legalName {
 email = "test@email.com"
 compatibilityZoneURL = "http://doorman.url.com"
 networkRootTrustStorePath = "networkRootTrustStore.jks"
+keystorePath = "notaryidentitykeystore.jks"
 
 networkRootTrustStorePassword = "password"
 keyStorePassword = "password"
@@ -47,5 +48,6 @@ trustStorePassword = "password"
         assertEquals("test@email.com", config.email)
         assertEquals(Paths.get("networkRootTrustStore.jks"), config.networkRootTrustStorePath)
         assertEquals("password", config.networkRootTrustStorePassword)
+        assertEquals(Paths.get("notaryidentitykeystore.jks"), config.keystorePath)
     }
 }

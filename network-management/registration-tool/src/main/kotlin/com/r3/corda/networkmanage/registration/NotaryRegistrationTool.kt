@@ -43,6 +43,7 @@ fun RegistrationOption.runRegistration() {
         override val trustStorePassword: String by lazy { config.trustStorePassword ?: readPassword("Node TrustStore password:") }
         val parent = configFile.parent
         override val certificatesDirectory: Path = if (parent != null) parent / "certificates" else Paths.get("certificates")
+        override val nodeKeystore: Path get() = config.keystorePath ?: certificatesDirectory/"notaryidentitykeystore.jks"
     }
 
     NetworkRegistrationHelper(sslConfig,
@@ -59,4 +60,5 @@ data class NotaryRegistrationConfig(val legalName: CordaX500Name,
                                     val networkRootTrustStorePath: Path,
                                     val keyStorePassword: String?,
                                     val networkRootTrustStorePassword: String?,
-                                    val trustStorePassword: String?)
+                                    val trustStorePassword: String?,
+                                    val keystorePath: Path?)

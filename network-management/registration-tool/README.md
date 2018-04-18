@@ -25,6 +25,8 @@ networkRootTrustStorePassword   Network root trust store password, to be provide
 keyStorePassword                Generated keystore's password. Optional, the tool will prompt for password input if not provided.
 
 trustStorePassword              Generated trust store's password. Optional, the tool will prompt for password input if not provided.
+
+keystorePath                    [Optional] Path of the generated keystore file, default to certificates/notaryidentitykeystore.jks
 ```
 
 Example config file
