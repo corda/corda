@@ -131,7 +131,6 @@ abstract class FlowLogic<out T> {
      * Note: The current implementation returns the single identity of the node. This will change once multiple identities
      * is implemented.
      */
-
     val ourIdentity: Party get() = stateMachine.ourIdentity
 
     // Used to implement the deprecated send/receive functions using Party. When such a deprecated function is used we

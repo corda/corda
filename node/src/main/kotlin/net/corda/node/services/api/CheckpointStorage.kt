@@ -22,7 +22,7 @@ interface CheckpointStorage {
 
     /**
      * Stream all checkpoints from the store. If this is backed by a database the stream will be valid until the
-     * underlying database connection is open, so any processing should happen before it is closed.
+     * underlying database connection is closed, so any processing should happen before it is closed.
      */
     fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>>
 }

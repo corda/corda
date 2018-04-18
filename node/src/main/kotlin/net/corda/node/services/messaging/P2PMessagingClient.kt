@@ -405,7 +405,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     internal fun deliver(artemisMessage: ClientMessage) {
-
         artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
             if (!deduplicator.isDuplicate(cordaMessage)) {
                 deduplicator.signalMessageProcessStart(cordaMessage)
@@ -418,7 +417,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     private fun deliver(msg: ReceivedMessage, artemisMessage: ClientMessage) {
-
         state.checkNotLocked()
         val deliverTo = handlers[msg.topic]
         if (deliverTo != null) {
@@ -600,7 +598,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId, additionalHeaders: Map<String, String>): Message {
-
         return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId, deduplicator.ourSenderUUID, additionalHeaders)
     }
 

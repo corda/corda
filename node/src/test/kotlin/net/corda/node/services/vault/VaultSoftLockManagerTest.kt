@@ -89,7 +89,7 @@ class VaultSoftLockManagerTest {
                 return object : VaultServiceInternal by realVault {
                     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
                         // Should be called before flow is removed
-                        assertEquals(1, node.smm.allStateMachines.size)
+                        assertEquals(1, node.started!!.smm.allStateMachines.size)
                         mockVault.softLockRelease(lockId, stateRefs) // No need to also call the real one for these tests.
                     }
                 }

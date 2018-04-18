@@ -1590,9 +1590,9 @@ public final class net.corda.core.flows.TransactionParts extends java.lang.Objec
   public String toString()
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.flows.UnexpectedFlowEndException extends net.corda.core.CordaRuntimeException implements net.corda.core.flows.IdentifiableException
-  public <init>(String, Throwable, long)
-  @org.jetbrains.annotations.NotNull public Long getErrorId()
-  public final long getOriginalErrorId()
+  public <init>(String)
+  public <init>(String, Throwable)
+  public <init>(String, Throwable, Long)
 ##
 @net.corda.core.DoNotImplement @net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.identity.AbstractParty extends java.lang.Object
   public <init>(java.security.PublicKey)
