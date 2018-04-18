@@ -25,7 +25,7 @@ import kotlin.system.exitProcess
 private val logger = LoggerFactory.getLogger("com.r3.corda.networkmanage.doorman")
 
 fun main(args: Array<String>) {
-    Crypto.findProvider(CordaSecurityProvider.PROVIDER_NAME) // Required to register Providers first thing on boot.
+    Crypto.registerProviders() // Required to register Providers first thing on boot.
     if (Manifests.exists("Doorman-Version")) {
         println("Version: ${Manifests.read("Doorman-Version")}")
     }

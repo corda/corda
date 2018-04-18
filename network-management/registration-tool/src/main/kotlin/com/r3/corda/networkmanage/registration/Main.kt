@@ -6,10 +6,12 @@ import joptsimple.OptionParser
 import joptsimple.OptionSpecBuilder
 import joptsimple.util.PathConverter
 import joptsimple.util.PathProperties
+import net.corda.core.crypto.Crypto
 import java.nio.file.Path
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
+    Crypto.registerProviders() // Required to register Providers first thing on boot.
     val options = try {
         parseOptions(*args)
     } catch (e: ShowHelpException) {
