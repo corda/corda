@@ -39,7 +39,7 @@ class NetworkTests {
         val network = Network
                 .new()
                 .addNode("Foo")
-                .addNode("Bar", databaseType = DatabaseType.SQL_SERVER)
+                .addNode("Bar", databaseType = DatabaseType.POSTGRES)
                 .addNode("Baz", notaryType = NotaryType.NON_VALIDATING)
                 .generate()
         network.use {

@@ -54,7 +54,7 @@ import java.nio.file.attribute.FileTime
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.security.cert.X509Certificate
+import java.security.cert.*
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
@@ -393,6 +393,22 @@ fun ExecutorService.join() {
     shutdown() // Do not change to shutdownNow, tests use this method to assert the executor has no more tasks.
     while (!awaitTermination(1, TimeUnit.SECONDS)) {
         // Try forever. Do not give up, tests use this method to assert the executor has no more tasks.
+    }
+}
+
+fun CertPath.validate(trustAnchor: TrustAnchor): PKIXCertPathValidatorResult {
+    val parameters = PKIXParameters(setOf(trustAnchor)).apply { isRevocationEnabled = false }
+    try {
+        return CertPathValidator.getInstance("PKIX").validate(this, parameters) as PKIXCertPathValidatorResult
+    } catch (e: CertPathValidatorException) {
+        throw CertPathValidatorException(
+                """Cert path failed to validate against trust anchor.
+Reason: ${e.reason}
+Offending cert index: ${e.index}
+Cert path: $this
+
+Trust anchor:
+$trustAnchor""", e, this, e.index)
     }
 }
 

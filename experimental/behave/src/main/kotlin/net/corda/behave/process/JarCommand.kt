@@ -14,7 +14,7 @@ import java.io.File
 import java.time.Duration
 
 class JarCommand(
-        jarFile: File,
+        val jarFile: File,
         arguments: Array<String>,
         directory: File,
         timeout: Duration,

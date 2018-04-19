@@ -10,17 +10,17 @@
 
 package net.corda.behave.service
 
-import net.corda.behave.service.database.SqlServerService
+import net.corda.behave.service.database.PostgreSQLService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Ignore
 import org.junit.Test
 
-class SqlServerServiceTests {
+class PostreSQLServiceTests {
 
     @Ignore
     @Test
-    fun `sql server can be started and stopped`() {
-        val service = SqlServerService("test-mssql", 12345, "S0meS3cretW0rd")
+    fun `postgres can be started and stopped`() {
+        val service = PostgreSQLService("test-postgres", 12345, "postgres")
         val didStart = service.start()
         service.stop()
         assertThat(didStart).isTrue()

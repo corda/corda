@@ -10,7 +10,7 @@
 
 package net.corda.behave.process
 
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import rx.observers.TestSubscriber
 
@@ -40,5 +40,4 @@ class CommandTests {
         }
         assertThat(exitCode).isEqualTo(0)
     }
-
 }

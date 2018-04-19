@@ -12,31 +12,25 @@ package net.corda.behave.service.database
 
 import net.corda.behave.database.DatabaseConnection
 import net.corda.behave.database.DatabaseType
-import net.corda.behave.database.configuration.SqlServerConfigurationTemplate
+import net.corda.behave.database.configuration.PostgresConfigurationTemplate
 import net.corda.behave.node.configuration.DatabaseConfiguration
 import net.corda.behave.service.ContainerService
 import net.corda.behave.service.ServiceSettings
 
-class SqlServerService(
+class PostgreSQLService(
         name: String,
         port: Int,
         private val password: String,
         settings: ServiceSettings = ServiceSettings()
-) : ContainerService(name, port, settings) {
+) : ContainerService(name, port, "database system is ready to accept connections", settings) {
 
-    override val baseImage = "microsoft/mssql-server-linux"
+    override val baseImage = "postgres"
 
-    override val internalPort = 1433
-
-    init {
-        addEnvironmentVariable("ACCEPT_EULA", "Y")
-        addEnvironmentVariable("SA_PASSWORD", password)
-        setStartupStatement("SQL Server is now ready for client connections")
-    }
+    override val internalPort = 5432
 
     override fun verify(): Boolean {
         val config = DatabaseConfiguration(
-                type = DatabaseType.SQL_SERVER,
+                type = DatabaseType.POSTGRES,
                 host = host,
                 port = port,
                 database = database,
@@ -44,7 +38,7 @@ class SqlServerService(
                 username = username,
                 password = password
         )
-        val connection = DatabaseConnection(config, SqlServerConfigurationTemplate())
+        val connection = DatabaseConnection(config, PostgresConfigurationTemplate())
         try {
             connection.use {
                 return true
@@ -57,12 +51,11 @@ class SqlServerService(
     }
 
     companion object {
-
         val host = "localhost"
-        val database = "master"
-        val schema = "dbo"
-        val username = "sa"
-
+        val database = "postgres"
+        val schema = "public"
+        val username = "postgres"
+        val driver = "postgresql-42.1.4.jar"
     }
 
 }

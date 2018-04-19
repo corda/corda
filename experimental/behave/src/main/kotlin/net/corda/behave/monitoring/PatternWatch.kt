@@ -10,23 +10,25 @@
 
 package net.corda.behave.monitoring
 
+import rx.Observable
+
 class PatternWatch(
+        observable: Observable<String>,
         pattern: String,
         ignoreCase: Boolean = false
-) : Watch() {
+) : AbstractWatch<String>(observable, false) {
 
-    private val regularExpression = if (ignoreCase) {
+    private val regularExpression: Regex = if (ignoreCase) {
         Regex("^.*$pattern.*$", RegexOption.IGNORE_CASE)
     } else {
         Regex("^.*$pattern.*$")
     }
 
-    override fun match(data: String) = regularExpression.matches(data.trim())
-
-    companion object {
-
-        val EMPTY = PatternWatch("")
-
+    init {
+        run()
     }
 
+    override fun match(data: String): Boolean {
+        return regularExpression.matches(data.trim())
+    }
 }

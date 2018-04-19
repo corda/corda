@@ -5,7 +5,7 @@ and test homogeneous and heterogeneous Corda networks on a local
 machine. The framework has built-in support for Dockerised node
 dependencies so that you easily can spin up a Corda node locally
 that, for instance, uses a 3rd party database provider such as
-MS SQL Server or Postgres.
+Postgres.
 
 # Structure
 
