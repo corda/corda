@@ -53,6 +53,8 @@ Unreleased
 
 * java.math.BigInteger serialization support added.
 
+* Fix CORDA-1355: Reduce amount of classpath scanning during integration tests execution.
+
 .. _changelog_v3.1:
 
 Version 3.1
