@@ -4,7 +4,7 @@ import net.corda.behave.scenarios.ScenarioState
 import net.corda.behave.scenarios.api.StepsBlock
 import net.corda.behave.scenarios.helpers.Vault
 import net.corda.core.contracts.ContractState
-import net.corda.core.utilities.sumByLong
+import net.corda.core.internal.sumByLong
 import net.corda.finance.contracts.asset.Cash
 
 class VaultSteps : StepsBlock {
