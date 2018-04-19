@@ -8,6 +8,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.toLedgerTransaction
@@ -30,15 +31,14 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.withoutTestSerialization
-import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import java.net.URLClassLoader
-import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests {
@@ -54,7 +54,7 @@ class AttachmentLoadingTests {
     private companion object {
         private val logger = contextLogger()
         val isolatedJAR = AttachmentLoadingTests::class.java.getResource("isolated.jar")!!
-        val ISOLATED_CONTRACT_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
+        const val ISOLATED_CONTRACT_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
 
         val bankAName = CordaX500Name("BankA", "Zurich", "CH")
         val bankBName = CordaX500Name("BankB", "Zurich", "CH")
@@ -74,11 +74,7 @@ class AttachmentLoadingTests {
             // Copy the app jar to the first node. The second won't have it.
             val path = (baseDirectory(nodeName) / "cordapps").createDirectories() / "isolated.jar"
             logger.info("Installing isolated jar to $path")
-            isolatedJAR.openStream().buffered().use { input ->
-                Files.newOutputStream(path).buffered().use { output ->
-                    input.copyTo(output)
-                }
-            }
+            isolatedJAR.openStream().use { it.copyTo(path) }
         }
     }
 

@@ -1,12 +1,14 @@
 package net.corda.behave.node
 
-import net.corda.behave.file.div
 import net.corda.behave.file.stagingRoot
 import net.corda.behave.logging.getLogger
 import net.corda.behave.service.Service
-import org.apache.commons.io.FileUtils
-import java.io.File
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import java.net.URL
+import java.nio.file.Path
 
 /**
  * Corda distribution.
@@ -21,7 +23,7 @@ class Distribution private constructor(
         /**
          * The path of the distribution fat JAR on disk, if available.
          */
-        file: File? = null,
+        file: Path? = null,
 
         /**
          * The URL of the distribution fat JAR, if available.
@@ -37,43 +39,39 @@ class Distribution private constructor(
     /**
      * The path to the distribution fat JAR.
      */
-    val path: File = file ?: nodePrefix / "$version"
+    val path: Path = file ?: nodePrefix / version
 
     /**
      * The path to the distribution fat JAR.
      */
-    val cordaJar: File = path / "corda.jar"
+    val cordaJar: Path = path / "corda.jar"
 
     /**
      * The path to available Cordapps for this distribution.
      */
-    val cordappDirectory: File = path / "apps"
+    val cordappDirectory: Path = path / "apps"
 
     /**
      * The path to network bootstrapping tool.
      */
-    val networkBootstrapper: File = path / "network-bootstrapper.jar"
+    val networkBootstrapper: Path = path / "network-bootstrapper.jar"
 
     /**
      * Ensure that the distribution is available on disk.
      */
     fun ensureAvailable() {
-        if (!cordaJar.exists()) {
-            if (url != null) {
-                try {
-                    FileUtils.forceMkdirParent(cordaJar)
-                    FileUtils.copyURLToFile(url, cordaJar)
-                } catch (e: Exception) {
-                    if (e.message!!.contains("HTTP response code: 401")) {
-                        log.warn("CORDA_ARTIFACTORY_USERNAME ${System.getenv("CORDA_ARTIFACTORY_USERNAME")}")
-                        log.warn("CORDA_ARTIFACTORY_PASSWORD ${System.getenv("CORDA_ARTIFACTORY_PASSWORD")}")
-                        throw Exception("Incorrect Artifactory permission. Please set CORDA_ARTIFACTORY_USERNAME and CORDA_ARTIFACTORY_PASSWORD environment variables correctly.")
-                    }
-                    else throw Exception("Invalid Corda version $version", e)
-                }
-            } else {
-                throw Exception("File not found $cordaJar")
+        if (cordaJar.exists()) return
+        val url = checkNotNull(url) { "File not found $cordaJar" }
+        try {
+            cordaJar.parent.createDirectories()
+            url.openStream().use { it.copyTo(cordaJar) }
+        } catch (e: Exception) {
+            if ("HTTP response code: 401" in e.message!!) {
+                log.warn("CORDA_ARTIFACTORY_USERNAME ${System.getenv("CORDA_ARTIFACTORY_USERNAME")}")
+                log.warn("CORDA_ARTIFACTORY_PASSWORD ${System.getenv("CORDA_ARTIFACTORY_PASSWORD")}")
+                throw Exception("Incorrect Artifactory permission. Please set CORDA_ARTIFACTORY_USERNAME and CORDA_ARTIFACTORY_PASSWORD environment variables correctly.")
             }
+            throw e
         }
     }
 
@@ -109,7 +107,7 @@ class Distribution private constructor(
          * @param version The version of the Corda distribution.
          * @param jarFile The path to the Corda fat JAR.
          */
-        fun fromJarFile(version: String, jarFile: File? = null): Distribution {
+        fun fromJarFile(version: String, jarFile: Path? = null): Distribution {
             val distribution = Distribution(version, file = jarFile)
             distributions.add(distribution)
             return distribution

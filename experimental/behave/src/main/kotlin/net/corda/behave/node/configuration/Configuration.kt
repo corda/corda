@@ -2,10 +2,10 @@ package net.corda.behave.node.configuration
 
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.logging.getLogger
-import net.corda.behave.node.*
+import net.corda.behave.node.Distribution
 import net.corda.core.identity.CordaX500Name
-import org.apache.commons.io.FileUtils
-import java.io.File
+import net.corda.core.internal.writeText
+import java.nio.file.Path
 
 class Configuration(
         val name: String,
@@ -43,8 +43,8 @@ class Configuration(
     private val extraConfig = (configElements.toList() + listOf(users, nodeInterface))
             .joinToString(separator = "\n") { it.generate(this) }
 
-    fun writeToFile(file: File) {
-        FileUtils.writeStringToFile(file, this.generate(), "UTF-8")
+    fun writeToFile(file: Path) {
+        file.writeText(this.generate())
         log.info(this.generate())
     }
 
@@ -54,7 +54,7 @@ class Configuration(
 
     companion object {
         private val log = getLogger<Configuration>()
-        val DEFAULT_PASSWORD = "S0meS3cretW0rd"
+        const val DEFAULT_PASSWORD = "S0meS3cretW0rd"
     }
 
 }

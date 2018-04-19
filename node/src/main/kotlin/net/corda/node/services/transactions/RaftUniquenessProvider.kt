@@ -110,7 +110,7 @@ class RaftUniquenessProvider(
         get() = _clientFuture.get()
 
     fun start() {
-        log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
+        log.info("Creating Copycat server, log stored in: ${storagePath.toAbsolutePath()}")
         val stateMachineFactory = {
             RaftTransactionCommitLog(db, clock, RaftUniquenessProvider.Companion::createMap)
         }
