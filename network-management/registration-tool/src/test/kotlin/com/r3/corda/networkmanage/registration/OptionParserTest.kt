@@ -27,7 +27,7 @@ class OptionParserTest {
 
     @Test
     fun `parse registration args correctly`() {
-        val options = parseOptions("--config-file", "${tempDir / "test.file"}") as ToolOption.RegistrationOption
+        val options = ToolArgsParser().parseOrExit("--config-file", "${tempDir / "test.file"}") as ToolOption.RegistrationOption
         assertThat(options.configFile).isEqualTo(tempDir / "test.file")
     }
 
@@ -40,7 +40,7 @@ class OptionParserTest {
                 "--destkeystore", "${tempDir / "target.jks"}",
                 "--deststorepass", "password2",
                 "--srcalias", "testalias")
-        assertThatThrownBy { parseOptions(*keyCopyArgs, "--config-file", "test.file") }
+        assertThatThrownBy { ToolArgsParser().parseOrExit(*keyCopyArgs, "--config-file", "test.file", printHelpOn = null) }
                 .isInstanceOf(OptionException::class.java)
                 .hasMessageContaining("Option(s) [config-file] are unavailable given other options on the command line")
     }
@@ -48,7 +48,7 @@ class OptionParserTest {
     @Test
     fun `key copy args should be unavailable in registration mode`() {
         assertThatThrownBy {
-            parseOptions("--config-file", "${tempDir / "test.file"}", "--srckeystore", "${tempDir / "source.jks"}")
+            ToolArgsParser().parseOrExit("--config-file", "${tempDir / "test.file"}", "--srckeystore", "${tempDir / "source.jks"}", printHelpOn = null)
         }.isInstanceOf(OptionException::class.java)
                 .hasMessageContaining("Option(s) [srckeystore] are unavailable given other options on the command line")
     }
@@ -63,7 +63,7 @@ class OptionParserTest {
                 "--deststorepass", "password2",
                 "--srcalias", "testalias",
                 "--destalias", "testalias2")
-        assertThat(parseOptions(*keyCopyArgs)).isEqualTo(ToolOption.KeyCopierOption(
+        assertThat(ToolArgsParser().parseOrExit(*keyCopyArgs)).isEqualTo(ToolOption.KeyCopierOption(
                 sourceFile = tempDir / "source.jks",
                 destinationFile = tempDir / "target.jks",
                 sourcePassword = "password1",
@@ -80,7 +80,7 @@ class OptionParserTest {
                 "--srckeystore", "${tempDir / "source.jks"}",
                 "--destkeystore", "${tempDir / "target.jks"}",
                 "--srcalias", "testalias")
-        assertThat(parseOptions(*keyCopyArgs)).isEqualTo(ToolOption.KeyCopierOption(
+        assertThat(ToolArgsParser().parseOrExit(*keyCopyArgs)).isEqualTo(ToolOption.KeyCopierOption(
                 sourceFile = tempDir / "source.jks",
                 destinationFile = tempDir / "target.jks",
                 sourcePassword = null,

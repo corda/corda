@@ -1,10 +1,10 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.google.common.primitives.Booleans
-import com.r3.corda.networkmanage.common.utils.ShowHelpException
+import com.r3.corda.networkmanage.common.utils.ArgsParser
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
-import joptsimple.OptionParser
+import joptsimple.OptionSet
 import joptsimple.util.EnumConverter
 import joptsimple.util.PathConverter
 import joptsimple.util.PathProperties
@@ -14,9 +14,7 @@ import net.corda.nodeapi.internal.config.parseAs
 import java.nio.file.Path
 import java.time.Instant
 
-class DoormanArgsParser {
-    private val optionParser = OptionParser()
-    private val helpOption = optionParser.acceptsAll(listOf("h", "help"), "show help").forHelp()
+class DoormanArgsParser : ArgsParser<DoormanCmdLineOptions>() {
     private val configFileArg = optionParser
             .accepts("config-file", "The path to the config file")
             .withRequiredArg()
@@ -37,11 +35,7 @@ class DoormanArgsParser {
             .accepts("trust-store-password", "Password for the generated network root trust store. Only applicable when operating in ${Mode.ROOT_KEYGEN} mode.")
             .withRequiredArg()
 
-    fun parse(vararg args: String): DoormanCmdLineOptions {
-        val optionSet = optionParser.parse(*args)
-        if (optionSet.has(helpOption)) {
-            throw ShowHelpException(optionParser)
-        }
+    override fun parse(optionSet: OptionSet): DoormanCmdLineOptions {
         val configFile = optionSet.valueOf(configFileArg)
         val mode = optionSet.valueOf(modeArg)
         val setNetworkParametersFile = optionSet.valueOf(setNetworkParametersArg)

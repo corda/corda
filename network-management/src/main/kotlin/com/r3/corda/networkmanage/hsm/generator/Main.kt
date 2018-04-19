@@ -10,7 +10,7 @@
 
 package com.r3.corda.networkmanage.hsm.generator
 
-import com.r3.corda.networkmanage.common.configuration.parseCommandLine
+import com.r3.corda.networkmanage.common.configuration.ConfigFilePathArgsParser
 import com.r3.corda.networkmanage.hsm.authentication.CryptoServerProviderConfig
 import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
 import net.corda.nodeapi.internal.crypto.CertificateType.ROOT_CA
@@ -19,7 +19,7 @@ import org.apache.logging.log4j.LogManager
 private val logger = LogManager.getLogger("com.r3.corda.networkmanage.hsm.generator.Main")
 
 fun main(args: Array<String>) {
-    run(parseParameters(parseCommandLine(*args)))
+    run(parseParameters(ConfigFilePathArgsParser().parseOrExit(*args)))
 }
 
 fun run(parameters: GeneratorParameters) {

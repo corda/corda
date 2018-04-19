@@ -10,8 +10,7 @@
 
 package com.r3.corda.networkmanage.hsm.generator
 
-import com.r3.corda.networkmanage.common.configuration.parseCommandLine
-import com.r3.corda.networkmanage.common.utils.ShowHelpException
+import com.r3.corda.networkmanage.common.configuration.ConfigFilePathArgsParser
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -31,22 +30,15 @@ class GeneratorParametersTest {
     @Test
     fun `should fail when config file is missing`() {
         val message = assertFailsWith<OptionException> {
-            parseCommandLine("--config-file", "not-existing-file")
+            ConfigFilePathArgsParser().parseOrExit("--config-file", "not-existing-file")
         }.message
         Assertions.assertThat(message).contains("not-existing-file")
     }
 
     @Test
-    fun `should throw ShowHelpException when help option is passed on the command line`() {
-        assertFailsWith<ShowHelpException> {
-            parseCommandLine("-h")
-        }
-    }
-
-    @Test
     fun `should fail when config is invalid`() {
         assertFailsWith<ConfigException.Missing> {
-            parseParameters(parseCommandLine("--config-file", invalidConfigPath))
+            parseParameters(ConfigFilePathArgsParser().parseOrExit("--config-file", invalidConfigPath))
         }
     }
 
@@ -71,6 +63,6 @@ class GeneratorParametersTest {
     }
 
     private fun parseCommandLineAndGetParameters(): GeneratorParameters {
-        return parseParameters(parseCommandLine(*validArgs))
+        return parseParameters(ConfigFilePathArgsParser().parseOrExit(*validArgs))
     }
 }

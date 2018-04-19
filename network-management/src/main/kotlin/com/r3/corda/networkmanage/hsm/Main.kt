@@ -12,7 +12,6 @@ package com.r3.corda.networkmanage.hsm
 
 import com.jcabi.manifests.Manifests
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
-import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import com.r3.corda.networkmanage.common.utils.initialiseSerialization
 import com.r3.corda.networkmanage.common.utils.parseConfig
 import com.r3.corda.networkmanage.hsm.configuration.ManualMode
@@ -25,7 +24,6 @@ import org.apache.logging.log4j.LogManager
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
 import javax.crypto.Cipher
-import kotlin.system.exitProcess
 
 private val logger = LogManager.getLogger("com.r3.corda.networkmanage.hsm.Main")
 
@@ -34,13 +32,7 @@ fun main(args: Array<String>) {
         println("Signing Service Version: ${Manifests.read("Signing-Service-Version")}")
     }
 
-    val cmdLineOptions = try {
-        SigningServiceArgsParser().parse(*args)
-    } catch (e: ShowHelpException) {
-        e.errorMessage?.let(::println)
-        e.parser.printHelpOn(System.out)
-        exitProcess(0)
-    }
+    val cmdLineOptions = SigningServiceArgsParser().parseOrExit(*args)
 
     val config = parseConfig<SigningServiceConfig>(cmdLineOptions.configFile)
 

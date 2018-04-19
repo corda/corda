@@ -10,7 +10,7 @@
 
 package com.r3.corda.networkmanage.dev
 
-import com.r3.corda.networkmanage.common.configuration.parseCommandLine
+import com.r3.corda.networkmanage.common.configuration.ConfigFilePathArgsParser
 import com.r3.corda.networkmanage.doorman.CORDA_X500_BASE
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.createDirectories
@@ -34,7 +34,7 @@ private val logger = LogManager.getLogger("com.r3.corda.networkmanage.dev.Main")
  * Look for the 'certificates' directory.
  */
 fun main(args: Array<String>) {
-    run(parseParameters(parseCommandLine(*args)))
+    run(parseParameters(ConfigFilePathArgsParser().parseOrExit(*args)))
 }
 
 fun run(configuration: GeneratorConfiguration) {

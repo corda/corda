@@ -26,7 +26,7 @@ class SigningServiceArgsParserTest : TestBase() {
 
     @Test
     fun `doorman-based config file is parsed correctly`() {
-        val cmdLineOptions = argsParser.parse("--config-file", doormanConfigPath)
+        val cmdLineOptions = argsParser.parseOrExit("--config-file", doormanConfigPath)
         val config = parseConfig<SigningServiceConfig>(cmdLineOptions.configFile)
         assertEquals("3001@192.168.0.1", config.device)
         val doormanCertParameters = config.doorman!!
@@ -37,7 +37,7 @@ class SigningServiceArgsParserTest : TestBase() {
 
     @Test
     fun `networkmap-based config file is parsed correctly`() {
-        val cmdLineOptions = argsParser.parse("--config-file", networkMapConfigPath)
+        val cmdLineOptions = argsParser.parseOrExit("--config-file", networkMapConfigPath)
         val config = parseConfig<SigningServiceConfig>(cmdLineOptions.configFile)
         assertEquals("3001@192.168.0.1", config.device)
         val networkMapConfig = config.networkMap!!
@@ -51,7 +51,7 @@ class SigningServiceArgsParserTest : TestBase() {
     @Test
     fun `should fail when config file is missing`() {
         assertThatThrownBy {
-            argsParser.parse("--config-file", "not-existing-file")
+            argsParser.parseOrExit("--config-file", "not-existing-file")
         }.hasMessageContaining("not-existing-file")
     }
 }

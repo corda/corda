@@ -11,20 +11,15 @@
 package com.r3.corda.networkmanage.hsm.configuration
 
 import com.google.common.primitives.Booleans
-import com.r3.corda.networkmanage.common.utils.ShowHelpException
+import com.r3.corda.networkmanage.common.utils.ArgsParser
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
-import com.typesafe.config.ConfigRenderOptions
-import joptsimple.OptionParser
+import joptsimple.OptionSet
 import joptsimple.util.PathConverter
 import joptsimple.util.PathProperties
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import java.net.InetAddress
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -61,7 +56,7 @@ data class DoormanCertificateConfig(val crlDistributionPoint: URL,
                                     val crlServerSocketAddress: NetworkHostAndPort,
                                     val crlUpdatePeriod: Long,
                                     val mode: ManualMode,
-                                    val keyGroup:String,
+                                    val keyGroup: String,
                                     val validDays: Int,
                                     val rootKeyStoreFile: Path,
                                     val rootKeyStorePassword: String,
@@ -84,9 +79,7 @@ data class AuthParametersConfig(val mode: AuthMode,
                                 val keyFilePath: Path? = null,
                                 val threshold: Int)
 
-class SigningServiceArgsParser {
-    private val optionParser = OptionParser()
-    private val helpOption = optionParser.acceptsAll(listOf("h", "help"), "show help").forHelp()
+class SigningServiceArgsParser : ArgsParser<SigningServiceCmdLineOptions>() {
     private val baseDirArg = optionParser
             .accepts("basedir", "Overriding configuration filepath, default to current directory.")
             .withRequiredArg()
@@ -97,11 +90,7 @@ class SigningServiceArgsParser {
             .withRequiredArg()
             .withValuesConvertedBy(PathConverter(PathProperties.FILE_EXISTING))
 
-    fun parse(vararg args: String): SigningServiceCmdLineOptions {
-        val optionSet = optionParser.parse(*args)
-        if (optionSet.has(helpOption)) {
-            throw ShowHelpException(optionParser)
-        }
+    override fun parse(optionSet: OptionSet): SigningServiceCmdLineOptions {
         val baseDir = optionSet.valueOf(baseDirArg)
         val configFile = optionSet.valueOf(configFileArg) ?: baseDir / "signing_service.conf"
         return SigningServiceCmdLineOptions(baseDir, configFile)

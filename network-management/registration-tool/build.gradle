@@ -68,6 +68,8 @@ publish {
 
 dependencies {
     compile project(':node')
+    // TODO: remove this when ArgsParser is moved into corda.
+    compile project(':network-management')
     testCompile 'junit:junit:4.12'
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }

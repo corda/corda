@@ -31,13 +31,7 @@ fun main(args: Array<String>) {
     }
 
     initialiseSerialization()
-    val cmdLineOptions = try {
-        DoormanArgsParser().parse(*args)
-    } catch (e: ShowHelpException) {
-        e.errorMessage?.let(::println)
-        e.parser.printHelpOn(System.out)
-        exitProcess(0)
-    }
+    val cmdLineOptions = DoormanArgsParser().parseOrExit(*args)
 
     val config = parseConfig<NetworkManagementServerConfig>(cmdLineOptions.configFile)
 

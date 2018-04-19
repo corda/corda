@@ -17,7 +17,7 @@ private val logger = LogManager.getLogger("com.r3.corda.networkmanage.common.too
 fun main(args: Array<String>) {
     initialiseSerialization()
     try {
-        submit(parseSubmissionUrl(*args))
+        submit(CRRToolArgsParser().parseOrExit(*args))
     } catch (e: Exception) {
         logger.error("Error when submitting a certificate revocation request.", e)
         throw e

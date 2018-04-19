@@ -38,8 +38,7 @@ fun parseParameters(configFile: Path?): GeneratorConfiguration {
     return if (configFile == null) {
         GeneratorConfiguration()
     } else {
-        ConfigFactory
-                .parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))
+        ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))
                 .resolve()
                 .parseAs()
     }

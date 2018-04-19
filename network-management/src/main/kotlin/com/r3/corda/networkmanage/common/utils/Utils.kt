@@ -13,9 +13,7 @@ package com.r3.corda.networkmanage.common.utils
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import com.typesafe.config.ConfigRenderOptions
-import joptsimple.OptionParser
 import net.corda.core.CordaOID
-import net.corda.core.crypto.sha256
 import net.corda.core.internal.CertRole
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -34,7 +32,6 @@ import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PrivateKey
-import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 
@@ -51,8 +48,6 @@ inline fun <reified T : Any> parseConfig(file: Path): T {
     logger.info(config.root().render(ConfigRenderOptions.defaults()))
     return config.parseAs(strict = false)
 }
-
-class ShowHelpException(val parser: OptionParser, val errorMessage: String? = null) : Exception()
 
 fun buildCertPath(certPathBytes: ByteArray): CertPath = X509CertificateFactory().delegate.generateCertPath(certPathBytes.inputStream())
 

@@ -10,7 +10,6 @@
 
 package com.r3.corda.networkmanage.doorman
 
-import com.r3.corda.networkmanage.common.utils.ShowHelpException
 import joptsimple.OptionException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -26,39 +25,32 @@ class DoormanArgsParserTest {
     @Test
     fun `should fail when network parameters file is missing`() {
         assertThatThrownBy {
-            argsParser.parse("--config-file", validConfigPath, "--set-network-parameters", "not-here")
+            argsParser.parseOrExit("--config-file", validConfigPath, "--set-network-parameters", "not-here")
         }.hasMessageContaining("not-here")
     }
 
     @Test
     fun `should fail when config file is missing`() {
         assertThatThrownBy {
-            argsParser.parse("--config-file", "not-existing-file")
+            argsParser.parseOrExit("--config-file", "not-existing-file")
         }.hasMessageContaining("not-existing-file")
     }
 
     @Test
-    fun `should throw ShowHelpException when help option is passed on the command line`() {
-        assertFailsWith<ShowHelpException> {
-            argsParser.parse("-h")
-        }
-    }
-
-    @Test
     fun `should parse trust store password correctly`() {
-        val parameter = argsParser.parse("--config-file", validConfigPath, "--mode", "ROOT_KEYGEN", "--trust-store-password", "testPassword")
+        val parameter = argsParser.parseOrExit("--config-file", validConfigPath, "--mode", "ROOT_KEYGEN", "--trust-store-password", "testPassword")
         assertEquals("testPassword", parameter.trustStorePassword)
 
         assertFailsWith<OptionException> {
-            argsParser.parse("--trust-store-password")
+            argsParser.parseOrExit("--trust-store-password", printHelpOn = null)
         }
 
         // Should fail if password is provided in mode other then root keygen.
         assertFailsWith<IllegalArgumentException> {
-            argsParser.parse("--config-file", validConfigPath, "--trust-store-password", "testPassword")
+            argsParser.parseOrExit("--config-file", validConfigPath, "--trust-store-password", "testPassword")
         }
 
         // trust store password is optional.
-        assertNull(argsParser.parse("--config-file", validConfigPath).trustStorePassword)
+        assertNull(argsParser.parseOrExit("--config-file", validConfigPath).trustStorePassword)
     }
 }
