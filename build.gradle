@@ -284,6 +284,12 @@ tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
+task testReport(type: TestReport) {
+    destinationDir = file("$buildDir/reports/allTests")
+    // Include the results from the `test` task in all subprojects
+    reportOn subprojects*.test
+}
+
 bintrayConfig {
     user = System.getenv('CORDA_BINTRAY_USER')
     key = System.getenv('CORDA_BINTRAY_KEY')
