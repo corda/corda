@@ -39,6 +39,7 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -755,9 +756,10 @@ class DriverDSLImpl(
             val systemProperties = mutableMapOf(
                     "name" to config.corda.myLegalName,
                     "visualvm.display.name" to "corda-${config.corda.myLegalName}",
-                    "java.io.tmpdir" to System.getProperty("java.io.tmpdir"), // Inherit from parent process
                     "log4j2.debug" to if (debugPort != null) "true" else "false"
             )
+
+            systemProperties += inheritFromParentProcess()
 
             if (cordappPackages.isNotEmpty()) {
                 systemProperties += Node.scanPackagesSystemProperty to cordappPackages.joinToString(Node.scanPackagesSeparator)
@@ -802,13 +804,24 @@ class DriverDSLImpl(
                     className = className, // cannot directly get class for this, so just use string
                     arguments = listOf("--base-directory", handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
-                    extraJvmArguments = listOf(
-                            "-Dname=node-${handle.p2pAddress}-webserver",
-                            "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
-                    ),
+                    extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver") +
+                            inheritFromParentProcess().map { "-D${it.first}=${it.second}" },
                     workingDirectory = null,
                     maximumHeapSize = maximumHeapSize
             )
+        }
+
+        private val propertiesInScope = setOf("java.io.tmpdir", AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
+
+        private fun inheritFromParentProcess() : Iterable<Pair<String, String>> {
+            return propertiesInScope.flatMap { propName ->
+                val propValue : String? = System.getProperty(propName)
+                if(propValue == null) {
+                    emptySet()
+                } else {
+                    setOf(Pair(propName, propValue))
+                }
+            }
         }
 
         private fun NodeHandleInternal.toWebServerConfig(): Config {
