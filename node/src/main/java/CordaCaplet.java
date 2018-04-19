@@ -4,8 +4,6 @@
 
 import com.typesafe.config.*;
 import sun.misc.Signal;
-import sun.misc.SignalHandler;
-
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -80,7 +78,7 @@ public class CordaCaplet extends Capsule {
         if (ATTR_APP_CLASS_PATH == attr) {
             T cp = super.attribute(attr);
 
-            (new File(baseDir, "cordapps")).mkdir();
+            (new File(baseDir, "cordapps")).mkdir(); // TODO: shall we check if the folder has been created?
             // Add additional directories of JARs to the classpath (at the end). e.g. for JDBC drivers
             augmentClasspath((List<Path>) cp, new File(baseDir, "cordapps"));
             try {
@@ -129,23 +127,27 @@ public class CordaCaplet extends Capsule {
 
     private void augmentClasspath(List<Path> classpath, File dir) {
         if (dir.exists()) {
+            // The following might return null if the directory is not there (we check this already) or if an I/O error occurs.
             File[] files = dir.listFiles();
-            for (File file : files) {
-                if (file.isFile() && isJAR(file)) {
-                    classpath.add(file.toPath().toAbsolutePath());
+            if (files != null) { // This is unlikely to happen, but if we don't check, for loop might fail with NullPointerException.
+                for (File file : files) {
+                    if (file.isFile() && isJAR(file)) {
+                        classpath.add(file.toPath().toAbsolutePath());
+                    } else if (file.isDirectory()) { // Search in nested folders as well.
+                        augmentClasspath(classpath, file);
+                    }
                 }
-            }
+            } // TODO: shall we log if files is null?
+        } else {
+            log(LOG_VERBOSE, "Directory to add in Classpath was not found " + dir.getAbsolutePath());
         }
     }
 
     @Override
     protected void liftoff() {
         super.liftoff();
-        Signal.handle(new Signal("INT"), new SignalHandler() {
-            @Override
-            public void handle(Signal signal) {
-                // Disable Ctrl-C for this process, so the child process can handle it in the shell instead.
-            }
+        Signal.handle(new Signal("INT"), signal -> {
+            // Disable Ctrl-C for this process, so the child process can handle it in the shell instead.
         });
     }
 
