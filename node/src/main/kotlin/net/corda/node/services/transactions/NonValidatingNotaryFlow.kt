@@ -36,6 +36,8 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAut
                     checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
                 }
                 val notary = tx.notary
+                checkNotary(notary)
+                checkInputs(tx.inputs)
                 TransactionParts(tx.id, tx.inputs, tx.timeWindow, notary)
             }
             is ContractUpgradeFilteredTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary)
