@@ -4,18 +4,18 @@ Feature: Startup Information - Logging
   configure / connect relevant software to said node.
 
   Scenario: Node shows logging information on startup
-    Given a node A of version MASTER
-    And node A uses database of type H2
-    And node A is located in London, GB
+    Given a node PartyA of version master
+    And node PartyA uses database of type H2
+    And node PartyA is located in London, GB
     When the network is ready
-    Then user can retrieve logging information for node A
+    Then user can retrieve logging information for node PartyA
 
   Scenario: Node shows database details on startup
-    Given a node A of version MASTER
+    Given a node PartyA of version master
     When the network is ready
-    Then user can retrieve database details for node A
+    Then user can retrieve database details for node PartyA
 
   Scenario: Node shows version information on startup
-    Given a node A of version MASTER
-    Then node A is on platform version 2
-    And node A is on version 3.0-SNAPSHOT
+    Given a node PartyA of version master
+    Then node PartyA is on platform version 4
+    And node PartyA is on release version corda-4.0-snapshot

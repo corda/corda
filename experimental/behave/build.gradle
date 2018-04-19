@@ -66,6 +66,12 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     compile "org.apache.logging.log4j:log4j-core:$log4j_version"
 
+    // JOptSimple: command line option parsing
+    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+
+    // FastClasspathScanner: classpath scanning
+    compile 'io.github.lukehutch:fast-classpath-scanner:2.12.3'
+
     compile "commons-io:commons-io:$commonsio_version"
     compile "commons-logging:commons-logging:$commonslogging_version"
     compile "com.spotify:docker-client:$docker_client_version"
@@ -85,7 +91,6 @@ dependencies {
     scenarioCompile "info.cukes:cucumber-java8:$cucumber_version"
     scenarioCompile "info.cukes:cucumber-junit:$cucumber_version"
     scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
-
 }
 
 compileKotlin {

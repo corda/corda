@@ -6,13 +6,13 @@ import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
 import net.corda.behave.monitoring.PatternWatch
-import net.corda.behave.monitoring.Watch
 import rx.Observable
 import java.io.Closeable
 
 abstract class ContainerService(
         name: String,
         port: Int,
+        val startupStatement: String,
         settings: ServiceSettings = ServiceSettings()
 ) : Service(name, port, settings), Closeable {
 
@@ -29,8 +29,6 @@ abstract class ContainerService(
     private var isClientOpen: Boolean = true
 
     private val environmentVariables: MutableList<String> = mutableListOf()
-
-    private var startupStatement: Watch = PatternWatch.EMPTY
 
     private val imageReference: String
         get() = "$baseImage:$imageTag"
@@ -51,7 +49,12 @@ abstract class ContainerService(
 
             val creation = client.createContainer(containerConfig)
             id = creation.id()
+
+            val info = client.inspectContainer(id)
+            log.info("Container $id info: $info")
+
             client.startContainer(id)
+
             true
         } catch (e: Exception) {
             id = null
@@ -71,10 +74,6 @@ abstract class ContainerService(
 
     protected fun addEnvironmentVariable(name: String, value: String) {
         environmentVariables.add("$name=$value")
-    }
-
-    protected fun setStartupStatement(statement: String) {
-        startupStatement = PatternWatch(statement)
     }
 
     override fun checkPrerequisites() {
@@ -97,8 +96,8 @@ abstract class ContainerService(
             while (timeout > 0) {
                 client.logs(id, DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr()).use {
                     val contents = it.readFully()
-                    val observable = Observable.from(contents.split("\n"))
-                    if (startupStatement.await(observable, settings.pollInterval)) {
+                    val observable = Observable.from(contents.split("\n", "\r"))
+                    if (PatternWatch(observable, startupStatement).await(settings.pollInterval)) {
                         log.info("Found process start-up statement for {}", this)
                         return true
                     }
@@ -118,5 +117,4 @@ abstract class ContainerService(
             client.close()
         }
     }
-
 }

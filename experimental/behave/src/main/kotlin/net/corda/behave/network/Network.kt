@@ -4,12 +4,14 @@ import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
 import net.corda.behave.file.currentDirectory
 import net.corda.behave.file.div
+import net.corda.behave.file.stagingRoot
 import net.corda.behave.logging.getLogger
 import net.corda.behave.minutes
 import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
 import net.corda.behave.node.configuration.NotaryType
 import net.corda.behave.process.JarCommand
+import net.corda.core.CordaException
 import org.apache.commons.io.FileUtils
 import java.io.Closeable
 import java.io.File
@@ -26,8 +28,6 @@ class Network private constructor(
         private val timeout: Duration = 2.minutes
 ) : Closeable, Iterable<Node> {
 
-    private val log = getLogger<Network>()
-
     private val latch = CountDownLatch(1)
 
     private var isRunning = false
@@ -36,6 +36,10 @@ class Network private constructor(
 
     private var hasError = false
 
+    init {
+        FileUtils.forceMkdir(targetDirectory)
+    }
+
     class Builder internal constructor(
             private val timeout: Duration
     ) {
@@ -43,7 +47,7 @@ class Network private constructor(
         private val nodes = mutableMapOf<String, Node>()
 
         private val startTime = DateTimeFormatter
-                .ofPattern("yyyyMMDD-HHmmss")
+                .ofPattern("yyyyMMdd-HHmmss")
                 .withZone(ZoneId.of("UTC"))
                 .format(Instant.now())
 
@@ -51,7 +55,7 @@ class Network private constructor(
 
         fun addNode(
                 name: String,
-                distribution: Distribution = Distribution.LATEST_MASTER,
+                distribution: Distribution = Distribution.MASTER,
                 databaseType: DatabaseType = DatabaseType.H2,
                 notaryType: NotaryType = NotaryType.NONE,
                 issuableCurrencies: List<String> = emptyList()
@@ -76,22 +80,28 @@ class Network private constructor(
 
         fun generate(): Network {
             val network = Network(nodes, directory, timeout)
-            network.bootstrapNetwork()
+
+            network.copyDatabaseDrivers()
+            if (!network.configureNodes()) {
+                throw CordaException("Unable to configure nodes in Corda network. Please check logs in $directory")
+            }
+            network.bootstrapLocalNetwork()
+
             return network
         }
-
     }
 
-    private fun copyDatabaseDrivers() {
+    fun copyDatabaseDrivers() {
         val driverDirectory = targetDirectory / "libs"
+        log.info("Copying database drivers from $stagingRoot/deps/drivers to $driverDirectory")
         FileUtils.forceMkdir(driverDirectory)
         FileUtils.copyDirectory(
-                currentDirectory / "deps/drivers",
+                stagingRoot / "deps/drivers",
                 driverDirectory
         )
     }
 
-    private fun configureNodes(): Boolean {
+    fun configureNodes(): Boolean {
         var allDependenciesStarted = true
         log.info("Configuring nodes ...")
         for (node in nodes.values) {
@@ -109,19 +119,14 @@ class Network private constructor(
         }
     }
 
-    private fun bootstrapNetwork() {
-        copyDatabaseDrivers()
-        if (!configureNodes()) {
-            hasError = true
-            return
-        }
+    private fun bootstrapLocalNetwork() {
         val bootstrapper = nodes.values
                 .sortedByDescending { it.config.distribution.version }
                 .first()
                 .config.distribution.networkBootstrapper
 
         if (!bootstrapper.exists()) {
-            log.warn("Network bootstrapping tool does not exist; continuing ...")
+            signalFailure("Network bootstrapping tool does not exist; exiting ...")
             return
         }
 
@@ -205,11 +210,15 @@ class Network private constructor(
         }
         isRunning = true
         for (node in nodes.values) {
+            log.info("Starting node [{}]", node.config.name)
             node.start()
         }
     }
 
     fun waitUntilRunning(waitDuration: Duration? = null): Boolean {
+
+        log.info("Network.waitUntilRunning")
+
         if (hasError) {
             return false
         }
@@ -264,6 +273,7 @@ class Network private constructor(
         }
         log.info("Shutting down network ...")
         isStopped = true
+        log.info("Shutting down nodes ...")
         for (node in nodes.values) {
             node.shutDown()
         }
@@ -289,13 +299,10 @@ class Network private constructor(
     }
 
     companion object {
-
+        val log = getLogger<Network>()
         const val CLEANUP_ON_ERROR = false
 
-        fun new(
-                timeout: Duration = 2.minutes
+        fun new(timeout: Duration = 2.minutes
         ): Builder = Builder(timeout)
-
     }
-
 }
