@@ -165,24 +165,6 @@ Nodes are created on the ``MockNetwork`` using:
             }
         }
 
-Registering a node's initiated flows
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Regular Corda nodes automatically register any response flows defined in their installed CorDapps. When using a
-``MockNetwork``, each ``StartedMockNode`` must manually register any responder flows it wishes to use.
-
-Responder flows are registered as follows:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-        nodeA.registerInitiatedFlow(ExampleFlow.Acceptor::class.java)
-
-   .. sourcecode:: java
-
-        nodeA.registerInitiatedFlow(ExampleFlow.Acceptor.class);
-
 Running the network
 ^^^^^^^^^^^^^^^^^^^
 
