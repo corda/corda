@@ -83,6 +83,11 @@ interface FloatInnerConfiguration {
     val customFloatOuterSSLConfiguration: BridgeSSLConfiguration?
 }
 
+interface BridgeHAConfig {
+    val haConnectionString: String
+    val haPriority: Int
+}
+
 /**
  * Details of the listening port for a [BridgeMode.FloatOuter] process and of the certificate that the [BridgeMode.FloatInner] should present.
  * Required for [BridgeMode.FloatOuter] mode.
@@ -100,7 +105,7 @@ interface BridgeConfiguration : NodeSSLConfiguration {
     val inboundConfig: BridgeInboundConfiguration?
     val floatInnerConfig: FloatInnerConfiguration?
     val floatOuterConfig: FloatOuterConfiguration?
-    val haConfig: String?
+    val haConfig: BridgeHAConfig?
     val networkParametersPath: Path
     val enableAMQPPacketTrace: Boolean
     // Reconnect to artemis after [artemisReconnectionInterval] ms the default value is 5000 ms.

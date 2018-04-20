@@ -13,6 +13,7 @@ package net.corda.bridge.services.supervisors
 import net.corda.bridge.services.api.*
 import net.corda.bridge.services.artemis.BridgeArtemisConnectionServiceImpl
 import net.corda.bridge.services.filter.SimpleMessageFilterService
+import net.corda.bridge.services.ha.ExternalMasterElectionService
 import net.corda.bridge.services.ha.SingleInstanceMasterService
 import net.corda.bridge.services.receiver.InProcessBridgeReceiverService
 import net.corda.bridge.services.receiver.TunnelingBridgeReceiverService
@@ -42,10 +43,10 @@ class BridgeSupervisorServiceImpl(val conf: BridgeConfiguration,
     private var statusSubscriber: Subscription? = null
 
     init {
-        if (conf.haConfig.isNullOrEmpty()) {
+        if (conf.haConfig == null) {
             haService = SingleInstanceMasterService(conf, auditService)
         } else {
-            TODO()
+            haService = ExternalMasterElectionService(conf, auditService)
         }
         artemisService = BridgeArtemisConnectionServiceImpl(conf, maxMessageSize, auditService)
         senderService = DirectBridgeSenderService(conf, auditService, haService, artemisService)

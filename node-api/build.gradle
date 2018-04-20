@@ -54,8 +54,8 @@ dependencies {
     runtime 'com.mattbertolini:liquibase-slf4j:2.0.0'
 
     // Apache Curator: a client library for Zookeeper
+    shadow "org.apache.curator:curator-client:${curator_version}"
     shadow "org.apache.curator:curator-recipes:${curator_version}"
-    testCompile configurations.shadow // need to look at rewritten classes
     testCompile "org.apache.curator:curator-test:${curator_version}"
 
     // FastClasspathScanner: classpath scanning - needed for the NetworkBootstraper
@@ -76,6 +76,7 @@ dependencies {
 }
 
 configurations {
+        compile.extendsFrom shadow
         testArtifacts.extendsFrom testRuntime
 }
 
@@ -90,7 +91,9 @@ shadowJar {
     configurations = [project.configurations.shadow]
     classifier ""
     dependencies {
+        include(dependency("org.apache.curator:curator-client:${curator_version}"))
         include(dependency("org.apache.curator:curator-recipes:${curator_version}"))
+        include(dependency("org.apache.curator:curator-framework:${curator_version}"))
         include(dependency('org.apache.zookeeper:zookeeper:3.5.3-beta'))
         include(dependency('commons-cli:commons-cli:1.2'))
         include(dependency('io.netty:netty:3.10.5.Final'))

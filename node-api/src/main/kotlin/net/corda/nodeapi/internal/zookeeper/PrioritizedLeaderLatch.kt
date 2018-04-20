@@ -12,6 +12,7 @@ package net.corda.nodeapi.internal.zookeeper
 
 import com.google.common.base.Preconditions
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.api.BackgroundCallback
 import org.apache.curator.framework.api.CuratorEvent
@@ -176,6 +177,8 @@ internal class PrioritizedLeaderLatch(client: CuratorFramework,
             }
 
             ConnectionState.LOST -> setLeadership(false)
+
+            else -> log.debug { "Ignoring state change $newState" }
         }
     }
 
@@ -199,10 +202,11 @@ internal class PrioritizedLeaderLatch(client: CuratorFramework,
             }
         }
 
+        val latchName = "$nodeId$LOCK_NAME${"%05d".format(priority)}" // Fixed width priority to ensure numeric sorting
         watchedClient.create()
                 .creatingParentContainersIfNeeded()
                 .withProtection().withMode(CreateMode.EPHEMERAL)
-                .inBackground(joinElectionCallback).forPath(ZKPaths.makePath(path, "$nodeId$LOCK_NAME$priority"), nodeId.toByteArray(Charsets.UTF_8))
+                .inBackground(joinElectionCallback).forPath(ZKPaths.makePath(path, latchName), nodeId.toByteArray(Charsets.UTF_8))
     }
 
     private fun setLeadership(newValue: Boolean) {
@@ -275,13 +279,15 @@ internal class PrioritizedLeaderLatch(client: CuratorFramework,
     private class ElectionWatcher(private val latch: PrioritizedLeaderLatch) : Watcher {
         override fun process(event: WatchedEvent) {
             log.info("Client ${latch.nodeId} detected event ${event.type}.")
-            latch.watchedClient.children.usingWatcher(ElectionWatcher(latch)).inBackground(NoNodeCallback(latch)).forPath(latch.path)
-            if (State.STARTED == latch.state.get() && Watcher.Event.EventType.NodeChildrenChanged == event.type && latch.ourPath.get() != null) {
-                try {
-                    log.info("Change detected in children nodes of path ${latch.path}. Checking candidates.")
-                    latch.processCandidates()
-                } catch (e: Exception) {
-                    log.error("An error occurred checking the leadership.", e)
+            if (State.STARTED == latch.state.get()) {
+                latch.watchedClient.children.usingWatcher(ElectionWatcher(latch)).inBackground(NoNodeCallback(latch)).forPath(latch.path)
+                if (Watcher.Event.EventType.NodeChildrenChanged == event.type && latch.ourPath.get() != null) {
+                    try {
+                        log.info("Change detected in children nodes of path ${latch.path}. Checking candidates.")
+                        latch.processCandidates()
+                    } catch (e: Exception) {
+                        log.error("An error occurred checking the leadership.", e)
+                    }
                 }
             }
         }

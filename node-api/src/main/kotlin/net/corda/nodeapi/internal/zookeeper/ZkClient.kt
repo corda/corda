@@ -11,12 +11,14 @@
 package net.corda.nodeapi.internal.zookeeper
 
 import net.corda.core.utilities.contextLogger
-import org.apache.curator.RetryPolicy
+import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener
-import org.apache.curator.retry.RetryOneTime
+import org.apache.curator.retry.RetryForever
+import org.apache.curator.retry.RetryNTimes
 import org.apache.curator.utils.CloseableUtils
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Simple Zookeeper client that offers priority based leader election.
@@ -26,21 +28,33 @@ import org.apache.curator.utils.CloseableUtils
  * @param nodeId unique client identifier used in the creation of child zNodes
  * @param priority indicates the priority of the client in the election process. Low value means high priority(a client
  * with [priority] set to 0 will have become leader before a client with [priority] 1
- * @param retryPolicy is an instance of [RetryPolicy] and indicates the process in case connection to Zookeeper server/cluster
- * is lost. If no policy is supplied, [RetryOneTime] will be used with 500ms before attempting to reconnect
+ * @param retryInterval the interval in msec between retries of the Zookeeper connection. Default value is 500 msec.
+ * @param retryCount the number of retries before giving up default value is 1. Use -1 to indicate forever.
  */
 class ZkClient(connectionString: String,
                electionPath: String,
                val nodeId: String,
                val priority: Int,
-               retryPolicy: RetryPolicy = RetryOneTime(500)) : ZkLeader {
+               retryInterval: Int = 500,
+               retryCount: Int = 1) : ZkLeader {
 
     private companion object {
         private val log = contextLogger()
     }
 
-    private val client = CuratorFrameworkFactory.newClient(connectionString, retryPolicy)
-    private val leaderLatch = PrioritizedLeaderLatch(client, electionPath, nodeId, priority)
+    private val client: CuratorFramework
+    private val leaderLatch: PrioritizedLeaderLatch
+    private val listeners = ConcurrentHashMap<CordaLeaderListener, LeaderLatchListener>()
+
+    init {
+        val retryPolicy = if (retryCount == -1) {
+            RetryForever(retryInterval)
+        } else {
+            RetryNTimes(retryCount, retryInterval)
+        }
+        client = CuratorFrameworkFactory.newClient(connectionString, retryPolicy)
+        leaderLatch = PrioritizedLeaderLatch(client, electionPath, nodeId, priority)
+    }
 
     override fun start() {
         if (client.state != CuratorFrameworkState.STARTED) {
@@ -82,12 +96,26 @@ class ZkClient(connectionString: String,
         return client.state == CuratorFrameworkState.STARTED
     }
 
-    override fun addLeadershipListener(listener: LeaderLatchListener) {
-        leaderLatch.addListener(listener)
+    override fun addLeadershipListener(listener: CordaLeaderListener) {
+        val listenerStub = object : LeaderLatchListener {
+            override fun notLeader() {
+                listener.notLeader()
+            }
+
+            override fun isLeader() {
+                listener.isLeader()
+            }
+
+        }
+        listeners[listener] = listenerStub
+        leaderLatch.addListener(listenerStub)
     }
 
 
-    override fun removeLeaderShipListener(listener: LeaderLatchListener) {
-        leaderLatch.removeListener(listener)
+    override fun removeLeadershipListener(listener: CordaLeaderListener) {
+        val listenerStub = listeners.remove(listener)
+        if (listenerStub != null) {
+            leaderLatch.removeListener(listenerStub)
+        }
     }
 }

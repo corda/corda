@@ -11,7 +11,6 @@
 package net.corda.nodeapi.internal.zookeeper
 
 import net.corda.core.utilities.contextLogger
-import org.apache.curator.framework.recipes.leader.LeaderLatchListener
 import org.apache.curator.test.TestingServer
 import org.apache.curator.utils.ZKPaths
 import org.junit.After
@@ -187,8 +186,8 @@ class ZkClientTests {
     @Test
     fun `clients with higher priority join and take leadership`() {
         val alice = ZkClient(zkServer.connectString, ZKPaths.makePath(ELECTION_PATH, "test7"), "ALICE", 0)
-        val bob = ZkClient(zkServer.connectString, ZKPaths.makePath(ELECTION_PATH, "test7"), "BOB", 1)
-        val chip = ZkClient(zkServer.connectString, ZKPaths.makePath(ELECTION_PATH, "test7"), "CHIP", 2)
+        val bob = ZkClient(zkServer.connectString, ZKPaths.makePath(ELECTION_PATH, "test7"), "BOB", 50) // Use numbers that check for numeric sorting
+        val chip = ZkClient(zkServer.connectString, ZKPaths.makePath(ELECTION_PATH, "test7"), "CHIP", 2000)
         val aliceLeaderGain = CountDownLatch(1)
         val bobLeaderGain  = CountDownLatch(1)
         val bobLeaderLoss = CountDownLatch(1)
@@ -297,6 +296,7 @@ class ZkClientTests {
                     when(action) {
                         Action.REQUEST ->  client.requestLeadership()
                         Action.RELINQUISH ->  client.relinquishLeadership()
+                        else -> throw IllegalArgumentException("Invalid action choice")
                     }
                     Thread.sleep(100)
                 }
@@ -332,7 +332,7 @@ class ZkClientTests {
     }
 
     private class HelperListener(private val nodeId: String,
-                                 private val leaders: MutableList<String>) : LeaderLatchListener{
+                                 private val leaders: MutableList<String>) : CordaLeaderListener {
         @Synchronized
         override fun notLeader() {
             leaders.remove(nodeId)
@@ -345,7 +345,7 @@ class ZkClientTests {
     }
     private class SyncHelperListener(private val nodeId: String,
                                      private val leaderGain: CountDownLatch = CountDownLatch(1),
-                                     private val leaderLoss: CountDownLatch = CountDownLatch(1)) : LeaderLatchListener {
+                                     private val leaderLoss: CountDownLatch = CountDownLatch(1)) : CordaLeaderListener {
         override fun notLeader() {
             log.info("$nodeId is no longer leader.")
             leaderLoss.countDown()
