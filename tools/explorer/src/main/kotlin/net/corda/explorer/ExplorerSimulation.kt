@@ -10,6 +10,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.thenMatch
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
@@ -63,7 +64,7 @@ class ExplorerSimulation(private val options: OptionSet) {
 
     private fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
-        driver(DriverParameters(portAllocation = portAllocation, extraCordappPackagesToScan = listOf(Cash::class.java.`package`.name), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true))) {
+        driver(DriverParameters(portAllocation = portAllocation, extraCordappPackagesToScan = listOf(Cash::class.packageName), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true))) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             val bob = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))

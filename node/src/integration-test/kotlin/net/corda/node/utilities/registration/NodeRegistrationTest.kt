@@ -3,6 +3,7 @@ package net.corda.node.utilities.registration
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.logElapsedTime
+import net.corda.core.internal.packageName
 import net.corda.core.internal.readFully
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.*
@@ -89,7 +90,7 @@ class NodeRegistrationTest {
                 compatibilityZone = compatibilityZone,
                 initialiseSerialization = false,
                 notarySpecs = listOf(NotarySpec(notaryName)),
-                extraCordappPackagesToScan = listOf(Cash::class.java.`package`.name)
+                extraCordappPackagesToScan = listOf(Cash::class.packageName)
         ) {
             val (alice, genevieve) = listOf(
                     startNode(providedName = aliceName),

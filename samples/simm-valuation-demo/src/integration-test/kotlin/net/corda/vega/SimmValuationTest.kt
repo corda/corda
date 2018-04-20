@@ -45,7 +45,7 @@ class SimmValuationTest {
 
     @Test
     fun `runs SIMM valuation demo`() {
-        driver(DriverParameters(isDebug = true, extraCordappPackagesToScan = listOf(IRSTradeFlow.javaClass.`package`.name, IRSState::class.java.`package`.name, "net.corda.vega.plugin.customserializers"))) {
+        driver(DriverParameters(isDebug = true, extraCordappPackagesToScan = listOf(IRSTradeFlow::class.packageName, IRSState::class.packageName, "net.corda.vega.plugin.customserializers"))) {
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }

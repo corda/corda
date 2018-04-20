@@ -1,6 +1,7 @@
 package net.corda.bank
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
@@ -29,7 +30,7 @@ class BankOfCordaRPCClientTest {
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities)
         )
-        driver(DriverParameters(extraCordappPackagesToScan = listOf(Cash::class.java.`package`.name), isDebug = true)) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf(Cash::class.packageName), isDebug = true)) {
             val bocManager = User("bocManager", "password1", permissions = setOf(
                     startFlow<CashIssueAndPaymentFlow>()) + commonPermissions)
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet<String>() + commonPermissions)

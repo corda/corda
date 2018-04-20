@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.packageName
 import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -88,7 +89,7 @@ class KotlinCommercialPaperLegacyTest : ICommercialPaperTestTemplate {
     override fun getContract() = CommercialPaper.CP_PROGRAM_ID
 }
 
-private val cordappPackages = listOf(Cash::class.java.`package`.name, CommercialPaper::class.java.`package`.name)
+private val cordappPackages = listOf(Cash::class.packageName, CommercialPaper::class.packageName)
 
 @RunWith(Parameterized::class)
 class CommercialPaperTestsGeneric {

@@ -4,6 +4,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
@@ -43,7 +44,7 @@ class DistributedServiceTests {
                 invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
         driver(DriverParameters(
-                extraCordappPackagesToScan = listOf(Cash::class.java.`package`.name),
+                extraCordappPackagesToScan = listOf(Cash::class.packageName),
                 notarySpecs = listOf(
                         NotarySpec(
                                 DUMMY_NOTARY_NAME,

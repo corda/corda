@@ -11,6 +11,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
@@ -54,7 +55,7 @@ class NodeMonitorModelTest {
     private lateinit var newNode: (CordaX500Name) -> NodeInfo
 
     private fun setup(runTest: () -> Unit) {
-        driver(DriverParameters(extraCordappPackagesToScan = listOf(Cash::class.java.`package`.name))) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf(Cash::class.packageName))) {
             val cashUser = User("user1", "test", permissions = setOf(
                     startFlow<CashIssueFlow>(),
                     startFlow<CashPaymentFlow>(),
