@@ -20,6 +20,7 @@ import net.corda.core.context.Trace.InvocationId
 import net.corda.core.internal.LazyStickyPool
 import net.corda.core.internal.LifeCycle
 import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.times
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.serialize
@@ -29,6 +30,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.DeduplicationChecker
+import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
@@ -173,6 +175,8 @@ class RPCClientProxyHandler(
     private val deduplicationSequenceNumber = AtomicLong(0)
 
     private val sendingEnabled = AtomicBoolean(true)
+    // used to interrupt failover thread (i.e. client is closed while failing over)
+    private var haFailoverThread: Thread? = null
 
     /**
      * Start the client. This creates the per-client queue, starts the consumer session and the reaper.
@@ -192,17 +196,22 @@ class RPCClientProxyHandler(
                 rpcConfiguration.reapInterval.toMillis(),
                 TimeUnit.MILLISECONDS
         )
+        // Create a session factory using the first available server. If more than one transport configuration was
+        // used when creating the server locator, every one will be tried during failover. The locator will round-robin
+        // through the available transport configurations with the starting position being generated randomly.
+        // If there's only one available, that one will be retried continuously as configured in rpcConfiguration.
+        // There is no failover on first attempt, meaning that if a connection cannot be established, the serverLocator
+        // will try another transport if it exists or throw an exception otherwise.
         sessionFactory = serverLocator.createSessionFactory()
-        producerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
-        rpcProducer = producerSession!!.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME)
-        consumerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
-        consumerSession!!.createTemporaryQueue(clientAddress, RoutingType.ANYCAST, clientAddress)
-        rpcConsumer = consumerSession!!.createConsumer(clientAddress)
-        rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)
-        producerSession!!.addFailoverListener(this::failoverHandler)
+        // Depending on how the client is constructed, connection failure is treated differently
+        if (serverLocator.staticTransportConfigurations.size == 1) {
+            sessionFactory!!.addFailoverListener(this::failoverHandler)
+        } else {
+            sessionFactory!!.addFailoverListener(this::haFailoverHandler)
+        }
+        initSessions()
         lifeCycle.transition(State.UNSTARTED, State.SERVER_VERSION_NOT_SET)
-        consumerSession!!.start()
-        producerSession!!.start()
+        startSessions()
     }
 
     // This is the general function that transforms a client side RPC to internal Artemis messages.
@@ -341,6 +350,10 @@ class RPCClientProxyHandler(
      * @param notify whether to notify observables or not.
      */
     private fun close(notify: Boolean = true) {
+        haFailoverThread?.apply {
+            interrupt()
+            join(1000)
+        }
         sessionFactory?.close()
         reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
@@ -403,26 +416,82 @@ class RPCClientProxyHandler(
         }
     }
 
+    private fun attemptReconnect() {
+        var reconnectAttempts = rpcConfiguration.maxReconnectAttempts * serverLocator.staticTransportConfigurations.size
+        var retryInterval = rpcConfiguration.connectionRetryInterval
+        val maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval
+
+        var transportIterator = serverLocator.staticTransportConfigurations.iterator()
+        while (transportIterator.hasNext() && reconnectAttempts != 0) {
+            val transport = transportIterator.next()
+            if (!transportIterator.hasNext())
+                transportIterator = serverLocator.staticTransportConfigurations.iterator()
+
+            log.debug("Trying to connect using ${transport.params}")
+            try {
+                if (serverLocator != null && !serverLocator.isClosed) {
+                    sessionFactory = serverLocator.createSessionFactory(transport)
+                } else {
+                    log.warn("Stopping reconnect attempts.")
+                    log.debug("Server locator is closed or garbage collected. Proxy may have been closed during reconnect.")
+                    break
+                }
+            } catch (e: ActiveMQException) {
+                try {
+                    Thread.sleep(retryInterval.toMillis())
+                } catch (e: InterruptedException) {}
+                // could not connect, try with next server transport
+                reconnectAttempts--
+                retryInterval = minOf(maxRetryInterval, retryInterval.times(rpcConfiguration.connectionRetryIntervalMultiplier.toLong()))
+                continue
+            }
+
+            log.debug("Connected successfully using ${transport.params}")
+            log.info("RPC server available.")
+            sessionFactory!!.addFailoverListener(this::haFailoverHandler)
+            initSessions()
+            startSessions()
+            sendingEnabled.set(true)
+            break
+        }
+
+        if (reconnectAttempts == 0 || sessionFactory == null)
+            log.error("Could not reconnect to the RPC server.")
+    }
+
+    private fun initSessions() {
+        producerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
+        rpcProducer = producerSession!!.createProducer(RPCApi.RPC_SERVER_QUEUE_NAME)
+        consumerSession = sessionFactory!!.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
+        consumerSession!!.createTemporaryQueue(clientAddress, RoutingType.ANYCAST, clientAddress)
+        rpcConsumer = consumerSession!!.createConsumer(clientAddress)
+        rpcConsumer!!.setMessageHandler(this::artemisMessageHandler)
+    }
+
+    private fun startSessions() {
+        consumerSession!!.start()
+        producerSession!!.start()
+    }
+
+    private fun haFailoverHandler(event: FailoverEventType) {
+        if (event == FailoverEventType.FAILURE_DETECTED) {
+            log.warn("Connection failure. Attempting to reconnect using back-up addresses.")
+            cleanUpOnConnectionLoss()
+            sessionFactory?.apply {
+                connection.destroy()
+                cleanup()
+                close()
+            }
+            haFailoverThread = Thread.currentThread()
+            attemptReconnect()
+        }
+        /* Other events are not considered as reconnection is not done by Artemis */
+    }
+
     private fun failoverHandler(event: FailoverEventType) {
         when (event) {
             FailoverEventType.FAILURE_DETECTED -> {
-                sendingEnabled.set(false)
-
-                log.warn("Terminating observables.")
-                val m = observableContext.observableMap.asMap()
-                m.keys.forEach { k ->
-                    observationExecutorPool.run(k) {
-                        m[k]?.onError(RPCException("Connection failure detected."))
-                    }
-                }
-                observableContext.observableMap.invalidateAll()
-
-                rpcReplyMap.forEach { _, replyFuture ->
-                    replyFuture.setException(RPCException("Connection failure detected."))
-                }
-
-                rpcReplyMap.clear()
-                callSiteMap?.clear()
+               cleanUpOnConnectionLoss()
             }
 
             FailoverEventType.FAILOVER_COMPLETED -> {
@@ -434,6 +503,25 @@ class RPCClientProxyHandler(
                 log.error("Could not reconnect to the RPC server.")
             }
         }
+    }
+
+    private fun cleanUpOnConnectionLoss() {
+        sendingEnabled.set(false)
+        log.warn("Terminating observables.")
+        val m = observableContext.observableMap.asMap()
+        m.keys.forEach { k ->
+            observationExecutorPool.run(k) {
+                m[k]?.onError(RPCException("Connection failure detected."))
+            }
+        }
+        observableContext.observableMap.invalidateAll()
+
+        rpcReplyMap.forEach { _, replyFuture ->
+            replyFuture.setException(RPCException("Connection failure detected."))
+        }
+
+        rpcReplyMap.clear()
+        callSiteMap?.clear()
     }
 }
 

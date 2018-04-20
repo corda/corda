@@ -14,6 +14,7 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.*
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransportsFromList
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.config.SSLConfiguration
@@ -60,7 +61,8 @@ data class CordaRPCClientConfigurationImpl(
 class RPCClient<I : RPCOps>(
         val transport: TransportConfiguration,
         val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
-        val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
+        val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
+        val haPoolTransportConfigurations: List<TransportConfiguration> = emptyList()
 ) {
     constructor(
             hostAndPort: NetworkHostAndPort,
@@ -68,6 +70,14 @@ class RPCClient<I : RPCOps>(
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfiguration), configuration, serializationContext)
+
+    constructor(
+            haAddressPool: List<NetworkHostAndPort>,
+            sslConfiguration: SSLConfiguration? = null,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
+    ) : this(tcpTransport(ConnectionDirection.Outbound(), haAddressPool.first(), sslConfiguration),
+            configuration, serializationContext, tcpTransportsFromList(ConnectionDirection.Outbound(), haAddressPool, sslConfiguration))
 
     companion object {
         private val log = contextLogger()
@@ -83,11 +93,15 @@ class RPCClient<I : RPCOps>(
         return log.logElapsedTime("Startup") {
             val clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.${random63BitValue()}")
 
-            val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(transport).apply {
+            val serverLocator = (if (haPoolTransportConfigurations.isEmpty()) {
+                ActiveMQClient.createServerLocatorWithoutHA(transport)
+            } else {
+                ActiveMQClient.createServerLocatorWithoutHA(*haPoolTransportConfigurations.toTypedArray())
+            }).apply {
                 retryInterval = rpcConfiguration.connectionRetryInterval.toMillis()
                 retryIntervalMultiplier = rpcConfiguration.connectionRetryIntervalMultiplier
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
-                reconnectAttempts = rpcConfiguration.maxReconnectAttempts
+                reconnectAttempts = if (haPoolTransportConfigurations.isEmpty()) rpcConfiguration.maxReconnectAttempts else 0
                 minLargeMessageSize = rpcConfiguration.maxFileSize
                 isUseGlobalPools = nodeSerializationEnv != null
             }
