@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
-import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.UpgradedContract
@@ -17,6 +16,11 @@ import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.Collections.singleton
+
+// When scanning of the CorDapp Jar is performed without "corda-core.jar" being the in the classpath, there is no way to appreciate
+// relationships between those interfaces, therefore they have to be listed explicitly.
+val coreContractClasses = setOf(Contract::class, UpgradedContractWithLegacyConstraint::class, UpgradedContract::class)
 
 /**
  * Scans the jar for contracts.
@@ -26,14 +30,9 @@ fun scanJarForContracts(cordappJar: Path): List<ContractClassName> {
     val scanResult = FastClasspathScanner()
             // A set of a single element may look odd, but if this is removed "Path" which itself is an `Iterable`
             // is getting broken into pieces to scan individually, which doesn't yield desired effect.
-            .overrideClasspath(setOf(cordappJar))
+            .overrideClasspath(singleton(cordappJar))
             .scan()
-    // TODO: Refactor to re-use functionality in `net.corda.node.internal.cordapp.CordappLoader#findContractClassNames()`
-    val contracts = (
-                scanResult.getNamesOfClassesImplementing(Contract::class.qualifiedName) +
-                scanResult.getNamesOfClassesImplementing(UpgradedContractWithLegacyConstraint::class.qualifiedName) +
-                scanResult.getNamesOfClassesImplementing(UpgradedContract::class.qualifiedName)
-            ).distinct()
+    val contracts = coreContractClasses.flatMap { contractClass -> scanResult.getNamesOfClassesImplementing(contractClass.qualifiedName) }.distinct()
 
     // Only keep instantiable contracts
     return URLClassLoader(arrayOf(cordappJar.toUri().toURL()), Contract::class.java.classLoader).use {
