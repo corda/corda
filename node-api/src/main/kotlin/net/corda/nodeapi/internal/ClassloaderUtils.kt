@@ -1,8 +1,11 @@
 package net.corda.nodeapi.internal
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
+import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.UpgradedContract
+import net.corda.core.contracts.UpgradedContractWithLegacyConstraint
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.logElapsedTime
@@ -25,7 +28,12 @@ fun scanJarForContracts(cordappJar: Path): List<ContractClassName> {
             // is getting broken into pieces to scan individually, which doesn't yield desired effect.
             .overrideClasspath(setOf(cordappJar))
             .scan()
-    val contracts = (scanResult.getNamesOfClassesImplementing(Contract::class.qualifiedName) ).distinct()
+    // TODO: Refactor to re-use functionality in `net.corda.node.internal.cordapp.CordappLoader#findContractClassNames()`
+    val contracts = (
+                scanResult.getNamesOfClassesImplementing(Contract::class.qualifiedName) +
+                scanResult.getNamesOfClassesImplementing(UpgradedContractWithLegacyConstraint::class.qualifiedName) +
+                scanResult.getNamesOfClassesImplementing(UpgradedContract::class.qualifiedName)
+            ).distinct()
 
     // Only keep instantiable contracts
     return URLClassLoader(arrayOf(cordappJar.toUri().toURL()), Contract::class.java.classLoader).use {
