@@ -106,12 +106,12 @@ class RPCClient<I : RPCOps>(
             val serverLocator = (if (haPoolTransportConfigurations.isEmpty()) {
                 ActiveMQClient.createServerLocatorWithoutHA(transport)
             } else {
-                ActiveMQClient.createServerLocatorWithHA(*haPoolTransportConfigurations.toTypedArray())
+                ActiveMQClient.createServerLocatorWithoutHA(*haPoolTransportConfigurations.toTypedArray())
             }).apply {
                 retryInterval = rpcConfiguration.connectionRetryInterval.toMillis()
                 retryIntervalMultiplier = rpcConfiguration.connectionRetryIntervalMultiplier
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
-                reconnectAttempts = rpcConfiguration.maxReconnectAttempts
+                reconnectAttempts = if (haPoolTransportConfigurations.isEmpty()) rpcConfiguration.maxReconnectAttempts else 0
                 minLargeMessageSize = rpcConfiguration.maxFileSize
                 isUseGlobalPools = nodeSerializationEnv != null
             }

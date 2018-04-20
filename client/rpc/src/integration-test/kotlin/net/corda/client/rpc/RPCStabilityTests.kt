@@ -336,6 +336,96 @@ class RPCStabilityTests {
         }
     }
 
+    interface ServerOps : RPCOps {
+        fun serverId(): String
+    }
+
+    @Test
+    fun `client connects to first available server`() {
+        rpcDriver {
+            val ops = object : ServerOps {
+                override val protocolVersion = 0
+                override fun serverId() = "server"
+            }
+            val serverFollower = shutdownManager.follower()
+            val serverAddress = startRpcServer<RPCOps>(ops = ops).getOrThrow().broker.hostAndPort!!
+            serverFollower.unfollow()
+
+            val clientFollower = shutdownManager.follower()
+            val client = startRpcClient<ServerOps>(listOf(NetworkHostAndPort("localhost", 12345), serverAddress, NetworkHostAndPort("localhost", 54321))).getOrThrow()
+            clientFollower.unfollow()
+
+            assertEquals("server", client.serverId())
+
+            clientFollower.shutdown() // Driver would do this after the new server, causing hang.
+        }
+    }
+
+    @Test
+    fun `3 server failover`() {
+        rpcDriver {
+            val ops1 = object : ServerOps {
+                override val protocolVersion = 0
+                override fun serverId() = "server1"
+            }
+            val ops2 = object : ServerOps {
+                override val protocolVersion = 0
+                override fun serverId() = "server2"
+            }
+            val ops3 = object : ServerOps {
+                override val protocolVersion = 0
+                override fun serverId() = "server3"
+            }
+            val serverFollower1 = shutdownManager.follower()
+            val server1 = startRpcServer<RPCOps>(ops = ops1).getOrThrow()
+            serverFollower1.unfollow()
+
+            val serverFollower2 = shutdownManager.follower()
+            val server2 = startRpcServer<RPCOps>(ops = ops2).getOrThrow()
+            serverFollower2.unfollow()
+
+            val serverFollower3 = shutdownManager.follower()
+            val server3 = startRpcServer<RPCOps>(ops = ops3).getOrThrow()
+            serverFollower3.unfollow()
+            val servers = mutableMapOf("server1" to serverFollower1, "server2" to serverFollower2, "server3" to serverFollower3)
+
+            val clientFollower = shutdownManager.follower()
+            val client = startRpcClient<ServerOps>(listOf(server1.broker.hostAndPort!!, server2.broker.hostAndPort!!, server3.broker.hostAndPort!!)).getOrThrow()
+            clientFollower.unfollow()
+
+            var response = client.serverId()
+            assertTrue(servers.containsKey(response))
+            servers[response]!!.shutdown()
+            servers.remove(response)
+
+            //failover will take some time
+            while (true) {
+                try {
+                    response = client.serverId()
+                    break
+                } catch (e: RPCException) {}
+            }
+            assertTrue(servers.containsKey(response))
+            servers[response]!!.shutdown()
+            servers.remove(response)
+
+            while (true) {
+                try {
+                    response = client.serverId()
+                    break
+                } catch (e: RPCException) {}
+            }
+            assertTrue(servers.containsKey(response))
+            servers[response]!!.shutdown()
+            servers.remove(response)
+
+            assertTrue(servers.isEmpty())
+
+            clientFollower.shutdown() // Driver would do this after the new server, causing hang.
+
+        }
+    }
+
     interface TrackSubscriberOps : RPCOps {
         fun subscribe(): Observable<Unit>
     }

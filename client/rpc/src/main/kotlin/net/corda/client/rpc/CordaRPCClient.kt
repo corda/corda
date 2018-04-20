@@ -110,7 +110,7 @@ interface CordaRPCClientConfiguration {
  * @param sslConfiguration An optional [SSLConfiguration] used to enable secure communication with the server.
  * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
  * The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
- * HA mode, no failover will occur and the client will try reconnecting to the initial server it connected to.
+ * HA mode, the client will round-robin from the beginning of the list and try all servers.
  */
 class CordaRPCClient private constructor(
         private val hostAndPort: NetworkHostAndPort,
@@ -125,7 +125,7 @@ class CordaRPCClient private constructor(
     /**
      * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
      * The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
-     * HA mode, no failover will occur and the client will try reconnecting to the initial server it connected to.
+     * HA mode, the client will round-robin from the beginning of the list and try all servers.
      * @param configuration An optional configuration used to tweak client behaviour.
      */
     @JvmOverloads
