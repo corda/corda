@@ -3214,7 +3214,7 @@ public static final class net.corda.core.transactions.FilteredTransaction$Compan
   @org.jetbrains.annotations.NotNull public final List inputsOfType(Class)
   public String toString()
   public final void verify()
-  public static final net.corda.core.transactions.LedgerTransaction$Companion Companion
+  @java.lang.Deprecated public static final net.corda.core.transactions.LedgerTransaction$Companion Companion
 ##
 public static final class net.corda.core.transactions.LedgerTransaction$InOutGroup extends java.lang.Object
   public <init>(List, List, Object)
@@ -3320,7 +3320,7 @@ public static final class net.corda.core.transactions.NotaryChangeWireTransactio
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction withAdditionalSignature(java.security.KeyPair, net.corda.core.crypto.SignatureMetadata)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction withAdditionalSignature(net.corda.core.crypto.TransactionSignature)
   @org.jetbrains.annotations.NotNull public final net.corda.core.transactions.SignedTransaction withAdditionalSignatures(Iterable)
-  public static final net.corda.core.transactions.SignedTransaction$Companion Companion
+  @java.lang.Deprecated public static final net.corda.core.transactions.SignedTransaction$Companion Companion
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.transactions.SignedTransaction$SignaturesMissingException extends java.security.SignatureException implements net.corda.core.CordaThrowable, net.corda.core.contracts.NamedByHash
   public <init>(Set, List, net.corda.core.crypto.SecureHash)
