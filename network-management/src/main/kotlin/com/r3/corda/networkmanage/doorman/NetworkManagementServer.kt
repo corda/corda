@@ -42,21 +42,7 @@ class NetworkManagementServer(dataSourceProperties: Properties,
     private val database = configureDatabase(dataSourceProperties, databaseConfig).also { closeActions += it::close }
     private val networkMapStorage = PersistentNetworkMapStorage(database)
     private val nodeInfoStorage = PersistentNodeInfoStorage(database)
-    private val crlStorage = PersistentCertificateRevocationListStorage(database)
-    private val csrStorage = doormanConfig?.let {
-        if (it.approveAll) {
-            ApproveAllCertificateSigningRequestStorage(PersistentCertificateSigningRequestStorage(database))
-        } else {
-            PersistentCertificateSigningRequestStorage(database)
-        }
-    }
-    private val crrStorage = revocationConfig?.let {
-        if (it.approveAll) {
-            ApproveAllCertificateRevocationRequestStorage(PersistentCertificateRevocationRequestStorage(database))
-        } else {
-            PersistentCertificateRevocationRequestStorage(database)
-        }
-    }
+
     lateinit var hostAndPort: NetworkHostAndPort
 
     override fun close() {
@@ -72,10 +58,8 @@ class NetworkManagementServer(dataSourceProperties: Properties,
 
     private fun getNetworkMapService(config: NetworkMapConfig, signer: LocalSigner?): NetworkMapWebService {
         logger.info("Starting Network Map server.")
-        csrStorage ?: throw IllegalStateException("Certificate signing request storage cannot be null when creating the network map service.")
         val localNetworkMapSigner = signer?.let { NetworkMapSigner(networkMapStorage, it) }
-        val latestParameters = networkMapStorage.getLatestNetworkParameters()?.networkParameters ?:
-                throw IllegalStateException("No network parameters were found. Please upload new network parameters before starting network map service")
+        val latestParameters = networkMapStorage.getLatestNetworkParameters()?.networkParameters ?: throw IllegalStateException("No network parameters were found. Please upload new network parameters before starting network map service")
         logger.info("Starting network map service with latest network parameters: $latestParameters")
         localNetworkMapSigner?.signAndPersistNetworkParameters(latestParameters)
 
@@ -92,15 +76,22 @@ class NetworkManagementServer(dataSourceProperties: Properties,
             }, config.signInterval, config.signInterval, TimeUnit.MILLISECONDS)
             closeActions += scheduledExecutor::shutdown
         }
-
-        return NetworkMapWebService(nodeInfoStorage, networkMapStorage, csrStorage, config)
+        return NetworkMapWebService(nodeInfoStorage, networkMapStorage, PersistentCertificateSigningRequestStorage(database), config)
     }
 
     private fun getDoormanService(config: DoormanConfig,
                                   csrCertPathAndKey: CertPathAndKey?,
                                   serverStatus: NetworkManagementServerStatus): RegistrationWebService {
         logger.info("Starting Doorman server.")
-        csrStorage ?: throw IllegalStateException("Certificate signing request storage cannot be null when creating the doorman service.")
+
+        val csrStorage = PersistentCertificateSigningRequestStorage(database).let {
+            if (config.approveAll) {
+                ApproveAllCertificateSigningRequestStorage(it)
+            } else {
+                it
+            }
+        }
+
         val jiraConfig = config.jira
         val requestProcessor = if (jiraConfig != null) {
             val jiraWebAPI = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
@@ -130,7 +121,15 @@ class NetworkManagementServer(dataSourceProperties: Properties,
     private fun getRevocationServices(config: CertificateRevocationConfig,
                                       csrCertPathAndKeyPair: CertPathAndKey?): Pair<CertificateRevocationRequestWebService, CertificateRevocationListWebService> {
         logger.info("Starting Revocation server.")
-        crrStorage ?: throw IllegalStateException("Certificate revocation request storage cannot be null when creating the revocation service.")
+
+        val crrStorage = PersistentCertificateRevocationRequestStorage(database).let {
+            if (config.approveAll) {
+                ApproveAllCertificateRevocationRequestStorage(it)
+            } else {
+                it
+            }
+        }
+        val crlStorage = PersistentCertificateRevocationListStorage(database)
         val crlHandler = csrCertPathAndKeyPair?.let {
             LocalCrlHandler(crrStorage,
                     crlStorage,
