@@ -417,7 +417,7 @@ class RPCClientProxyHandler(
     }
 
     private fun attemptReconnect() {
-        var reconnectAttempts = rpcConfiguration.maxReconnectAttempts * serverLocator.staticTransportConfigurations.size
+        var reconnectAttempts = rpcConfiguration.maxReconnectAttempts.times(serverLocator.staticTransportConfigurations.size)
         var retryInterval = rpcConfiguration.connectionRetryInterval
         val maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval
 
