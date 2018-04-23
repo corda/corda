@@ -39,7 +39,7 @@ class TraderDemoTest {
                 all()))
         driver(DriverParameters(startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf(
-                        Cash::class.packageName, CommercialPaper::class.packageName, CashSchemaV1::class.packageName))) {
+                        Cash::class.packageName, CommercialPaper::class.packageName, CashSchemaV1::class.packageName, SellerFlow::class.packageName))) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
