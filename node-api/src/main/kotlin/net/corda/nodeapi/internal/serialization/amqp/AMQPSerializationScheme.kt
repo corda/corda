@@ -41,16 +41,26 @@ abstract class AbstractAMQPSerializationScheme(
     // TODO: This method of initialisation for the Whitelist and plugin serializers will have to change
     // when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest way
     companion object {
+
+        const val SCAN_SPEC_PROP_NAME = "amqp.custom.serialization.scanSpec"
+
         private val serializationWhitelists: List<SerializationWhitelist> by lazy {
             ServiceLoader.load(SerializationWhitelist::class.java, this::class.java.classLoader).toList() + DefaultWhitelist
         }
 
         private val customSerializers: List<SerializationCustomSerializer<*, *>> by lazy {
-            FastClasspathScanner().addClassLoader(this::class.java.classLoader).scan()
-                    .getNamesOfClassesImplementing(SerializationCustomSerializer::class.java)
-                    .mapNotNull { this::class.java.classLoader.loadClass(it).asSubclass(SerializationCustomSerializer::class.java) }
-                    .filterNot { Modifier.isAbstract(it.modifiers) }
-                    .map { it.kotlin.objectOrNewInstance() }
+
+            val scanSpec: String? = System.getProperty(SCAN_SPEC_PROP_NAME)
+
+            if(scanSpec == null) {
+                emptyList()
+            } else {
+                FastClasspathScanner(scanSpec).addClassLoader(this::class.java.classLoader).scan()
+                        .getNamesOfClassesImplementing(SerializationCustomSerializer::class.java)
+                        .mapNotNull { this::class.java.classLoader.loadClass(it).asSubclass(SerializationCustomSerializer::class.java) }
+                        .filterNot { Modifier.isAbstract(it.modifiers) }
+                        .map { it.kotlin.objectOrNewInstance() }
+            }
         }
     }
 
