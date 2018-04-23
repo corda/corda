@@ -5,20 +5,21 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.div
+import net.corda.core.internal.list
+import net.corda.core.internal.readLines
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.node.User
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.io.*
-import java.nio.file.Files
 import kotlin.test.assertEquals
 
 class BootTests {
@@ -40,13 +41,13 @@ class BootTests {
         driver(DriverParameters(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
-            val logFile = logFolder.toFile().listFiles { _, name -> name.endsWith(".log") }.single()
+            val logFile = logFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }
             // Start second Alice, should fail
             assertThatThrownBy {
                 startNode(providedName = ALICE_NAME).getOrThrow()
             }
             // We count the number of nodes that wrote into the logfile by counting "Logs can be found in"
-            val numberOfNodesThatLogged = Files.lines(logFile.toPath()).filter { NodeStartup.LOGS_CAN_BE_FOUND_IN_STRING in it }.count()
+            val numberOfNodesThatLogged = logFile.readLines { it.filter { NodeStartup.LOGS_CAN_BE_FOUND_IN_STRING in it }.count() }
             assertEquals(1, numberOfNodesThatLogged)
         }
     }

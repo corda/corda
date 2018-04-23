@@ -32,7 +32,6 @@ import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.nio.file.Paths
 import java.sql.SQLException
 import java.time.Duration
 import java.time.Instant
@@ -576,7 +575,7 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
 
 val Class<out FlowLogic<*>>.appName: String
     get() {
-        val jarFile = Paths.get(protectionDomain.codeSource.location.toURI())
+        val jarFile = protectionDomain.codeSource.location.toPath()
         return if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
             jarFile.fileName.toString().removeSuffix(".jar")
         } else {

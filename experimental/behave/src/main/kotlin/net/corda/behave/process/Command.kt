@@ -7,14 +7,14 @@ import net.corda.behave.process.output.OutputListener
 import rx.Observable
 import rx.Subscriber
 import java.io.Closeable
-import java.io.File
 import java.io.IOException
+import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 
 open class Command(
         private val command: List<String>,
-        private val directory: File = currentDirectory,
+        private val directory: Path = currentDirectory,
         private val timeout: Duration = 2.minutes
 ): Closeable {
 
@@ -49,7 +49,7 @@ open class Command(
         try {
             log.info("Command: $command")
             val processBuilder = ProcessBuilder(command)
-                    .directory(directory)
+                    .directory(directory.toFile())
                     .redirectErrorStream(true)
             processBuilder.environment().putAll(System.getenv())
             process = processBuilder.start()

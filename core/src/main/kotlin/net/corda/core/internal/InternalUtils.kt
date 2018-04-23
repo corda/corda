@@ -34,13 +34,13 @@ import java.lang.reflect.Field
 import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_OK
+import java.net.URI
 import java.net.URL
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.*
-import java.nio.file.attribute.FileAttribute
-import java.nio.file.attribute.FileTime
+import java.nio.file.CopyOption
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -67,14 +67,6 @@ infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(th
 
 operator fun Duration.div(divider: Long): Duration = dividedBy(divider)
 operator fun Duration.times(multiplicand: Long): Duration = multipliedBy(multiplicand)
-
-/**
- * Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform
- * separator problems.
- */
-operator fun Path.div(other: String): Path = resolve(other)
-
-operator fun String.div(other: String): Path = Paths.get(this) / other
 
 /**
  * Returns the single element matching the given [predicate], or `null` if the collection is empty, or throws exception
@@ -119,43 +111,6 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
     require(i != -1)
     return i
 }
-
-fun Path.createDirectory(vararg attrs: FileAttribute<*>): Path = Files.createDirectory(this, *attrs)
-fun Path.createDirectories(vararg attrs: FileAttribute<*>): Path = Files.createDirectories(this, *attrs)
-fun Path.exists(vararg options: LinkOption): Boolean = Files.exists(this, *options)
-fun Path.copyToDirectory(targetDir: Path, vararg options: CopyOption): Path {
-    require(targetDir.isDirectory()) { "$targetDir is not a directory" }
-    val targetFile = targetDir.resolve(fileName)
-    Files.copy(this, targetFile, *options)
-    return targetFile
-}
-
-fun Path.moveTo(target: Path, vararg options: CopyOption): Path = Files.move(this, target, *options)
-fun Path.isRegularFile(vararg options: LinkOption): Boolean = Files.isRegularFile(this, *options)
-fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(this, *options)
-inline val Path.size: Long get() = Files.size(this)
-fun Path.lastModifiedTime(vararg options: LinkOption): FileTime = Files.getLastModifiedTime(this, *options)
-inline fun <R> Path.list(block: (Stream<Path>) -> R): R = Files.list(this).use(block)
-fun Path.deleteIfExists(): Boolean = Files.deleteIfExists(this)
-fun Path.reader(charset: Charset = UTF_8): BufferedReader = Files.newBufferedReader(this, charset)
-fun Path.writer(charset: Charset = UTF_8, vararg options: OpenOption): BufferedWriter = Files.newBufferedWriter(this, charset, *options)
-fun Path.readAll(): ByteArray = Files.readAllBytes(this)
-inline fun <R> Path.read(vararg options: OpenOption, block: (InputStream) -> R): R = Files.newInputStream(this, *options).use(block)
-inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = emptyArray(), block: (OutputStream) -> Unit) {
-    if (createDirs) {
-        normalize().parent?.createDirectories()
-    }
-    Files.newOutputStream(this, *options).use(block)
-}
-
-inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) -> R): R = Files.lines(this, charset).use(block)
-fun Path.readAllLines(charset: Charset = UTF_8): List<String> = Files.readAllLines(this, charset)
-fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
-
-inline fun <reified T : Any> Path.readObject(): T = readAll().deserialize()
-
-/** Calculate the hash of the contents of this file. */
-val Path.hash: SecureHash get() = read { it.hash() }
 
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
@@ -350,6 +305,10 @@ fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, seri
 
 /** Convenience method to get the package name of a class literal. */
 val KClass<*>.packageName: String get() = java.`package`.name
+
+fun URI.toPath(): Path = Paths.get(this)
+
+fun URL.toPath(): Path = toURI().toPath()
 
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 

@@ -267,7 +267,7 @@ class GenericsTests {
 
         assertEquals("wibble",
                 DeserializationInput(sf).deserialize(SerializedBytes<ForceWildcard<*>>(
-                        File(GenericsTests::class.java.getResource(resource).toURI()).readBytes())).t)
+                        GenericsTests::class.java.getResource(resource).readBytes())).t)
     }
 
     data class StateAndString(val state: TransactionState<*>, val ref: String)

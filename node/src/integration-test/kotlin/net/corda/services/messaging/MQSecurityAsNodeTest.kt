@@ -93,7 +93,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
                 val legalName = CordaX500Name("MegaCorp", "London", "GB")
                 certificatesDirectory.createDirectories()
                 if (!trustStoreFile.exists()) {
-                    javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").copyTo(trustStoreFile)
+                    javaClass.classLoader.getResourceAsStream("certificates/cordatruststore.jks").use { it.copyTo(trustStoreFile) }
                 }
 
                 val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
