@@ -2,6 +2,7 @@ package net.corda.vega
 
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.packageName
 import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -32,7 +33,7 @@ class SimmValuationTest {
 
     @Before
     fun setup() {
-        System.setProperty(AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME, CurrencyParameterSensitivitiesSerializer::class.java.`package`.name)
+        System.setProperty(AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME, CurrencyParameterSensitivitiesSerializer::class.packageName)
     }
 
     @After
