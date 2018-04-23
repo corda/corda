@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
@@ -88,7 +98,8 @@ open class Node(configuration: NodeConfiguration,
         private val sameVmNodeCounter = AtomicInteger()
         val scanPackagesSystemProperty = "net.corda.node.cordapp.scan.packages"
         val scanPackagesSeparator = ","
-        private fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
+        @JvmStatic
+        protected fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
             return System.getProperty(scanPackagesSystemProperty)?.let { scanPackages ->
                 CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
             } ?: CordappLoader.createDefault(configuration.baseDirectory)
@@ -174,12 +185,18 @@ open class Node(configuration: NodeConfiguration,
         } else {
             startLocalRpcBroker(networkParameters)
         }
-        val advertisedAddress = info.addresses[0]
-        bridgeControlListener = BridgeControlListener(configuration, serverAddress, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
-
+        val advertisedAddress = info.addresses.single()
+        val externalBridge = configuration.enterpriseConfiguration.externalBridge
+        if (externalBridge == null || !externalBridge) {
+            bridgeControlListener = BridgeControlListener(configuration, serverAddress, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
+        }
         printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
+
+        val rpcServerConfiguration = RPCServerConfiguration.default.copy(
+                rpcThreadPoolSize = configuration.enterpriseConfiguration.tuning.rpcThreadPoolSize
+        )
         rpcServerAddresses?.let {
-            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
+            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, rpcServerConfiguration)
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }
@@ -198,10 +215,12 @@ open class Node(configuration: NodeConfiguration,
                 serverThread,
                 database,
                 services.networkMapCache,
+                services.monitoringService.metrics,
+                info.legalIdentities[0].name.toString(),
                 advertisedAddress,
                 /*networkParameters.maxMessageSize*/MAX_FILE_SIZE,
-                isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
-                drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values)
+                nodeProperties.flowsDrainingMode::isEnabled,
+                nodeProperties.flowsDrainingMode.values)
     }
 
     private fun startLocalRpcBroker(networkParameters: NetworkParameters): BrokerAddresses? {
@@ -225,12 +244,16 @@ open class Node(configuration: NodeConfiguration,
 
     private fun getAdvertisedAddress(): NetworkHostAndPort {
         return with(configuration) {
-            val host = if (detectPublicIp) {
-                tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host
+            if (relay != null) {
+                NetworkHostAndPort(relay!!.relayHost, relay!!.remoteInboundPort)
             } else {
-                p2pAddress.host
+                val host = if (detectPublicIp) {
+                    tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host
+                } else {
+                    p2pAddress.host
+                }
+                NetworkHostAndPort(host, p2pAddress.port)
             }
-            NetworkHostAndPort(host, p2pAddress.port)
         }
     }
 
@@ -324,6 +347,9 @@ open class Node(configuration: NodeConfiguration,
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }
+        else if (databaseUrl != null) {
+            printBasicNodeInfo("Database connection url is", databaseUrl)
+        }
         return super.initialiseDatabasePersistence(schemaService, identityService)
     }
 
@@ -390,6 +416,7 @@ open class Node(configuration: NodeConfiguration,
 
     private var rpcMessagingClient: RPCMessagingClient? = null
     private var verifierMessagingClient: VerifierMessagingClient? = null
+
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
         rpcMessagingClient?.start2(rpcBroker!!.serverControl)

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.schema
 
 import net.corda.core.contracts.ContractState
@@ -14,11 +24,9 @@ import net.corda.node.services.api.SchemaService.SchemaOptions
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.messaging.P2PMessageDeduplicator
 import net.corda.node.services.messaging.P2PMessagingClient
-import net.corda.node.services.persistence.DBCheckpointStorage
-import net.corda.node.services.persistence.DBTransactionMappingStorage
-import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.node.services.persistence.*
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
@@ -43,12 +51,15 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
                     PersistentKeyManagementService.PersistentKey::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
-                    P2PMessagingClient.ProcessedMessage::class.java,
+                    P2PMessageDeduplicator.ProcessedMessage::class.java,
                     P2PMessagingClient.RetryMessage::class.java,
                     PersistentIdentityService.PersistentIdentity::class.java,
                     PersistentIdentityService.PersistentIdentityNames::class.java,
-                    ContractUpgradeServiceImpl.DBContractUpgrade::class.java
-            ))
+                    ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
+                    RunOnceService.MutualExclusion::class.java
+            )){
+        override val migrationResource = "node-core.changelog-master"
+    }
 
     // Entities used by a Notary
     object NodeNotary
@@ -59,7 +70,9 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
                     PersistentUniquenessProvider.CommittedState::class.java,
                     RaftUniquenessProvider.CommittedState::class.java,
                     BFTNonValidatingNotaryService.CommittedState::class.java
-            ))
+            )) {
+        override val migrationResource = "node-notary.changelog-master"
+    }
 
     // Required schemas are those used by internal Corda services
     private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =

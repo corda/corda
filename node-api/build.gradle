@@ -1,3 +1,15 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+plugins {
+    id "com.github.johnrengelman.shadow" version "2.0.3"
+}
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
@@ -34,11 +46,25 @@ dependencies {
     // For AMQP serialisation.
     compile "org.apache.qpid:proton-j:0.21.0"
 
+    // SQL connection pooling library
+    compile "com.zaxxer:HikariCP:$hikari_version"
+
+    // For db migration
+    compile "org.liquibase:liquibase-core:$liquibase_version"
+    runtime 'com.mattbertolini:liquibase-slf4j:2.0.0'
+
+    // Apache Curator: a client library for Zookeeper
+    shadow "org.apache.curator:curator-client:${curator_version}"
+    shadow "org.apache.curator:curator-recipes:${curator_version}"
+    testCompile "org.apache.curator:curator-test:${curator_version}"
+
     // FastClasspathScanner: classpath scanning - needed for the NetworkBootstraper
     compile 'io.github.lukehutch:fast-classpath-scanner:2.12.3'
 
     // Pure-Java Snappy compression
     compile 'org.iq80.snappy:snappy:0.4'
+
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
@@ -50,7 +76,35 @@ dependencies {
 }
 
 configurations {
+        compile.extendsFrom shadow
         testArtifacts.extendsFrom testRuntime
+}
+
+jar {
+    baseName 'corda-node-api'
+}
+// ensure that immediately after jar step we update to the shaded version of the jar, so that everyone use it.
+jar.finalizedBy shadowJar
+
+shadowJar {
+    baseName jar.baseName
+    configurations = [project.configurations.shadow]
+    classifier ""
+    dependencies {
+        include(dependency("org.apache.curator:curator-client:${curator_version}"))
+        include(dependency("org.apache.curator:curator-recipes:${curator_version}"))
+        include(dependency("org.apache.curator:curator-framework:${curator_version}"))
+        include(dependency('org.apache.zookeeper:zookeeper:3.5.3-beta'))
+        include(dependency('commons-cli:commons-cli:1.2'))
+        include(dependency('io.netty:netty:3.10.5.Final'))
+        include(dependency('com.google.guava:guava:20.0'))
+    }
+    relocate 'org.apache.curator.', 'net.corda.shaded.org.apache.curator.'
+    relocate 'org.apache.zookeeper.', 'net.corda.shaded.org.apache.zookeeper.'
+    relocate 'org.apache.jute.', 'net.corda.shaded.org.apache.jute.'
+    relocate 'org.apache.commons.', 'net.corda.shaded.org.apache.commons.'
+    relocate 'org.jboss.netty.', 'net.corda.shaded.org.jboss.netty.'
+    relocate 'com.google.', 'net.corda.shaded.com.google.'
 }
 
 task testJar(type: Jar) {
@@ -62,10 +116,6 @@ artifacts {
     testArtifacts testJar
 }
 
-jar {
-    baseName 'corda-node-api'
-}
-
 publish {
-    name jar.baseName
+    name shadowJar.baseName
 }

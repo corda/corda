@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.demobench.model
 
 import javafx.beans.binding.IntegerExpression
@@ -7,13 +17,13 @@ import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.noneOrSingle
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.pty.R3Pty
-import net.corda.core.node.NetworkParameters
-import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.core.node.NotaryInfo
 import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import tornadofx.*
 import java.io.IOException
 import java.lang.management.ManagementFactory

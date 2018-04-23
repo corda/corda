@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.testing.driver
 
 import net.corda.core.concurrent.CordaFuture
@@ -11,22 +21,29 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
-import net.corda.testing.core.*
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.http.HttpApi
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
 import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import kotlin.streams.toList
 
-class DriverTests {
-    private companion object {
+class DriverTests : IntegrationTest() {
+    companion object {
         val DUMMY_REGULATOR_NAME = CordaX500Name("Regulator A", "Paris", "FR")
         val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
@@ -41,6 +58,11 @@ class DriverTests {
             // Check that the port is bound
             addressMustNotBeBound(executorService, hostAndPort)
         }
+
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName(),
+                DUMMY_REGULATOR_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName())
     }
 
     @Test
@@ -72,10 +94,12 @@ class DriverTests {
     fun `default notary is visible when the startNode future completes`() {
         // Based on local testing, running this 3 times gives us a high confidence that we'll spot if the feature is not working
         repeat(3) {
+            setUp() // R3.Corda only: Schema setup for standalone database, does nothing for H2
             driver(DriverParameters(startNodesInProcess = true)) {
                 val bob = startNode(providedName = BOB_NAME).getOrThrow()
                 assertThat(bob.rpc.networkMapSnapshot().flatMap { it.legalIdentities }).contains(defaultNotaryIdentity)
             }
+            tearDown() // R3.Corda only: Schema cleanup for standalone database, does nothing for H2
         }
     }
 
@@ -93,11 +117,7 @@ class DriverTests {
         // Make sure we're using the log4j2 config which writes to the log file
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(DriverParameters(
-                isDebug = true,
-                notarySpecs = emptyList(),
-                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
-        )) {
+        driver(DriverParameters(isDebug = true,notarySpecs = emptyList(), systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
             val baseDirectory = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow().baseDirectory
             val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
@@ -107,7 +127,7 @@ class DriverTests {
 
     @Test
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        driver(DriverParameters(startNodesInProcess = false, notarySpecs = emptyList())) {
+        driver(DriverParameters(startNodesInProcess = false, jmxPolicy = JmxPolicy(true), notarySpecs = emptyList())) {
             // start another node so we gain access to node JMX metrics
             val webAddress = NetworkHostAndPort("localhost", 7006)
             startNode(providedName = DUMMY_REGULATOR_NAME,

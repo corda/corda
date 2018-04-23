@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.nodeapi.internal.bridging
 
 import io.netty.channel.EventLoopGroup
@@ -18,6 +28,7 @@ import net.corda.nodeapi.internal.bridging.AMQPBridgeManager.AMQPBridge.Companio
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
+import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -37,7 +48,7 @@ import kotlin.concurrent.withLock
  *  The Netty thread pool used by the AMQPBridges is also shared and managed by the AMQPBridgeManager.
  */
 @VisibleForTesting
-class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFactory: () -> ArtemisSessionProvider) : BridgeManager {
+class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConfig: SocksProxyConfig? = null, val artemisMessageClientFactory: () -> ArtemisSessionProvider) : BridgeManager {
 
     private val lock = ReentrantLock()
     private val bridgeNameToBridgeMap = mutableMapOf<String, AMQPBridge>()
@@ -47,7 +58,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
     private val trustStore = config.loadTrustStore().internal
     private var artemis: ArtemisSessionProvider? = null
 
-    constructor(config: NodeSSLConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int) : this(config, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+    constructor(config: NodeSSLConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int, socksProxyConfig: SocksProxyConfig? = null) : this(config, socksProxyConfig, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private const val NUM_BRIDGE_THREADS = 0 // Default sized pool
@@ -68,6 +79,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
                              keyStorePrivateKeyPassword: String,
                              trustStore: KeyStore,
                              sharedEventGroup: EventLoopGroup,
+                             socksProxyConfig: SocksProxyConfig?,
                              private val artemis: ArtemisSessionProvider) {
         companion object {
             fun getBridgeName(queueName: String, hostAndPort: NetworkHostAndPort): String = "$queueName -> $hostAndPort"
@@ -75,7 +87,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
 
         private val log = LoggerFactory.getLogger("$bridgeName:${legalNames.first()}")
 
-        val amqpClient = AMQPClient(listOf(target), legalNames, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, sharedThreadPool = sharedEventGroup)
+        val amqpClient = AMQPClient(listOf(target), legalNames, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, sharedThreadPool = sharedEventGroup, socksProxyConfig = socksProxyConfig)
         val bridgeName: String get() = getBridgeName(queueName, target)
         private val lock = ReentrantLock() // lock to serialise session level access
         private var session: ClientSession? = null
@@ -169,7 +181,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
         if (bridgeExists(getBridgeName(queueName, target))) {
             return
         }
-        val newBridge = AMQPBridge(queueName, target, legalNames, keyStore, keyStorePrivateKeyPassword, trustStore, sharedEventLoopGroup!!, artemis!!)
+        val newBridge = AMQPBridge(queueName, target, legalNames, keyStore, keyStorePrivateKeyPassword, trustStore, sharedEventLoopGroup!!, socksProxyConfig, artemis!!)
         lock.withLock {
             bridgeNameToBridgeMap[newBridge.bridgeName] = newBridge
         }

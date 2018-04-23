@@ -1,0 +1,190 @@
+/*
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ *   * Neither the name of Intel Corporation nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+
+/* Pointers.edl - Samples for pointer attributes. */
+
+enclave {
+    
+    /* 
+     * Following keywords/attributes are supported for pointers in Edger8r: 
+     *      in, out, user_check, 
+     *      string, wstring,
+     *      const, size, count, sizefunc, isptr, readonly
+     */
+
+    trusted {
+        
+        /*
+         * [user_check]:
+         *      the pointer won't be validated, and the buffer pointed by
+         *      'val' is not copied into the enclave either. But Enclave 
+         *      can modify the memory pointed by 'val'.
+         */
+        
+        public size_t ecall_pointer_user_check([user_check] void *val, size_t sz);
+        
+        /*
+         * [in]:
+         *      buffer with the same size will be allocated inside the enclave,
+         *      content pointed by 'val' will be copied into the new allocated
+         *      memory inside. Any changes performed inside the enclave will not 
+         *      affect the buffer outside.
+         */
+        
+        public void ecall_pointer_in([in] int *val);
+        
+        /*
+         * [out]:
+         *      buffer with the same size will be allocated inside the enclave,
+         *      but the content pointed by 'val' won't be copied. But after return, 
+         *      the buffer inside the enclave will copied into outside 'val'.
+         */
+        
+        public void ecall_pointer_out([out] int *val);
+
+        /*
+         * [in, out]:
+         *      buffer with the same size will be allocated inside the enclave,
+         *      the content pointed by 'val' will be copied either. After return, 
+         *      the buffer inside the enclave will by copied into outside 'val' again.
+         */
+        
+        public void ecall_pointer_in_out([in, out] int *val);
+        
+        /*
+         * [string]:
+         *      the attribute tells Edger8r 'str' is NULL terminated string, so strlen 
+         *      will be used to count the length of buffer pointed by 'str'.
+         */
+        
+        public void ecall_pointer_string([in, out, string] char *str);
+
+        /*
+         * [const]:
+         *      the attribute tells Edger8r the buffer pointed by 'str' cannot be modified,
+         *      so users cannot decorate 'str' with [out] attribute anymore.
+         */
+        
+        public void ecall_pointer_string_const([in, string] const char *str);
+
+        /*
+         * [size]:
+         *      the attribute tells Edger8r the length of buffer in byte pointed by 'ptr' 
+         *      (shall be copied or not). 
+         * Note: Users shall not specify [size] on [string] parameters.
+         */
+        
+        public void ecall_pointer_size([in, out, size=len] void *ptr, size_t len);
+
+        /*
+         * [count]:
+         *      the attribute tells Edger8r the number of integers to be copied from 'arr'.
+         */
+        
+        public void ecall_pointer_count([in, out, count=cnt] int *arr, int cnt);
+
+        /*
+         * [isptr]:
+         *      tells Edger8r the user defined type is a pointer; 
+         * [readonly]:
+         *      forbids the buffer allocated inside the enclave to be copied back to App
+         *      (cannot use with [out]).
+         */
+        
+        public void ecall_pointer_isptr_readonly([in, isptr, readonly, size=len] buffer_t buf, size_t len);
+        
+        /*
+         * [sizefunc]:
+         *      call a function to decide the size/length of the parameter; 
+         * Note:
+         *      User need to define and implement `get_buf_len' as:
+         *      size_t get_buf_len(const char* buf); 
+         */
+
+        public void ecall_pointer_sizefunc([sizefunc = get_buffer_len, in, out] char *buf);
+
+    };
+
+    /*
+     * Users can define multiple trusted/untrusted blocks, 
+     * edger8r will merged them into one trusted/untrusted block.
+     */
+    trusted {
+        /*
+         * Test pointer attributes in OCALLs
+         */
+        
+        public void ocall_pointer_attr(void);
+    
+    };
+
+    untrusted {
+    
+        /*
+         * [user_check]:
+         *      the pointer won't be valified, and the buffer pointed by 'val' is not 
+         *      copied to outside buffer either. Besides 'App' cannot modify the memory 
+         *      pointer by 'val'.
+         */
+        
+        void ocall_pointer_user_check([user_check] int *val);
+        
+        /*
+         * [in]:
+         *      buffer with the same size will be allocated in 'App' side, the content 
+         *      pointed by 'val' will be copied into the new allocated memory outside. 
+         *      Any changes performed by 'App' will not affect the buffer pointed by 'val'.
+         */
+        
+        void ocall_pointer_in([in] int *val);
+        
+        /*
+         * [out]:
+         *      buffer with the same size will be allocated in 'App' side, the content
+         *      pointed by 'val' won't be copied. But after return, the buffer outside
+         *      will be copied into the enclave.
+         */
+        
+        void ocall_pointer_out([out] int *val);
+
+        /*
+         * [in, out]:
+         *      buffer with the same size will be allocated in 'App' side, the content
+         *      pointed by 'val' will be copied either. After return, the buffer outside 
+         *      will copied into the enclave.
+         */
+        
+        void ocall_pointer_in_out([in, out] int *val);
+    
+    };
+
+};

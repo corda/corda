@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.persistence
 
 import net.corda.core.identity.AbstractParty
@@ -21,7 +31,6 @@ class AbstractPartyToX500NameAsStringConverter(private val identityService: Iden
         if (party != null) {
             val partyName = identityService.wellKnownPartyFromAnonymous(party)?.toString()
             if (partyName != null) return partyName
-             log.warn("Identity service unable to resolve AbstractParty: $party")
         }
         return null // non resolvable anonymous parties
     }
@@ -30,7 +39,6 @@ class AbstractPartyToX500NameAsStringConverter(private val identityService: Iden
         if (dbData != null) {
             val party = identityService.wellKnownPartyFromX500Name(CordaX500Name.parse(dbData))
             if (party != null) return party
-            log.warn("Identity service unable to resolve X500name: $dbData")
         }
         return null // non resolvable anonymous parties are stored as nulls
     }

@@ -1,0 +1,433 @@
+(type jobject java/lang/Object)
+
+(type class avian/VMClass
+  (array void* vtable))
+
+(type jclass java/lang/Class
+  (require class vmClass))
+
+(type jaccessibleObject java/lang/reflect/AccessibleObject)
+
+(type jexecutable java/lang/reflect/Executable)
+
+(type jfield java/lang/reflect/Field)
+
+(type jmethod java/lang/reflect/Method)
+
+(type jconstructor java/lang/reflect/Constructor)
+
+(type constantPool sun/reflect/ConstantPool)
+
+(type serializable java/io/Serializable)
+
+(type cloneable java/lang/Cloneable)
+
+(type callSite java/lang/invoke/CallSite
+  (require invocation invocation))
+
+(type methodHandle java/lang/invoke/MethodHandle
+  (alias method method vmtarget))
+
+(type methodType java/lang/invoke/MethodType)
+
+(type lookup java/lang/invoke/MethodHandles$Lookup)
+
+(type singleton avian/Singleton
+  (array maybe_object body))
+
+(type classLoader java/lang/ClassLoader
+  (object map))
+
+(type systemClassLoader avian/SystemClassLoader
+  (void* finder))
+
+(type field avian/VMField)
+
+(type method avian/VMMethod)
+
+(type addendum avian/Addendum)
+
+(type classAddendum avian/ClassAddendum)
+
+(type methodAddendum avian/MethodAddendum)
+
+(type fieldAddendum avian/FieldAddendum)
+
+(type classRuntimeData
+  (object arrayClass)
+  (object jclass)
+  (object pool)
+  (object signers))
+
+(type native
+  (void* function)
+  (uint8_t fast))
+
+(type methodRuntimeData
+  (native native))
+
+(type pointer
+  (void* value))
+
+(type nativeIntercept
+  (extends native)
+  (object original))
+
+(type region
+  (void* region)
+  (uint32_t position))
+
+(type exceptionHandlerTable
+  (array uint64_t body))
+
+(type lineNumberTable
+  (array uint64_t body))
+
+(type invocation
+  (uint16_t bootstrap)
+  (int32_t index)
+  (class class)
+  (singleton pool)
+  (method template)
+  (callSite site))
+
+(type triple
+  (object first)
+  (object second)
+  (object third))
+
+(type finalizer
+  (nogc object target)
+  (void* finalize)
+  (nogc object next)
+  (object queueTarget)
+  (finalizer queueNext))
+
+(type list
+  (uint32_t size)
+  (object front)
+  (object rear))
+
+(type vector
+  (uint32_t size)
+  (array object body))
+
+(type traceElement
+  (object method)
+  (int32_t ip))
+
+(type treeNode
+  (object value)
+  (treeNode left)
+  (treeNode right))
+
+(type callNode
+  (intptr_t address)
+  (method target)
+  (uintptr_t flags)
+  (callNode next))
+
+(type wordArray
+  (array uintptr_t body))
+
+(type array
+  (noassert array object body))
+
+(type hashMap
+  (uint32_t size)
+  (field array array))
+
+(type weakHashMap
+  (extends hashMap))
+
+(type pair avian/Pair
+  (object first)
+  (object second))
+
+(type monitor
+  (void* owner)
+  (void* waitHead)
+  (void* waitTail)
+  (object acquireHead)
+  (object acquireTail)
+  (uint32_t depth))
+
+(type monitorNode
+  (void* value)
+  (object next))
+
+(type innerClassReference avian/InnerClassReference)
+
+(type continuationContext
+  (continuationContext next)
+  (object before)
+  (object after)
+  (object continuation)
+  (method method))
+
+(type continuation avian/Continuations$Continuation
+  (continuation next)
+  (continuationContext context)
+  (method method)
+  (void* address)
+  (uintptr_t returnAddressOffset)
+  (uintptr_t framePointerOffset)
+  (array uintptr_t body))
+
+(type unwindResult avian/Continuations$UnwindResult)
+
+(type string java/lang/String
+  (alias data object value)
+  (alias length uint32_t count)
+  (alias hashCode uint32_t hash)
+  (polyfill uint32_t offset)
+  (polyfill uint32_t length))
+
+(type thread java/lang/Thread
+  (require object sleepLock)
+  (require object interruptLock)
+  (require uint8_t interrupted)
+  (require uint8_t unparked)
+  (require uint8_t blacklisting)
+  (alias peer uint64_t eetop)
+  (alias peer uint64_t nativePeer)
+  (require uint64_t peer))
+
+(type threadGroup java/lang/ThreadGroup)
+
+(type stackTraceElement java/lang/StackTraceElement)
+
+(type throwable java/lang/Throwable
+  (alias message string detailMessage)
+  (alias trace object backtrace)
+  (alias trace object stackState))
+
+(type exception java/lang/Exception)
+
+(type runtimeException java/lang/RuntimeException)
+
+(type nullPointerException java/lang/NullPointerException)
+
+(type arithmeticException java/lang/ArithmeticException)
+
+(type illegalStateException java/lang/IllegalStateException)
+
+(type illegalArgumentException java/lang/IllegalArgumentException)
+
+(type illegalMonitorStateException java/lang/IllegalMonitorStateException)
+
+(type indexOutOfBoundsException java/lang/IndexOutOfBoundsException)
+
+(type arrayIndexOutOfBoundsException java/lang/ArrayIndexOutOfBoundsException)
+
+(type arrayStoreException java/lang/ArrayStoreException)
+
+(type negativeArraySizeException java/lang/NegativeArraySizeException)
+
+(type cloneNotSupportedException java/lang/CloneNotSupportedException)
+
+(type reflectiveOperationException java/lang/ReflectiveOperationException)
+
+(type classCastException java/lang/ClassCastException)
+
+(type classNotFoundException java/lang/ClassNotFoundException)
+
+(type invocationTargetException java/lang/reflect/InvocationTargetException)
+
+(type interruptedException java/lang/InterruptedException)
+
+(type error java/lang/Error)
+
+(type virtualMachineError java/lang/VirtualMachineError)
+
+(type outOfMemoryError java/lang/OutOfMemoryError)
+
+(type stackOverflowError java/lang/StackOverflowError)
+
+(type linkageError java/lang/LinkageError)
+
+(type incompatibleClassChangeError java/lang/IncompatibleClassChangeError)
+
+(type abstractMethodError java/lang/AbstractMethodError)
+
+(type noSuchFieldError java/lang/NoSuchFieldError)
+
+(type noSuchMethodError java/lang/NoSuchMethodError)
+
+(type noClassDefFoundError java/lang/NoClassDefFoundError)
+
+(type unsatisfiedLinkError java/lang/UnsatisfiedLinkError)
+
+(type exceptionInInitializerError java/lang/ExceptionInInitializerError)
+
+(type ioException java/io/IOException)
+
+(type fileNotFoundException java/io/FileNotFoundException)
+
+(type incompatibleContinuationException
+  avian/IncompatibleContinuationException)
+
+(type number java/lang/Number)
+
+(type byte java/lang/Byte)
+
+(type boolean java/lang/Boolean)
+
+(type short java/lang/Short)
+
+(type char java/lang/Character)
+
+(type int java/lang/Integer)
+
+(type long java/lang/Long)
+
+(type float java/lang/Float)
+
+(type double java/lang/Double)
+
+(type referenceQueue java/lang/ref/ReferenceQueue
+  (alias front jreference head)
+  (require object jnext))
+
+(type jreference java/lang/ref/Reference
+  (alias target object referent)
+  (alias queue referenceQueue queue)
+  (alias jNext jreference next)
+  (alias jNext jreference queueNext)
+  (alias vmNext object discovered)
+  (alias vmNext object pendingNext)
+  (nogc object target)
+  (nogc object queue)
+  (nogc object vmNext))
+
+(type weakReference java/lang/ref/WeakReference)
+
+(type softReference java/lang/ref/SoftReference)
+
+(type phantomReference java/lang/ref/PhantomReference)
+
+(type cleaner sun/misc/Cleaner
+  (cleaner queueNext))
+
+(type byteArray [B
+  (extends jobject)
+  (array int8_t body))
+
+(type reference
+  (uint8_t kind)
+  (byteArray class)
+  (byteArray name)
+  (byteArray spec))
+
+(type finder
+  (void* finder)
+  (byteArray name)
+  (finder next))
+
+(type booleanArray [Z
+  (extends jobject)
+  (array uint8_t body))
+
+(type shortArray [S
+  (extends jobject)
+  (array int16_t body))
+
+(type charArray [C
+  (extends jobject)
+  (array uint16_t body))
+
+(type intArray [I
+  (extends jobject)
+  (array int32_t body))
+
+(type code avian/Code
+  (singleton pool)
+  (intArray stackMap)
+  (object exceptionHandlerTable)
+  (lineNumberTable lineNumberTable)
+  (intptr_t compiled)
+  (uint32_t compiledSize)
+  (uint16_t maxStack)
+  (uint16_t maxLocals)
+  (array uint8_t body))
+
+(type longArray [J
+  (extends jobject)
+  (array int64_t body))
+
+(type floatArray [F
+  (extends jobject)
+  (array uint32_t body))
+
+(type doubleArray [D
+  (extends jobject)
+  (array uint64_t body))
+
+(type jbyte
+  (extends jobject))
+
+(type jboolean
+  (extends jobject))
+
+(type jshort
+  (extends jobject))
+
+(type jchar
+  (extends jobject))
+
+(type jint
+  (extends jobject))
+
+(type jlong
+  (extends jobject))
+
+(type jfloat
+  (extends jobject))
+
+(type jdouble
+  (extends jobject))
+
+(type jvoid
+  (extends jobject))
+
+(type roots
+  (classLoader bootLoader)
+  (classLoader appLoader)
+  (hashMap bootstrapClassMap)
+  (hashMap packageMap)
+  (method findLoadedClassMethod)
+  (method loadClassMethod)
+  (hashMap monitorMap)
+  (hashMap stringMap)
+  (hashMap byteArrayMap)
+  (hashMap poolMap)
+  (vector classRuntimeDataTable)
+  (vector methodRuntimeDataTable)
+  (vector jNIMethodTable)
+  (vector jNIFieldTable)
+  (pair shutdownHooks)
+  (thread finalizerThread)
+  (finalizer objectsToFinalize)
+  (cleaner objectsToClean)
+  (throwable nullPointerException)
+  (throwable arithmeticException)
+  (throwable arrayIndexOutOfBoundsException)
+  (throwable outOfMemoryError)
+  (throwable shutdownInProgress)
+  (finder virtualFileFinders)
+  (field array virtualFiles)
+  (field array arrayInterfaceTable)
+  (object threadTerminated)
+  (field array invocations))
+
+(type compileRoots
+  (field array callTable)
+  (treeNode methodTree)
+  (treeNode methodTreeSentinal)
+  (object objectPools)
+  (object staticTableArray)
+  (wordArray virtualThunks)
+  (wordArray dynamicThunks)
+  (method receiveMethod)
+  (method windMethod)
+  (method rewindMethod))

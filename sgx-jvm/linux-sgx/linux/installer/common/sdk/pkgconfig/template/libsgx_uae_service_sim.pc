@@ -1,0 +1,10 @@
+prefix=/opt/intel/sgxsdk
+includedir=${prefix}/include
+libdir=${prefix}/@LIB_FOLDER_NAME@
+
+Name: libsgx_uae_service_sim
+Description: SGX uAE service simulation library
+Version: @SGX_VERSION@
+Cflags: -I${includedir}
+Libs: -L${libdir} -lsgx_uae_service_sim
+Libs.private: -lsgx_urts_sim

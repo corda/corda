@@ -1,0 +1,87 @@
+/*
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ *   * Neither the name of Intel Corporation nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+/* Types.edl - Samples for basic types. */
+
+enclave {
+
+    /* 
+     * Following types can be supported in Edger8r: 
+     *      char, short, int, float, double, void, 
+     *      int8_t, int16_t, int32_t, int64_t,
+     *      size_t, wchar_t, 
+     *      uint8_t, uint16_t, uint32_t, uint64_t, 
+     *      unsigned, struct, enum, union.
+     */
+
+    /*
+     * We will demo few types in ECALL functions, data 
+     * types in OCALL functions can be handled either.
+     */
+
+     /* structure definition */
+    struct struct_foo_t {
+        /* Basic types can be used in structure. */
+        uint32_t struct_foo_0;
+        uint64_t struct_foo_1;
+    };
+
+    /* enum definition */
+    enum enum_foo_t {
+        ENUM_FOO_0 = 0,
+        ENUM_FOO_1 = 1
+    };
+
+    /* union definition */
+    union union_foo_t {
+        uint32_t union_foo_0;
+        uint32_t union_foo_1;
+        uint64_t union_foo_3;
+    };
+
+    trusted {
+
+        public void ecall_type_char(char val);
+        public void ecall_type_int(int val);
+
+        public void ecall_type_float(float val);
+        public void ecall_type_double(double val);
+
+        public void ecall_type_size_t(size_t val);
+        public void ecall_type_wchar_t(wchar_t val);
+
+        public void ecall_type_struct(struct struct_foo_t val);
+        public void ecall_type_enum_union(enum enum_foo_t val1, [user_check] union union_foo_t *val2);
+        
+        /* for using user defined types, please refer to Pointers.edl, Arrays.edl. */
+    };
+
+};

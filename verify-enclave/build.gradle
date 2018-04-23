@@ -1,0 +1,92 @@
+apply plugin: 'kotlin'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+//noinspection GroovyAssignabilityCheck
+configurations {
+    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
+    runtime.exclude module: 'isolated'
+
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
+dependencies {
+    compile project(':core')
+    compile project(':finance')
+    // This is added so that we include node-api/src/main/resources/META-INF/services/net.corda.core.node.CordaPluginRegistry
+    // which is needed for the serialisation whitelist initialisation.
+    // TODO think about this.
+    compile project(':node-api')
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+
+    testCompile project(':node-driver')
+}
+
+jar {
+    from '../node/capsule/NOTICE' // Copy CDDL notice
+    // Create a fat jar by packing all deps into the output
+    from {
+        configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    exclude "META-INF/*.DSA"
+    exclude "META-INF/*.RSA"
+    exclude "META-INF/*.SF"
+    exclude "META-INF/*.MF"
+    archiveName "corda-enclavelet.jar"
+    manifest {
+        attributes(
+            'Main-Class': 'com.r3.enclaves.txverify.Enclavelet',
+        )
+    }
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    systemProperties['java.library.path'] = '../sgx-jvm/jvm-enclave/jni/build'
+}
+
+test {
+    // Pending Gradle bug: https://github.com/gradle/gradle/issues/2657
+    //systemProperties['java.system.class.loader'] = 'com.r3.enclaves.DummySystemClassLoader'
+}
+
+task generateNativeSgxHeaders(type: Exec) {
+    def classpath = sourceSets.main.output.classesDirs.asPath
+    commandLine "javah", "-o", "$buildDir/native/include/jni_sgx_api.h", "-cp", classpath, "com.r3.enclaves.txverify.NativeSgxApi"
+    dependsOn classes
+}

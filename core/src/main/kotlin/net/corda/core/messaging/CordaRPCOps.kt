@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.core.messaging
 
 import net.corda.core.concurrent.CordaFuture
@@ -259,6 +269,13 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T>
+
+    /**
+     * Attempts to kill a flow. This is not a clean termination and should be reserved for exceptional cases such as stuck fibers.
+     *
+     * @return whether the flow existed and was killed.
+     */
+    fun killFlow(id: StateMachineRunId): Boolean
 
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo

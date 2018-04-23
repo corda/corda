@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+         version="3.1">
+    <session-config>
+        <session-timeout>10</session-timeout>
+    </session-config>
+</web-app>

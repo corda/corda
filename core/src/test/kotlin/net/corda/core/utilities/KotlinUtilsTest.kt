@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.core.utilities
 
 import com.esotericsoftware.kryo.KryoException
@@ -43,7 +53,7 @@ class KotlinUtilsTest {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = NonCapturingTransientProperty()
-        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize()
+        original.serialize(context = KRYO_CHECKPOINT_CONTEXT.withEncoding(null)).deserialize()
     }
 
     @Test
@@ -62,7 +72,7 @@ class KotlinUtilsTest {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("is not annotated or on the whitelist, so cannot be used in serialization")
         val original = CapturingTransientProperty("Hello")
-        original.serialize(context = KRYO_CHECKPOINT_CONTEXT).deserialize()
+        original.serialize(context = KRYO_CHECKPOINT_CONTEXT.withEncoding(null)).deserialize()
     }
 
     private class NullTransientProperty {

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.smoketesting
 
 import com.typesafe.config.Config
@@ -14,7 +24,9 @@ class NodeConfig(
         val rpcPort: Int,
         val rpcAdminPort: Int,
         val isNotary: Boolean,
-        val users: List<User>
+        val users: List<User>,
+        val runMigration: Boolean = true,
+        val jarDirs: List<String> = emptyList()
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
@@ -36,7 +48,9 @@ class NodeConfig(
                         .withValue("adminAddress", addressValueFor(rpcAdminPort))
                         .root())
                 .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
+                .withValue("database", valueFor(mapOf("runMigration" to runMigration)))
                 .withValue("useTestClock", valueFor(true))
+                .withValue("jarDirs", valueFor(jarDirs))
         return if (isNotary) {
             config.withValue("notary", ConfigValueFactory.fromMap(mapOf("validating" to true)))
         } else {

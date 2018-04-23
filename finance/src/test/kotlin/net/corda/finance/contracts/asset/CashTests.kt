@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.finance.contracts.asset
 
 import net.corda.core.contracts.*
@@ -83,7 +93,7 @@ class CashTests {
         megaCorpServices = MockServices(megaCorp)
         miniCorpServices = MockServices(miniCorp)
         val databaseAndServices = makeTestDatabaseAndMockServices(
-                listOf("net.corda.finance.contracts.asset"),
+                listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
                 makeTestIdentityService(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity),
                 TestIdentity(CordaX500Name("Me", "London", "GB"))
         )

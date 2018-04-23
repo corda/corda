@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.transactions
 
 import io.atomix.catalyst.transport.Address
@@ -104,7 +114,7 @@ class RaftTransactionCommitLogTests {
     private fun createReplica(myAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(serverNameTablePrefix = "PORT_${myAddress.port}_"), rigorousMock(), NodeSchemaService(includeNotarySchemas = true))
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), rigorousMock(), NodeSchemaService(includeNotarySchemas = true))
         databases.add(database)
         val stateMachineFactory = { RaftTransactionCommitLog(database, Clock.systemUTC(), RaftUniquenessProvider.Companion::createMap) }
 

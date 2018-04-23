@@ -1,0 +1,93 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet author="R3.Corda" id="1511451595465-4">
+        <createTable tableName="node_link_nodeinfo_party">
+            <column name="node_info_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="party_name" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-10">
+        <createTable tableName="node_info_hosts">
+            <column name="host" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="port" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="node_info_id" type="INT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-11">
+        <createTable tableName="node_info_party_cert">
+            <column name="party_name" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ismain" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owning_key_hash" type="NVARCHAR(130)"/>
+            <column name="party_cert_binary" type="blob"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-12">
+        <createTable tableName="node_infos">
+            <column name="node_info_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="node_info_hash" type="NVARCHAR(64)"/>
+            <column name="platform_version" type="INT"/>
+            <column name="serial" type="BIGINT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-35">
+        <addPrimaryKey columnNames="host, port" constraintName="node_info_hosts_pkey" tableName="node_info_hosts"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-36">
+        <addPrimaryKey columnNames="party_name" constraintName="node_info_party_cert_pkey"
+                       tableName="node_info_party_cert"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-37">
+        <addPrimaryKey columnNames="node_info_id" constraintName="node_infos_pkey" tableName="node_infos"/>
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="1511451595465-62">
+        <addForeignKeyConstraint baseColumnNames="node_info_id" baseTableName="node_link_nodeinfo_party"
+                                 constraintName="FK__link_nodeinfo_party__infos"
+                                 referencedColumnNames="node_info_id" referencedTableName="node_infos"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-63">
+        <addForeignKeyConstraint baseColumnNames="node_info_id" baseTableName="node_info_hosts"
+                                 constraintName="FK__info_hosts__infos"
+                                 referencedColumnNames="node_info_id" referencedTableName="node_infos"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="remove_host_port_pk">
+        <delete tableName="node_infos"/>
+        <delete tableName="node_link_nodeinfo_party"/>
+        <delete tableName="node_info_hosts"/>
+        <delete tableName="node_info_party_cert"/>
+        <dropPrimaryKey tableName="node_info_hosts" constraintName="node_info_hosts_pkey"/>
+        <addColumn tableName="node_info_hosts">
+            <column name="hosts_id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addPrimaryKey columnNames="hosts_id" constraintName="node_info_hosts_pkey_id" tableName="node_info_hosts"/>
+    </changeSet>
+</databaseChangeLog>

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.finance.flows
 
 import net.corda.core.identity.Party
@@ -29,7 +39,7 @@ class CashPaymentFlowTests {
 
     @Before
     fun start() {
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance.contracts.asset"))
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"))
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         bankOfCorda = bankOfCordaNode.info.identityFromX500Name(BOC_NAME)
         aliceNode = mockNet.createPartyNode(ALICE_NAME)

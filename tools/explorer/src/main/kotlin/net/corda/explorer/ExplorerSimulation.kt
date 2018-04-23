@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.explorer
 
 import joptsimple.OptionSet
@@ -22,18 +32,28 @@ import net.corda.finance.flows.*
 import net.corda.finance.flows.CashExitFlow.ExitRequest
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.sample.businessnetwork.iou.IOUFlow
+import net.corda.sample.businessnetwork.membership.flow.ObtainMembershipListContentFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.*
 import net.corda.testing.node.User
 import java.time.Instant
 import java.util.*
+import kotlin.reflect.KClass
 
 class ExplorerSimulation(private val options: OptionSet) {
+
+    private companion object {
+        fun packagesOfClasses(vararg classes: KClass<*>): List<String> = classes.map { it.java.`package`.name }
+    }
+
     private val user = User("user1", "test", permissions = setOf(
             startFlow<CashPaymentFlow>(),
-            startFlow<CashConfigDataFlow>()
-    ))
+            startFlow<CashConfigDataFlow>(),
+            startFlow<IOUFlow>(),
+            startFlow<ObtainMembershipListContentFlow>())
+    )
     private val manager = User("manager", "test", permissions = setOf(
             startFlow<CashIssueAndPaymentFlow>(),
             startFlow<CashPaymentFlow>(),
@@ -46,24 +66,26 @@ class ExplorerSimulation(private val options: OptionSet) {
     private lateinit var bobNode: NodeHandle
     private lateinit var issuerNodeGBP: NodeHandle
     private lateinit var issuerNodeUSD: NodeHandle
+    private lateinit var bnoNode: NodeHandle
     private lateinit var notary: Party
 
     private val RPCConnections = ArrayList<CordaRPCConnection>()
     private val issuers = HashMap<Currency, CordaRPCOps>()
     private val parties = ArrayList<Pair<Party, CordaRPCOps>>()
 
-    init {
-        startDemoNodes()
-    }
-
     private fun onEnd() {
         println("Closing RPC connections")
         RPCConnections.forEach { it.close() }
     }
 
-    private fun startDemoNodes() {
+    fun startDemoNodes() {
         val portAllocation = PortAllocation.Incremental(20000)
-        driver(DriverParameters(portAllocation = portAllocation, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true, jmxPolicy = JmxPolicy(true))) {
+        driver(DriverParameters(
+                portAllocation = portAllocation,
+                extraCordappPackagesToScan = packagesOfClasses(CashPaymentFlow::class, IOUFlow::class, ObtainMembershipListContentFlow::class),
+                waitForAllNodesToFinish = true,
+                jmxPolicy = JmxPolicy(true)
+        )) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             val bob = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
@@ -73,14 +95,16 @@ class ExplorerSimulation(private val options: OptionSet) {
                     customOverrides = mapOf("custom" to mapOf("issuableCurrencies" to listOf("GBP"))))
             val issuerUSD = startNode(providedName = usaBankName, rpcUsers = listOf(manager),
                     customOverrides = mapOf("custom" to mapOf("issuableCurrencies" to listOf("USD"))))
+            val bno = startNode(providedName = IOUFlow.allowedMembershipName, rpcUsers = listOf(user))
 
             notaryNode = defaultNotaryNode.get()
             aliceNode = alice.get()
             bobNode = bob.get()
             issuerNodeGBP = issuerGBP.get()
             issuerNodeUSD = issuerUSD.get()
+            bnoNode = bno.get()
 
-            arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD).forEach {
+            arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD, bnoNode).forEach {
                 println("${it.nodeInfo.legalIdentities.first()} started on ${it.rpcAddress}")
             }
 
@@ -182,6 +206,7 @@ class ExplorerSimulation(private val options: OptionSet) {
     private fun startErrorFlowsSimulation() {
         println("Running flows with errors simulation mode ...")
         setUpRPC()
+        notary = aliceNode.rpc.notaryIdentities().first()
         val eventGenerator = ErrorFlowsEventGenerator(
                 parties = parties.map { it.first },
                 notary = notary,

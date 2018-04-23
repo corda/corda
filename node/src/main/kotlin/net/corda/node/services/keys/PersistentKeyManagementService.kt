@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
@@ -32,7 +42,6 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
-
             @Id
             @Column(name = "public_key_hash", length = MAX_HASH_HEX_SIZE)
             var publicKeyHash: String,
@@ -52,8 +61,10 @@ class PersistentKeyManagementService(val identityService: IdentityService,
         fun createKeyMap(): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toStringShort() },
-                    fromPersistentEntity = { Pair(Crypto.decodePublicKey(it.publicKey), Crypto.decodePrivateKey(
-                            it.privateKey)) },
+                    fromPersistentEntity = {
+                        Pair(Crypto.decodePublicKey(it.publicKey),
+                                Crypto.decodePrivateKey(it.privateKey))
+                    },
                     toPersistentEntity = { key: PublicKey, value: PrivateKey ->
                         PersistentKey(key, value)
                     },

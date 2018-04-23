@@ -1,7 +1,20 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.core.utilities
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowException
+import net.corda.core.internal.castIfPossible
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
 import java.io.Serializable
 
 /**
@@ -29,3 +42,15 @@ class UntrustworthyData<out T>(@PublishedApi internal val fromUntrustedWorld: T)
 }
 
 inline fun <T, R> UntrustworthyData<T>.unwrap(validator: (T) -> R): R = validator(fromUntrustedWorld)
+
+fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
+    val payloadData: T = try {
+        val serializer = SerializationDefaults.SERIALIZATION_FACTORY
+        serializer.deserialize(this, type, SerializationDefaults.P2P_CONTEXT)
+    } catch (ex: Exception) {
+        throw IllegalArgumentException("Payload invalid", ex)
+    }
+    return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) } ?:
+            throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a " +
+                    "${payloadData.javaClass.name} (${payloadData})")
+}

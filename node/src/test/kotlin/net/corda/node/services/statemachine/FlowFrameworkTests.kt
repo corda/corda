@@ -1,7 +1,18 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.concurrent.Semaphore
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
@@ -67,10 +78,6 @@ class FlowFrameworkTests {
     private lateinit var alice: Party
     private lateinit var bob: Party
 
-    private fun StartedNode<*>.flushSmm() {
-        (this.smm as StateMachineManagerImpl).executor.flush()
-    }
-
     @Before
     fun start() {
         mockNet = InternalMockNetwork(
@@ -109,6 +116,19 @@ class FlowFrameworkTests {
         assertThat(flow.lazyTime).isNotNull()
     }
 
+    class ThrowingActionExecutor(private val exception: Exception, val delegate: ActionExecutor) : ActionExecutor {
+        var thrown = false
+        @Suspendable
+        override fun executeAction(fiber: FlowFiber, action: Action) {
+            if (thrown) {
+                delegate.executeAction(fiber, action)
+            } else {
+                thrown = true
+                throw exception
+            }
+        }
+    }
+
     @Test
     fun `exception while fiber suspended`() {
         bobNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
@@ -116,16 +136,15 @@ class FlowFrameworkTests {
         val fiber = aliceNode.services.startFlow(flow) as FlowStateMachineImpl
         // Before the flow runs change the suspend action to throw an exception
         val exceptionDuringSuspend = Exception("Thrown during suspend")
-        fiber.actionOnSuspend = {
-            throw exceptionDuringSuspend
-        }
+        val throwingActionExecutor = ThrowingActionExecutor(exceptionDuringSuspend, fiber.transientValues!!.value.actionExecutor)
+        fiber.transientValues = TransientReference(fiber.transientValues!!.value.copy(actionExecutor = throwingActionExecutor))
         mockNet.runNetwork()
         assertThatThrownBy {
             fiber.resultFuture.getOrThrow()
         }.isSameAs(exceptionDuringSuspend)
         assertThat(aliceNode.smm.allStateMachines).isEmpty()
         // Make sure the fiber does actually terminate
-        assertThat(fiber.isTerminated).isTrue()
+        assertThat(fiber.state).isEqualTo(Strand.State.WAITING)
     }
 
     @Test
@@ -148,7 +167,6 @@ class FlowFrameworkTests {
         aliceNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
         bobNode.services.startFlow(ReceiveFlow(alice).nonTerminating()) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
-        bobNode.flushSmm()
         bobNode.internals.disableDBCloseOnStop()
         bobNode.dispose() // kill receiver
         val restoredFlow = bobNode.restartAndGetRestoredFlow<ReceiveFlow>()
@@ -174,7 +192,6 @@ class FlowFrameworkTests {
             assertEquals(1, bobNode.checkpointStorage.checkpoints().size)
         }
         // Make sure the add() has finished initial processing.
-        bobNode.flushSmm()
         bobNode.internals.disableDBCloseOnStop()
         // Restart node and thus reload the checkpoint and resend the message with same UUID
         bobNode.dispose()
@@ -187,7 +204,6 @@ class FlowFrameworkTests {
         val (firstAgain, fut1) = node2b.getSingleFlow<PingPongFlow>()
         // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
         mockNet.runNetwork()
-        node2b.flushSmm()
         fut1.getOrThrow()
 
         val receivedCount = receivedSessionMessages.count { it.isPayloadTransfer }
@@ -216,6 +232,8 @@ class FlowFrameworkTests {
         val payload = "Hello World"
         aliceNode.services.startFlow(SendFlow(payload, bob, charlie))
         mockNet.runNetwork()
+        bobNode.internals.acceptableLiveFiberCountOnStop = 1
+        charlieNode.internals.acceptableLiveFiberCountOnStop = 1
         val bobFlow = bobNode.getSingleFlow<InitiatedReceiveFlow>().first
         val charlieFlow = charlieNode.getSingleFlow<InitiatedReceiveFlow>().first
         assertThat(bobFlow.receivedPayloads[0]).isEqualTo(payload)
@@ -234,9 +252,6 @@ class FlowFrameworkTests {
                 aliceNode sent normalEnd to charlieNode
                 //There's no session end from the other flows as they're manually suspended
         )
-
-        bobNode.internals.acceptableLiveFiberCountOnStop = 1
-        charlieNode.internals.acceptableLiveFiberCountOnStop = 1
     }
 
     @Test
@@ -338,7 +353,9 @@ class FlowFrameworkTests {
 
         mockNet.runNetwork()
 
-        assertThat(erroringFlowSteps.get()).containsExactly(
+        erroringFlowFuture.getOrThrow()
+        val flowSteps = erroringFlowSteps.get()
+        assertThat(flowSteps).containsExactly(
                 Notification.createOnNext(ExceptionFlow.START_STEP),
                 Notification.createOnError(erroringFlowFuture.get().exceptionThrown)
         )
@@ -378,8 +395,8 @@ class FlowFrameworkTests {
             assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
         }
 
-        assertThat(receivingFiber.isTerminated).isTrue()
-        assertThat((erroringFlow.get().stateMachine as FlowStateMachineImpl).isTerminated).isTrue()
+        assertThat(receivingFiber.state).isEqualTo(Strand.State.WAITING)
+        assertThat((erroringFlow.get().stateMachine as FlowStateMachineImpl).state).isEqualTo(Strand.State.WAITING)
         assertThat(erroringFlowSteps.get()).containsExactly(
                 Notification.createOnNext(ExceptionFlow.START_STEP),
                 Notification.createOnError(erroringFlow.get().exceptionThrown)
@@ -396,7 +413,7 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `FlowException propagated in invocation chain`() {
+    fun `FlowException only propagated to parent`() {
         val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
         val charlie = charlieNode.info.singleIdentity()
 
@@ -404,9 +421,8 @@ class FlowFrameworkTests {
         bobNode.registerFlowFactory(ReceiveFlow::class) { ReceiveFlow(charlie) }
         val receivingFiber = aliceNode.services.startFlow(ReceiveFlow(bob))
         mockNet.runNetwork()
-        assertThatExceptionOfType(MyFlowException::class.java)
+        assertThatExceptionOfType(UnexpectedFlowEndException::class.java)
                 .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
-                .withMessage("Chain")
     }
 
     @Test
@@ -558,10 +574,8 @@ class FlowFrameworkTests {
 
     @Test
     fun `customised client flow which has annotated @InitiatingFlow again`() {
-        val result = aliceNode.services.startFlow(IncorrectCustomSendFlow("Hello", bob)).resultFuture
-        mockNet.runNetwork()
         assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
-            result.getOrThrow()
+            aliceNode.services.startFlow(IncorrectCustomSendFlow("Hello", bob)).resultFuture
         }.withMessageContaining(InitiatingFlow::class.java.simpleName)
     }
 
@@ -635,24 +649,6 @@ class FlowFrameworkTests {
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
     }
 
-    @Test
-    fun `double initiateFlow throws`() {
-        val future = aliceNode.services.startFlow(DoubleInitiatingFlow()).resultFuture
-        mockNet.runNetwork()
-        assertThatExceptionOfType(IllegalStateException::class.java)
-                .isThrownBy { future.getOrThrow() }
-                .withMessageContaining("Attempted to initiateFlow() twice")
-    }
-
-    @InitiatingFlow
-    private class DoubleInitiatingFlow : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            initiateFlow(ourIdentity)
-            initiateFlow(ourIdentity)
-        }
-    }
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //region Helpers
 
@@ -685,7 +681,6 @@ class FlowFrameworkTests {
     private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): InitialSessionMessage {
         return InitialSessionMessage(SessionId(0), 0, clientFlowClass.java.name, flowVersion, "", payload?.serialize())
     }
-
     private fun sessionConfirm(flowVersion: Int = 1) = ExistingSessionMessage(SessionId(0), ConfirmSessionMessage(SessionId(0), FlowInfo(flowVersion, "")))
     private fun sessionData(payload: Any) = ExistingSessionMessage(SessionId(0), DataSessionMessage(payload.serialize()))
     private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
@@ -694,7 +689,7 @@ class FlowFrameworkTests {
     private fun StartedNode<*>.sendSessionMessage(message: SessionMessage, destination: Party) {
         services.networkService.apply {
             val address = getAddressOfParty(PartyInfo.SingleNode(destination, emptyList()))
-            send(createMessage(StateMachineManagerImpl.sessionTopic, message.serialize().bytes), address)
+            send(createMessage(FlowMessagingImpl.sessionTopic, message.serialize().bytes), address)
         }
     }
 
@@ -720,7 +715,7 @@ class FlowFrameworkTests {
     }
 
     private fun Observable<MessageTransfer>.toSessionTransfers(): Observable<SessionTransfer> {
-        return filter { it.getMessage().topic == StateMachineManagerImpl.sessionTopic }.map {
+        return filter { it.getMessage().topic == FlowMessagingImpl.sessionTopic }.map {
             val from = it.sender.id
             val message = it.messageData.deserialize<SessionMessage>()
             SessionTransfer(from, sanitise(message), it.recipients)

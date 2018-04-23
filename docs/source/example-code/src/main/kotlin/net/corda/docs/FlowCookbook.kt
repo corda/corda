@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 @file:Suppress("UNUSED_VARIABLE", "unused")
 
 package net.corda.docs
@@ -572,13 +582,6 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         val additionalParties: Set<Party> = setOf(regulator)
         val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()))
         // DOCEND 10
-
-        // DOCSTART FlowSession porting
-        send(regulator, Any()) // Old API
-        // becomes
-        val session = initiateFlow(regulator)
-        session.send(Any())
-        // DOCEND FlowSession porting
     }
 }
 

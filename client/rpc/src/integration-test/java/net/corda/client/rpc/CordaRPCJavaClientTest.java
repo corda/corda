@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.client.rpc;
 
 import net.corda.core.contracts.Amount;
@@ -12,9 +22,12 @@ import net.corda.node.internal.Node;
 import net.corda.node.internal.StartedNode;
 import net.corda.testing.internal.InternalTestUtilsKt;
 import net.corda.testing.node.User;
+import net.corda.testing.internal.IntegrationTestKt;
+import net.corda.testing.internal.IntegrationTestSchemas;
 import net.corda.testing.node.internal.NodeBasedTest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -34,6 +47,9 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
         super(Arrays.asList("net.corda.finance.contracts", CashSchemaV1.class.getPackage().getName()));
     }
+
+    @ClassRule
+    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(ALICE_NAME));
 
     private List<String> perms = Arrays.asList(
             startFlow(CashPaymentFlow.class),
@@ -56,6 +72,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
 
     @Before
     public void setUp() throws Exception {
+        super.setUp();
         node = startNode(ALICE_NAME, 1, singletonList(rpcUser));
         client = new CordaRPCClient(requireNonNull(node.getInternals().getConfiguration().getRpcOptions().getAddress()));
     }

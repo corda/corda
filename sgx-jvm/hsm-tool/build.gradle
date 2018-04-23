@@ -1,0 +1,64 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+group 'com.r3cev.sgx'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+
+}
+
+dependencies {
+
+    compile fileTree(dir: 'libs', include: '*.jar')
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+
+    compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
+    compile "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
+    compile "com.typesafe:config:$typesafe_config_version"
+    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+
+}
+
+jar {
+    from(configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) })
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/*.MF'
+
+    manifest {
+        attributes('Main-Class' : 'com.r3cev.sgx.hsmtool.MainKt')
+    }
+}
+
+task copyConfig(type: Copy) {
+    from 'config'
+    into "$buildDir/libs"
+}
+
+build.dependsOn copyConfig

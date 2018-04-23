@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+#
+# Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in
+#     the documentation and/or other materials provided with the
+#     distribution.
+#   * Neither the name of Intel Corporation nor the names of its
+#     contributors may be used to endorse or promote products derived
+#     from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+
+grep intel_sgx /lib/modules/$(uname -r)/modules.builtin &> /dev/null
+if [[ $? != "0" ]]; then
+    modinfo isgx &> /dev/null
+    if [[ $? != "0" ]]; then
+        lsmod | grep isgx &> /dev/null
+        if [[ $? = "0" ]]; then
+            echo "Warning: You did not follow the document to install the driver package"
+            echo
+        else
+            echo "Please install the driver package before the PSW package"
+            exit 4
+        fi
+    fi
+fi
+
+set -e
+
+PKG_NAME="Intel SGX PSW Package"
+
+if test $(id -u) -ne 0; then
+    echo "Root privilege is required to install $PKG_NAME."
+    exit 4
+fi
+
+
+PKG_ARCH=@arch@
+ARCH=$(uname -m)
+
+if [ $ARCH == "i386" ] || [ $ARCH == "i586" ] || [ $ARCH == "i686" ]; then
+    ARCH=x86
+fi
+
+if [[ $ARCH != $PKG_ARCH ]]; then
+    echo "$PKG_ARCH $PKG_NAME can not be installed on $ARCH platform."
+    exit 4
+fi
+
+INSTALL_PATH=/opt/intel/sgxpsw
+if [ -d "$INSTALL_PATH" ]; then
+    echo "$PKG_NAME already exists in $INSTALL_PATH, please uninstall it first!"
+    exit 4
+fi
+
+PATH=/usr/bin:/bin
+umask 022
+
+PSWPKG=`mktemp -t sgx-psw-pkg.XXXXXX`
+PSW_TEMP_FOLDER=`mktemp -d sgx-psw-XXXXXX -p /tmp`
+trap "rm -fr $PSWPKG $PSW_TEMP_FOLDER= 2>/dev/null; exit 3" HUP INT QUIT TERM
+
+# The number of lines in this script (plus 1).  Using this number to
+# calculate the start address of the payload.
+NR_SCRIPT_LINES=@linenum@
+
+# Run /usr/bin/md5sum on the binary payload to get the MD5 check sum.
+CHKSUM=@md5sum@
+
+# Get the install payload from this shell script.
+echo -n "Unpacking $PKG_NAME ..."
+tail -n +$NR_SCRIPT_LINES "$0" > $PSWPKG
+echo " done."
+
+echo -n "Verifying the integrity of the install package ..."
+if test $(md5sum $PSWPKG | awk '{print $1}') != $CHKSUM; then
+    echo " The install package appears to be corrupted."
+    exit 1
+fi
+echo " done."
+
+echo -n "Installing $PKG_NAME ..."
+tar zxf $PSWPKG -C $PSW_TEMP_FOLDER >/dev/null 2>&1
+retcode=$?			# Save the return code
+# Clean-up the temporary tarball.
+rm -f $PSWPKG 2>/dev/null
+
+if test $retcode -ne 0; then
+    echo " failed."
+    exit 2
+fi
+echo " done."
+
+pushd $PSW_TEMP_FOLDER
+
+source scripts/installConfig
+make install
+
+popd
+
+${SGX_PACKAGES_PATH}/${PSW_PKG_NAME}/scripts/install.sh
+
+rm -fr ${PSW_TEMP_FOLDER}
+
+
+exit 0

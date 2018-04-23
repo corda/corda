@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.control.Label?>
+
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<BorderPane stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.76-ea"
+            xmlns:fx="http://javafx.com/fxml/1">
+    <padding>
+        <Insets top="5" left="5" right="5" bottom="5"/>
+    </padding>
+    <center>
+        <TableView fx:id="allViewTable" VBox.vgrow="ALWAYS">
+            <columnResizePolicy>
+                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+            </columnResizePolicy>
+        </TableView>
+    </center>
+    <bottom>
+        <Label fx:id="matchingFlowsLabel" text="matching flows(s)"/>
+    </bottom>
+</BorderPane>

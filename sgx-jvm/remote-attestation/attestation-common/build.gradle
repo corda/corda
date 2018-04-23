@@ -1,0 +1,40 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+apply plugin: 'kotlin'
+
+description 'Common code shared between remote attestation modules'
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+    testCompile "junit:junit:$junit_version"
+
+    compile "com.fasterxml.jackson.core:jackson-core:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
+    compile "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
+    compile "org.slf4j:slf4j-api:$slf4j_version"
+}
+
+configurations {
+    testArtifacts.extendsFrom testRuntime
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+artifacts {
+    testArtifacts testJar
+}

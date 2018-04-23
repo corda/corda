@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.messaging
 
 import net.corda.core.messaging.AllPossibleRecipients
@@ -49,10 +59,10 @@ class InMemoryMessagingTests {
 
         val bits = "test-content".toByteArray()
         var finalDelivery: Message? = null
-        node2.network.addMessageHandler("test.topic") { msg, _ ->
+        node2.network.addMessageHandler("test.topic") { msg, _, _ ->
             node2.network.send(msg, node3.network.myAddress)
         }
-        node3.network.addMessageHandler("test.topic") { msg, _ ->
+        node3.network.addMessageHandler("test.topic") { msg, _, _ ->
             finalDelivery = msg
         }
 
@@ -73,7 +83,7 @@ class InMemoryMessagingTests {
         val bits = "test-content".toByteArray()
 
         var counter = 0
-        listOf(node1, node2, node3).forEach { it.network.addMessageHandler("test.topic") { _, _ -> counter++ } }
+        listOf(node1, node2, node3).forEach { it.network.addMessageHandler("test.topic") { _, _, _ -> counter++ } }
         node1.network.send(node2.network.createMessage("test.topic", data = bits), rigorousMock<AllPossibleRecipients>())
         mockNet.runNetwork(rounds = 1)
         assertEquals(3, counter)
@@ -89,9 +99,10 @@ class InMemoryMessagingTests {
         val node2 = mockNet.createNode()
         var received = 0
 
-        node1.network.addMessageHandler("valid_message") { _, _ ->
+        node1.network.addMessageHandler("valid_message") { _, _, _ ->
             received++
         }
+
         val invalidMessage = node2.network.createMessage("invalid_message", data = ByteArray(1))
         val validMessage = node2.network.createMessage("valid_message", data = ByteArray(1))
         node2.network.send(invalidMessage, node1.network.myAddress)

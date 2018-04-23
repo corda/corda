@@ -1,0 +1,1 @@
+This directory is expected by JMeter

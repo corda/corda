@@ -1,0 +1,86 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+apply plugin: 'kotlin'
+// Java Persistence API support: create no-arg constructor
+// see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
+apply plugin: 'kotlin-jpa'
+apply plugin: CanonicalizerPlugin
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordapp'
+//apply plugin: 'com.jfrog.artifactory'
+
+description 'Corda performance test modules'
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+            srcDir file('../../testing/test-utils/src/main/resources')
+        }
+    }
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+dependencies {
+    // Note the :finance module is a CorDapp in its own right
+    // and CorDapps using :finance features should use 'cordapp' not 'compile' linkage.
+    cordaCompile project(':core')
+    cordaCompile project(':confidential-identities')
+
+    // TODO Remove this once we have app configs
+    compile "com.typesafe:config:$typesafe_config_version"
+
+    testCompile project(':node-driver')
+    testCompile project(path: ':core', configuration: 'testArtifacts')
+    testCompile "junit:junit:$junit_version"
+
+    // AssertJ: for fluent assertions for testing
+    testCompile "org.assertj:assertj-core:$assertj_version"
+}
+
+configurations {
+    testArtifacts.extendsFrom testRuntime
+
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+artifacts {
+    testArtifacts testJar
+}
+
+jar {
+    baseName 'corda-ptflows'
+}
+
+publish {
+    name jar.baseName
+}

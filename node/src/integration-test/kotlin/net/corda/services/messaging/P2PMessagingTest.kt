@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.services.messaging
 
 import net.corda.core.concurrent.CordaFuture
@@ -16,15 +26,19 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.send
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.internalServices
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.chooseIdentity
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -32,8 +46,12 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
-class P2PMessagingTest {
-    private companion object {
+class P2PMessagingTest : IntegrationTest() {
+     private companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), "DistributedService_0", "DistributedService_1")
+
         val DISTRIBUTED_SERVICE_NAME = CordaX500Name("DistributedService", "London", "GB")
     }
 
@@ -112,7 +130,10 @@ class P2PMessagingTest {
 
 
     private fun startDriverWithDistributedService(dsl: DriverDSL.(List<InProcess>) -> Unit) {
-        driver(DriverParameters(startNodesInProcess = true, notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2))))) {
+        driver(DriverParameters(
+                        startNodesInProcess = true,
+                        notarySpecs = listOf(NotarySpec(DISTRIBUTED_SERVICE_NAME, cluster = ClusterSpec.Raft(clusterSize = 2)))
+        )) {
             dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as InProcess) })
         }
     }
@@ -143,8 +164,8 @@ class P2PMessagingTest {
         )
 
         distributedServiceNodes.forEach {
-            val nodeName = it.services.myInfo.legalIdentitiesAndCerts.first().name
-            it.internalServices.networkService.addMessageHandler("test.request") { netMessage, _ ->
+            val nodeName = it.services.myInfo.chooseIdentity().name
+            it.internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handler ->
                 crashingNodes.requestsReceived.incrementAndGet()
                 crashingNodes.firstRequestReceived.countDown()
                 // The node which receives the first request will ignore all requests
@@ -159,6 +180,7 @@ class P2PMessagingTest {
                     val response = it.internalServices.networkService.createMessage("test.response", responseMessage.serialize().bytes)
                     it.internalServices.networkService.send(response, request.replyTo)
                 }
+                handler.afterDatabaseTransaction()
             }
         }
         return crashingNodes
@@ -184,12 +206,13 @@ class P2PMessagingTest {
         }
         assertThat(participatingNodes).containsOnlyElementsOf(participatingServiceNodes.map { it.services.myInfo })
     }
-    
+
     private fun InProcess.respondWith(message: Any) {
-        internalServices.networkService.addMessageHandler("test.request") { netMessage, _ ->
+        internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handle ->
             val request = netMessage.data.deserialize<TestRequest>()
             val response = internalServices.networkService.createMessage("test.response", message.serialize().bytes)
             internalServices.networkService.send(response, request.replyTo)
+            handle.afterDatabaseTransaction()
         }
     }
 
@@ -211,11 +234,12 @@ class P2PMessagingTest {
      */
     inline fun MessagingService.runOnNextMessage(topic: String, crossinline callback: (ReceivedMessage) -> Unit) {
         val consumed = AtomicBoolean()
-        addMessageHandler(topic) { msg, reg ->
+        addMessageHandler(topic) { msg, reg, handle ->
             removeMessageHandler(reg)
             check(!consumed.getAndSet(true)) { "Called more than once" }
             check(msg.topic == topic) { "Topic/session mismatch: ${msg.topic} vs $topic" }
             callback(msg)
+            handle.afterDatabaseTransaction()
         }
     }
 

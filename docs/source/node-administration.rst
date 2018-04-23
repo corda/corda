@@ -72,6 +72,8 @@ Any database browsing tool that supports JDBC can be used, but if you have Intel
 a tool integrated with your IDE. Just open the database window and add an H2 data source with the above details.
 You will now be able to browse the tables and row data within them.
 
+.. _jolokia_ref:
+
 Monitoring your node
 --------------------
 

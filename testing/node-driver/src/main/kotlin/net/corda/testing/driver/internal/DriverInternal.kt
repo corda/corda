@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.testing.driver.internal
 
 import net.corda.core.flows.FlowLogic
@@ -60,7 +70,7 @@ data class InProcessImpl(
         private val onStopCallback: () -> Unit,
         private val node: StartedNode<Node>
 ) : InProcess, NodeHandleInternal {
-    val database: CordaPersistence = node.database
+    val database: CordaPersistence get() = node.database
     override val services: StartedNodeServices get() = node.services
     override val rpcUsers: List<User> = configuration.rpcUsers.map { User(it.username, it.password, it.permissions) }
     override fun stop() {

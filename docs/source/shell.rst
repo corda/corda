@@ -37,6 +37,8 @@ In development mode, the shell will display in the node's terminal window.
 The shell connects to the node as 'shell' user with password 'shell' which is only available in dev mode.
 It may be disabled by passing the ``--no-local-shell`` flag when running the node.
 
+.. _ssh_server:
+
 The shell via SSH
 -----------------
 The shell is also accessible via SSH.

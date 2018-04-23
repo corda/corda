@@ -1,0 +1,15 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Explorer - demo nodes (flow triage)" type="JetRunConfigurationType" factoryName="Kotlin" singleton="true">
+    <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
+    <option name="VM_PARAMETERS" value="-DAMQ_DELIVERY_DELAY_MS=15000" />
+    <option name="PROGRAM_PARAMETERS" value="-F" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <option name="ALTERNATIVE_JRE_PATH" value="1.8" />
+    <option name="PASS_PARENT_ENVS" value="true" />
+    <option name="MAIN_CLASS_NAME" value="net.corda.explorer.MainKt" />
+    <option name="WORKING_DIRECTORY" value="" />
+    <module name="explorer_main" />
+    <envs />
+    <method />
+  </configuration>
+</component>

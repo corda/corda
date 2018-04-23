@@ -18,10 +18,11 @@ The ORM mapping is specified using the `Java Persistence API <https://en.wikiped
 (JPA) as annotations and is converted to database table rows by the node automatically every time a state is recorded
 in the node's local vault as part of a transaction.
 
-.. note:: Presently the node includes an instance of the H2 database but any database that supports JDBC is a
-          candidate and the node will in the future support a range of database implementations via their JDBC drivers. Much
-          of the node internal state is also persisted there. You can access the internal H2 database via JDBC, please see the
-          info in ":doc:`node-administration`" for details.
+.. note:: Presently the node includes an instance of the H2 database. H2 database is supported for development purposes,
+          and we have certified R3 Corda to work against SQL Server 2017 and Azure SQL.
+          PostgreSQL 9.6 is supported preliminarily. Other databases will be officially supported very soon.
+          Much of the node internal state is also persisted there. You can access
+          the internal H2 database via JDBC, please see the info in ":doc:`node-administration`" for details.
 
 Schemas
 -------
@@ -128,7 +129,7 @@ Use the ``ServiceHub`` ``jdbcSession`` function to obtain a JDBC connection as i
   :start-after: DOCSTART JdbcSession
   :end-before: DOCEND JdbcSession
 
-JDBC session's can be used in Flows and Service Plugins (see ":doc:`flow-state-machines`")
+JDBC sessions can be used in Flows and Service Plugins (see ":doc:`flow-state-machines`")
 
 The following example illustrates the creation of a custom corda service using a jdbcSession:
 
@@ -145,4 +146,3 @@ which is then referenced within a custom flow:
   :end-before: DOCEND TopupIssuer
 
 For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`
-

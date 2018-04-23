@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services
 
 import com.nhaarman.mockito_kotlin.doReturn
@@ -23,25 +33,21 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.withoutTestSerialization
-import net.corda.testing.internal.MockCordappConfigProvider
+import net.corda.testing.internal.*
 import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert.assertEquals
+import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import java.net.URLClassLoader
 import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
-class AttachmentLoadingTests {
+class AttachmentLoadingTests : IntegrationTest() {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -52,6 +58,11 @@ class AttachmentLoadingTests {
     private val appContext get() = provider.getAppContext(cordapp)
 
     private companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(),
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+
         private val logger = contextLogger()
         val isolatedJAR = AttachmentLoadingTests::class.java.getResource("isolated.jar")!!
         val ISOLATED_CONTRACT_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.internal.security
 
 
@@ -77,8 +87,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
          * Instantiate RPCSecurityManager initialised with users data from a list of [User]
          */
         fun fromUserList(id: AuthServiceId, users: List<User>) =
-                RPCSecurityManagerImpl(
-                    AuthServiceConfig.fromUsers(users).copy(id = id))
+                RPCSecurityManagerImpl(AuthServiceConfig.fromUsers(users).copy(id = id))
 
         // Build internal Shiro securityManager instance
         private fun buildImpl(config: AuthServiceConfig): DefaultSecurityManager {

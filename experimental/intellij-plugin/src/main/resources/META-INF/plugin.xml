@@ -1,0 +1,47 @@
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<idea-plugin>
+  <id>net.corda</id>
+  <name>CorDapp Plugin</name>
+  <version>1.0</version>
+  <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">YourCompany</vendor>
+
+  <description><![CDATA[
+      Enter short description for your plugin here.<br>
+      <em>most HTML tags may be used</em>
+    ]]></description>
+
+  <change-notes><![CDATA[
+      Add change notes here.<br>
+      <em>most HTML tags may be used</em>
+    ]]>
+  </change-notes>
+
+  <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
+  <idea-version since-build="145.0"/>
+
+  <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+       on how to target different products -->
+  <depends>com.intellij.modules.lang</depends>
+  <depends>org.jetbrains.kotlin</depends>
+  <depends>DevKit</depends>
+  <depends>org.jetbrains.plugins.gradle</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <moduleType id="CORDA_MODULE" implementationClass="net.corda.ideaplugin.module.CordaModuleType"/>
+    <toolWindow id="Corda Flow Tool" icon="/images/corda-toolwindow-icon.png" anchor="right" factoryClass="net.corda.ideaplugin.toolwindow.CordaFlowToolWindow" />
+  </extensions>
+
+  <actions>
+    <!-- Add your actions here -->
+  </actions>
+
+</idea-plugin>

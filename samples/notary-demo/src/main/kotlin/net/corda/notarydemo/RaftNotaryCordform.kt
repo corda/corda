@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.notarydemo
 
 import net.corda.cordform.CordformContext
@@ -8,9 +18,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.RaftConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
-import net.corda.testing.node.internal.demorun.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.node.internal.demorun.*
 import java.nio.file.Paths
 
 fun main(args: Array<String>) = RaftNotaryCordform().nodeRunner().deployAndRunNodes()

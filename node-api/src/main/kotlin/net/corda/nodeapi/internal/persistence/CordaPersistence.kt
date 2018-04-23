@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.nodeapi.internal.persistence
 
 import co.paralleluniverse.strands.Strand
@@ -22,9 +32,9 @@ const val NODE_DATABASE_PREFIX = "node_"
 
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
-        val initialiseSchema: Boolean = true,
-        val serverNameTablePrefix: String = "",
+        val runMigration: Boolean = false,
         val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ,
+        val schema: String? = null,
         val exportHibernateJMXStatistics: Boolean = false
 )
 
@@ -39,7 +49,8 @@ enum class TransactionIsolationLevel {
     /**
      * The JDBC constant value of the same name but prefixed with TRANSACTION_ defined in [java.sql.Connection].
      */
-    val jdbcValue: Int = java.sql.Connection::class.java.getField("TRANSACTION_$name").get(null) as Int
+    val jdbcString = "TRANSACTION_$name"
+    val jdbcValue: Int = java.sql.Connection::class.java.getField(jdbcString).get(null) as Int
 }
 
 private val _contextDatabase = ThreadLocal<CordaPersistence>()
@@ -52,6 +63,7 @@ class CordaPersistence(
         val dataSource: DataSource,
         databaseConfig: DatabaseConfig,
         schemas: Set<MappedSchema>,
+        val jdbcUrl: String,
         attributeConverters: Collection<AttributeConverter<*, *>> = emptySet()
 ) : Closeable {
     companion object {
@@ -60,8 +72,9 @@ class CordaPersistence(
 
     private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
+
         transaction {
-            HibernateConfiguration(schemas, databaseConfig, attributeConverters)
+            HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl)
         }
     }
     val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas
@@ -83,6 +96,10 @@ class CordaPersistence(
         transaction {
             check(!connection.metaData.isReadOnly) { "Database should not be readonly." }
         }
+    }
+
+    object DataSourceConfigTag {
+        const val DATA_SOURCE_URL = "dataSource.url"
     }
 
     fun currentOrNew(isolation: TransactionIsolationLevel = defaultIsolationLevel): DatabaseTransaction {
@@ -245,3 +262,17 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
         }
     }
 }
+
+fun parserTransactionIsolationLevel(property: String?): Int =
+        when (property) {
+            "none" -> Connection.TRANSACTION_NONE
+            "readUncommitted" -> Connection.TRANSACTION_READ_UNCOMMITTED
+            "readCommitted" -> Connection.TRANSACTION_READ_COMMITTED
+            "repeatableRead" -> Connection.TRANSACTION_REPEATABLE_READ
+            "serializable" -> Connection.TRANSACTION_SERIALIZABLE
+            else -> {
+                Connection.TRANSACTION_REPEATABLE_READ
+            }
+        }
+
+fun isH2Database(jdbcUrl: String) = jdbcUrl.startsWith("jdbc:h2:")

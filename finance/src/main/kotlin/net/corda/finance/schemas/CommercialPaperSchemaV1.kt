@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.finance.schemas
 
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
@@ -22,7 +32,11 @@ object CommercialPaperSchema
  * as it stood at the time of writing.
  */
 @CordaSerializable
-object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
+object CommercialPaperSchemaV1 : MappedSchema(
+        schemaFamily = CommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
+
+    override val migrationResource = "commercial-paper.changelog-master"
+
     @Entity
     @Table(name = "cp_states",
             indexes = arrayOf(Index(name = "ccy_code_index", columnList = "ccy_code"),

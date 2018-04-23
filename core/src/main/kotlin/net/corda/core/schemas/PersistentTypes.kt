@@ -1,5 +1,16 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.core.schemas
 
+import com.google.common.base.CaseFormat
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.serialization.CordaSerializable
@@ -41,6 +52,14 @@ open class MappedSchema(schemaFamily: Class<*>,
                         val version: Int,
                         val mappedTypes: Iterable<Class<*>>) {
     val name: String = schemaFamily.name
+
+    /**
+     * Points to a classpath resource containing the database changes for the [mappedTypes]
+     */
+    protected open val migrationResource: String? = null
+
+    internal fun getMigrationResource(): String? = migrationResource
+
     override fun toString(): String = "${this.javaClass.simpleName}(name=$name, version=$version)"
 }
 //DOCEND MappedSchema

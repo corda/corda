@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.vault;
 
 import com.google.common.collect.ImmutableSet;
@@ -26,6 +36,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import net.corda.testing.core.TestIdentity;
 import net.corda.testing.internal.vault.DummyLinearContract;
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1;
 import net.corda.testing.internal.vault.VaultFiller;
 import net.corda.testing.node.MockServices;
 import org.junit.After;
@@ -46,10 +57,8 @@ import java.util.stream.StreamSupport;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
 import static net.corda.core.utilities.ByteArrays.toHexString;
+import static net.corda.testing.core.TestConstants.*;
 import static net.corda.testing.internal.InternalTestUtilsKt.rigorousMock;
-import static net.corda.testing.core.TestConstants.BOC_NAME;
-import static net.corda.testing.core.TestConstants.CHARLIE_NAME;
-import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,7 +79,12 @@ public class VaultQueryJavaTests {
 
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
-        List<String> cordappPackages = Arrays.asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
+        List<String> cordappPackages = Arrays.asList(
+                "net.corda.testing.internal.vault",
+                "net.corda.finance.contracts.asset",
+                CashSchemaV1.class.getPackage().getName(),
+                DummyLinearStateSchemaV1.class.getPackage().getName()
+        );
         IdentityService identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.api
 
 import net.corda.core.concurrent.CordaFuture
@@ -19,6 +29,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -135,8 +146,9 @@ interface FlowStarter {
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      * @param context indicates who started the flow, see: [InvocationContext].
+     * @param deduplicationHandler allows exactly-once start of the flow, see [DeduplicationHandler]
      */
-    fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>>
+    fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext, deduplicationHandler: DeduplicationHandler? = null): CordaFuture<FlowStateMachine<T>>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.

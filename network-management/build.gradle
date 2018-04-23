@@ -1,0 +1,124 @@
+
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+description 'Network management module encapsulating components such as Doorman, HSM Signing Service and Network Map'
+
+apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'kotlin'
+apply plugin: 'kotlin-jpa'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    jcenter()
+    maven {
+        url 'http://ci-artifactory.corda.r3cev.com/artifactory/corda-dev'
+    }
+    maven {
+        url 'http://ci-artifactory.corda.r3cev.com/artifactory/corda-releases'
+    }
+}
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: '*.jar')
+
+    compile project(':node-api')
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    // Log4J: logging framework (with SLF4J bindings)
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
+    compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
+    compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
+
+    // Web stuff: for HTTP[S] servlets
+    compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
+    compile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
+    compile "javax.servlet:javax.servlet-api:3.1.0"
+
+    // Jersey for JAX-RS implementation for use in Jetty
+    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
+    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+
+    // JOpt: for command line flags.
+    compile "net.sf.jopt-simple:jopt-simple:5.0.2"
+
+    // TypeSafe Config: for simple and human friendly config files.
+    compile "com.typesafe:config:1.3.0"
+
+    // Hibernate audit plugin
+    compile "org.hibernate:hibernate-envers:5.2.11.Final"
+
+    // Manifests: for reading stuff from the manifest file
+    compile "com.jcabi:jcabi-manifests:1.1"
+
+    testCompile project(':test-utils')
+    testCompile project(':node-driver')
+
+    // Unit testing helpers.
+    testCompile 'junit:junit:4.12'
+    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testCompile "com.nhaarman:mockito-kotlin:0.6.1"
+    testCompile "com.spotify:docker-client:8.9.1"
+
+    compile('com.atlassian.jira:jira-rest-java-client-core:5.0.4') {
+        // The jira client includes jersey-core 1.5 which breaks everything.
+        exclude module: 'jersey-core'
+    }
+    // Needed by jira rest client
+    compile "com.atlassian.fugue:fugue:2.6.1"
+
+    // SQL connection pooling library
+    compile "com.zaxxer:HikariCP:${hikari_version}"
+
+    // For H2 database support in persistence
+    compile "com.h2database:h2:$h2_version"
+
+    //TODO remove once we can put driver jar into a predefined directory
+    //JDBC driver can be passed to the Node at startup using setting the jarDirs property in the Node configuration file.
+    compile 'com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8'
+
+    // Bouncy Castle for HSM signing
+    compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
+    compile "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
+}

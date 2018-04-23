@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.vault
 
 import net.corda.core.contracts.ContractState
@@ -27,6 +37,9 @@ object VaultSchema
 @CordaSerializable
 object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
         mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
+
+    override val migrationResource = "vault-schema.changelog-master"
+
     @Entity
     @Table(name = "vault_states",
             indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status"),

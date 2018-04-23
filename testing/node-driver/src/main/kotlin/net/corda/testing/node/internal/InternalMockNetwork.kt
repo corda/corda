@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.testing.node.internal
 
 import com.google.common.jimfs.Configuration.unix
@@ -40,7 +50,6 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.services.transactions.BFTSMaRt
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.User
@@ -53,6 +62,7 @@ import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices.Companion.makeTestDatabaseProperties
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.sshd.common.util.security.SecurityUtils
 import rx.internal.schedulers.CachedThreadScheduler
@@ -231,7 +241,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         private val entropyRoot = args.entropyRoot
         var counter = entropyRoot
         override val log get() = staticLog
-        override val serverThread: AffinityExecutor =
+        override val serverThread =
                 if (mockNet.threadPerNode) {
                     ServiceAffinityExecutor("Mock node $id thread", 1)
                 } else {
@@ -366,7 +376,8 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         val config = mockNodeConfiguration().also {
             doReturn(baseDirectory(id).createDirectories()).whenever(it).baseDirectory
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
-            doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
+            doReturn(makeTestDataSourceProperties("node_$id","net_$networkId")).whenever(it).dataSourceProperties
+            doReturn(makeTestDatabaseProperties("node_$id")).whenever(it).database
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             parameters.configOverrides(it)
         }
@@ -467,5 +478,9 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(5).whenever(it).messageRedeliveryDelaySeconds
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
+        doReturn(EnterpriseConfiguration(
+                mutualExclusionConfiguration = MutualExclusionConfiguration(false, "", 20000, 40000),
+                useMultiThreadedSMM = false
+        )).whenever(it).enterpriseConfiguration
     }
 }

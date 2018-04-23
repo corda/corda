@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.vega
 
 import com.opengamma.strata.product.common.BuySell
@@ -5,25 +15,35 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
 
-class SimmValuationTest {
+class SimmValuationTest : IntegrationTest() {
     private companion object {
         // SIMM demo can only currently handle one valuation date due to a lack of market data or a market data source.
         val valuationDate: LocalDate = LocalDate.parse("2016-06-06")
         val nodeALegalName = DUMMY_BANK_A_NAME
         val nodeBLegalName = DUMMY_BANK_B_NAME
         val testTradeId = "trade1"
+
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
     }
 
     @Test
@@ -32,8 +52,8 @@ class SimmValuationTest {
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }
-            val nodeAWebServerFuture = startWebserver(nodeA)
-            val nodeBWebServerFuture = startWebserver(nodeB)
+            val nodeAWebServerFuture = startWebserver(nodeA, maximumHeapSize = "300m")
+            val nodeBWebServerFuture = startWebserver(nodeB, maximumHeapSize = "300m")
             val nodeAApi = HttpApi.fromHostAndPort(nodeAWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
             val nodeBApi = HttpApi.fromHostAndPort(nodeBWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
             val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)

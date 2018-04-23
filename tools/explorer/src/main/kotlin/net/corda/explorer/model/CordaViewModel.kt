@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.explorer.model
 
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
@@ -11,9 +21,13 @@ class CordaViewModel {
     val registeredViews = mutableListOf<CordaView>().observable()
 
     inline fun <reified T> registerView() where  T : CordaView {
+        registerView(find<T>())
+    }
+
+    fun registerView(view: CordaView) {
         // Note: this is weirdly very important, as it forces the initialisation of Views. Therefore this is the entry
         // point to the top level observable/stream wiring! Any events sent before this init may be lost!
-        registeredViews.add(find<T>().apply { root })
+        registeredViews.add(view.apply { root })
     }
 }
 

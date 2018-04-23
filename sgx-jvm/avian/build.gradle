@@ -1,0 +1,323 @@
+buildscript {
+  repositories {
+    jcenter()
+  }
+
+  dependencies {
+    classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:2.2.4'
+  }
+}
+
+apply plugin: 'native-component'
+apply plugin: 'ivy-publish'
+apply plugin: 'java'
+apply plugin: 'artifactory-publish'
+
+enum SupportedOS implements OperatingSystem {
+  LINUX, WINDOWS, MACOSX;
+
+  public static final SupportedOS CURRENT;
+
+  static {
+    String p = System.properties['os.name']
+    switch(p.replaceAll(' ', '').toLowerCase()) {
+      case ~/.*linux.*/:  CURRENT = LINUX; break;
+      case ~/.*darwin.*/: CURRENT = MACOSX; break;
+      case ~/.*osx.*/:    CURRENT = MACOSX; break;
+      case ~/.*win.*/:    CURRENT = WINDOWS; break;
+      default:
+        String m = "SupportedOS: unrecognized platform: ${p}"
+        println(m)
+        throw new IllegalArgumentException(m)
+    }
+  }
+
+  public String getName() {
+    return toString().toLowerCase()
+  }
+
+  public String  getDisplayName() {
+    return getName()
+  }
+  public boolean isCurrent() { return this == CURRENT }
+  public boolean isFreeBSD() { return false }
+  public boolean isLinux() { return this == LINUX }
+  public boolean isMacOsX() { return this == MACOSX }
+  public boolean isSolaris() { return false }
+  public boolean isWindows() { return this == WINDOWS }
+
+}
+
+public String adjustArch(String arch) {
+  switch(arch) {
+    case ~/.*64.*/: return 'x86_64'
+    default:        return 'i386'
+  }
+}
+
+ext {
+  currentPlatform = SupportedOS.CURRENT.getName()
+  currentArch = adjustArch(System.properties['os.arch'])
+  currentPlatformArch = "${currentPlatform}-${currentArch}"
+
+  platform = project.hasProperty('platform') ? platform : currentPlatform
+  arch = project.hasProperty('arch') ? arch : currentArch
+  platformArch = "${platform}-${arch}"
+
+  java_home = System.properties.'java.home'
+  if(java_home.endsWith("/jre")) {
+    java_home = java_home.substring(0, java_home.length() - "/jre".length())
+  }
+  java_home = java_home
+
+  libDir = "${buildDir}/lib"
+  lzmaDir = "${libDir}/lzma"
+
+  buildOptions = ['', '-lzma']
+}
+
+repositories {
+  ivy {
+    name "ivyLocal"
+    url "${System.env.HOME}/.ivy2/local"
+    layout 'maven'
+  }
+
+  ivy {
+    name "jcenter"
+    if(version.contains("SNAPSHOT")) {
+      url "http://oss.jfrog.org/artifactory/oss-snapshot-local"
+    } else {
+      url "http://oss.jfrog.org/artifactory/oss-release-local"
+    }
+    layout 'maven'
+  }
+}
+
+configurations {
+  create('windows-i386')
+  create('windows-x86_64')
+}
+
+dependencies {
+  'windows-i386' "com.readytalk:win32:1.0.0-SNAPSHOT"
+  'windows-x86_64' "com.readytalk:win64:1.0.0-SNAPSHOT"
+}
+
+model {
+  platforms {
+    create(platformArch) {
+      operatingSystem SupportedOS.valueOf(platform.toUpperCase())
+      architecture "${arch}"
+    }
+  }
+
+  tasks {
+    buildOptions.each { buildOption ->
+      platforms.each { platform ->
+        if(platform.operatingSystem.name == "windows") {
+          def artifactName = platform.architecture.name == "i386" ? 'win32' : 'win64'
+
+          task "extract${platform.name}${buildOption}"(type: Copy) {
+            from {
+              tarTree(configurations."${platform.name}".find { it.name =~ artifactName })
+            }
+            into "${libDir}/tools"
+          }
+        }
+
+        task "build${platform.name}${buildOption}"(type: Exec) {
+          executable "make"
+          args "platform=${platform.operatingSystem.name}",
+               "arch=${platform.architecture.name}"
+
+          if(buildOption == "-lzma") {
+            dependsOn 'extractLzma'
+            args "lzma=${lzmaDir}"
+          }
+
+          if(platform.operatingSystem.name == "windows") {
+              dependsOn "extract${platform.name}${buildOption}"
+              args "win32=${libDir}/tools/win32",
+                   "win64=${libDir}/tools/win64"
+          }
+          environment JAVA_HOME: java_home
+        }
+
+        assemble {
+          dependsOn "build${platform.name}${buildOption}"
+        }
+      }
+    }
+  }
+}
+
+tasks.withType(JavaCompile) {
+  sourceCompatibility = "1.6"
+  targetCompatibility = "1.6"
+
+  options.with {
+    encoding = "UTF-8"
+    bootClasspath = sourceSets.main.output.classesDir
+  }
+}
+
+sourceSets {
+  main {
+    java {
+      srcDir 'classpath'
+    }
+  }
+}
+
+javadoc {
+  title = "Avian v${version} Class Library API"
+}
+
+task javadocJar(type: Jar) {
+  dependsOn javadoc
+  classifier = 'javadoc'
+  from {
+    javadoc.destinationDir
+  }
+}
+
+jar {
+  baseName "classpath-avian"
+}
+
+task downloadLzma(type: Exec) {
+  commandLine "curl"
+  args "--create-dirs", "-o", "${lzmaDir}/lzma920.tar.bz2", "-f", "http://oss.readytalk.com/avian-web/lzma920.tar.bz2"
+}
+
+task extractLzma(type: Copy) {
+  dependsOn downloadLzma
+  from {
+    tarTree(resources.bzip2("${lzmaDir}/lzma920.tar.bz2"))
+  }
+  into lzmaDir
+}
+
+task install {
+  dependsOn assemble, publish
+}
+
+publishing {
+  repositories {
+    add(project.repositories."ivyLocal")
+  }
+
+  publications {
+
+    ivy(IvyPublication) {
+      from components.java
+
+      artifact(javadocJar)
+
+      artifact("vm.pro") {
+        name "vm"
+        type "proguard"
+        extension "pro"
+      }
+
+      module "classpath-avian"
+    }
+
+    create("tools-avian-${currentPlatformArch}", IvyPublication) {
+      module "tools-avian-${currentPlatformArch}"
+
+      def publishBinSuffix = currentPlatform == "windows" ? "exe" : "bin"
+      def binSuffix = currentPlatform == "windows" ? ".exe" : ""
+      artifact("${buildDir}/${currentPlatform}-${currentArch}/binaryToObject/binaryToObject${binSuffix}") {
+        name "binaryToObject"
+        type publishBinSuffix
+        extension publishBinSuffix
+      }
+    }
+
+    buildOptions.each { buildOption ->
+      platforms.each { platform ->
+        def binSuffix=""
+        def publishBinSuffix="bin"
+
+        create("${platform.name}${buildOption}", IvyPublication) {
+          def nativeBuildDir = "${buildDir}/${platform.operatingSystem.name}-${platform.architecture.name}${buildOption}"
+
+          if(platform.operatingSystem.name == "windows") {
+            publishBinSuffix = "exe"
+            binSuffix = ".${publishBinSuffix}"
+          }
+
+          module "runtime-avian${buildOption}-${platform.name}"
+
+          artifact("${nativeBuildDir}/avian${binSuffix}") {
+            name "avian"
+            type publishBinSuffix
+            extension publishBinSuffix
+          }
+
+          artifact("${nativeBuildDir}/libavian.a") {
+            name "libavian"
+            type "a"
+            extension "a"
+          }
+
+          if (buildOption == "-lzma") {
+            artifact("${nativeBuildDir}/libavian-lzma.a") {
+              name "libavian-lzma"
+              type "a"
+              extension "a"
+            }
+
+            artifact("${nativeBuildDir}/lzma/lzma${binSuffix}") {
+              name "lzma"
+              type publishBinSuffix
+              extension publishBinSuffix
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+artifactoryPublish {
+  onlyIf {
+    // TRAVIS_BRANCH reports master if it is a master build or a PR going to master
+    // TRAVIS_PULL_REQUEST reports false if not a pull request and the PR number if it is
+    System.env.'TRAVIS_BRANCH' == "master" && System.env.'TRAVIS_PULL_REQUEST' == "false"
+  }
+  dependsOn assemble
+}
+
+artifactory {
+  contextUrl = "http://oss.jfrog.org"
+
+  resolve {
+    repository {
+      repoKey = 'libs-releases'
+    }
+  }
+
+  publish {
+    repository {
+      repoKey = 'oss-snapshot-local'
+      username = System.env.BINTRAY_USER
+      password = System.env.BINTRAY_API_KEY
+      ivy {
+        ivyLayout = "[organisation]/[module]/[revision]/ivy-[revision].xml"
+      }
+    }
+
+    defaults {
+      platforms.each {
+        publications it.name
+      }
+    }
+  }
+}
+
+task wrapper(type: Wrapper) {
+  distributionUrl = 'http://services.gradle.org/distributions/gradle-2.0-bin.zip'
+}

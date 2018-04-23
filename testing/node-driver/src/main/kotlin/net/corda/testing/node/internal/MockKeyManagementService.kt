@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.testing.node.internal
 
 import net.corda.core.crypto.*
@@ -6,6 +16,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.keys.freshCertificate
+import net.corda.node.services.keys.getSigner
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -37,7 +48,7 @@ class MockKeyManagementService(val identityService: IdentityService,
         return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
     }
 
-    private fun getSigner(publicKey: PublicKey): ContentSigner = net.corda.node.services.keys.getSigner(getSigningKeyPair(publicKey))
+    private fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))
 
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
         val pk = publicKey.keys.firstOrNull { keyStore.containsKey(it) }

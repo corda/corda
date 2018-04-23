@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.network
 
 import net.corda.core.concurrent.CordaFuture
@@ -31,6 +41,7 @@ import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
+import java.sql.Connection
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.HashSet
@@ -282,9 +293,10 @@ open class PersistentNetworkMapCache(
     private fun queryIdentityByLegalName(session: Session, name: CordaX500Name): PartyAndCertificate? {
         val query = session.createQuery(
                 // We do the JOIN here to restrict results to those present in the network map
-                "SELECT DISTINCT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
+                "SELECT l FROM ${NodeInfoSchemaV1.PersistentNodeInfo::class.java.name} n JOIN n.legalIdentitiesAndCerts l WHERE l.name = :name",
                 NodeInfoSchemaV1.DBPartyAndCertificate::class.java)
         query.setParameter("name", name.toString())
+        query.maxResults = 1 // instead of DISTINCT in the query, DISTINCT is not supported in Oracle when one of the columns is BLOB
         val candidates = query.resultList.map { it.toLegalIdentityAndCert() }
         // The map is restricted to holding a single identity for any X.500 name, so firstOrNull() is correct here.
         return candidates.firstOrNull()

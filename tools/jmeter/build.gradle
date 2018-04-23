@@ -1,0 +1,162 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+apply plugin: 'kotlin'
+apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'application'
+
+mainClassName = 'com.r3.corda.jmeter.Launcher'
+
+dependencies {
+    compile project(':client:rpc')
+    compile project(':perftestcordapp')
+
+    // https://mvnrepository.com/artifact/com.jcraft/jsch
+    compile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
+    compile group: 'com.jcraft', name: 'jsch.agentproxy.core', version: '0.0.9'
+    compile group: 'com.jcraft', name: 'jsch.agentproxy.sshagent', version: '0.0.9'
+    compile group: 'com.jcraft', name: 'jsch.agentproxy.usocket-jna', version: '0.0.9'
+    compile group: 'com.jcraft', name: 'jsch.agentproxy.pageant', version: '0.0.9'
+
+    // Log4J: logging framework (with SLF4J bindings)
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
+
+    // JMeter
+    ext.jmVersion = "3.3"
+
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_components', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_core', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_ftp', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_functions', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_http', version: "$jmVersion"
+    compile group: 'org.apache.jmeter', name: 'ApacheJMeter_java', version: "$jmVersion" // 'compile' because we extend Java sampler.
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_jdbc', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_jms', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_junit', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_ldap', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_mail', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_mongodb', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_native', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_tcp', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_config', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'jorphan', version: "$jmVersion"
+    //For Azure SQL and SQL Server support in persistence
+    runtime group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '6.2.1.jre8'
+
+
+    testCompile project(':test-utils')
+    testCompile project(':node-driver')
+}
+
+// Run JMeter as server process/agent on current host.
+task(runServer, dependsOn: 'classes', type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.r3.corda.jmeter.Launcher'
+    def file = new File("$rootDir/build/search_paths.txt")
+    file.createNewFile()
+    file.text = "${project(':tools:jmeter').configurations.runtime.files.join(";")}"
+    systemProperty "search_paths_file", file.toString()
+    systemProperty "java.rmi.server.hostname", "0.0.0.0"
+    systemProperty "jmeter.home", sourceSets.main.resources.getSrcDirs().first().getPath()
+    // If you want to debug: jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+    args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
+             "-d", sourceSets.main.resources.getSrcDirs().first().getPath(),
+             "-s" ]
+}
+
+// Just start ssh tunnels, without JMeter.
+task(runSsh, dependsOn: 'classes', type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.r3.corda.jmeter.Ssh'
+    if ( project.hasProperty("sshUser") ){
+        args+= "-XsshUser"
+        args+= Eval.me(sshUser)
+    }
+    if ( project.hasProperty("jmeterHosts") ) {
+        args+= "-Xssh"
+        args+= Eval.me(jmeterHosts)
+    }
+    standardInput = System.in
+}
+
+// Use the driver to launch 2 local nodes and the notary running the perftestcordapp.
+// To use for development of samplers and flows locally.
+task(runDriver, dependsOn: 'classes', type: JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'com.r3.corda.jmeter.StartLocalPerfCorDapp'
+    standardInput = System.in
+}
+
+// Run JMeter (by default the UI).
+// Extra args can be passed by setting jmeterArgs (e.g. -n to run in non-UI mode).
+// e.g. ./gradlew tools:jmeter:run -PjmeterArgs="['-n']"
+// ssh tunnels will be built from local host to remote hosts by specifying jmeterHosts
+// e.g. ./gradlew tools:jmeter:run -PjmeterHosts="['perf-notary.corda.r3cev.com', 'perf-node-1.corda.r3cev.com']"
+// Each host is paired with local host ports listed in remote_hosts of jmeter.properties
+run {
+    def file = new File("$rootDir/build/search_paths.txt")
+    file.createNewFile()
+    file.text = "${project(':tools:jmeter').configurations.runtime.files.join(";")}"
+    systemProperty "search_paths_file", file.toString()
+    systemProperty "java.rmi.server.hostname", "localhost"
+    systemProperty "jmeter.home", sourceSets.main.resources.getSrcDirs().first().getPath()
+    // If you want to debug: jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+    args+= [ "-p", sourceSets.main.resources.getSrcDirs().first().getPath()+"/jmeter.properties",
+             "-d", sourceSets.main.resources.getSrcDirs().first().getPath() ]
+    if ( project.hasProperty("jmeterArgs") ) {
+        args+= Eval.me(jmeterArgs)
+    }
+    if ( project.hasProperty("sshUser") ){
+        args+= "-XsshUser"
+        args+= Eval.me(sshUser)
+    }
+    if ( project.hasProperty("jmeterHosts") ) {
+        args+= "-Xssh"
+        args+= Eval.me(jmeterHosts)
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.tools.jmeter',
+                'Main-Class': mainClassName
+        )
+    }
+    zip64 = true
+}
+
+// For building a runnable jar with no other dependencies for remote JMeter slave server, that has Corda code on classpath.
+// Run with: java -jar jmeter-corda-<version>.jar
+// No additional args required but will be passed if specified.
+task buildJMeterJAR(type: FatCapsule, dependsOn: 'jar') {
+    applicationClass 'com.r3.corda.jmeter.Launcher'
+    archiveName "jmeter-corda-${corda_release_version}.jar"
+    applicationSource = files(
+            project(':tools:jmeter').jar
+    )
+    from 'NOTICE' // Copy CDDL notice
+    from("$rootDir/tools/jmeter/build/resources/main") {
+        include "log4j2.xml"
+        include "*.properties"
+    }
+
+    capsuleManifest {
+        applicationVersion = corda_release_version
+        systemProperties['java.rmi.server.hostname'] = 'localhost'
+        minJavaVersion = '1.8.0'
+        minUpdateVersion['1.8'] = java8_minUpdateVersion
+
+        // JVM configuration.  Can be overridden on java command line.
+        jvmArgs = ['-Xms512m', '-Xmx512m', '-XX:+UseG1GC']
+    }
+}

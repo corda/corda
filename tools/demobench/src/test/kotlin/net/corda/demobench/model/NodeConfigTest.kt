@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.demobench.model
 
 import com.typesafe.config.ConfigFactory
@@ -6,6 +16,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.webserver.WebServerConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -44,7 +55,7 @@ class NodeConfigTest {
         assertEquals(localPort(40002), fullConfig.rpcOptions.address)
         assertEquals(localPort(10001), fullConfig.p2pAddress)
         assertEquals(listOf(user("jenny")), fullConfig.rpcUsers)
-        assertThat(fullConfig.dataSourceProperties["dataSource.url"] as String).contains("AUTO_SERVER_PORT=30001")
+        assertThat(fullConfig.dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] as String).contains("AUTO_SERVER_PORT=30001")
         assertTrue(fullConfig.useTestClock)
         assertFalse(fullConfig.detectPublicIp)
     }

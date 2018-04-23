@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 @file:JvmName("Driver")
 
 package net.corda.testing.driver
@@ -144,7 +154,8 @@ data class NodeParameters(
         val verifierType: VerifierType = VerifierType.InMemory,
         val customOverrides: Map<String, Any?> = emptyMap(),
         val startInSameProcess: Boolean? = null,
-        val maximumHeapSize: String = "512m"
+        val maximumHeapSize: String = "512m",
+        val logLevel: String? = null
 ) {
     fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
     fun withRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
@@ -152,6 +163,7 @@ data class NodeParameters(
     fun withCustomOverrides(customOverrides: Map<String, Any?>): NodeParameters = copy(customOverrides = customOverrides)
     fun withStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
     fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
+    fun withLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
 }
 
 /**
@@ -203,7 +215,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
             ),
             coerce = { it },
             dsl = dsl,
-            initialiseSerialization = true
+            initialiseSerialization = defaultParameters.initialiseSerialization
     )
 }
 
@@ -240,12 +252,13 @@ data class DriverParameters(
         val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
+        val initialiseSerialization: Boolean = true,
         val startNodesInProcess: Boolean = false,
         val waitForAllNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
         val jmxPolicy: JmxPolicy = JmxPolicy(),
-        val networkParameters: NetworkParameters = testNetworkParameters()
+        val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList())
 ) {
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
     fun withDriverDirectory(driverDirectory: Path): DriverParameters = copy(driverDirectory = driverDirectory)
@@ -253,6 +266,7 @@ data class DriverParameters(
     fun withDebugPortAllocation(debugPortAllocation: PortAllocation): DriverParameters = copy(debugPortAllocation = debugPortAllocation)
     fun withSystemProperties(systemProperties: Map<String, String>): DriverParameters = copy(systemProperties = systemProperties)
     fun withUseTestClock(useTestClock: Boolean): DriverParameters = copy(useTestClock = useTestClock)
+    fun withInitialiseSerialization(initialiseSerialization: Boolean): DriverParameters = copy(initialiseSerialization = initialiseSerialization)
     fun withStartNodesInProcess(startNodesInProcess: Boolean): DriverParameters = copy(startNodesInProcess = startNodesInProcess)
     fun withWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean): DriverParameters = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
     fun withNotarySpecs(notarySpecs: List<NotarySpec>): DriverParameters = copy(notarySpecs = notarySpecs)

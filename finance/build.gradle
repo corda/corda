@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 apply plugin: 'kotlin'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
@@ -16,6 +26,9 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
+        }
+        resources {
+            srcDir file('../../testing/test-utils/src/main/resources')
         }
     }
 }

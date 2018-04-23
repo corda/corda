@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.nodeapi.internal.persistence
 
 import net.corda.core.internal.castIfPossible
@@ -5,15 +15,14 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toHexString
 import org.hibernate.SessionFactory
+import org.hibernate.boot.Metadata
+import org.hibernate.boot.MetadataBuilder
 import org.hibernate.boot.MetadataSources
-import org.hibernate.boot.model.naming.Identifier
-import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.hibernate.type.AbstractSingleColumnStandardBasicType
 import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
@@ -29,10 +38,27 @@ class HibernateConfiguration(
         schemas: Set<MappedSchema>,
         private val databaseConfig: DatabaseConfig,
         private val attributeConverters: Collection<AttributeConverter<*, *>>,
+        private val jdbcUrl: String,
         val cordappClassLoader: ClassLoader? = null
 ) {
     companion object {
         private val logger = contextLogger()
+
+        // register custom converters
+        fun buildHibernateMetadata(metadataBuilder: MetadataBuilder, jdbcUrl:String, attributeConverters: Collection<AttributeConverter<*, *>>): Metadata {
+            metadataBuilder.run {
+                attributeConverters.forEach { applyAttributeConverter(it) }
+                // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
+                // to avoid OOM when large blobs might get logged.
+                applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
+                applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
+                // When connecting to SqlServer or Oracle, do we need to tell hibernate to use
+                // nationalised (i.e. Unicode) strings by default
+                val forceUnicodeForSqlServer = listOf(":oracle:", ":sqlserver:").any { jdbcUrl.contains(it, ignoreCase = true) }
+                enableGlobalNationalizedCharacterDataSupport(forceUnicodeForSqlServer)
+                return build()
+            }
+        }
     }
 
     // TODO: make this a guava cache or similar to limit ability for this to grow forever.
@@ -50,20 +76,27 @@ class HibernateConfiguration(
         logger.info("Creating session factory for schemas: $schemas")
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
         val metadataSources = MetadataSources(serviceRegistry)
-        // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
-        // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
-        // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
+
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
-                .setProperty("hibernate.hbm2ddl.auto", if (databaseConfig.initialiseSchema) "update" else "validate")
-                .setProperty("hibernate.format_sql", "true")
+                .setProperty("hibernate.hbm2ddl.auto", if (isH2Database(jdbcUrl)) "update" else "validate")
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
+
+        databaseConfig.schema?.apply {
+            //preserving case-sensitive schema name for PostgreSQL by wrapping in double quotes, schema without double quotes would be treated as case-insensitive (lower cases)
+            val schemaName = if (jdbcUrl.contains(":postgresql:", ignoreCase = true) && !databaseConfig.schema.startsWith("\"")) {
+                "\"" + databaseConfig.schema + "\""
+            } else {
+                databaseConfig.schema
+            }
+            config.setProperty("hibernate.default_schema", schemaName)
+        }
 
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
-        val sessionFactory = buildSessionFactory(config, metadataSources, databaseConfig.serverNameTablePrefix, cordappClassLoader)
+        val sessionFactory = buildSessionFactory(config, metadataSources, cordappClassLoader)
         logger.info("Created session factory for schemas: $schemas")
 
         // export Hibernate JMX statistics
@@ -84,13 +117,12 @@ class HibernateConfiguration(
 
         try {
             mbeanServer.registerMBean(statisticsMBean, statsName)
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             logger.warn(e.message)
         }
     }
 
-    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String, cordappClassLoader: ClassLoader?): SessionFactory {
+    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, cordappClassLoader: ClassLoader?): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
 
         if (cordappClassLoader != null) {
@@ -99,22 +131,8 @@ class HibernateConfiguration(
                     ClassLoaderServiceImpl(cordappClassLoader))
         }
 
-        val metadata = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build()).run {
-            applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
-                override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
-                    val default = super.toPhysicalTableName(name, context)
-                    return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
-                }
-            })
-            // register custom converters
-            attributeConverters.forEach { applyAttributeConverter(it) }
-            // Register a tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.
-            // to avoid OOM when large blobs might get logged.
-            applyBasicType(CordaMaterializedBlobType, CordaMaterializedBlobType.name)
-            applyBasicType(CordaWrapperBinaryType, CordaWrapperBinaryType.name)
-            build()
-        }
-
+        val metadataBuilder = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build())
+        val metadata = buildHibernateMetadata(metadataBuilder, jdbcUrl, attributeConverters)
         return metadata.sessionFactoryBuilder.run {
             allowOutOfTransactionUpdateOperations(true)
             applySecondLevelCacheSupport(false)
@@ -149,14 +167,14 @@ class HibernateConfiguration(
     }
 
     // A tweaked version of `org.hibernate.type.MaterializedBlobType` that truncates logged messages.  Also logs in hex.
-    private object CordaMaterializedBlobType : AbstractSingleColumnStandardBasicType<ByteArray>(BlobTypeDescriptor.DEFAULT, CordaPrimitiveByteArrayTypeDescriptor) {
+    object CordaMaterializedBlobType : AbstractSingleColumnStandardBasicType<ByteArray>(BlobTypeDescriptor.DEFAULT, CordaPrimitiveByteArrayTypeDescriptor) {
         override fun getName(): String {
             return "materialized_blob"
         }
     }
 
     // A tweaked version of `org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor` that truncates logged messages.
-    private object CordaPrimitiveByteArrayTypeDescriptor : PrimitiveByteArrayTypeDescriptor() {
+    object CordaPrimitiveByteArrayTypeDescriptor : PrimitiveByteArrayTypeDescriptor() {
         private val LOG_SIZE_LIMIT = 1024
 
         override fun extractLoggableRepresentation(value: ByteArray?): String {
@@ -173,7 +191,7 @@ class HibernateConfiguration(
     }
 
     // A tweaked version of `org.hibernate.type.WrapperBinaryType` that deals with ByteArray (java primitive byte[] type).
-    private object CordaWrapperBinaryType : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
+    object CordaWrapperBinaryType : AbstractSingleColumnStandardBasicType<ByteArray>(VarbinaryTypeDescriptor.INSTANCE, PrimitiveByteArrayTypeDescriptor.INSTANCE) {
         override fun getRegistrationKeys(): Array<String> {
             return arrayOf(name, "ByteArray", ByteArray::class.java.name)
         }
@@ -183,3 +201,6 @@ class HibernateConfiguration(
         }
     }
 }
+
+/** Allow Oracle database drivers ojdbc7.jar and ojdbc8.jar to deserialize classes from oracle.sql.converter package. */
+fun oracleJdbcDriverSerialFilter(clazz: Class<*>): Boolean = clazz.name.startsWith("oracle.sql.converter.")

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.client.jfx
 
 import net.corda.client.jfx.model.NodeMonitorModel
@@ -31,12 +41,16 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
+import org.junit.ClassRule
 import org.junit.Test
 import rx.Observable
 
-class NodeMonitorModelTest {
+class NodeMonitorModelTest : IntegrationTest() {
     private lateinit var aliceNode: NodeInfo
     private lateinit var bobNode: NodeInfo
     private lateinit var notaryParty: Party
@@ -51,6 +65,13 @@ class NodeMonitorModelTest {
     private lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>
     private lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
     private lateinit var newNode: (CordaX500Name) -> NodeInfo
+
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, CHARLIE_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
+    }
 
     private fun setup(runTest: () -> Unit) {
         driver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance"))) {

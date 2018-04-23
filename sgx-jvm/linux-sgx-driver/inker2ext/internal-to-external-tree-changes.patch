@@ -1,0 +1,1106 @@
+From 2ff2ed01f25da0e87eb7891594f32469eae1b0bc Mon Sep 17 00:00:00 2001
+From: Serge Ayoun <serge.ayoun@intel.com>
+Date: Mon, 23 Oct 2017 17:30:10 +0300
+Subject: [PATCH] in kernel code to out of tree driver patch.
+
+---
+ drivers/platform/x86/intel_sgx/Makefile         |  37 ++--
+ drivers/platform/x86/intel_sgx/sgx.h            |   6 +-
+ drivers/platform/x86/intel_sgx/sgx_arch.h       | 269 ++++++++++++++++++++++++
+ drivers/platform/x86/intel_sgx/sgx_asm.h        | 233 ++++++++++++++++++++
+ drivers/platform/x86/intel_sgx/sgx_encl.c       |  13 +-
+ drivers/platform/x86/intel_sgx/sgx_ioctl.c      |   6 +-
+ drivers/platform/x86/intel_sgx/sgx_main.c       | 151 ++++---------
+ drivers/platform/x86/intel_sgx/sgx_page_cache.c |   6 +-
+ drivers/platform/x86/intel_sgx/sgx_user.h       | 139 ++++++++++++
+ drivers/platform/x86/intel_sgx/sgx_util.c       |   6 +-
+ drivers/platform/x86/intel_sgx/sgx_vma.c        |  11 +
+ 11 files changed, 749 insertions(+), 128 deletions(-)
+ create mode 100644 drivers/platform/x86/intel_sgx/sgx_arch.h
+ create mode 100644 drivers/platform/x86/intel_sgx/sgx_asm.h
+ create mode 100644 drivers/platform/x86/intel_sgx/sgx_user.h
+
+diff --git a/drivers/platform/x86/intel_sgx/Makefile b/drivers/platform/x86/intel_sgx/Makefile
+index 92af946..4b5edaf 100644
+--- a/drivers/platform/x86/intel_sgx/Makefile
++++ b/drivers/platform/x86/intel_sgx/Makefile
+@@ -1,13 +1,24 @@
+-#
+-# Intel SGX
+-#
+-
+-obj-$(CONFIG_INTEL_SGX) += intel_sgx.o
+-
+-intel_sgx-$(CONFIG_INTEL_SGX) += \
+-	sgx_ioctl.o \
+-	sgx_encl.o \
+-	sgx_main.o \
+-	sgx_page_cache.o \
+-	sgx_util.o \
+-	sgx_vma.o \
++ifneq ($(KERNELRELEASE),)
++	isgx-y := \
++		sgx_main.o \
++		sgx_page_cache.o \
++		sgx_ioctl.o \
++		sgx_vma.o \
++		sgx_util.o\
++		sgx_encl.o
++	obj-m += isgx.o
++else
++KDIR := /lib/modules/$(shell uname -r)/build
++PWD  := $(shell pwd)
++
++default:
++	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) CFLAGS_MODULE="-DDEBUG -g -O0" modules
++
++install: default
++	$(MAKE) INSTALL_MOD_DIR=kernel/drivers/intel/sgx -C $(KDIR) M=$(PWD) modules_install
++	sh -c "cat /etc/modules | grep -Fxq isgx || echo isgx >> /etc/modules"
++
++endif
++
++clean:
++	rm -vrf *.o *.ko *.order *.symvers *.mod.c .tmp_versions .*o.cmd
+diff --git a/drivers/platform/x86/intel_sgx/sgx.h b/drivers/platform/x86/intel_sgx/sgx.h
+index 24140a3..bfc24c0 100644
+--- a/drivers/platform/x86/intel_sgx/sgx.h
++++ b/drivers/platform/x86/intel_sgx/sgx.h
+@@ -60,15 +60,17 @@
+ #ifndef __ARCH_INTEL_SGX_H__
+ #define __ARCH_INTEL_SGX_H__
+ 
+-#include <uapi/asm/sgx.h>
++#include "sgx_asm.h"
+ #include <linux/kref.h>
++#include <linux/version.h>
+ #include <linux/rbtree.h>
+ #include <linux/rwsem.h>
+ #include <linux/sched.h>
+ #include <linux/workqueue.h>
+ #include <linux/mmu_notifier.h>
+ #include <linux/radix-tree.h>
+-#include <asm/sgx.h>
++#include "sgx_arch.h"
++#include "sgx_user.h"
+ 
+ #define SGX_EINIT_SPIN_COUNT	20
+ #define SGX_EINIT_SLEEP_COUNT	50
+diff --git a/drivers/platform/x86/intel_sgx/sgx_arch.h b/drivers/platform/x86/intel_sgx/sgx_arch.h
+new file mode 100644
+index 0000000..dcb620e
+--- /dev/null
++++ b/drivers/platform/x86/intel_sgx/sgx_arch.h
+@@ -0,0 +1,269 @@
++/*
++ * This file is provided under a dual BSD/GPLv2 license.  When using or
++ * redistributing this file, you may do so under either license.
++ *
++ * GPL LICENSE SUMMARY
++ *
++ * Copyright(c) 2016-2017 Intel Corporation.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of version 2 of the GNU General Public License as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * Contact Information:
++ * Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
++ * Intel Finland Oy - BIC 0357606-4 - Westendinkatu 7, 02160 Espoo
++ *
++ * BSD LICENSE
++ *
++ * Copyright(c) 2016-2017 Intel Corporation.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ *
++ *   * Redistributions of source code must retain the above copyright
++ *     notice, this list of conditions and the following disclaimer.
++ *   * Redistributions in binary form must reproduce the above copyright
++ *     notice, this list of conditions and the following disclaimer in
++ *     the documentation and/or other materials provided with the
++ *     distribution.
++ *   * Neither the name of Intel Corporation nor the names of its
++ *     contributors may be used to endorse or promote products derived
++ *     from this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ *
++ * Authors:
++ *
++ * Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
++ */
++
++#include <linux/types.h>
++#ifndef _ASM_X86_SGX_ARCH_H
++#define _ASM_X86_SGX_ARCH_H
++
++#define SGX_SSA_GPRS_SIZE		182
++#define SGX_SSA_MISC_EXINFO_SIZE	16
++
++enum sgx_misc {
++	SGX_MISC_EXINFO		= 0x01,
++};
++
++#define SGX_MISC_RESERVED_MASK 0xFFFFFFFFFFFFFFFEL
++
++enum sgx_attribute {
++	SGX_ATTR_DEBUG		= 0x02,
++	SGX_ATTR_MODE64BIT	= 0x04,
++	SGX_ATTR_PROVISIONKEY	= 0x10,
++	SGX_ATTR_EINITTOKENKEY	= 0x20,
++};
++
++#define SGX_ATTR_RESERVED_MASK 0xFFFFFFFFFFFFFFC9L
++
++#define SGX_SECS_RESERVED1_SIZE 24
++#define SGX_SECS_RESERVED2_SIZE 32
++#define SGX_SECS_RESERVED3_SIZE 96
++#define SGX_SECS_RESERVED4_SIZE 3836
++
++struct sgx_secs {
++	uint64_t size;
++	uint64_t base;
++	uint32_t ssaframesize;
++	uint32_t miscselect;
++	uint8_t reserved1[SGX_SECS_RESERVED1_SIZE];
++	uint64_t attributes;
++	uint64_t xfrm;
++	uint32_t mrenclave[8];
++	uint8_t reserved2[SGX_SECS_RESERVED2_SIZE];
++	uint32_t mrsigner[8];
++	uint8_t	reserved3[SGX_SECS_RESERVED3_SIZE];
++	uint16_t isvvprodid;
++	uint16_t isvsvn;
++	uint8_t reserved4[SGX_SECS_RESERVED4_SIZE];
++};
++
++enum sgx_tcs_flags {
++	SGX_TCS_DBGOPTIN	= 0x01, /* cleared on EADD */
++};
++
++#define SGX_TCS_RESERVED_MASK 0xFFFFFFFFFFFFFFFEL
++
++struct sgx_tcs {
++	uint64_t state;
++	uint64_t flags;
++	uint64_t ossa;
++	uint32_t cssa;
++	uint32_t nssa;
++	uint64_t oentry;
++	uint64_t aep;
++	uint64_t ofsbase;
++	uint64_t ogsbase;
++	uint32_t fslimit;
++	uint32_t gslimit;
++	uint64_t reserved[503];
++};
++
++struct sgx_pageinfo {
++	uint64_t linaddr;
++	uint64_t srcpge;
++	union {
++		uint64_t secinfo;
++		uint64_t pcmd;
++	};
++	uint64_t secs;
++} __attribute__((aligned(32)));
++
++
++#define SGX_SECINFO_PERMISSION_MASK	0x0000000000000007L
++#define SGX_SECINFO_PAGE_TYPE_MASK	0x000000000000FF00L
++#define SGX_SECINFO_RESERVED_MASK	0xFFFFFFFFFFFF00F8L
++
++enum sgx_page_type {
++	SGX_PAGE_TYPE_SECS	= 0x00,
++	SGX_PAGE_TYPE_TCS	= 0x01,
++	SGX_PAGE_TYPE_REG	= 0x02,
++	SGX_PAGE_TYPE_VA	= 0x03,
++};
++
++enum sgx_secinfo_flags {
++	SGX_SECINFO_R		= 0x01,
++	SGX_SECINFO_W		= 0x02,
++	SGX_SECINFO_X		= 0x04,
++	SGX_SECINFO_SECS	= (SGX_PAGE_TYPE_SECS << 8),
++	SGX_SECINFO_TCS		= (SGX_PAGE_TYPE_TCS << 8),
++	SGX_SECINFO_REG		= (SGX_PAGE_TYPE_REG << 8),
++};
++
++struct sgx_secinfo {
++	uint64_t flags;
++	uint64_t reserved[7];
++} __attribute__((aligned(64)));
++
++struct sgx_pcmd {
++	struct sgx_secinfo secinfo;
++	uint64_t enclave_id;
++	uint8_t reserved[40];
++	uint8_t mac[16];
++};
++
++#define SGX_MODULUS_SIZE 384
++
++struct sgx_sigstruct_header {
++	uint64_t header1[2];
++	uint32_t vendor;
++	uint32_t date;
++	uint64_t header2[2];
++	uint32_t swdefined;
++	uint8_t reserved1[84];
++};
++
++struct sgx_sigstruct_body {
++	uint32_t miscselect;
++	uint32_t miscmask;
++	uint8_t reserved2[20];
++	uint64_t attributes;
++	uint64_t xfrm;
++	uint8_t attributemask[16];
++	uint8_t mrenclave[32];
++	uint8_t reserved3[32];
++	uint16_t isvprodid;
++	uint16_t isvsvn;
++} __attribute__((__packed__));
++
++struct sgx_sigstruct {
++	struct sgx_sigstruct_header header;
++	uint8_t modulus[SGX_MODULUS_SIZE];
++	uint32_t exponent;
++	uint8_t signature[SGX_MODULUS_SIZE];
++	struct sgx_sigstruct_body body;
++	uint8_t reserved4[12];
++	uint8_t q1[SGX_MODULUS_SIZE];
++	uint8_t q2[SGX_MODULUS_SIZE];
++};
++
++struct sgx_sigstruct_payload {
++	struct sgx_sigstruct_header header;
++	struct sgx_sigstruct_body body;
++};
++
++struct sgx_einittoken_payload {
++	uint32_t valid;
++	uint32_t reserved1[11];
++	uint64_t attributes;
++	uint64_t xfrm;
++	uint8_t mrenclave[32];
++	uint8_t reserved2[32];
++	uint8_t mrsigner[32];
++	uint8_t reserved3[32];
++};
++
++struct sgx_einittoken {
++	struct sgx_einittoken_payload payload;
++	uint8_t cpusvnle[16];
++	uint16_t isvprodidle;
++	uint16_t isvsvnle;
++	uint8_t reserved2[24];
++	uint32_t maskedmiscselectle;
++	uint64_t maskedattributesle;
++	uint64_t maskedxfrmle;
++	uint8_t keyid[32];
++	uint8_t mac[16];
++};
++
++struct sgx_report {
++	uint8_t cpusvn[16];
++	uint32_t miscselect;
++	uint8_t reserved1[28];
++	uint64_t attributes;
++	uint64_t xfrm;
++	uint8_t mrenclave[32];
++	uint8_t reserved2[32];
++	uint8_t mrsigner[32];
++	uint8_t reserved3[96];
++	uint16_t isvprodid;
++	uint16_t isvsvn;
++	uint8_t reserved4[60];
++	uint8_t reportdata[64];
++	uint8_t keyid[32];
++	uint8_t mac[16];
++};
++
++struct sgx_targetinfo {
++	uint8_t mrenclave[32];
++	uint64_t attributes;
++	uint64_t xfrm;
++	uint8_t reserved1[4];
++	uint32_t miscselect;
++	uint8_t reserved2[456];
++};
++
++struct sgx_keyrequest {
++	uint16_t keyname;
++	uint16_t keypolicy;
++	uint16_t isvsvn;
++	uint16_t reserved1;
++	uint8_t cpusvn[16];
++	uint64_t attributemask;
++	uint64_t xfrmmask;
++	uint8_t keyid[32];
++	uint32_t miscmask;
++	uint8_t reserved2[436];
++};
++
++#endif /* _ASM_X86_SGX_ARCH_H */
+diff --git a/drivers/platform/x86/intel_sgx/sgx_asm.h b/drivers/platform/x86/intel_sgx/sgx_asm.h
+new file mode 100644
+index 0000000..b786f34
+--- /dev/null
++++ b/drivers/platform/x86/intel_sgx/sgx_asm.h
+@@ -0,0 +1,233 @@
++/*
++ * This file is provided under a dual BSD/GPLv2 license.  When using or
++ * redistributing this file, you may do so under either license.
++ *
++ * GPL LICENSE SUMMARY
++ *
++ * Copyright(c) 2016-2017 Intel Corporation.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of version 2 of the GNU General Public License as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * Contact Information:
++ * Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
++ * Intel Finland Oy - BIC 0357606-4 - Westendinkatu 7, 02160 Espoo
++ *
++ * BSD LICENSE
++ *
++ * Copyright(c) 2016-2017 Intel Corporation.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ *
++ *   * Redistributions of source code must retain the above copyright
++ *     notice, this list of conditions and the following disclaimer.
++ *   * Redistributions in binary form must reproduce the above copyright
++ *     notice, this list of conditions and the following disclaimer in
++ *     the documentation and/or other materials provided with the
++ *     distribution.
++ *   * Neither the name of Intel Corporation nor the names of its
++ *     contributors may be used to endorse or promote products derived
++ *     from this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ *
++ * Authors:
++ *
++ * Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
++ * Suresh Siddha <suresh.b.siddha@intel.com>
++ */
++
++#ifndef _ASM_X86_SGX_H
++#define _ASM_X86_SGX_H
++
++#include "sgx_arch.h"
++#include <asm/asm.h>
++#include <linux/bitops.h>
++#include <linux/err.h>
++#include <linux/types.h>
++
++#define SGX_CPUID 0x12
++
++enum sgx_cpuid {
++	SGX_CPUID_CAPABILITIES	= 0,
++	SGX_CPUID_ATTRIBUTES	= 1,
++	SGX_CPUID_EPC_BANKS	= 2,
++};
++
++enum sgx_commands {
++	ECREATE	= 0x0,
++	EADD	= 0x1,
++	EINIT	= 0x2,
++	EREMOVE	= 0x3,
++	EDGBRD	= 0x4,
++	EDGBWR	= 0x5,
++	EEXTEND	= 0x6,
++	ELDU	= 0x8,
++	EBLOCK	= 0x9,
++	EPA	= 0xA,
++	EWB	= 0xB,
++	ETRACK	= 0xC,
++	EAUG	= 0xD,
++	EMODPR	= 0xE,
++	EMODT	= 0xF,
++};
++
++#ifdef CONFIG_X86_64
++#define XAX "%%rax"
++#else
++#define XAX "%%eax"
++#endif
++
++#define __encls_ret(rax, rbx, rcx, rdx)			\
++	({						\
++	int ret;					\
++	asm volatile(					\
++	"1: .byte 0x0f, 0x01, 0xcf;\n\t"		\
++	"2:\n"						\
++	".section .fixup,\"ax\"\n"			\
++	"3: mov $-14,"XAX"\n"				\
++	"   jmp 2b\n"					\
++	".previous\n"					\
++	_ASM_EXTABLE(1b, 3b)				\
++	: "=a"(ret)					\
++	: "a"(rax), "b"(rbx), "c"(rcx), "d"(rdx)	\
++	: "memory");					\
++	ret;						\
++	})
++
++#define __encls(rax, rbx, rcx, rdx...)			\
++	({						\
++	int ret;					\
++	asm volatile(					\
++	"1: .byte 0x0f, 0x01, 0xcf;\n\t"		\
++	"   xor "XAX","XAX"\n"				\
++	"2:\n"						\
++	".section .fixup,\"ax\"\n"			\
++	"3: mov $-14,"XAX"\n"				\
++	"   jmp 2b\n"					\
++	".previous\n"					\
++	_ASM_EXTABLE(1b, 3b)				\
++	: "=a"(ret), "=b"(rbx), "=c"(rcx)		\
++	: "a"(rax), "b"(rbx), "c"(rcx), rdx		\
++	: "memory");					\
++	ret;						\
++	})
++
++static inline unsigned long __ecreate(struct sgx_pageinfo *pginfo, void *secs)
++{
++	return __encls(ECREATE, pginfo, secs, "d"(0));
++}
++
++static inline int __eextend(void *secs, void *epc)
++{
++	return __encls(EEXTEND, secs, epc, "d"(0));
++}
++
++static inline int __eadd(struct sgx_pageinfo *pginfo, void *epc)
++{
++	return __encls(EADD, pginfo, epc, "d"(0));
++}
++
++static inline int __einit(void *sigstruct, struct sgx_einittoken *einittoken,
++			  void *secs)
++{
++	return __encls_ret(EINIT, sigstruct, secs, einittoken);
++}
++
++static inline int __eremove(void *epc)
++{
++	unsigned long rbx = 0;
++	unsigned long rdx = 0;
++
++	return __encls_ret(EREMOVE, rbx, epc, rdx);
++}
++
++static inline int __edbgwr(void *epc, unsigned long *data)
++{
++	return __encls(EDGBWR, *data, epc, "d"(0));
++}
++
++static inline int __edbgrd(void *epc, unsigned long *data)
++{
++	unsigned long rbx = 0;
++	int ret;
++
++	ret = __encls(EDGBRD, rbx, epc, "d"(0));
++	if (!ret)
++		*(unsigned long *) data = rbx;
++
++	return ret;
++}
++
++static inline int __etrack(void *epc)
++{
++	unsigned long rbx = 0;
++	unsigned long rdx = 0;
++
++	return __encls_ret(ETRACK, rbx, epc, rdx);
++}
++
++static inline int __eldu(unsigned long rbx, unsigned long rcx,
++			 unsigned long rdx)
++{
++	return __encls_ret(ELDU, rbx, rcx, rdx);
++}
++
++static inline int __eblock(unsigned long rcx)
++{
++	unsigned long rbx = 0;
++	unsigned long rdx = 0;
++
++	return __encls_ret(EBLOCK, rbx, rcx, rdx);
++}
++
++static inline int __epa(void *epc)
++{
++	unsigned long rbx = SGX_PAGE_TYPE_VA;
++
++	return __encls(EPA, rbx, epc, "d"(0));
++}
++
++static inline int __ewb(struct sgx_pageinfo *pginfo, void *epc, void *va)
++{
++	return __encls_ret(EWB, pginfo, epc, va);
++}
++
++static inline int __eaug(struct sgx_pageinfo *pginfo, void *epc)
++{
++	return __encls(EAUG, pginfo, epc, "d"(0));
++}
++
++static inline int __emodpr(struct sgx_secinfo *secinfo, void *epc)
++{
++	unsigned long rdx = 0;
++
++	return __encls_ret(EMODPR, secinfo, epc, rdx);
++}
++
++static inline int __emodt(struct sgx_secinfo *secinfo, void *epc)
++{
++	unsigned long rdx = 0;
++
++	return __encls_ret(EMODT, secinfo, epc, rdx);
++}
++
++#endif /* _ASM_X86_SGX_H */
+diff --git a/drivers/platform/x86/intel_sgx/sgx_encl.c b/drivers/platform/x86/intel_sgx/sgx_encl.c
+index 6f69126..2669509 100644
+--- a/drivers/platform/x86/intel_sgx/sgx_encl.c
++++ b/drivers/platform/x86/intel_sgx/sgx_encl.c
+@@ -64,7 +64,12 @@
+ #include <linux/file.h>
+ #include <linux/highmem.h>
+ #include <linux/ratelimit.h>
+-#include <linux/sched/signal.h>
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
++	#include <linux/sched/signal.h>
++#else
++	#include <linux/signal.h>
++#endif
++#include "linux/file.h"
+ #include <linux/slab.h>
+ #include <linux/hashtable.h>
+ #include <linux/shmem_fs.h>
+@@ -576,7 +581,7 @@ int sgx_encl_create(struct sgx_secs *secs)
+ 	long ret;
+ 
+ 	encl = sgx_encl_alloc(secs);
+-	if (IS_ERR(secs))
++	if (IS_ERR(encl))
+ 		return PTR_ERR(encl);
+ 
+ 	secs_epc = sgx_alloc_page(0);
+@@ -634,8 +639,8 @@ int sgx_encl_create(struct sgx_secs *secs)
+ 	}
+ 
+ 	if (vma->vm_start != secs->base ||
+-	    vma->vm_end != (secs->base + secs->size) ||
+-	    vma->vm_pgoff != 0) {
++	    vma->vm_end != (secs->base + secs->size)
++	    /* vma->vm_pgoff != 0 */) {
+ 		ret = -EINVAL;
+ 		up_read(&current->mm->mmap_sem);
+ 		goto out;
+diff --git a/drivers/platform/x86/intel_sgx/sgx_ioctl.c b/drivers/platform/x86/intel_sgx/sgx_ioctl.c
+index af8b6b6..f7540fc 100644
+--- a/drivers/platform/x86/intel_sgx/sgx_ioctl.c
++++ b/drivers/platform/x86/intel_sgx/sgx_ioctl.c
+@@ -64,7 +64,11 @@
+ #include <linux/file.h>
+ #include <linux/highmem.h>
+ #include <linux/ratelimit.h>
+-#include <linux/sched/signal.h>
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
++	#include <linux/sched/signal.h>
++#else
++	#include <linux/signal.h>
++#endif
+ #include <linux/slab.h>
+ #include <linux/hashtable.h>
+ #include <linux/shmem_fs.h>
+diff --git a/drivers/platform/x86/intel_sgx/sgx_main.c b/drivers/platform/x86/intel_sgx/sgx_main.c
+index dc50410..7ff3864 100644
+--- a/drivers/platform/x86/intel_sgx/sgx_main.c
++++ b/drivers/platform/x86/intel_sgx/sgx_main.c
+@@ -58,16 +58,17 @@
+  * Sean Christopherson <sean.j.christopherson@intel.com>
+  */
+ 
++#include "asm/msr-index.h"
+ #include "sgx.h"
+ #include <linux/acpi.h>
+ #include <linux/file.h>
+ #include <linux/highmem.h>
++#include <linux/miscdevice.h>
+ #include <linux/module.h>
+ #include <linux/suspend.h>
+ #include <linux/hashtable.h>
+ #include <linux/kthread.h>
+ #include <linux/platform_device.h>
+-#include <linux/cdev.h>
+ 
+ #define DRV_DESCRIPTION "Intel SGX Driver"
+ #define DRV_VERSION "0.10"
+@@ -75,6 +76,11 @@
+ MODULE_DESCRIPTION(DRV_DESCRIPTION);
+ MODULE_AUTHOR("Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>");
+ MODULE_VERSION(DRV_VERSION);
++#ifndef X86_FEATURE_SGX
++	#define X86_FEATURE_SGX (9 * 32 + 2)
++#endif
++
++#define FEATURE_CONTROL_SGX_ENABLE                      (1<<18)
+ 
+ /*
+  * Global data.
+@@ -152,6 +158,13 @@ static const struct file_operations sgx_fops = {
+ 	.get_unmapped_area	= sgx_get_unmapped_area,
+ };
+ 
++static struct miscdevice sgx_dev = {
++ .minor	= MISC_DYNAMIC_MINOR,
++	.name	= "isgx",
++	.fops	= &sgx_fops,
++	.mode   = 0666,
++};
++
+ static int sgx_pm_suspend(struct device *dev)
+ {
+ 	struct sgx_tgid_ctx *ctx;
+@@ -170,71 +183,8 @@ static int sgx_pm_suspend(struct device *dev)
+ 
+ static SIMPLE_DEV_PM_OPS(sgx_drv_pm, sgx_pm_suspend, NULL);
+ 
+-static struct bus_type sgx_bus_type = {
+-	.name	= "sgx",
+-};
+-
+-struct sgx_context {
+-	struct device dev;
+-	struct cdev cdev;
+-};
+-
+-static dev_t sgx_devt;
+-
+-static void sgx_dev_release(struct device *dev)
+-{
+-	struct sgx_context *ctx = container_of(dev, struct sgx_context, dev);
+-
+-	kfree(ctx);
+-}
+-
+-static struct sgx_context *sgx_ctx_alloc(struct device *parent)
+-{
+-	struct sgx_context *ctx;
+-
+-	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+-	if (!ctx)
+-		return ERR_PTR(-ENOMEM);
+-
+-	device_initialize(&ctx->dev);
+-
+-	ctx->dev.bus = &sgx_bus_type;
+-	ctx->dev.parent = parent;
+-	ctx->dev.devt = MKDEV(MAJOR(sgx_devt), 0);
+-	ctx->dev.release = sgx_dev_release;
+-
+-	dev_set_name(&ctx->dev, "sgx");
+-
+-	cdev_init(&ctx->cdev, &sgx_fops);
+-	ctx->cdev.owner = THIS_MODULE;
+-
+-	dev_set_drvdata(parent, ctx);
+-
+-	return ctx;
+-}
+-
+-static struct sgx_context *sgxm_ctx_alloc(struct device *parent)
+-{
+-	struct sgx_context *ctx;
+-	int rc;
+-
+-	ctx = sgx_ctx_alloc(parent);
+-	if (IS_ERR(ctx))
+-		return ctx;
+-
+-	rc = devm_add_action_or_reset(parent, (void (*)(void *))put_device,
+-				      &ctx->dev);
+-	if (rc) {
+-		kfree(ctx);
+-		return ERR_PTR(rc);
+-	}
+-
+-	return ctx;
+-}
+-
+ static int sgx_dev_init(struct device *parent)
+ {
+-	struct sgx_context *sgx_dev;
+ 	unsigned int eax, ebx, ecx, edx;
+ 	unsigned long pa;
+ 	unsigned long size;
+@@ -243,8 +193,6 @@ static int sgx_dev_init(struct device *parent)
+ 
+ 	pr_info("intel_sgx: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
+ 
+-	sgx_dev = sgxm_ctx_alloc(parent);
+-
+ 	cpuid_count(SGX_CPUID, SGX_CPUID_CAPABILITIES, &eax, &ebx, &ecx, &edx);
+ 	/* Only allow misc bits supported by the driver. */
+ 	sgx_misc_reserved = ~ebx | SGX_MISC_RESERVED_MASK;
+@@ -313,7 +261,13 @@ static int sgx_dev_init(struct device *parent)
+ 		goto out_iounmap;
+ 	}
+ 
+-	ret = cdev_device_add(&sgx_dev->cdev, &sgx_dev->dev);
++	sgx_dev.parent = parent;
++	ret = misc_register(&sgx_dev);
++	if (ret) {
++		pr_err("intel_sgx: misc_register() failed\n");
++		goto out_workqueue;
++	}
++
+ 	if (ret)
+ 		goto out_workqueue;
+ 
+@@ -328,10 +282,16 @@ static int sgx_dev_init(struct device *parent)
+ 	return ret;
+ }
+ 
++static atomic_t sgx_init_flag = ATOMIC_INIT(0);
+ static int sgx_drv_probe(struct platform_device *pdev)
+ {
+ 	unsigned int eax, ebx, ecx, edx;
+ 	unsigned long fc;
++	if (atomic_cmpxchg(&sgx_init_flag, 0, 1)) {
++		pr_warn("intel_sgx: second initialization call skipped\n");
++		return 0;
++	}
++
+ 
+ 	if (boot_cpu_data.x86_vendor != X86_VENDOR_INTEL)
+ 		return -ENODEV;
+@@ -370,11 +330,14 @@ static int sgx_drv_probe(struct platform_device *pdev)
+ 
+ static int sgx_drv_remove(struct platform_device *pdev)
+ {
+-	struct device *parent = &pdev->dev;
+-	struct sgx_context *ctx = dev_get_drvdata(parent);
+ 	int i;
+ 
+-	cdev_device_del(&ctx->cdev, &ctx->dev);
++	if (!atomic_cmpxchg(&sgx_init_flag, 1, 0)) {
++		pr_warn("intel_sgx: second release call skipped\n");
++		return 0;
++	}
++
++	misc_deregister(&sgx_dev);
+ 
+ 	destroy_workqueue(sgx_add_page_wq);
+ #ifdef CONFIG_X86_64
+@@ -404,48 +367,24 @@ static struct platform_driver sgx_drv = {
+ 	},
+ };
+ 
+-static int __init sgx_drv_subsys_init(void)
++static struct platform_device *pdev;
++int init_sgx_module(void)
+ {
+-	int ret;
+-
+-	ret = bus_register(&sgx_bus_type);
+-	if (ret)
+-		return ret;
+-
+-	ret = alloc_chrdev_region(&sgx_devt, 0, 1, "sgx");
+-	if (ret < 0) {
+-		bus_unregister(&sgx_bus_type);
+-		return ret;
+-	}
+-
++	platform_driver_register(&sgx_drv);
++	pdev = platform_device_register_simple("intel_sgx", 0, NULL, 0);
++	if (IS_ERR(pdev))
++		pr_err("platform_device_register_simple failed\n");
+ 	return 0;
+ }
+ 
+-static void sgx_drv_subsys_exit(void)
+-{
+-	bus_unregister(&sgx_bus_type);
+-	unregister_chrdev_region(sgx_devt, 1);
+-}
+-
+-static int __init sgx_drv_init(void)
+-{
+-	int ret;
+-
+-	ret = sgx_drv_subsys_init();
+-
+-	ret = platform_driver_register(&sgx_drv);
+-	if (ret)
+-		sgx_drv_subsys_exit();
+-
+-	return ret;
+-}
+-module_init(sgx_drv_init);
+-
+-static void __exit sgx_drv_exit(void)
++void cleanup_sgx_module(void)
+ {
++	dev_set_uevent_suppress(&pdev->dev, true);
++	platform_device_unregister(pdev);
+ 	platform_driver_unregister(&sgx_drv);
+-	sgx_drv_subsys_exit();
+ }
+-module_exit(sgx_drv_exit);
++
++module_init(init_sgx_module);
++module_exit(cleanup_sgx_module);
+ 
+ MODULE_LICENSE("Dual BSD/GPL");
+diff --git a/drivers/platform/x86/intel_sgx/sgx_page_cache.c b/drivers/platform/x86/intel_sgx/sgx_page_cache.c
+index f8883d2..8472037 100644
+--- a/drivers/platform/x86/intel_sgx/sgx_page_cache.c
++++ b/drivers/platform/x86/intel_sgx/sgx_page_cache.c
+@@ -63,7 +63,11 @@
+ #include <linux/highmem.h>
+ #include <linux/kthread.h>
+ #include <linux/ratelimit.h>
+-#include <linux/sched/signal.h>
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
++	#include <linux/sched/signal.h>
++#else
++	#include <linux/signal.h>
++#endif
+ #include <linux/slab.h>
+ 
+ #define SGX_NR_LOW_EPC_PAGES_DEFAULT 32
+diff --git a/drivers/platform/x86/intel_sgx/sgx_user.h b/drivers/platform/x86/intel_sgx/sgx_user.h
+new file mode 100644
+index 0000000..a15f87b
+--- /dev/null
++++ b/drivers/platform/x86/intel_sgx/sgx_user.h
+@@ -0,0 +1,139 @@
++/*
++ * This file is provided under a dual BSD/GPLv2 license.  When using or
++ * redistributing this file, you may do so under either license.
++ *
++ * GPL LICENSE SUMMARY
++ *
++ * Copyright(c) 2016 Intel Corporation.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of version 2 of the GNU General Public License as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * Contact Information:
++ * Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
++ * Intel Finland Oy - BIC 0357606-4 - Westendinkatu 7, 02160 Espoo
++ *
++ * BSD LICENSE
++ *
++ * Copyright(c) 2016 Intel Corporation.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ *
++ *   * Redistributions of source code must retain the above copyright
++ *     notice, this list of conditions and the following disclaimer.
++ *   * Redistributions in binary form must reproduce the above copyright
++ *     notice, this list of conditions and the following disclaimer in
++ *     the documentation and/or other materials provided with the
++ *     distribution.
++ *   * Neither the name of Intel Corporation nor the names of its
++ *     contributors may be used to endorse or promote products derived
++ *     from this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ *
++ * Authors:
++ *
++ * Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
++ * Suresh Siddha <suresh.b.siddha@intel.com>
++ */
++
++#ifndef _UAPI_ASM_X86_SGX_H
++#define _UAPI_ASM_X86_SGX_H
++
++#include <linux/types.h>
++#include <linux/ioctl.h>
++
++#define SGX_MAGIC 0xA4
++
++#define SGX_IOC_ENCLAVE_CREATE \
++	_IOW(SGX_MAGIC, 0x00, struct sgx_enclave_create)
++#define SGX_IOC_ENCLAVE_ADD_PAGE \
++	_IOW(SGX_MAGIC, 0x01, struct sgx_enclave_add_page)
++#define SGX_IOC_ENCLAVE_INIT \
++	_IOW(SGX_MAGIC, 0x02, struct sgx_enclave_init)
++
++/* SGX leaf instruction return values */
++#define SGX_SUCCESS			0
++#define SGX_INVALID_SIG_STRUCT		1
++#define SGX_INVALID_ATTRIBUTE		2
++#define SGX_BLKSTATE			3
++#define SGX_INVALID_MEASUREMENT		4
++#define SGX_NOTBLOCKABLE		5
++#define SGX_PG_INVLD			6
++#define SGX_LOCKFAIL			7
++#define SGX_INVALID_SIGNATURE		8
++#define SGX_MAC_COMPARE_FAIL		9
++#define SGX_PAGE_NOT_BLOCKED		10
++#define SGX_NOT_TRACKED			11
++#define SGX_VA_SLOT_OCCUPIED		12
++#define SGX_CHILD_PRESENT		13
++#define SGX_ENCLAVE_ACT			14
++#define SGX_ENTRYEPOCH_LOCKED		15
++#define SGX_INVALID_EINITTOKEN		16
++#define SGX_PREV_TRK_INCMPL		17
++#define SGX_PG_IS_SECS			18
++#define SGX_INVALID_CPUSVN		32
++#define SGX_INVALID_ISVSVN		64
++#define SGX_UNMASKED_EVENT		128
++#define SGX_INVALID_KEYNAME		256
++
++/* IOCTL return values */
++#define SGX_POWER_LOST_ENCLAVE		0x40000000
++#define SGX_LE_ROLLBACK			0x40000001
++
++/**
++ * struct sgx_enclave_create - parameter structure for the
++ *                             %SGX_IOC_ENCLAVE_CREATE ioctl
++ * @src:	address for the SECS page data
++ */
++struct sgx_enclave_create  {
++	__u64	src;
++} __attribute__((__packed__));
++
++/**
++ * struct sgx_enclave_add_page - parameter structure for the
++ *                               %SGX_IOC_ENCLAVE_ADD_PAGE ioctl
++ * @addr:	address in the ELRANGE
++ * @src:	address for the page data
++ * @secinfo:	address for the SECINFO data
++ * @mrmask:	bitmask for the 256 byte chunks that are to be measured
++ */
++struct sgx_enclave_add_page {
++	__u64	addr;
++	__u64	src;
++	__u64	secinfo;
++	__u16	mrmask;
++} __attribute__((__packed__));
++
++/**
++ * struct sgx_enclave_init - parameter structure for the
++ *                           %SGX_IOC_ENCLAVE_INIT ioctl
++ * @addr:	address in the ELRANGE
++ * @sigstruct:	address for the page data
++ * @einittoken:	EINITTOKEN
++ */
++struct sgx_enclave_init {
++	__u64	addr;
++	__u64	sigstruct;
++	__u64	einittoken;
++} __attribute__((__packed__));
++
++#endif /* _UAPI_ASM_X86_SGX_H */
+diff --git a/drivers/platform/x86/intel_sgx/sgx_util.c b/drivers/platform/x86/intel_sgx/sgx_util.c
+index 6ef7949..ff0e40a 100644
+--- a/drivers/platform/x86/intel_sgx/sgx_util.c
++++ b/drivers/platform/x86/intel_sgx/sgx_util.c
+@@ -61,7 +61,11 @@
+ #include "sgx.h"
+ #include <linux/highmem.h>
+ #include <linux/shmem_fs.h>
+-#include <linux/sched/mm.h>
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0))
++	#include <linux/sched/mm.h>
++#else
++	#include <linux/mm.h>
++#endif
+ 
+ struct page *sgx_get_backing(struct sgx_encl *encl,
+ 			     struct sgx_encl_page *entry,
+diff --git a/drivers/platform/x86/intel_sgx/sgx_vma.c b/drivers/platform/x86/intel_sgx/sgx_vma.c
+index 54b588f..dae9eb9 100644
+--- a/drivers/platform/x86/intel_sgx/sgx_vma.c
++++ b/drivers/platform/x86/intel_sgx/sgx_vma.c
+@@ -96,10 +96,21 @@ static void sgx_vma_close(struct vm_area_struct *vma)
+ 	kref_put(&encl->refcount, sgx_encl_release);
+ }
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
+ static int sgx_vma_fault(struct vm_fault *vmf)
+ {
+ 	struct vm_area_struct *vma = vmf->vma;
++#else
++static int sgx_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
++{
++#endif
++	
++	
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
+ 	unsigned long addr = (unsigned long)vmf->address;
++#else
++	unsigned long addr = (unsigned long) vmf->virtual_address;
++#endif
+ 	struct sgx_encl_page *entry;
+ 
+ 	entry = sgx_fault_page(vma, addr, 0);
+-- 
+2.7.4
+

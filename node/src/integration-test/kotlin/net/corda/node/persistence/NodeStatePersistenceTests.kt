@@ -1,3 +1,12 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
 package net.corda.node.persistence
 
 import co.paralleluniverse.fibers.Suspendable
@@ -22,17 +31,28 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.node.User
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import org.junit.Assume.assumeFalse
+import org.junit.ClassRule
 import org.junit.Test
 import java.lang.management.ManagementFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class NodeStatePersistenceTests {
+class NodeStatePersistenceTests : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
+    }
     @Test
     fun `persistent state survives node restart`() {
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))

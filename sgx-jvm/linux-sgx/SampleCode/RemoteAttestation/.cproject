@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+	<storageModule moduleId="org.eclipse.cdt.core.settings">
+		<cconfiguration id="com.intel.sgx.configuration.Sim.Debug">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.intel.sgx.configuration.Sim.Debug" moduleId="org.eclipse.cdt.core.settings" name="Intel(R) SGX Simulation Debug">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.MakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.autotools.core.ErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="${ProjName}" buildProperties="" description="" id="com.intel.sgx.configuration.Sim.Debug" name="Intel(R) SGX Simulation Debug" parent="com.intel.sgx.configuration.Sim.Debug">
+					<folderInfo id="com.intel.sgx.configuration.Sim.Debug.935873960" name="/" resourcePath="">
+						<toolChain id="com.intel.sgx.toolChain.Sim.Debug.2132595457" name="Intel(R) SGX" superClass="com.intel.sgx.toolChain.Sim.Debug">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="com.intel.sgx.targetEnclave.1678491512" isAbstract="false" superClass="com.intel.sgx.targetEnclave"/>
+							<builder arguments="SGX_DEBUG=1 SGX_MODE=SIM -f Makefile" command="make" id="com.intel.sgx.builder2.229166714" keepEnvironmentInBuildfile="false" name="Intel(R) Software Guard Extensions Linux Builder" superClass="com.intel.sgx.builder2"/>
+							<tool id="com.intel.sgx.compiler.81269967" name="Intel(R) SGX" superClass="com.intel.sgx.compiler">
+								<option id="com.intel.sgx.option.includePath.1694375039" superClass="com.intel.sgx.option.includePath" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${SGX_SDK}/include&quot;"/>
+								</option>
+								<inputType id="com.intel.sgx.inputType.742388855" superClass="com.intel.sgx.inputType"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="com.intel.sgx.configuration.Sim.Release">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.intel.sgx.configuration.Sim.Release" moduleId="org.eclipse.cdt.core.settings" name="Intel(R) SGX Simulation">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.MakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.autotools.core.ErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="${ProjName}" buildProperties="" description="" id="com.intel.sgx.configuration.Sim.Release" name="Intel(R) SGX Simulation" parent="com.intel.sgx.configuration.Sim.Release">
+					<folderInfo id="com.intel.sgx.configuration.Sim.Release.428839196" name="/" resourcePath="">
+						<toolChain id="com.intel.sgx.toolChain.Sim.Release.709775329" name="Intel(R) SGX" superClass="com.intel.sgx.toolChain.Sim.Release">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="com.intel.sgx.targetEnclave.1866379479" isAbstract="false" superClass="com.intel.sgx.targetEnclave"/>
+							<builder arguments="SGX_DEBUG=0 SGX_MODE=SIM -f Makefile" command="make" id="com.intel.sgx.builder3.1000705250" keepEnvironmentInBuildfile="false" name="Intel(R) Software Guard Extensions Linux Builder" superClass="com.intel.sgx.builder3"/>
+							<tool id="com.intel.sgx.compiler.301453474" name="Intel(R) SGX" superClass="com.intel.sgx.compiler">
+								<option id="com.intel.sgx.option.includePath.1312096753" superClass="com.intel.sgx.option.includePath" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${SGX_SDK}/include&quot;"/>
+								</option>
+								<inputType id="com.intel.sgx.inputType.596141238" superClass="com.intel.sgx.inputType"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="com.intel.sgx.configuration.HW.Debug">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.intel.sgx.configuration.HW.Debug" moduleId="org.eclipse.cdt.core.settings" name="Intel(R) SGX Hardware Debug">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.MakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.autotools.core.ErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="${ProjName}" buildProperties="" description="" id="com.intel.sgx.configuration.HW.Debug" name="Intel(R) SGX Hardware Debug" parent="com.intel.sgx.configuration.HW.Debug">
+					<folderInfo id="com.intel.sgx.configuration.HW.Debug.562917509" name="/" resourcePath="">
+						<toolChain id="com.intel.sgx.toolChain.HW.Debug.2046051538" name="Intel(R) SGX" superClass="com.intel.sgx.toolChain.HW.Debug">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="com.intel.sgx.targetEnclave.999277922" isAbstract="false" superClass="com.intel.sgx.targetEnclave"/>
+							<builder arguments="SGX_DEBUG=1 SGX_MODE=HW -f Makefile" command="make" id="com.intel.sgx.builder1.577701014" keepEnvironmentInBuildfile="false" name="Intel(R) Software Guard Extensions Linux Builder" superClass="com.intel.sgx.builder1"/>
+							<tool id="com.intel.sgx.compiler.1898704176" name="Intel(R) SGX" superClass="com.intel.sgx.compiler">
+								<option id="com.intel.sgx.option.includePath.1026657138" superClass="com.intel.sgx.option.includePath" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${SGX_SDK}/include&quot;"/>
+								</option>
+								<inputType id="com.intel.sgx.inputType.393162412" superClass="com.intel.sgx.inputType"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="com.intel.sgx.configuration.HW.Prerelease">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.intel.sgx.configuration.HW.Prerelease" moduleId="org.eclipse.cdt.core.settings" name="Intel(R) SGX Hardware Prerelease">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.MakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.autotools.core.ErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="${ProjName}" buildProperties="" description="" id="com.intel.sgx.configuration.HW.Prerelease" name="Intel(R) SGX Hardware Prerelease" parent="com.intel.sgx.configuration.HW.Prerelease">
+					<folderInfo id="com.intel.sgx.configuration.HW.Prerelease.2074448686" name="/" resourcePath="">
+						<toolChain id="com.intel.sgx.toolChain.HW.Prerelease.2016152654" name="Intel(R) SGX" superClass="com.intel.sgx.toolChain.HW.Prerelease">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="com.intel.sgx.targetEnclave.1520324017" isAbstract="false" superClass="com.intel.sgx.targetEnclave"/>
+							<builder arguments="SGX_PRERELEASE=1 SGX_MODE=HW -f Makefile" command="make" id="com.intel.sgx.builder5.293910513" keepEnvironmentInBuildfile="false" name="Intel(R) Software Guard Extensions Linux Builder" superClass="com.intel.sgx.builder5"/>
+							<tool id="com.intel.sgx.compiler.845441552" name="Intel(R) SGX" superClass="com.intel.sgx.compiler">
+								<option id="com.intel.sgx.option.includePath.199398937" superClass="com.intel.sgx.option.includePath" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${SGX_SDK}/include&quot;"/>
+								</option>
+								<inputType id="com.intel.sgx.inputType.1555926498" superClass="com.intel.sgx.inputType"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="com.intel.sgx.configuration.HW.Release">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.intel.sgx.configuration.HW.Release" moduleId="org.eclipse.cdt.core.settings" name="Intel(R) SGX Hardware Release">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.MakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.autotools.core.ErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="${ProjName}" buildProperties="" description="" id="com.intel.sgx.configuration.HW.Release" name="Intel(R) SGX Hardware Release" parent="com.intel.sgx.configuration.HW.Release">
+					<folderInfo id="com.intel.sgx.configuration.HW.Release.1347223665" name="/" resourcePath="">
+						<toolChain id="com.intel.sgx.toolChain.HW.Release.1050674831" name="Intel(R) SGX" superClass="com.intel.sgx.toolChain.HW.Release">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="com.intel.sgx.targetEnclave.987781695" isAbstract="false" superClass="com.intel.sgx.targetEnclave"/>
+							<builder arguments="SGX_DEBUG=0 SGX_MODE=HW -f Makefile" command="make" id="com.intel.sgx.builder6.484951388" keepEnvironmentInBuildfile="false" name="Intel(R) Software Guard Extensions Linux Builder" superClass="com.intel.sgx.builder6"/>
+							<tool id="com.intel.sgx.compiler.945246695" name="Intel(R) SGX" superClass="com.intel.sgx.compiler">
+								<option id="com.intel.sgx.option.includePath.119487102" superClass="com.intel.sgx.option.includePath" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${SGX_SDK}/include&quot;"/>
+								</option>
+								<inputType id="com.intel.sgx.inputType.593431891" superClass="com.intel.sgx.inputType"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+	</storageModule>
+	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+		<project id="RemoteAttestation.cdt.managedbuild.target.gnu.exe.872917958" name="Executable" projectType="cdt.managedbuild.target.gnu.exe"/>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Intel(R) SGX Hardware Debug">
+			<resource resourceType="PROJECT" workspacePath="/RemoteAttestation"/>
+		</configuration>
+		<configuration configurationName="Intel(R) SGX Simulation Debug">
+			<resource resourceType="PROJECT" workspacePath="/RemoteAttestation"/>
+		</configuration>
+		<configuration configurationName="Intel(R) SGX Hardware Prerelease">
+			<resource resourceType="PROJECT" workspacePath="/RemoteAttestation"/>
+		</configuration>
+		<configuration configurationName="Intel(R) SGX Simulation">
+			<resource resourceType="PROJECT" workspacePath="/RemoteAttestation"/>
+		</configuration>
+		<configuration configurationName="Intel(R) SGX Hardware Release">
+			<resource resourceType="PROJECT" workspacePath="/RemoteAttestation"/>
+		</configuration>
+	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="com.intel.sgx.configuration.HW.Release;com.intel.sgx.configuration.HW.Release.1347223665;com.intel.sgx.compiler.945246695;com.intel.sgx.inputType.593431891">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.intel.sgx.SGXPerProjectProfile"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.intel.sgx.configuration.Sim.Debug;com.intel.sgx.configuration.Sim.Debug.935873960;com.intel.sgx.compiler.81269967;com.intel.sgx.inputType.742388855">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.intel.sgx.SGXPerProjectProfile"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.intel.sgx.configuration.Sim.Release;com.intel.sgx.configuration.Sim.Release.428839196;com.intel.sgx.compiler.301453474;com.intel.sgx.inputType.596141238">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.intel.sgx.SGXPerProjectProfile"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.1609650460;cdt.managedbuild.config.gnu.exe.debug.1609650460.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1644119147;cdt.managedbuild.tool.gnu.c.compiler.input.938348551">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.1394873887;cdt.managedbuild.config.gnu.exe.release.1394873887.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.2035356548;cdt.managedbuild.tool.gnu.c.compiler.input.793813290">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.intel.sgx.configuration.HW.Debug;com.intel.sgx.configuration.HW.Debug.562917509;com.intel.sgx.compiler.1898704176;com.intel.sgx.inputType.393162412">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.intel.sgx.SGXPerProjectProfile"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.intel.sgx.configuration.HW.Prerelease;com.intel.sgx.configuration.HW.Prerelease.2074448686;com.intel.sgx.compiler.845441552;com.intel.sgx.inputType.1555926498">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.intel.sgx.SGXPerProjectProfile"/>
+		</scannerConfigBuildInfo>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+</cproject>

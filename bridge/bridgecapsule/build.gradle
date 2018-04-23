@@ -1,0 +1,78 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ *
+ * This build.gradle exists to publish our capsule (executable fat jar) to maven. It cannot be placed in the
+ * bridges project because the bintray plugin cannot publish two modules from one project.
+ */
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Corda bridge server capsule'
+
+configurations {
+    runtimeArtifacts
+    capsuleRuntime
+}
+
+dependencies {
+    // TypeSafe Config: for simple and human friendly config files.
+    capsuleRuntime "com.typesafe:config:$typesafe_config_version"
+}
+
+// Force the Caplet to target Java 6. This ensures that running 'java -jar corda.jar' on any Java 6 VM upwards
+// will get as far as the Capsule version checks, meaning that if your JVM is too old, you will at least get
+// a sensible error message telling you what to do rather than a bytecode version exception that doesn't.
+// If we introduce .java files into this module that need Java 8+ then we will have to push the caplet into
+// its own module so its target can be controlled individually, but for now this suffices.
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+jar {
+    baseName 'corda-bridgeserver'
+}
+
+task buildBridgeServerJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
+    applicationClass 'net.corda.bridge.Bridge'
+    archiveName "corda-bridgeserver-${corda_release_version}.jar"
+    applicationSource = files(
+            project(':bridge').configurations.runtime,
+            project(':bridge').jar,
+            "$rootDir/config/dev/log4j2.xml",
+            "$rootDir/bridge/build/resources/main/reference.conf"
+    )
+    from 'NOTICE' // Copy CDDL notice
+    from configurations.capsuleRuntime.files.collect { zipTree(it) }
+
+    capsuleManifest {
+        applicationVersion = corda_release_version
+        javaAgents = []
+        systemProperties['visualvm.display.name'] = 'Corda Bridge Server'
+        minJavaVersion = '1.8.0'
+        minUpdateVersion['1.8'] = java8_minUpdateVersion
+        caplets = []
+
+        // JVM configuration:
+        // - Constrain to small heap sizes to ease development on low end devices.
+        // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
+        jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
+    }
+}
+
+artifacts {
+    runtimeArtifacts buildBridgeServerJar
+    publish buildBridgeServerJar {
+        classifier ""
+    }
+}
+
+publish {
+    disableDefaultJar = true
+    name jar.baseName
+}

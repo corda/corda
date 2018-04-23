@@ -1,0 +1,173 @@
+comment #
+   Copyright (c) 2008-2015, Avian Contributors
+
+   Permission to use, copy, modify, and/or distribute this software
+   for any purpose with or without fee is hereby granted, provided
+   that the above copyright notice and this permission notice appear
+   in all copies.
+
+   There is NO WARRANTY for this software.  See license.txt for
+   details.
+
+   ORIGIN: https://github.com/gkvas/avian/tree/wince
+#
+
+.586
+.MODEL FLAT, C
+
+comment # types.h #
+VOID_TYPE equ 0
+INT8_TYPE equ 1
+INT16_TYPE equ 2
+INT32_TYPE equ 3
+INT64_TYPE equ 4
+FLOAT_TYPE equ 5
+DOUBLE_TYPE equ 6
+POINTER_TYPE equ 7
+
+comment # target-fields.h #
+ifdef TARGET_BYTES_PER_WORD
+	if TARGET_BYTES_PER_WORD eq 8
+
+TARGET_THREAD_EXCEPTION equ 80
+TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT equ 2256
+TARGET_THREAD_EXCEPTIONOFFSET equ 2264
+TARGET_THREAD_EXCEPTIONHANDLER equ 2272
+
+TARGET_THREAD_IP equ 2216
+TARGET_THREAD_STACK equ 2224
+TARGET_THREAD_NEWSTACK equ 2232
+TARGET_THREAD_SCRATCH equ 2240
+TARGET_THREAD_CONTINUATION equ 2248
+TARGET_THREAD_TAILADDRESS equ 2280
+TARGET_THREAD_VIRTUALCALLTARGET equ 2288
+TARGET_THREAD_VIRTUALCALLINDEX equ 2296
+TARGET_THREAD_HEAPIMAGE equ 2304
+TARGET_THREAD_CODEIMAGE equ 2312
+TARGET_THREAD_THUNKTABLE equ 2320
+TARGET_THREAD_STACKLIMIT equ 2368
+
+	elseif TARGET_BYTES_PER_WORD eq 4
+
+TARGET_THREAD_EXCEPTION equ 44
+TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT equ 2164
+TARGET_THREAD_EXCEPTIONOFFSET equ 2168
+TARGET_THREAD_EXCEPTIONHANDLER equ 2172
+
+TARGET_THREAD_IP equ 2144
+TARGET_THREAD_STACK equ 2148
+TARGET_THREAD_NEWSTACK equ 2152
+TARGET_THREAD_SCRATCH equ 2156
+TARGET_THREAD_CONTINUATION equ 2160
+TARGET_THREAD_TAILADDRESS equ 2176
+TARGET_THREAD_VIRTUALCALLTARGET equ 2180
+TARGET_THREAD_VIRTUALCALLINDEX equ 2184
+TARGET_THREAD_HEAPIMAGE equ 2188
+TARGET_THREAD_CODEIMAGE equ 2192
+TARGET_THREAD_THUNKTABLE equ 2196
+TARGET_THREAD_STACKLIMIT equ 2220
+
+	else
+		error
+	endif
+else
+	error
+endif
+
+ifdef AVIAN_USE_FRAME_POINTER
+	ALIGNMENT_ADJUSTMENT equ 0
+else
+	ALIGNMENT_ADJUSTMENT equ 12
+endif
+
+CALLEE_SAVED_REGISTER_FOOTPRINT equ 16 + ALIGNMENT_ADJUSTMENT
+
+_TEXT SEGMENT
+
+public C vmInvoke
+vmInvoke:
+	push ebp
+	mov ebp,esp
+
+	; 8(%ebp): thread
+	; 12(%ebp): function
+	; 16(%ebp): arguments
+	; 20(%ebp): argumentFootprint
+	; 24(%ebp): frameSize
+	; 28(%ebp): returnType
+
+	; allocate stack space for callee-saved registers
+	sub esp,offset CALLEE_SAVED_REGISTER_FOOTPRINT
+
+	; remember this stack position, since we won't be able to rely on
+	; %rbp being restored when the call returns
+	mov eax,ds:dword ptr[8+ebp]
+	mov ds:dword ptr[TARGET_THREAD_SCRATCH+eax],esp
+
+	mov ds:dword ptr[0+esp],ebx
+	mov ds:dword ptr[4+esp],esi
+	mov ds:dword ptr[8+esp],edi
+
+	; allocate stack space for arguments
+	sub esp,ds:dword ptr[24+ebp]
+
+	; we use ebx to hold the thread pointer, by convention
+	mov ebx,eax
+
+	; copy arguments into place
+	mov ecx,0
+	mov edx,ds:dword ptr[16+ebp]
+	jmp LvmInvoke_argumentTest
+
+LvmInvoke_argumentLoop:
+	mov eax,ds:dword ptr[edx+ecx*1]
+	mov ds:dword ptr[esp+ecx*1],eax
+	add ecx,4
+
+LvmInvoke_argumentTest:
+	cmp ecx,ds:dword ptr[20+ebp]
+	jb LvmInvoke_argumentLoop
+
+	; call function
+	call dword ptr[12+ebp]
+
+public vmInvoke_returnAddress
+vmInvoke_returnAddress:
+	; restore stack pointer
+	mov esp,ds:dword ptr[TARGET_THREAD_SCRATCH+ebx]
+
+	; clear MyThread::stack to avoid confusing another thread calling
+	; java.lang.Thread.getStackTrace on this one.  See
+	; MyProcess::getStackTrace in compile.cpp for details on how we get
+	; a reliable stack trace from a thread that might be interrupted at
+	; any point in its execution.
+	mov ds:dword ptr[TARGET_THREAD_STACK+ebx],0
+
+public vmInvoke_safeStack
+vmInvoke_safeStack:
+
+	; restore callee-saved registers
+	mov ebx,ds:dword ptr[0+esp]
+	mov esi,ds:dword ptr[4+esp]
+	mov edi,ds:dword ptr[8+esp]
+
+	add esp,offset CALLEE_SAVED_REGISTER_FOOTPRINT
+
+	mov ecx,ds:dword ptr[28+esp]
+
+	pop ebp
+	ret
+
+LgetPC:
+	mov esi,ds:dword ptr[esp]
+	ret
+
+public vmJumpAndInvoke
+vmJumpAndInvoke:
+	; vmJumpAndInvoke should only be called when continuations are
+	; enabled
+	int 3
+
+_TEXT ENDS
+
+END

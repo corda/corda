@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
@@ -14,12 +24,15 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
-import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.internal.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.junit.After
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -34,18 +47,21 @@ import kotlin.test.assertFailsWith
  */
 @RunWith(Parameterized::class)
 class AuthDBTests : NodeBasedTest() {
-
-    private lateinit var node: StartedNode<Node>
-    private lateinit var client: CordaRPCClient
-    private lateinit var db: UsersDB
-
     companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
+
         private val cacheExpireAfterSecs: Long = 1
 
         @JvmStatic
         @Parameterized.Parameters(name = "password encryption format = {0}")
         fun encFormats() = arrayOf(PasswordEncryption.NONE, PasswordEncryption.SHIRO_1_CRYPT)
     }
+
+    private lateinit var node: StartedNode<Node>
+    private lateinit var client: CordaRPCClient
+    private lateinit var db: UsersDB
 
     @Parameterized.Parameter
     lateinit var passwordEncryption: PasswordEncryption
@@ -214,7 +230,7 @@ class AuthDBTests : NodeBasedTest() {
     }
 
     @After
-    fun tearDown() {
+    override fun tearDown() {
          db.close()
     }
 

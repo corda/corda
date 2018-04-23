@@ -1,0 +1,85 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+buildscript {
+    // For sharing constants between builds
+    Properties constants = new Properties()
+    file("../../constants.properties").withInputStream { constants.load(it) }
+
+    ext.kotlin_version = constants.getProperty("kotlinVersion")
+    ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
+    ext.resteasy_version = '3.1.4.Final'
+    ext.httpclient_version = "4.5.3"
+    ext.jackson_version = '2.9.2'
+    ext.slf4j_version = '1.7.25'
+    ext.log4j_version = '2.9.1'
+    ext.junit_version = '4.12'
+
+    // Port numbers to launch the different components on.
+    ext.hostHttpPort = 8080
+    ext.isvHttpPort = 8084
+
+    ext.testHttpPort = 9080
+    ext.iasTestHttpsPort = 9443
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
+        classpath 'org.akhikhl.gretty:gretty:2.0.0'
+    }
+}
+
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+allprojects {
+    tasks.withType(KotlinCompile).all {
+        kotlinOptions {
+            languageVersion = "1.1"
+            apiVersion = "1.1"
+            jvmTarget = "1.8"
+            javaParameters = true   // Useful for reflection.
+        }
+    }
+
+    tasks.withType(Test) {
+        // Prevent the project from creating temporary files outside of the build directory.
+        systemProperties['java.io.tmpdir'] = buildDir
+
+        // Set logging directory for all tests.
+        systemProperties["attestation.home"] = "$buildDir/logs"
+    }
+
+    group 'com.r3.corda'
+    version '1.0-SNAPSHOT'
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+
+    configurations {
+        compile {
+            // We want to use SLF4J's version of these bindings: jcl-over-slf4j
+            // Remove any transitive dependency on Apache's version.
+            exclude group: 'commons-logging', module: 'commons-logging'
+        }
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = "4.3.1"
+}

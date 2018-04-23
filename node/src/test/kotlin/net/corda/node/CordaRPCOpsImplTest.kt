@@ -1,5 +1,16 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node
 
+import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.PermissionException
 import net.corda.core.context.AuthServiceId
@@ -19,6 +30,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.GBP
 import net.corda.finance.USD
@@ -43,6 +55,7 @@ import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.testActor
 import org.apache.commons.io.IOUtils
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -80,7 +93,7 @@ class CordaRPCOpsImplTest {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset"))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services, { })
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
@@ -290,6 +303,71 @@ class CordaRPCOpsImplTest {
             assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
                 rpc.startFlow(::NonRPCFlow)
             }
+        }
+    }
+
+    @Test
+    fun `kill a stuck flow through RPC`() {
+
+        withPermissions(startFlow<NewJoinerFlow>(), invokeRpc(CordaRPCOps::killFlow), invokeRpc(CordaRPCOps::stateMachinesFeed), invokeRpc(CordaRPCOps::stateMachinesSnapshot)) {
+
+            val flow = rpc.startFlow(::NewJoinerFlow)
+
+            val killed = rpc.killFlow(flow.id)
+
+            assertThat(killed).isTrue()
+            assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
+        }
+    }
+
+    @Test
+    fun `kill a waiting flow through RPC`() {
+
+        withPermissions(startFlow<HopefulFlow>(), invokeRpc(CordaRPCOps::killFlow), invokeRpc(CordaRPCOps::stateMachinesFeed), invokeRpc(CordaRPCOps::stateMachinesSnapshot)) {
+
+            val flow = rpc.startFlow(::HopefulFlow, alice)
+
+            val killed = rpc.killFlow(flow.id)
+
+            assertThat(killed).isTrue()
+            assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
+        }
+    }
+
+    @Test
+    fun `kill a nonexistent flow through RPC`() {
+
+        withPermissions(invokeRpc(CordaRPCOps::killFlow)) {
+
+            val nonexistentFlowId = StateMachineRunId.createRandom()
+
+            val killed = rpc.killFlow(nonexistentFlowId)
+
+            assertThat(killed).isFalse()
+        }
+    }
+
+    @StartableByRPC
+    class NewJoinerFlow : FlowLogic<String>() {
+
+        @Suspendable
+        override fun call(): String {
+
+            logger.info("When can I join you say? Almost there buddy...")
+            Fiber.currentFiber().join()
+            return "You'll never get me!"
+        }
+    }
+
+    @StartableByRPC
+    class HopefulFlow(private val party: Party) : FlowLogic<String>() {
+
+        @Suspendable
+        override fun call(): String {
+
+            logger.info("Waiting for a miracle...")
+            val miracle = initiateFlow(party).receive<String>().unwrap { it }
+            return miracle
         }
     }
 

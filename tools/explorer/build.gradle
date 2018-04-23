@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 repositories {
     mavenCentral()
 }
@@ -29,6 +39,9 @@ dependencies {
     compile project(':client:mock')
     compile project(':node-driver')
     compile project(':finance')
+
+    // Additional CorDapps that will be displayed in the GUI.
+    compile project(':samples:business-network-demo')
 
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.
@@ -63,6 +76,12 @@ task(runSimulationNodes, dependsOn: 'classes', type: JavaExec) {
     main = 'net.corda.explorer.MainKt'
     classpath = sourceSets.main.runtimeClasspath
     args '-S'
+}
+
+task(runFlowTriageNodes, dependsOn: 'classes', type: JavaExec) {
+    main = 'net.corda.explorer.MainKt'
+    classpath = sourceSets.main.runtimeClasspath
+    args '-F'
 }
 
 jar {

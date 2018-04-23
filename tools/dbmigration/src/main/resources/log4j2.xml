@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<Configuration status="info">
+
+    <Properties>
+        <Property name="consoleLogLevel">info</Property>
+        <Property name="defaultLogLevel">debug</Property>
+    </Properties>
+
+    <ThresholdFilter level="trace"/>
+
+    <Appenders>
+        <Console name="Console-Appender" target="SYSTEM_OUT">
+            <PatternLayout pattern="-- %date{ISO8601}{UTC}Z %c{2}.%method - %msg %X%n"/>
+        </Console>
+
+        <File name="File-Appender" fileName="logs/migration.log">
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <Root level="${sys:defaultLogLevel}">
+            <AppenderRef ref="File-Appender" />
+        </Root>
+        <Logger name="migration.tool" >
+            <AppenderRef ref="Console-Appender"/>
+            <AppenderRef ref="File-Appender" />
+        </Logger>
+    </Loggers>
+</Configuration>

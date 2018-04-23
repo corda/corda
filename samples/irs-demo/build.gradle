@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 buildscript {
     ext {
         springBootVersion = '1.5.10.RELEASE'
@@ -18,6 +28,7 @@ ext['artemis.version'] = "$artemis_version"
 ext['hibernate.version'] = "$hibernate_version"
 ext['selenium.version'] = "$selenium_version"
 ext['jackson.version'] = "$jackson_version"
+ext['dropwizard-metrics.version'] = "$metrics_version"
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
@@ -34,6 +45,9 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
+        }
+        resources {
+            srcDir file('../testing/test-utils/src/main/resources')
         }
     }
     systemTest {

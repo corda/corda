@@ -51,6 +51,16 @@ To enable remote debugging of the node, run the following from the terminal wind
 
 This command line will start the debugger on port 5005 and pause the process awaiting debugger attachment.
 
+Starting a node with JMX monitoring enabled
+-------------------------------------------
+To enable export of JMX metrics over HTTP via `Jolokia <https://jolokia.org/>`_, run the following from the terminal window:
+
+``java -Dcapsule.jvm.args="-javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7005" -jar corda.jar``
+
+This command line will start the node with JMX metrics accessible via HTTP on port 7005.
+
+See :ref:`Monitoring your node <jolokia_ref>` for further details.
+
 Starting all nodes at once from the command line
 ------------------------------------------------
 If you created your nodes using ``deployNodes``, a ``runnodes`` shell script (or batch file on Windows) will have been
@@ -63,8 +73,4 @@ Start the nodes with ``runnodes`` by running the following command from the root
 * Windows: ``call build\nodes\runnodes.bat``
 
 .. warning:: On macOS, do not click/change focus until all the node terminal windows have opened, or some processes may
-   fail to start.
-
-If you receive an ``OutOfMemoryError`` exception when interacting with the nodes, you need to increase the amount of
-Java heap memory available to them, which you can do when running them individually. See
-:ref:`starting-an-individual-corda-node`.
+fail to start.

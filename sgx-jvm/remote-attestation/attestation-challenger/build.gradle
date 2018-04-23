@@ -1,0 +1,99 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+buildscript {
+    ext.keyStoreDir = "$buildDir/keystore"
+    ext.cli_version = '1.4'
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'application'
+
+description 'Proof-of-concept Remote Attestation Challenger'
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.compileClasspath + test.compileClasspath
+            runtimeClasspath += main.runtimeClasspath + test.runtimeClasspath
+            //noinspection GroovyAssignabilityCheck
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
+mainClassName = 'net.corda.attestation.challenger.Main'
+
+dependencies {
+    compile project(':attestation-common')
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+    testCompile "junit:junit:$junit_version"
+
+    compile "org.bouncycastle:bcpkix-jdk15on:$bouncycastle_version"
+    compile "com.fasterxml.jackson.core:jackson-core:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
+    compile "org.apache.httpcomponents:httpclient:$httpclient_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
+    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
+    compile "commons-cli:commons-cli:$cli_version"
+    testCompile project(path: ':attestation-common', configuration: 'testArtifacts')
+}
+
+task createChallengerKeyStores(type: Exec) {
+    doFirst {
+        mkdir keyStoreDir
+    }
+
+    inputs.dir "$projectDir/src/main/ssl/challenger"
+    outputs.files "$keyStoreDir/challenger.pfx"
+    workingDir keyStoreDir
+    commandLine "$projectDir/src/main/ssl/challenger/generate-keystore.sh"
+}
+
+task createIntelKeyStores(type: Exec) {
+    doFirst {
+        mkdir keyStoreDir
+    }
+
+    inputs.dir "$projectDir/src/main/ssl/intel"
+    outputs.files "$keyStoreDir/ias.pfx"
+    workingDir keyStoreDir
+    commandLine "$projectDir/src/main/ssl/intel/generate-keystores.sh"
+}
+
+processResources {
+    dependsOn.addAll createChallengerKeyStores, createIntelKeyStores
+    from keyStoreDir
+}
+
+tasks.withType(Test) {
+    // Enable "unlimited" encryption.
+    systemProperties["java.security.properties"] = "$projectDir/src/main/security.properties"
+}
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': mainClassName,
+            'Class-Path': configurations.runtime.collect { it.getName() }.join(' '),
+            'Automatic-Module-Name': 'net.corda.attestation.challenger'
+        )
+    }
+}

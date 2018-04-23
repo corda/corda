@@ -1,9 +1,11 @@
-/**
- * Copyright (C) 2016 - present by OpenGamma Inc. and the OpenGamma group of companies
- * <p>
- * Please see distribution for license.
- * <p>
- * Credit market data for examples.
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
 /**

@@ -1,10 +1,22 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "corda-4.0-snapshot"
+    ext.corda_release_version = "R3.CORDA-3.0-SNAPSHOT"    // "CORDA-3.0-SNAPSHOT" for Corda (Open Source)
+    ext.corda_release_distribution = "com.r3.corda"        // "net.corda" for Corda (Open Source)
+
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
@@ -47,6 +59,7 @@ buildscript {
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.caffeine_version = constants.getProperty("caffeineVersion")
+    ext.metrics_version = constants.getProperty("metricsVersion")
     ext.okhttp_version = '3.5.0'
     ext.netty_version = '4.1.9.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
@@ -66,14 +79,19 @@ buildscript {
     ext.beanutils_version = '1.9.3'
     ext.crash_version = 'cadb53544fbb3c0fb901445da614998a6a419488'
     ext.jsr305_version = constants.getProperty("jsr305Version")
+    ext.spring_jdbc_version ='5.0.0.RELEASE'
     ext.shiro_version = '1.4.0'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
+    ext.liquibase_version = '3.5.3'
+    ext.shadow_version = '2.0.2'
+    ext.hikari_version = '2.5.1'
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
     ext.docker_compose_rule_version = '0.33.0'
     ext.selenium_version = '3.8.1'
     ext.ghostdriver_version = '2.1.0'
     ext.eaagentloader_version = '1.0.3'
+    ext.curator_version = '4.0.0'
     ext.jsch_version = '0.1.54'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
@@ -178,7 +196,7 @@ allprojects {
             attributes('Corda-Release-Version': corda_release_version)
             attributes('Corda-Platform-Version': corda_platform_version)
             attributes('Corda-Revision': corda_revision)
-            attributes('Corda-Vendor': 'Corda Open Source')
+            attributes('Corda-Vendor': 'R3 Corda Edition')
             attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
         }
     }
@@ -186,6 +204,33 @@ allprojects {
     tasks.withType(Test) {
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperties['java.io.tmpdir'] = buildDir
+
+        // Ensures that "net.corda.testing.amqp.enable" is passed correctly from Gradle command line
+        // down to JVM executing unit test. It looks like we are running unit tests in the forked mode
+        // and all the "-D" parameters passed to Gradle not making it to unit test level
+        // TODO: Remove once we fully switched to AMQP
+        final AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
+        systemProperty(AMQP_ENABLE_PROP_NAME, System.getProperty(AMQP_ENABLE_PROP_NAME))
+
+         // relational database provider to be used by node
+        final DATABASE_PROVIDER = "custom.databaseProvider"
+        final DATASOURCE_URL = "corda.dataSourceProperties.dataSource.url"
+        final DATASOURCE_CLASSNAME = "corda.dataSourceProperties.dataSourceClassName"
+        final DATASOURCE_USER = "corda.dataSourceProperties.dataSource.user"
+        final DATASOURCE_PASSWORD = "corda.dataSourceProperties.dataSource.password"
+
+        // integration testing database configuration (to be used in conjunction with a DATABASE_PROVIDER)
+        final TEST_DB_ADMIN_USER = "test.db.admin.user"
+        final TEST_DB_ADMIN_PASSWORD = "test.db.admin.password"
+        final TEST_DB_SCRIPT_DIR = "test.db.script.dir"
+
+        [DATABASE_PROVIDER,DATASOURCE_URL, DATASOURCE_CLASSNAME, DATASOURCE_USER, DATASOURCE_PASSWORD,
+          TEST_DB_ADMIN_USER, TEST_DB_ADMIN_PASSWORD, TEST_DB_SCRIPT_DIR].forEach {
+            def property = System.getProperty(it)
+            if (property != null) {
+                systemProperty(it, property)
+            }
+        }
 
         if (System.getProperty("test.maxParallelForks") != null) {
             maxParallelForks = Integer.valueOf(System.getProperty("test.maxParallelForks"))
@@ -196,7 +241,7 @@ allprojects {
         }
     }
 
-    group 'net.corda'
+    group 'com.r3.corda'
     version "$corda_release_version"
 
     repositories {
@@ -205,6 +250,18 @@ allprojects {
         jcenter()
         maven { url 'https://jitpack.io' }
         maven { url "$artifactory_contextUrl/corda-releases" } // cordform-common
+        if (project.hasProperty("mavenOracleUsername") && project.hasProperty("mavenOraclePassword")) {
+            maven {
+                // For integrationTest task when running against Oracle database the JDBC driver is in Oracle Maven repository with login access only,
+                // setup an account on https://login.oracle.com/oaam_server/login.do
+                // provide credentials to Gradle task by -PmavenOracleUsername=... -PmavenOraclePassword=...
+                url "https://www.oracle.com/content/secure/maven/content"
+                credentials {
+                    username = project.property("mavenOracleUsername")
+                    password = project.property("mavenOraclePassword")
+                }
+            }
+        }
     }
 
     configurations {
@@ -284,8 +341,8 @@ tasks.withType(Test) {
 }
 
 bintrayConfig {
-    user = System.getenv('CORDA_BINTRAY_USER')
-    key = System.getenv('CORDA_BINTRAY_KEY')
+    // user = System.getenv('CORDA_BINTRAY_USER')
+    // key = System.getenv('CORDA_BINTRAY_KEY')
     repo = 'corda'
     org = 'r3'
     licenses = ['Apache-2.0']
@@ -293,7 +350,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities', 'corda-shell']
+    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities', 'doorman', 'doorman-hsm', 'corda-shell', 'corda-bridgeserver']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
@@ -323,7 +380,7 @@ artifactory {
     publish {
         contextUrl = artifactory_contextUrl
         repository {
-            repoKey = 'corda-dev'
+            repoKey = 'enterprise-dev'
             username = 'teamcity'
             password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
         }

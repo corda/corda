@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 @file:JvmName("CryptoUtils")
 
 package net.corda.core.crypto
@@ -170,6 +180,28 @@ fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Cr
  */
 @Throws(NoSuchAlgorithmException::class)
 fun secureRandomBytes(numOfBytes: Int): ByteArray = ByteArray(numOfBytes).apply { newSecureRandom().nextBytes(this) }
+
+/**
+ * This is a hack added because during deserialisation when no-param constructors are called sometimes default values
+ * generate random numbers, which fail in SGX.
+ * TODO remove this once deserialisation is figured out.
+ */
+private class DummySecureRandomSpi : SecureRandomSpi() {
+    override fun engineSetSeed(bytes: ByteArray?) {
+        Exception("DummySecureRandomSpi.engineSetSeed called").printStackTrace(System.out)
+    }
+
+    override fun engineNextBytes(bytes: ByteArray?) {
+        Exception("DummySecureRandomSpi.engineNextBytes called").printStackTrace(System.out)
+        bytes?.fill(0)
+    }
+
+    override fun engineGenerateSeed(numberOfBytes: Int): ByteArray {
+        Exception("DummySecureRandomSpi.engineGenerateSeed called").printStackTrace(System.out)
+        return ByteArray(numberOfBytes)
+    }
+}
+object DummySecureRandom : SecureRandom(DummySecureRandomSpi(), null)
 
 /**
  * Get an instance of [SecureRandom] to avoid blocking, due to waiting for additional entropy, when possible.

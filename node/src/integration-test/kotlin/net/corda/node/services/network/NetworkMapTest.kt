@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.network
 
 import net.corda.cordform.CordformNode
@@ -17,21 +27,30 @@ import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.RandomFree
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.After
+import org.junit.*
 import org.junit.Assert.assertEquals
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
 import java.net.URL
 import java.time.Instant
 import kotlin.streams.toList
 
-class NetworkMapTest {
+class NetworkMapTest : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(
+                ALICE_NAME.toDatabaseSchemaName(),
+                BOB_NAME.toDatabaseSchemaName(),
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)

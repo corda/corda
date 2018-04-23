@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.config
 
 import com.typesafe.config.Config
@@ -13,6 +23,7 @@ import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
@@ -42,15 +53,19 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val rpcOptions: NodeRpcOptions
     val messagingServerAddress: NetworkHostAndPort?
     val messagingServerExternal: Boolean
+    val enterpriseConfiguration: EnterpriseConfiguration
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
+    val relay: RelayConfiguration?
     val noLocalShell: Boolean get() = false
     val transactionCacheSizeBytes: Long get() = defaultTransactionCacheSize
     val attachmentContentCacheSizeBytes: Long get() = defaultAttachmentContentCacheSize
     val attachmentCacheBound: Long get() = defaultAttachmentCacheBound
+    val graphiteOptions: GraphiteOptions? get() = null
+
     // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
     val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
     val extraNetworkMapKeys: List<UUID>
@@ -73,6 +88,13 @@ interface NodeConfiguration : NodeSSLConfiguration {
 
 data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
 
+data class GraphiteOptions(
+        val server: String,
+        val port: Int,
+        val prefix: String? = null, // defaults to org name and ip address when null
+        val sampleInvervallSeconds: Long = 60
+)
+
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
 }
@@ -84,14 +106,24 @@ fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || should
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
-                        val custom: Boolean = false
+                        val custom: Boolean = false,
+                        val mysql: MySQLConfiguration? = null
 ) {
     init {
-        require(raft == null || bftSMaRt == null || !custom) {
-            "raft, bftSMaRt, and custom configs cannot be specified together"
+        require(raft == null || bftSMaRt == null || !custom || mysql == null) {
+            "raft, bftSMaRt, custom, and mysql configs cannot be specified together"
         }
     }
-    val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null
+    val isClusterConfig: Boolean get() = raft != null || bftSMaRt != null || mysql != null
+}
+
+data class MySQLConfiguration(
+        val dataSource: Properties,
+        val connectionRetries: Int = 0
+) {
+    init {
+        require(connectionRetries >= 0) { "connectionRetries cannot be negative" }
+    }
 }
 
 data class RaftConfig(val nodeAddress: NetworkHostAndPort, val clusterAddresses: List<NetworkHostAndPort>)
@@ -121,7 +153,7 @@ data class NodeConfigurationImpl(
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
         override val rpcUsers: List<User>,
-        override val security : SecurityConfiguration? = null,
+        override val security: SecurityConfiguration? = null,
         override val verifierType: VerifierType,
         // TODO typesafe config supports the notion of durations. Make use of that by mapping it to java.time.Duration.
         // Then rename this to messageRedeliveryDelay and make it of type Duration
@@ -129,8 +161,12 @@ data class NodeConfigurationImpl(
         override val p2pAddress: NetworkHostAndPort,
         private val rpcAddress: NetworkHostAndPort? = null,
         private val rpcSettings: NodeRpcSettings,
+        override val relay: RelayConfiguration?,
+        // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
+        // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         override val messagingServerAddress: NetworkHostAndPort?,
         override val messagingServerExternal: Boolean = (messagingServerAddress != null),
+        override val enterpriseConfiguration: EnterpriseConfiguration,
         override val notary: NotaryConfig?,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
@@ -141,13 +177,14 @@ data class NodeConfigurationImpl(
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
         override val sshd: SSHDConfiguration? = null,
-        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
+        override val database: DatabaseConfig = DatabaseConfig(exportHibernateJMXStatistics = devMode),
         private val transactionCacheSizeMegaBytes: Int? = null,
         private val attachmentContentCacheSizeMegaBytes: Int? = null,
         override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
+        override val graphiteOptions: GraphiteOptions? = null,
         override val extraNetworkMapKeys: List<UUID> = emptyList(),
         // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
-        private val h2port: Int  = 0,
+        private val h2port: Int = 0,
         // do not use or remove (used by Capsule)
         private val jarDirs: List<String> = emptyList()
     ) : NodeConfiguration {
@@ -196,6 +233,29 @@ data class NodeConfigurationImpl(
         require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
+        }
+
+        // ensure our datasource configuration is sane
+        require(dataSourceProperties.get("autoCommit") != true) { "Datbase auto commit cannot be enabled, Corda requires transactional behaviour" }
+        dataSourceProperties.set("autoCommit", false)
+        if (dataSourceProperties.get("transactionIsolation") == null) {
+            dataSourceProperties["transactionIsolation"] = database.transactionIsolationLevel.jdbcString
+        }
+
+        // enforce that SQLServer does not get sent all strings as Unicode - hibernate handles this "cleverly"
+        val dataSourceUrl = dataSourceProperties.getProperty(DataSourceConfigTag.DATA_SOURCE_URL, "")
+        if (dataSourceUrl.contains(":sqlserver:") && !dataSourceUrl.contains("sendStringParametersAsUnicode", true)) {
+            dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] = dataSourceUrl + ";sendStringParametersAsUnicode=false"
+        }
+
+        // Adjust connection pool size depending on N=flow thread pool size.
+        // If there is no configured pool size set it to N + 1, otherwise check that it's greater than N.
+        val flowThreadPoolSize = enterpriseConfiguration.tuning.flowThreadPoolSize
+        val maxConnectionPoolSize = dataSourceProperties.getProperty("maximumPoolSize")
+        if (maxConnectionPoolSize == null) {
+            dataSourceProperties.setProperty("maximumPoolSize", (flowThreadPoolSize + 1).toString())
+        } else {
+            require(maxConnectionPoolSize.toInt() > flowThreadPoolSize)
         }
     }
 }
@@ -338,3 +398,9 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
         }
     }
 }
+data class RelayConfiguration(val relayHost: String,
+                              val remoteInboundPort: Int,
+                              val username: String,
+                              val privateKeyFile: Path,
+                              val publicKeyFile: Path,
+                              val sshPort: Int = 22)

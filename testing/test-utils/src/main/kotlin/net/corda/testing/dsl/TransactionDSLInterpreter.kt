@@ -1,11 +1,29 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.testing.dsl
 
 import net.corda.core.DoNotImplement
-import net.corda.core.contracts.*
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.AttachmentConstraint
+import net.corda.core.contracts.AutomaticHashConstraint
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
-import net.corda.core.utilities.seconds
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.seconds
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -85,6 +103,11 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
      * @param stateLabel The label of the output state specified when calling [TransactionDSLInterpreter.output] and friends.
      */
     fun input(stateLabel: String) = input(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
+
+    fun input(contractClassName: ContractClassName, stateLabel: String) {
+        val stateAndRef = retrieveOutputStateAndRef(ContractState::class.java, stateLabel)
+        input(contractClassName, stateAndRef.state.data)
+    }
 
     /**
      * Creates an [LedgerDSLInterpreter._unverifiedTransaction] with a single output state and adds it's reference as an

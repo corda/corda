@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.nodeapi.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.*
@@ -23,6 +33,7 @@ import net.corda.core.toObservable
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.core.utilities.SgxSupport
 import net.corda.nodeapi.internal.serialization.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.serializationContextKey
 import org.slf4j.Logger
@@ -97,13 +108,16 @@ object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
  * set via the constructor and the class is immutable.
  */
 class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() {
-    val props = klass.memberProperties.sortedBy { it.name }
-    val propsByName = props.associateBy { it.name }
-    val constructor = klass.primaryConstructor!!
+    val props by lazy { klass.memberProperties.sortedBy { it.name } }
+    val propsByName by lazy { props.associateBy { it.name } }
+    val constructor by lazy { klass.primaryConstructor!! }
 
     init {
-        // Verify that this class is immutable (all properties are final)
-        assert(props.none { it is KMutableProperty<*> })
+        // Verify that this class is immutable (all properties are final).
+        // We disable this check inside SGX as the reflection blows up.
+        if (!SgxSupport.isInsideEnclave) {
+            assert(props.none { it is KMutableProperty<*> })
+        }
     }
 
     // Just a utility to help us catch cases where nodes are running out of sync versions.

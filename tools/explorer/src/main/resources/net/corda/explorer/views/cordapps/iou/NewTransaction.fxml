@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<DialogPane stylesheets="@../../../css/corda.css" xmlns="http://javafx.com/javafx/8.0.76-ea"
+            xmlns:fx="http://javafx.com/fxml/1">
+    <content>
+        <GridPane hgap="10" vgap="10">
+            <!-- Row 0 -->
+            <Label fx:id="partyALabel" GridPane.halignment="RIGHT" GridPane.rowIndex="1" text="Lender : "/>
+            <TextField fx:id="partyATextField" GridPane.columnIndex="1" GridPane.columnSpan="4" GridPane.rowIndex="1"
+                       editable="false" disable="true"/>
+
+            <!-- Row 1 -->
+            <Label fx:id="partyBLabel" GridPane.halignment="RIGHT" GridPane.rowIndex="2" text="Borrower : "/>
+            <ChoiceBox fx:id="partyBChoiceBox" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.columnSpan="4"
+                       GridPane.fillWidth="true" GridPane.hgrow="ALWAYS" GridPane.rowIndex="2"/>
+
+            <!-- Row 2 -->
+            <Label fx:id="amountLabel" text="Amount : " GridPane.halignment="RIGHT" GridPane.rowIndex="5"/>
+            <TextField fx:id="amountTextField" maxWidth="Infinity" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"
+                       GridPane.rowIndex="5" GridPane.columnSpan="4"/>
+
+            <padding>
+                <Insets bottom="20.0" left="30.0" right="30.0" top="30.0"/>
+            </padding>
+        </GridPane>
+    </content>
+</DialogPane>

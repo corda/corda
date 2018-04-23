@@ -1,9 +1,20 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.internal
 
 import net.corda.client.rpc.PermissionException
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -71,6 +82,10 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
 
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?) = guard("startTrackedFlowDynamic", listOf(logicType)) {
         implementation.startTrackedFlowDynamic(logicType, *args)
+    }
+
+    override fun killFlow(id: StateMachineRunId): Boolean = guard("killFlow") {
+        return implementation.killFlow(id)
     }
 
     override fun nodeInfo(): NodeInfo = guard("nodeInfo", implementation::nodeInfo)

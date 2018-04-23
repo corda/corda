@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.core.flows
 
 import net.corda.core.CordaException
@@ -7,16 +17,27 @@ import net.corda.core.CordaRuntimeException
 /**
  * Exception which can be thrown by a [FlowLogic] at any point in its logic to unexpectedly bring it to a permanent end.
  * The exception will propagate to all counterparty flows and will be thrown on their end the next time they wait on a
- * [FlowSession.receive] or [FlowSession.sendAndReceive]. Any flow which no longer needs to do a receive, or has already ended,
- * will not receive the exception (if this is required then have them wait for a confirmation message).
+ * [FlowSession.receive] or [FlowSession.sendAndReceive]. Any flow which no longer needs to do a receive, or has already
+ * ended, will not receive the exception (if this is required then have them wait for a confirmation message).
+ *
+ * If the *rethrown* [FlowException] is uncaught in counterparty flows and propagation triggers then the exception is
+ * downgraded to an [UnexpectedFlowEndException]. This means only immediate counterparty flows will receive information
+ * about what the exception was.
  *
  * [FlowException] (or a subclass) can be a valid expected response from a flow, particularly ones which act as a service.
  * It is recommended a [FlowLogic] document the [FlowException] types it can throw.
+ *
+ * @property originalErrorId the ID backing [getErrorId]. If null it will be set dynamically by the flow framework when
+ *     the exception is handled. This ID is propagated to counterparty flows, even when the [FlowException] is
+ *     downgraded to an [UnexpectedFlowEndException]. This is so the error conditions may be correlated later on.
  */
-open class FlowException(message: String?, cause: Throwable?) : CordaException(message, cause) {
+open class FlowException(message: String?, cause: Throwable?) :
+        CordaException(message, cause), IdentifiableException {
     constructor(message: String?) : this(message, null)
     constructor(cause: Throwable?) : this(cause?.toString(), cause)
     constructor() : this(null, null)
+    var originalErrorId: Long? = null
+    override fun getErrorId(): Long? = originalErrorId
 }
 // DOCEND 1
 
@@ -25,6 +46,7 @@ open class FlowException(message: String?, cause: Throwable?) : CordaException(m
  * that we were not expecting), or the other side had an internal error, or the other side terminated when we
  * were waiting for a response.
  */
-class UnexpectedFlowEndException(message: String?, cause: Throwable?) : CordaRuntimeException(message, cause) {
-    constructor(msg: String) : this(msg, null)
+class UnexpectedFlowEndException(message: String, cause: Throwable?, val originalErrorId: Long) :
+        CordaRuntimeException(message, cause), IdentifiableException {
+    override fun getErrorId(): Long = originalErrorId
 }

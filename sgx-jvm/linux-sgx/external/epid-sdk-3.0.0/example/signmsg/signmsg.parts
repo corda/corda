@@ -1,0 +1,52 @@
+############################################################################
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+############################################################################
+
+Import('*')
+
+# Normal stuff that all Parts should have
+env.PartName("signmsg")
+
+src_files = Pattern(src_dir='src/',
+                    includes=['*.c'],
+                    recursive=True).files()
+inc_files = Pattern(src_dir='src/',
+                    includes=['*.h'],
+                    recursive=True).files()
+parts_file = ['signmsg.parts']
+
+if 'install_package' in env['MODE']:
+    env.InstallTopLevel(inc_files + src_files,
+                        sub_dir='example/${PART_SHORT_NAME}/src')
+    env.InstallTopLevel(parts_file, sub_dir='example/${PART_SHORT_NAME}')
+else:
+    env.DependsOn([
+        Component('member'),
+        Component('util'),
+        Component('dropt')
+    ])
+
+    env.Append(CPPPATH='#/example/signmsg')
+
+    if env['TARGET_PLATFORM']['OS'] == 'win32':
+        if env.isConfigBasedOn('debug'):
+            env['PDB'] = '${PART_NAME}.pdb'
+
+    outputs = env.Program('${PART_NAME}', src_files,
+                          no_import_lib=True)
+
+    env.InstallBin(outputs,
+                   no_pkg=False,
+                   INSTALL_BIN='${INSTALL_SAMPLE_BIN}')

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.testing.node.internal
 
 import com.google.common.collect.HashMultimap
@@ -538,9 +548,7 @@ class DriverDSLImpl(
                 localNetworkMap,
                 spec.rpcUsers,
                 spec.verifierType,
-                customOverrides = notaryConfig(clusterAddress) + mapOf(
-                        "database.serverNameTablePrefix" to nodeNames[0].toString().replace(Regex("[^0-9A-Za-z]+"), "")
-                )
+                customOverrides = notaryConfig(clusterAddress)
         )
 
         // All other nodes will join the cluster
@@ -551,9 +559,7 @@ class DriverDSLImpl(
                     localNetworkMap,
                     spec.rpcUsers,
                     spec.verifierType,
-                    customOverrides = notaryConfig(nodeAddress, clusterAddress) + mapOf(
-                            "database.serverNameTablePrefix" to it.toString().replace(Regex("[^0-9A-Za-z]+"), "")
-                    )
+                    customOverrides = notaryConfig(nodeAddress, clusterAddress)
             )
         }
 
@@ -986,7 +992,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
-    val serializationEnv = setGlobalSerialization(true)
+    val serializationEnv = setGlobalSerialization(defaultParameters.initialiseSerialization)
     val driverDsl = driverDslWrapper(
             DriverDSLImpl(
                     portAllocation = defaultParameters.portAllocation,

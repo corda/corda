@@ -1,0 +1,54 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="R3.Corda" id="1512743023716-8">
+        <createTable tableName="dummy_linear_states_v2">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_id" type="NVARCHAR(255)"/>
+            <column name="uuid" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="linear_boolean" type="BOOLEAN"/>
+            <column name="linear_number" type="BIGINT"/>
+            <column name="linear_string" type="NVARCHAR(255)"/>
+            <column name="linear_timestamp" type="TIMESTAMP"/>
+        </createTable>
+
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_E"
+                       tableName="dummy_linear_states_v2"/>
+
+        <createTable tableName="dummy_linear_states_v2_parts">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="participants" type="NVARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="output_index,transaction_id"
+                                 baseTableName="dummy_linear_states_v2_parts"
+                                 constraintName="FKlfb5dvtmuadsllckeghmjlckk"
+                                 referencedColumnNames="output_index,transaction_id"
+                                 referencedTableName="dummy_linear_states_v2"/>
+
+    </changeSet>
+</databaseChangeLog>

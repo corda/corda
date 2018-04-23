@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.testing.internal.vault
 
 import net.corda.core.contracts.ContractState
@@ -19,6 +29,9 @@ object DummyLinearStateSchema
  * at the time of writing.
  */
 object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSchema.javaClass, version = 1, mappedTypes = listOf(PersistentDummyLinearState::class.java)) {
+
+    override val migrationResource = "dummy-linear-v1.changelog-init"
+
     @Entity
     @Table(name = "dummy_linear_states",
             indexes = arrayOf(Index(name = "external_id_idx", columnList = "external_id"),
@@ -28,6 +41,10 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
 
             /** X500Name of participant parties **/
             @ElementCollection
+            @Column(name = "participants")
+            @CollectionTable(name = "dummy_linear_state_parts", joinColumns = arrayOf(
+                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
             var participants: MutableSet<AbstractParty>,
 
             /**

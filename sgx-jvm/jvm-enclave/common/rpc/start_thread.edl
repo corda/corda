@@ -1,0 +1,9 @@
+enclave {
+    from "sgx_tstdc.edl" import *;
+    trusted {
+        public void create_new_thread(unsigned int nonce);
+    };
+    untrusted {
+        void request_new_thread(uint64_t enclave_id, uint32_t nonce);
+    };
+};

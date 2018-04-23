@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.utilities.registration
 
 import net.corda.core.identity.CordaX500Name
@@ -19,6 +29,8 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
@@ -26,10 +38,7 @@ import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.URL
@@ -45,8 +54,12 @@ import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 
-class NodeRegistrationTest {
+class NodeRegistrationTest : IntegrationTest() {
     companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas("NotaryService", "Alice", "Genevieve")
+
         private val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
         private val aliceName = CordaX500Name("Alice", "London", "GB")
         private val genevieveName = CordaX500Name("Genevieve", "London", "GB")

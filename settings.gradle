@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 // The project is named 'corda-project' and not 'corda' because if this is named the same as the
 // output JAR from the capsule then the buildCordaJAR task goes into an infinite loop.
 rootProject.name = 'corda-project'
@@ -9,6 +19,8 @@ include 'docs'
 include 'node-api'
 include 'node'
 include 'node:capsule'
+include 'bridge'
+include 'bridge:bridgecapsule'
 include 'client:jackson'
 include 'client:jfx'
 include 'client:mock'
@@ -20,20 +32,32 @@ include 'experimental:behave'
 include 'experimental:sandbox'
 include 'experimental:quasar-hook'
 include 'experimental:kryo-hook'
+include 'experimental:intellij-plugin'
+include 'experimental:flow-hook'
 include 'test-common'
 include 'test-utils'
 include 'smoke-test-utils'
 include 'node-driver'
+include 'perftestcordapp'
 // Avoid making 'testing' a project, and allow build.gradle files to refer to these by their simple names:
 ['test-common', 'test-utils', 'smoke-test-utils', 'node-driver'].each {
     project(":$it").projectDir = new File("$settingsDir/testing/$it")
 }
+include 'network-management'
+include 'network-management:capsule'
+include 'network-management:capsule-hsm'
+include 'network-management:capsule-hsm-cert-generator'
+include 'network-management:capsule-crr-submission'
+include 'network-management:registration-tool'
+include 'tools:jmeter'
 include 'tools:explorer'
 include 'tools:explorer:capsule'
 include 'tools:demobench'
 include 'tools:loadtest'
 include 'tools:graphs'
 include 'tools:bootstrapper'
+include 'tools:dbmigration'
+include 'tools:notaryhealthcheck'
 include 'tools:shell'
 include 'example-code'
 project(':example-code').projectDir = file("$settingsDir/docs/source/example-code")
@@ -46,4 +70,12 @@ include 'samples:network-visualiser'
 include 'samples:simm-valuation-demo'
 include 'samples:notary-demo'
 include 'samples:bank-of-corda-demo'
+include 'samples:business-network-demo'
 include 'samples:cordapp-configuration'
+include 'cordform-common'
+include 'verify-enclave'
+include 'hsm-tool'
+project(':hsm-tool').with {
+    name = 'sgx-hsm-tool'
+    projectDir = file("$settingsDir/sgx-jvm/hsm-tool")
+}

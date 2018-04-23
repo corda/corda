@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 apply plugin: 'kotlin'
 // Java Persistence API support: create no-arg constructor
 // see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
@@ -23,6 +33,7 @@ configurations {
         // We don't need these because we already include netty-all.
         exclude group: 'io.netty', module: 'netty-transport'
         exclude group: 'io.netty', module: 'netty-handler'
+        exclude group: 'io.netty', module: 'netty-common'
     }
 
     integrationTestCompile.extendsFrom testCompile
@@ -43,6 +54,7 @@ sourceSets {
         }
         resources {
             srcDir file('src/integration-test/resources')
+            srcDir file('../../testing/test-utils/src/main/resources')
         }
     }
 }
@@ -107,7 +119,8 @@ dependencies {
     }
 
     // Coda Hale's Metrics: for monitoring of key statistics
-    compile "io.dropwizard.metrics:metrics-core:3.1.2"
+    compile "io.dropwizard.metrics:metrics-core:$metrics_version"
+    compile "io.dropwizard.metrics:metrics-graphite:$metrics_version"
 
     // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
     compile "com.google.jimfs:jimfs:1.1"
@@ -118,6 +131,7 @@ dependencies {
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
+    testCompile 'com.github.stefanbirkner:system-rules:1.16.0'
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
     testCompile project(':finance')
@@ -128,11 +142,11 @@ dependencies {
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"
 
-    // For Postgres database support in persistence
-    compile "org.postgresql:postgresql:$postgresql_version"
+    // For the MySQLUniquenessProvider
+    compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.6'
 
     // SQL connection pooling library
-    compile "com.zaxxer:HikariCP:2.5.1"
+    compile "com.zaxxer:HikariCP:${hikari_version}"
 
     // Hibernate: an object relational mapper for writing state objects to the database automatically.
     compile "org.hibernate:hibernate-core:$hibernate_version"
@@ -160,6 +174,9 @@ dependencies {
     // Apache Shiro: authentication, authorization and session management.
     compile "org.apache.shiro:shiro-core:${shiro_version}"
 
+    // Jsh: A SSH implementation for tunneling inbound traffic via a relay
+    compile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
+
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
@@ -178,8 +195,46 @@ dependencies {
     testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 
+    // Add runtime-only dependency on the JDBC driver for the specified DB provider (used in database integration tests)
+    def DB_PROVIDER = System.getProperty("custom.databaseProvider")
+    switch (DB_PROVIDER) {
+        case null: //DB provider not provided, use default H2 driver (already in the classpath)
+            break
+        case "integration-sql-server" :
+            runtime "com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8"
+            break
+        case "integration-azure-sql" :
+            runtime "com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre8"
+            break
+        case "integration-oracle" :
+            runtime ("com.oracle.jdbc:ojdbc8:12.2.0.1") { //exclude unnecessary or conflicting libraries
+                exclude group: "com.oracle.jdbc", module: "ucp"
+                exclude group: "com.oracle.jdbc", module: "ons"
+                exclude group: "com.oracle.jdbc", module: "xmlparserv2"
+                exclude group: "com.oracle.jdbc", module: "xdb6"
+                exclude group: "com.oracle.jdbc", module: "oraclepki"
+                exclude group: "com.oracle.jdbc", module: "osdt_cert"
+                exclude group: "com.oracle.jdbc", module: "osdt_core"
+            }
+            break
+        case "integration-oracle-11" :
+            runtime files("lib/ojdbc6.jar")
+            break
+        case "integration-postgres" :
+            runtime "org.postgresql:postgresql:${postgresql_version}"
+            break
+        default:
+            throw new GradleException('Unsupported DB provider: ' + DB_PROVIDER)
+    }
+
     // Jolokia JVM monitoring agent, required to push logs through slf4j
     compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
+
+    // Allow access to simple SOCKS Server for integration testing
+    testCompile("io.netty:netty-example:$netty_version") {
+        exclude group: "io.netty", module: "netty-tcnative"
+        exclude group: "ch.qos.logback", module: "logback-classic"
+    }
 }
 
 task integrationTest(type: Test) {

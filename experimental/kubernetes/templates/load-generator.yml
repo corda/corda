@@ -1,0 +1,36 @@
+apiVersion: "apps/v1beta1"
+kind: Deployment
+metadata:
+  name: load-generator
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      imagePullSecrets:
+      - name: regsecret 
+      containers:
+      - name: notary-healthcheck
+        image: {{ image }}
+        imagePullPolicy: Always
+        env:
+        - name: "TARGET_HOST"
+          value: "{{ version }}-0.{{ version }}.{{ namespace }}.svc.cluster.local"
+        - name: "RPC_PORT"
+          value: "10003"
+        - name: "NUM_ITERATIONS"
+          value: "2"
+        - name: "SLEEP_MILLIS"
+          value: "30000"
+        volumeMounts:
+        - name: cordapps
+          mountPath: /cordapps
+      volumes:
+      - name: cordapps
+        persistentVolumeClaim:
+          claimName: cordapps

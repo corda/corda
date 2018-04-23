@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 /**
  * This build.gradle exists to publish our capsule (executable fat jar) to maven. It cannot be placed in the
  * node project because the bintray plugin cannot publish two modules from one project.
@@ -6,7 +16,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'com.jfrog.artifactory'
 
-description 'Corda standalone node'
+description 'R3 Corda'
 
 configurations {
     runtimeArtifacts.extendsFrom runtime
@@ -28,7 +38,7 @@ targetCompatibility = 1.6
 
 task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
     applicationClass 'net.corda.node.Corda'
-    archiveName "corda-${corda_release_version}.jar"
+    archiveName "corda-r3-${corda_release_version}.jar"
     applicationSource = files(
             project(':node').configurations.runtime,
             project(':node').jar,
@@ -46,7 +56,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
         // See experimental/quasar-hook/README.md for how to generate.
         def quasarExcludeExpression = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**)"
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar=${quasarExcludeExpression}"]
-        systemProperties['visualvm.display.name'] = 'Corda'
+        systemProperties['visualvm.display.name'] = 'CordaEnterprise'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
         caplets = ['CordaCaplet']

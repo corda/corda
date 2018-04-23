@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.client.rpc
 
 import net.corda.core.context.*
@@ -21,6 +31,8 @@ import net.corda.node.services.Permissions.Companion.all
 import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.core.*
 import net.corda.testing.node.User
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.internal.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
@@ -28,6 +40,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 import rx.subjects.PublishSubject
 import java.util.concurrent.CountDownLatch
@@ -49,9 +62,15 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     private fun login(username: String, password: String, externalTrace: Trace? = null, impersonatedActor: Actor? = null) {
         connection = client.start(username, password, externalTrace, impersonatedActor)
     }
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
+    }
 
     @Before
-    fun setUp() {
+    override fun setUp() {
+        super.setUp()
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
         client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!, object : CordaRPCClientConfiguration {
             override val maxReconnectAttempts = 5

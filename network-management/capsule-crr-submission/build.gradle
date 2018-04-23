@@ -1,0 +1,49 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'us.kirchmeier.capsule'
+
+description 'HSM Certificate Generator'
+
+version project(':network-management').version
+
+configurations {
+    runtimeArtifacts.extendsFrom runtime
+}
+
+task buildCrrSubmissionJAR(type: FatCapsule, dependsOn: 'jar') {
+    applicationClass 'com.r3.corda.networkmanage.tools.crr.submission.MainKt'
+    archiveName "crr-submission-${version}.jar"
+    capsuleManifest {
+        applicationVersion = corda_release_version
+        systemProperties['visualvm.display.name'] = 'CRR Submission Tool'
+        minJavaVersion = '1.8.0'
+        jvmArgs = ['-XX:+UseG1GC']
+    }
+    applicationSource = files(
+        project(':network-management').configurations.runtime,
+        project(':network-management').jar
+    )
+}
+
+artifacts {
+    runtimeArtifacts buildCrrSubmissionJAR
+    publish buildCrrSubmissionJAR
+}
+
+jar {
+    classifier "ignore"
+}
+
+publish {
+    name 'crr-submission'
+    disableDefaultJar = true
+}

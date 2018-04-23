@@ -1,20 +1,50 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.statemachine
 
+import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowInfo
-import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.serialize
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.checkPayloadIs
 
-class FlowSessionImpl(override val counterparty: Party) : FlowSession() {
-    internal lateinit var stateMachine: FlowStateMachine<*>
-    internal lateinit var sessionFlow: FlowLogic<*>
+class FlowSessionImpl(
+        override val counterparty: Party,
+        val sourceSessionId: SessionId
+) : FlowSession() {
+
+    override fun toString() = "FlowSessionImpl(counterparty=$counterparty, sourceSessionId=$sourceSessionId)"
+
+    override fun equals(other: Any?): Boolean {
+        return (other as? FlowSessionImpl)?.sourceSessionId == sourceSessionId
+    }
+
+    override fun hashCode() = sourceSessionId.hashCode()
+
+    private fun getFlowStateMachine(): FlowStateMachine<*> {
+        return Fiber.currentFiber() as FlowStateMachine<*>
+    }
 
     @Suspendable
     override fun getCounterpartyFlowInfo(maySkipCheckpoint: Boolean): FlowInfo {
-        return stateMachine.getFlowInfo(counterparty, sessionFlow, maySkipCheckpoint)
+        val request = FlowIORequest.GetFlowInfo(NonEmptySet.of(this))
+        return getFlowStateMachine().suspend(request, maySkipCheckpoint)[this]!!
     }
 
     @Suspendable
@@ -26,14 +56,15 @@ class FlowSessionImpl(override val counterparty: Party) : FlowSession() {
             payload: Any,
             maySkipCheckpoint: Boolean
     ): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(
-                receiveType,
-                counterparty,
-                payload,
-                sessionFlow,
-                retrySend = false,
-                maySkipCheckpoint = maySkipCheckpoint
+        enforceNotPrimitive(receiveType)
+        val request = FlowIORequest.SendAndReceive(
+                sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
+                shouldRetrySend = false
         )
+        val responseValues: Map<FlowSession, SerializedBytes<Any>> = getFlowStateMachine().suspend(request, maySkipCheckpoint)
+        val responseForCurrentSession = responseValues[this]!!
+
+        return responseForCurrentSession.checkPayloadIs(receiveType)
     }
 
     @Suspendable
@@ -41,7 +72,9 @@ class FlowSessionImpl(override val counterparty: Party) : FlowSession() {
 
     @Suspendable
     override fun <R : Any> receive(receiveType: Class<R>, maySkipCheckpoint: Boolean): UntrustworthyData<R> {
-        return stateMachine.receive(receiveType, counterparty, sessionFlow, maySkipCheckpoint)
+        enforceNotPrimitive(receiveType)
+        val request = FlowIORequest.Receive(NonEmptySet.of(this))
+        return getFlowStateMachine().suspend(request, maySkipCheckpoint)[this]!!.checkPayloadIs(receiveType)
     }
 
     @Suspendable
@@ -49,12 +82,18 @@ class FlowSessionImpl(override val counterparty: Party) : FlowSession() {
 
     @Suspendable
     override fun send(payload: Any, maySkipCheckpoint: Boolean) {
-        return stateMachine.send(counterparty, payload, sessionFlow, maySkipCheckpoint)
+        val request = FlowIORequest.Send(
+                sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
+                shouldRetrySend = false
+        )
+        return getFlowStateMachine().suspend(request, maySkipCheckpoint)
     }
 
     @Suspendable
     override fun send(payload: Any) = send(payload, maySkipCheckpoint = false)
 
-    override fun toString() = "Flow session with $counterparty"
+    private fun enforceNotPrimitive(type: Class<*>) {
+        require(!type.isPrimitive) { "Cannot receive primitive type $type" }
+    }
 }
 

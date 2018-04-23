@@ -1,18 +1,34 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.persistence
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.bufferUntilSubscribed
+
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.ConcurrentBox
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
+import net.corda.core.toFuture
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AppendOnlyPersistentMapBase
+import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding.SNAPPY
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -53,7 +69,7 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
                         DBTransaction().apply {
                             txId = key.toString()
                             transaction = value.toSignedTx().
-                                    serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                                    serialize(context = SerializationDefaults.STORAGE_CONTEXT.withEncoding(SNAPPY)).bytes
                         }
                     },
                     persistentEntityClass = DBTransaction::class.java,
@@ -76,10 +92,10 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
         }
     }
 
-    private val txStorage = ThreadBox(createTransactionsMap(cacheSizeBytes))
+    private val txStorage = ConcurrentBox(createTransactionsMap(cacheSizeBytes))
 
     override fun addTransaction(transaction: SignedTransaction): Boolean =
-            txStorage.locked {
+            txStorage.concurrent {
                 addWithDuplicatesAllowed(transaction.id, transaction.toTxCacheValue()).apply {
                     updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
                 }
@@ -91,12 +107,22 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
     override val updates: Observable<SignedTransaction> = updatesPublisher.wrapWithDatabaseTransaction()
 
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
-        return txStorage.locked {
+        return txStorage.exclusive {
             DataFeed(allPersisted().map { it.second.toSignedTx() }.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 
+    override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
+        return txStorage.exclusive {
+            val existingTransaction = get(id)
+            if (existingTransaction == null) {
+                updatesPublisher.filter { it.id == id }.toFuture()
+            } else {
+                doneFuture(existingTransaction.toSignedTx())
+            }
+        }
+    }
+
     @VisibleForTesting
-    val transactions: Iterable<SignedTransaction>
-        get() = txStorage.content.allPersisted().map { it.second.toSignedTx() }.toList()
+    val transactions: Iterable<SignedTransaction> get() = txStorage.content.allPersisted().map { it.second.toSignedTx() }.toList()
 }

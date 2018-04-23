@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.docs
 
 import net.corda.client.rpc.CordaRPCClient
@@ -6,6 +16,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
@@ -17,16 +28,29 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
+import org.junit.ClassRule
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class IntegrationTestingTutorial {
+class IntegrationTestingTutorial : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
+
     @Test
     fun `alice bob cash exchange example`() {
         // START 1
-        driver(DriverParameters(startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset"))) {
+        driver(DriverParameters(
+                startNodesInProcess = true,
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts.asset","net.corda.finance.schemas")
+        )) {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
                     startFlow<CashIssueFlow>(),
                     startFlow<CashPaymentFlow>(),
@@ -55,14 +79,15 @@ class IntegrationTestingTutorial {
             // END 2
 
             // START 3
-            val bobVaultUpdates = bobProxy.vaultTrackBy<Cash.State>().updates
-            val aliceVaultUpdates = aliceProxy.vaultTrackBy<Cash.State>().updates
+            val bobVaultUpdates = bobProxy.vaultTrackBy<Cash.State>(criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)).updates
+            val aliceVaultUpdates = aliceProxy.vaultTrackBy<Cash.State>(criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)).updates
             // END 3
 
             // START 4
+            val numberOfStates = 10
             val issueRef = OpaqueBytes.of(0)
             val notaryParty = aliceProxy.notaryIdentities().first()
-            (1..10).map { i ->
+            (1..numberOfStates).map { i ->
                 aliceProxy.startFlow(::CashIssueFlow,
                         i.DOLLARS,
                         issueRef,
@@ -70,7 +95,7 @@ class IntegrationTestingTutorial {
                 ).returnValue
             }.transpose().getOrThrow()
             // We wait for all of the issuances to run before we start making payments
-            (1..10).map { i ->
+            (1..numberOfStates).map { i ->
                 aliceProxy.startFlow(::CashPaymentFlow,
                         i.DOLLARS,
                         bob.nodeInfo.singleIdentity(),
@@ -80,7 +105,7 @@ class IntegrationTestingTutorial {
 
             bobVaultUpdates.expectEvents {
                 parallel(
-                        (1..10).map { i ->
+                        (1..numberOfStates).map { i ->
                             expect(
                                     match = { update: Vault.Update<Cash.State> ->
                                         update.produced.first().state.data.amount.quantity == i * 100L
@@ -94,21 +119,44 @@ class IntegrationTestingTutorial {
             // END 4
 
             // START 5
-            for (i in 1..10) {
+            for (i in 1..numberOfStates) {
                 bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.singleIdentity()).returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {
                 sequence(
-                        (1..10).map { i ->
-                            expect { update: Vault.Update<Cash.State> ->
-                                println("Alice got vault update of $update")
-                                assertEquals(update.produced.first().state.data.amount.quantity, i * 100L)
-                            }
-                        }
+                        // issuance
+                        parallel(
+                                (1..numberOfStates).map { i ->
+                                    expect(match = { it.moved() == -i * 100 }) { update: Vault.Update<Cash.State> ->
+                                        assertEquals(0, update.consumed.size)
+                                    }
+                                }
+                        ),
+                        // move to Bob
+                        parallel(
+                                (1..numberOfStates).map { i ->
+                                    expect(match = { it.moved() == i * 100 }) { update: Vault.Update<Cash.State> ->
+                                    }
+                                }
+                        ),
+                        // move back to Alice
+                        sequence(
+                                (1..numberOfStates).map { i ->
+                                    expect(match = { it.moved() == -i * 100 }) { update: Vault.Update<Cash.State> ->
+                                        assertEquals(update.consumed.size, 0)
+                                    }
+                                }
+                        )
                 )
             }
             // END 5
         }
+    }
+
+    fun Vault.Update<Cash.State>.moved(): Int {
+        val consumedSum = consumed.sumBy { it.state.data.amount.quantity.toInt() }
+        val producedSum = produced.sumBy { it.state.data.amount.quantity.toInt() }
+        return consumedSum - producedSum
     }
 }

@@ -1,0 +1,160 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+version = '0.1'
+
+buildscript {
+    ext.dokka_version = "0.9.15"
+
+    ext.nativeBuildDir = "$projectDir/native/build"
+    ext.enclaveBuildDir = "$projectDir/../enclave/build"
+
+    if (!project.hasProperty("debug")) {
+        ext.debug = false
+    } else {
+        ext.debug = (ext.debug == "1" || ext.debug == "yes" || ext.debug == "true")
+    }
+
+    if (!project.hasProperty("debugPort")) {
+        ext.debugPort = 5005
+    } else {
+        ext.debugPort = Integer.parseInt(ext.debugPort.toString())
+    }
+
+    if (ext.debug) {
+        ext.debugArgs = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,timeout=10000,address=$debugPort"
+    } else {
+        ext.debugArgs = "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort"
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:$dokka_version"
+    }
+}
+
+apply from: 'utilities.gradle'
+apply plugin: 'kotlin'
+apply plugin: 'application'
+apply plugin: 'org.jetbrains.dokka'
+
+mainClassName = 'net.corda.sgx.cli.Program'
+description "Client side of SGX remote attestation process"
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+
+    compile "com.fasterxml.jackson.core:jackson-core:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
+
+    compile "org.apache.httpcomponents:httpclient:$httpclient_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
+    runtime "org.apache.logging.log4j:log4j-web:$log4j_version"
+    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
+}
+
+dokka {
+    outputFormat = 'html'
+    outputDirectory = "$buildDir/javadoc"
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+tasks.withType(Test) {
+    systemProperty "java.library.path", "$nativeBuildDir"
+    systemProperty "corda.sgx.enclave.path", "$enclaveBuildDir"
+    jvmArgs "$debugArgs"
+}
+
+task cleanEnclave(type: Exec) {
+    commandLine containerArgs("enclave", "clean")
+}
+
+task cleanJniLibrary(type: Exec) {
+    commandLine containerArgs("host/native", "clean")
+}
+
+clean.dependsOn.addAll 'cleanEnclave', 'cleanJniLibrary'
+
+task buildEnclave(type: Exec) {
+    commandLine containerArgs("enclave", "all")
+}
+
+task buildJniLibrary(type: Exec, dependsOn: ['buildEnclave', 'classes']) {
+    commandLine containerArgs("host/native", "all")
+}
+
+task runFlow(type: Exec, dependsOn: ['buildJniLibrary']) {
+    commandLine runArgs(["java"], ["net.corda.sgx.cli.Program"])
+}
+
+task runFlowWithNativeDebugger(type: Exec, dependsOn: ['buildJniLibrary']) {
+    commandLine runArgs(["gdb", "--args", "java"], ["net.corda.sgx.cli.Program"])
+}
+
+task runFlowWithNativeSgxDebugger(type: Exec, dependsOn: ['buildJniLibrary']) {
+    commandLine runArgs(["sgx-gdb", "--args", "java"], ["net.corda.sgx.cli.Program"])
+}
+
+task runFlowWithNativeDebugServer(type: Exec, dependsOn: ['buildJniLibrary']) {
+    commandLine runArgs(["gdbserver", "localhost:2000", "java"], ["net.corda.sgx.cli.Program"])
+}
+
+task runUnitTestsInContainer(type: Task, dependsOn: ['buildJniLibrary']) {
+    doLast { containerDebugWait("$projectDir", "host", "unit-tests") }
+}
+
+task runIntegrationTestsInContainer(type: Task, dependsOn: ['buildJniLibrary']) {
+    doLast { containerDebugWait("$projectDir", "host", "integration-tests") }
+}
+
+task runFlowInContainer(type: Task, dependsOn: ['buildJniLibrary']) {
+    doLast { containerDebugWait("$projectDir", "host", "run") }
+}
+
+task debugUnitTestsInContainer(type: Task, dependsOn: ['buildJniLibrary']) {
+    doLast { containerDebugWait("$projectDir", "host", "DEBUG=1", "unit-tests") }
+}
+
+task debugIntegrationTestsInContainer(type: Task, dependsOn: ['buildJniLibrary']) {
+    doLast { containerDebugWait("$projectDir", "host", "DEBUG=1", "integration-tests") }
+}
+
+task debugFlowInContainer(type: Task, dependsOn: ['buildJniLibrary']) {
+    doLast { containerDebugWait("$projectDir", "host", "DEBUG=1", "run") }
+}

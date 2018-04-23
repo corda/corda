@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.tools.shell
 
 import com.google.common.io.Files
@@ -11,9 +21,15 @@ import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.common.internal.withCertificates
 import net.corda.testing.common.internal.withKeyStores
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -21,11 +37,18 @@ import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
+import org.junit.ClassRule
 import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertTrue
 
-class InteractiveShellIntegrationTest {
+class InteractiveShellIntegrationTest : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
+    }
 
     @Test
     fun `shell should not log in with invalid credentials`() {

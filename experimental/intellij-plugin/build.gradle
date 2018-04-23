@@ -1,0 +1,57 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+plugins {
+    id "org.jetbrains.intellij" version "0.2.11"
+}
+
+apply plugin: 'kotlin'
+
+intellij {
+    version 'IC-2017.1'
+    //IntelliJ IDEA 2016.3 dependency; for a full list of IntelliJ IDEA releases please see https://www.jetbrains.com/intellij-repository/releases
+    plugins = ['Kotlin', 'devkit', 'gradle'] //Bundled plugin dependencies
+    pluginName "$project.name"
+
+    updateSinceUntilBuild = false
+    sameSinceUntilBuild = false
+
+    buildDir = "$projectDir/build"
+}
+
+dependencies {
+    compile project(':core')
+    // For JSON
+    compile "com.fasterxml.jackson.core:jackson-databind:2.8.5"
+}
+
+group 'net.corda'
+version '0.1.0' // Plugin version
+
+
+repositories {
+    mavenCentral()
+}
+
+sourceSets {
+    main{
+        java.srcDirs += 'src/main/kotlin'
+        resources.srcDirs += 'src/main/resources'
+    }
+}

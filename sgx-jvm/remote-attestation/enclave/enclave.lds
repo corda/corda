@@ -1,0 +1,10 @@
+corda_sgx_ra_enclave.so
+{
+    global:
+        enclave_entry;
+        g_global_data_sim;
+        g_global_data;
+        g_peak_heap_used;
+    local:
+        *;
+};

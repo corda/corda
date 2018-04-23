@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
@@ -72,7 +82,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     class PersistentIdentity(
             @Id
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE)
-            var publicKeyHash: String = "",
+            var publicKeyHash: String,
 
             @Lob
             @Column(name = "identity_value")
@@ -139,7 +149,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
 
         log.debug { "Registering identity $identity" }
         val key = mapToKey(identity)
-        keyToParties.addWithDuplicatesAllowed(key, identity)
+        keyToParties.addWithDuplicatesAllowed(key, identity, false)
         // Always keep the first party we registered, as that's the well known identity
         principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
         val parentId = mapToKey(identityCertChain[1].publicKey)

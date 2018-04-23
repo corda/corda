@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
@@ -8,6 +18,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.testing.core.*
 import net.corda.testing.core.BOC_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
@@ -15,16 +26,25 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.poll
 import net.corda.traderdemo.flow.BuyerFlow
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.concurrent.Executors
 
-class TraderDemoTest {
+class TraderDemoTest : IntegrationTest() {
+    companion object {
+        @ClassRule  @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, BOC_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
+    }
     @Test
     fun `runs trader demo`() {
         val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))

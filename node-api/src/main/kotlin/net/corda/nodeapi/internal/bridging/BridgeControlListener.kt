@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.nodeapi.internal.bridging
 
 import net.corda.core.serialization.SerializationDefaults
@@ -12,27 +22,41 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
+import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
+import rx.Observable
+import rx.subjects.PublishSubject
 import java.util.*
 
 class BridgeControlListener(val config: NodeSSLConfiguration,
+                            socksProxyConfig: SocksProxyConfig? = null,
                             val artemisMessageClientFactory: () -> ArtemisSessionProvider) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
-    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, artemisMessageClientFactory)
+    private val bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
+    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, socksProxyConfig, artemisMessageClientFactory)
     private val validInboundQueues = mutableSetOf<String>()
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
 
     constructor(config: NodeSSLConfiguration,
                 p2pAddress: NetworkHostAndPort,
-                maxMessageSize: Int) : this(config, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+                maxMessageSize: Int,
+                socksProxy: SocksProxyConfig? = null) : this(config, socksProxy, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private val log = contextLogger()
     }
+
+    val active: Boolean
+        get() = validInboundQueues.isNotEmpty()
+
+    private val _activeChange = PublishSubject.create<Boolean>().toSerialized()
+    val activeChange: Observable<Boolean>
+        get() = _activeChange
 
     fun start() {
         stop()
@@ -42,8 +66,11 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
         artemis.start()
         val artemisClient = artemis.started!!
         val artemisSession = artemisClient.session
-        val bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
-        artemisSession.createTemporaryQueue(BRIDGE_CONTROL, RoutingType.MULTICAST, bridgeControlQueue)
+        try {
+            artemisSession.createTemporaryQueue(BRIDGE_CONTROL, RoutingType.MULTICAST, bridgeControlQueue)
+        } catch (ex: ActiveMQQueueExistsException) {
+            // Ignore if there is a queue still not cleaned up
+        }
         val control = artemisSession.createConsumer(bridgeControlQueue)
         controlConsumer = control
         control.setMessageHandler { msg ->
@@ -60,10 +87,16 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
     }
 
     fun stop() {
+        if (active) {
+            _activeChange.onNext(false)
+        }
         validInboundQueues.clear()
         controlConsumer?.close()
         controlConsumer = null
-        artemis?.stop()
+        artemis?.apply {
+            started?.session?.deleteQueue(bridgeControlQueue)
+            stop()
+        }
         artemis = null
         bridgeManager.stop()
     }
@@ -99,7 +132,11 @@ class BridgeControlListener(val config: NodeSSLConfiguration,
                 for (outQueue in controlMessage.sendQueues) {
                     bridgeManager.deployBridge(outQueue.queueName, outQueue.targets.first(), outQueue.legalNames.toSet())
                 }
+                val wasActive = active
                 validInboundQueues.addAll(controlMessage.inboxQueues)
+                if (!wasActive && active) {
+                    _activeChange.onNext(true)
+                }
             }
             is BridgeControl.BridgeToNodeSnapshotRequest -> {
                 log.error("Message from Bridge $controlMessage detected on wrong topic!")

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
@@ -19,6 +29,7 @@ import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.tools.shell.InteractiveShell
+import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -206,7 +217,19 @@ open class NodeStartup(val args: Array<String>) {
     open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
 
     open protected fun banJavaSerialisation(conf: NodeConfiguration) {
-        SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
+        val isOracleDbDriver = conf.dataSourceProperties.getProperty("dataSource.url", "").startsWith("jdbc:oracle:")
+        val filter =
+                if (conf.notary?.bftSMaRt != null && isOracleDbDriver) {
+                    val bftAndOracleSerialFilter: (Class<*>) -> Boolean = { clazz -> bftSMaRtSerialFilter(clazz) || oracleJdbcDriverSerialFilter(clazz) }
+                    bftAndOracleSerialFilter
+                } else if (conf.notary?.bftSMaRt != null) {
+                    ::bftSMaRtSerialFilter
+                } else if (isOracleDbDriver) {
+                    ::oracleJdbcDriverSerialFilter
+                } else {
+                    ::defaultSerialFilter
+                }
+        SerialFilter.install(filter)
     }
 
     open protected fun getVersionInfo(): VersionInfo {

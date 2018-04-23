@@ -1,9 +1,20 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.smoketesting
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.internal.copyTo
+import net.corda.core.internal.copyToDirectory
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
@@ -11,6 +22,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.common.internal.testNetworkParameters
+import java.io.File
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -52,7 +64,9 @@ class NodeProcess(
     // as a CorDapp for the nodes.
     class Factory(
             private val buildDirectory: Path = Paths.get("build"),
-            private val cordaJarUrl: URL? = this::class.java.getResource("/corda.jar")
+            private val cordaJarUrl: URL? = this::class.java.getResource("/corda.jar"),
+            private val extraJvmArgs: Array<out String> = emptyArray(),
+            private val redirectConsoleTo: File? = null
     ) {
         val cordaJar: Path by lazy {
             require(cordaJarUrl != null, { "corda.jar could not be found in classpath" })
@@ -97,6 +111,13 @@ class NodeProcess(
             return NodeProcess(config, nodeDir, process, client)
         }
 
+        fun setupPlugins(config: NodeConfig, jarPaths: List<String>): Factory {
+            (baseDirectory(config) / "drivers").createDirectories().also {
+                jarPaths.forEach { jar -> Paths.get(jar).copyToDirectory(it) }
+            }
+            return this
+        }
+
         private fun waitForNode(process: Process, config: NodeConfig, client: CordaRPCClient) {
             val executor = Executors.newSingleThreadScheduledExecutor()
             try {
@@ -127,11 +148,16 @@ class NodeProcess(
         }
 
         private fun startNode(nodeDir: Path): Process {
+            val redirectTo = redirectConsoleTo?.let {
+                ProcessBuilder.Redirect.appendTo(it)
+            } ?: ProcessBuilder.Redirect.INHERIT
+
             val builder = ProcessBuilder()
-                    .command(javaPath.toString(), "-Dcapsule.log=verbose", "-jar", cordaJar.toString())
+                    .command(javaPath.toString(), "-Dcapsule.log=verbose",
+                            "-jar", cordaJar.toString(), *extraJvmArgs)
                     .directory(nodeDir.toFile())
-                    .redirectError(ProcessBuilder.Redirect.INHERIT)
-                    .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+                    .redirectError(redirectTo)
+                    .redirectOutput(redirectTo)
 
             builder.environment().putAll(mapOf(
                     "CAPSULE_CACHE_DIR" to (buildDirectory / "capsule").toString()

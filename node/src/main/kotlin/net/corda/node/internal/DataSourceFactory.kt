@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.internal
 
 import com.zaxxer.hikari.HikariConfig
@@ -8,6 +18,9 @@ import org.h2.engine.Database
 import org.h2.engine.Engine
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Modifier
+import java.net.URLClassLoader
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 import javax.sql.DataSource
 
@@ -42,5 +55,29 @@ object DataSourceFactory {
                 PropertyElf.setTargetFromProperties(it, config.dataSourceProperties)
             }
         }
+    }
+
+    fun createDatasourceFromDriverJarFolders(dataSourceProperties: Properties, baseClassLoader: ClassLoader, driverJarsPath: List<Path>): DataSource {
+        return URLClassLoader(driverJarsPath.flatMap { Files.newDirectoryStream(it, "*.jar") }.map { it.toUri().toURL() }.toTypedArray(), baseClassLoader).let { driversClassLoader ->
+            val dataSourceClassName = dataSourceProperties["dataSourceClassName"] as String?
+            val dataSourceClass = driversClassLoader.loadClass(dataSourceClassName)
+            val dataSourceInstance = dataSourceClass.newInstance() as DataSource
+
+            val props = Properties().also {
+                it.putAll(dataSourceProperties.propertyNames().toList()
+                        .filter { name -> (name as String).startsWith("dataSource.") }
+                        .map { name -> (name as String).substring("dataSource.".length) to (dataSourceProperties[name]) }.toMap())
+            }
+            PropertyElf.setTargetFromProperties(dataSourceInstance, props)
+
+            dataSourceInstance
+        }
+    }
+
+    fun createHikariDatasourceFromDriverJarFolders(dataSourceProperties: Properties, baseClassLoader: ClassLoader, driverJarsPath: List<Path>): DataSource {
+        val dataSource = createDatasourceFromDriverJarFolders(dataSourceProperties, baseClassLoader, driverJarsPath)
+        val cfg = HikariConfig(dataSourceProperties)
+        cfg.dataSource = dataSource
+        return HikariDataSource(cfg)
     }
 }

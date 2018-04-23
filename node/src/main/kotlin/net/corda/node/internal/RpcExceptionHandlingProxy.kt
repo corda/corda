@@ -5,6 +5,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.doOnError
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.doOnError
@@ -127,6 +128,8 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
     override fun setFlowsDrainingModeEnabled(enabled: Boolean) = wrap { delegate.setFlowsDrainingModeEnabled(enabled) }
 
     override fun isFlowsDrainingModeEnabled() = wrap(delegate::isFlowsDrainingModeEnabled)
+
+    override fun killFlow(id: StateMachineRunId) = wrap { delegate.killFlow(id) }
 
     override fun shutdown() = wrap(delegate::shutdown)
 

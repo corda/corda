@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.explorer
 
 import com.apple.eawt.Application
@@ -16,6 +26,7 @@ import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.views.*
 import net.corda.explorer.views.cordapps.cash.CashViewer
+import net.corda.explorer.views.cordapps.iou.IOUViewer
 import org.apache.commons.lang.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.App
@@ -64,7 +75,18 @@ class Main : App(MainView::class) {
         if (!isLoggedIn) {
             stage.hide()
             loginView.login()
-            stage.show()
+        }
+        addOptionalViews()
+        (find(primaryView) as MainView).initializeControls()
+        stage.show()
+    }
+
+    private fun addOptionalViews() {
+        val iouView = find<IOUViewer>()
+        Models.get<CordaViewModel>(Main::class).apply {
+            if (iouView.isEnabledForNode()) {
+                registerView(iouView)
+            }
         }
     }
 
@@ -101,6 +123,7 @@ class Main : App(MainView::class) {
             // Stock Views.
             registerView<Dashboard>()
             registerView<TransactionViewer>()
+            registerView<StateMachineViewer>()
             // CordApps Views.
             registerView<CashViewer>()
             // Tools.
@@ -127,5 +150,5 @@ class Main : App(MainView::class) {
 fun main(args: Array<String>) {
     val parser = OptionParser("SF")
     val options = parser.parse(*args)
-    ExplorerSimulation(options)
+    ExplorerSimulation(options).startDemoNodes()
 }

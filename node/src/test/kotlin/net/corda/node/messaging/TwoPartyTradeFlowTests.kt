@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.messaging
 
 import co.paralleluniverse.fibers.Suspendable
@@ -79,7 +89,7 @@ import kotlin.test.assertTrue
 @RunWith(Parameterized::class)
 class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     companion object {
-        private val cordappPackages = listOf("net.corda.finance.contracts")
+        private val cordappPackages = listOf("net.corda.finance.contracts", "net.corda.finance.schemas")
         @JvmStatic
         @Parameterized.Parameters(name = "Anonymous = {0}")
         fun data(): Collection<Boolean> = listOf(true, false)
@@ -744,6 +754,12 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             private val database: CordaPersistence,
             private val delegate: WritableTransactionStorage
     ) : WritableTransactionStorage, SingletonSerializeAsToken() {
+        override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
+            return database.transaction {
+                delegate.trackTransaction(id)
+            }
+        }
+
         override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
             return database.transaction {
                 delegate.track()

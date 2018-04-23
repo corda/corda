@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.network
 
 import net.corda.core.crypto.generateKeyPair
@@ -7,22 +17,29 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.core.*
 import net.corda.testing.node.internal.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 import kotlin.test.assertEquals
 
 // TODO Clean up these tests, they were written with old network map design in place.
 class PersistentNetworkMapCacheTest : NodeBasedTest() {
-    private companion object {
+    companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70).party
         val BOB = TestIdentity(BOB_NAME, 80).party
         val DUMMY_REGULATOR = TestIdentity(CordaX500Name("Regulator A", "Paris", "FR"), 100).party
-    }
 
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_REGULATOR.name.toDatabaseSchemaName(), ALICE.name.toDatabaseSchemaName(),
+                BOB.name.toDatabaseSchemaName())
+    }
     private val partiesList = listOf(DUMMY_REGULATOR, ALICE, BOB)
     private val addressesMap = HashMap<CordaX500Name, NetworkHostAndPort>()
     private val infos = HashSet<NodeInfo>()

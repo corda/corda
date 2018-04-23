@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.irs
 
 import com.fasterxml.jackson.core.JsonParseException
@@ -29,24 +39,33 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.http.HttpApi
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import rx.Observable
 import java.time.Duration
 import java.time.LocalDate
 
-class IRSDemoTest {
+class IRSDemoTest : IntegrationTest() {
     companion object {
         private val log = contextLogger()
+
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(),
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName(), "Regulator")
     }
 
     private val rpcUsers = listOf(User("user", "password", setOf("ALL")))
     private val currentDate: LocalDate = LocalDate.now()
     private val futureDate: LocalDate = currentDate.plusMonths(6)
-    private val maxWaitTime: Duration = 60.seconds
+    private val maxWaitTime: Duration = 180.seconds
 
     @Test
     fun `runs IRS demo`() {

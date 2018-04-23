@@ -1,0 +1,470 @@
+/*************************************************************************/
+/* Copyright (c) 2016 Intel Corporation.				 */
+/* 									 */
+/* All rights reserved. This program and the accompanying materials	 */
+/* are made available under the terms of the Eclipse Public License v1.0 */
+/* which accompanies this distribution, and is available at		 */
+/* http://www.eclipse.org/legal/epl-v10.html				 */
+/* 									 */
+/* Contributors:							 */
+/*     Intel Corporation - initial implementation and documentation	 */
+/*************************************************************************/
+/*<meta />*/
+
+/*begin-old-version{{*/
+
+body
+{
+	color: #333333;
+	background-color: #ffffff;
+	font-family: "Intel Clear", Verdana, Arial, sans-serif;
+	margin-left: 30px;
+	margin-right: 30px;
+	margin-bottom: 7%;
+	color: #333333;
+	background-color: #ffffff;
+	font-family: "Intel Clear", Verdana, Arial, sans-serif;
+	margin-left: 30px;
+	margin-right: 30px;
+	margin-bottom: 7%;
+	font-size: 12pt;
+}
+
+.RevUpdate
+{
+	background-color: #FFFF99;
+	font-weight: normal;
+	line-height: 100%;
+	background-color: #FFFF99;
+	font-weight: normal;
+	line-height: 100%;
+}
+
+.NonStdFortran
+{
+	color: #007F00;
+	color: #007F00;
+}
+
+body.OH_VSIP_body
+{
+	margin-left: 30px;
+	margin-left: 30px;
+}
+
+DIV.OH_outerContent
+{
+	border: 0px none #FFFFFF;
+	border: 0px none #ffffff;
+}
+
+h1
+{
+	color: #0071c5;
+	font-size: 15pt;
+	font-weight: normal;
+	padding-bottom: 1px;
+	margin-left: 0pt;
+	margin-bottom: 0px;
+	color: #0071c5;
+	font-size: 15pt;
+	font-weight: normal;
+	padding-bottom: 1px;
+	margin-left: 0pt;
+	margin-bottom: 0px;
+}
+
+h1.firsttitle
+{
+	font-weight: normal;
+	border-bottom: 0 none;
+	margin-left: 0;
+	font-size: 18pt;
+	border-bottom: 1px solid #0071c5;
+	line-height: 100%;
+	padding-bottom: 10px;
+	margin-bottom: 20px;
+	margin-top: 20px;
+	font-weight: normal;
+	border-bottom: 0 none;
+	margin-left: 0;
+	font-size: 18pt;
+	border-bottom: 1px solid #0071c5;
+	line-height: 100%;
+	padding-bottom: 10px;
+	margin-bottom: 20px;
+	margin-top: 20px;
+}
+
+h2
+{
+	color: #0071c5;
+	margin-top: 15pt;
+	margin-bottom: 5pt;
+	font-size: 12pt;
+	color: #0071c5;
+	margin-top: 15pt;
+	margin-bottom: 5pt;
+	font-size: 12pt;
+}
+
+h3
+{
+	color: #333333;
+	font-weight: bold;
+	margin-top: 15pt;
+	margin-bottom: 5pt;
+	font-size: 11pt;
+	color: #333333;
+	font-weight: bold;
+	margin-top: 15pt;
+	margin-bottom: 5pt;
+	font-size: 11pt;
+}
+
+h4
+{
+	color: #0071c5;
+	margin-top: 10pt;
+	margin-bottom: 5pt;
+	padding-left: 0px;
+	font-size: 10pt;
+	color: #0071c5;
+	margin-top: 10pt;
+	margin-bottom: 5pt;
+	padding-left: 0px;
+	font-size: 10pt;
+}
+
+h5
+{
+	color: #0071c5;
+	margin-top: 10pt;
+	margin-bottom: 5pt;
+	padding-left: 0px;
+	font-size: 10pt;
+	color: #0071c5;
+	margin-top: 10pt;
+	margin-bottom: 5pt;
+	padding-left: 0px;
+	font-size: 10pt;
+}
+
+h6
+{
+	color: #0071c5;
+	margin-top: 10pt;
+	margin-bottom: 5pt;
+	padding-left: 0px;
+	font-size: 10pt;
+	color: #0071c5;
+	margin-top: 10pt;
+	margin-bottom: 5pt;
+	padding-left: 0px;
+	font-size: 10pt;
+}
+
+.relinfo
+{
+	padding-left: 30px;
+	padding-left: 30px;
+}
+
+.tablecap
+{
+	color: #0071c5;
+}
+
+caption
+{
+	font-weight: bold;
+	text-align: left;
+	font-weight: bold;
+	text-align: left;
+	font-size: 12pt;
+}
+
+.figcap
+{
+	margin-left: 24px;
+	font-size: 10pt;
+	font-weight: bold;
+	text-align: center;
+	margin-left: 24px;
+	font-size: 10pt;
+	font-weight: bold;
+	text-align: center;
+}
+
+.sectiontitle
+{
+	padding-left: 0px;
+	padding-left: 0px;
+}
+
+.linklist
+{
+	padding-left: 0px;
+	padding-left: 0px;
+}
+
+h1.topictitle1
+{
+	color: #0071c5;
+	font-size: 18pt;
+	margin-left: 0pt;
+	margin-bottom: 15px;
+	color: #0071c5;
+	font-size: 18pt;
+	margin-left: 0pt;
+	margin-bottom: 15px;
+}
+
+#header_text
+{
+	color: #0071C5;
+	text-align: right;
+	color: #0071C5;
+	text-align: right;
+}
+
+.titlepage
+{
+	margin-right: 15%;
+	margin-right: 15%;
+}
+
+.familylinks
+{
+	margin-top: 1em;
+	margin-top: 1em;
+}
+
+a.start
+{
+	font-size: 18pt;
+	text-decoration: underline;
+	font-size: 18pt;
+	text-decoration: underline;
+}
+
+a.underlined
+{
+	text-decoration: underline;
+	text-decoration: underline;
+}
+
+.shortdesc
+{
+	font-size: inherit;
+	padding-left: inherit;
+	line-height: 16pt;
+	margin-top: 0px;
+	margin-bottom: 0.5em;
+	font-size: inherit;
+	padding-left: inherit;
+	line-height: 16pt;
+	margin-top: 0px;
+	margin-bottom: 0.5em;
+}
+
+.shortdesc-it
+{
+	font-style: italic;
+	font-style: italic;
+}
+
+p
+{
+	margin-left: 0px;
+	line-height: 120%;
+	margin-top: 0;
+	margin-bottom: 10px;
+	margin-left: 0px;
+	line-height: 120%;
+	margin-top: 0;
+	margin-bottom: 10px;
+	font-size: 12pt;
+}
+
+.p
+{
+	font-size: inherit;
+	margin-left: 0px;
+	line-height: 170%;
+	margin-top: 0;
+	margin-bottom: 5pt;
+	padding-left: 0pt;
+	font-size: inherit;
+	margin-left: 0px;
+	line-height: 170%;
+	margin-top: 0;
+	margin-bottom: 5pt;
+	padding-left: 0pt;
+}
+
+table
+{
+	margin-bottom: 5pt;
+	border-collapse: collapse;
+	margin-left: 0px;
+	margin-top: 0.3em;
+	font-size: 10pt;
+	margin-bottom: 5pt;
+	border-collapse: collapse;
+	margin-left: 0px;
+	margin-top: 0.3em;
+	font-size: 10pt;
+}
+
+tr
+{
+	vertical-align: top;
+	vertical-align: top;
+}
+
+DIV.Note
+{
+	margin-top: 20pt;
+	margin-bottom: 20pt;
+	margin-right: 0.46cm;
+	padding-left: 5px;
+	border-top-style: solid;
+	border-top-width: 1px;
+	border-bottom-style: solid;
+	border-bottom-width: 1px;
+	font-size: 10pt;
+}
+
+p.NoteTipHead
+{
+	font-weight: bold;
+	font-style: italic;
+	margin-top: 9pt;
+	margin-bottom: 3pt;
+	line-height: 15pt;
+	margin-left: 0.202cm;
+	font-family: "Verdana", "sans-serif";
+	text-transform: uppercase;
+	text-align: justify;
+	font-size: 12pt;
+}
+
+MadCap|xref
+{
+	color: #0860a8;
+	mc-format: '{paratext}';
+	text-decoration: none;
+	font-size: 12pt;
+}
+
+div.NoteCont
+{
+	border-bottom-style: solid;
+	border-bottom-width: 1px;
+	border-top-style: solid;
+	border-top-width: 1px;
+	font-size: 10pt;
+}
+
+p.figcap
+{
+	text-align: left;
+	font-size: 12pt;
+}
+
+th
+{
+	text-align: left;
+	font-size: 12pt;
+}
+
+ul
+{
+	font-size: 12pt;
+}
+
+ol
+{
+	font-size: 12pt;
+}
+
+li
+{
+	font-size: 12pt;
+}
+
+b
+{
+	font-size: 12pt;
+}
+
+code
+{
+	font-size: 12pt;
+}
+
+a:link
+{
+	color: #0071c5;
+	text-decoration: none;
+	color: #0071c5;
+	text-decoration: none;
+}
+
+a:visited
+{
+	color: #0071c5;
+	text-decoration: none;
+	color: #0071c5;
+	text-decoration: none;
+}
+
+a:hover
+{
+	color: #00aeef;
+	text-decoration: underline;
+	color: #00aeef;
+	text-decoration: underline;
+}
+
+a:active
+{
+	color: #0071c5;
+	text-decoration: underline;
+	color: #0071c5;
+	text-decoration: underline;
+}
+
+a.start:visited
+{
+	color: #0071c5;
+	text-decoration: underline;
+	color: #0071c5;
+	text-decoration: underline;
+}
+
+a.start:active
+{
+	color: #0071c5;
+	text-decoration: underline;
+	color: #0071c5;
+	text-decoration: underline;
+}
+
+a.underlined:visited
+{
+	color: #0071c5;
+	text-decoration: underline;
+	color: #0071c5;
+	text-decoration: underline;
+}
+
+a.underlined:active
+{
+	color: #0071c5;
+	text-decoration: underline;
+	color: #0071c5;
+	text-decoration: underline;
+}
+

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services
 
 import com.nhaarman.mockito_kotlin.doReturn
@@ -31,18 +41,28 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class BFTNotaryServiceTests {
+class BFTNotaryServiceTests : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2", "node_3", "node_4", "node_5",
+                "node_6", "node_7", "node_8", "node_9")
+    }
+
     private lateinit var mockNet: InternalMockNetwork
     private lateinit var notary: Party
     private lateinit var node: StartedNode<MockNode>

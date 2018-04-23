@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.finance.contracts.asset.cash.selection
 
 import co.paralleluniverse.fibers.Suspendable
@@ -27,7 +37,9 @@ import kotlin.concurrent.withLock
  * Custom implementations must implement this interface and declare their implementation in
  * META-INF/services/net.corda.contracts.asset.CashSelection
  */
-abstract class AbstractCashSelection {
+// TODO: make parameters configurable when we get CorDapp configuration.
+abstract class AbstractCashSelection(private val maxRetries : Int = 8, private val retrySleep : Int = 100,
+                                     private val retryCap : Int = 2000) {
     companion object {
         val instance = AtomicReference<AbstractCashSelection>()
 
@@ -48,10 +60,6 @@ abstract class AbstractCashSelection {
     }
 
     // coin selection retry loop counter, sleep (msecs) and lock for selecting states
-    // TODO: make parameters configurable when we get CorDapp configuration.
-    private val MAX_RETRIES = 8
-    private val RETRY_SLEEP = 100
-    private val RETRY_CAP = 2000
     private val spendLock: ReentrantLock = ReentrantLock()
 
     /**
@@ -105,13 +113,13 @@ abstract class AbstractCashSelection {
         val stateAndRefs = mutableListOf<StateAndRef<Cash.State>>()
 
         // DOCSTART CASHSELECT 1
-        for (retryCount in 1..MAX_RETRIES) {
+        for (retryCount in 1..maxRetries) {
             if (!attemptSpend(services, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs, stateAndRefs)) {
                 log.warn("Coin selection failed on attempt $retryCount")
                 // TODO: revisit the back off strategy for contended spending.
-                if (retryCount != MAX_RETRIES) {
+                if (retryCount != maxRetries) {
                     stateAndRefs.clear()
-                    val durationMillis = (minOf(RETRY_SLEEP.shl(retryCount), RETRY_CAP / 2) * (1.0 + Math.random())).toInt()
+                    val durationMillis = (minOf(retrySleep.shl(retryCount), retryCap / 2) * (1.0 + Math.random())).toInt()
                     FlowLogic.sleep(durationMillis.millis)
                 } else {
                     log.warn("Insufficient spendable states identified for $amount")

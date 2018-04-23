@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.client.rpc
 
 import net.corda.core.context.Actor
@@ -11,17 +21,31 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assume.assumeFalse
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 
-class FlowsExecutionModeRpcTest {
+class FlowsExecutionModeRpcTest : IntegrationTest() {
+
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
+    }
 
     @Test
     fun `persistent state survives node restart`() {
@@ -47,6 +71,12 @@ class FlowsExecutionModeRpcTest {
 }
 
 class FlowsExecutionModeTests : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
+
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
+    }
 
     private val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))
     private lateinit var node: StartedNode<Node>

@@ -109,21 +109,21 @@ Below is a sample of what a CorDapp's Gradle dependencies block might look like.
 
         dependencies {
             // Corda integration dependencies
-            cordaCompile "net.corda:corda-core:$corda_release_version"
-            cordaCompile "net.corda:corda-finance:$corda_release_version"
-            cordaCompile "net.corda:corda-jackson:$corda_release_version"
-            cordaCompile "net.corda:corda-rpc:$corda_release_version"
-            cordaCompile "net.corda:corda-node-api:$corda_release_version"
-            cordaCompile "net.corda:corda-webserver-impl:$corda_release_version"
-            cordaRuntime "net.corda:corda:$corda_release_version"
-            cordaRuntime "net.corda:corda-webserver:$corda_release_version"
-            testCompile "net.corda:corda-test-utils:$corda_release_version"
+            cordaCompile "$corda_release_distribution:corda-core:$corda_release_version"
+            cordaCompile "$corda_release_distribution:corda-finance:$corda_release_version"
+            cordaCompile "$corda_release_distribution:corda-jackson:$corda_release_version"
+            cordaCompile "$corda_release_distribution:corda-rpc:$corda_release_version"
+            cordaCompile "$corda_release_distribution:corda-node-api:$corda_release_version"
+            cordaCompile "$corda_release_distribution:corda-webserver-impl:$corda_release_version"
+            cordaRuntime "$corda_release_distribution:corda:$corda_release_version"
+            cordaRuntime "$corda_release_distribution:corda-webserver:$corda_release_version"
+            testCompile "$corda_release_distribution:corda-test-utils:$corda_release_version"
 
             // Corda Plugins: dependent flows and services
             // Identifying a CorDapp by its module in the same project.
             cordapp project(":cordapp-contracts-states")
             // Identifying a CorDapp by its fully-qualified name.
-            cordapp "net.corda:bank-of-corda-demo:1.0"
+            cordapp "$corda_release_distribution:bank-of-corda-demo:1.0"
 
             // Some other dependencies
             compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.explorer.views
 
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
@@ -14,6 +24,7 @@ import javafx.scene.control.ListView
 import javafx.scene.control.TableView
 import javafx.scene.control.TitledPane
 import javafx.scene.layout.BorderPane
+import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.filterNotNull
@@ -29,9 +40,11 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.toBase58String
+import net.corda.sample.businessnetwork.iou.IOUState
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
 import net.corda.explorer.formatters.Formatter
+import net.corda.explorer.formatters.NumberFormatter
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.identicon.identicon
 import net.corda.explorer.identicon.identiconToolTip
@@ -305,6 +318,25 @@ class TransactionViewer : CordaView("Transactions") {
                                 }
                             }
                         }
+                     is IOUState -> {
+                         fun Pane.partyLabel(party: Party) = label(party.nameOrNull().let { PartyNameFormatter.short.format(it) } ?: "Anonymous") {
+                             tooltip(party.owningKey.toBase58String())
+                         }
+                         row {
+                             label("Amount :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
+                             label(NumberFormatter.boring.format(data.value))
+                         }
+                         row {
+                             label("Borrower :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
+                             val party = data.borrower
+                             partyLabel(party)
+                         }
+                         row {
+                             label("Lender :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
+                             val party = data.lender
+                             partyLabel(party)
+                         }
+                     }
                     // TODO : Generic view using reflection?
                         else -> label {}
                     }
@@ -324,11 +356,15 @@ private fun calculateTotalEquiv(myIdentity: Party?,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>): AmountDiff<Currency> {
     val (reportingCurrency, exchange) = reportingCurrencyExchange
-    fun List<ContractState>.sum() = this.map { it as? Cash.State }
-            .filterNotNull()
-            .filter { it.owner.owningKey.toKnownParty().value == myIdentity }
-            .map { exchange(it.amount.withoutIssuer()).quantity }
-            .sum()
+    fun List<ContractState>.sum(): Long {
+        val cashSum: Long  = map { it as? Cash.State }
+                .filterNotNull()
+                .filter { it.owner.owningKey.toKnownParty().value == myIdentity }
+                .map { exchange(it.amount.withoutIssuer()).quantity }
+                .sum()
+        val iouSum: Int = mapNotNull {it as? IOUState }.map { it.value }.sum() * 100
+        return cashSum + iouSum
+    }
 
     // For issuing cash, if I am the issuer and not the owner (e.g. issuing cash to other party), count it as negative.
     val issuedAmount = if (inputs.isEmpty()) outputs.map { it as? Cash.State }

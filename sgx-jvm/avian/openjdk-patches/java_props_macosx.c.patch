@@ -1,0 +1,15 @@
+--- openjdk/java_props_macosx.c
++++ openjdk/java_props_macosx.c
+@@ -37,11 +37,7 @@
+
+ // need dlopen/dlsym trick to avoid pulling in JavaRuntimeSupport before libjava.dylib is loaded
+ static void *getJRSFramework() {
+-    static void *jrsFwk = NULL;
+-    if (jrsFwk == NULL) {
+-       jrsFwk = dlopen("/System/Library/Frameworks/JavaVM.framework/Frameworks/JavaRuntimeSupport.framework/JavaRuntimeSupport", RTLD_LAZY | RTLD_LOCAL);
+-    }
+-    return jrsFwk;
++    return NULL;
+ }
+
+ static char *getPosixLocale(int cat) {

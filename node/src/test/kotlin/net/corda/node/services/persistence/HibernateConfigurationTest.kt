@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.persistence
 
 import com.nhaarman.mockito_kotlin.*
@@ -24,9 +34,9 @@ import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.DummyFungibleContract
+import net.corda.finance.sampleschemas.SampleCashSchemaV2
+import net.corda.finance.sampleschemas.SampleCashSchemaV3
 import net.corda.finance.schemas.CashSchemaV1
-import net.corda.finance.schemas.SampleCashSchemaV2
-import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.ContractStateAndRef
@@ -41,11 +51,12 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.DummyDealStateSchemaV1
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV2
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
-import net.corda.testing.internal.vault.DummyLinearStateSchemaV2
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
@@ -110,8 +121,8 @@ class HibernateConfigurationTest {
                 doReturn(it.party).whenever(mock).wellKnownPartyFromX500Name(it.name)
             }
         }
-        val schemaService = NodeSchemaService()
-        database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
+        val schemaService = NodeSchemaService(extraSchemas = setOf(CashSchemaV1, SampleCashSchemaV2, SampleCashSchemaV3, DummyLinearStateSchemaV1, DummyLinearStateSchemaV2, DummyDealStateSchemaV1 ))
+        database = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true), identityService, schemaService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
 

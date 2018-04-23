@@ -1,0 +1,72 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+import net.corda.plugins.Cordform
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'idea'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'maven-publish'
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    testCompile "junit:junit:$junit_version"
+
+    // Corda integration dependencies
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+    cordaCompile project(':client:jfx')
+    cordaCompile project(':client:rpc')
+    cordaCompile project(':node-driver')
+    compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.6'
+    compile "io.dropwizard.metrics:metrics-graphite:$metrics_version"
+
+}
+
+idea {
+    module {
+        downloadJavadoc = true // defaults to false
+        downloadSources = true
+    }
+}
+
+publishing {
+    publications {
+        jarAndSources(MavenPublication) {
+            from components.java
+            artifactId 'notaryhealthcheck'
+
+            artifact sourceJar
+            artifact javadocJar
+        }
+    }
+}
+
+task runTest(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'net.corda.notaryhealthcheck.MainKt'
+}
+
+task deployNodes(type: Cordform, dependsOn: 'jar') {
+    definitionClass = 'net.corda.notaryhealthcheck.HealthCheckCordform'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.notaryhealthcheck'
+        )
+    }
+}
+

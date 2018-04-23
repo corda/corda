@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.internal.schemas
 
 import net.corda.core.crypto.toStringShort
@@ -20,6 +30,9 @@ object NodeInfoSchemaV1 : MappedSchema(
         version = 1,
         mappedTypes = listOf(PersistentNodeInfo::class.java, DBPartyAndCertificate::class.java, DBHostAndPort::class.java, NodePropertiesPersistentStore.DBNodeProperty::class.java)
 ) {
+
+    override val migrationResource = "node-info.changelog-master"
+
     @Entity
     @Table(name = "node_infos")
     class PersistentNodeInfo(
@@ -28,7 +41,7 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "node_info_id")
             var id: Int,
 
-            @Column(name="node_info_hash", length = 64)
+            @Column(name = "node_info_hash", length = 64)
             val hash: String,
 
             @Column(name = "addresses")
@@ -102,7 +115,6 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "party_cert_binary")
             val partyCertBinary: ByteArray,
 
-
             val isMain: Boolean,
 
             @ManyToMany(mappedBy = "legalIdentitiesAndCerts", cascade = arrayOf(CascadeType.ALL)) // ManyToMany because of distributed services.
@@ -110,8 +122,8 @@ object NodeInfoSchemaV1 : MappedSchema(
     ) : Serializable {
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
                 : this(partyAndCert.name.toString(),
-                       partyAndCert.party.owningKey.toStringShort(),
-                       partyAndCert.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes, isMain)
+                partyAndCert.party.owningKey.toStringShort(),
+                partyAndCert.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes, isMain)
 
         fun toLegalIdentityAndCert(): PartyAndCertificate {
             return partyCertBinary.deserialize()

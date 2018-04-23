@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
@@ -84,9 +94,12 @@ class VaultSoftLockManagerTest {
     private val mockNet = InternalMockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = { args ->
         object : InternalMockNetwork.MockNode(args) {
             override fun makeVaultService(keyManagementService: KeyManagementService, services: ServicesForResolution, hibernateConfig: HibernateConfiguration): VaultServiceInternal {
+                val node = this
                 val realVault = super.makeVaultService(keyManagementService, services, hibernateConfig)
                 return object : VaultServiceInternal by realVault {
                     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
+                        // Should be called before flow is removed
+                        assertEquals(1, node.started!!.smm.allStateMachines.size)
                         mockVault.softLockRelease(lockId, stateRefs) // No need to also call the real one for these tests.
                     }
                 }

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services
 
 import net.corda.client.rpc.CordaRPCClient
@@ -19,21 +29,31 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.internal.toDatabaseSchemaNames
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DummyClusterSpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import rx.Observable
 import java.util.*
 
-class DistributedServiceTests {
+class DistributedServiceTests : IntegrationTest() {
     private lateinit var alice: NodeHandle
     private lateinit var notaryNodes: List<OutOfProcess>
     private lateinit var aliceProxy: CordaRPCOps
     private lateinit var raftNotaryIdentity: Party
     private lateinit var notaryStateMachines: Observable<Pair<Party, StateMachineUpdate>>
-
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY_NAME.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
+                ALICE_NAME.toDatabaseSchemaName())
+    }
     private fun setup(compositeIdentity: Boolean = false, testBlock: () -> Unit) {
         val testUser = User("test", "test", permissions = setOf(
                 startFlow<CashIssueFlow>(),
@@ -42,7 +62,7 @@ class DistributedServiceTests {
                 invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
         driver(DriverParameters(
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
+                extraCordappPackagesToScan = listOf("net.corda.finance.contracts", "net.corda.finance.schemas"),
                 notarySpecs = listOf(
                         NotarySpec(
                                 DUMMY_NOTARY_NAME,

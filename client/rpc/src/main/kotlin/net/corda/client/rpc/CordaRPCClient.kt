@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.client.rpc
 
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
@@ -93,18 +103,33 @@ interface CordaRPCClientConfiguration {
  * [CordaRPCClientConfiguration]. While attempting failover, current and future RPC calls will throw
  * [RPCException] and previously returned observables will call onError().
  *
+ * If the client was created using a list of hosts, automatic failover will occur(the servers have to be started in HA mode)
+ *
  * @param hostAndPort The network address to connect to.
  * @param configuration An optional configuration used to tweak client behaviour.
  * @param sslConfiguration An optional [SSLConfiguration] used to enable secure communication with the server.
+ * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
+ * The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
+ * HA mode, the client will round-robin from the beginning of the list and try all servers.
  */
 class CordaRPCClient private constructor(
-        hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
-        sslConfiguration: SSLConfiguration? = null,
-        classLoader: ClassLoader? = null
+        private val hostAndPort: NetworkHostAndPort,
+        private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+        private val sslConfiguration: SSLConfiguration? = null,
+        private val classLoader: ClassLoader? = null,
+        private val haAddressPool: List<NetworkHostAndPort> = emptyList()
 ) {
     @JvmOverloads
     constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) : this(hostAndPort, configuration, null)
+
+    /**
+     * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
+     * The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
+     * HA mode, the client will round-robin from the beginning of the list and try all servers.
+     * @param configuration An optional configuration used to tweak client behaviour.
+     */
+    @JvmOverloads
+    constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) : this(haAddressPool.first(), configuration, null, null, haAddressPool)
 
     companion object {
         internal fun createWithSsl(
@@ -115,6 +140,14 @@ class CordaRPCClient private constructor(
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
         }
 
+        internal fun createWithSsl(
+                haAddressPool: List<NetworkHostAndPort>,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+                sslConfiguration: SSLConfiguration? = null
+        ): CordaRPCClient {
+            return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, null, haAddressPool)
+        }
+
         internal fun createWithSslAndClassLoader(
                 hostAndPort: NetworkHostAndPort,
                 configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
@@ -122,6 +155,15 @@ class CordaRPCClient private constructor(
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration, classLoader)
+        }
+
+        internal fun createWithSslAndClassLoader(
+                haAddressPool: List<NetworkHostAndPort>,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+                sslConfiguration: SSLConfiguration? = null,
+                classLoader: ClassLoader? = null
+        ): CordaRPCClient {
+            return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, classLoader, haAddressPool)
         }
     }
 
@@ -137,11 +179,19 @@ class CordaRPCClient private constructor(
         }
     }
 
-    private val rpcClient = RPCClient<CordaRPCOps>(
-            tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = sslConfiguration),
-            configuration,
-            if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT
-    )
+    private fun getRpcClient() : RPCClient<CordaRPCOps> {
+        return if (haAddressPool.isEmpty()) {
+            RPCClient(
+                    tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = sslConfiguration),
+                    configuration,
+                    if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT)
+        } else {
+            RPCClient(haAddressPool,
+                    sslConfiguration,
+                    configuration,
+                    if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT)
+        }
+    }
 
     /**
      * Logs in to the target server and returns an active connection. The returned connection is a [java.io.Closeable]
@@ -169,7 +219,7 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?): CordaRPCConnection {
-        return CordaRPCConnection(rpcClient.start(CordaRPCOps::class.java, username, password, externalTrace, impersonatedActor))
+        return CordaRPCConnection(getRpcClient().start(CordaRPCOps::class.java, username, password, externalTrace, impersonatedActor))
     }
 
     /**

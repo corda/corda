@@ -3,6 +3,16 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import net.corda.demobench.ui.*?>
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
 <VBox visible="false" prefHeight="953.0" prefWidth="1363.0" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" styleClass="terminal-vbox">
     <HBox fx:id="header" disable="true" prefHeight="95.0" prefWidth="800.0" styleClass="header">
         <VBox prefHeight="66.0" HBox.hgrow="ALWAYS">

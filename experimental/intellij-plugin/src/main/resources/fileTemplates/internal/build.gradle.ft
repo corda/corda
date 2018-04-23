@@ -1,0 +1,162 @@
+buildscript {
+    ext.corda_release_version = '${CORDA_SDK_VERSION}'
+    ext.corda_gradle_plugins_version = '0.11.2'
+    ext.kotlin_version = '1.1.2'
+    ext.junit_version = '4.12'
+    ext.quasar_version = '0.7.6'
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "net.corda.plugins:publish-utils:$corda_gradle_plugins_version"
+        classpath "net.corda.plugins:cordformation:$corda_gradle_plugins_version"
+        classpath "net.corda.plugins:quasar-utils:$corda_gradle_plugins_version"
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'idea'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'maven-publish'
+
+group '${GROUP}'
+version '${VERSION}'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+    maven { url 'https://dl.bintray.com/kotlin/exposed' }
+    maven { url 'https://jitpack.io' }
+}
+
+sourceSets {
+    main {
+        resources {
+            srcDir "config/dev"
+        }
+    }
+    test {
+        resources {
+            srcDir "config/test"
+        }
+    }
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "junit:junit:$junit_version"
+
+    // Corda integration dependencies
+    compile "net.corda:core:$corda_release_version"
+    compile "net.corda:finance:$corda_release_version"
+    compile "net.corda:jackson:$corda_release_version"
+    compile "net.corda:node:$corda_release_version"
+    compile "net.corda:rpc:$corda_release_version"
+    compile "net.corda:webserver:$corda_release_version"
+    runtime "net.corda:corda:$corda_release_version"
+    runtime "net.corda:webserver:$corda_release_version"
+
+    testCompile "net.corda:test-utils:$corda_release_version"
+
+    // GraphStream: For visualisation (required by TemplateClientRPC app)
+    compile "org.graphstream:gs-core:1.3"
+    compile("org.graphstream:gs-ui:1.3") {
+        exclude group: "bouncycastle"
+    }
+
+    // CorDapp dependencies
+    // Specify your cordapp's dependencies below, including dependent cordapps
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions {
+        languageVersion = "1.1"
+        apiVersion = "1.1"
+        jvmTarget = "1.8"
+        javaParameters = true   // Useful for reflection.
+    }
+}
+
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    directory "./build/nodes"
+    networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK"
+    node {
+        name "CN=Controller,O=R3,OU=corda,L=London,C=UK"
+        advertisedServices = ["corda.notary.validating"]
+        p2pPort 10002
+        rpcPort 10003
+        cordapps = []
+    }
+    node {
+        name "CN=NodeA,O=NodeA,L=London,C=UK"
+        advertisedServices = []
+        p2pPort 10005
+        rpcPort 10006
+        webPort 10007
+        cordapps = []
+        rpcUsers = [[user: "user1", "password": "test", "permissions": []]]
+    }
+    node {
+        name "CN=NodeB,O=NodeB,L=New York,C=US"
+        advertisedServices = []
+        p2pPort 10008
+        rpcPort 10009
+        webPort 10010
+        cordapps = []
+        rpcUsers = [[user: "user1", "password": "test", "permissions": []]]
+    }
+    node {
+        name "CN=NodeC,O=NodeC,L=Paris,C=FR"
+        advertisedServices = []
+        p2pPort 10011
+        rpcPort 10012
+        webPort 10013
+        cordapps = []
+        rpcUsers = [[user: "user1", "password": "test", "permissions": []]]
+    }
+}
+
+// TODO: Make into gradle plugin without any references to Jython
+task installJythonDeps(dependsOn: ['build']) {
+    project.copy {
+        from project.configurations.runtime
+        into "build/jythonDeps"
+    }
+}
+
+installJythonDeps.shouldRunAfter build
+
+idea {
+    module {
+        downloadJavadoc = true // defaults to false
+        downloadSources = true
+    }
+}
+
+publishing {
+    publications {
+        jarAndSources(MavenPublication) {
+            from components.java
+            artifactId 'cordapp-name-goes-here'
+
+            artifact sourceJar
+            artifact javadocJar
+        }
+    }
+}
+
+task runTemplateClientRPC(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.template.client.TemplateClientRPCKt'
+    args 'localhost:10006'
+}

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<GridPane styleClass="flow-expanded" stylesheets="@../css/enterprise.css" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1">
+    <padding>
+        <Insets bottom="5" left="5" right="5" top="5" />
+    </padding>
+    <GridPane fx:id="flowInitiatorGrid" hgap="10.0" vgap="10.0" maxHeight="Infinity" maxWidth="Infinity" GridPane.fillWidth="true" GridPane.rowIndex="0">
+        <padding>
+            <Insets bottom="5.0" left="5.0" right="10.0" />
+        </padding>
+    </GridPane>
+    <VBox fx:id="flowResultVBox" spacing="10.0" maxHeight="Infinity" maxWidth="Infinity" GridPane.rowIndex="1" GridPane.fillWidth="true">
+        <padding>
+            <Insets bottom="5" left="5" right="5" top="5" />
+        </padding>
+    </VBox>
+    <columnConstraints>
+        <ColumnConstraints minWidth="450.0" />
+        <ColumnConstraints hgrow="ALWAYS" />
+    </columnConstraints>
+    <rowConstraints>
+        <RowConstraints vgrow="ALWAYS" />
+        <RowConstraints vgrow="ALWAYS" />
+    </rowConstraints>
+</GridPane>

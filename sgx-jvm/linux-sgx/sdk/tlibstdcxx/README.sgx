@@ -1,0 +1,22 @@
+Version: 5.2.1
+
+Changes:
+
+    * Move unsupported STL headers to stlport/deprecated folder
+    * Do not include ctime in stlport_prefix.h
+    * Inlude __Named_exception imple. in stlport static library 
+    * Fix warnings under MSVC and GCC, and most of them are issues of unused parameters
+    * Use sgx_read_rand for generating rand numbers
+    * Replace unique(...) in _algo.h with LLVM imple.
+    * Add no storage (zero-length) bitset in _bitset.h
+    * Disable features rely on I/O operations
+    * Disable wchar support
+    * Define _NOTHREADS, _STLP_NO_THREADS, _STLP_USE_NEWALLOC, _STLP_NO_EXTENSIONS by default
+    * Use Intel(R) Software Guard Extensions (Intel(R) SGX) C++ runtime library instead
+    * Disable unsupported data types and interfaces in _cstdio.h, _cstdlib.h, _ctime.h, _cwchar.h, etc.
+    * Add using _STLP_VENDOR_EXCEPT_STD::bad_alloc
+    * Let _STLP_THROW_BAD_ALLOC call _STLP_ABORT() directly, do not use puts() and exit(1)
+    * Do not use puts() in _STLP_THROW_MSG()
+    * Use Intel(R) SGX spinlock instead
+    * Add _sgx.h for Intel(R) SGX configurations
+    * Do not include Windows/Linux system headers directly

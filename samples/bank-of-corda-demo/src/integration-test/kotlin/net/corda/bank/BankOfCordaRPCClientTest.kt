@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.bank
 
 import net.corda.client.rpc.CordaRPCClient
@@ -12,16 +22,24 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.core.BOC_NAME
-import net.corda.testing.core.expect
-import net.corda.testing.core.expectEvents
-import net.corda.testing.core.sequence
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
+import org.junit.ClassRule
 import org.junit.Test
 
-class BankOfCordaRPCClientTest {
+class BankOfCordaRPCClientTest : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(BOC_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName(),
+                BIGCORP_NAME.organisation)
+    }
+
     @Test
     fun `issuer flow via RPC`() {
         val commonPermissions = setOf(

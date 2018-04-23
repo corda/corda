@@ -1,0 +1,901 @@
+#!/usr/bin/env bash
+
+# {{{ Environment
+
+# Locations
+version="0.1"
+file="${BASH_SOURCE[0]}"
+base_dir="$(cd "$(dirname "$file")/../.." && pwd)"
+repo_dir="$(cd "${base_dir}/.." && pwd)"
+repo_base="sgx-jvm"
+progname="$(basename "$file")"
+sx=${file}
+
+# Configuration variables
+VERBOSE=off
+FORCE=off
+TTY_MODE=on
+COLOUR_MODE=on
+TABSTOP=23
+
+# Build variables
+DEBUG_MODE=on
+TARGET_CONFIG=debug
+HARDWARE_MODE=off
+USE_NATIVE_LOGGING=off
+HSM_PROFILE=dev_sim
+
+# Runtime variables
+ISV_PORT=${PORT:-9080}
+HOST_PORT=${HOST_PORT:-8080}
+LINES=${LINES:-50}
+
+# Debug variables
+gdb_port=2000
+jdwp_port=5005
+
+# Docker environment
+docker_ip=$(ifconfig docker0 2> /dev/null | sed -n 's/^.*inet \([^ ]*\).*/\1/p')
+if [ -z "$docker_ip" ]; then
+    docker_ip="192.168.65.1"
+fi
+
+# }}} Environment
+
+# {{{ Logging
+
+# {{{ Colours and Formatting
+
+update_colours() {
+    if test -t 1; then
+        local ncolours=$(tput colors)
+        if test -n "$ncolours" && test $ncolours -ge 8; then
+            TABSTOP=34
+            bold="$(tput bold)"
+            underline="$(tput smul)"
+            standout="$(tput smso)"
+            normal="$(tput sgr0)"
+            black="$(tput setaf 0)"
+            red="$(tput setaf 1)"
+            green="$(tput setaf 2)"
+            yellow="$(tput setaf 3)"
+            blue="$(tput setaf 4)"
+            magenta="$(tput setaf 5)"
+            cyan="$(tput setaf 6)"
+            white="$(tput setaf 7)"
+        fi
+    fi
+    if [ "$COLOUR_MODE" == "off" ]; then
+            TABSTOP=23
+            bold=""
+            underline=""
+            standout=""
+            normal=""
+            black=""
+            red=""
+            green=""
+            yellow=""
+            blue=""
+            magenta=""
+            cyan=""
+            white=""
+    fi
+}
+update_colours
+
+p_value() {
+    local key="$1"
+    shift 1
+    echo -e "  ${yellow}${key}${normal}\t$@" | expand -t${TABSTOP}
+}
+
+p_value_verbose() {
+    if [ "${VERBOSE}" == "on" ]; then
+        local key="$1"
+        shift 1
+        p_value "$key" "$@"
+    fi
+}
+
+nl_verbose() {
+    if [ "${VERBOSE}" == "on" ]; then
+        echo
+    fi
+}
+
+# }}} Colours and Formatting
+
+verbose() {
+    if [ "$VERBOSE" == "on" ]; then
+        info "$@"
+    fi
+}
+
+info() {
+    echo -e "${blue}$(date +'%H:%M:%S') ${yellow}info:${normal} $@"
+}
+
+warn() {
+    echo -e "${blue}$(date +'%H:%M:%S') ${red}warn:${normal} $@" > /dev/stderr
+}
+
+error() {
+    echo -e "${blue}$(date +'%H:%M:%S') ${red}error:${normal} $@" > /dev/stderr
+    exit 1
+}
+
+# }}} Logging
+
+# {{{ Utilities
+trim() {
+    sed 's/^[ ]*//' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/ /g'
+}
+
+browse() {
+    local url="$1"
+    for b in "${BROWSER}" firefox chromium chrome opera open ; do
+        if [ ! -z "$(which $b)" ]; then
+            $b "${url}" 2>&1 > /dev/null &
+            exit
+        fi
+    done
+    warn "unable to find preferred browser"
+    echo "report location: $url"
+}
+# }}} Utilities
+
+# {{{ Auto-Completion
+print_autocompletion() {
+cat<<EOF
+_sx()
+{
+    local cur="\${COMP_WORDS[COMP_CWORD]}"
+    local prev="\${COMP_WORDS[@]:0:COMP_CWORD}"
+    COMPREPLY=(\$(compgen -W "\$(sx shell commands "\$prev")" -- \$cur))
+}
+complete -F _sx sx
+EOF
+}
+
+filter_commands() {
+    local category="$(echo " $@ " | sed 's/ -[A-Za-z]\+ //g' | trim)"
+    if [ "${category}" == "sx" ]; then
+        category="root"
+    fi
+    if [[ "${category}" =~ " exec" ]] || [[ "${category}" =~ "containers build" ]]; then
+        docker images sgx-ra-* | sed '1d' | cut -d' ' -f1 | sed 's/sgx-ra-//'
+    else
+        if [ "${category}" != "root" ]; then
+            category="$(echo "${category}" | sed 's/^.* \([^ ]*\)$/\1/')"
+        fi
+        sed -n "s/^[ ]*\([a-z-]*\)) # ${category}: .*$/\1/p" "${file}" | sort | uniq
+    fi
+}
+# }}} Auto-Completion
+
+# {{{ Options
+options() {
+    while getopts ":dDcCtTfvhHrpsSlP" opt; do
+        case $opt in
+            d) # (option): debug = on | off (-D)
+                TARGET_CONFIG=debug
+                DEBUG_MODE=on
+                ;;
+            D)
+                DEBUG_MODE=off
+                ;;
+            c) # (option): colours = on | off (-C)
+                COLOUR_MODE=on
+                update_colours
+                ;;
+            C)
+                COLOUR_MODE=off
+                update_colours
+                ;;
+            t) # (option): tty = on | off (-T)
+                TTY_MODE=on
+                ;;
+            T)
+                TTY_MODE=off
+                ;;
+            f) # (option): force operation
+                FORCE=on
+                ;;
+            v) # (option): verbose output
+                VERBOSE=on
+                ;;
+            h) # (option): hardware = on | off (-s)
+                HARDWARE_MODE=on
+                ;;
+            s)
+                HARDWARE_MODE=off
+                ;;
+            r) # (option): target = release | pre-release (-p)
+                TARGET_CONFIG=release
+                DEBUG_MODE=off
+                ;;
+            p)
+                TARGET_CONFIG=pre-release
+                ;;
+            s) # (option): hsm profile = simulator | development hsm (-S) | production (-P)
+                HSM_PROFILE=dev_sim
+                ;;
+            S)
+                HSM_PROFILE=dev_hsm
+                ;;
+            l)
+                USE_NATIVE_LOGGING=on
+                ;;
+            P)
+                HSM_PROFILE=prod
+                ;;
+            :)
+                error "option -${OPTARG} requires an argument"
+                ;;
+            \?)
+                error "invalid option: -${OPTARG}"
+                ;;
+        esac
+    done
+}
+# }}}
+
+# {{{ Print Commands and Usage
+print_commands() {
+    echo -e "${magenta}<command>${normal}"
+    local category=$1
+    local options=$2
+    sed -n "s/^[ ]*\([a-z-]*\)) # ${category}: \(.*\)$/  ${blue}\1${normal}	\2/p" \
+        "${file}" | sed "/	hidden/d" | expand -t ${TABSTOP} | sort
+    echo
+
+    if [ "$options" != "NONE" ]; then
+        echo -e "${magenta}<options>${normal}"
+        sed -n "s/^[ ]*\([A-Za-z-]*\)) # (option): \(.*\)$/  ${blue}-\1${normal}	\2/p" \
+            "${file}" | expand -t ${TABSTOP} | sort | grep $options
+        echo
+    fi
+
+    echo -e "${green}<variables>${normal}"
+    echo -e "  ${blue}LINES${normal}\tnumber of lines to return from the end of the log files (default 50)" \
+        | expand -t ${TABSTOP}
+    echo -e "  ${blue}PORT${normal}\tport number used for connecting to the ISV (default 9080)" \
+        | expand -t ${TABSTOP}
+    echo
+
+    exit 1
+}
+
+print_usage() {
+    local category=$1
+    local options=$2
+    echo -n -e "${bold}usage:${normal} ${green}<variables>${normal} ${progname} "
+    if [ "$category" != "root" ]; then
+        echo -n -e "${bold}${category}${normal} "
+    fi
+    echo -e "${magenta}<command> <options>${normal}"
+    echo
+    print_commands $category $options
+}
+# }}} Print Commands and Usage
+
+# {{{ Container Utilities
+in_container() {
+    local container="${1:-core}"
+    local CODE=$(pwd | sed 's/enterprise\/sgx-jvm.*$/enterprise/')
+    local tty=""
+    shift 1
+    mkdir -p ${HOME}/.container
+    echo 'export PS1="$ "' > ${HOME}/.container/.bashrc
+
+    if [ "${TTY_MODE}" == "on" ]; then
+        tty="-t"
+    fi
+
+    local privileged=""
+    local isgx_device=""
+    local mei0_device=""
+    local ports=""
+    local aesm_socket=""
+    privileged="--privileged"
+    if [ -e "/dev/isgx" ]; then
+        isgx_device="--device /dev/isgx"
+        if [ -e "/dev/mei0" ]; then
+            mei0_device="--device /dev/mei0"
+        fi
+    fi
+    ports="-p ${gdb_port}:${gdb_port} -p ${jdwp_port}:${jdwp_port} -p ${HOST_PORT}:${HOST_PORT}"
+    local sock="/var/run/aesmd/aesm.socket"
+    if [ -e "${sock}" ]; then
+        aesm_socket="-v ${sock}:${sock}"
+    fi
+
+    [ -z "$(docker images -q sgx-ra-${container})" ] && \
+        error "cannot find container image with name ${magenta}sgx-ra-${container}${normal}"
+
+    local c=$(docker images sgx-ra-${container} | tail -n1 | tr -s ' ()' '\t')
+    local container_name=$(echo "${c}" | cut -f 1)
+    local container_tag=$(echo "${c}" | cut -f 2)
+    local container_hash=$(echo "${c}" | cut -f 3)
+
+    verbose "running command in container"
+    nl_verbose
+
+    p_value_verbose "container image" "${container_name}:${container_tag} (${container_hash})"
+    p_value_verbose "network" "${docker_ip}"
+
+    if [ ! -z "${ports}" ]; then
+        p_value_verbose "ports" "${gdb_port}, ${jdwp_port}"
+    fi
+
+    if [ ! -z "$(echo "$@")" ]; then
+        p_value_verbose "command" "$@"
+    fi
+
+    if [ ! -z "${isgx_device}" ]; then
+        p_value_verbose "devices" "${isgx_device} ${mei0_device}"
+    fi
+
+    nl_verbose
+
+    docker run --rm -i ${tty} \
+        ${privileged} \
+        --network host \
+        --add-host="localhost:${docker_ip}" \
+        -v ${CODE}:/code \
+        -v ${HOME}/.container:/home \
+        -v ${HOME}/.container/sgx:/sgx \
+        -e "PORT=${ISV_PORT}" \
+        -u `id -u`:`id -g` \
+        ${ports} \
+        ${isgx_device} \
+        ${mei0_device} \
+        ${aesm_socket} \
+        sgx-ra-${container} "$@"
+
+    nl_verbose
+    verbose "execution completed"
+    echo
+}
+
+container_make() {
+    local dir="$1"
+    shift 1
+    TTY_MODE=no
+    in_container core make -C ${repo_base}/${dir} "$@"
+}
+# }}} Container Utilities
+
+# {{{ Debug Utilities
+debug_server() {
+    local docker_process=$(docker ps | grep sgx-ra-core | cut -d' ' -f1)
+    if [ -z "$docker_process" ]; then
+        error "no debuggable processes running"
+    fi
+
+    local process=$(docker exec -it "$docker_process" pidof java | cut -d' ' -f1)
+
+    nohup docker exec -t "$docker_process" \
+        gdbserver --attach localhost:2000 "$process" 2>&1 > /dev/null &
+}
+# }}} Debug Utilities
+
+# {{{ Command: Build
+cmd_build() {
+    if [ "${1:0:1}" == "-" ]; then
+        options "$@"
+        shift 1
+    fi
+    local dir="${1:-.}"
+    shift 1
+    info "building ${dir} $@"
+    local vars=""
+    if [ "${HARDWARE_MODE}" == "on" ]; then
+        p_value_verbose "mode" "hardware"
+        vars="${vars} SGX_USE_HARDWARE=TRUE"
+    else
+        p_value_verbose "mode" "simulation"
+        vars="${vars} SGX_USE_HARDWARE=FALSE"
+    fi
+    if [ "${DEBUG_MODE}" == "on" ]; then
+        p_value_verbose "debug" "on"
+        vars="${vars} SGX_DEBUG_MODE=TRUE"
+    else
+        p_value_verbose "debug" "off"
+        vars="${vars} SGX_DEBUG_MODE=FALSE"
+    fi
+    if [ "${TARGET_CONFIG}" == "release" ]; then
+        p_value_verbose "configuration" "release"
+        vars="${vars} SGX_IS_PRERELEASE=FALSE SGX_DEBUG_MODE=FALSE"
+    elif [ "${TARGET_CONFIG}" == "pre-release" ]; then
+        p_value_verbose "configuration" "pre-release"
+        vars="${vars} SGX_IS_PRERELEASE=TRUE"
+    elif [ "${DEBUG_MODE}" == "on" ]; then
+        p_value_verbose "configuration" "debug"
+        vars="${vars} SGX_IS_PRERELEASE=FALSE SGX_DEBUG_MODE=TRUE"
+    else
+        p_value_verbose "configuration" "release"
+        vars="${vars} SGX_IS_PRERELEASE=FALSE SGX_DEBUG_MODE=FALSE"
+    fi
+    if [ "${USE_NATIVE_LOGGING}" == "on" ]; then
+        p_value_verbose "logging" "on"
+        vars="${vars} LOGGING=TRUE"
+    else
+        p_value_verbose "logging" "off"
+    fi
+    if [ "${HSM_PROFILE}" == "prod" ]; then
+        p_value_verbose "hsm profile" "production"
+    elif [ "${HSM_PROFILE}" == "dev_hsm" ]; then
+        p_value_verbose "hsm profile" "development hsm"
+    else
+        p_value_verbose "hsm profile" "simulator"
+    fi
+    vars="${vars} HSM_PROFILE=${HSM_PROFILE}"
+    echo
+    container_make ${dir} ${vars} "$@"
+    echo
+}
+# }}} Command: Build
+
+# {{{ Command: Containers
+build_container() {
+    local build_targets="$1"
+    local target="$2"
+    local make_target="$3"
+    if [[ " ${build_targets} " =~ " ${target} " ]]; then
+        if [ "$FORCE" == "on" ]; then
+            ${sx} containers remove ${target}
+        fi
+
+        local images=$(docker images | grep sgx-ra-)
+        if [ ! -z "${images}" ]; then
+            exit 0
+        fi
+
+        info "building container ${blue}${target}${normal} using target ${magenta}${make_target}${normal} ..."
+        echo
+        make -C "${base_dir}/containers/${target}" ${make_target}
+        echo
+    fi
+
+}
+
+cmd_containers() {
+    local command=$1
+    shift 1
+
+    local build_targets="$(echo " $@ " | sed 's/ -[A-Za-z]\+ //g' | trim)"
+    if [ -z "${build_targets}" ]; then
+        build_targets="core"
+    fi
+
+    case $command in
+        build) # containers: create containers for build and testing
+            options "$@"
+            verbose "building targets: ${build_targets} ..."
+            build_container "${build_targets}" "core" "container"
+            ;;
+
+        install-sdk) # containers: install the sgx sdk for containers
+            options "$@"
+            verbose "installing sgx sdk in container ${build_targets} ..."
+            build_container "${build_targets}" "core" "sgxsdk"
+            ;;
+
+        exec) # containers: run command in container (<image> <command>)
+            if [ "${1:0:1}" == "-" ]; then
+                options "$@"
+                shift 1
+            fi
+            local container="${1:-core}"
+            shift 1
+            in_container "${container}" "$@"
+            ;;
+
+        running) # containers: show list of running containers
+            options "$@"
+            verbose "list of running containers related to this project"
+            docker ps -a | sed -n -e '1p' -e '/sgx-ra-*/p'
+            ;;
+
+        list) # containers: show list of available images
+            options "$@"
+            verbose "list of available images related to this project"
+            docker images sgx-ra-*
+            ;;
+
+        clean) # containers: stop and remove all containers
+            info "stopping containers ..."
+            [ ! -z "$(docker ps -aq)" ] && \
+                docker ps -aq | xargs docker rm
+            ;;
+
+        remove) # containers: delete images related to this project (<filter>)
+            local image="$1"
+            if [ -z "${image}" -o "${image:0:1}" == "-" ]; then
+                error "no filter specified"
+            else
+                shift 1
+            fi
+            options "$@"
+            if [ "$FORCE" == "on" ]; then
+                ${sx} containers clean
+            fi
+            local image_pattern="sgx-ra-${image}*"
+            info "removing images matching: ${image_pattern} ..."
+            [ ! -z "$(docker images -q ${image_pattern})" ] && \
+                docker images -q ${image_pattern} | xargs docker rmi -f
+            ;;
+
+        prune) # containers: prune system; stop containers and delete images
+            docker system prune -af
+            ;;
+
+        clear-cache) # containers: clear cached home directory for containers
+            info "deleting files in directory: ${HOME}/.container/"
+            rm -rf ${HOME}/.container/
+            ;;
+
+        *)
+            options "$@"
+            print_usage "containers" "\(-f\|-v\)"
+            ;;
+    esac
+}
+# }}} Command: Containers
+
+# {{{ Command: Debug
+
+# {{{ GDB Config
+write_gdb_config() {
+code_dir=${1:-/code}
+sgx_dir=${2:-/sgx}
+cat<<EOF
+set pagination off
+set breakpoint pending on
+handle SIGSEGV noprint nostop
+set print thread-events off
+dir ${code_dir}/${repo_base}:${code_dir}/sgx-jvm/linux-sgx/sdk/tkey_exchange:${code_dir}/sgx-jvm/linux-sgx/sdk/ukey_exchange:${sgx_dir}/sgxsdk/lib64/gdb-sgx-plugin:\$cdir:\$cwd
+EOF
+}
+# }}} GDB Config
+
+# {{{ VS Code Config
+write_vscode_config() {
+code_dir=${1:-/code}
+sgx_dir=${2:-~/.container/sgx}
+cat<<EOF
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Attach Remote",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "java",
+            "miDebuggerServerAddress": "localhost:2000",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "\${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "${sgx_dir}/sgxsdk/bin/sgx-gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}
+EOF
+}
+# }}} VS Code Config
+
+cmd_debug() {
+    local command="$1"
+    shift 1
+
+    case $command in
+        config-defaults) # debug: create configuration files for host and containers
+            info "generating configuration file for gdb"
+            mkdir -p ~/.container
+            write_gdb_config "/code" "/sgx" > ${HOME}/.container/.gdbinit
+            write_gdb_config "${repo_dir}" "${HOME}/.container/sgx" > ${HOME}/.gdbinit
+            info "generating launch configuration for vs code"
+            mkdir -p "${repo_dir}/${repo_base}/.vscode"
+            write_vscode_config "${repo_dir}" "${HOME}/.container/sgx" > "${repo_dir}/${repo_base}/.vscode/launch.json"
+            ;;
+
+        server) # debug: start debug server in container and attach to running java process
+            debug_server
+            ;;
+
+        attach) # debug: attach debugger to remote target in container
+            options "$@"
+            info "attaching debugger to $docker_ip:$gdb_port ..."
+            local gdb_exec="gdb"
+            if [ "${FORCE}" == "on" ]; then
+                gdb_exec="gdb_"
+            fi
+            if [ ! -z "$(which ${gdb_exec})" ]; then
+                verbose "using native installation of gdb"
+                gdb -q \
+                    -ex "target remote $docker_ip:$gdb_port"
+            else
+                verbose "using containerised installation of gdb"
+                ${sx} containers exec core gdb -q \
+                    -ex "target remote $docker_ip:$gdb_port"
+            fi
+            ;;
+
+        *)
+            options "$@"
+            print_usage "debug" "NONE"
+            ;;
+    esac
+}
+# }}} Command: Debug
+
+# {{{ Command: HSM
+cmd_hsm() {
+    local command="$1"
+    shift 1
+
+    case $command in
+        start-simulator) # hsm: start hsm simulator (<hsm directory>)
+            local UTIMACO_HSM_DIR=$1
+            local TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            local SIMULATOR_RUN_DIR=${base_dir}/log/hsm_simulator/$TIMESTAMP
+            mkdir -p $SIMULATOR_RUN_DIR
+            bash -c $UTIMACO_HSM_DIR/SDK/Linux/bin/cs_sim.sh \
+                -f $SIMULATOR_RUN_DIR/stdout > /dev/null &
+            ;;
+
+        stop-simulator) # hsm: stop hsm simulator
+            local jobs=$(ps -o pid,args | \
+                grep cs_sim | \
+                grep -v grep | \
+                cut -d' ' -f 1)
+            if [ ! -z "${jobs}" ]; then
+                kill ${jobs}
+            fi
+            ;;
+
+        *)
+            options "$@"
+            print_usage "hsm" "NONE"
+            ;;
+    esac
+}
+# }}} Command: HSM
+
+# {{{ Command: Reports
+
+cmd_reports() {
+    local command="$1"
+    shift 1
+
+    case $command in
+        unit-tests) # reports: open test report for unit test suite
+            find "${repo_dir}/${repo_base}" \
+                -path "*/build/reports/tests/test/index.html" \
+                -exec browse {} \;
+            ;;
+
+        integration-tests) # reports: open test report for integration tests
+            find "${repo_dir}/${repo_base}" \
+                -path "*/build/reports/tests/integrationTest/index.html" \
+                -exec browse {} \;
+            ;;
+
+        *)
+            options "$@"
+            print_usage "reports" "NONE"
+            ;;
+    esac
+}
+
+# }}} Command: Reports
+
+# {{{ Command: Shell
+cmd_shell() {
+    local command="$1"
+    shift 1
+
+    case $command in
+        commands) # shell: list available commands
+            filter_commands "$@"
+            ;;
+
+        auto-completion) # shell: print configuration for shell auto-completion
+            print_autocompletion
+            ;;
+
+        info) # shell: show configuration based on passed options
+            options "$@"
+            p_value "version" "${version}"
+            p_value "script directory" "${base_dir}"
+            p_value "repository directory" "${repo_dir}"
+            p_value "repository base" "${repo_base}"
+            p_value "debug mode" "${DEBUG_MODE}"
+            p_value "tty mode" "${TTY_MODE}"
+            p_value "verbose mode" "${VERBOSE}"
+            p_value "hardware mode" "${HARDWARE_MODE}"
+            p_value "target configuration" "${TARGET_CONFIG}"
+            p_value "c/native debug port" "${gdb_port}"
+            p_value "java debug port" "${jdwp_port}"
+            p_value "docker ip address" "${docker_ip}"
+            exit
+            ;;
+
+        *)
+            options "$@"
+            print_usage "shell" "NONE"
+            ;;
+    esac
+}
+# }}} Command: Shell
+
+# {{{ Command: Tags
+ctags_config() {
+cat<<EOF
+--langdef=kotlin
+--langmap=kotlin:.kt
+--regex-kotlin=/^[ \t]*((abstract|final|sealed|implicit|lazy)[ \t]*)*(private[^ ]*|protected)?[ \t]*class[ \t]+([a-zA-Z0-9_]+)/\4/c,classes/
+--regex-kotlin=/^[ \t]*((abstract|final|sealed|implicit|lazy)[ \t]*)*(private[^ ]*|protected)?[ \t]*object[ \t]+([a-zA-Z0-9_]+)/\4/o,objects/
+--regex-kotlin=/^[ \t]*((abstract|final|sealed|implicit|lazy)[ \t]*)*(private[^ ]*|protected)?[ \t]*((abstract|final|sealed|implicit|lazy)[ \t]*)*data class[ \t]+([a-zA-Z0-9_]+)/\6/c,data classes/
+--regex-kotlin=/^[ \t]*((abstract|final|sealed|implicit|lazy)[ \t]*)*(private[^ ]*|protected)?[ \t]*enum class[ \t]+([a-zA-Z0-9_]+)/\4/c,enum classes/
+--regex-kotlin=/^[ \t]*((abstract|final|sealed|implicit|lazy)[ \t]*)*(private[^ ]*|protected)?[ \t]*interface[ \t]+([a-zA-Z0-9_]+)/\4/i,interfaces/
+--regex-kotlin=/^[ \t]*type[ \t]+([a-zA-Z0-9_]+)/\1/T,types/
+--regex-kotlin=/^[ \t]*((abstract|final|sealed|implicit|lazy|private[^ ]*(\[[a-z]*\])*|protected)[ \t]*)*fun[ \t]+([a-zA-Z0-9_]+)/\4/m,methods/
+--regex-kotlin=/^[ \t]*((abstract|final|sealed|implicit|lazy|private[^ ]*|protected)[ \t]*)*val[ \t]+([a-zA-Z0-9_]+)/\3/co,constants/
+--regex-kotlin=/^[ \t]*((abstract|final|sealed|implicit|lazy|private[^ ]*|protected)[ \t]*)*var[ \t]+([a-zA-Z0-9_]+)/\3/va,variables/
+--regex-kotlin=/^[ \t]*package[ \t]+([a-zA-Z0-9_.]+)/\1/p,packages/
+--regex-kotlin=/^[ \t]*import[ \t]+([a-zA-Z0-9_.]+)/\1/p,imports/
+
+--recurse=yes
+--extra=+f
+--exclude=.git
+--exclude=bin
+--exclude=obj
+--exclude=build
+--languages=java,kotlin,c,c++
+--tag-relative=yes
+EOF
+}
+
+ctags_cmd() {
+cat<<EOF
+#!/usr/bin/env bash
+cd /code/${repo_base}
+ctags \
+    --options=/root/.ctags.config \
+    -o /code/${repo_base}/tags \
+    \$@
+EOF
+}
+
+generate_tags() {
+    ctags_config > ${HOME}/.container/.ctags.config
+    ctags_cmd > ${HOME}/.container/.ctags.cmd
+    ${sx} containers exec core bash /root/.ctags.cmd "$@"
+}
+
+cmd_tags() {
+    local command="$1"
+    shift 1
+
+    case $command in
+        full) # tags: generate tags for remote attestation project (<project> and linux sgx sdk)
+            if [ -z "$1" ]; then
+                error "project not provided"
+            fi
+            generate_tags "$1" \
+                ./linux-sgx/common \
+                ./linux-sgx/psw \
+                ./linux-sgx/sdk
+            ;;
+
+        lean) # tags: generate tags for remote attestation project (<project>)
+            if [ -z "$1" ]; then
+                error "project not provided"
+            fi
+            generate_tags "$1"
+            ;;
+
+        clean) # tags: remove generated tags file
+            rm -f ${repo_dir}/${repo_base}/tags
+            ;;
+
+        *)
+            options "$@"
+            print_usage "tags" "NONE"
+            ;;
+    esac
+}
+# }}} Command: Tags
+
+# {{{ Command
+
+docker_path=$(which docker)
+if [ -z "$docker_path" ]; then
+    error "cannot find an active docker installation; please install"
+fi
+
+command=$1
+shift 1
+
+case $command in
+
+    build) # root: build project in container (<directory> <arguments>)
+        cmd_build "$@"
+        ;;
+
+    containers) # root: actions related to containers
+        cmd_containers "$@"
+        ;;
+
+    debug) # root: actions related to debugging
+        cmd_debug "$@"
+        ;;
+
+    exec) # root: shorthand for `containers exec core`
+        ${sx} containers exec core "$@"
+        ;;
+
+    hsm) # root: actions related to the hsm simulator
+        cmd_hsm "$@"
+        ;;
+
+    logs) # root: tail application logs
+        options "$@"
+        follow=""
+        if [ "${FORCE}" == "on" ]; then
+            follow="-f"
+        fi
+        find "${repo_dir}/${repo_base}" -type f \
+            \( \
+                -iname '*.log' -a \
+                ! -iname '*build*' -a \
+                ! -iname '*config*' -a \
+                ! -iname '*cmake*' \
+            \)
+            -exec tail -v ${follow} -n ${LINES} {} \; 2> /dev/null
+        ;;
+
+    reports) # root: actions related to reports
+        cmd_reports "$@"
+        ;;
+
+    shell) # root: show information about shell commands
+        cmd_shell "$@"
+        ;;
+
+    tags) # root: actions related to tag databases
+        cmd_tags "$@"
+        ;;
+
+    get-started) # root: build containers and key components
+        ${sx} containers build
+        ${sx} containers install-sdk
+        ${sx} debug config-defaults
+        ;;
+
+    help) # root: show help information
+        options "$@"
+        print_usage "root" "."
+        ;;
+
+    *)
+        if [ -z "${command}" ]; then
+            print_usage "root" "."
+        fi
+        error "invalid command ${blue}${command}${normal}, " \
+            "run ${magenta}sx help${normal} for a list of available commands"
+        ;;
+esac
+# }}} Command

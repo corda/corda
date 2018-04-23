@@ -41,8 +41,54 @@ The Participant nodes are only able to spend cash (eg. move cash).
    * Bob -> 20014
 
 Explorer login credentials to the Issuer nodes are defaulted to ``manager`` and ``test``.
-Explorer login credentials to the Participants nodes are defaulted to ``user1`` and ``test``.
+Explorer login credentials to the Participant nodes are defaulted to ``user1`` and ``test``.
 Please note you are not allowed to login to the notary.
+
+## Running Simulation Nodes
+
+Building on the demonstration Corda network topology described above, simulation mode performs continuous
+issue, move and exit cash operations across all participant nodes.
+
+**Windows:**
+
+    gradlew.bat tools:explorer:runSimulationNodes
+
+**Other:**
+
+    ./gradlew tools:explorer:runSimulationNodes
+
+## Running Flow Triage scenario
+
+Once again, building on the demonstration Corda network topology described above, this scenario mode triggers 
+an exception within a flow which can then be visualized using the "Flow Triage" panel within the Explorer.
+The "Flow Triage" panel will be enhanced in the future to enable operators to take corrective actions upon flow failures 
+(eg. retry, terminate, amend and replay)
+
+**Windows:**
+
+    gradlew.bat tools:explorer:runFlowTriageNodes
+
+**Other:**
+
+    ./gradlew tools:explorer:runFlowTriageNodes
+
+## Business Network reference implementation
+
+An additional "IOU" panel is now visible in the main Explorer dashboard to demonstrate the new Business Networks concept using a sample IOU product.
+
+Business Networks are introduced in order to segregate Corda Nodes that do not need to transact with each other or indeed even know of each others existence.
+
+Whenever an IOU transaction is entered, membership checks are performed to ensure that participants are included in the same
+Business Network.
+Upon startup both "Alice" and "Bob" are configured to be part of the same Business Network and therefore can transact with each other. 
+The transactions panel been also extended to be able to display details of the IOU transactions.
+
+Use the following Business Network configuration file to define what participants are included within its membership:
+`samples\business-network-demo\build\resources\main\net\corda\sample\businessnetwork\membership\internal\AliceBobMembershipList.csv`
+could be modified (no restart necessary) and then IOU transaction will no longer be possible between "Alice" and "Bob".
+
+Please note Business Networks functionality only applies to the same IOU CorDapp, Cash payments CorDapp will allow transactions between
+"Alice" and "Bob" at all times.
 
 ## TODOs:
 - Shows more useful information in the dashboard.

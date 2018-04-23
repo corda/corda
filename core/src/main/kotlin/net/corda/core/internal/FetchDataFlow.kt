@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
@@ -17,6 +27,7 @@ import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.unwrap
 import java.util.*
 
@@ -72,7 +83,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
         return if (toFetch.isEmpty()) {
             Result(fromDisk, emptyList())
         } else {
-            logger.info("Requesting ${toFetch.size} dependency(s) for verification from ${otherSideSession.counterparty.name}")
+            logger.debug { "Requesting ${toFetch.size} dependency(s) for verification from ${otherSideSession.counterparty.name}" }
 
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
             // We can then switch to requesting items in large batches to minimise the latency penalty.
@@ -89,7 +100,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             }
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
             val downloaded = validateFetchResponse(UntrustworthyData(maybeItems), toFetch)
-            logger.info("Fetched ${downloaded.size} elements from ${otherSideSession.counterparty.name}")
+            logger.debug { "Fetched ${downloaded.size} elements from ${otherSideSession.counterparty.name}" }
             maybeWriteToDisk(downloaded)
             Result(fromDisk, downloaded)
         }

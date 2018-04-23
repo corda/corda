@@ -37,6 +37,8 @@ object MessageSchemaV1 : MappedSchema(
         version = 1,
         mappedTypes = listOf(PersistentMessage::class.java)) {
 
+    override val migrationResource = "message-schema.changelog-init"
+
     @Entity
     @Table(name = "messages")
     class PersistentMessage(

@@ -64,12 +64,19 @@ absolute path to the node's base directory.
 
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
-:database: Database configuration:
+.. _database_properties_ref:
 
-        :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
-        :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
+:database:  This section is used to configure JDBC and Hibernate related properties:
+
+    :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
             ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
-        :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
+
+    :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
+
+    :runMigration: Boolean on whether to run the database migration scripts. Defaults to true.
+
+    :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
+                 (the value is passed to Hibernate property 'hibernate.default_schema').
 
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
@@ -167,6 +174,17 @@ absolute path to the node's base directory.
 
     :port: The port to start SSH server on
 
+:relay: If provided, the node will attempt to tunnel inbound connections via an external relay. The relay's address will be
+    advertised to the network map service instead of the provided ``p2pAddress``.
+
+        :relayHost: Hostname of the relay machine
+        :remoteInboundPort: A port on the relay machine that accepts incoming TCP connections. Traffic will be forwarded
+            from this port to the local port specified in ``p2pAddress``.
+        :username: Username for establishing a SSH connection with the relay.
+        :privateKeyFile: Path to the private key file for SSH authentication. The private key must not have a passphrase.
+        :publicKeyFile: Path to the public key file for SSH authentication.
+        :sshPort: Port to be used for SSH connection, default ``22``.
+
 :jmxMonitoringHttpPort: If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
     Default Jolokia access url is http://127.0.0.1:port/jolokia/
 
@@ -179,7 +197,14 @@ absolute path to the node's base directory.
 :attachmentCacheBound: Optionally specify how many attachments should be cached locally. Note that this includes only the key and
             metadata, the content is cached separately and can be loaded lazily. Defaults to 1024.
 
+:graphiteOptions: Optionally export metrics to a graphite server. When specified, the node will push out all JMX
+                metrics to the specified Graphite server at regular intervals.
 
+            :server: Server name or ip address of the graphite instance.
+            :port: Port the graphite instance is listening at.
+            :prefix: Optional prefix string to identify metrics from this node, will default to a string made up
+                    from Organisation Name and ip address.
+            :sampleIntervallSeconds: optional wait time between pushing metrics. This will default to 60 seconds.
 Examples
 --------
 

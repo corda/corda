@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
@@ -63,7 +73,7 @@ class NodeVaultService(
         val updatesPublisher: rx.Observer<Vault.Update<ContractState>> get() = _updatesPublisher.bufferUntilDatabaseCommit().tee(_rawUpdatesPublisher)
     }
 
-    private val mutex = ThreadBox(InnerState())
+    private val concurrentBox = ConcurrentBox(InnerState())
 
     private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
         if (!update.isEmpty()) {
@@ -101,10 +111,10 @@ class NodeVaultService(
     }
 
     override val rawUpdates: Observable<Vault.Update<ContractState>>
-        get() = mutex.locked { _rawUpdatesPublisher }
+        get() = concurrentBox.content._rawUpdatesPublisher
 
     override val updates: Observable<Vault.Update<ContractState>>
-        get() = mutex.locked { _updatesInDbTx }
+        get() = concurrentBox.content._updatesInDbTx
 
     /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
     override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
@@ -196,10 +206,18 @@ class NodeVaultService(
         val netUpdate = updates.reduce { update1, update2 -> update1 + update2 }
         if (!netUpdate.isEmpty()) {
             recordUpdate(netUpdate)
-            mutex.locked {
-                // flowId required by SoftLockManager to perform auto-registration of soft locks for new states
+            concurrentBox.concurrent {
+                // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
                 val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
+                if (uuid != null) {
+                    val fungible = netUpdate.produced.filter { it.state.data is FungibleAsset<*> }
+                    if (fungible.isNotEmpty()) {
+                        val stateRefs = fungible.map { it.ref }.toNonEmptySet()
+                        log.trace { "Reserving soft locks for flow id $uuid and states $stateRefs" }
+                        softLockReserve(uuid, stateRefs)
+                    }
+                }
                 updatesPublisher.onNext(vaultUpdate)
             }
         }
@@ -378,7 +396,7 @@ class NodeVaultService(
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
-        log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
+        log.debug {"Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting" }
         // calculate total results where a page specification has been defined
         var totalStates = -1L
         if (!paging.isDefault) {
@@ -410,7 +428,7 @@ class NodeVaultService(
                 if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
             }
 
-            query.firstResult = (paging.pageNumber - 1) * paging.pageSize
+            query.firstResult = if (paging.pageNumber > 0) (paging.pageNumber - 1) * paging.pageSize else 0 //some DB don't allow a negative value in SELECT TOP query
             query.maxResults = paging.pageSize + 1  // detection too many results
 
             // execution
@@ -459,7 +477,7 @@ class NodeVaultService(
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return mutex.locked {
+        return concurrentBox.exclusive {
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
             val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) })
             DataFeed(snapshotResults, updates)

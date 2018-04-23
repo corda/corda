@@ -1,0 +1,14 @@
+package ${PACKAGE_NAME}.state
+
+import ${PACKAGE_NAME}.contract.${PROJECT_NAME}Contract
+import net.corda.core.contracts.ContractState
+import net.corda.core.identity.AbstractParty
+
+/**
+ * Define your state object here.
+ */
+class ${PROJECT_NAME}State(override val contract: ${PROJECT_NAME}Contract): ContractState {
+    /** The public keys of the involved parties. */
+    override val participants: List<AbstractParty>
+        get() = listOf()
+}

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: doorman
+  labels:
+    app: doorman
+spec:
+  imagePullSecrets:
+  - name: regsecret 
+  containers:
+  - name: doorman
+    image: {{ image }}
+    imagePullPolicy: Always
+    volumeMounts:
+      - mountPath: /data
+        name: pv
+      - mountPath: /config
+        name: config
+    ports:
+      - containerPort: 1300
+    command:
+      - '/app/init.sh'
+  volumes:
+    - name: config
+      configMap:
+        name: doorman
+    - name: pv
+      persistentVolumeClaim:
+        claimName: doorman

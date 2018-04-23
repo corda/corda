@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 // Due to Capsule being in the default package, which cannot be imported, this caplet
 // must also be in the default package. When using Kotlin there are a whole host of exceptions
 // trying to construct this from Capsule, so it is written in Java.
@@ -82,6 +92,7 @@ public class CordaCaplet extends Capsule {
 
             (new File(baseDir, "cordapps")).mkdir();
             // Add additional directories of JARs to the classpath (at the end). e.g. for JDBC drivers
+            augmentClasspath((List<Path>) cp, new File(baseDir, "drivers"));
             augmentClasspath((List<Path>) cp, new File(baseDir, "cordapps"));
             try {
                 List<String> jarDirs = nodeConfig.getStringList("jarDirs");

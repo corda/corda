@@ -1,8 +1,11 @@
 ![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
 
-<a href="https://ci-master.corda.r3cev.com/viewType.html?buildTypeId=Corda_CordaBuild&tab=buildTypeStatusDiv&guest=1"><img src="https://ci.corda.r3cev.com/app/rest/builds/buildType:Corda_CordaBuild/statusIcon"/></a>
+<a href="https://ci-master.corda.r3cev.com/viewType.html?buildTypeId=CordaEnterprise_Build&tab=buildTypeStatusDiv"><img src="https://ci.corda.r3cev.com/app/rest/builds/buildType:Corda_CordaBuild/statusIcon"/></a>
 
-# Corda
+# Corda Enterprise
+
+Corda Enterprise is R3's closed source patch set on top of Corda Open Source. It adds features and improvements that we
+plan to charge for.
 
 Corda is a decentralised database system in which nodes trust each other as little as possible.
 
@@ -14,6 +17,14 @@ Corda is a decentralised database system in which nodes trust each other as litt
 * "Notary" infrastructure to validate uniqueness and sequencing of transactions without global broadcast
 * Enables the development and deployment of distributed apps called CorDapps
 * Written in [Kotlin](https://kotlinlang.org), targeting the JVM
+
+## Extra features
+
+* Doorman
+* SOCKS relaying
+* Flow triage screen in Explorer
+* No stupid jokes at startup
+* SGX
 
 ## Getting started
 

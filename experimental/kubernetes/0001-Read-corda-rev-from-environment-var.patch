@@ -1,0 +1,25 @@
+From b24ad7306e9e3c7faff032aa20fc7b42848ec815 Mon Sep 17 00:00:00 2001
+From: Thomas Schroeter <thomas.schroeter@r3.com>
+Date: Fri, 16 Feb 2018 11:07:58 +0000
+Subject: [PATCH] Read corda rev from environment var
+
+---
+ build.gradle | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/build.gradle b/build.gradle
+index 206335645f..0ffab4eac1 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -109,7 +109,7 @@ plugins {
+ }
+ 
+ ext {
+-    corda_revision = org.ajoberstar.grgit.Grgit.open(file('.')).head().id
++    corda_revision = System.getenv("rev")
+ }
+ 
+ apply plugin: 'project-report'
+-- 
+2.14.3 (Apple Git-98)
+

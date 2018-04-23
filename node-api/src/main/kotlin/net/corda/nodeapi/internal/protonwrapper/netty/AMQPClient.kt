@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.bootstrap.Bootstrap
@@ -7,6 +17,8 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
+import io.netty.handler.proxy.Socks4ProxyHandler
+import io.netty.handler.proxy.Socks5ProxyHandler
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.identity.CordaX500Name
@@ -17,12 +29,26 @@ import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.net.InetSocketAddress
 import java.security.KeyStore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
 import kotlin.concurrent.withLock
+
+enum class SocksProxyVersion {
+    SOCKS4,
+    SOCKS5
+}
+
+data class SocksProxyConfig(val version: SocksProxyVersion, val proxyAddress: NetworkHostAndPort, val userName: String? = null, val password: String? = null) {
+    init {
+        if (version == SocksProxyVersion.SOCKS4) {
+            require(password == null) { "SOCKS4 does not support a password" }
+        }
+    }
+}
 
 /**
  * The AMQPClient creates a connection initiator that will try to connect in a round-robin fashion
@@ -39,7 +65,8 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                  private val keyStorePrivateKeyPassword: String,
                  private val trustStore: KeyStore,
                  private val trace: Boolean = false,
-                 private val sharedThreadPool: EventLoopGroup? = null) : AutoCloseable {
+                 private val sharedThreadPool: EventLoopGroup? = null,
+                 private val socksProxyConfig: SocksProxyConfig? = null) : AutoCloseable {
     companion object {
         init {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)
@@ -107,6 +134,25 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         override fun initChannel(ch: SocketChannel) {
             val pipeline = ch.pipeline()
+            val socksConfig = parent.socksProxyConfig
+            if (socksConfig != null) {
+                val proxyAddress = InetSocketAddress(socksConfig.proxyAddress.host, socksConfig.proxyAddress.port)
+                val proxy = when (parent.socksProxyConfig!!.version) {
+                    SocksProxyVersion.SOCKS4 -> {
+                        Socks4ProxyHandler(proxyAddress, socksConfig.userName)
+                    }
+                    SocksProxyVersion.SOCKS5 -> {
+                        Socks5ProxyHandler(proxyAddress, socksConfig.userName, socksConfig.password)
+                    }
+                }
+                pipeline.addLast("SocksPoxy", proxy)
+                proxy.connectFuture().addListener {
+                    if (!it.isSuccess) {
+                        ch.disconnect()
+                    }
+                }
+            }
+
             val handler = createClientSslHelper(parent.currentTarget, keyManagerFactory, trustManagerFactory)
             pipeline.addLast("sslHandler", handler)
             if (parent.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))

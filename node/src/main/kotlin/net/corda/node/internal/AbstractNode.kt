@@ -1,13 +1,23 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
-import com.google.common.util.concurrent.MoreExecutors
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
@@ -47,6 +57,7 @@ import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.*
 import net.corda.node.services.persistence.*
@@ -56,7 +67,6 @@ import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.*
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JVMAgentRegistry
 import net.corda.node.utilities.NamedThreadFactory
@@ -65,9 +75,7 @@ import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.*
 import net.corda.nodeapi.internal.storeLegalIdentity
 import net.corda.tools.shell.InteractiveShell
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -76,6 +84,7 @@ import org.slf4j.Logger
 import rx.Observable
 import rx.Scheduler
 import java.io.IOException
+import java.lang.management.ManagementFactory
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 import java.security.KeyPair
@@ -83,14 +92,13 @@ import java.security.KeyStoreException
 import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.sql.Connection
+import java.sql.DriverManager
 import java.time.Clock
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.collections.set
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
@@ -110,7 +118,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                             val platformClock: CordaClock,
                             protected val versionInfo: VersionInfo,
                             protected val cordappLoader: CordappLoader,
-                            private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
+                            protected val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
 
     private class StartedNodeImpl<out N : AbstractNode>(
             override val internals: N,
@@ -131,7 +139,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     // We will run as much stuff in this single thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
-    protected abstract val serverThread: AffinityExecutor
+    protected abstract val serverThread: AffinityExecutor.ServiceAffinityExecutor
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
     private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
@@ -139,7 +147,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected val services: ServiceHubInternal get() = _services
     private lateinit var _services: ServiceHubInternalImpl
     protected var myNotaryIdentity: PartyAndCertificate? = null
-    private lateinit var checkpointStorage: CheckpointStorage
+    protected lateinit var checkpointStorage: CheckpointStorage
     private lateinit var tokenizableServices: List<Any>
     protected lateinit var attachments: NodeAttachmentService
     protected lateinit var network: MessagingService
@@ -238,30 +246,25 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     nodeProperties,
                     cordappProvider,
                     networkParameters)
+            val mutualExclusionConfiguration = configuration.enterpriseConfiguration.mutualExclusionConfiguration
+            if (mutualExclusionConfiguration.on) {
+                RunOnceService(database, mutualExclusionConfiguration.machineName,
+                        ManagementFactory.getRuntimeMXBean().name.split("@")[0],
+                        mutualExclusionConfiguration.updateInterval, mutualExclusionConfiguration.waitInterval).start()
+            }
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
             val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
-            val flowStarter = FlowStarterImpl(serverThread, smm, flowLogicRefFactory)
+            val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
             val schedulerService = NodeSchedulerService(
                     platformClock,
                     database,
                     flowStarter,
                     servicesForResolution,
                     unfinishedSchedules = busyNodeLatch,
-                    serverThread = serverThread,
                     flowLogicRefFactory = flowLogicRefFactory,
                     drainingModePollPeriod = configuration.drainingModePollPeriod,
                     nodeProperties = nodeProperties)
-
-            (serverThread as? ExecutorService)?.let {
-                runOnStop += {
-                    // We wait here, even though any in-flight messages should have been drained away because the
-                    // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
-                    // arbitrary and might be inappropriate.
-                    MoreExecutors.shutdownAndAwaitTermination(it, 50, SECONDS)
-                }
-            }
-
             makeVaultObservers(schedulerService, database.hibernateConfig, smm, schemaService, flowLogicRefFactory)
             val rpcOps = makeRPCOps(flowStarter, database, smm)
             startMessagingService(rpcOps)
@@ -385,11 +388,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
     protected open fun makeStateMachineManager(database: CordaPersistence): StateMachineManager {
-        return StateMachineManagerImpl(
+        return SingleThreadedStateMachineManager(
                 services,
                 checkpointStorage,
                 serverThread,
                 database,
+                newSecureRandom(),
                 busyNodeLatch,
                 cordappLoader.appClassLoader
         )
@@ -639,7 +643,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     protected open fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage = DBTransactionStorage(transactionCacheSizeBytes)
     private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager, schemaService: SchemaService, flowLogicRefFactory: FlowLogicRefFactory) {
-        VaultSoftLockManager.install(services.vaultService, smm)
         ScheduledActivityObserver.install(services.vaultService, schedulerService, flowLogicRefFactory)
         HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig, schemaService)
     }
@@ -680,6 +683,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
     protected open fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
+        log.debug {
+            val driverClasses = DriverManager.getDrivers().asSequence().map { it.javaClass.name }
+            "Available JDBC drivers: $driverClasses"
+        }
+
         val props = configuration.dataSourceProperties
         if (props.isEmpty()) throw DatabaseConfigurationException("There must be a database configured.")
         val database = configureDatabase(props, configuration.database, identityService, schemaService)
@@ -715,14 +723,19 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {
         val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
         return notaryConfig.run {
-            if (raft != null) {
-                val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.clock, services.monitoringService.metrics, raft)
-                (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
-            } else if (bftSMaRt != null) {
-                if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")
-                BFTNonValidatingNotaryService(services, notaryKey, bftSMaRt, makeBFTCluster(notaryKey, bftSMaRt))
-            } else {
-                (if (validating) ::ValidatingNotaryService else ::SimpleNotaryService)(services, notaryKey)
+            when {
+                raft != null -> {
+                    val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.clock, services.monitoringService.metrics, raft)
+                    (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
+                }
+                bftSMaRt != null -> {
+                    if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")
+                    BFTNonValidatingNotaryService(services, notaryKey, bftSMaRt, makeBFTCluster(notaryKey, bftSMaRt))
+                }
+                mysql != null -> {
+                    (if (validating) ::MySQLValidatingNotaryService else ::MySQLNonValidatingNotaryService)(services, notaryKey, mysql, configuration.devMode)
+                }
+                else -> (if (validating) ::ValidatingNotaryService else ::SimpleNotaryService)(services, notaryKey)
             }
         }
     }
@@ -893,9 +906,9 @@ internal fun logVendorString(database: CordaPersistence, log: Logger) {
     }
 }
 
-internal class FlowStarterImpl(private val serverThread: AffinityExecutor, private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
-    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
-        return serverThread.fetchFrom { smm.startFlow(logic, context) }
+internal class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
+    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext, deduplicationHandler: DeduplicationHandler?): CordaFuture<FlowStateMachine<T>> {
+        return smm.startFlow(logic, context, ourIdentity = null, deduplicationHandler = deduplicationHandler)
     }
 
     override fun <T> invokeFlowAsync(
@@ -926,5 +939,11 @@ fun configureDatabase(hikariProperties: Properties,
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
     val dataSource = DataSourceFactory.createDataSource(hikariProperties)
     val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
-    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
+    val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
+    SchemaMigration(
+            schemaService.schemaOptions.keys,
+            dataSource,
+            !isH2Database(jdbcUrl),
+            databaseConfig).nodeStartup()
+    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
 }

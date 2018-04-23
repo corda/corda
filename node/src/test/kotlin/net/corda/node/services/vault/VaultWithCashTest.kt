@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.vault
 
 import net.corda.core.contracts.ContractState
@@ -44,7 +54,8 @@ import kotlin.test.fail
 
 class VaultWithCashTest {
     private companion object {
-        val cordappPackages = listOf("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName)
+        private val cordappPackages = listOf(
+                "net.corda.testing.contracts", "net.corda.finance.contracts.asset", CashSchemaV1::class.packageName, DummyLinearStateSchemaV1::class.packageName)
         val BOB = TestIdentity(BOB_NAME, 80).party
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.tools.shell
 
 import co.paralleluniverse.fibers.Suspendable
@@ -15,18 +25,28 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.node.User
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.io.Streams
+import org.junit.ClassRule
 import org.junit.Ignore
 import org.junit.Test
 import java.net.ConnectException
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
-class SSHServerTest {
+class SSHServerTest : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
 
     @Test()
     fun `ssh server does not start be default`() {
@@ -151,7 +171,7 @@ class SSHServerTest {
             session.disconnect()
 
             // There are ANSI control characters involved, so we want to avoid direct byte to byte matching.
-            assertThat(linesWithDoneCount).hasSize(1)
+            assertThat(linesWithDoneCount).size().isGreaterThanOrEqualTo(1)
         }
     }
 

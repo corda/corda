@@ -1,0 +1,17 @@
+@import "corda-dark-color-scheme.css";
+
+/* Flow triage css */
+.flow-expanded {
+    -fx-background-color: rgba(255, 255, 255);
+    -fx-background-size: Auto 90%;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center center;
+    -fx-border-color: transparent;
+    -fx-border-radius: 2;
+}
+
+.flow-expanded:hover {
+    -fx-border-color: -color-3;
+    -fx-border-width: 2;
+    -fx-border-radius: 2;
+}

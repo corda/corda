@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.testing.node
 
 import net.corda.core.DoNotImplement
@@ -18,10 +28,8 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.trace
-import net.corda.node.services.messaging.Message
-import net.corda.node.services.messaging.MessageHandlerRegistration
-import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.messaging.ReceivedMessage
+import net.corda.node.services.messaging.*
+import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.node.internal.InMemoryMessage
@@ -290,9 +298,16 @@ class InMemoryMessagingNetwork private constructor(
     private data class InMemoryReceivedMessage(override val topic: String,
                                                override val data: ByteSequence,
                                                override val platformVersion: Int,
-                                               override val uniqueMessageId: String,
+                                               override val uniqueMessageId: DeduplicationId,
                                                override val debugTimestamp: Instant,
-                                               override val peer: CordaX500Name) : ReceivedMessage
+                                               override val peer: CordaX500Name,
+                                               override val senderUUID: String? = null,
+                                               override val senderSeqNo: Long? = null,
+                                               /** Note this flag is never set in the in memory network. */
+                                               override val isSessionInit: Boolean = false) : ReceivedMessage {
+
+        override val additionalHeaders: Map<String, String> = emptyMap()
+    }
 
     /**
      * A class that provides an abstraction over the nodes' messaging service that also contains the ability to
@@ -319,7 +334,7 @@ class InMemoryMessagingNetwork private constructor(
                                           private val peerHandle: PeerHandle,
                                           private val executor: AffinityExecutor,
                                           private val database: CordaPersistence) : SingletonSerializeAsToken(), InternalMockMessagingService {
-        private inner class Handler(val topicSession: String, val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+        private inner class Handler(val topicSession: String, val callback: MessageHandler) : MessageHandlerRegistration
 
         @Volatile
         private var running = true
@@ -330,7 +345,7 @@ class InMemoryMessagingNetwork private constructor(
         }
 
         private val state = ThreadBox(InnerState())
-        private val processedMessages: MutableSet<String> = Collections.synchronizedSet(HashSet<String>())
+        private val processedMessages: MutableSet<DeduplicationId> = Collections.synchronizedSet(HashSet<DeduplicationId>())
 
         override val myAddress: PeerHandle get() = peerHandle
 
@@ -353,7 +368,7 @@ class InMemoryMessagingNetwork private constructor(
             }
         }
 
-        override fun addMessageHandler(topic: String, callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
+        override fun addMessageHandler(topic: String, callback: MessageHandler): MessageHandlerRegistration {
             check(running)
             val (handler, transfers) = state.locked {
                 val handler = Handler(topic, callback).apply { handlers.add(this) }
@@ -374,7 +389,7 @@ class InMemoryMessagingNetwork private constructor(
             state.locked { check(handlers.remove(registration as Handler)) }
         }
 
-        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
+        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
             check(running)
             msgSend(this, message, target)
             if (!sendManuallyPumped) {
@@ -400,7 +415,7 @@ class InMemoryMessagingNetwork private constructor(
         override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
-        override fun createMessage(topic: String, data: ByteArray, deduplicationId: String): Message {
+        override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId, additionalHeaders: Map<String, String>): Message {
             return InMemoryMessage(topic, OpaqueBytes(data), deduplicationId)
         }
 
@@ -465,7 +480,7 @@ class InMemoryMessagingNetwork private constructor(
                     database.transaction {
                         for (handler in deliverTo) {
                             try {
-                                handler.callback(transfer.toReceivedMessage(), handler)
+                                handler.callback(transfer.toReceivedMessage(), handler, DummyDeduplicationHandler())
                             } catch (e: Exception) {
                                 log.error("Caught exception in handler for $this/${handler.topicSession}", e)
                             }
@@ -488,6 +503,13 @@ class InMemoryMessagingNetwork private constructor(
                 message.uniqueMessageId,
                 message.debugTimestamp,
                 sender.name)
+    }
+
+    private class DummyDeduplicationHandler : DeduplicationHandler {
+        override fun afterDatabaseTransaction() {
+        }
+        override fun insideDatabaseTransaction() {
+        }
     }
 }
 

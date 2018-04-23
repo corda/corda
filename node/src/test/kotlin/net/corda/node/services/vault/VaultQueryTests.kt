@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.vault
 
 import net.corda.core.contracts.*
@@ -17,23 +27,20 @@ import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.DealState
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
+import net.corda.finance.sampleschemas.SampleCashSchemaV3
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
-import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
-import net.corda.testing.internal.vault.DummyLinearContract
-import net.corda.testing.internal.vault.VaultFiller
+import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
-import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.*
@@ -45,7 +52,7 @@ import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-class VaultQueryTests {
+open class VaultQueryTests {
     private companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
         val bankOfCorda = TestIdentity(BOC_NAME)
@@ -82,7 +89,6 @@ class VaultQueryTests {
         val MINI_CORP_IDENTITY get() = miniCorp.identity
         val MINI_CORP get() = miniCorp.party
     }
-
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -95,7 +101,8 @@ class VaultQueryTests {
             "net.corda.testing.contracts",
             "net.corda.finance.contracts",
             CashSchemaV1::class.packageName,
-            DummyLinearStateSchemaV1::class.packageName)
+            DummyLinearStateSchemaV1::class.packageName,
+            DummyDealStateSchemaV1::class.packageName)
     private lateinit var services: MockServices
     private lateinit var vaultFiller: VaultFiller
     private lateinit var vaultFillerCashNotary: VaultFiller
@@ -104,7 +111,7 @@ class VaultQueryTests {
     private lateinit var identitySvc: IdentityService
     private lateinit var database: CordaPersistence
     @Before
-    fun setUp() {
+    open fun setUp() {
         // register additional identities
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,
@@ -124,7 +131,7 @@ class VaultQueryTests {
     }
 
     @After
-    fun tearDown() {
+    open fun tearDown() {
         database.close()
     }
 
@@ -134,7 +141,7 @@ class VaultQueryTests {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), identitySvc)
+        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(runMigration = true), identitySvc)
         setUpDb(database, 5000)
 
         database.close()
@@ -1702,7 +1709,7 @@ class VaultQueryTests {
     @Test
     fun `unconsumed linear heads for linearId between two timestamps for a given external id`() {
         val start = Instant.now()
-        val end = start.plus(1, ChronoUnit.SECONDS)
+        val end = start.plus(6, ChronoUnit.SECONDS) //Enterprise: extended timeout for TC
 
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")

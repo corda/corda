@@ -109,15 +109,10 @@ See more on plugins in :doc:`running-a-node`.
 Security
 --------
 RPC credentials associated with a Client must match the permission set configured on the server node.
-This refers to both authentication (username and password) and role-based authorisation (a permissioned set of RPC operations an
+This refers to both authentication (username and password) and authorisation (a permissioned set of RPC operations an
 authenticated user is entitled to run).
 
-.. note:: Permissions are represented as *String's* to allow RPC implementations to add their own permissioning. Currently
-     the only permission type defined is *StartFlow*, which defines a list of whitelisted flows an authenticated use may
-     execute. An administrator user (or a developer) may also be assigned the ``ALL`` permission, which grants access to
-     any flow.
-
-In the instructions above the server node permissions are configured programmatically in the driver code:
+In the instructions below the server node permissions are configured programmatically in the driver code:
 
 .. code-block:: text
 
@@ -125,13 +120,16 @@ In the instructions above the server node permissions are configured programmati
             val user = User("user", "password", permissions = setOf(startFlow<CashFlow>()))
             val node = startNode("CN=Alice Corp,O=Alice Corp,L=London,C=GB", rpcUsers = listOf(user)).get()
 
-When starting a standalone node using a configuration file we must supply the RPC credentials as follows:
+When starting a standalone node using a configuration file we must supply the RPC credentials in the node configuration,
+like illustrated in the sample configuration below, or indicate an external database storing user accounts (see
+:doc:`clientrpc` for more details):
 
 .. code-block:: text
 
     rpcUsers : [
         { username=user, password=password, permissions=[ StartFlow.net.corda.finance.flows.CashFlow ] }
     ]
+
 
 When using the gradle Cordformation plugin to configure and deploy a node you must supply the RPC credentials in a similar
 manner:

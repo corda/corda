@@ -1,0 +1,67 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
+apply plugin: 'kotlin'
+apply plugin: 'java'
+apply plugin: 'net.corda.plugins.publish-utils'
+
+description 'Corda peer bridging components'
+
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
+processResources {
+    from file("$rootDir/config/dev/log4j2.xml")
+}
+
+dependencies {
+    compile project(':node-api')
+
+    // Log4J: logging framework (with SLF4J bindings)
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+
+    // JOpt: for command line flags.
+    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+
+    // Manifests: for reading stuff from the manifest file
+    compile "com.jcabi:jcabi-manifests:1.1"
+
+    integrationTestCompile project(':node-driver')
+    integrationTestCompile "org.apache.curator:curator-test:${curator_version}"
+    testCompile "junit:junit:$junit_version"
+    testCompile project(':test-utils')
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+jar {
+    baseName 'corda-bridge-impl'
+}
+
+publish {
+    name jar.baseName
+}

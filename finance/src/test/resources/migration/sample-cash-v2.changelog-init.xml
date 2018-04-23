@@ -1,0 +1,57 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="R3.Corda" id="1512743551377-1">
+        <createTable tableName="cash_states_v2">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issuer_name" type="NVARCHAR(255)"/>
+            <column name="issuer_ref" type="VARBINARY(512)"/>
+            <column name="owner_name" type="NVARCHAR(255)"/>
+            <column name="quantity" type="BIGINT"/>
+            <column name="ccy_code" type="NVARCHAR(3)"/>
+        </createTable>
+
+        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_D"
+                       tableName="cash_states_v2"/>
+
+        <createIndex indexName="ccy_code_idx2" tableName="cash_states_v2">
+            <column name="ccy_code"/>
+        </createIndex>
+
+        <createTable tableName="cash_states_v2_participants">
+            <column name="output_index" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="participants" type="NVARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseColumnNames="output_index,transaction_id"
+                                 baseTableName="cash_states_v2_participants"
+                                 constraintName="FKg6ab1fhx6aesnmhlo62o4dnrt_"
+                                 referencedColumnNames="output_index,transaction_id"
+                                 referencedTableName="cash_states_v2"/>
+
+    </changeSet>
+
+</databaseChangeLog>

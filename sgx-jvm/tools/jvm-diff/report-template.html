@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>
+    JDK: 8.0.0 to 8.0.0-deterministic
+</title>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" />
+<!-- {{{ Styles -->
+<style type="text/css">
+    body {
+        font-family:Arial, sans-serif;
+        font-size:11px;
+        background-color:White;
+        color:Black;
+    }
+    a {
+        text-decoration: none;
+    }
+    a:hover {
+        text-decoration: underline;
+    }
+    th.file-column {
+        text-align: left;
+    }
+    td.type-column {
+        text-align: center;
+        color: #c0c0c0;
+    }
+    td.file-column {
+        text-align: left;
+        font-size: 0.875em;
+        font-family: Consolas, 'DejaVu Sans Mono', 'Droid Sans Mono', Monaco, Monospace;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+    td.status-column {
+        text-align: center;
+    }
+    td.change-column {
+        text-align: center;
+    }
+    td.diff-column {
+        text-align: center;
+    }
+    table.summary {
+        margin-top: 5px;
+        margin-bottom: 5px;
+    }
+    span.status {
+        padding: 5px 10px;
+        border-radius: 2px;
+        min-width: 50px;
+        display: inline-block;
+    }
+    span.status-added {
+        background-color: #00d800;
+    }
+    span.status-changed {
+        background-color: #e8b411;
+    }
+    span.status-removed {
+        background-color: #c00000;
+        color: #ffffff;
+    }
+    span.status-moved {
+        background-color: #e8b411;
+    }
+    span.status-renamed {
+        background-color: #e8b411;
+    }
+    span.status-exclusions {
+        background-color: #c00000;
+        color: #ffffff;
+    }
+    span.status-unchanged {
+        background-color: #00d800;
+    }
+    th input[type="text"] {
+        outline: none;
+        width: 100%;
+        padding: 5px;
+        border: 1px solid #e8e8e8;
+    }
+</style>
+<!-- Styles }}} -->
+<!-- {{{ Scripts -->
+<script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" language="JavaScript">
+<!--
+$(function() {
+    var dataset = [
+        // {{{ Dataset
+
+        /* DATASET */
+
+        // Dataset }}}
+    ];
+
+    var statusRenderFunc = function (data, type, row, meta) {
+        return '<span class="status status-' + data + '">' + data + '</span>';
+    };
+    var diffRenderFunc = function (data, type, row, meta) {
+        if (data) {
+            if (data.endsWith('.java')) {
+                return '<a href="exclusions.'+data.replace(/\//g, '.')+'" target="_blank">(view)</a>';
+            } else {
+                return '<a href="pkgdiff_reports.jdk.8.0.0_to_8.0.0-deterministic.diffs.'+data.replace(/\//g, '.')+'-diff.html" target="_blank">(view)</a>';
+            }
+        } else {
+            return '';
+        }
+    };
+
+    $('.summary tfoot th').each( function () {
+        var title = $(this).text();
+        $(this).html( '<input type="text" placeholder="Search '+title+'" />' );
+    });
+
+    var table = $('.summary').DataTable({
+        'order': [[ 1, 'asc' ]],
+        'pageLength': 100,
+        'lengthMenu': [ 10, 25, 50, 100, 1000, 10000, 25000 ],
+        'data': dataset,
+        'columns': [
+            { 'title': 'Type', 'className': 'type-column' },
+            { 'title': 'File', 'width': '70%', 'className': 'file-column' },
+            { 'title': 'Status', 'className': 'status-column', 'render': statusRenderFunc },
+            { 'title': 'Change', 'className': 'change-column' },
+            { 'title': 'Differences', 'className': 'diff-column', 'render': diffRenderFunc },
+        ]
+    });
+
+    table.columns().every( function () {
+        var that = this;
+        $( 'input', this.footer() ).on( 'keyup change', function () {
+            if ( that.search() !== this.value ) {
+                that
+                    .search( this.value )
+                    .draw();
+            }
+        } );
+    } );
+});
+-->
+</script>
+<!-- Scripts }}} -->
+</head>
+<body>
+    <table class="summary">
+        <tfoot>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+        </tfoot>
+    </table>
+</body>
+</html>

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.crypto.Crypto.generateKeyPair
@@ -44,6 +54,7 @@ class EvolvabilityTests {
         // Original version of the class for the serialised version of this class
         // data class C (val a: Int, val b: Int)
         // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(C(A, B)).bytes)
+        // println (path)
 
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: Int, val a: Int)
@@ -68,6 +79,7 @@ class EvolvabilityTests {
         // Original version of the class as it was serialised
         // data class C (val a: Int, val b: String)
         // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(C(A, B)).bytes)
+        // println (path)
 
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: String, val a: Int)
@@ -89,7 +101,7 @@ class EvolvabilityTests {
 
         // Original version of the class as it was serialised
         // data class C(val a: Int)
-        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(C(A)).bytes)
+        // File(URI("$localPath/$resource")).writeBytes( SerializationOutput(sf).serialize(C(A))
 
         data class C(val a: Int, val b: Int?)
 
@@ -302,7 +314,6 @@ class EvolvabilityTests {
         val resource1 = "EvolvabilityTests.multiVersion.1"
         val resource2 = "EvolvabilityTests.multiVersion.2"
         val resource3 = "EvolvabilityTests.multiVersion.3"
-
         val a = 100
         val b = 200
         val c = 300

@@ -1,0 +1,19 @@
+{
+global:
+    get_launch_token;
+    sgx_init_quote;
+    sgx_get_quote_size;
+    sgx_get_quote;
+    sgx_get_ps_cap;
+    sgx_report_attestation_status;
+    create_session_ocall;
+    exchange_report_ocall;
+    close_session_ocall;
+    invoke_service_ocall;
+    sgx_get_extended_epid_group_id;
+    sgx_calc_quote_size;
+    sgx_get_whitelist_size;
+    sgx_get_whitelist;
+local:
+    *;
+};

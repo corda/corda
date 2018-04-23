@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.finance.schemas
 
 import net.corda.core.identity.AbstractParty
@@ -19,7 +29,11 @@ object CashSchema
  * at the time of writing.
  */
 @CordaSerializable
-object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
+object CashSchemaV1 : MappedSchema(
+        schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
+
+    override val migrationResource = "cash.changelog-master"
+
     @Entity
     @Table(name = "contract_cash_states",
             indexes = arrayOf(Index(name = "ccy_code_idx", columnList = "ccy_code"),

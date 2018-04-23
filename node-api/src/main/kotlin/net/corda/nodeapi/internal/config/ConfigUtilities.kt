@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 @file:JvmName("ConfigUtilities")
 
 package net.corda.nodeapi.internal.config
@@ -37,31 +47,33 @@ operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T
     return getValueInternal(metadata.name, metadata.returnType)
 }
 
-fun <T : Any> Config.parseAs(clazz: KClass<T>): T {
+fun <T : Any> Config.parseAs(clazz: KClass<T>, strict: Boolean = true): T {
     require(clazz.isData) { "Only Kotlin data classes can be parsed. Offending: ${clazz.qualifiedName}" }
     val constructor = clazz.primaryConstructor!!
     val parameters = constructor.parameters
-    val parameterNames = parameters.flatMap { param ->
-        mutableSetOf<String>().apply {
-            param.name?.let(this::add)
-            clazz.memberProperties.singleOrNull { it.name == param.name }?.let { matchingProperty ->
-                matchingProperty.annotations.filterIsInstance<OldConfig>().map { it.value }.forEach { this.add(it) }
+    if (strict) {
+        val parameterNames = parameters.flatMap { param ->
+            mutableSetOf<String>().apply {
+                param.name?.let(this::add)
+                clazz.memberProperties.singleOrNull { it.name == param.name }?.let { matchingProperty ->
+                    matchingProperty.annotations.filterIsInstance<OldConfig>().map { it.value }.forEach { this.add(it) }
+                }
             }
         }
-    }
-    val unknownConfigurationKeys = this.entrySet()
-            .mapNotNull { it.key.split(".").firstOrNull() }
-            .filterNot { it == CUSTOM_NODE_PROPERTIES_ROOT }
-            .filterNot(parameterNames::contains)
-            .toSortedSet()
-    if (unknownConfigurationKeys.isNotEmpty()) {
-        throw UnknownConfigurationKeysException.of(unknownConfigurationKeys)
+        val unknownConfigurationKeys = this.entrySet()
+                .mapNotNull { it.key.split(".").firstOrNull() }
+                .filterNot { it == CUSTOM_NODE_PROPERTIES_ROOT }
+                .filterNot(parameterNames::contains)
+                .toSortedSet()
+        if (unknownConfigurationKeys.isNotEmpty()) {
+            throw UnknownConfigurationKeysException.of(unknownConfigurationKeys)
+        }
     }
     val args = parameters.filterNot { it.isOptional && !hasPath(it.name!!) }.associateBy({ it }) { param ->
                 // Get the matching property for this parameter
                 val property = clazz.memberProperties.first { it.name == param.name }
                 val path = defaultToOldPath(property)
-                getValueInternal<Any>(path, param.type)
+                getValueInternal<Any>(path, param.type, strict)
             }
     try {
         return constructor.callBy(args)
@@ -81,7 +93,7 @@ class UnknownConfigurationKeysException private constructor(val unknownKeys: Set
     }
 }
 
-inline fun <reified T : Any> Config.parseAs(): T = parseAs(T::class)
+inline fun <reified T : Any> Config.parseAs(strict: Boolean = true): T = parseAs(T::class, strict)
 
 fun Config.toProperties(): Properties {
     return entrySet().associateByTo(
@@ -90,11 +102,11 @@ fun Config.toProperties(): Properties {
             { it.value.unwrapped().toString() })
 }
 
-private fun <T : Any> Config.getValueInternal(path: String, type: KType): T {
-    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type) else getCollectionValue(path, type))
+private fun <T : Any> Config.getValueInternal(path: String, type: KType, strict: Boolean = true): T {
+    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type, strict) else getCollectionValue(path, type, strict))
 }
 
-private fun Config.getSingleValue(path: String, type: KType): Any? {
+private fun Config.getSingleValue(path: String, type: KType, strict: Boolean = true): Any? {
     if (type.isMarkedNullable && !hasPath(path)) return null
     val typeClass = type.jvmErasure
     return when (typeClass) {
@@ -111,7 +123,7 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         UUID::class -> UUID.fromString(getString(path))
         CordaX500Name::class -> {
             when (getValue(path).valueType()) {
-                ConfigValueType.OBJECT -> getConfig(path).parseAs()
+                ConfigValueType.OBJECT -> getConfig(path).parseAs(strict)
                 else -> CordaX500Name.parse(getString(path))
             }
         }
@@ -120,12 +132,12 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         else -> if (typeClass.java.isEnum) {
             parseEnum(typeClass.java, getString(path))
         } else {
-            getConfig(path).parseAs(typeClass)
+            getConfig(path).parseAs(typeClass, strict)
         }
     }
 }
 
-private fun Config.getCollectionValue(path: String, type: KType): Collection<Any> {
+private fun Config.getCollectionValue(path: String, type: KType, strict: Boolean = true): Collection<Any> {
     val typeClass = type.jvmErasure
     require(typeClass == List::class || typeClass == Set::class) { "$typeClass is not supported" }
     val elementClass = type.arguments[0].type?.jvmErasure ?: throw IllegalArgumentException("Cannot work with star projection: $type")
@@ -149,7 +161,7 @@ private fun Config.getCollectionValue(path: String, type: KType): Collection<Any
         else -> if (elementClass.java.isEnum) {
             getStringList(path).map { parseEnum(elementClass.java, it) }
         } else {
-            getConfigList(path).map { it.parseAs(elementClass) }
+            getConfigList(path).map { it.parseAs(elementClass, strict) }
         }
     }
     return if (typeClass == Set::class) values.toSet() else values

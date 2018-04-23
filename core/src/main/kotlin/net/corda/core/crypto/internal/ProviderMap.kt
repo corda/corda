@@ -1,13 +1,16 @@
 package net.corda.core.crypto.internal
 
+import net.corda.core.crypto.CORDA_SECURE_RANDOM_ALGORITHM
 import net.corda.core.crypto.CordaSecurityProvider
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.decodePrivateKey
 import net.corda.core.crypto.Crypto.decodePublicKey
+import net.corda.core.crypto.DummySecureRandom
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.X509EdDSAEngine
+import net.corda.core.utilities.SgxSupport
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSASecurityProvider
-import org.apache.commons.lang.SystemUtils
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
@@ -45,9 +48,10 @@ internal val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
 // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
 // The val is private to avoid any harmful state changes.
 internal val providerMap = listOf(cordaBouncyCastleProvider, cordaSecurityProvider, bouncyCastlePQCProvider).map { it.name to it }.toMap()
-internal val platformSecureRandomFactory: () -> SecureRandom = when {
-    SystemUtils.IS_OS_LINUX -> {
-        { SecureRandom.getInstance("NativePRNGNonBlocking") }
-    }
-    else -> SecureRandom::getInstanceStrong
+@VisibleForTesting
+internal val platformSecureRandom = when {
+    SgxSupport.isInsideEnclave -> DummySecureRandom
+    else -> SecureRandom.getInstance(CORDA_SECURE_RANDOM_ALGORITHM)
 }
+
+internal fun platformSecureRandomFactory() = platformSecureRandom // To minimise diff of CryptoUtils against open-source.

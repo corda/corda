@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ R3 Proprietary and Confidential
+  ~
+  ~ Copyright (c) 2018 R3 Limited.  All rights reserved.
+  ~
+  ~ The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+  ~
+  ~ Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+  -->
+
+<Configuration status="info">
+
+    <Properties>
+        <Property name="attestation.home">.</Property>
+        <Property name="log-path">${sys:attestation.home}</Property>
+        <Property name="log-name">attestation-host</Property>
+        <Property name="archive">${sys:log-path}/archive</Property>
+        <Property name="consoleLogLevel">info</Property>
+        <Property name="defaultLogLevel">debug</Property>
+    </Properties>
+
+    <ThresholdFilter level="trace"/>
+
+    <Appenders>
+        <!-- Will generate up to 10 log files for a given day. During every rollover it will delete
+             those that are older than 60 days, but keep the most recent 10 GB -->
+        <RollingFile name="RollingFile-Appender"
+                     fileName="${sys:log-path}/${log-name}.log"
+                     filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
+
+            <PatternLayout pattern="%date{ISO8601}{UTC}Z [%-5level] %c - %msg%n"/>
+
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+
+            <DefaultRolloverStrategy min="1" max="10">
+                <Delete basePath="${archive}" maxDepth="1">
+                    <IfFileName glob="${log-name}*.log.gz"/>
+                    <IfLastModified age="60d">
+                        <IfAny>
+                            <IfAccumulatedFileSize exceeds="10 GB"/>
+                        </IfAny>
+                    </IfLastModified>
+                </Delete>
+            </DefaultRolloverStrategy>
+
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <Root level="${sys:defaultLogLevel}">
+            <AppenderRef ref="RollingFile-Appender"/>
+        </Root>
+        <Logger name="org.apache.http" level="warn"/>
+        <Logger name="org.jboss.resteasy" level="warn"/>
+    </Loggers>
+</Configuration>

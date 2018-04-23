@@ -1,0 +1,98 @@
+/*
+ * Copyright (C) 2011-2017 Intel Corporation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ *   * Neither the name of Intel Corporation nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+
+/* Arrays.edl - Samples for array attributes. */
+
+enclave {
+    
+    /* 
+     *  Only for fixed-size array (size is explicitly specified).
+     */
+    
+    trusted {
+        
+        /*
+         * []:  can be used to declare an array.
+         * [user_check]:
+         *      pointer of the array won't be valified, and the buffer pointed by 'arr' 
+         *      is not copied into the enclave either. But enclave can modify the memory outside.
+         */
+        
+        public void ecall_array_user_check([user_check] int arr[4]);
+        
+        /*
+         * [in]:
+         *      buffer for the array will be allocated inside the enclave, 
+         *      content of the array will be copied into the new allocated memory inside. 
+         *      Any changes performed inside the enclave will not affect the array outside.
+         */
+        
+        public void ecall_array_in([in] int arr[4]);
+        
+        /*
+         * [out]:
+         *      buffer for the array will be allocated inside the enclave,
+         *      but the content of the array won't be copied. After ECALL returns, 
+         *      the buffer inside the enclave will copied into outside array.
+         */
+        
+        public void ecall_array_out([out] int arr[4]);
+        
+        /*
+         * [in, out]:
+         *      buffer for the array will be allocated inside the enclave,
+         *      the content of the array will be copied either. After ECALL returns, 
+         *      the buffer inside the enclave will by copied into outside array again.
+         */
+        
+        public void ecall_array_in_out([in, out] int arr[4]);
+        
+        /*
+         * [isary]:
+         *      tells Edger8r the user defined 'array_t' is an array type, 'arr' will be 
+         *      treated as a pointer, no memory copied either due to [user_check].
+         *      For OCALLs, 'arr' shall point to the memory outside the enclave. 
+         */
+        
+        public void ecall_array_isary([user_check, isary] array_t arr);
+    
+    };
+
+    untrusted {
+    
+        /*
+         * [user_check|in|out|in,out|isary] can also be used in OCALLs, refer to the "User Guide" for details.
+         */
+
+    };
+
+};

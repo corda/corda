@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
@@ -10,15 +20,17 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
+import org.junit.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -28,17 +40,21 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import kotlin.test.fail
 
-class P2PFlowsDrainingModeTest {
+class P2PFlowsDrainingModeTest : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME)
+                .map { it.toDatabaseSchemaName() }.toTypedArray())
+
+        private val logger = loggerFor<P2PFlowsDrainingModeTest>()
+    }
 
     private val portAllocation = PortAllocation.Incremental(10000)
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 
     private var executor: ScheduledExecutorService? = null
-
-    companion object {
-        private val logger = loggerFor<P2PFlowsDrainingModeTest>()
-    }
 
     @Before
     fun setup() {

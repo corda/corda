@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.explorer.views
 
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
@@ -23,7 +33,8 @@ import tornadofx.*
  * TODO : Predictive text?
  * TODO : Regex?
  */
-class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria: Pair<String, (T, String) -> Boolean>) : UIComponent() {
+class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria: Pair<String, (T, String) -> Boolean>,
+                     val disabledFields: List<String> = emptyList()) : UIComponent() {
     override val root: Parent by fxml()
     private val textField by fxid<TextField>()
     private val clearButton by fxid<Node>()
@@ -34,13 +45,13 @@ class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria:
         val text = textField.text
         val category = searchCategory.value
         data.filtered { data ->
-            text.isNullOrBlank() || if (category == ALL) {
+            (text.isNullOrBlank() && textField.isVisible) || if (category == ALL) {
                 filterCriteria.any { it.second(data, text) }
             } else {
                 filterCriteria.toMap()[category]?.invoke(data, text) == true
             }
         }
-    }, arrayOf<Observable>(textField.textProperty(), searchCategory.valueProperty())))
+    }, arrayOf<Observable>(textField.textProperty(), searchCategory.valueProperty(), textField.visibleProperty())))
 
     init {
         clearButton.setOnMouseClicked { event: MouseEvent ->
@@ -73,5 +84,7 @@ class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria:
             }
             "Filter by $category."
         })
+        textField.visibleProperty().bind(searchCategory.valueProperty().map { it !in disabledFields })
+        // TODO Maybe it will be better to replace these categories with comboBox? For example Result with choice: succes, in progress, error.
     }
 }

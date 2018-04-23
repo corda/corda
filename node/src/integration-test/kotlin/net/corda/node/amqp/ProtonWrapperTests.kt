@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.amqp
 
 import com.nhaarman.mockito_kotlin.doReturn
@@ -8,9 +18,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
@@ -224,6 +232,7 @@ class ProtonWrapperTests {
             doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
+            doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
         }
         artemisConfig.configureWithDevSSLCertificate()
 

@@ -1,3 +1,13 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
@@ -26,10 +36,12 @@ import net.corda.node.MutableClock
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchedulerService
+import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.apache.mina.util.ConcurrentHashSet
 import org.slf4j.Logger
 import java.io.Serializable
 import java.time.Duration
@@ -61,7 +73,6 @@ class NodeSchedulerService(private val clock: CordaClock,
                            private val flowStarter: FlowStarter,
                            private val servicesForResolution: ServicesForResolution,
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
-                           private val serverThread: Executor,
                            private val flowLogicRefFactory: FlowLogicRefFactory,
                            private val nodeProperties: NodePropertiesStore,
                            private val drainingModePollPeriod: Duration,
@@ -164,6 +175,10 @@ class NodeSchedulerService(private val clock: CordaClock,
         var rescheduled: GuavaSettableFuture<Boolean>? = null
     }
 
+    // Used to de-duplicate flow starts in case a flow is starting but the corresponding entry hasn't been removed yet
+    // from the database
+    private val startingStateRefs = ConcurrentHashSet<ScheduledStateRef>()
+
     private val mutex = ThreadBox(InnerState())
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
@@ -181,7 +196,7 @@ class NodeSchedulerService(private val clock: CordaClock,
             val previousEarliest = scheduledStatesQueue.peek()
             scheduledStatesQueue.remove(previousState)
             scheduledStatesQueue.add(action)
-            if (previousState == null) {
+            if (previousState == null && action !in startingStateRefs) {
                 unfinishedSchedules.countUp()
             }
 
@@ -254,25 +269,41 @@ class NodeSchedulerService(private val clock: CordaClock,
         schedulerTimerExecutor.join()
     }
 
+    private inner class FlowStartDeduplicationHandler(val scheduledState: ScheduledStateRef) : DeduplicationHandler {
+        override fun insideDatabaseTransaction() {
+            scheduledStates.remove(scheduledState.ref)
+        }
+
+        override fun afterDatabaseTransaction() {
+            startingStateRefs.remove(scheduledState)
+        }
+
+        override fun toString(): String {
+            return "${javaClass.simpleName}($scheduledState)"
+        }
+    }
+
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        serverThread.execute {
-            var flowName: String? = "(unknown)"
-            try {
-                database.transaction {
-                    val scheduledFlow = getScheduledFlow(scheduledState)
-                    if (scheduledFlow != null) {
-                        flowName = scheduledFlow.javaClass.name
-                        // TODO refactor the scheduler to store and propagate the original invocation context
-                        val context = InvocationContext.newInstance(InvocationOrigin.Scheduled(scheduledState))
-                        val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
-                        future.then {
-                            unfinishedSchedules.countDown()
-                        }
+        var flowName: String? = "(unknown)"
+        try {
+            // We need to check this before the database transaction, otherwise there is a subtle race between a
+            // doubly-reached deadline and the removal from [startingStateRefs].
+            if (scheduledState !in startingStateRefs) {
+                val scheduledFlow = database.transaction { getScheduledFlow(scheduledState) }
+                if (scheduledFlow != null) {
+                    startingStateRefs.add(scheduledState)
+                    flowName = scheduledFlow.javaClass.name
+                    // TODO refactor the scheduler to store and propagate the original invocation context
+                    val context = InvocationContext.newInstance(InvocationOrigin.Scheduled(scheduledState))
+                    val deduplicationHandler = FlowStartDeduplicationHandler(scheduledState)
+                    val future = flowStarter.startFlow(scheduledFlow, context, deduplicationHandler).flatMap { it.resultFuture }
+                    future.then {
+                        unfinishedSchedules.countDown()
                     }
                 }
-            } catch (e: Exception) {
-                log.error("Failed to start scheduled flow $flowName for $scheduledState due to an internal error", e)
             }
+        } catch (e: Exception) {
+            log.error("Failed to start scheduled flow $flowName for $scheduledState due to an internal error", e)
         }
     }
 
@@ -304,7 +335,6 @@ class NodeSchedulerService(private val clock: CordaClock,
                         }
                         else -> {
                             log.trace { "Scheduler starting FlowLogic $flowLogic" }
-                            scheduledStates.remove(scheduledState.ref)
                             scheduledStatesQueue.remove(scheduledState)
                             flowLogic
                         }
