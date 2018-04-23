@@ -20,10 +20,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowIORequest
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.*
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Try
@@ -41,7 +38,6 @@ import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 import kotlin.reflect.KProperty1
 
@@ -309,7 +305,7 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
 
 val Class<out FlowLogic<*>>.appName: String
     get() {
-        val jarFile = Paths.get(protectionDomain.codeSource.location.toURI())
+        val jarFile = protectionDomain.codeSource.location.toPath()
         return if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
             jarFile.fileName.toString().removeSuffix(".jar")
         } else {

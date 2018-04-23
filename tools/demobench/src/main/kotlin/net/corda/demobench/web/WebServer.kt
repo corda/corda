@@ -13,6 +13,7 @@ package net.corda.demobench.web
 import com.google.common.util.concurrent.RateLimiter
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.isDirectory
 import net.corda.core.internal.until
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
@@ -36,17 +37,17 @@ class WebServer internal constructor(private val webServerController: WebServerC
 
     @Throws(IOException::class)
     fun open(config: NodeConfigWrapper): CordaFuture<URI> {
-        val nodeDir = config.nodeDir.toFile()
+        val nodeDir = config.nodeDir
 
-        if (!nodeDir.isDirectory) {
-            log.warn("Working directory '{}' does not exist.", nodeDir.absolutePath)
+        if (!nodeDir.isDirectory()) {
+            log.warn("Working directory '{}' does not exist.", nodeDir.toAbsolutePath())
             return openFuture()
         }
 
         val legalName = config.nodeConfig.myLegalName
         try {
             val p = webServerController.process()
-                    .directory(nodeDir)
+                    .directory(nodeDir.toFile())
                     .start()
             process = p
 

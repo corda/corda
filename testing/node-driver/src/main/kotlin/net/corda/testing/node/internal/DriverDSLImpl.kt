@@ -73,8 +73,6 @@ import java.net.ConnectException
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
@@ -136,7 +134,7 @@ class DriverDSLImpl(
             val urls = (cl as URLClassLoader).urLs
             val jarPattern = jarNamePattern.toRegex()
             val jarFileUrl = urls.first { jarPattern.matches(it.path) }
-            Paths.get(jarFileUrl.toURI()).toString()
+            jarFileUrl.toPath().toString()
         } catch (e: Exception) {
             log.warn("Unable to locate JAR `$jarNamePattern` on classpath: ${e.message}", e)
             throw e
@@ -1094,16 +1092,11 @@ fun getTimestampAsDirectoryName(): String {
 
 fun writeConfig(path: Path, filename: String, config: Config) {
     val configString = config.root().render(ConfigRenderOptions.defaults())
-    configString.byteInputStream().copyTo(path / filename, StandardCopyOption.REPLACE_EXISTING)
+    (path / filename).writeText(configString)
 }
 
 private fun Config.toNodeOnly(): Config {
-
-    return if (hasPath("webAddress")) {
-        withoutPath("webAddress").withoutPath("useHTTPS")
-    } else {
-        this
-    }
+    return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
 
 private operator fun Config.plus(property: Pair<String, Any>) = withValue(property.first, ConfigValueFactory.fromAnyRef(property.second))

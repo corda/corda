@@ -12,6 +12,7 @@ package net.corda.testing.node.internal.demorun
 
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
+import net.corda.core.internal.deleteRecursively
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.driver.JmxPolicy
@@ -39,7 +40,7 @@ class CordformNodeRunner(val cordformDefinition: CordformDefinition) {
 
     fun clean() {
         System.err.println("Deleting: ${cordformDefinition.nodesDirectory}")
-        cordformDefinition.nodesDirectory.toFile().deleteRecursively()
+        cordformDefinition.nodesDirectory.deleteRecursively()
     }
 
     /**

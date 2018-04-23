@@ -14,7 +14,6 @@ import net.corda.behave.database.DatabaseConnection
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
 import net.corda.behave.file.currentDirectory
-import net.corda.behave.file.div
 import net.corda.behave.file.stagingRoot
 import net.corda.behave.logging.getLogger
 import net.corda.behave.monitoring.PatternWatch
@@ -27,11 +26,13 @@ import net.corda.behave.ssh.MonitoringSSHClient
 import net.corda.behave.ssh.SSHClient
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.commons.io.FileUtils
-import java.io.File
 import java.net.InetAddress
+import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 
@@ -40,7 +41,7 @@ import java.util.concurrent.CountDownLatch
  */
 class Node(
         val config: Configuration,
-        private val rootDirectory: File = currentDirectory,
+        private val rootDirectory: Path = currentDirectory,
         private val settings: ServiceSettings = ServiceSettings()
 ) {
 
@@ -229,10 +230,10 @@ class Node(
 
     private fun installApps() {
         val version = config.distribution.version
-        val appDirectory = stagingRoot / "deps/corda/$version/apps"
+        val appDirectory = stagingRoot / "deps" / "corda" / version / "apps"
         if (appDirectory.exists()) {
             val targetAppDirectory = runtimeDirectory / "cordapps"
-            FileUtils.copyDirectory(appDirectory, targetAppDirectory)
+            FileUtils.copyDirectory(appDirectory.toFile(), targetAppDirectory.toFile())
         }
     }
 
@@ -257,7 +258,7 @@ class Node(
 
         private var includeFinance = false
 
-        private var directory: File? = null
+        private var directory: Path? = null
 
         private var timeout = Duration.ofSeconds(60)
 
@@ -307,7 +308,7 @@ class Node(
             return this
         }
 
-        fun withDirectory(newDirectory: File): Builder {
+        fun withDirectory(newDirectory: Path): Builder {
             directory = newDirectory
             return this
         }

@@ -11,6 +11,8 @@
 package net.corda.testing.common.internal
 
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.createFile
+import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
@@ -123,20 +125,19 @@ data class UnsafeKeyStore(private val delegate: KeyStore, val password: String) 
     fun save(path: Path) = delegate.save(path, password)
 
     fun toTemporaryFile(fileName: String, fileExtension: String? = delegate.type.toLowerCase(), directory: Path): TemporaryFile {
-        return TemporaryFile("$fileName.$fileExtension", directory).also { save(it.path) }
+        return TemporaryFile("$fileName.$fileExtension", directory).also { save(it.file) }
     }
 }
 
 class TemporaryFile(fileName: String, val directory: Path) : AutoCloseable {
-    private val file = (directory / fileName).toFile()
+    val file: Path = (directory / fileName).createFile().toAbsolutePath()
     init {
-        file.createNewFile()
-        file.deleteOnExit()
+        file.toFile().deleteOnExit()
     }
 
-    val path: Path = file.toPath().toAbsolutePath()
-
-    override fun close() = FileUtils.forceDelete(file)
+    override fun close() {
+        file.deleteIfExists()
+    }
 }
 
 data class UnsafeCertificate(val value: X509Certificate, val privateKey: PrivateKey?) {
@@ -205,8 +206,8 @@ fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOption
             action(serverSslConfiguration.value, clientSslConfiguration.value)
         }
     }
-    FileUtils.deleteQuietly(clientDir.toFile())
-    FileUtils.deleteQuietly(serverDir.toFile())
+    clientDir.deleteIfExists()
+    serverDir.deleteIfExists()
 }
 
 fun withCertificates(factoryDefaults: UnsafeCertificatesFactory.Defaults = UnsafeCertificatesFactory.defaults(), action: (server: KeyStores, client: KeyStores, createSelfSigned: (name: CordaX500Name) -> UnsafeCertificate, createSignedBy: (name: CordaX500Name, issuer: UnsafeCertificate) -> UnsafeCertificate) -> Unit) {

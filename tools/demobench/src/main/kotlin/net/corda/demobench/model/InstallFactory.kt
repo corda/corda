@@ -11,6 +11,7 @@
 package net.corda.demobench.model
 
 import com.typesafe.config.Config
+import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.parseAs
@@ -47,6 +48,6 @@ class InstallConfig internal constructor(val baseDir: Path, private val config: 
     val key = config.key
     override val cordappsDir: Path = baseDir / "cordapps"
 
-    fun deleteBaseDir(): Boolean = baseDir.toFile().deleteRecursively()
+    fun deleteBaseDir(): Unit = baseDir.deleteRecursively()
     fun installTo(installDir: Path) = config.copy(baseDir = installDir)
 }

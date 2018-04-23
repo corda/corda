@@ -10,10 +10,13 @@
 
 package net.corda.behave.file
 
-import java.io.File
+import net.corda.core.internal.list
+import net.corda.core.internal.readText
+import java.nio.file.Path
+import kotlin.streams.toList
 
 class LogSource(
-        private val directory: File,
+        private val directory: Path,
         filePattern: String? = ".*\\.log",
         private val filePatternUsedForExclusion: Boolean = false
 ) {
@@ -21,7 +24,7 @@ class LogSource(
     private val fileRegex = Regex(filePattern ?: ".*")
 
     data class MatchedLogContent(
-            val filename: File,
+            val filename: Path,
             val contents: String
     )
 
@@ -31,10 +34,12 @@ class LogSource(
         } else {
             null
         }
-        val logFiles = directory.listFiles({ file ->
-            (!filePatternUsedForExclusion && file.name.matches(fileRegex)) ||
-                    (filePatternUsedForExclusion && !file.name.matches(fileRegex))
-        })
+        val logFiles = directory.list {
+            it.filter {
+                (!filePatternUsedForExclusion && it.fileName.toString().matches(fileRegex)) ||
+                (filePatternUsedForExclusion && !it.fileName.toString().matches(fileRegex))
+            }.toList()
+        }
         val result = mutableListOf<MatchedLogContent>()
         for (file in logFiles) {
             val contents = file.readText()

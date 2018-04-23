@@ -13,6 +13,8 @@ package net.corda.behave
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 
+// TODO Most of these are available in corda core
+
 val Int.millisecond: Duration
     get() = Duration.ofMillis(this.toLong())
 
