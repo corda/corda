@@ -61,9 +61,8 @@ public class FlowsInJavaTest {
             fail("ExecutionException should have been thrown");
         } catch (ExecutionException e) {
             assertThat(e.getCause())
-                    .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("primitive")
-                    .hasMessageContaining(receiveType.getName());
+                    .hasMessageContaining(Primitives.unwrap(receiveType).getName());
         }
     }
 
