@@ -51,7 +51,7 @@ class CollectSignaturesFlowTests {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.core.flows"))
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bobNode = mockNet.createPartyNode(BOB_NAME)
         charlieNode = mockNet.createPartyNode(CHARLIE_NAME)
@@ -64,12 +64,6 @@ class CollectSignaturesFlowTests {
     @After
     fun tearDown() {
         mockNet.stopNodes()
-    }
-
-    private fun registerFlowOnAllNodes(flowClass: KClass<out FlowLogic<*>>) {
-        listOf(aliceNode, bobNode, charlieNode).forEach {
-            it.registerInitiatedFlow(flowClass.java)
-        }
     }
 
     // With this flow, the initiator starts the "CollectTransactionFlow". It is then the responders responsibility to
@@ -120,7 +114,6 @@ class CollectSignaturesFlowTests {
             // Normally this is handled by TransactionKeyFlow, but here we have to manually let A know about the identity
             aliceNode.services.identityService.verifyAndRegisterIdentity(bConfidentialIdentity)
         }
-        registerFlowOnAllNodes(TestFlow.Responder::class)
         val magicNumber = 1337
         val parties = listOf(alice, bConfidentialIdentity.party, charlie)
         val state = DummyContract.MultiOwnerState(magicNumber, parties)

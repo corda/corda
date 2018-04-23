@@ -140,7 +140,3 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
     throw e.cause!!
 }
 
-/**
- * Extension method for providing a sumBy method that processes and returns a Long
- */
-fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector(it) }.sum()

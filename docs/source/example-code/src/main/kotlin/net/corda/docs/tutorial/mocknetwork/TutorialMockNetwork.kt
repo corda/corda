@@ -11,6 +11,7 @@
 package net.corda.docs.tutorial.mocknetwork
 
 import co.paralleluniverse.fibers.Suspendable
+import com.google.common.collect.ImmutableList
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
@@ -72,10 +73,9 @@ class TutorialMockNetwork {
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork(emptyList())
+        mockNet = MockNetwork(ImmutableList.of("net.corda.docs.tutorial.mocknetwork"))
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
-        nodeB.registerInitiatedFlow(FlowB::class.java)
     }
 
     @After

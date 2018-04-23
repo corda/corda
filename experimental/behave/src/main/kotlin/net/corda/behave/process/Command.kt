@@ -15,6 +15,7 @@ import net.corda.behave.file.currentDirectory
 import net.corda.behave.logging.getLogger
 import net.corda.behave.process.output.OutputListener
 import rx.Observable
+import rx.Subscriber
 import java.io.Closeable
 import java.io.File
 import java.io.IOException
@@ -153,8 +154,9 @@ open class Command(
         return exitCode
     }
 
-    fun use(action: (Command, Observable<String>) -> Unit = { _, _ -> }): Int {
+    fun use(subscriber: Subscriber<String>, action: (Command, Observable<String>) -> Unit = { _, _ -> }): Int {
         try {
+            output.subscribe(subscriber)
             start()
             action(this, output)
         } finally {

@@ -27,6 +27,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
 import java.io.File
@@ -251,13 +252,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     }
 
     private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
-        return (scanResult.getNamesOfClassesImplementing(Contract::class) +
-                scanResult.getNamesOfClassesImplementing(UpgradedContract::class) +
-                // Even though UpgradedContractWithLegacyConstraint implements UpgradedContract
-                // we need to specify it separately. Otherwise, classes implementing UpgradedContractWithLegacyConstraint
-                // don't get picked up.
-                scanResult.getNamesOfClassesImplementing(UpgradedContractWithLegacyConstraint::class))
-                .distinct()
+        return coreContractClasses.flatMap { scanResult.getNamesOfClassesImplementing(it) }.distinct()
     }
 
     private fun findPlugins(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {

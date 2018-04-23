@@ -48,12 +48,10 @@ class ResolveTransactionsFlowTest {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.core.internal"))
         notaryNode = mockNet.defaultNotaryNode
         megaCorpNode = mockNet.createPartyNode(CordaX500Name("MegaCorp", "London", "GB"))
         miniCorpNode = mockNet.createPartyNode(CordaX500Name("MiniCorp", "London", "GB"))
-        megaCorpNode.registerInitiatedFlow(TestResponseFlow::class.java)
-        miniCorpNode.registerInitiatedFlow(TestResponseFlow::class.java)
         notary = mockNet.defaultNotaryIdentity
         megaCorp = megaCorpNode.info.singleIdentity()
         miniCorp = miniCorpNode.info.singleIdentity()

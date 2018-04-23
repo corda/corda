@@ -474,3 +474,8 @@ fun NotarisationRequest.generateSignature(serviceHub: ServiceHub): NotarisationR
 }
 
 val PublicKey.hash: SecureHash get() = encoded.sha256()
+
+/**
+ * Extension method for providing a sumBy method that processes and returns a Long
+ */
+fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector(it) }.sum()
