@@ -10,15 +10,12 @@
 
 package net.corda.behave.file
 
-import java.io.File
+import java.nio.file.Path
+import java.nio.file.Paths
 
-val currentDirectory: File
-    get() = File(System.getProperty("user.dir"))
+val currentDirectory: Path
+    get() = Paths.get(System.getProperty("user.dir"))
 
 // location of Corda distributions and Drivers dependencies
-val stagingRoot: File
-    get() = if (System.getProperty("STAGING_ROOT") != null)
-                File(System.getProperty("STAGING_ROOT"))
-            else currentDirectory
-
-operator fun File.div(relative: String): File = this.resolve(relative)
+val stagingRoot: Path
+    get() = System.getProperty("STAGING_ROOT")?.let { Paths.get(it) } ?: currentDirectory

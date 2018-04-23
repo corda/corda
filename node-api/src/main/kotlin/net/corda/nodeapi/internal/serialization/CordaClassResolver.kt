@@ -16,6 +16,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
+import net.corda.core.internal.writer
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
@@ -26,10 +27,9 @@ import net.corda.nodeapi.internal.serialization.kryo.ThrowableSerializer
 import java.io.PrintWriter
 import java.lang.reflect.Modifier
 import java.lang.reflect.Modifier.isAbstract
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
+import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
+import java.nio.file.StandardOpenOption.*
 import java.util.*
 
 /**
@@ -216,7 +216,7 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
             val fileName = System.getenv("WHITELIST_FILE")
             if (fileName != null && fileName.isNotEmpty()) {
                 try {
-                    return PrintWriter(Files.newBufferedWriter(Paths.get(fileName), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE), true)
+                    return PrintWriter(Paths.get(fileName).writer(UTF_8, CREATE, APPEND, WRITE), true)
                 } catch (ioEx: Exception) {
                     log.error("Could not open/create whitelist journal file for append: $fileName", ioEx)
                 }

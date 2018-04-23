@@ -10,11 +10,10 @@
 
 package net.corda.behave.scenarios.helpers
 
-import net.corda.behave.file.div
 import net.corda.behave.minutes
 import net.corda.behave.process.JarCommand
 import net.corda.behave.scenarios.ScenarioState
-import java.io.File
+import net.corda.core.internal.div
 
 class Startup(state: ScenarioState) : Substeps(state) {
 
@@ -113,7 +112,7 @@ class Startup(state: ScenarioState) : Substeps(state) {
             // assumption is there is a Main() method declared in the manifest of the JAR
             // eg. Main-Class: net.corda.notaryhealthcheck.MainKt
             val cordappDirectory = node(nodeName).config.distribution.cordappDirectory
-            val cordappJar : File = cordappDirectory / "$cordapp.jar"
+            val cordappJar = cordappDirectory / "$cordapp.jar"
             // Execute
             val command = JarCommand(cordappJar, args as Array<String>, cordappDirectory, 1.minutes)
             command.start()

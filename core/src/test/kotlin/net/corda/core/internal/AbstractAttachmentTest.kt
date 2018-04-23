@@ -12,13 +12,16 @@ package net.corda.core.internal
 
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.streams.toList
 import kotlin.test.assertEquals
 
 class AbstractAttachmentTest {
@@ -46,23 +49,23 @@ class AbstractAttachmentTest {
             (dir / "_signable3").writeLines(listOf("signable3"))
         }
 
-        private fun load(name: String) = object : AbstractAttachment({ (dir / name).readAll() }) {
+        private fun load(name: String) = object : AbstractAttachment((dir / name)::readAll) {
             override val id get() = throw UnsupportedOperationException()
         }
 
         @AfterClass
         @JvmStatic
         fun afterClass() {
-            dir.toFile().deleteRecursively()
+            dir.deleteRecursively()
         }
     }
 
     @After
     fun tearDown() {
-        dir.toFile().listFiles().forEach {
-            if (!it.name.startsWith("_")) it.deleteRecursively()
+        dir.list {
+            it.filter { !it.fileName.toString().startsWith("_") }.forEach(Path::deleteRecursively)
         }
-        assertEquals(5, dir.toFile().listFiles().size)
+        assertThat(dir.list()).hasSize(5)
     }
 
     @Test

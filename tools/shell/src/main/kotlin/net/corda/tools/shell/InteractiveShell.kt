@@ -118,7 +118,7 @@ object InteractiveShell {
             config["crash.auth"] = "corda"
             configuration.sshHostKeyDirectory?.apply {
                 val sshKeysDir = configuration.sshHostKeyDirectory
-                sshKeysDir.toFile().mkdirs()
+                sshKeysDir.createDirectories()
                 config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
                 config["crash.ssh.keygen"] = "true"
             }

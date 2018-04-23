@@ -11,10 +11,7 @@
 package net.corda.nodeapi.internal.network
 
 import net.corda.cordform.CordformNode
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.isRegularFile
-import net.corda.core.internal.list
+import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import rx.Observable
 import rx.Scheduler
@@ -25,7 +22,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.COPY_ATTRIBUTES
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.util.concurrent.TimeUnit
 
@@ -110,10 +106,10 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
     private fun poll() {
         nodeDataMapBox.locked {
             for (nodeData in values) {
-                nodeData.nodeDir.list { paths ->
-                    paths.filter { it.isRegularFile() }
-                            .filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }
-                            .forEach { path -> processPath(nodeData, path) }
+                nodeData.nodeDir.list { paths -> paths
+                        .filter { it.isRegularFile() }
+                        .filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }
+                        .forEach { processPath(nodeData, it) }
                 }
             }
         }
@@ -123,7 +119,7 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
     // be copied.
     private fun processPath(nodeData: NodeData, path: Path) {
         nodeDataMapBox.alreadyLocked {
-            val newTimestamp = Files.readAttributes(path, BasicFileAttributes::class.java).lastModifiedTime()
+            val newTimestamp = path.lastModifiedTime()
             val previousTimestamp = nodeData.previouslySeenFiles.put(path, newTimestamp) ?: FileTime.fromMillis(-1)
             if (newTimestamp > previousTimestamp) {
                 for (destination in this.values.filter { it.nodeDir != nodeData.nodeDir }.map { it.additionalNodeInfoDirectory }) {
@@ -143,18 +139,18 @@ class NodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : AutoCloseabl
         }
         try {
             // First copy the file to a temporary file within the appropriate directory.
-            Files.copy(source, tempDestination, COPY_ATTRIBUTES, REPLACE_EXISTING)
+            source.copyTo(tempDestination, COPY_ATTRIBUTES, REPLACE_EXISTING)
         } catch (exception: IOException) {
             log.warn("Couldn't copy $source to $tempDestination.", exception)
-            Files.delete(tempDestination)
+            tempDestination.delete()
             throw exception
         }
         try {
             // Then rename it to the desired name. This way the file 'appears' on the filesystem as an atomic operation.
-            Files.move(tempDestination, destination, REPLACE_EXISTING)
+            tempDestination.moveTo(destination, REPLACE_EXISTING)
         } catch (exception: IOException) {
             log.warn("Couldn't move $tempDestination to $destination.", exception)
-            Files.delete(tempDestination)
+            tempDestination.delete()
             throw exception
         }
     }

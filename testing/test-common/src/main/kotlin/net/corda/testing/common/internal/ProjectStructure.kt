@@ -12,12 +12,12 @@ package net.corda.testing.common.internal
 
 import net.corda.core.internal.div
 import net.corda.core.internal.isDirectory
+import net.corda.core.internal.toPath
 import java.nio.file.Path
-import java.nio.file.Paths
 
 object ProjectStructure {
     val projectRootDir: Path = run {
-        var dir = Paths.get(javaClass.getResource("/").toURI())
+        var dir = javaClass.getResource("/").toPath()
         while (!(dir / ".git").isDirectory()) {
             dir = dir.parent
         }

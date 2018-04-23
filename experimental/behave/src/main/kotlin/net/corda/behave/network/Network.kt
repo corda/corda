@@ -13,7 +13,6 @@ package net.corda.behave.network
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
 import net.corda.behave.file.currentDirectory
-import net.corda.behave.file.div
 import net.corda.behave.file.stagingRoot
 import net.corda.behave.logging.getLogger
 import net.corda.behave.minutes
@@ -22,19 +21,20 @@ import net.corda.behave.node.Node
 import net.corda.behave.node.configuration.NotaryType
 import net.corda.behave.process.JarCommand
 import net.corda.core.CordaException
+import net.corda.core.internal.*
 import org.apache.commons.io.FileUtils
 import java.io.Closeable
-import java.io.File
+import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneId
+import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class Network private constructor(
         private val nodes: Map<String, Node>,
-        private val targetDirectory: File,
+        private val targetDirectory: Path,
         private val timeout: Duration = 2.minutes
 ) : Closeable, Iterable<Node> {
 
@@ -47,7 +47,7 @@ class Network private constructor(
     private var hasError = false
 
     init {
-        FileUtils.forceMkdir(targetDirectory)
+        targetDirectory.createDirectories()
     }
 
     class Builder internal constructor(
@@ -58,10 +58,10 @@ class Network private constructor(
 
         private val startTime = DateTimeFormatter
                 .ofPattern("yyyyMMdd-HHmmss")
-                .withZone(ZoneId.of("UTC"))
+                .withZone(UTC)
                 .format(Instant.now())
 
-        private val directory = currentDirectory / "build/runs/$startTime"
+        private val directory = currentDirectory / "build" / "runs" / startTime
 
         fun addNode(
                 name: String,
@@ -102,12 +102,11 @@ class Network private constructor(
     }
 
     fun copyDatabaseDrivers() {
-        val driverDirectory = targetDirectory / "libs"
+        val driverDirectory = (targetDirectory / "libs").createDirectories()
         log.info("Copying database drivers from $stagingRoot/deps/drivers to $driverDirectory")
-        FileUtils.forceMkdir(driverDirectory)
         FileUtils.copyDirectory(
-                stagingRoot / "deps/drivers",
-                driverDirectory
+                (stagingRoot / "deps" / "drivers").toFile(),
+                driverDirectory.toFile()
         )
     }
 
@@ -160,7 +159,7 @@ class Network private constructor(
             error("Failed to bootstrap network") {
                 val matches = LogSource(targetDirectory)
                         .find(".*[Ee]xception.*")
-                        .groupBy { it.filename.absolutePath }
+                        .groupBy { it.filename.toAbsolutePath() }
                 for (match in matches) {
                     log.info("Log(${match.key}):\n${match.value.joinToString("\n") { it.contents }}")
                 }
@@ -174,30 +173,17 @@ class Network private constructor(
         try {
             if (!hasError || CLEANUP_ON_ERROR) {
                 log.info("Cleaning up runtime ...")
-                FileUtils.deleteDirectory(targetDirectory)
+                targetDirectory.deleteRecursively()
             } else {
                 log.info("Deleting temporary files, but retaining logs and config ...")
-                for (node in nodes.values.map { it.config.name }) {
-                    val nodeFolder = targetDirectory / node
-                    FileUtils.deleteDirectory(nodeFolder / "additional-node-infos")
-                    FileUtils.deleteDirectory(nodeFolder / "artemis")
-                    FileUtils.deleteDirectory(nodeFolder / "certificates")
-                    FileUtils.deleteDirectory(nodeFolder / "cordapps")
-                    FileUtils.deleteDirectory(nodeFolder / "shell-commands")
-                    FileUtils.deleteDirectory(nodeFolder / "sshkey")
-                    FileUtils.deleteQuietly(nodeFolder / "corda.jar")
-                    FileUtils.deleteQuietly(nodeFolder / "network-parameters")
-                    FileUtils.deleteQuietly(nodeFolder / "persistence.mv.db")
-                    FileUtils.deleteQuietly(nodeFolder / "process-id")
-
-                    for (nodeInfo in nodeFolder.listFiles({
-                        file ->  file.name.matches(Regex("nodeInfo-.*"))
-                    })) {
-                        FileUtils.deleteQuietly(nodeInfo)
+                for (node in nodes.values) {
+                    val nodeDir = targetDirectory / node.config.name
+                    nodeDir.list { paths -> paths
+                            .filter { it.fileName.toString() !in setOf("logs", "node.conf") }
+                            .forEach(Path::deleteRecursively)
                     }
                 }
-                FileUtils.deleteDirectory(targetDirectory / "libs")
-                FileUtils.deleteDirectory(targetDirectory / ".cache")
+                listOf("libs", ".cache").forEach { (targetDirectory / it).deleteRecursively() }
             }
             log.info("Network was shut down successfully")
         } catch (e: Exception) {

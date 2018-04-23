@@ -10,20 +10,19 @@
 
 package net.corda.tools.shell
 
+import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.slf4j.event.Level
 import java.nio.file.Paths
 import kotlin.test.assertEquals
-import java.io.File
 
 class StandaloneShellArgsParserTest {
-
-    private val CONFIG_FILE = File(StandaloneShellArgsParserTest::class.java.getResource("/config.conf").toURI())
+    private val CONFIG_FILE = StandaloneShellArgsParserTest::class.java.getResource("/config.conf").toPath()
 
     @Test
     fun args_to_cmd_options() {
-
         val args = arrayOf("--config-file", "/x/y/z/config.conf",
                 "--commands-directory", "/x/y/commands",
                 "--cordpass-directory", "/x/y/cordapps",
@@ -42,7 +41,8 @@ class StandaloneShellArgsParserTest {
                 "--truststore-type", "dummy",
                 "--keystore-type", "JKS")
 
-        val expectedOptions = CommandLineOptions(configFile = "/x/y/z/config.conf",
+        val expectedOptions = CommandLineOptions(
+                configFile = "/x/y/z/config.conf",
                 commandsDirectory = Paths.get("/x/y/commands").normalize().toAbsolutePath(),
                 cordappsDirectory = Paths.get("/x/y/cordapps").normalize().toAbsolutePath(),
                 host = "alocalhost",
@@ -62,7 +62,7 @@ class StandaloneShellArgsParserTest {
 
         val options = CommandLineOptionParser().parse(*args)
 
-        assertEquals(expectedOptions, options)
+        assertThat(options).isEqualTo(expectedOptions)
     }
 
     @Test
@@ -137,7 +137,7 @@ class StandaloneShellArgsParserTest {
     @Test
     fun cmd_options_to_config_from_file() {
 
-        val options = CommandLineOptions(configFile = CONFIG_FILE.absolutePath,
+        val options = CommandLineOptions(configFile = CONFIG_FILE.toString(),
                 commandsDirectory = null,
                 cordappsDirectory = null,
                 host = null,
@@ -176,7 +176,7 @@ class StandaloneShellArgsParserTest {
     @Test
     fun cmd_options_override_config_from_file() {
 
-        val options = CommandLineOptions(configFile = CONFIG_FILE.absolutePath,
+        val options = CommandLineOptions(configFile = CONFIG_FILE.toString(),
                 commandsDirectory = null,
                 cordappsDirectory = null,
                 host = null,

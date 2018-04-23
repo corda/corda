@@ -9,11 +9,11 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.google.common.io.Closeables
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.internal.copyTo
+import net.corda.core.internal.inputStream
 import org.crsh.command.InvocationContext
 import rx.Observable
 import java.io.BufferedInputStream
 import java.io.InputStream
-import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 
@@ -85,7 +85,7 @@ object InputStreamDeserializer : JsonDeserializer<InputStream>() {
     private val streams = Collections.synchronizedSet(HashSet<InputStream>())
 
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): InputStream {
-        val stream = object : BufferedInputStream(Files.newInputStream(Paths.get(p.text))) {
+        val stream = object : BufferedInputStream(Paths.get(p.text).inputStream()) {
             override fun close() {
                 super.close()
                 streams.remove(this)

@@ -36,7 +36,6 @@ import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -115,13 +114,13 @@ class NetworkBootstrapper {
             val cordappsDir = (nodeDir / "cordapps").createDirectories()
             cordappJars.forEach { it.copyToDirectory(cordappsDir) }
         }
-        Files.delete(cordaJar)
+        cordaJar.delete()
     }
 
     private fun extractCordaJarTo(directory: Path): Path {
         val cordaJarPath = directory / "corda.jar"
         if (!cordaJarPath.exists()) {
-            Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar").copyTo(cordaJarPath)
+            Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar").use { it.copyTo(cordaJarPath) }
         }
         return cordaJarPath
     }

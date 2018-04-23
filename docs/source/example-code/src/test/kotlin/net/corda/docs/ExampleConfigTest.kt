@@ -10,8 +10,8 @@
 
 package net.corda.docs
 
+import net.corda.core.internal.toPath
 import net.corda.node.services.config.ConfigHelper
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import org.junit.Test
 import java.nio.file.Path
@@ -25,7 +25,7 @@ class ExampleConfigTest {
         configFilenames.forEach {
             println("Checking $it")
             val configFileResource = ExampleConfigTest::class.java.classLoader.getResource(it)
-            val config = loadConfig(Paths.get(configFileResource.toURI()))
+            val config = loadConfig(configFileResource.toPath())
             // Force the config fields as they are resolved lazily
             config.javaClass.kotlin.declaredMemberProperties.forEach { member ->
                 if (member.visibility == KVisibility.PUBLIC) {
@@ -37,7 +37,7 @@ class ExampleConfigTest {
 
     @Test
     fun `example node_confs parses fine`() {
-        readAndCheckConfigurations<NodeConfiguration>(
+        readAndCheckConfigurations(
                 "example-node.conf",
                 "example-out-of-process-verifier-node.conf"
         ) {

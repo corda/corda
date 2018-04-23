@@ -14,8 +14,8 @@ import net.corda.core.serialization.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions
 import org.junit.Test
-import java.io.File
 import java.io.NotSerializableException
+import java.net.URI
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
@@ -23,11 +23,11 @@ import kotlin.test.assertTrue
 
 class EnumEvolvabilityTests {
     @Suppress("UNUSED")
-    var localPath = projectRootDir.toUri().resolve(
+    var localPath: URI = projectRootDir.toUri().resolve(
             "node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp")
 
     companion object {
-        val VERBOSE = false
+        const val VERBOSE = false
     }
 
     enum class NotAnnotated {
@@ -442,8 +442,7 @@ class EnumEvolvabilityTests {
         //File(URI("$localPath/$resource")).writeBytes(
         //        SerializationOutput(sf).serialize(WrapsUnknown(WithUnknownTest.D)).bytes)
 
-        val path = EvolvabilityTests::class.java.getResource(resource)
-        val sb1 = File(path.toURI()).readBytes()
+        val sb1 = EvolvabilityTests::class.java.getResource(resource).readBytes()
 
         val envelope = DeserializationInput(sf).deserializeAndReturnEnvelope(SerializedBytes<WrapsUnknown>(sb1)).envelope
 

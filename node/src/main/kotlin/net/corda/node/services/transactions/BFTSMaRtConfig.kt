@@ -11,10 +11,10 @@
 package net.corda.node.services.transactions
 
 import net.corda.core.internal.div
+import net.corda.core.internal.writer
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import java.io.FileWriter
 import java.io.PrintWriter
 import java.net.InetAddress
 import java.net.Socket
@@ -58,7 +58,7 @@ class BFTSMaRtConfig(private val replicaAddresses: List<NetworkHostAndPort>, deb
 
     private fun configWriter(name: String, block: PrintWriter.() -> Unit) {
         // Default charset, consistent with loaders:
-        FileWriter((path / name).toFile()).use {
+        (path / name).writer().use {
             PrintWriter(it).use {
                 it.run(block)
             }

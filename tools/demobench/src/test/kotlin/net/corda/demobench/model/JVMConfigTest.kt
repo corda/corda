@@ -11,30 +11,28 @@
 package net.corda.demobench.model
 
 import com.jediterm.terminal.ui.UIUtil
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class JVMConfigTest {
-
     private val jvm = JVMConfig()
 
     @Test
     fun `test Java path`() {
-        assertTrue(Files.isExecutable(jvm.javaPath.onFileSystem()))
+        assertThat(jvm.javaPath.onFileSystem()).isExecutable()
     }
 
     @Test
     fun `test application directory`() {
-        assertTrue(Files.isDirectory(jvm.applicationDir))
+        assertThat(jvm.applicationDir).isDirectory()
     }
 
     @Test
     fun `test user home`() {
-        assertTrue(Files.isDirectory(jvm.userHome))
+        assertThat(jvm.userHome).isDirectory()
     }
 
     @Test
@@ -51,8 +49,5 @@ class JVMConfigTest {
         assertEquals(listOf(java.toString(), "-jar", "testapp.jar", "arg1", "arg2", "arg3"), process.command())
     }
 
-    private fun Path.onFileSystem(): Path
-            = if (UIUtil.isWindows) this.parent.resolve(Paths.get(this.fileName.toString() + ".exe"))
-    else this
-
+    private fun Path.onFileSystem(): Path = if (UIUtil.isWindows) parent.resolve(Paths.get("$fileName.exe")) else this
 }
