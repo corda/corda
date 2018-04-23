@@ -52,6 +52,7 @@ interface BridgeSSLConfiguration : SSLConfiguration {
  */
 interface BridgeOutboundConfiguration {
     val artemisBrokerAddress: NetworkHostAndPort
+    val alternateArtemisBrokerAddresses: List<NetworkHostAndPort>
     // Allows override of [KeyStore] details for the artemis connection, otherwise the general top level details are used.
     val customSSLConfiguration: BridgeSSLConfiguration?
     // Allows use of a SOCKS 4/5 proxy
