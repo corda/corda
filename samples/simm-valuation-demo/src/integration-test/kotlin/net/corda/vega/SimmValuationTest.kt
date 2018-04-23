@@ -12,7 +12,9 @@ package net.corda.vega
 
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.packageName
 import net.corda.core.utilities.getOrThrow
+import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -26,7 +28,10 @@ import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
+import net.corda.vega.plugin.customserializers.CurrencyParameterSensitivitiesSerializer
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
+import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test
 import java.math.BigDecimal
@@ -44,6 +49,16 @@ class SimmValuationTest : IntegrationTest() {
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
                 .map { it.toDatabaseSchemaName() }.toTypedArray())
+    }
+
+    @Before
+    fun setup() {
+        System.setProperty(AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME, CurrencyParameterSensitivitiesSerializer::class.packageName)
+    }
+
+    @After
+    fun tearDown() {
+        System.clearProperty(AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
     }
 
     @Test
