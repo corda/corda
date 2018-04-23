@@ -97,5 +97,19 @@ class ArtemisTcpTransport {
             }
             return TransportConfiguration(factoryName, options)
         }
+
+        /** Create as list of [TransportConfiguration]. **/
+        fun tcpTransportsFromList(
+                direction: ConnectionDirection,
+                hostAndPortList: List<NetworkHostAndPort>,
+                config: SSLConfiguration?,
+                enableSSL: Boolean = true): List<TransportConfiguration>{
+            val tcpTransports = ArrayList<TransportConfiguration>(hostAndPortList.size)
+            hostAndPortList.forEach {
+                tcpTransports.add(tcpTransport(direction, it, config, enableSSL))
+            }
+
+            return tcpTransports
+        }
     }
 }
