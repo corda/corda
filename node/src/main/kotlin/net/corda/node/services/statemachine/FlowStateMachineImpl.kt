@@ -297,7 +297,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun <R : Any> suspend(ioRequest: FlowIORequest<R>, maySkipCheckpoint: Boolean): R {
         val serializationContext = TransientReference(getTransientField(TransientValues::checkpointSerializationContext))
         val transaction = extractThreadLocalTransaction()
-        val transitionExecutor = TransientReference(getTransientField(TransientValues::transitionExecutor))
         parkAndSerialize { _, _ ->
             logger.trace { "Suspended on $ioRequest" }
 
@@ -312,8 +311,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 Event.Error(throwable)
             }
 
-            // We must commit the database transaction before returning from this closure, otherwise Quasar may schedule
-            // other fibers
+            // We must commit the database transaction before returning from this closure otherwise Quasar may schedule
+            // other fibers, so we process the event immediately
             val continuation = processEventImmediately(
                     event,
                     isDbTransactionOpenOnEntry = true,

@@ -186,20 +186,6 @@ abstract class FlowLogic<out T> {
     }
 
     /**
-     * Similar to [sendAndReceive] but also instructs the `payload` to be redelivered until the expected message is received.
-     *
-     * Note that this method should NOT be used for regular party-to-party communication, use [sendAndReceive] instead.
-     * It is only intended for the case where the [otherParty] is running a distributed service with an idempotent
-     * flow which only accepts a single request and sends back a single response – e.g. a notary or certain types of
-     * oracle services. If one or more nodes in the service cluster go down mid-session, the message will be redelivered
-     * to a different one, so there is no need to wait until the initial node comes back up to obtain a response.
-     */
-    @Deprecated("Use FlowSession.sendAndReceiveWithRetry()", level = DeprecationLevel.WARNING)
-    internal inline fun <reified R : Any> sendAndReceiveWithRetry(otherParty: Party, payload: Any): UntrustworthyData<R> {
-        return getDeprecatedSessionForParty(otherParty).sendAndReceiveWithRetry(payload)
-    }
-
-    /**
      * Suspends until the specified [otherParty] sends us a message of type [R].
      *
      * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
