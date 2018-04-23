@@ -93,7 +93,8 @@ interface CordaRPCClientConfiguration {
  * [CordaRPCClientConfiguration]. While attempting failover, current and future RPC calls will throw
  * [RPCException] and previously returned observables will call onError().
  *
- * If the client was created using a list of hosts, automatic failover will occur(the servers have to be started in HA mode)
+ * If the client was created using a list of hosts, automatic failover will occur (the servers have to be started in
+ * HA mode).
  *
  * @param hostAndPort The network address to connect to.
  * @param configuration An optional configuration used to tweak client behaviour.
@@ -130,14 +131,6 @@ class CordaRPCClient private constructor(
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
         }
 
-        internal fun createWithSsl(
-                haAddressPool: List<NetworkHostAndPort>,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
-                sslConfiguration: SSLConfiguration? = null
-        ): CordaRPCClient {
-            return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, null, haAddressPool)
-        }
-
         internal fun createWithSslAndClassLoader(
                 hostAndPort: NetworkHostAndPort,
                 configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
@@ -145,15 +138,6 @@ class CordaRPCClient private constructor(
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration, classLoader)
-        }
-
-        internal fun createWithSslAndClassLoader(
-                haAddressPool: List<NetworkHostAndPort>,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
-                sslConfiguration: SSLConfiguration? = null,
-                classLoader: ClassLoader? = null
-        ): CordaRPCClient {
-            return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, classLoader, haAddressPool)
         }
     }
 

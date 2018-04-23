@@ -388,7 +388,7 @@ class RPCStabilityTests {
             servers[response]!!.shutdown()
             servers.remove(response)
 
-            //failover will take some time
+            // Failover will take some time.
             while (true) {
                 try {
                     response = client.serverId()
