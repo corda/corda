@@ -15,9 +15,7 @@ import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.OnLedgerAsset
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PartyAndAmount
 import net.corda.confidential.SwapIdentitiesFlow
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
@@ -56,7 +54,7 @@ class CashIssueAndDoublePayment(val amount: Amount<Currency>,
                 = txState.copy(data = txState.data.copy(amount = amt, owner = owner))
 
         val issueResult = subFlow(CashIssueFlow(amount, issueRef, notary))
-        val cashStateAndRef = issueResult.stx.tx.outRef<Cash.State>(0)
+        val cashStateAndRef = serviceHub.loadStates(setOf(StateRef(issueResult.id, 0))).single() as StateAndRef<Cash.State>
 
         progressTracker.currentStep = GENERATING_ID
         val txIdentities = if (anonymous) {
@@ -93,7 +91,7 @@ class CashIssueAndDoublePayment(val amount: Amount<Currency>,
             val cause = expected.cause
             if (cause is NotaryException) {
                 if (cause.error is NotaryError.Conflict) {
-                    return Result(notarised1, recipient)
+                    return Result(notarised1.id, recipient)
                 }
                 throw expected // Wasn't actually expected!
             }

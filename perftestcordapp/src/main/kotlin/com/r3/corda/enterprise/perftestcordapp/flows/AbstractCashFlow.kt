@@ -12,6 +12,7 @@ package com.r3.corda.enterprise.perftestcordapp.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -55,7 +56,7 @@ abstract class AbstractCashFlow<out T>(override val progressTracker: ProgressTra
      * transaction, otherwise this is the well known identity.
      */
     @CordaSerializable
-    data class Result(val stx: SignedTransaction, val recipient: AbstractParty?)
+    data class Result(val id: SecureHash, val recipient: AbstractParty?)
 
     abstract class AbstractRequest(val amount: Amount<Currency>)
 }

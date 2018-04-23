@@ -15,9 +15,7 @@ import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.OnLedgerAsset
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PartyAndAmount
 import net.corda.confidential.SwapIdentitiesFlow
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -53,7 +51,7 @@ class CashIssueAndDuplicatePayment(val amount: Amount<Currency>,
                 = txState.copy(data = txState.data.copy(amount = amt, owner = owner))
 
         val issueResult = subFlow(CashIssueFlow(amount, issueRef, notary))
-        val cashStateAndRef = issueResult.stx.tx.outRef<Cash.State>(0)
+        val cashStateAndRef = serviceHub.loadStates(setOf(StateRef(issueResult.id, 0))).single() as StateAndRef<Cash.State>
 
         progressTracker.currentStep = GENERATING_ID
         val txIdentities = if (anonymous) {
@@ -79,6 +77,6 @@ class CashIssueAndDuplicatePayment(val amount: Amount<Currency>,
         val notarised1 = finaliseTx(tx, setOf(recipient), "Unable to notarise spend first time")
         val notarised2 = finaliseTx(tx, setOf(recipient), "Unable to notarise spend second time")
 
-        return Result(notarised2, recipient)
+        return Result(notarised2.id, recipient)
     }
 }

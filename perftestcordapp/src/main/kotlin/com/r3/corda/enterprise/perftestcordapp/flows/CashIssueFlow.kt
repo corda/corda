@@ -11,6 +11,8 @@
 package com.r3.corda.enterprise.perftestcordapp.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
+import com.r3.corda.enterprise.perftestcordapp.issuedBy
 import net.corda.core.contracts.Amount
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
@@ -18,8 +20,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
-import com.r3.corda.enterprise.perftestcordapp.issuedBy
 import java.util.*
 
 /**
@@ -54,7 +54,7 @@ class CashIssueFlow(private val amount: Amount<Currency>,
         progressTracker.currentStep = FINALISING_TX
         // There is no one to send the tx to as we're the only participants
         val notarised = finaliseTx(tx, emptySet(), "Unable to notarise issue")
-        return Result(notarised, ourIdentity)
+        return Result(notarised.id, ourIdentity)
     }
 
     @CordaSerializable

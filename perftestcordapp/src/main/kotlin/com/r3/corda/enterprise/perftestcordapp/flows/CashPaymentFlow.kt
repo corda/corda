@@ -11,6 +11,7 @@
 package com.r3.corda.enterprise.perftestcordapp.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
@@ -20,7 +21,6 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import java.util.*
 
 /**
@@ -73,7 +73,7 @@ open class CashPaymentFlow(
 
         progressTracker.currentStep = FINALISING_TX
         val notarised = finaliseTx(tx, setOf(recipient), "Unable to notarise spend")
-        return Result(notarised, anonymousRecipient)
+        return Result(notarised.id, anonymousRecipient)
     }
 
     @CordaSerializable

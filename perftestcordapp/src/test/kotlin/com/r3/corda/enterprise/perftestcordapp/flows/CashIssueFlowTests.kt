@@ -53,7 +53,7 @@ class CashIssueFlowTests {
         val ref = OpaqueBytes.of(0x01)
         val future = bankOfCordaNode.startFlow(CashIssueFlow(expected, ref, notary))
         mockNet.runNetwork()
-        val issueTx = future.getOrThrow().stx
+        val issueTx = bankOfCordaNode.services.validatedTransactions.getTransaction(future.getOrThrow().id)!!
         val output = issueTx.tx.outputsOfType<Cash.State>().single()
         assertEquals(expected.`issued by`(bankOfCorda.ref(ref)), output.amount)
     }

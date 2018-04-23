@@ -11,6 +11,9 @@
 package com.r3.corda.enterprise.perftestcordapp.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
+import com.r3.corda.enterprise.perftestcordapp.contracts.asset.cash.selection.AbstractCashSelection
+import com.r3.corda.enterprise.perftestcordapp.issuedBy
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.flows.StartableByRPC
@@ -23,9 +26,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
-import com.r3.corda.enterprise.perftestcordapp.contracts.asset.cash.selection.AbstractCashSelection
-import com.r3.corda.enterprise.perftestcordapp.issuedBy
 import java.util.*
 
 /**
@@ -84,7 +84,7 @@ class CashExitFlow(private val amount: Amount<Currency>,
         // Commit the transaction
         progressTracker.currentStep = FINALISING_TX
         val notarised = finaliseTx(tx, participants, "Unable to notarise exit")
-        return Result(notarised, null)
+        return Result(notarised.id, null)
     }
 
     @CordaSerializable

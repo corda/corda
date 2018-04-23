@@ -56,7 +56,7 @@ class CashExitFlowTests {
         val exitAmount = 500.DOLLARS
         val future = bankOfCordaNode.startFlow(CashExitFlow(exitAmount, ref))
         mockNet.runNetwork()
-        val exitTx = future.getOrThrow().stx.tx
+        val exitTx = bankOfCordaNode.services.validatedTransactions.getTransaction(future.getOrThrow().id)!!.tx
         val expected = (initialBalance - exitAmount).`issued by`(bankOfCorda.ref(ref))
         assertEquals(1, exitTx.inputs.size)
         assertEquals(1, exitTx.outputs.size)
