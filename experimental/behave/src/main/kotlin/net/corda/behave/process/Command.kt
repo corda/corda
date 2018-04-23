@@ -1,9 +1,12 @@
 package net.corda.behave.process
 
-import net.corda.behave.*
+import net.corda.behave.await
 import net.corda.behave.file.currentDirectory
-import net.corda.behave.logging.getLogger
 import net.corda.behave.process.output.OutputListener
+import net.corda.behave.waitFor
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import rx.Observable
 import rx.Subscriber
 import java.io.Closeable
@@ -18,7 +21,7 @@ open class Command(
         private val timeout: Duration = 2.minutes
 ): Closeable {
 
-    protected val log = getLogger<Command>()
+    protected val log = loggerFor<Command>()
 
     private val terminationLatch = CountDownLatch(1)
 
@@ -74,7 +77,7 @@ open class Command(
             }).start()
             val streamIsClosed = outputCapturedLatch.await(timeout)
             val timeout = if (!streamIsClosed || isInterrupted) {
-                1.second
+                1.seconds
             } else {
                 timeout
             }
