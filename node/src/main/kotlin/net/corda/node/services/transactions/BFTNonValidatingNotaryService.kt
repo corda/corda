@@ -139,9 +139,9 @@ class BFTNonValidatingNotaryService(
                 val id = transaction.id
                 val inputs = transaction.inputs
                 val notary = transaction.notary
-                if (transaction is FilteredTransaction) NotaryService.validateTimeWindow(services.clock, transaction.timeWindow)
+                val timeWindow = (transaction as? FilteredTransaction)?.timeWindow
                 if (notary !in services.myInfo.legalIdentities) throw NotaryInternalException(NotaryError.WrongNotary)
-                commitInputStates(inputs, id, callerIdentity.name, requestSignature)
+                commitInputStates(inputs, id, callerIdentity.name, requestSignature, timeWindow)
                 log.debug { "Inputs committed successfully, signing $id" }
                 BFTSMaRt.ReplicaResponse.Signature(sign(id))
             } catch (e: NotaryInternalException) {
