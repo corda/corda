@@ -26,7 +26,7 @@ Contributions from the community are welcomed and strongly encouraged. From the 
 
 ## Project Leadership and Maintainers
 
-The leader of this project is currently [Mike Hearn](https://github.com/mikehearn), who is also the Lead Platform Engineer at R3. The project leader will appoint maintainers of the project, to whom responsibility is delegated for merging community contributions into the code base and acting as points of contact for the community. There is currently one such community maintainer, who is also currently an R3 employee. However, there is no requirement that they be such and we anticipate maintainers joining the project from across the community.
+The leader of this project is currently [Mike Hearn](https://github.com/mikehearn), who is also the Lead Platform Engineer at R3. The project leader will appoint maintainers of the project, to whom responsibility is delegated for merging community contributions into the code base and acting as points of contact. There is currently one such community maintainer, [Joel Dudley](https://github.com/joeldudleyr3), who is also currently an R3 employee. However, there is no requirement that maintainers be such and we anticipate maintainers joining the project from across the community.
 
 Transparency: In addition to the project lead and maintainer(s), developers employed by R3 who have passed our technical interview process have commit privileges to the repo. All R3 contributions undergo peer review, which is documented in public in GitHub, before they can be merged; they are held to the same standard as all other contributions. The community is encouraged both to observe and participate in this [review process](https://github.com/corda/corda/pulls).
 
