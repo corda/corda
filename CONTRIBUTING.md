@@ -22,13 +22,13 @@ Contributions from the community are welcomed and strongly encouraged. From the 
 * **Maintainability**: If the feature will require ongoing maintenance (eg support for a particular brand of database), we may ask you to accept responsibility for maintaining this feature.
 * **Non-duplicative**: If the contribution duplicates features that already exist or are already in progress, you may be asked to work with the project maintainers to reconcile this. As the major contributor to Corda, many [R3](https://r3.com) employees will be working on features at any given time. To avoid surprises and foster transparency, our work tracking system, [Jira](https://r3-cev.atlassian.net/projects/CORDA/summary), is public. In addition, the maintainers and developers on the project are available on the [design](https://cordaledger.slack.com/messages/C3J04VC3V/) channel of our [Slack](https://slack.corda.net/) and they would be delighted to discuss any work you plan to do.
 
-**Advice to contributors**: you are encouraged to join our [Slack](https://slack.corda.net/), observe the [Pull Request](https://github.com/corda/corda/pulls) process in action, contribute to code reviews and start by submitting small changes.
+**Advice to contributors**: You are encouraged to join our [Slack](https://slack.corda.net/), observe the [Pull Request](https://github.com/corda/corda/pulls) process in action, contribute to code reviews and start by submitting small changes.
 
 ## Project Leadership and Maintainers
 
 The leader of this project is currently [Mike Hearn](https://github.com/mikehearn), who is also the Lead Platform Engineer at R3. The project leader will appoint maintainers of the project, to whom responsibility is delegated for merging community contributions into the code base and acting as points of contact for the community. There is currently one such community maintainer, who is also currently an R3 employee. However, there is no requirement that they be such and we anticipate maintainers joining the project from across the community.
 
-Transparency: in addition to the project lead and maintainer(s), developers employed by R3 who have passed our technical interview process have commit privileges to the repo. All R3 contributions undergo peer review, which is documented in public in GitHub, before they can be merged; they are held to the same standard as all other contributions. The community is encouraged both to observe and participate in this [review process](https://github.com/corda/corda/pulls).
+Transparency: In addition to the project lead and maintainer(s), developers employed by R3 who have passed our technical interview process have commit privileges to the repo. All R3 contributions undergo peer review, which is documented in public in GitHub, before they can be merged; they are held to the same standard as all other contributions. The community is encouraged both to observe and participate in this [review process](https://github.com/corda/corda/pulls).
 
 ## Community Locations
 
