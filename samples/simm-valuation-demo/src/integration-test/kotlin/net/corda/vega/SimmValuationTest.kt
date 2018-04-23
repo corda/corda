@@ -57,8 +57,9 @@ class SimmValuationTest : IntegrationTest() {
     }
 
     @After
-    fun tearDown() {
+    override fun tearDown() {
         System.clearProperty(AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
+        super.tearDown()
     }
 
     @Test

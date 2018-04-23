@@ -68,26 +68,7 @@ than 2.12.3 (including 2.12.4) exhibit a different issue.
 
 * java.math.BigInteger serialization support added.
 
-* Fix CORDA-1355: Reduce amount of classpath scanning during integration tests execution.
-
 * java.security.cert.CRLReason added to the default Whitelist.
-* Fix CORDA-1355: Reduce amount of classpath scanning during integration tests execution.
-
-.. _changelog_v3.1:
-
-Version 3.1
------------
-
-* Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
-
-  .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
-  than 2.12.3 (including 2.12.4) exhibit a different issue.
-
-* Updated the api scanner gradle plugin to work the same way as the version in master. These changes make the api scanner more
-  accurate and fix a couple of bugs, and change the format of the api-current.txt file slightly. Backporting these changes
-  to the v3 branch will make it easier for us to ensure that apis are stable for future versions. These changes are
-  released in gradle plugins version 3.0.10. For more information on the api scanner see
-  the `documentation <https://github.com/corda/corda-gradle-plugins/tree/master/api-scanner>`_.
 
 * java.security.cert.X509CRL serialization support added.
 
