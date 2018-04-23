@@ -2,9 +2,6 @@ package net.corda.node.internal.cordapp
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.UpgradedContract
-import net.corda.core.contracts.UpgradedContractWithLegacyConstraint
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
 import net.corda.core.internal.*
@@ -133,7 +130,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                 logger.info("Generating a test-only cordapp of classes discovered in $scanPackage at $cordappJAR")
                 JarOutputStream(cordappJAR.outputStream()).use { jos ->
                     val scanDir = url.toPath()
-                    scanDir.listFiles().filter { it.isFile }.forEach {
+                    scanDir.toFile().listFiles().filter { it.isFile }.map { it.toPath() }.forEach {
                         val entryPath = "$jarPackageName/${scanDir.relativize(it).toString().replace('\\', '/')}"
                         val time = FileTime.from(Instant.EPOCH)
                         val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
