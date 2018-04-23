@@ -27,10 +27,10 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthor
     override fun validateRequest(requestPayload: NotarisationPayload): TransactionParts {
         try {
             val stx = requestPayload.signedTransaction
+            checkInputs(stx.inputs)
             validateRequestSignature(NotarisationRequest(stx.inputs, stx.id), requestPayload.requestSignature)
             val notary = stx.notary
             checkNotary(notary)
-            checkInputs(stx.inputs)
             resolveAndContractVerify(stx)
             verifySignatures(stx)
             val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null

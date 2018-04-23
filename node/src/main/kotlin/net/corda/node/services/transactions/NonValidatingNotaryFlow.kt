@@ -22,11 +22,11 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAut
     @Suspendable
     override fun validateRequest(requestPayload: NotarisationPayload): TransactionParts {
         val transaction = requestPayload.coreTransaction
+        checkInputs(transaction.inputs)
         val request = NotarisationRequest(transaction.inputs, transaction.id)
         validateRequestSignature(request, requestPayload.requestSignature)
         val parts = extractParts(transaction)
         checkNotary(parts.notary)
-        checkInputs(parts.inputs)
         return parts
     }
 
