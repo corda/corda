@@ -77,14 +77,11 @@ public class CordaCaplet extends Capsule {
         // defined as public static final fields on the Capsule class, therefore referential equality is safe.
         if (ATTR_APP_CLASS_PATH == attr) {
             T cp = super.attribute(attr);
-            // Create cordapps directory if it doesn't exist.
+
             File cordappsDir = new File(baseDir, "cordapps");
-            cordappsDir.mkdir();
-            if (!cordappsDir.exists()) {
-                log(LOG_VERBOSE, "cordapps directory cannot be found");
-                System.exit(1);
-            }
-            // Add additional directories of JARs to the classpath (at the end). e.g. for JDBC drivers.
+            // Create cordapps directory if it doesn't exist.
+            requireCordappsDirExists(cordappsDir);
+            // Add additional directories of JARs to the classpath (at the end), e.g., for JDBC drivers.
             augmentClasspath((List<Path>) cp, cordappsDir);
             try {
                 List<String> jarDirs = nodeConfig.getStringList("jarDirs");
@@ -131,20 +128,51 @@ public class CordaCaplet extends Capsule {
     }
 
     private void augmentClasspath(List<Path> classpath, File dir) {
-        if (dir.exists()) {
-            // The following might return null if the directory is not there (we check this already) or if an I/O error occurs.
-            File[] files = dir.listFiles();
-            if (files != null) { // This is unlikely to happen, but if we don't check, for-loop might fail with NullPointerException.
+        try {
+            if (dir.exists()) {
+                // The following might return null if the directory is not there (we check this already) or if an I/O error occurs.
+                File[] files = dir.listFiles();
                 for (File file : files) {
-                    if (file.isFile() && isJAR(file)) {
-                        classpath.add(file.toPath().toAbsolutePath());
-                    } else if (file.isDirectory()) { // Search in nested folders as well. TODO: check for circular symlinks.
-                        augmentClasspath(classpath, file);
-                    }
+                    addToClasspath(classpath, file);
                 }
-            } // TODO: shall we log if files is null?
-        } else {
-            log(LOG_VERBOSE, "Directory to add in Classpath was not found " + dir.getAbsolutePath());
+            } else {
+                log(LOG_VERBOSE, "Directory to add in Classpath was not found " + dir.getAbsolutePath());
+            }
+        } catch (SecurityException | NullPointerException e) {
+            log(LOG_QUIET, e);
+        }
+    }
+
+    private void requireCordappsDirExists(File dir) {
+        try {
+            if (!dir.mkdir() && !dir.exists()) { // It is unlikely to enter this if-branch, but just in case.
+                logOnFailedCordappDir();
+                throw new RuntimeException("Cordapps dir could not be created"); // Let Capsule handle the error (log error, clean up, die).
+            }
+        }
+        catch (SecurityException | NullPointerException e) {
+            logOnFailedCordappDir();
+            throw e; // Let Capsule handle the error (log error, clean up, die).
+        }
+    }
+
+    private void logOnFailedCordappDir() {
+        log(LOG_VERBOSE, "Cordapps dir could not be created");
+    }
+
+    private void addToClasspath(List<Path> classpath, File file) {
+        try {
+            if (file.canRead()) {
+                if (file.isFile() && isJAR(file)) {
+                    classpath.add(file.toPath().toAbsolutePath());
+                } else if (file.isDirectory()) { // Search in nested folders as well. TODO: check for circular symlinks.
+                    augmentClasspath(classpath, file);
+                }
+            } else {
+                log(LOG_VERBOSE, "File or directory to add in Classpath could not be read " + file.getAbsolutePath());
+            }
+        } catch (SecurityException | NullPointerException e) {
+            log(LOG_QUIET, e);
         }
     }
 
