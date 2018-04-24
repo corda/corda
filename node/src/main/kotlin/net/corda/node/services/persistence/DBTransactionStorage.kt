@@ -108,7 +108,7 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
 
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return txStorage.exclusive {
-            DataFeed(allPersisted().map { it.second.toSignedTx() }.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            DataFeed(allPersisted().map { it.second.toSignedTx() }.toList(), updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 
@@ -116,7 +116,7 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
         return txStorage.exclusive {
             val existingTransaction = get(id)
             if (existingTransaction == null) {
-                updatesPublisher.filter { it.id == id }.toFuture()
+                updates.filter { it.id == id }.toFuture()
             } else {
                 doneFuture(existingTransaction.toSignedTx())
             }

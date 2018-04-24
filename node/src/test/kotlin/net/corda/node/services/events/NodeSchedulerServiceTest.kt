@@ -31,6 +31,7 @@ import net.corda.testing.internal.doLookup
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.TestClock
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestWatcher
@@ -275,6 +276,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         newDatabase.close()
     }
 
+    @Ignore("Temporarily")
     @Test
     fun `test that if schedule is updated then the flow is invoked on the correct schedule`() {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()

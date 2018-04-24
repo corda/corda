@@ -96,4 +96,3 @@ class FlowSessionImpl(
         require(!type.isPrimitive) { "Cannot receive primitive type $type" }
     }
 }
-

@@ -149,7 +149,7 @@ interface ReceivedMessage : Message {
     val peer: CordaX500Name
     /** Platform version of the sender's node. */
     val platformVersion: Int
-    /** UUID representing the sending JVM */
+    /** Sequence number of message with respect to senderUUID */
     val senderSeqNo: Long?
     /** True if a flow session init message */
     val isSessionInit: Boolean
@@ -188,4 +188,3 @@ interface DeduplicationHandler {
 }
 
 typealias MessageHandler = (ReceivedMessage, MessageHandlerRegistration, DeduplicationHandler) -> Unit
-

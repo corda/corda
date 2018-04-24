@@ -239,4 +239,3 @@ sealed class ErrorState {
         }
     }
 }
-

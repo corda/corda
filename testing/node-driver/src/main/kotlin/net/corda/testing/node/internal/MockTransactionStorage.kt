@@ -20,7 +20,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.util.HashMap
+import java.util.*
 
 /**
  * A class which provides an implementation of [WritableTransactionStorage] which is used in [MockServices]
