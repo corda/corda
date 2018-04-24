@@ -42,7 +42,7 @@ dependencies {
     compile project(':finance')
     compile project(':client:rpc')
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "com.google.guava:guava:$guava_version"
 
     // ReactFX: Functional reactive UI programming.

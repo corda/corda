@@ -41,6 +41,7 @@ import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.io.*
 import java.lang.reflect.Field
+import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.HttpURLConnection.HTTP_OK
@@ -315,6 +316,10 @@ fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, seri
 
 /** Convenience method to get the package name of a class literal. */
 val KClass<*>.packageName: String get() = java.`package`.name
+
+inline val Class<*>.isAbstractClass: Boolean get() = Modifier.isAbstract(modifiers)
+
+inline val Class<*>.isConcreteClass: Boolean get() = !isInterface && !isAbstractClass
 
 fun URI.toPath(): Path = Paths.get(this)
 
