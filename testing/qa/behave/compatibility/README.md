@@ -5,7 +5,7 @@ Compatibility / Interoperability testing refers to validating the run-time behav
 components within the Corda Platform and ensuring that data is compatible, both "on the wire" (P2P AMQP and RPC Kyro 
 serialization forms) and "at rest" (persisted to a database) between collaborating components.
 
-Compatibility testing focuses at three different levels:
+Compatibility testing focuses on three different levels:
 
 1. Corda Network (Compatibility Zone - level, Doorman, Notary)
 2. Corda Node (eg. participant nodes, oracles)
@@ -21,7 +21,7 @@ Components within scope for this level of testing include:
 
 The following aspects of a Corda Network are configurable/changeable over time and require validating via CTS coverage:
 
-- Permissioning: provision of an identity certificate signed by the networks root CA
+- Permissioning: provisioning of an identity certificate signed by the networks root CA
 - Network Parameters changes (such as adding/removing a Notary, whitelisting CorDapps for constraint checking),
   and distribution to nodes via bootstrapper (OS) / HTTP NMS distribution (Enterprise)
 - Nodes and Oracles addition and removal (with provisioned identities) via bootstrapping / registration with Network Map
@@ -76,19 +76,19 @@ Specifically, compatibility testing takes the following types of CorDapp-related
   
     There are 3 failure scenarios to test for:
   
-    a) flows that hang (due to the expectation that a response is expected but never received)
+    a) flows that hang (due to en expected response never being received)
     
     b) incorrect data types in `send` or `receive` calls: "Expected Type X but Received Type Y"
     
     c) early termination: "Counterparty flow terminated early on the other side"
    
-    Inlined Flows are not versioned as they inherit the version of their parent `initiatingFlow` or `inittiatedFlow`. 
+    Inlined Flows are not versioned as they inherit the version of their parent `initiatingFlow` or `initiatedFlow`. 
     There are 2 scenarios to consider: 
   
-    a) Inlined flows that perform `send` and `receive` calling with other inlined flows 
+    a) Inlined flows that perform `send` and `receive` calling with other inlined flows. 
        A change to the interface here must be considered a change to the parent flow interfaces.
        
-    b) Utility inlined flows that perform a local function (eg. query the vault).
+    b) Utility inlined flows that perform a local function (e.g., query the vault).
   
     Flow Draining mode is used to ensure outstanding checkpointed flows are flushed before upgrading to a new flow version.
    
@@ -96,7 +96,7 @@ Specifically, compatibility testing takes the following types of CorDapp-related
 
    Two types of contract/state upgrade:
    
-   a) Implicit, using CZ Whitelisting of multiple CorDapp version (subsequently enforced by contract constraint logic)
+   a) Implicit, using Compatibility Zone (CZ) Whitelisting of multiple CorDapp version (subsequently enforced by contract constraint logic)
    
    b) Explicit, by creating a special contract upgrade transaction and getting all participants of a state to sign it using 
       contract upgrade flows.

@@ -5,7 +5,7 @@ Feature: Compatibility - Notary cluster member changes.
   Scenario Outline: Corda (OS) health checker node can interact with R3 Corda RAFT notary cluster.
     Given a node PartyA of version <Corda-Node-Version>
     And node PartyA has app installed: <Cordapp-Name>
-#    And a 3 node validating RAFT notary cluster of version <R3-Corda-Node-Version>
+    And a 3 node validating RAFT notary cluster of version <R3-Corda-Node-Version>
     When the network is ready
     Then node PartyA can run <Cordapp-Name> <NumIterations> <SleepMillis>
 

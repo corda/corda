@@ -1,5 +1,5 @@
 @compatibility @notary
-Feature: Compatibility - Notary version change
+Feature: Compatibility - Notary type change
   To support an interoperable Corda network, a Corda node using a Notary type must have the ability to transact with another Corda node
   using a different Notary type by changing Notarised states from one Notary type to another (by invoking notary change flow).
 
@@ -28,4 +28,7 @@ Feature: Compatibility - Notary version change
     Examples:
       | Corda-Node-Version    | Notary-Type-A       | Notary-Type-B          |
       | corda-3.0             | notary-validating   | notary-non-validating  |
+
+  Scenario Outline: Unhappy path scenarios to be added.
+    Examples: TODO
 

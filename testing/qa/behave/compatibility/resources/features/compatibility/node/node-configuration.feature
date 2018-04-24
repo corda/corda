@@ -29,7 +29,7 @@ Feature: Compatibility - Node configuration
       | Corda-Node-Version-X |
       | r3corda-3.0-DP3-RC01      |
 
-  Scenario Outline: R3 Corda node can transact with another Corda (OS) node where where node configuration is changed on both of the R3 Corda nodes
+  Scenario Outline: R3 Corda node can transact with another Corda (OS) node where node configuration is changed on both of the R3 Corda nodes
     Given a node A of version <Corda-Node-Version-X>
     And node A configuration is changed
     And node A has the finance app installed
