@@ -1391,7 +1391,6 @@ class VaultQueryTests {
             vaultFiller.fillWithSomeTestCash(100.POUNDS, gbpCashIssuerServices, 1, gbpCashIssuer.party.ref(1))
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, usdCashIssuerServices, 1, usdCashIssuer.party.ref(1))
             vaultFiller.fillWithSomeTestCash(100.SWISS_FRANCS, chfCashIssuerServices, 1, chfCashIssuer.party.ref(1))
-
             this.session.flush()
 
             val criteria = FungibleAssetQueryCriteria(issuer = listOf(gbpCashIssuer.party, usdCashIssuer.party))
