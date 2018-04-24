@@ -89,7 +89,6 @@ class FiberDeserializationChecker {
     fun stop(): Boolean {
         jobQueue.add(Job.Finish)
         checkerThread?.join()
-        checkerThread = null
         return foundUnrestorableFibers
     }
 }
