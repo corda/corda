@@ -188,6 +188,29 @@ class NodeSchedulerService(private val clock: CordaClock,
         }
     }
 
+    /**
+     * Stop scheduler service.
+     */
+    fun stop() {
+        mutex.locked {
+            schedulerTimerExecutor.shutdown()
+            scheduledStatesQueue.clear()
+            scheduledStates.clear()
+        }
+    }
+
+    /**
+     * Resume scheduler service after having called [stop].
+     */
+    fun resume() {
+        mutex.locked {
+            schedulerTimerExecutor = Executors.newSingleThreadExecutor()
+            scheduledStates.putAll(createMap())
+            scheduledStatesQueue.addAll(scheduledStates.values)
+            rescheduleWakeUp()
+        }
+    }
+
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
         val previousState = scheduledStates[action.ref]
@@ -227,7 +250,7 @@ class NodeSchedulerService(private val clock: CordaClock,
         }
     }
 
-    private val schedulerTimerExecutor = Executors.newSingleThreadExecutor()
+    private var schedulerTimerExecutor = Executors.newSingleThreadExecutor()
     /**
      * This method first cancels the [java.util.concurrent.Future] for any pending action so that the
      * [awaitWithDeadline] used below drops through without running the action.  We then create a new

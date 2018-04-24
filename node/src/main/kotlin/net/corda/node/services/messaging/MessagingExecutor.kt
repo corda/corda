@@ -70,7 +70,6 @@ class MessagingExecutor(
     private val releaseVersion = SimpleString(versionInfo.releaseVersion)
     private val sendMessageSizeMetric = metricRegistry.histogram("SendMessageSize")
     private val sendLatencyMetric = metricRegistry.timer("SendLatency")
-    private val sendBatchSizeMetric = metricRegistry.histogram("SendBatchSize")
     private val ourSenderSeqNo = AtomicLong()
 
     private companion object {

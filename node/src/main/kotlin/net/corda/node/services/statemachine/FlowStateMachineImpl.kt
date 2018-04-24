@@ -98,6 +98,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if (value) field = value else throw IllegalArgumentException("Can only set to true")
         }
 
+    /**
+     * Processes an event by creating the associated transition and executing it using the given executor.
+     * Try to avoid using this directly, instead use [processEventsUntilFlowIsResumed] or [processEventImmediately]
+     * instead.
+     */
     @Suspendable
     private fun processEvent(transitionExecutor: TransitionExecutor, event: Event): FlowContinuation {
         val stateMachine = getTransientField(TransientValues::stateMachine)
@@ -109,22 +114,63 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         return continuation
     }
 
+    /**
+     * Processes the events in the event queue until a transition indicates that control should be returned to user code
+     * in the form of a regular resume or a throw of an exception. Alternatively the transition may abort the fiber
+     * completely.
+     *
+     * @param isDbTransactionOpenOnEntry indicates whether a DB transaction is expected to be present before the
+     *   processing of the eventloop. Purely used for internal invariant checks.
+     * @param isDbTransactionOpenOnExit indicates whether a DB transaction is expected to be present once the eventloop
+     *   processing finished. Purely used for internal invariant checks.
+     */
     @Suspendable
-    private fun processEventsUntilFlowIsResumed(): Any? {
+    private fun processEventsUntilFlowIsResumed(isDbTransactionOpenOnEntry: Boolean, isDbTransactionOpenOnExit: Boolean): Any? {
+        checkDbTransaction(isDbTransactionOpenOnEntry)
         val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
         val eventQueue = getTransientField(TransientValues::eventQueue)
-        eventLoop@while (true) {
-            val nextEvent = eventQueue.receive()
-            val continuation = processEvent(transitionExecutor, nextEvent)
-            when (continuation) {
-                is FlowContinuation.Resume -> return continuation.result
-                is FlowContinuation.Throw -> {
-                    continuation.throwable.fillInStackTrace()
-                    throw continuation.throwable
+        try {
+            eventLoop@while (true) {
+                val nextEvent = eventQueue.receive()
+                val continuation = processEvent(transitionExecutor, nextEvent)
+                when (continuation) {
+                    is FlowContinuation.Resume -> return continuation.result
+                    is FlowContinuation.Throw -> {
+                        continuation.throwable.fillInStackTrace()
+                        throw continuation.throwable
+                    }
+                    FlowContinuation.ProcessEvents -> continue@eventLoop
+                    FlowContinuation.Abort -> abortFiber()
                 }
-                FlowContinuation.ProcessEvents -> continue@eventLoop
-                FlowContinuation.Abort -> abortFiber()
             }
+        } finally {
+            checkDbTransaction(isDbTransactionOpenOnExit)
+        }
+    }
+
+    /**
+     * Immediately processes the passed in event. Always called with an open database transaction.
+     *
+     * @param event the event to be processed.
+     * @param isDbTransactionOpenOnEntry indicates whether a DB transaction is expected to be present before the
+     *   processing of the event. Purely used for internal invariant checks.
+     * @param isDbTransactionOpenOnExit indicates whether a DB transaction is expected to be present once the event
+     *   processing finished. Purely used for internal invariant checks.
+     */
+    @Suspendable
+    private fun processEventImmediately(event: Event, isDbTransactionOpenOnEntry: Boolean, isDbTransactionOpenOnExit: Boolean): FlowContinuation {
+        checkDbTransaction(isDbTransactionOpenOnEntry)
+        val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
+        val continuation = processEvent(transitionExecutor, event)
+        checkDbTransaction(isDbTransactionOpenOnExit)
+        return continuation
+    }
+
+    private fun checkDbTransaction(isPresent: Boolean) {
+        if (isPresent) {
+            requireNotNull(contextTransactionOrNull != null)
+        } else {
+            require(contextTransactionOrNull == null)
         }
     }
 
@@ -155,32 +201,56 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 Event.Error(resultOrError.exception)
             }
         }
-        scheduleEvent(finalEvent)
-        processEventsUntilFlowIsResumed()
+        // Immediately process the last event. This is to make sure the transition can assume that it has an open
+        // database transaction.
+        val continuation = processEventImmediately(
+                finalEvent,
+                isDbTransactionOpenOnEntry = true,
+                isDbTransactionOpenOnExit = false
+        )
+        if (continuation == FlowContinuation.ProcessEvents) {
+            // This can happen in case there was an error and there are further things to do e.g. to propagate it.
+            processEventsUntilFlowIsResumed(
+                    isDbTransactionOpenOnEntry = false,
+                    isDbTransactionOpenOnExit = false
+            )
+        }
 
         recordDuration(startTime)
     }
 
     @Suspendable
     private fun initialiseFlow() {
-        processEventsUntilFlowIsResumed()
+        processEventsUntilFlowIsResumed(
+                isDbTransactionOpenOnEntry = false,
+                isDbTransactionOpenOnExit = true
+        )
     }
 
     @Suspendable
     override fun <R> subFlow(subFlow: FlowLogic<R>): R {
-        processEvent(getTransientField(TransientValues::transitionExecutor), Event.EnterSubFlow(subFlow.javaClass))
+        processEventImmediately(
+                Event.EnterSubFlow(subFlow.javaClass),
+                isDbTransactionOpenOnEntry = true,
+                isDbTransactionOpenOnExit = true
+        )
         return try {
             subFlow.call()
         } finally {
-            processEvent(getTransientField(TransientValues::transitionExecutor), Event.LeaveSubFlow)
+            processEventImmediately(
+                    Event.LeaveSubFlow,
+                    isDbTransactionOpenOnEntry = true,
+                    isDbTransactionOpenOnExit = true
+            )
         }
     }
 
     @Suspendable
     override fun initiateFlow(party: Party): FlowSession {
-        val resume = processEvent(
-                getTransientField(TransientValues::transitionExecutor),
-                Event.InitiateFlow(party)
+        val resume = processEventImmediately(
+                Event.InitiateFlow(party),
+                isDbTransactionOpenOnEntry = true,
+                isDbTransactionOpenOnExit = true
         ) as FlowContinuation.Resume
         return resume.result as FlowSession
     }
@@ -237,7 +307,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun <R : Any> suspend(ioRequest: FlowIORequest<R>, maySkipCheckpoint: Boolean): R {
         val serializationContext = TransientReference(getTransientField(TransientValues::checkpointSerializationContext))
         val transaction = extractThreadLocalTransaction()
-        val transitionExecutor = TransientReference(getTransientField(TransientValues::transitionExecutor))
         parkAndSerialize { _, _ ->
             logger.trace { "Suspended on $ioRequest" }
 
@@ -252,12 +321,20 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 Event.Error(throwable)
             }
 
-            // We must commit the database transaction before returning from this closure, otherwise Quasar may schedule
-            // other fibers
-            require(processEvent(transitionExecutor.value, event) == FlowContinuation.ProcessEvents)
+            // We must commit the database transaction before returning from this closure otherwise Quasar may schedule
+            // other fibers, so we process the event immediately
+            val continuation = processEventImmediately(
+                    event,
+                    isDbTransactionOpenOnEntry = true,
+                    isDbTransactionOpenOnExit = false
+            )
+            require(continuation == FlowContinuation.ProcessEvents)
             Fiber.unparkDeserialized(this, scheduler)
         }
-        return uncheckedCast(processEventsUntilFlowIsResumed())
+        return uncheckedCast(processEventsUntilFlowIsResumed(
+                isDbTransactionOpenOnEntry = false,
+                isDbTransactionOpenOnExit = true
+        ))
     }
 
     @Suspendable

@@ -46,7 +46,9 @@ open class FlowException(message: String?, cause: Throwable?) :
  * that we were not expecting), or the other side had an internal error, or the other side terminated when we
  * were waiting for a response.
  */
-class UnexpectedFlowEndException(message: String, cause: Throwable?, val originalErrorId: Long) :
+class UnexpectedFlowEndException(message: String, cause: Throwable?, val originalErrorId: Long?) :
         CordaRuntimeException(message, cause), IdentifiableException {
-    override fun getErrorId(): Long = originalErrorId
+    constructor(message: String, cause: Throwable?) : this(message, cause, null)
+    constructor(message: String) : this(message, null)
+    override fun getErrorId(): Long? = originalErrorId
 }

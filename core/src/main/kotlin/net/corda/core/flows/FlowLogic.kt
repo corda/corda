@@ -16,7 +16,10 @@ import net.corda.core.CordaInternal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.abbreviate
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -141,8 +144,97 @@ abstract class FlowLogic<out T> {
      * Note: The current implementation returns the single identity of the node. This will change once multiple identities
      * is implemented.
      */
-
     val ourIdentity: Party get() = stateMachine.ourIdentity
+
+    // Used to implement the deprecated send/receive functions using Party. When such a deprecated function is used we
+    // create a fresh session for the Party, put it here and use it in subsequent deprecated calls.
+    private val deprecatedPartySessionMap = HashMap<Party, FlowSession>()
+    private fun getDeprecatedSessionForParty(party: Party): FlowSession {
+        return deprecatedPartySessionMap.getOrPut(party) { initiateFlow(party) }
+    }
+    /**
+     * Returns a [FlowInfo] object describing the flow [otherParty] is using. With [FlowInfo.flowVersion] it
+     * provides the necessary information needed for the evolution of flows and enabling backwards compatibility.
+     *
+     * This method can be called before any send or receive has been done with [otherParty]. In such a case this will force
+     * them to start their flow.
+     */
+    @Deprecated("Use FlowSession.getCounterpartyFlowInfo()", level = DeprecationLevel.WARNING)
+    @Suspendable
+    fun getFlowInfo(otherParty: Party): FlowInfo = getDeprecatedSessionForParty(otherParty).getCounterpartyFlowInfo()
+
+    /**
+     * Serializes and queues the given [payload] object for sending to the [otherParty]. Suspends until a response
+     * is received, which must be of the given [R] type.
+     *
+     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
+     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
+     * corrupted data in order to exploit your code.
+     *
+     * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
+     * use this when you expect to do a message swap than do use [send] and then [receive] in turn.
+     *
+     * @return an [UntrustworthyData] wrapper around the received object.
+     */
+    @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
+    inline fun <reified R : Any> sendAndReceive(otherParty: Party, payload: Any): UntrustworthyData<R> {
+        return sendAndReceive(R::class.java, otherParty, payload)
+    }
+
+    /**
+     * Serializes and queues the given [payload] object for sending to the [otherParty]. Suspends until a response
+     * is received, which must be of the given [receiveType]. Remember that when receiving data from other parties the data
+     * should not be trusted until it's been thoroughly verified for consistency and that all expectations are
+     * satisfied, as a malicious peer may send you subtly corrupted data in order to exploit your code.
+     *
+     * Note that this function is not just a simple send+receive pair: it is more efficient and more correct to
+     * use this when you expect to do a message swap than do use [send] and then [receive] in turn.
+     *
+     * @return an [UntrustworthyData] wrapper around the received object.
+     */
+    @Deprecated("Use FlowSession.sendAndReceive()", level = DeprecationLevel.WARNING)
+    @Suspendable
+    open fun <R : Any> sendAndReceive(receiveType: Class<R>, otherParty: Party, payload: Any): UntrustworthyData<R> {
+        return getDeprecatedSessionForParty(otherParty).sendAndReceive(receiveType, payload)
+    }
+
+    /**
+     * Suspends until the specified [otherParty] sends us a message of type [R].
+     *
+     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
+     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
+     * corrupted data in order to exploit your code.
+     */
+    @Deprecated("Use FlowSession.receive()", level = DeprecationLevel.WARNING)
+    inline fun <reified R : Any> receive(otherParty: Party): UntrustworthyData<R> = receive(R::class.java, otherParty)
+
+    /**
+     * Suspends until the specified [otherParty] sends us a message of type [receiveType].
+     *
+     * Remember that when receiving data from other parties the data should not be trusted until it's been thoroughly
+     * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
+     * corrupted data in order to exploit your code.
+     *
+     * @return an [UntrustworthyData] wrapper around the received object.
+     */
+    @Deprecated("Use FlowSession.receive()", level = DeprecationLevel.WARNING)
+    @Suspendable
+    open fun <R : Any> receive(receiveType: Class<R>, otherParty: Party): UntrustworthyData<R> {
+        return getDeprecatedSessionForParty(otherParty).receive(receiveType)
+    }
+
+    /**
+     * Queues the given [payload] for sending to the [otherParty] and continues without suspending.
+     *
+     * Note that the other party may receive the message at some arbitrary later point or not at all: if [otherParty]
+     * is offline then message delivery will be retried until it comes back or until the message is older than the
+     * network's event horizon time.
+     */
+    @Deprecated("Use FlowSession.send()", level = DeprecationLevel.WARNING)
+    @Suspendable
+    open fun send(otherParty: Party, payload: Any) {
+        getDeprecatedSessionForParty(otherParty).send(payload)
+    }
 
     @Suspendable
     internal fun <R : Any> FlowSession.sendAndReceiveWithRetry(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {

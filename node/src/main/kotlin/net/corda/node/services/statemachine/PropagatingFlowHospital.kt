@@ -28,4 +28,3 @@ object PropagatingFlowHospital : FlowHospital {
         throw IllegalStateException("Flow ${flowFiber.id} cleaned after error propagation triggered")
     }
 }
-

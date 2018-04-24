@@ -15,6 +15,7 @@ import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -115,7 +116,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
 ) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver, AutoCloseable {
     companion object {
         private val log = contextLogger()
-        private val amqDelayMillis = System.getProperty("amq.delivery.delay.ms", "0").toInt()
         private const val messageMaxRetryCount: Int = 3
 
         fun createMessageToRedeliver(): PersistentMap<Long, Pair<Message, MessageRecipients>, RetryMessage, Long> {
@@ -352,6 +352,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private val shutdownLatch = CountDownLatch(1)
 
+    var runningFuture = openFuture<Unit>()
+
     /**
      * Starts the p2p event loop: this method only returns once [stop] has been called.
      */
@@ -362,6 +364,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 check(started) { "start must be called first" }
                 check(!running) { "run can't be called twice" }
                 running = true
+                runningFuture.set(Unit)
                 // If it's null, it means we already called stop, so return immediately.
                 if (p2pConsumer == null) {
                     return
@@ -426,7 +429,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     internal fun deliver(artemisMessage: ClientMessage) {
-
         artemisToCordaMessage(artemisMessage)?.let { cordaMessage ->
             if (!deduplicator.isDuplicate(cordaMessage)) {
                 deduplicator.signalMessageProcessStart(cordaMessage)
@@ -439,7 +441,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     private fun deliver(msg: ReceivedMessage, artemisMessage: ClientMessage) {
-
         state.checkNotLocked()
         val deliverTo = handlers[msg.topic]
         if (deliverTo != null) {
@@ -480,6 +481,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             check(started)
             val prevRunning = running
             running = false
+            runningFuture = openFuture()
             networkChangeSubscription?.unsubscribe()
             require(p2pConsumer != null, { "stop can't be called twice" })
             require(producer != null, { "stop can't be called twice" })
@@ -621,7 +623,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
     }
 
     override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId, additionalHeaders: Map<String, String>): Message {
-
         return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId, deduplicator.ourSenderUUID, additionalHeaders)
     }
 

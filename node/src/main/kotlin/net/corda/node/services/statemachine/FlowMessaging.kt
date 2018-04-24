@@ -46,7 +46,6 @@ interface FlowMessaging {
  * Implementation of [FlowMessaging] using a [ServiceHubInternal] to do the messaging and routing.
  */
 class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
-
     companion object {
         val log = contextLogger()
 
@@ -73,7 +72,6 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     }
 
     private fun SessionMessage.additionalHeaders(target: Party): Map<String, String> {
-
         // This prevents a "deadlock" in case an initiated flow tries to start a session against a draining node that is also the initiator.
         // It does not help in case more than 2 nodes are involved in a circle, so the kill switch via RPC should be used in that case.
         val mightDeadlockDrainingTarget = FlowStateMachineImpl.currentStateMachine()?.context?.origin.let { it is InvocationOrigin.Peer && it.party == target.name }

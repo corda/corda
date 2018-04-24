@@ -97,4 +97,3 @@ sealed class FlowIORequest<out R : Any> {
      */
     data class ExecuteAsyncOperation<T : Any>(val operation: FlowAsyncOperation<T>) : FlowIORequest<T>()
 }
-

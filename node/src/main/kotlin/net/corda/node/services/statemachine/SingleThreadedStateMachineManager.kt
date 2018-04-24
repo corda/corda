@@ -44,6 +44,7 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.statemachine.interceptors.*
 import net.corda.node.services.statemachine.transitions.StateMachine
+import net.corda.node.services.statemachine.transitions.StateMachineConfiguration
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.serialization.SerializeAsTokenContextImpl
@@ -140,6 +141,20 @@ class SingleThreadedStateMachineManager(
                     onSessionMessage(receivedMessage, deduplicationHandler)
                 }
             }
+        }
+    }
+
+    override fun resume() {
+        fiberDeserializationChecker?.start(checkpointSerializationContext!!)
+        val fibers = restoreFlowsFromCheckpoints()
+        Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
+            (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
+        }
+        serviceHub.networkMapCache.nodeReady.then {
+            resumeRestoredFlows(fibers)
+        }
+        mutex.locked {
+            stopping = false
         }
     }
 
