@@ -131,8 +131,7 @@ public class CordaCaplet extends Capsule {
         try {
             if (dir.exists()) {
                 // The following might return null if the directory is not there (we check this already) or if an I/O error occurs.
-                File[] files = dir.listFiles();
-                for (File file : files) {
+                for (File file : dir.listFiles()) {
                     addToClasspath(classpath, file);
                 }
             } else {
