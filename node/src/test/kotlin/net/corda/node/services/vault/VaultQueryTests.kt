@@ -174,7 +174,7 @@ class VaultQueryTests {
     private fun makePersistentDataSourceProperties(): Properties {
         val props = Properties()
         props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-        props.setProperty("dataSource.url", "jdbc:h2:mem:vault_query_persistence;DB_CLOSE_ON_EXIT=TRUE")
+        props.setProperty("dataSource.url", "jdbc:h2:~/test/vault_query_persistence;DB_CLOSE_ON_EXIT=TRUE")
         props.setProperty("dataSource.user", "sa")
         props.setProperty("dataSource.password", "")
         return props
@@ -281,7 +281,6 @@ class VaultQueryTests {
             stateRefs.addAll(issuedStateRefs)
             this.session.flush()
 
-
             val spentStates = consumeCash(25.DOLLARS)
             val consumedStateRefs = spentStates.consumed.map { it.ref }.toList()
             val producedStateRefs = spentStates.produced.map { it.ref }.toList()
@@ -309,7 +308,6 @@ class VaultQueryTests {
         val consumed = mutableSetOf<SecureHash>()
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 10, DUMMY_CASH_ISSUER)
-
             this.session.flush()
 
             consumeCash(10.DOLLARS).consumed.forEach { consumed += it.ref.txhash }
@@ -410,18 +408,10 @@ class VaultQueryTests {
             vaultFiller.fillWithSomeTestLinearStates(8)
             val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-//            this.session.flush()
-
             vaultFiller.consumeLinearStates(linearStates.states.toList())
             vaultFiller.consumeDeals(dealStates.states.filter { it.state.data.linearId.externalId == "456" })
 
-//            this.session.flush()
-
             consumeCash(50.DOLLARS) // generates a new change state!
-
-            this.session.flush()
-
-//            Thread.sleep(1000)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val results = vaultService.queryBy<ContractState>(criteria)
@@ -827,9 +817,6 @@ class VaultQueryTests {
             vaultFiller.fillWithSomeTestLinearStates(3, "ABC")
             vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789"))
             // count fungible assets
-
-            this.session.flush()
-
             val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
             val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
             val fungibleStateCount = vaultService.queryBy<FungibleAsset<*>>(countCriteria).otherResults.single() as Long
@@ -1067,10 +1054,6 @@ class VaultQueryTests {
             val states = result.states
             val metadata = result.statesMetadata
 
-            for (i in 0 until states.size) {
-                println("${states[i].ref} : ${metadata[i].contractStateClassName}, ${metadata[i].status}, ${metadata[i].consumedTime}")
-            }
-
             assertThat(states).hasSize(20)
             assertThat(metadata.first().contractStateClassName).isEqualTo("$DUMMY_LINEAR_CONTRACT_PROGRAM_ID\$State")
             assertThat(metadata.first().status).isEqualTo(Vault.StateStatus.UNCONSUMED) // 0 = UNCONSUMED
@@ -1086,7 +1069,6 @@ class VaultQueryTests {
             vaultFiller.fillWithSomeTestCommodity(Amount(100, Commodity.getInstance("FCOJ")!!), notaryServices, DUMMY_OBLIGATION_ISSUER.ref(1))
             vaultFiller.fillWithSomeTestLinearStates(10)
 
-            this.session.flush()
             val results = vaultService.queryBy<FungibleAsset<*>>()
             assertThat(results.states).hasSize(4)
         }
@@ -1122,6 +1104,7 @@ class VaultQueryTests {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
             this.session.flush()
+
             consumeCash(50.DOLLARS)
             // should now have x2 CONSUMED + x2 UNCONSUMED (one spent + one change)
             val results = vaultService.queryBy<Cash.State>(FungibleAssetQueryCriteria())
@@ -1262,7 +1245,6 @@ class VaultQueryTests {
             val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.LinearStateAttribute.EXTERNAL_ID), Sort.Direction.DESC)))
 
             val results = vaultService.queryBy<DummyLinearContract.State>((vaultCriteria), sorting = sorting)
-            results.states.forEach { println(it.state.data.linearString) }
             assertThat(results.states).hasSize(6)
         }
     }
@@ -1349,8 +1331,6 @@ class VaultQueryTests {
             vaultFiller.fillWithSomeTestLinearStates(2, "TEST")
             vaultFiller.fillWithSomeTestDeals(listOf("456"))
             vaultFiller.fillWithSomeTestDeals(listOf("123", "789"))
-            val all = vaultService.queryBy<DealState>()
-            all.states.forEach { println(it.state) }
 
             val criteria = LinearStateQueryCriteria(externalId = listOf("456"))
             val results = vaultService.queryBy<DealState>(criteria)
@@ -1426,8 +1406,6 @@ class VaultQueryTests {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, BOC.ref(1))
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, MEGA_CORP.ref(0), MINI_CORP)
 
-            this.session.flush()
-
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP))
             val results = vaultService.queryBy<FungibleAsset<*>>(criteria)
             assertThat(results.states).hasSize(1)   // can only be 1 owner of a node (MEGA_CORP in this MockServices setup)
@@ -1440,8 +1418,6 @@ class VaultQueryTests {
             vaultFillerCashNotary.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, MEGA_CORP.ref(0), MEGA_CORP)
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 1, BOC.ref(0), MINI_CORP)  // irrelevant to this vault
-
-            this.session.flush()
 
             // DOCSTART VaultQueryExample5.2
             val criteria = FungibleAssetQueryCriteria(owner = listOf(MEGA_CORP, BOC))
@@ -1869,7 +1845,6 @@ class VaultQueryTests {
             vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
             // add another deal
             vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
-
             this.session.flush()
 
             // consume stuff
@@ -1911,7 +1886,6 @@ class VaultQueryTests {
             vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
             // add another deal
             vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
-
             this.session.flush()
 
             consumeCash(100.POUNDS)
@@ -1920,8 +1894,6 @@ class VaultQueryTests {
             consumeCash(100.DOLLARS)
             vaultFiller.consumeDeals(dealStates.toList())
             vaultFiller.consumeLinearStates(linearStates.toList())
-
-            this.session.flush()
 
             close() // transaction needs to be closed to trigger events
             updates
@@ -1958,7 +1930,6 @@ class VaultQueryTests {
             vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
             // add another deal
             vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
-
             this.session.flush()
 
 //             consume stuff
@@ -2014,7 +1985,6 @@ class VaultQueryTests {
             vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
             // add another deal
             vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
-
             this.session.flush()
 
             // consume stuff
@@ -2064,7 +2034,6 @@ class VaultQueryTests {
             vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
             // add another deal
             vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
-
             this.session.flush()
 
             // consume stuff
@@ -2097,6 +2066,7 @@ class VaultQueryTests {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(1000.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
             this.session.flush()
+
             val builder = TransactionBuilder()
             val issuer = DUMMY_CASH_ISSUER
             val exitStates = AbstractCashSelection
@@ -2113,7 +2083,7 @@ class VaultQueryTests {
     fun `unconsumedCashStatesForSpending_single_issuer_reference_not_matching`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(1000.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
-            this.session.flush()
+
             val builder = TransactionBuilder()
             val issuer = DUMMY_CASH_ISSUER
             val exitStates = AbstractCashSelection
