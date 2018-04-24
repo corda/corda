@@ -210,7 +210,7 @@ class NotaryServiceTests {
 
     private fun runNotarisationAndInterceptClientPayload(payloadModifier: (NotarisationPayload) -> NotarisationPayload) {
         aliceNode.setMessagingServiceSpy(object : MessagingServiceSpy(aliceNode.network) {
-            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
+            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
                 val messageData = message.data.deserialize<Any>() as? InitialSessionMessage
                 val payload = messageData?.firstPayload!!.deserialize()
 

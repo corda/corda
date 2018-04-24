@@ -75,6 +75,13 @@ inline fun <reified I : RPCOps> RPCDriverDSL.startRpcClient(
         configuration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default
 ) = startRpcClient(I::class.java, rpcAddress, username, password, configuration)
 
+inline fun<reified I : RPCOps> RPCDriverDSL.startRpcClient(
+        haAddressPool: List<NetworkHostAndPort>,
+        username: String = rpcTestUser.username,
+        password: String = rpcTestUser.password,
+        configuration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default
+) = startRpcClient(I::class.java, haAddressPool, username, password, configuration)
+
 data class RpcBrokerHandle(
         val hostAndPort: NetworkHostAndPort?,
         /** null if this is an InVM broker */
@@ -328,6 +335,32 @@ data class RPCDriverDSL(
     ): CordaFuture<I> {
         return driverDSL.executorService.fork {
             val client = RPCClient<I>(ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), rpcAddress, null), configuration)
+            val connection = client.start(rpcOpsClass, username, password, externalTrace)
+            driverDSL.shutdownManager.registerShutdown {
+                connection.close()
+            }
+            connection.proxy
+        }
+    }
+
+    /**
+     * Starts a Netty RPC client.
+     *
+     * @param rpcOpsClass The [Class] of the RPC interface.
+     * @param haAddressPool The addresses of the RPC servers(configured in HA mode) to connect to.
+     * @param username The username to authenticate with.
+     * @param password The password to authenticate with.
+     * @param configuration The RPC client configuration.
+     */
+    fun <I : RPCOps> startRpcClient(
+            rpcOpsClass: Class<I>,
+            haAddressPool: List<NetworkHostAndPort>,
+            username: String = rpcTestUser.username,
+            password: String = rpcTestUser.password,
+            configuration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default
+    ): CordaFuture<I> {
+        return driverDSL.executorService.fork {
+            val client = RPCClient<I>(haAddressPool, null, configuration)
             val connection = client.start(rpcOpsClass, username, password, externalTrace)
             driverDSL.shutdownManager.registerShutdown {
                 connection.close()

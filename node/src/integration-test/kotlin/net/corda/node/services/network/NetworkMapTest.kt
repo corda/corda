@@ -29,7 +29,6 @@ import org.junit.Rule
 import org.junit.Test
 import java.net.URL
 import java.time.Instant
-import kotlin.streams.toList
 
 class NetworkMapTest {
     @Rule
@@ -197,7 +196,7 @@ class NetworkMapTest {
         // Make sure the nodes aren't getting the node infos from their additional directories
         val nodeInfosDir = baseDirectory / CordformNode.NODE_INFO_DIRECTORY
         if (nodeInfosDir.exists()) {
-            assertThat(nodeInfosDir.list { it.toList() }).isEmpty()
+            assertThat(nodeInfosDir.list()).isEmpty()
         }
         assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
     }

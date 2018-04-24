@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.uncheckedCast
 import net.corda.nodeapi.internal.addShutdownHook
 import java.io.Closeable
@@ -9,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger
 private class DeleteOnExitPath(internal val path: Path) {
     private val shutdownHook = addShutdownHook { dispose() }
     internal fun dispose() {
-        path.toFile().deleteRecursively()
+        path.deleteRecursively()
         shutdownHook.cancel()
     }
 }

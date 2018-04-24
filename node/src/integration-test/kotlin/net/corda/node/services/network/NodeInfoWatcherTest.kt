@@ -5,6 +5,7 @@ import com.google.common.jimfs.Jimfs
 import net.corda.cordform.CordformNode
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.internal.size
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.nodeapi.internal.NodeInfoAndSigned
@@ -15,7 +16,6 @@ import net.corda.testing.internal.createNodeInfoAndSigned
 import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.contentOf
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -65,9 +65,9 @@ class NodeInfoWatcherTest {
         assertEquals(1, nodeInfoFiles.size)
         val fileName = nodeInfoFiles.first()
         assertTrue(fileName.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX))
-        val file = (tempFolder.root.path / fileName).toFile()
+        val file = (tempFolder.root.path / fileName)
         // Just check that something is written, another tests verifies that the written value can be read back.
-        assertThat(contentOf(file)).isNotEmpty()
+        assertThat(file.size).isGreaterThan(0)
     }
 
     @Test

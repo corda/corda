@@ -84,9 +84,12 @@ class VaultSoftLockManagerTest {
     private val mockNet = InternalMockNetwork(cordappPackages = listOf(ContractImpl::class.packageName), defaultFactory = { args ->
         object : InternalMockNetwork.MockNode(args) {
             override fun makeVaultService(keyManagementService: KeyManagementService, services: ServicesForResolution, hibernateConfig: HibernateConfiguration): VaultServiceInternal {
+                val node = this
                 val realVault = super.makeVaultService(keyManagementService, services, hibernateConfig)
                 return object : VaultServiceInternal by realVault {
                     override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
+                        // Should be called before flow is removed
+                        assertEquals(1, node.started!!.smm.allStateMachines.size)
                         mockVault.softLockRelease(lockId, stateRefs) // No need to also call the real one for these tests.
                     }
                 }

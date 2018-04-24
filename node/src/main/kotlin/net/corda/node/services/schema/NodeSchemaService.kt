@@ -14,6 +14,7 @@ import net.corda.node.services.api.SchemaService.SchemaOptions
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.messaging.P2PMessageDeduplicator
 import net.corda.node.services.messaging.P2PMessagingClient
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
@@ -43,7 +44,7 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
                     PersistentKeyManagementService.PersistentKey::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
-                    P2PMessagingClient.ProcessedMessage::class.java,
+                    P2PMessageDeduplicator.ProcessedMessage::class.java,
                     P2PMessagingClient.RetryMessage::class.java,
                     PersistentIdentityService.PersistentIdentity::class.java,
                     PersistentIdentityService.PersistentIdentityNames::class.java,

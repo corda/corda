@@ -77,8 +77,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
          * Instantiate RPCSecurityManager initialised with users data from a list of [User]
          */
         fun fromUserList(id: AuthServiceId, users: List<User>) =
-                RPCSecurityManagerImpl(
-                    AuthServiceConfig.fromUsers(users).copy(id = id))
+                RPCSecurityManagerImpl(AuthServiceConfig.fromUsers(users).copy(id = id))
 
         // Build internal Shiro securityManager instance
         private fun buildImpl(config: AuthServiceConfig): DefaultSecurityManager {

@@ -47,6 +47,7 @@ buildscript {
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.caffeine_version = constants.getProperty("caffeineVersion")
+    ext.metrics_version = constants.getProperty("metricsVersion")
     ext.okhttp_version = '3.5.0'
     ext.netty_version = '4.1.9.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
@@ -165,8 +166,8 @@ allprojects {
 
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
         kotlinOptions {
-            languageVersion = "1.1"
-            apiVersion = "1.1"
+            languageVersion = "1.2"
+            apiVersion = "1.2"
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
         }

@@ -30,7 +30,7 @@ import kotlin.test.assertEquals
 class EvolvabilityTests {
     // When regenerating the test files this needs to be set to the file system location of the resource files
     @Suppress("UNUSED")
-    var localPath = projectRootDir.toUri().resolve(
+    var localPath: URI = projectRootDir.toUri().resolve(
             "node-api/src/test/resources/net/corda/nodeapi/internal/serialization/amqp")
 
     @Test
@@ -48,10 +48,8 @@ class EvolvabilityTests {
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: Int, val a: Int)
 
-        val path = EvolvabilityTests::class.java.getResource(resource)
-        val f = File(path.toURI())
-
-        val sc2 = f.readBytes()
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
 
         assertEquals(A, deserializedC.a)
@@ -72,9 +70,8 @@ class EvolvabilityTests {
         // new version of the class, in this case the order of the parameters has been swapped
         data class C(val b: String, val a: Int)
 
-        val path = EvolvabilityTests::class.java.getResource(resource)
-        val f = File(path.toURI())
-        val sc2 = f.readBytes()
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
 
         assertEquals(A, deserializedC.a)
@@ -93,9 +90,8 @@ class EvolvabilityTests {
 
         data class C(val a: Int, val b: Int?)
 
-        val path = EvolvabilityTests::class.java.getResource(resource)
-        val f = File(path.toURI())
-        val sc2 = f.readBytes()
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
 
         assertEquals(A, deserializedC.a)
@@ -105,8 +101,7 @@ class EvolvabilityTests {
     @Test(expected = NotSerializableException::class)
     fun addAdditionalParam() {
         val sf = testDefaultFactory()
-        val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.addAdditionalParam")
-        val f = File(path.toURI())
+        val url = EvolvabilityTests::class.java.getResource("EvolvabilityTests.addAdditionalParam")
         @Suppress("UNUSED_VARIABLE")
         val A = 1
 
@@ -120,7 +115,7 @@ class EvolvabilityTests {
         // new version of the class, in this case a new parameter has been added (b)
         data class C(val a: Int, val b: Int)
 
-        val sc2 = f.readBytes()
+        val sc2 = url.readBytes()
 
         // Expected to throw as we can't construct the new type as it contains a newly
         // added parameter that isn't optional, i.e. not nullable and there isn't
@@ -144,9 +139,8 @@ class EvolvabilityTests {
 
         data class CC(val b: String, val d: Int)
 
-        val path = EvolvabilityTests::class.java.getResource("EvolvabilityTests.removeParameters")
-        val f = File(path.toURI())
-        val sc2 = f.readBytes()
+        val url = EvolvabilityTests::class.java.getResource("EvolvabilityTests.removeParameters")
+        val sc2 = url.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
         assertEquals(B, deserializedCC.b)
@@ -171,9 +165,8 @@ class EvolvabilityTests {
 
         data class CC(val a: Int, val e: Boolean?, val d: Int)
 
-        val path = EvolvabilityTests::class.java.getResource(resource)
-        val f = File(path.toURI())
-        val sc2 = f.readBytes()
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
         assertEquals(A, deserializedCC.a)
@@ -197,9 +190,8 @@ class EvolvabilityTests {
             constructor (a: Int) : this(a, "hello")
         }
 
-        val path = EvolvabilityTests::class.java.getResource(resource)
-        val f = File(path.toURI())
-        val sc2 = f.readBytes()
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
         assertEquals(A, deserializedCC.a)
@@ -210,9 +202,8 @@ class EvolvabilityTests {
     @Suppress("UNUSED")
     fun addMandatoryFieldWithAltConstructorUnAnnotated() {
         val sf = testDefaultFactory()
-        val path = EvolvabilityTests::class.java.getResource(
+        val url = EvolvabilityTests::class.java.getResource(
                 "EvolvabilityTests.addMandatoryFieldWithAltConstructorUnAnnotated")
-        val f = File(path.toURI())
         @Suppress("UNUSED_VARIABLE")
         val A = 1
 
@@ -230,7 +221,7 @@ class EvolvabilityTests {
 
         // we expect this to throw as we should not find any constructors
         // capable of dealing with this
-        DeserializationInput(sf).deserialize(SerializedBytes<CC>(f.readBytes()))
+        DeserializationInput(sf).deserialize(SerializedBytes<CC>(url.readBytes()))
     }
 
     @Test
@@ -253,9 +244,8 @@ class EvolvabilityTests {
             constructor (c: String, a: Int, b: Int) : this(a, b, c, "wibble")
         }
 
-        val path = EvolvabilityTests::class.java.getResource(resource)
-        val f = File(path.toURI())
-        val sc2 = f.readBytes()
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
         assertEquals(A, deserializedCC.a)
@@ -286,9 +276,8 @@ class EvolvabilityTests {
             constructor (c: String, a: Int) : this(a, c, "wibble")
         }
 
-        val path = EvolvabilityTests::class.java.getResource(resource)
-        val f = File(path.toURI())
-        val sc2 = f.readBytes()
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
         val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
 
         assertEquals(A, deserializedCC.a)
@@ -334,11 +323,11 @@ class EvolvabilityTests {
             constructor (a: Int, b: Int, c: Int, d: Int) : this(-1, c, b, a, d)
         }
 
-        val path1 = EvolvabilityTests::class.java.getResource(resource1)
-        val path2 = EvolvabilityTests::class.java.getResource(resource2)
-        val path3 = EvolvabilityTests::class.java.getResource(resource3)
+        val url1 = EvolvabilityTests::class.java.getResource(resource1)
+        val url2 = EvolvabilityTests::class.java.getResource(resource2)
+        val url3 = EvolvabilityTests::class.java.getResource(resource3)
 
-        val sb1 = File(path1.toURI()).readBytes()
+        val sb1 = url1.readBytes()
         val db1 = DeserializationInput(sf).deserialize(SerializedBytes<C>(sb1))
 
         assertEquals(a, db1.a)
@@ -347,7 +336,7 @@ class EvolvabilityTests {
         assertEquals(-1, db1.d)
         assertEquals(-1, db1.e)
 
-        val sb2 = File(path2.toURI()).readBytes()
+        val sb2 = url2.readBytes()
         val db2 = DeserializationInput(sf).deserialize(SerializedBytes<C>(sb2))
 
         assertEquals(a, db2.a)
@@ -356,7 +345,7 @@ class EvolvabilityTests {
         assertEquals(-1, db2.d)
         assertEquals(-1, db2.e)
 
-        val sb3 = File(path3.toURI()).readBytes()
+        val sb3 = url3.readBytes()
         val db3 = DeserializationInput(sf).deserialize(SerializedBytes<C>(sb3))
 
         assertEquals(a, db3.a)
@@ -383,9 +372,8 @@ class EvolvabilityTests {
 
         data class Outer(val a: Int, val b: Inner)
 
-        val path = EvolvabilityTests::class.java.getResource(resource)
-        val f = File(path.toURI())
-        val sc2 = f.readBytes()
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
         val outer = DeserializationInput(sf).deserialize(SerializedBytes<Outer>(sc2))
 
         assertEquals(oa, outer.a)
@@ -438,11 +426,11 @@ class EvolvabilityTests {
             constructor (b: Int, c: Int, d: Int, e: Int, f: Int) : this(b, c, d, e, f, -1)
         }
 
-        val path1 = EvolvabilityTests::class.java.getResource(resource1)
-        val path2 = EvolvabilityTests::class.java.getResource(resource2)
-        val path3 = EvolvabilityTests::class.java.getResource(resource3)
+        val url1 = EvolvabilityTests::class.java.getResource(resource1)
+        val url2 = EvolvabilityTests::class.java.getResource(resource2)
+        val url3 = EvolvabilityTests::class.java.getResource(resource3)
 
-        val sb1 = File(path1.toURI()).readBytes()
+        val sb1 = url1.readBytes()
         val db1 = DeserializationInput(sf).deserialize(SerializedBytes<C>(sb1))
 
         assertEquals(b, db1.b)
@@ -452,7 +440,7 @@ class EvolvabilityTests {
         assertEquals(-1, db1.f)
         assertEquals(-1, db1.g)
 
-        val sb2 = File(path2.toURI()).readBytes()
+        val sb2 = url2.readBytes()
         val db2 = DeserializationInput(sf).deserialize(SerializedBytes<C>(sb2))
 
         assertEquals(b, db2.b)
@@ -462,7 +450,7 @@ class EvolvabilityTests {
         assertEquals(-1, db2.f)
         assertEquals(-1, db1.g)
 
-        val sb3 = File(path3.toURI()).readBytes()
+        val sb3 = url3.readBytes()
         val db3 = DeserializationInput(sf).deserialize(SerializedBytes<C>(sb3))
 
         assertEquals(b, db3.b)
@@ -500,9 +488,8 @@ class EvolvabilityTests {
         //
         val resource = "networkParams.r3corda.6a6b6f256"
 
-        val path = EvolvabilityTests::class.java.getResource(resource)
-        val f = File(path.toURI())
-        val sc2 = f.readBytes()
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<SignedData<NetworkParameters>>(sc2))
         val networkParams = DeserializationInput(sf).deserialize(deserializedC.raw)
 
@@ -537,7 +524,7 @@ class EvolvabilityTests {
         val signed = SignedData(serialized, sig)
         val signedAndSerialized = testOutput.serialize(signed)
 
-        File(URI("$localPath/$resource")).writeBytes( signedAndSerialized.bytes)
+        File(URI("$localPath/$resource")).writeBytes(signedAndSerialized.bytes)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -570,10 +557,9 @@ class EvolvabilityTests {
             constructor() : this(0, 0, 0, 0)
         }
 
-        val path = EvolvabilityTests::class.java.getResource(resource)
-        val f = File(path.toURI())
+        val url = EvolvabilityTests::class.java.getResource(resource)
 
-        val sc2 = f.readBytes()
+        val sc2 = url.readBytes()
         val deserializedC = DeserializationInput(sf).deserialize(SerializedBytes<C>(sc2))
 
         assertEquals(1, deserializedC.a)

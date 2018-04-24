@@ -20,5 +20,4 @@ abstract class Substeps(protected val state: ScenarioState) {
             }
         })
     }
-
 }

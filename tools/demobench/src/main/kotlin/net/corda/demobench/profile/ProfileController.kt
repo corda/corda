@@ -4,8 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import javafx.stage.FileChooser
 import javafx.stage.FileChooser.ExtensionFilter
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
+import net.corda.core.internal.*
 import net.corda.demobench.model.*
 import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.plugin.inCordappsDir
@@ -14,7 +13,6 @@ import tornadofx.*
 import java.io.File
 import java.io.IOException
 import java.net.URI
-import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -58,13 +56,13 @@ class ProfileController : Controller() {
                 configs.forEach { config ->
                     // Write the configuration file.
                     val nodeDir = fs.getPath(config.key).createDirectories()
-                    val file = Files.write(nodeDir / "node.conf", config.nodeConfig.serialiseAsString().toByteArray(UTF_8))
+                    val file = (nodeDir / "node.conf").writeText(config.nodeConfig.serialiseAsString())
                     log.info("Wrote: $file")
 
                     // Write all of the non-built-in cordapps.
-                    val cordappDir = Files.createDirectory(nodeDir.resolve(NodeConfig.cordappDirName))
+                    val cordappDir = (nodeDir / NodeConfig.cordappDirName).createDirectory()
                     cordappController.useCordappsFor(config).forEach {
-                        val cordapp = Files.copy(it, cordappDir.resolve(it.fileName.toString()))
+                        val cordapp = it.copyToDirectory(cordappDir)
                         log.info("Wrote: $cordapp")
                     }
                 }
@@ -122,8 +120,8 @@ class ProfileController : Controller() {
                         val config = nodeIndex[cordapp.getName(0).toString()] ?: return@forEach
 
                         try {
-                            val cordappDir = Files.createDirectories(config.cordappsDir)
-                            Files.copy(cordapp, cordappDir.resolve(cordapp.fileName.toString()))
+                            val cordappDir = config.cordappsDir.createDirectories()
+                            cordapp.copyToDirectory(cordappDir)
                             log.info("Loaded: $cordapp")
                         } catch (e: Exception) {
                             log.log(Level.SEVERE, "Failed to extract '$cordapp': ${e.message}", e)
@@ -136,8 +134,5 @@ class ProfileController : Controller() {
         return configs
     }
 
-    private fun parse(path: Path): Config = Files.newBufferedReader(path).use {
-        return ConfigFactory.parseReader(it)
-    }
-
+    private fun parse(path: Path): Config = path.reader().use { ConfigFactory.parseReader(it) }
 }
