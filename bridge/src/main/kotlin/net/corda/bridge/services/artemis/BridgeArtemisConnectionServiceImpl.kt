@@ -24,6 +24,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.FailoverEventType
 import org.apache.activemq.artemis.api.core.client.ServerLocator
+import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import rx.Subscription
 import java.util.concurrent.CountDownLatch
 
@@ -66,10 +67,12 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
         state.locked {
             check(!running) { "start can't be called twice" }
             running = true
-            log.info("Connecting to message broker: ${conf.outboundConfig!!.artemisBrokerAddress}")
+            val outboundConf = conf.outboundConfig!!
+            log.info("Connecting to message broker: ${outboundConf.artemisBrokerAddress}")
+            val brokerAddresses = listOf(outboundConf.artemisBrokerAddress) + outboundConf.alternateArtemisBrokerAddresses
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-            val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), conf.outboundConfig!!.artemisBrokerAddress, sslConfiguration)
-            locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
+            val tcpTransports = brokerAddresses.map { ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), it, sslConfiguration) }
+            locator = ActiveMQClient.createServerLocatorWithoutHA(*tcpTransports.toTypedArray()).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.
                 connectionTTL = -1
@@ -117,14 +120,17 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
         get() = state.locked { started }
 
     private fun artemisReconnectionLoop() {
+        var tcpIndex = 0
         while (state.locked { running }) {
             val locator = state.locked { locator }
             if (locator == null) {
                 break
             }
             try {
-                log.info("Try create session factory")
-                val newSessionFactory = locator.createSessionFactory()
+                val transport = locator.staticTransportConfigurations[tcpIndex]
+                tcpIndex = (tcpIndex + 1).rem(locator.staticTransportConfigurations.size)
+                log.info("Try create session factory ${transport.params[TransportConstants.HOST_PROP_NAME]}:${transport.params[TransportConstants.PORT_PROP_NAME]}")
+                val newSessionFactory = locator.createSessionFactory(transport)
                 log.info("Got session factory")
                 val latch = CountDownLatch(1)
                 newSessionFactory.connection.addCloseListener {
@@ -152,7 +158,6 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
                 }
                 stateHelper.active = true
                 latch.await()
-                stateHelper.active = false
                 state.locked {
                     started?.apply {
                         producer.close()
@@ -161,6 +166,7 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
                     }
                     started = null
                 }
+                stateHelper.active = false
                 log.info("Session closed")
             } catch (ex: Exception) {
                 log.trace("Caught exception", ex)

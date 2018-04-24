@@ -15,6 +15,8 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.bridge.internal.BridgeInstance
 import net.corda.bridge.services.api.BridgeMode
 import net.corda.bridge.services.config.BridgeHAConfigImpl
+import net.corda.core.internal.copyToDirectory
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
@@ -134,7 +136,6 @@ class BridgeIntegrationTest {
             artemisClient.stop()
             artemisServer.stop()
         }
-
     }
 
     @Test
@@ -258,6 +259,113 @@ class BridgeIntegrationTest {
         }
     }
 
+    @Test
+    fun `Test artemis failover logic`() {
+        val configResource = "/net/corda/bridge/artemisfailover/bridge.conf"
+        createNetworkParams(tempFolder.root.toPath())
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(BridgeMode.SenderReceiver, config.bridgeMode)
+        assertEquals(NetworkHostAndPort("localhost", 11005), config.outboundConfig!!.artemisBrokerAddress)
+        assertEquals(listOf(NetworkHostAndPort("localhost", 12005)), config.outboundConfig!!.alternateArtemisBrokerAddresses)
+        assertEquals(NetworkHostAndPort("0.0.0.0", 10005), config.inboundConfig!!.listeningAddress)
+        assertNull(config.floatInnerConfig)
+        assertNull(config.floatOuterConfig)
+        config.createBridgeKeyStores(DUMMY_BANK_A_NAME)
+        val (artemisServer, artemisClient) = createArtemis()
+        val (artemisServer2, artemisClient2) = createArtemis2()
+        try {
+            installBridgeControlResponder(artemisClient)
+            installBridgeControlResponder(artemisClient2)
+            val bridge = BridgeInstance(config, BridgeVersionInfo(1, "1.1", "Dummy", "Test"))
+            val stateFollower = bridge.activeChange.toBlocking().iterator
+            assertEquals(false, stateFollower.next())
+            assertEquals(false, bridge.active)
+            bridge.start()
+            assertEquals(true, stateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, serverListening("localhost", 10005))
+            artemisClient.stop() // Stop artemis to force failover to second choice
+            artemisServer.stop()
+            assertEquals(false, stateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(true, stateFollower.next())
+            assertEquals(true, bridge.active)
+            bridge.stop()
+            assertEquals(false, stateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(false, serverListening("localhost", 10005))
+        } finally {
+            artemisClient.stop()
+            artemisServer.stop()
+            artemisClient2.stop()
+            artemisServer2.stop()
+        }
+    }
+
+    @Test
+    fun `Test artemis failover logic with float`() {
+        val bridgeFolder = tempFolder.root.toPath()
+        val bridgeConfigResource = "/net/corda/bridge/artemisfailoverandfloat/bridge/bridge.conf"
+        val bridgeConfig = createAndLoadConfigFromResource(bridgeFolder, bridgeConfigResource)
+        bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
+        createNetworkParams(bridgeFolder)
+        assertEquals(BridgeMode.FloatInner, bridgeConfig.bridgeMode)
+        assertEquals(NetworkHostAndPort("localhost", 11005), bridgeConfig.outboundConfig!!.artemisBrokerAddress)
+        assertEquals(listOf(NetworkHostAndPort("localhost", 12005)), bridgeConfig.outboundConfig!!.alternateArtemisBrokerAddresses)
+        val floatFolder = tempFolder.root.toPath() / "float"
+        val floatConfigResource = "/net/corda/bridge/artemisfailoverandfloat/float/bridge.conf"
+        val floatConfig = createAndLoadConfigFromResource(floatFolder, floatConfigResource)
+        floatConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
+        createNetworkParams(floatFolder)
+        assertEquals(BridgeMode.FloatOuter, floatConfig.bridgeMode)
+        assertEquals(NetworkHostAndPort("0.0.0.0", 10005), floatConfig.inboundConfig!!.listeningAddress)
+        val (artemisServer, artemisClient) = createArtemis()
+        val (artemisServer2, artemisClient2) = createArtemis2()
+        try {
+            installBridgeControlResponder(artemisClient)
+            installBridgeControlResponder(artemisClient2)
+            val bridge = BridgeInstance(bridgeConfig, BridgeVersionInfo(1, "1.1", "Dummy", "Test"))
+            val bridgeStateFollower = bridge.activeChange.toBlocking().iterator
+            val float = BridgeInstance(floatConfig, BridgeVersionInfo(1, "1.1", "Dummy", "Test"))
+            val floatStateFollower = float.activeChange.toBlocking().iterator
+            assertEquals(false, floatStateFollower.next())
+            float.start()
+            assertEquals(true, floatStateFollower.next())
+            assertEquals(true, float.active) // float is running
+            assertEquals(false, serverListening("localhost", 10005)) // but not activated
+            assertEquals(false, bridgeStateFollower.next())
+            bridge.start()
+            assertEquals(true, bridgeStateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, float.active)
+            assertEquals(true, serverListening("localhost", 10005)) // now activated
+            artemisClient.stop() // Stop artemis to force failover to second choice
+            artemisServer.stop()
+            assertEquals(false, bridgeStateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(true, float.active)
+            assertEquals(false, serverListening("localhost", 10005)) // now activated
+            assertEquals(true, bridgeStateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, float.active)
+            assertEquals(true, serverListening("localhost", 10005)) // now activated
+            bridge.stop()
+            assertEquals(false, bridgeStateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(true, float.active)
+            assertEquals(false, serverListening("localhost", 10005)) // now de-activated
+            float.stop()
+            assertEquals(false, floatStateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(false, float.active)
+        } finally {
+            artemisClient.stop()
+            artemisServer.stop()
+            artemisServer2.stop()
+        }
+    }
+
+
     private fun createArtemis(): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
         val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(tempFolder.root.toPath()).whenever(it).baseDirectory
@@ -271,6 +379,30 @@ class BridgeIntegrationTest {
         }
         val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 11005), MAX_MESSAGE_SIZE)
         val artemisClient = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", 11005), MAX_MESSAGE_SIZE)
+        artemisServer.start()
+        artemisClient.start()
+        return Pair(artemisServer, artemisClient)
+    }
+
+    private fun createArtemis2(): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
+        val originalCertsFolderPath = tempFolder.root.toPath() / "certificates"
+        val folderPath = tempFolder.root.toPath() / "artemis2"
+        val newCertsFolderPath = folderPath / "certificates"
+        newCertsFolderPath.createDirectories()
+        (originalCertsFolderPath / "truststore.jks").copyToDirectory(newCertsFolderPath)
+        (originalCertsFolderPath / "sslkeystore.jks").copyToDirectory(newCertsFolderPath)
+        val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
+            doReturn(folderPath).whenever(it).baseDirectory
+            doReturn(ALICE_NAME).whenever(it).myLegalName
+            doReturn("trustpass").whenever(it).trustStorePassword
+            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(NetworkHostAndPort("localhost", 12005)).whenever(it).p2pAddress
+            doReturn(null).whenever(it).jmxMonitoringHttpPort
+            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
+            doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration
+        }
+        val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 12005), MAX_MESSAGE_SIZE)
+        val artemisClient = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", 12005), MAX_MESSAGE_SIZE)
         artemisServer.start()
         artemisClient.start()
         return Pair(artemisServer, artemisClient)

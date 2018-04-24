@@ -34,6 +34,7 @@ data class BridgeSSLConfigurationImpl(override val keyStorePassword: String,
 }
 
 data class BridgeOutboundConfigurationImpl(override val artemisBrokerAddress: NetworkHostAndPort,
+                                           override val alternateArtemisBrokerAddresses: List<NetworkHostAndPort>,
                                            override val customSSLConfiguration: BridgeSSLConfigurationImpl?,
                                            override val socksProxyConfig: SocksProxyConfig? = null) : BridgeOutboundConfiguration
 
