@@ -48,7 +48,7 @@ dependencies {
 
     // Library
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     compile("com.github.corda.crash:crash.shell:$crash_version") {
