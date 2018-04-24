@@ -71,10 +71,6 @@ class MultiThreadedStateMachineManager(
         private val unfinishedFibers: ReusableLatch = ReusableLatch(),
         private val classloader: ClassLoader = MultiThreadedStateMachineManager::class.java.classLoader
 ) : StateMachineManager, StateMachineManagerInternal {
-    override fun resume() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
     companion object {
         private val logger = contextLogger()
     }

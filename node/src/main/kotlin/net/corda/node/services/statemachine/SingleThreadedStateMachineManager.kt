@@ -144,20 +144,6 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    override fun resume() {
-        fiberDeserializationChecker?.start(checkpointSerializationContext!!)
-        val fibers = restoreFlowsFromCheckpoints()
-        Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
-            (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
-        }
-        serviceHub.networkMapCache.nodeReady.then {
-            resumeRestoredFlows(fibers)
-        }
-        mutex.locked {
-            stopping = false
-        }
-    }
-
     override fun <A : FlowLogic<*>> findStateMachines(flowClass: Class<A>): List<Pair<A, CordaFuture<*>>> {
         return mutex.locked {
             flows.values.mapNotNull {

@@ -80,6 +80,12 @@ import kotlin.reflect.jvm.javaMethod
  * unsubscribing from the [Observable], or if the [Observable] is garbage collected the client will eventually
  * automatically signal the server. This is done using a cache that holds weak references to the [UnicastSubject]s.
  * The cleanup happens in batches using a dedicated reaper, scheduled on [reaperExecutor].
+ *
+ * The client will attempt to failover in case the server become unreachable. Depending on the [ServerLocataor] instance
+ * passed in the constructor, failover is either handle at Artemis level or client level. If only one transport
+ * was used to create the [ServerLocator], failover is handled by Artemis (retrying based on [CordaRPCClientConfiguration].
+ * If a list of transport configurations was used, failover is handled locally. Artemis is able to do it, however the
+ * brokers on server side need to be configured in HA mode and the [ServerLocator] needs to be created with HA as well.
  */
 class RPCClientProxyHandler(
         private val rpcConfiguration: CordaRPCClientConfiguration,
@@ -185,7 +191,7 @@ class RPCClientProxyHandler(
     private val deduplicationSequenceNumber = AtomicLong(0)
 
     private val sendingEnabled = AtomicBoolean(true)
-    // used to interrupt failover thread (i.e. client is closed while failing over)
+    // Used to interrupt failover thread (i.e. client is closed while failing over).
     private var haFailoverThread: Thread? = null
 
     /**
@@ -427,7 +433,7 @@ class RPCClientProxyHandler(
     }
 
     private fun attemptReconnect() {
-        var reconnectAttempts = rpcConfiguration.maxReconnectAttempts * serverLocator.staticTransportConfigurations.size
+        var reconnectAttempts = rpcConfiguration.maxReconnectAttempts.times(serverLocator.staticTransportConfigurations.size)
         var retryInterval = rpcConfiguration.connectionRetryInterval
         val maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval
 
@@ -456,7 +462,7 @@ class RPCClientProxyHandler(
                 continue
             }
 
-            log.debug("Connected successfully using ${transport.params}")
+            log.debug("Connected successfully after $reconnectAttempts attempts using ${transport.params}.")
             log.info("RPC server available.")
             sessionFactory!!.addFailoverListener(this::haFailoverHandler)
             initSessions()
@@ -495,7 +501,7 @@ class RPCClientProxyHandler(
             haFailoverThread = Thread.currentThread()
             attemptReconnect()
         }
-        /* Other events are not considered as reconnection is not done by Artemis */
+        // Other events are not considered as reconnection is not done by Artemis.
     }
 
     private fun failoverHandler(event: FailoverEventType) {
