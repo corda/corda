@@ -69,7 +69,7 @@ void check_transaction(void *reqbuf, size_t buflen, char *error) {
         jthrowable exception = env->ExceptionOccurred();
         env->ExceptionDescribe();
         env->ExceptionClear(); // clears the exception; e seems to remain valid
-        
+
         jclass clazz = env->GetObjectClass(exception);
         jmethodID getMessage =
             env->GetMethodID(

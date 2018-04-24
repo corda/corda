@@ -2,6 +2,7 @@
 #include <sgx_thread_mutex_guard.h>
 #include <sgx_thread_completion.h>
 #include <sgx_trts.h>
+#include <sgx_utils.h>
 #include <java_t.h>
 
 #include "aex_assert.h"
@@ -28,7 +29,21 @@ struct ThreadMutexInit {
 };
 static ThreadMutexInit _thread_mutex_init;
 
+static sgx_status_t get_mr_enclave(sgx_measurement_t *mr_enclave) {
+    sgx_report_t report;
+    sgx_status_t ret = sgx_create_report(NULL, NULL, &report);
+    if (ret == SGX_SUCCESS) {
+        memcpy(mr_enclave, &report.body.mr_enclave, sizeof(sgx_measurement_t));
+    }
+    return ret;
+}
+
 thread_data_t *start_thread(void (*routine)(void *), void *param, sgx_thread_completion *thread_completed) {
+    sgx_measurement_t mr_enclave = { 0 };
+    if (SGX_SUCCESS != get_mr_enclave(&mr_enclave)) {
+        return NULL;
+    }
+
     nonce_t nonce;
     aex_assert(SGX_SUCCESS == sgx_read_rand((unsigned char*)&nonce, sizeof(nonce)));
     sgx_thread_cond_t thread_started;
@@ -47,11 +62,7 @@ thread_data_t *start_thread(void (*routine)(void *), void *param, sgx_thread_com
         aex_assert(new_thread_map.find(nonce) == new_thread_map.end());
         new_thread_map[nonce] = thread_init_data;
     }
-
-    // TODO use MRENCLAVE instead of enclave_id (this is currently not used)
-    uint64_t enclave_id = 0L;
-
-    request_new_thread(enclave_id, nonce);
+    request_new_thread(mr_enclave, nonce);
     sgx_thread_cond_wait(&thread_started, &thread_started_mutex);
     sgx_thread_mutex_guard started_thread_data_map_guard(&started_thread_data_map_mutex);
     auto thread_data_iter = started_thread_data_map.find(nonce);

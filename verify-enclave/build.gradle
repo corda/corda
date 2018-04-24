@@ -57,6 +57,11 @@ dependencies {
 }
 
 jar {
+
+    // De-duplicate dependencies - otherwise, they will appear multiple times in the resulting JAR file, which in turn
+    // will confuse ProGuard in the processing step in sgx-jvm/jvm-enclave.
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     from '../node/capsule/NOTICE' // Copy CDDL notice
     // Create a fat jar by packing all deps into the output
     from {

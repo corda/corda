@@ -30,7 +30,7 @@ add_custom_target(
     DEPENDS ${GENERATED_EDL_FILES}
 )
 
-set(SOURCE_FILES sgx_utilities.cpp untrusted_start_thread.cpp untrusted_debug_print.cpp ${GENERATED_RPC_DIR}/java_u.c)
+set(SOURCE_FILES sgx_utilities.cpp untrusted_start_thread.cpp untrusted_debug_print.cpp enclave_map.cpp enclave_metadata.cpp ${GENERATED_RPC_DIR}/java_u.c)
 add_library(common OBJECT ${SOURCE_FILES})
 set_property(TARGET common PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_include_directories(common PUBLIC ${SGX_SDK_INCLUDE} ${GENERATED_RPC_DIR})

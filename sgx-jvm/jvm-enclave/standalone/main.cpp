@@ -4,13 +4,25 @@
 #include <fstream>
 #include "sgx_utilities.h"
 #include "java_u.h"
+#include "enclave_map.h"
+#include "enclave_metadata.h"
+
+static sgx_measurement_t mr_enclave;
 
 int main(int argc, char **argv) {
     sgx_launch_token_t token = {0};
     sgx_enclave_id_t enclave_id = {0};
     int updated = 0;
 
-    CHECK_SGX(sgx_create_enclave("../../enclave/build/cordaenclave.signed.so", SGX_DEBUG_FLAG, &token, &updated, &enclave_id, NULL));
+    const char *enclave_path = "../../enclave/build/cordaenclave.signed.so";
+    enclave_hash_result_t hash_result = retrieve_enclave_hash(enclave_path, mr_enclave.m);
+    if (EHR_SUCCESS != hash_result) {
+        printf("Unable to retrieve MRENCLAVE from enclave\n");
+        exit(1);
+    }
+
+    CHECK_SGX(sgx_create_enclave(enclave_path, SGX_DEBUG_FLAG, &token, &updated, &enclave_id, NULL));
+    add_enclave_mapping(&mr_enclave, enclave_id);
 
     if (argc < 2) {
         printf("Usage: <executable> /path/to/req/file\n");
