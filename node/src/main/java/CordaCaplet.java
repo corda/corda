@@ -77,10 +77,15 @@ public class CordaCaplet extends Capsule {
         // defined as public static final fields on the Capsule class, therefore referential equality is safe.
         if (ATTR_APP_CLASS_PATH == attr) {
             T cp = super.attribute(attr);
-
-            (new File(baseDir, "cordapps")).mkdir(); // TODO: shall we check if the folder has been created?
-            // Add additional directories of JARs to the classpath (at the end). e.g. for JDBC drivers
-            augmentClasspath((List<Path>) cp, new File(baseDir, "cordapps"));
+            // Create cordapps directory if it doesn't exist.
+            File cordappsDir = new File(baseDir, "cordapps");
+            cordappsDir.mkdir();
+            if (!cordappsDir.exists()) {
+                log(LOG_VERBOSE, "cordapps directory cannot be found");
+                System.exit(1);
+            }
+            // Add additional directories of JARs to the classpath (at the end). e.g. for JDBC drivers.
+            augmentClasspath((List<Path>) cp, cordappsDir);
             try {
                 List<String> jarDirs = nodeConfig.getStringList("jarDirs");
                 log(LOG_VERBOSE, "Configured JAR directories = " + jarDirs);
@@ -129,11 +134,11 @@ public class CordaCaplet extends Capsule {
         if (dir.exists()) {
             // The following might return null if the directory is not there (we check this already) or if an I/O error occurs.
             File[] files = dir.listFiles();
-            if (files != null) { // This is unlikely to happen, but if we don't check, for loop might fail with NullPointerException.
+            if (files != null) { // This is unlikely to happen, but if we don't check, for-loop might fail with NullPointerException.
                 for (File file : files) {
                     if (file.isFile() && isJAR(file)) {
                         classpath.add(file.toPath().toAbsolutePath());
-                    } else if (file.isDirectory()) { // Search in nested folders as well.
+                    } else if (file.isDirectory()) { // Search in nested folders as well. TODO: check for circular symlinks.
                         augmentClasspath(classpath, file);
                     }
                 }
