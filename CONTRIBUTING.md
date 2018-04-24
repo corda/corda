@@ -12,7 +12,7 @@ Corda is an open source project with the aim of developing an enterprise-grade d
 
 We believe one of the things that makes Corda special is its coherent design and we seek to retain this defining characteristic. One of the ways we do this is by encouraging developers of new features to write a design proposal for review, comment and advice before they start work and you are encouraged to take advantage of this process. Posting to the [design](https://cordaledger.slack.com/messages/C3J04VC3V/) channel on Slack is a good way to kick this process off. When reviewing a proposed feature, we use the [Corda Technical Whitepaper](https://docs.corda.net/_static/corda-technical-whitepaper.pdf) as a guide and you are strongly encouraged to study it. This white paper is a living document that is updated from time to time under the guidance of the project leader (see below).
 
-## How to Get Your Contributions Merged
+## How to Contribute
 
 Contributions from the community are welcomed and strongly encouraged. From the outset we defined some guidelines to ensure new contributions only ever enhance the project:
 
@@ -22,7 +22,7 @@ Contributions from the community are welcomed and strongly encouraged. From the 
 * **Maintainability**: If the feature will require ongoing maintenance (eg support for a particular brand of database), we may ask you to accept responsibility for maintaining this feature.
 * **Non-duplicative**: If the contribution duplicates features that already exist or are already in progress, you may be asked to work with the project maintainers to reconcile this. As the major contributor to Corda, many [R3](https://r3.com) employees will be working on features at any given time. To avoid surprises and foster transparency, our work tracking system, [Jira](https://r3-cev.atlassian.net/projects/CORDA/summary), is public. In addition, the maintainers and developers on the project are available on the [design](https://cordaledger.slack.com/messages/C3J04VC3V/) channel of our [Slack](https://slack.corda.net/) and they would be delighted to discuss any work you plan to do.
 
-**Advice to contributors**: You are encouraged to join our [Slack](https://slack.corda.net/), observe the [Pull Request](https://github.com/corda/corda/pulls) process in action, contribute to code reviews and start by submitting small changes.
+**Advice to contributors**: You are encouraged to join our [Slack](https://slack.corda.net/), observe the [Pull Request](https://github.com/corda/corda/pulls) process in action, contribute to code reviews and start by submitting small changes. [This page](https://docs.corda.net/head/contributing.html) in our docsite shares tips on how to identify areas in which to contribute, and outlines the mechanics for doing so.
 
 ## Project Leadership and Maintainers
 
