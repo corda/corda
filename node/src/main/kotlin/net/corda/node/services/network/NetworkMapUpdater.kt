@@ -128,9 +128,10 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             0
         } else {
             // TODO This needs special handling (node omitted update process or didn't accept new parameters)
-            logger.error("Node is using parameters with hash: $currentParametersHash but network map is " +
-                    "advertising: ${networkMap.networkParameterHash}.\n" +
-                    "Node will shutdown now. Please update node to use correct network parameters file.")
+            logger.error(
+                    """Node is using network parameters with hash $currentParametersHash but the network map is advertising ${networkMap.networkParameterHash}.
+To resolve this mismatch, and move to the current parameters, delete the $NETWORK_PARAMS_FILE_NAME file from the node's directory and restart.
+The node will shutdown now.""")
             1
         }
         exitProcess(exitCode)
