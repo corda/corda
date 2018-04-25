@@ -22,9 +22,12 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAut
     @Suspendable
     override fun validateRequest(requestPayload: NotarisationPayload): TransactionParts {
         val transaction = requestPayload.coreTransaction
+        checkInputs(transaction.inputs)
         val request = NotarisationRequest(transaction.inputs, transaction.id)
         validateRequestSignature(request, requestPayload.requestSignature)
-        return extractParts(transaction)
+        val parts = extractParts(transaction)
+        checkNotary(parts.notary)
+        return parts
     }
 
     private fun extractParts(tx: CoreTransaction): TransactionParts {
@@ -35,8 +38,7 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAut
                     checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
                     checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
                 }
-                val notary = tx.notary
-                TransactionParts(tx.id, tx.inputs, tx.timeWindow, notary)
+                TransactionParts(tx.id, tx.inputs, tx.timeWindow, tx.notary)
             }
             is ContractUpgradeFilteredTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary)
             is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary)
