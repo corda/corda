@@ -13,7 +13,8 @@ Feature: Compatibility - CorDapp versions
 
     Examples:
       | Corda-Node-Version-X | Cordapp-Version-X     | Cordapp-Version-Y    |
-      | corda-3.0       | finance-V1-flowImpl1  | finance-V2-flowImpl2 |
+      | corda-master         | finance-V1-flowImpl1  | finance-V2-flowImpl2 |
+      | r3-master            | finance-V1-flowImpl1  | finance-V2-flowImpl2 |
 
   Scenario Outline: Corda node can transact with another Corda node where each has a Cordapp version with different, but backwards compatible, Flow versions
     Given a node A of version <Corda-Node-Version-X>
@@ -25,7 +26,8 @@ Feature: Compatibility - CorDapp versions
 
     Examples:
       | Corda-Node-Version-X | Cordapp-Version-X  | Cordapp-Version-Y |
-      | corda-3.0       | finance-V1-flowV1  | finance-V2-flowV2 |
+      | corda-master         | finance-V1-flowV1  | finance-V2-flowV2 |
+      | r3-master            | finance-V1-flowV1  | finance-V2-flowV2 |
 
   Scenario Outline: Corda node fails to transact with another Corda node where each has a Cordapp version with different, incompatible, Flow versions
     Given a node A of version <Corda-Node-Version-X>
@@ -37,4 +39,5 @@ Feature: Compatibility - CorDapp versions
 
     Examples:
       | Corda-Node-Version-X | Cordapp-Version-X           | Cordapp-Version-Y          |
-      | corda-3.0       | finance-V1-flowV1-incompat  | finance-V2-flowV2-incompat |
+      | corda-master         | finance-V1-flowV1-incompat  | finance-V2-flowV2-incompat |
+      | r3-master            | finance-V1-flowV1-incompat  | finance-V2-flowV2-incompat |

@@ -7,24 +7,10 @@ Feature: Compatibility - Node versions
     When the network is ready
 
     Examples:
-      | Corda-Node-Version    |
-      | corda-3.0        |
-
-  Scenario Outline: Startup a Corda (OS) Node from Artifactory
-    Given a node PartyA of version <Corda-Node-Version>
-    When the network is ready
-
-    Examples:
-      | Corda-Node-Version    |
-      | corda-3.0        |
-
-  Scenario Outline: Startup an R3 Corda Node from Artifactory
-    Given a node PartyA of version <Corda-Node-Version>
-    When the network is ready
-
-    Examples:
-      | Corda-Node-Version    |
-      | r3corda-3.0-DP3-RC01       |
+      | Corda-Node-Version           |
+      | corda-3.0                    |
+      | corda-3.1                    |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 |
 
   Scenario Outline: Startup a Corda (OS) Node and print its node information
     Given a node PartyA of version <Corda-Node-Version>
@@ -33,8 +19,10 @@ Feature: Compatibility - Node versions
     And user can retrieve node identity information for node A
 
     Examples:
-      | Corda-Node-Version    |
-      | corda-3.0        |
+      | Corda-Node-Version           |
+      | corda-3.0                    |
+      | corda-3.1                    |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 |
 
   Scenario Outline: Startup a Corda (OS) Node with several Cordapps deployed.
     Given a node PartyA of version <Corda-Node-Version>
@@ -45,5 +33,7 @@ Feature: Compatibility - Node versions
     And user can retrieve node identity information for node A
 
     Examples:
-      | Corda-Node-Version    |
-      | corda-3.0        |
+      | Corda-Node-Version           |
+      | corda-3.0                    |
+      | corda-3.1                    |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 |

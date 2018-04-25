@@ -10,5 +10,7 @@ Feature: Compatibility - Notary cluster member changes.
     Then node PartyA can run <Cordapp-Name> <NumIterations> <SleepMillis>
 
     Examples:
-      | Corda-Node-Version | R3-Corda-Node-Version   | Cordapp-Name      | NumIterations | SleepMillis |
-      | corda-3.0          | r3-master               | notaryhealthcheck | 10            | 200         |
+      | R3-Corda-Node-Version        | Corda-Node-Version | Cordapp-Name      | NumIterations | SleepMillis |
+      | r3-master                    | corda-master       | notaryhealthcheck | 10            | 200         |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.0          | notaryhealthcheck | 10            | 200         |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.1          | notaryhealthcheck | 10            | 200         |

@@ -14,8 +14,8 @@ Feature: Compatibility - CZ Network Parameters changes
     Then node A can transfer 100 tokens to node B
 
   Examples:
-      | Corda-Node-Version    |
-      | r3corda-3.0           |
+      | Corda-Node-Version           |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 |
 
   Scenario Outline: R3 Corda nodes continue transacting when existing Notary changes from non-validating to validating
     Given a node A of version <Corda-Node-Version>
@@ -27,5 +27,8 @@ Feature: Compatibility - CZ Network Parameters changes
     Then node A can transfer 100 tokens to node B
 
     Examples:
-      | Corda-Node-Version    |
-      | r3corda-3.0           |
+      | Corda-Node-Version           |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 |
+
+  Scenario Outline: Many more scenarios to be added here (eg. CZ whitelist updates, minimumPlatformVersion, maxMessageSize, maxTransactionSize)
+    Examples: TODO

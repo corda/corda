@@ -13,7 +13,8 @@ Feature: Compatibility - CorDapp versions
 
     Examples:
       | Corda-Node-Version-X | Cordapp-Version-X    | Cordapp-Version-Y   |
-      | corda-3.0            | finance-V1-contract  | finance-V2-contract |
+      | corda-master         | finance-V1-contract  | finance-V2-contract |
+      | r3-master            | finance-V1-contract  | finance-V2-contract |
 
   Scenario Outline: Corda node can transact with another Corda node where each has a Cordapp version with same Contract verify but different State definition
     Given a node A of version <Corda-Node-Version-X>
@@ -26,7 +27,8 @@ Feature: Compatibility - CorDapp versions
 
     Examples:
       | Corda-Node-Version-X | Cordapp-Version-X    | Cordapp-Version-Y   |
-      | corda-3.0            | finance-V1-state     | finance-V2-state    |
+      | corda-master         | finance-V1-state     | finance-V2-state    |
+      | r3-master            | finance-V1-state     | finance-V2-state    |
 
   Scenario Outline: Corda node can transact with another Corda node where each has a Cordapp version with same Contract verify but different State definition and custom schemas
     Given a node A of version <Corda-Node-Version-X>
@@ -39,7 +41,8 @@ Feature: Compatibility - CorDapp versions
 
     Examples:
       | Corda-Node-Version-X | Cordapp-Version-X        | Cordapp-Version-Y       |
-      | corda-3.0            | finance-V1-state-schema  | finance-V2-state-schema |
+      | corda-master         | finance-V1-state-schema  | finance-V2-state-schema |
+      | r3-master            | finance-V1-state-schema  | finance-V2-state-schema |
 
   Scenario Outline: Unhappy path scenarios to be added.
     Examples: TODO

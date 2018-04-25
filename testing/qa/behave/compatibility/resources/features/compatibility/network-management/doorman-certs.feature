@@ -14,8 +14,9 @@ Feature: Compatibility - Doorman certificate issuance
     Then node A can transfer 100 tokens to node B
 
   Examples:
-      | Corda-Node-Version    | Doorman-Version-X       | Doorman-Version-Y     |
-      | corda-3.0             | doorman-3.0-DP3-RC01     | doorman-3.0-master       |
+      | Corda-Node-Version    | Doorman-Version-X           | Doorman-Version-Y |
+      | corda-3.0             | doorman-3.0.0-DEV-PREVIEW-3 | doorman-master    |
+      | corda-3.1             | doorman-3.0.0-DEV-PREVIEW-3 | doorman-master    |
 
   Scenario Outline: R3 Corda nodes can transact with each other, where they have been issued Certificates by different (R3 Corda) Doorman versions.
     Given a node A of version <Corda-Node-Version>
@@ -28,8 +29,8 @@ Feature: Compatibility - Doorman certificate issuance
     Then node A can transfer 100 tokens to node B
 
     Examples:
-      | Corda-Node-Version    | Doorman-Version-X       | Doorman-Version-Y     |
-      | r3corda-3.0-DP3-RC01       | doorman-3.0-DP3-RC01     | doorman-3.0-master       |
+      | Corda-Node-Version           | Doorman-Version-X           | Doorman-Version-Y |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 | doorman-3.0.0-DEV-PREVIEW-3 | doorman-master    |
 
   Scenario Outline: Mixed (R3 and OS) Corda nodes can transact with each other, where they have been issued Certificates by different (R3 Corda) Doorman versions.
     Given a node A of version <Corda-Node-Version-X>
@@ -42,5 +43,6 @@ Feature: Compatibility - Doorman certificate issuance
     Then node A can transfer 100 tokens to node B
 
     Examples:
-      | Corda-Node-Version-X  | Corda-Node-Version-Y  | Doorman-Version-X       | Doorman-Version-Y     |
-      | r3corda-3.0-DP3-RC01       | corda-3.0             | doorman-3.0-DP3-RC01     | doorman-3.0-master      |
+      | Corda-Node-Version-X         | Corda-Node-Version-Y  | Doorman-Version-X           | Doorman-Version-Y |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.0             | doorman-3.0.0-DEV-PREVIEW-3 | doorman-master    |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.1             | doorman-3.0.0-DEV-PREVIEW-3 | doorman-master    |

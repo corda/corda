@@ -14,7 +14,9 @@ Feature: Compatibility - Node configuration
 
   Examples:
       | Corda-Node-Version-X |
-      | corda-3.0       |
+      | corda-3.0            |
+      | corda-3.1            |
+      | corda-master         |
 
   Scenario Outline: R3 Corda node can transact with another R3 Corda node where node configuration is changed on one of the R3 Corda nodes
     Given a node A of version <Corda-Node-Version-X>
@@ -26,10 +28,11 @@ Feature: Compatibility - Node configuration
     Then node A can transfer 100 tokens to node B
 
     Examples:
-      | Corda-Node-Version-X |
-      | r3corda-3.0-DP3-RC01      |
+      | Corda-Node-Version-X         |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 |
+      | r3-master                    |
 
-  Scenario Outline: R3 Corda node can transact with another Corda (OS) node where node configuration is changed on both of the R3 Corda nodes
+  Scenario Outline: R3 Corda node can transact with another Corda (OS) node where node configuration is changed on both OS and R3 Corda nodes
     Given a node A of version <Corda-Node-Version-X>
     And node A configuration is changed
     And node A has the finance app installed
@@ -41,4 +44,9 @@ Feature: Compatibility - Node configuration
 
     Examples:
       | Corda-Node-Version-X | Corda-Node-Version-Y |
-      | r3corda-3.0-DP3-RC01      | corda-3.0            |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.0    |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.1    |
+      | r3-master                    | corda-master |
+
+  Scenario Outline: Add scenarios where new configuration items are added.
+    Examples: TODO

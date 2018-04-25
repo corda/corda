@@ -15,8 +15,7 @@ Feature: Compatibility - Database providers
 
     Examples:
       | Corda-Node-Version | R3-Corda-Node-Version   | Currency | Database-Type     |
-#      | corda-3.0          | r3-master               | GBP      | SQL Server        |
-      | corda-3.0          | r3corda-3.0-DP3-RC04        | GBP      | SQL Server    |
+      | corda-master       | r3-master               | GBP      | SQL Server        |
 
   Scenario Outline: QA: Corda (OS) Node using H2 can transact with R3 Corda (Enterprise) node using Postgres, in an R3 Corda configured network.
     Given a node PartyA of version <R3-Corda-Node-Version> with proxy
@@ -31,9 +30,7 @@ Feature: Compatibility - Database providers
 
     Examples:
       | Corda-Node-Version | R3-Corda-Node-Version   | Currency | Database-Type   |
-#      | corda-3.0          | r3-master               | GBP      | postgres        |
-      | corda-3.0          | r3corda-3.0-DP3-RC04        | GBP      | postgres    |
-
+      | corda-master       | r3-master               | GBP      | postgres        |
 
   Scenario Outline: QA: 3 Nodes can transact with each other using different database providers: H2, SQL Server, PostgreSQL
     Given a node PartyA of version <R3-Corda-Node-Version> with proxy
@@ -54,5 +51,7 @@ Feature: Compatibility - Database providers
 
     Examples:
       | R3-Corda-Node-Version   | Currency | Database-Type-1 | Database-Type-2 | Database-Type-3 |
-#      | r3-master               | GBP      | h2              | sql-server      | postgres        |
-      | r3corda-3.0-DP3-RC01    | GBP      | h2              | sql-server      | postgres        |
+      | r3-master               | GBP      | h2              | sql-server      | postgres        |
+
+  Scenario Outline: Add Doorman and NMS database usage scenarios
+    Examples: TODO

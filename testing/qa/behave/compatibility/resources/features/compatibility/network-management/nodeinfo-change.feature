@@ -13,5 +13,7 @@ Feature: Compatibility - NMS node identity (nodeinfo) changes
     Then node A can transfer 100 tokens to node B
 
   Examples:
-      | Corda-Node-Version |
-      | corda-3.0          |
+      | Corda-Node-Version           |
+      | corda-3.0                    |
+      | corda-3.1                    |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 |

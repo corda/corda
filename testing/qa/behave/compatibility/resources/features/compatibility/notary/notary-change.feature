@@ -13,8 +13,10 @@ Feature: Compatibility - Notary type change
     Then node A can transfer 100 tokens to node B
 
     Examples:
-      | Corda-Node-Version    | Notary-Type-A       | Notary-Type-B          |
-      | corda-3.0             | notary-validating   | notary-non-validating  |
+      | Corda-Node-Version           | Notary-Type-A       | Notary-Type-B          |
+      | corda-3.0                    | notary-validating   | notary-non-validating  |
+      | corda-3.1                    | notary-validating   | notary-non-validating  |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 | notary-validating   | notary-non-validating  |
 
   Scenario Outline: Corda (OS) nodes can continue transacting with each other, using states that have been signed by different notaries (using transaction resolution).
     Given a node A of version <Corda-Node-Version> using <Notary-Type-A>
@@ -26,8 +28,10 @@ Feature: Compatibility - Notary type change
     And node A can transfer 100 <Currency> to node B
 
     Examples:
-      | Corda-Node-Version    | Notary-Type-A       | Notary-Type-B          |
-      | corda-3.0             | notary-validating   | notary-non-validating  |
+      | Corda-Node-Version           | Notary-Type-A       | Notary-Type-B          |
+      | corda-3.0                    | notary-validating   | notary-non-validating  |
+      | corda-3.1                    | notary-validating   | notary-non-validating  |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 | notary-validating   | notary-non-validating  |
 
   Scenario Outline: Unhappy path scenarios to be added.
     Examples: TODO

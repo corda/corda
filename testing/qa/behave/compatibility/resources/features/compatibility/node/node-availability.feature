@@ -15,5 +15,5 @@ Feature: Compatibility - Node high availability and operational continuity
     And node A can transfer 100 GBP to node B
 
   Examples:
-      | Corda-Node-Version-X |
-      | r3corda-3.0-DP3-RC01      |
+      | Corda-Node-Version-X         |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 |

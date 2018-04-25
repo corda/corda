@@ -13,4 +13,8 @@ Feature: Compatibility - CorDapp versions
 
   Examples:
       | Corda-Node-Version-X | Cordapp-Version-X | Cordapp-Version-Y |
-      | corda-3.0       | finance-V1        | finance-V2        |
+      | corda-master         | finance-V1        | finance-V2        |
+      | r3-master            | finance-V1        | finance-V2        |
+
+  Scenario Outline: Scenarios that exercise both happy and unhappy paths using Contract Constraints checking (hash, CZ whitelist, signature).
+    Examples: TODO

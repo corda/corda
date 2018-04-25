@@ -13,5 +13,8 @@ Feature: Compatibility - Notary version change
     And node B can transfer 100 tokens to node A using <Notary-Version-Y>
 
     Examples:
-      | Corda-Node-Version    | Notary-Version-X       | Notary-Version-Y     |
-      | corda-3.0             | notary-r3c-3.0-DP2     | notary-r3c-3.0       |
+      | Corda-Node-Version           | Notary-Version-X                    | Notary-Version-Y                    |
+      | corda-3.0                    | notary-corda-3.0                    | notary-corda-3.1                    |
+      | corda-3.0                    | notary-corda-3.0                    | notary-R3.CORDA-3.0.0-DEV-PREVIEW-3 |
+      | corda-3.1                    | notary-corda-3.1                    | notary-R3.CORDA-3.0.0-DEV-PREVIEW-3 |
+      | R3.CORDA-3.0.0-DEV-PREVIEW-3 | notary-R3.CORDA-3.0.0-DEV-PREVIEW-3 | r3-master                           |

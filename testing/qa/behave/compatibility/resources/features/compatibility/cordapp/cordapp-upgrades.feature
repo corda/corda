@@ -16,7 +16,7 @@ Feature: Compatibility - CorDapp upgrades and migrations
 
   Examples:
     | Corda-Node-Version-X | Corda-Node-Version-Y | Cordapp-Version-X | Cordapp-Version-Y |
-    | corda-3.0       | r3corda-3.0-DP3-RC01      | finance-V1        | finance-V2        |
+    | corda-master         | r3-master            | finance-V1        | finance-V2        |
 
   Scenario Outline: as above but Node B has not processed Node A payment flow transactions before upgrade
     Given a node A of version <Corda-Node-Version-X>
@@ -31,7 +31,7 @@ Feature: Compatibility - CorDapp upgrades and migrations
 
     Examples:
       | Corda-Node-Version-X | Corda-Node-Version-Y | Cordapp-Version-X | Cordapp-Version-Y |
-      | corda-3.0       | r3corda-3.0-DP3-RC01      | finance-V1        | finance-V2        |
+      | corda-master         | r3-master            | finance-V1        | finance-V2        |
 
   Scenario Outline: as above but Node B has not processed Node A payment flow transactions before upgrade so we enforce flow draining mode before upgrade can complete
     Given a node A of version <Corda-Node-Version-X>
@@ -47,4 +47,4 @@ Feature: Compatibility - CorDapp upgrades and migrations
 
     Examples:
       | Corda-Node-Version-X | Corda-Node-Version-Y | Cordapp-Version-X | Cordapp-Version-Y |
-      | corda-3.0       | r3corda-3.0-DP3-RC01      | finance-V1        | finance-V2        |
+      | corda-master         | r3-master            | finance-V1        | finance-V2        |
