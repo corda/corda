@@ -47,9 +47,7 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
-import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.database.DatabaseConstants
@@ -57,12 +55,11 @@ import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_CLASSNAME
 import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_PASSWORD
 import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_URL
 import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_USER
-import net.corda.testing.database.DatabaseConstants.SCHEMA
-import net.corda.testing.database.DatabaseConstants.TRANSACTION_ISOLATION_LEVEL
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.internal.MockTransactionStorage
+import net.corda.testing.node.internal.makeTestDatabaseProperties
 import net.corda.testing.services.MockAttachmentStorage
 import java.security.KeyPair
 import java.sql.Connection
@@ -111,20 +108,6 @@ open class MockServices private constructor(
             props.setProperty("dataSource.password", config.getString("dataSourceProperties.dataSource.password"))
             props["autoCommit"] = false
             return props
-        }
-
-        /**
-         * Make properties appropriate for creating a Database for unit tests.
-         *
-         * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.
-         */
-        @JvmStatic
-        fun makeTestDatabaseProperties(nodeName: String? = null): DatabaseConfig {
-            val config = databaseProviderDataSourceConfig(nodeName)
-            val transactionIsolationLevel = if (config.hasPath(TRANSACTION_ISOLATION_LEVEL)) TransactionIsolationLevel.valueOf(config.getString(TRANSACTION_ISOLATION_LEVEL))
-                                                else TransactionIsolationLevel.READ_COMMITTED
-            val schema = if (config.hasPath(SCHEMA)) config.getString(SCHEMA) else ""
-            return DatabaseConfig(runMigration = true, transactionIsolationLevel = transactionIsolationLevel, schema = schema)
         }
 
         /**

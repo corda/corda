@@ -11,7 +11,6 @@
 package net.corda.testing.node.internal
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
@@ -26,10 +25,13 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
-import net.corda.testing.driver.NodeHandle
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
+import net.corda.testing.database.DatabaseConstants
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.User
+import net.corda.testing.node.databaseProviderDataSourceConfig
 import net.corda.testing.node.testContext
 import org.slf4j.LoggerFactory
 import java.net.Socket
@@ -125,6 +127,19 @@ internal interface InternalMockMessagingService : MessagingService {
     fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer?
 
     fun stop()
+}
+
+/**
+ * Make properties appropriate for creating a Database for unit tests.
+ *
+ * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.
+ */
+fun makeTestDatabaseProperties(nodeName: String? = null): DatabaseConfig {
+    val config = databaseProviderDataSourceConfig(nodeName)
+    val transactionIsolationLevel = if (config.hasPath(DatabaseConstants.TRANSACTION_ISOLATION_LEVEL)) TransactionIsolationLevel.valueOf(config.getString(DatabaseConstants.TRANSACTION_ISOLATION_LEVEL))
+    else TransactionIsolationLevel.READ_COMMITTED
+    val schema = if (config.hasPath(DatabaseConstants.SCHEMA)) config.getString(DatabaseConstants.SCHEMA) else ""
+    return DatabaseConfig(runMigration = true, transactionIsolationLevel = transactionIsolationLevel, schema = schema)
 }
 
 fun CordaRPCClient.start(user: User) = start(user.username, user.password)

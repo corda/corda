@@ -4250,7 +4250,6 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @org.jetbrains.annotations.NotNull public static final Properties makeTestDataSourceProperties(String, String, kotlin.jvm.functions.Function2)
   @org.jetbrains.annotations.NotNull public static final kotlin.Pair makeTestDatabaseAndMockServices(List, net.corda.core.node.services.IdentityService, net.corda.testing.core.TestIdentity, net.corda.core.node.NetworkParameters, java.security.KeyPair...)
   @org.jetbrains.annotations.NotNull public static final kotlin.Pair makeTestDatabaseAndMockServices(List, net.corda.core.node.services.IdentityService, net.corda.testing.core.TestIdentity, java.security.KeyPair...)
-  @org.jetbrains.annotations.NotNull public static final net.corda.nodeapi.internal.persistence.DatabaseConfig makeTestDatabaseProperties(String)
   public void recordTransactions(Iterable)
   public void recordTransactions(net.corda.core.node.StatesToRecord, Iterable)
   public void recordTransactions(net.corda.core.transactions.SignedTransaction, net.corda.core.transactions.SignedTransaction...)
@@ -4267,7 +4266,6 @@ public static final class net.corda.testing.node.MockServices$Companion extends 
   @org.jetbrains.annotations.NotNull public final Properties makeTestDataSourceProperties(String, String, kotlin.jvm.functions.Function2)
   @org.jetbrains.annotations.NotNull public final kotlin.Pair makeTestDatabaseAndMockServices(List, net.corda.core.node.services.IdentityService, net.corda.testing.core.TestIdentity, net.corda.core.node.NetworkParameters, java.security.KeyPair...)
   @org.jetbrains.annotations.NotNull public final kotlin.Pair makeTestDatabaseAndMockServices(List, net.corda.core.node.services.IdentityService, net.corda.testing.core.TestIdentity, java.security.KeyPair...)
-  @org.jetbrains.annotations.NotNull public final net.corda.nodeapi.internal.persistence.DatabaseConfig makeTestDatabaseProperties(String)
 ##
 public static final class net.corda.testing.node.MockServices$Companion$makeTestDatabaseAndMockServices$mockService$1$1 extends net.corda.testing.node.MockServices
   @org.jetbrains.annotations.NotNull public net.corda.core.node.services.VaultService getVaultService()
