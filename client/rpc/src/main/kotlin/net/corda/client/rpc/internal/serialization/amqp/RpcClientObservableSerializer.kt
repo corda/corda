@@ -27,18 +27,21 @@ class RpcClientObservableSerializer : CustomSerializer.Implements<Observable<*>>
                 context: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
         ) = context.withProperty (
                     RpcClientObservableSerializer.RpcObservableContextKey, observableContext)
-
     }
 
     private fun <T> pinInSubscriptions(observable: Observable<T>, hardReferenceStore: MutableSet<Observable<*>>): Observable<T> {
         val refCount = AtomicInteger(0)
         return observable.doOnSubscribe {
             if (refCount.getAndIncrement() == 0) {
-                require(hardReferenceStore.add(observable)) { "Reference store already contained reference $this on add" }
+                require(hardReferenceStore.add(observable)) {
+                    "Reference store already contained reference $this on add"
+                }
             }
         }.doOnUnsubscribe {
             if (refCount.decrementAndGet() == 0) {
-                require(hardReferenceStore.remove(observable)) { "Reference store did not contain reference $this on remove" }
+                require(hardReferenceStore.remove(observable)) {
+                    "Reference store did not contain reference $this on remove"
+                }
             }
         }
     }
@@ -53,11 +56,10 @@ class RpcClientObservableSerializer : CustomSerializer.Implements<Observable<*>>
                 as ObservableContext
 
         if (obj !is List<*>) throw NotSerializableException ("Input must be a serialised list")
-        if (obj.size != 2) throw NotSerializableException ("Expecting two elementsm have ${obj.size}")
+        if (obj.size != 2) throw NotSerializableException ("Expecting two elements, have ${obj.size}")
 
         val observableId : Trace.InvocationId = Trace.InvocationId((obj[0] as String), Instant.ofEpochMilli((obj[1] as Long)))
         val observable = UnicastSubject.create<Notification<*>>()
-
 
         require(observableContext.observableMap.getIfPresent(observableId) == null) {
             "Multiple Observables arrived with the same ID $observableId"
