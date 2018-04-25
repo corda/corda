@@ -127,7 +127,7 @@ class VaultQueryTests {
     val expectedEx: ExpectedException = ExpectedException.none()
 
     @Before
-    fun setuUp() {
+    fun setUp() {
         transaction = database.newTransaction()
     }
 
