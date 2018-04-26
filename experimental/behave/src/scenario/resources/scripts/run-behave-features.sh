@@ -10,7 +10,7 @@
 # Note: please ensure you have configured your staging environment by running the top-level script: prepare.sh
 
 BUILD_DIR=$PWD
-cd $BUILD_DIR
+cd ${BUILD_DIR}
 ../../gradlew behaveJar
 
 BEHAVE_JAR=$(ls build/libs/corda-behave-*.jar | tail -n1)
