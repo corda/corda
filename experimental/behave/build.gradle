@@ -37,21 +37,10 @@ sourceSets {
         }
         resources.srcDir file('src/scenario/resources')
     }
-    scenario {
-        java {
-            compileClasspath += main.output
-            runtimeClasspath += main.output
-            srcDir file('src/scenario/kotlin')
-        }
-        resources.srcDir file('src/scenario/resources')
-    }
 }
 
 configurations {
-    scenarioCompile.extendsFrom testCompile
-    scenarioRuntime.extendsFrom testRuntime
-
-    behaveCompile.extendsFrom scenarioCompile
+    behaveCompile.extendsFrom testCompile
     behaveRuntime.extendsFrom testRuntime
 }
 
@@ -99,9 +88,9 @@ dependencies {
 
     // Scenarios / End-to-End Tests
 
-    scenarioCompile "info.cukes:cucumber-java8:$cucumber_version"
-    scenarioCompile "info.cukes:cucumber-junit:$cucumber_version"
-    scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
+    compile "info.cukes:cucumber-java8:$cucumber_version"
+    compile "info.cukes:cucumber-junit:$cucumber_version"
+    compile "info.cukes:cucumber-picocontainer:$cucumber_version"
 }
 
 compileKotlin {
@@ -112,23 +101,8 @@ compileTestKotlin {
     kotlinOptions.jvmTarget = "1.8"
 }
 
-compileScenarioKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
 test {
     testLogging.showStandardStreams = true
-}
-
-task scenarios(type: Test) {
-    setTestClassesDirs sourceSets.scenario.output.getClassesDirs()
-    classpath = sourceSets.scenario.runtimeClasspath
-    outputs.upToDateWhen { false }
-
-    if (project.hasProperty("tags")) {
-        systemProperty "cucumber.options", "--tags $tags"
-        logger.warn("Only running tests tagged with: $tags ...")
-    }
 }
 
 task behaveJar(type: Jar) {
@@ -149,6 +123,3 @@ task behaveJar(type: Jar) {
         attributes 'Main-Class': 'net.corda.behave.scenarios.ScenarioRunner'
     }
 }
-
-//scenarios.mustRunAfter test
-//scenarios.dependsOn test
