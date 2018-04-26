@@ -35,7 +35,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val compatibilityZoneURL: URL?
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
-    val messageRedeliveryDelaySeconds: Int
+    val p2pMessagingRetry: P2PMessagingRetryConfiguration
     val notary: NotaryConfig?
     val additionalNodeInfoPollingFrequencyMsec: Long
     val p2pAddress: NetworkHostAndPort
@@ -108,6 +108,18 @@ data class BFTSMaRtConfiguration(
     }
 }
 
+/**
+ * Currently only used for notarisation requests.
+ *
+ * When the response doesn't arrive in time, the message is resent to a different notary-replica round-robin
+ * in case of clustered notaries.
+ */
+data class P2PMessagingRetryConfiguration(
+        val messageRedeliveryDelay: Duration,
+        val maxRetryCount: Int,
+        val backoffBase: Double
+)
+
 fun Config.parseAsNodeConfiguration(): NodeConfiguration = parseAs<NodeConfigurationImpl>()
 
 data class NodeConfigurationImpl(
@@ -123,9 +135,7 @@ data class NodeConfigurationImpl(
         override val rpcUsers: List<User>,
         override val security : SecurityConfiguration? = null,
         override val verifierType: VerifierType,
-        // TODO typesafe config supports the notion of durations. Make use of that by mapping it to java.time.Duration.
-        // Then rename this to messageRedeliveryDelay and make it of type Duration
-        override val messageRedeliveryDelaySeconds: Int = 30,
+        override val p2pMessagingRetry: P2PMessagingRetryConfiguration,
         override val p2pAddress: NetworkHostAndPort,
         private val rpcAddress: NetworkHostAndPort? = null,
         private val rpcSettings: NodeRpcSettings,
