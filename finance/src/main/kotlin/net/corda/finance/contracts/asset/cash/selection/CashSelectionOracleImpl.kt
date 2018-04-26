@@ -49,10 +49,18 @@ class CashSelectionOracleImpl : AbstractCashSelection(maxRetries = 16, retrySlee
                 """+
                 (if (notary != null)
                     " AND vs.notary_name = ?" else "") +
-                (if (onlyFromIssuerParties.isNotEmpty())
-                    " AND ccs.issuer_key_hash IN (?)" else "") +
-                (if (withIssuerRefs.isNotEmpty())
-                    " AND ccs.issuer_ref IN (?)" else "") +
+                 (if (onlyFromIssuerParties.isNotEmpty()) {
+                     val repeats = generateSequence { "?" }
+                             .take(onlyFromIssuerParties.size)
+                             .joinToString (",")
+                     " AND ccs.issuer_key_hash IN ($repeats)"
+                 } else { "" }) +
+                 (if (withIssuerRefs.isNotEmpty()) {
+                     val repeats = generateSequence { "?" }
+                             .take(withIssuerRefs.size)
+                             .joinToString (",")
+                     " AND ccs.issuer_ref IN ($repeats)"
+                 } else { "" }) +
                 """)
             SELECT transaction_id, output_index, pennies, total, lock_id
             FROM entry where total <= ? + pennies"""
@@ -64,10 +72,12 @@ class CashSelectionOracleImpl : AbstractCashSelection(maxRetries = 16, retrySlee
             statement.setString(++pIndex, lockId.toString())
             if (notary != null)
                 statement.setString(++pIndex, notary.name.toString())
-            if (onlyFromIssuerParties.isNotEmpty())
-                statement.setObject(++pIndex, onlyFromIssuerParties.map { it.owningKey.toStringShort() as Any }.toTypedArray())
-            if (withIssuerRefs.isNotEmpty())
-                statement.setObject(++pIndex, withIssuerRefs.map { it.bytes.toHexString() as Any }.toTypedArray())
+            onlyFromIssuerParties.map { it.owningKey.toStringShort() }.forEach {
+                statement.setObject(++pIndex, it)
+            }
+            withIssuerRefs.map { it.bytes }.forEach {
+                statement.setBytes(++pIndex, it)
+            }
             statement.setLong(++pIndex, amount.quantity)
 
             // https://stackoverflow.com/questions/2683214/get-query-from-java-sql-preparedstatement
