@@ -108,7 +108,7 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
 
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return txStorage.exclusive {
-            DataFeed(allPersisted().map { it.second.toSignedTx() }.toList(), updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            DataFeed(allPersisted().map { it.second.toSignedTx() }.toList(), updates.bufferUntilSubscribed())
         }
     }
 
