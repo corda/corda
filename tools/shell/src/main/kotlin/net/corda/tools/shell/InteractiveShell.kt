@@ -24,6 +24,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.getOrThrow
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -275,7 +276,7 @@ object InteractiveShell {
             } catch (e: InterruptedException) {
                 // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
             }
-            stateObservable.returnValue.get()?.apply {
+            stateObservable.returnValue.getOrThrow()?.apply {
                 if (this !is Throwable) {
                     output.println("Flow completed with result: $this")
                 }
@@ -285,6 +286,8 @@ object InteractiveShell {
             e.errors.forEach { output.println("- $it", Color.red) }
         } catch (e: PermissionException) {
             output.println(e.message ?: "Access denied", Color.red)
+        } catch (e: ExecutionException) {
+          // ignoring it as already logged by the progress handler subscriber
         } finally {
             InputStreamDeserializer.closeAll()
         }
