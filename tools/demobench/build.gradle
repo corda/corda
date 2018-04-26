@@ -9,7 +9,7 @@
  */
 
 buildscript {
-    ext.tornadofx_version = '1.7.10'
+    ext.tornadofx_version = '1.7.15'
     ext.jna_version = '4.1.0'
     ext.purejavacomm_version = '0.0.18'
     ext.controlsfx_version = '8.40.12'
@@ -46,6 +46,15 @@ repositories {
     maven {
         jcenter()
         url 'http://www.sparetimelabs.com/maven2'
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        // Force TornadoFX to use the same version of Kotlin as Corda.
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+        force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     }
 }
 
