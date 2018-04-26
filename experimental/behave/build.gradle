@@ -29,19 +29,19 @@ repositories {
 }
 
 sourceSets {
-    scenario {
+    behave {
         java {
             compileClasspath += main.output
             runtimeClasspath += main.output
-            srcDir file('src/scenario/kotlin')
+            srcDirs = ["src/main/kotlin", "src/scenario/kotlin"]
         }
         resources.srcDir file('src/scenario/resources')
     }
 }
 
 configurations {
-    scenarioCompile.extendsFrom testCompile
-    scenarioRuntime.extendsFrom testRuntime
+    behaveCompile.extendsFrom testCompile
+    behaveRuntime.extendsFrom testRuntime
 }
 
 dependencies {
@@ -88,9 +88,9 @@ dependencies {
 
     // Scenarios / End-to-End Tests
 
-    scenarioCompile "info.cukes:cucumber-java8:$cucumber_version"
-    scenarioCompile "info.cukes:cucumber-junit:$cucumber_version"
-    scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
+    behaveCompile "info.cukes:cucumber-java8:$cucumber_version"
+    behaveCompile "info.cukes:cucumber-junit:$cucumber_version"
+    behaveCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
 }
 
 compileKotlin {
@@ -101,24 +101,25 @@ compileTestKotlin {
     kotlinOptions.jvmTarget = "1.8"
 }
 
-compileScenarioKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
 test {
     testLogging.showStandardStreams = true
 }
 
-task scenarios(type: Test) {
-    setTestClassesDirs sourceSets.scenario.output.getClassesDirs()
-    classpath = sourceSets.scenario.runtimeClasspath
-    outputs.upToDateWhen { false }
-
-    if (project.hasProperty("tags")) {
-        systemProperty "cucumber.options", "--tags $tags"
-        logger.warn("Only running tests tagged with: $tags ...")
+task behaveJar(type: Jar) {
+    baseName "corda-behave"
+    from sourceSets.behave.output
+    from {
+        configurations.behaveCompile.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    zip64 true
+    exclude("features/**")
+    exclude("scripts/**")
+    exclude("META-INF/*.DSA")
+    exclude("META-INF/*.RSA")
+    exclude("META-INF/*.SF")
+    manifest {
+        attributes 'Main-Class': 'net.corda.behave.scenarios.ScenarioRunner'
     }
 }
-
-//scenarios.mustRunAfter test
-//scenarios.dependsOn test

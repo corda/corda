@@ -93,11 +93,8 @@ class Network private constructor(
 
     fun copyDatabaseDrivers() {
         val driverDirectory = (targetDirectory / "libs").createDirectories()
-        log.info("Copying database drivers from $stagingRoot/deps/drivers to $driverDirectory")
-        FileUtils.copyDirectory(
-                (stagingRoot / "deps" / "drivers").toFile(),
-                driverDirectory.toFile()
-        )
+        log.info("Copying database drivers from $stagingRoot/drivers to $driverDirectory")
+        FileUtils.copyDirectory((stagingRoot / "drivers").toFile(), driverDirectory.toFile())
     }
 
     fun configureNodes(): Boolean {
