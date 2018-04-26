@@ -35,7 +35,9 @@ The set of REST end-points for the network map service are as follows.
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | POST           | /network-map/ack-parameters             | For the node operator to acknowledge network map that new parameters were accepted for future update.                                        |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map                            | Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.         |
+| GET            | /network-map                            | Retrieve the current signed public network map object. The entire object is signed with the network map certificate which is also attached.  |
++----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
+| GET            | /network-map/{uuid}                     | Retrieve the current signed private network map object with given uuid. Format is the same as for ``/network-map`` endpoint.                 |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /network-map/node-info/{hash}           | Retrieve a signed ``NodeInfo`` as specified in the network map object.                                                                       |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
@@ -170,5 +172,3 @@ shell (see :doc:`shell`):
 If the administrator does not accept the update then next time the node polls network map after the deadline, the
 advertised network parameters will be the updated ones. The previous set of parameters will no longer be valid.
 At this point the node will automatically shutdown and will require the node operator to bring it back again.
-
-
