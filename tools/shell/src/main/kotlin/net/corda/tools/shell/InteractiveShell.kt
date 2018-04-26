@@ -24,7 +24,6 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getOrThrow
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -276,7 +275,7 @@ object InteractiveShell {
             } catch (e: InterruptedException) {
                 // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
             }
-            stateObservable.returnValue.getOrThrow()?.apply {
+            stateObservable.returnValue.get()?.apply {
                 if (this !is Throwable) {
                     output.println("Flow completed with result: $this")
                 }
