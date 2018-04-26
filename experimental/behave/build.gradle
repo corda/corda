@@ -29,6 +29,14 @@ repositories {
 }
 
 sourceSets {
+    behave {
+        java {
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+            srcDirs = ["src/main/kotlin", "src/scenario/kotlin"]
+        }
+        resources.srcDir file('src/scenario/resources')
+    }
     scenario {
         java {
             compileClasspath += main.output
@@ -42,6 +50,9 @@ sourceSets {
 configurations {
     scenarioCompile.extendsFrom testCompile
     scenarioRuntime.extendsFrom testRuntime
+
+    behaveCompile.extendsFrom scenarioCompile
+    behaveRuntime.extendsFrom testRuntime
 }
 
 dependencies {
@@ -117,6 +128,25 @@ task scenarios(type: Test) {
     if (project.hasProperty("tags")) {
         systemProperty "cucumber.options", "--tags $tags"
         logger.warn("Only running tests tagged with: $tags ...")
+    }
+}
+
+task behaveJar(type: Jar) {
+    baseName "corda-behave"
+    from sourceSets.behave.output
+    from {
+        configurations.behaveCompile.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    zip64 true
+    exclude("features/**")
+    exclude("scripts/**")
+    exclude("META-INF/*.DSA")
+    exclude("META-INF/*.RSA")
+    exclude("META-INF/*.SF")
+    manifest {
+        attributes 'Main-Class': 'net.corda.behave.scenarios.ScenarioRunner'
     }
 }
 

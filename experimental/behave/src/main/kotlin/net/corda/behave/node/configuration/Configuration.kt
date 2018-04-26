@@ -45,7 +45,7 @@ class Configuration(
 
     fun writeToFile(file: Path) {
         file.writeText(this.generate())
-        log.info(this.generate())
+        log.debug(this.generate())
     }
 
     private fun generate() = listOf(basicConfig, database.config(), extraConfig)

@@ -220,7 +220,7 @@ class Node(
 
     private fun installApps() {
         val version = config.distribution.version
-        val appDirectory = stagingRoot / "deps" / "corda" / version / "apps"
+        val appDirectory = stagingRoot / "corda" / version / "apps"
         if (appDirectory.exists()) {
             val targetAppDirectory = runtimeDirectory / "cordapps"
             FileUtils.copyDirectory(appDirectory.toFile(), targetAppDirectory.toFile())
