@@ -36,7 +36,7 @@ const val CUSTOM_NODE_PROPERTIES_ROOT = "custom"
 
 // TODO Move other config parsing to use parseAs and remove this
 operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
-    return getValueInternal(metadata.name, metadata.returnType)
+    return getValueInternal(metadata.name, metadata.returnType, UnknownConfigKeysPolicy.IGNORE::handle)
 }
 
 fun <T : Any> Config.parseAs(clazz: KClass<T>, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle): T {
@@ -91,7 +91,7 @@ fun Config.toProperties(): Properties {
             { it.value.unwrapped().toString() })
 }
 
-private fun <T : Any> Config.getValueInternal(path: String, type: KType, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = {_, _ -> }): T {
+private fun <T : Any> Config.getValueInternal(path: String, type: KType, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit)): T {
     return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type, onUnknownKeys) else getCollectionValue(path, type, onUnknownKeys))
 }
 
