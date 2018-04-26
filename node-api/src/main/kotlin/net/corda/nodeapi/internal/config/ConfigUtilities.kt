@@ -17,6 +17,7 @@ import java.net.Proxy
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.Temporal
@@ -104,6 +105,7 @@ private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set
         Double::class -> getDouble(path)
         Boolean::class -> getBoolean(path)
         LocalDate::class -> LocalDate.parse(getString(path))
+        Duration::class -> getDuration(path)
         Instant::class -> Instant.parse(getString(path))
         NetworkHostAndPort::class -> NetworkHostAndPort.parse(getString(path))
         Path::class -> Paths.get(getString(path))
