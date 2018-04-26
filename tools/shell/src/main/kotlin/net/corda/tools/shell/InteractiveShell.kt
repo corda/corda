@@ -275,6 +275,12 @@ object InteractiveShell {
             } catch (e: InterruptedException) {
                 // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
             }
+            stateObservable.returnValue.get()?.apply {
+                when (this) {
+                    is Throwable -> output.println("Flow completed exceptionally: ${this.message}", Color.red)
+                    else -> output.println("Flow completed with result: $this")
+                }
+            }
         } catch (e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }
