@@ -188,6 +188,10 @@ absolute path to the node's base directory.
 :attachmentCacheBound: Optionally specify how many attachments should be cached locally. Note that this includes only the key and
             metadata, the content is cached separately and can be loaded lazily. Defaults to 1024.
 
+:extraNetworkMapKeys: An optional list of private network map UUIDs. Your node will fetch the public network and private network maps based on
+            these keys. Private network UUID should be provided by network operator and lets you see nodes not visible on public network.
+
+            .. note:: This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.
 
 Examples
 --------
