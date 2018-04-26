@@ -88,9 +88,9 @@ dependencies {
 
     // Scenarios / End-to-End Tests
 
-    compile "info.cukes:cucumber-java8:$cucumber_version"
-    compile "info.cukes:cucumber-junit:$cucumber_version"
-    compile "info.cukes:cucumber-picocontainer:$cucumber_version"
+    behaveCompile "info.cukes:cucumber-java8:$cucumber_version"
+    behaveCompile "info.cukes:cucumber-junit:$cucumber_version"
+    behaveCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
 }
 
 compileKotlin {
