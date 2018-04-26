@@ -15,7 +15,6 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import rx.Observable
 import java.time.Duration
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future

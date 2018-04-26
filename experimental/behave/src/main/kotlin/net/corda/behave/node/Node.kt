@@ -15,11 +15,9 @@ import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
 import net.corda.behave.file.currentDirectory
 import net.corda.behave.file.stagingRoot
-import net.corda.behave.logging.getLogger
 import net.corda.behave.monitoring.PatternWatch
 import net.corda.behave.node.configuration.*
 import net.corda.behave.process.JarCommand
-import net.corda.behave.seconds
 import net.corda.behave.service.Service
 import net.corda.behave.service.ServiceSettings
 import net.corda.behave.ssh.MonitoringSSHClient
@@ -30,6 +28,8 @@ import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.seconds
 import org.apache.commons.io.FileUtils
 import java.net.InetAddress
 import java.nio.file.Path
@@ -45,7 +45,7 @@ class Node(
         private val settings: ServiceSettings = ServiceSettings()
 ) {
 
-    private val log = getLogger<Node>()
+    private val log = loggerFor<Node>()
 
     private val runtimeDirectory = rootDirectory / config.name
 

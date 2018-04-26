@@ -11,7 +11,7 @@
 package net.corda.behave.monitoring
 
 import net.corda.behave.await
-import net.corda.behave.seconds
+import net.corda.core.utilities.seconds
 import rx.Observable
 import java.time.Duration
 import java.util.concurrent.CountDownLatch

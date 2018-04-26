@@ -37,6 +37,7 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthor
     override fun validateRequest(requestPayload: NotarisationPayload): TransactionParts {
         try {
             val stx = requestPayload.signedTransaction
+            checkInputs(stx.inputs)
             validateRequestSignature(NotarisationRequest(stx.inputs, stx.id), requestPayload.requestSignature)
             val notary = stx.notary
             checkNotary(notary)
