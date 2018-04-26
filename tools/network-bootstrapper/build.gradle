@@ -1,0 +1,67 @@
+buildscript {
+
+    ext.tornadofx_version = '1.7.15'
+    ext.controlsfx_version = '8.40.12'
+
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+}
+
+
+apply plugin: 'kotlin'
+apply plugin: 'idea'
+apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+dependencies {
+
+    compile "com.microsoft.azure:azure:1.8.0"
+    compile "com.github.docker-java:docker-java:3.0.6"
+
+    testCompile "org.jetbrains.kotlin:kotlin-test"
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit"
+
+    compile project(':node-api')
+    compile project(':node')
+
+    compile group: "com.typesafe", name: "config", version: typesafe_config_version
+    compile group: "com.fasterxml.jackson.dataformat", name: "jackson-dataformat-yaml", version: "2.9.0"
+    compile group: "com.fasterxml.jackson.core", name: "jackson-databind", version: "2.9.0"
+    compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.+"
+    compile group: 'info.picocli', name: 'picocli', version: '3.0.1'
+
+    // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
+    compile "no.tornado:tornadofx:$tornadofx_version"
+
+    // Controls FX: more java FX components http://fxexperience.com/controlsfx/
+    compile "org.controlsfx:controlsfx:$controlsfx_version"
+
+}
+
+shadowJar {
+    baseName = 'network-bootstrapper'
+    classifier = null
+    version = null
+    zip64 true
+    mainClassName = 'net.corda.bootstrapper.Main'
+}
+
+task buildNetworkBootstrapper(dependsOn: shadowJar){
+}
