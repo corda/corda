@@ -9,12 +9,10 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.artemis.CertificateChainCheckPolicy
 import net.corda.node.services.config.rpc.NodeRpcOptions
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
-import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
+import org.slf4j.Logger
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
@@ -108,7 +106,7 @@ data class BFTSMaRtConfiguration(
     }
 }
 
-fun Config.parseAsNodeConfiguration(): NodeConfiguration = parseAs<NodeConfigurationImpl>()
+fun Config.parseAsNodeConfiguration(onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle): NodeConfiguration = parseAs<NodeConfigurationImpl>(onUnknownKeys)
 
 data class NodeConfigurationImpl(
         /** This is not retrieved from the config file but rather from a command line argument. */
