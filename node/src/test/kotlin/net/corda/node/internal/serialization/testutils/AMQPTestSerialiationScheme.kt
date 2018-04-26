@@ -12,23 +12,6 @@ import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import net.corda.client.rpc.internal.ObservableContext as ClientObservableContext
 
 /**
- *
- */
-class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme(emptyList(), TestSerializerFactoryFactory()) {
-    override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
-        throw UnsupportedOperationException()
-    }
-
-    override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory {
-        return SerializerFactory(cl = javaClass.classLoader, whitelist = AllWhitelist).apply {
-            register(RpcServerObservableSerializer(this@AMQPTestSerializationScheme))
-        }
-    }
-
-    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase) = true
-}
-
-/**
  * Special serialization context for the round trip tests that allows for both server and client RPC
  * operations
  */
@@ -38,16 +21,13 @@ class AMQPRoundTripRPCSerializationScheme(
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         return SerializerFactory(cl = javaClass.classLoader, whitelist = AllWhitelist).apply {
-            register(RpcClientObservableSerializer(
-                    context))
+            register(RpcClientObservableSerializer)
         }
     }
 
     override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory {
         return SerializerFactory(cl = javaClass.classLoader, whitelist = AllWhitelist).apply {
-            register(RpcServerObservableSerializer(
-                    this@AMQPRoundTripRPCSerializationScheme,
-                    context))
+            register(RpcServerObservableSerializer())
         }
     }
 
@@ -65,5 +45,4 @@ class AMQPRoundTripRPCSerializationScheme(
     fun rpcServerSerializerFactory(observableContext: TestObservableContext) =
             rpcServerSerializerFactory(
                     RpcServerObservableSerializer.createContext(observableContext, serializationContext))
-
 }

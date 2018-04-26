@@ -209,7 +209,6 @@ object InputStreamSerializer : Serializer<InputStream>() {
         }
         return flattened.inputStream()
     }
-
 }
 
 inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T): T {

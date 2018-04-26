@@ -3,6 +3,7 @@ package net.corda.node.serialization.amqp
 import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.utilities.loggerFor
 import net.corda.node.services.messaging.ObservableContextInterface
 import net.corda.node.services.messaging.ObservableSubscription
 import net.corda.nodeapi.RPCApi
@@ -50,7 +51,7 @@ class RpcServerObservableSerializer : CustomSerializer.Implements<Observable<*>>
     ) {
         val observableId = Trace.InvocationId.newInstance()
         if (RpcServerObservableSerializer.RpcObservableContextKey !in context.properties) {
-            throw NotSerializableException ("Missing Observable Key on Server Serializer context == SERVER ${context == SerializationDefaults.RPC_SERVER_CONTEXT}")
+            throw NotSerializableException ("Missing Observable Key on serialization context - $type")
         }
 
         val observableContext = context.properties[RpcServerObservableSerializer.RpcObservableContextKey]
@@ -78,12 +79,12 @@ class RpcServerObservableSerializer : CustomSerializer.Implements<Observable<*>>
                             }
 
                             override fun onError(exception: Throwable) {
-                                //RpcServerObservableSerializer.log.error("onError called in materialize()d RPC Observable", exception)
-                                println("SO MUcH NO!!!!")
+                                loggerFor<RpcServerObservableSerializer>().error(
+                                        "onError called in materialize()d RPC Observable", exception)
                             }
 
                             override fun onCompleted() {
-                                println ("Complete")
+
                             }
                         }
                 )

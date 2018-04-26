@@ -18,16 +18,13 @@ import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
 import javax.transaction.NotSupportedException
 
-class RpcClientObservableSerializer : CustomSerializer.Implements<Observable<*>>(Observable::class.java){
+object  RpcClientObservableSerializer : CustomSerializer.Implements<Observable<*>>(Observable::class.java){
     private object RpcObservableContextKey
 
-    companion object {
-        fun createContext(
-                observableContext: ObservableContext,
-                context: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
-        ) = context.withProperty (
-                    RpcClientObservableSerializer.RpcObservableContextKey, observableContext)
-    }
+    fun createContext(
+            observableContext: ObservableContext,
+            serializationContext: SerializationContext
+    ) = serializationContext.withProperty(RpcObservableContextKey, observableContext)
 
     private fun <T> pinInSubscriptions(observable: Observable<T>, hardReferenceStore: MutableSet<Observable<*>>): Observable<T> {
         val refCount = AtomicInteger(0)
@@ -52,8 +49,16 @@ class RpcClientObservableSerializer : CustomSerializer.Implements<Observable<*>>
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext
     ) : Observable<*> {
-        val observableContext = context.properties[RpcClientObservableSerializer.RpcObservableContextKey]
-                as ObservableContext
+        if (RpcObservableContextKey !in context.properties) {
+            context.properties.forEach {
+                println ("${it.key} - ${it.value}")
+                println (it.key == RpcObservableContextKey)
+            }
+            throw NotSerializableException ("Missing Observable Context Key on Client Context")
+        }
+
+        val observableContext =
+                context.properties[RpcClientObservableSerializer.RpcObservableContextKey] as ObservableContext
 
         if (obj !is List<*>) throw NotSerializableException ("Input must be a serialised list")
         if (obj.size != 2) throw NotSerializableException ("Expecting two elements, have ${obj.size}")
@@ -85,8 +90,12 @@ class RpcClientObservableSerializer : CustomSerializer.Implements<Observable<*>>
         return observableContext.callSiteMap?.get(rpcRequestOrObservableId)
     }
 
-    override fun writeDescribedObject(obj: Observable<*>, data: Data, type: Type, output: SerializationOutput,
-                                      context: SerializationContext
+    override fun writeDescribedObject(
+            obj: Observable<*>,
+            data: Data,
+            type: Type,
+            output: SerializationOutput,
+            context: SerializationContext
     ) {
        throw NotSupportedException()
     }

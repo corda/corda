@@ -64,6 +64,6 @@ class OverridePKSerializerTest {
 
         Assertions
                 .assertThatThrownBy { scheme.serialize(key, AMQP_P2P_CONTEXT) }
-                .hasMessageMatching("Custom write call")
+                .hasMessageContaining("Custom write call")
     }
 }

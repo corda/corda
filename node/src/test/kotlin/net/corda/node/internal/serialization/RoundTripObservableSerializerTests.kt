@@ -1,6 +1,7 @@
 package net.corda.node.internal.serialization
 
 
+import bftsmart.communication.server.TestSerialization
 import net.corda.client.rpc.internal.ObservableContext as ClientObservableContext
 import net.corda.client.rpc.internal.RpcObservableMap
 import net.corda.core.serialization.SerializationContext
@@ -22,7 +23,10 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalCause
 import com.github.benmanes.caffeine.cache.RemovalListener
 import com.google.common.collect.LinkedHashMultimap
+import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableSerializer
 import net.corda.node.internal.serialization.testutils.serializationContext
+import net.corda.node.serialization.amqp.RpcServerObservableSerializer
+import net.corda.nodeapi.RPCApi
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Test
 import rx.Notification
@@ -94,8 +98,16 @@ class RoundTripObservableSerializerTests {
         // What we're actually going to serialize then deserialize
         val obs = Observable.create<Int>({ 12 })
 
-        // So this doesn't crash... but does it work?
-        val blob = SerializationOutput(serverSerializer).serialize(obs)
-        val obs2 = DeserializationInput(clientSerializer).deserialize(blob)
+        val serverSerializationContext = RpcServerObservableSerializer.createContext(
+                serverObservableContext,
+                serializationContext)
+
+        val clientSerializationContext = RpcClientObservableSerializer.createContext(
+                clientObservableContext,
+                serializationContext).withProperty(RPCApi.RpcRequestOrObservableIdKey, id)
+
+
+        val blob = SerializationOutput(serverSerializer).serialize(obs, serverSerializationContext)
+        val obs2 = DeserializationInput(clientSerializer).deserialize(blob, clientSerializationContext)
     }
 }

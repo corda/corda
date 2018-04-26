@@ -24,7 +24,10 @@ import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testSerializationContext
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -57,9 +60,6 @@ import kotlin.reflect.full.superclasses
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.testSerializationContext
 
 object AckWrapper {
     object Ack
@@ -654,15 +654,18 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         val state = TransactionState(FooState(), FOO_PROGRAM_ID, MEGA_CORP)
 
         val scheme = AMQPServerSerializationScheme(emptyList())
+
         val func = scheme::class.superclasses.single { it.simpleName == "AbstractAMQPSerializationScheme" }
-                .java.getDeclaredMethod("registerCustomSerializers", SerializerFactory::class.java)
+                .java.getDeclaredMethod("registerCustomSerializers",
+                                        SerializationContext::class.java,
+                                        SerializerFactory::class.java)
         func.isAccessible = true
 
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        func.invoke(scheme, factory)
+        func.invoke(scheme, testSerializationContext, factory)
 
         val factory2 = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-        func.invoke(scheme, factory2)
+        func.invoke(scheme, testSerializationContext, factory2)
 
         val desState = serdes(state, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
         assertTrue((desState as TransactionState<*>).data is FooState)

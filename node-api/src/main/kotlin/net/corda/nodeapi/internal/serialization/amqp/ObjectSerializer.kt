@@ -24,7 +24,12 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
     }
 
     open internal val propertySerializers: PropertySerializers by lazy {
-        propertiesForSerialization(kotlinConstructor, clazz, factory)
+        try {
+            propertiesForSerialization(kotlinConstructor, clazz, factory)
+        } catch (e: NotSerializableException) {
+            logger.warn(e.stackTrace.joinToString(separator = "\n"))
+            throw NotSerializableException("ObjectSerializerConstructor, failed to ascertain properties\n${e.message}")
+        }
     }
 
     fun getPropertySerializers() = propertySerializers
@@ -74,7 +79,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             // Write list
             withList {
                 propertySerializers.serializationOrder.forEach { property ->
-                    property.getter.writeProperty(obj, this, output, context,debugIndent + 1)
+                    property.getter.writeProperty(obj, this, output, context, debugIndent + 1)
                 }
             }
         }

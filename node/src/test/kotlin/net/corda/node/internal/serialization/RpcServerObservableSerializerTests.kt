@@ -2,6 +2,7 @@ package net.corda.node.internal.serialization
 
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.collect.LinkedHashMultimap
+import junit.framework.TestFailure
 import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext
 import net.corda.node.internal.serialization.testutils.*
@@ -21,10 +22,10 @@ import rx.Observable
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class RpcServerObservableSerializerTests {
-    val scheme = AMQPTestSerializationScheme()
 
     private fun subscriptionMap() : ObservableSubscriptionMap {
         val subMap: ObservableSubscriptionMap = Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.MINUTES)
@@ -39,7 +40,13 @@ class RpcServerObservableSerializerTests {
     @Test
     fun canSerializerBeRegistered() {
         val sf = SerializerFactory(cl = javaClass.classLoader, whitelist = AllWhitelist)
-        sf.register(RpcServerObservableSerializer(AMQP_RPC_SERVER_CONTEXT))
+
+        try {
+            sf.register(RpcServerObservableSerializer())
+        }
+        catch (e: Exception) {
+            throw Error("Observable serializer must be registerable with factory, unexpected exception - ${e.message}")
+        }
     }
 
     @Test
@@ -49,6 +56,7 @@ class RpcServerObservableSerializerTests {
                 clientAddressToObservables = LinkedHashMultimap.create(),
                 deduplicationIdentity = "thisIsATest",
                 clientAddress = SimpleString ("clientAddress"))
+
         val newContext = RpcServerObservableSerializer.createContext(observable, serializationContext)
 
         assertEquals(1, newContext.properties.size)
@@ -58,30 +66,28 @@ class RpcServerObservableSerializerTests {
 
     @Test
     fun serialiseFakeObservable() {
+        val testClientAddress = "clientAddres"
         val observable = TestObservableContext(
                 subscriptionMap(),
                 clientAddressToObservables = LinkedHashMultimap.create(),
                 deduplicationIdentity = "thisIsATest",
-                clientAddress = SimpleString ("clientAddress"))
-
-        val newContext = RpcServerObservableSerializer.createContext(observable, serializationContext)
+                clientAddress = SimpleString (testClientAddress))
 
         val sf = SerializerFactory(
                 cl = javaClass.classLoader,
                 whitelist = AllWhitelist
         ).apply {
-            register(RpcServerObservableSerializer(newContext))
+            register(RpcServerObservableSerializer())
         }
 
         val obs = Observable.create<Int>( { 12 })
+        val newContext = RpcServerObservableSerializer.createContext(observable, serializationContext)
 
-
-        SerializationOutput(sf).serializeAndReturnSchema(obs)
-
-        observable.clientAddressToObservables.forEach { t, u ->
-            println (t)
-            println (u)
+        try {
+            SerializationOutput(sf).serializeAndReturnSchema(obs, newContext)
+        }
+        catch (e: Exception) {
+            throw Error ("Serialization of observable should not throw - ${e.message}")
         }
     }
-
 }

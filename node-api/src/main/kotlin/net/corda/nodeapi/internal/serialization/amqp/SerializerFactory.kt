@@ -287,7 +287,11 @@ open class SerializerFactory(
                        SingletonSerializer(clazz, singleton, this)
                    } else {
                        whitelist.requireWhitelisted(type)
-                       ObjectSerializer(type, this)
+                        try {
+                            ObjectSerializer(type, this)
+                        } catch (e: NotSerializableException) {
+                            throw NotSerializableException("Making class serializer $type\n${e.message}")
+                        }
                    }
                 }
             }

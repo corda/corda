@@ -5,6 +5,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import net.corda.nodeapi.internal.serialization.amqp.custom.RXNotificationSerializer
 
 class AMQPServerSerializationScheme(cordapps: List<Cordapp> = emptyList()) : AbstractAMQPSerializationScheme(cordapps) {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
@@ -18,8 +19,8 @@ class AMQPServerSerializationScheme(cordapps: List<Cordapp> = emptyList()) : Abs
         ).apply {
             register(RpcServerObservableSerializer())
             register(RpcServerCordaFutureSerialiser(this))
+            register(RXNotificationSerializer(this))
         }
-
 
     override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
         return canDeserializeVersion(magic) &&

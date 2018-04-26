@@ -20,7 +20,10 @@ import java.util.concurrent.atomic.AtomicInteger
 object RpcClientObservableSerializer : Serializer<Observable<*>>() {
     private object RpcObservableContextKey
 
-    fun createContext(serializationContext: SerializationContext, observableContext: ObservableContext): SerializationContext {
+    fun createContext(
+            serializationContext: SerializationContext,
+            observableContext: ObservableContext
+    ): SerializationContext {
         return serializationContext.withProperty(RpcObservableContextKey, observableContext)
     }
 

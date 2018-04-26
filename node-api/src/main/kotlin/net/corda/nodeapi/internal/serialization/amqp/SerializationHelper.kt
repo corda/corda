@@ -68,7 +68,11 @@ internal fun <T : Any> propertiesForSerialization(
         type: Type,
         factory: SerializerFactory) = PropertySerializers.make(
         if (kotlinConstructor != null) {
-            propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
+            try {
+                propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
+            } catch (e: NotSerializableException) {
+                throw NotSerializableException("propertiesForSerialization, constructor inference failed\n${e.message}")
+            }
         } else {
             propertiesForSerializationFromAbstract(type.asClass()!!, type, factory)
         }.sortedWith(PropertyAccessor))

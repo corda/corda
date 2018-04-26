@@ -189,14 +189,16 @@ class SerializerFingerPrinter : FingerPrinter {
         val name = type.asClass()?.name
                 ?: throw NotSerializableException("Expected only Class or ParameterizedType but found $type")
 
-        propertiesForSerialization(constructorForDeserialization(type), contextType ?: type, factory)
-                .serializationOrder
-                .fold(hasher.putUnencodedChars(name)) { orig, prop ->
-                    fingerprintForType(prop.getter.resolvedType, type, alreadySeen, orig, debugIndent + 1)
-                            .putUnencodedChars(prop.getter.name)
-                            .putUnencodedChars(if (prop.getter.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
-                }
-        interfacesForSerialization(type, factory).map { fingerprintForType(it, type, alreadySeen, hasher, debugIndent + 1) }
-        return hasher
+        ifThrowsAppend({"fingerprintForObject - Failed to ascertain properties - $type"}) {
+            propertiesForSerialization(constructorForDeserialization(type), contextType ?: type, factory)
+                    .serializationOrder
+                    .fold(hasher.putUnencodedChars(name)) { orig, prop ->
+                        fingerprintForType(prop.getter.resolvedType, type, alreadySeen, orig, debugIndent + 1)
+                                .putUnencodedChars(prop.getter.name)
+                                .putUnencodedChars(if (prop.getter.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
+                    }
+            interfacesForSerialization(type, factory).map { fingerprintForType(it, type, alreadySeen, hasher, debugIndent + 1) }
+            return hasher
+        }
     }
 }

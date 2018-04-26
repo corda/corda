@@ -5,6 +5,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
+import java.io.NotSerializableException
 import java.lang.reflect.Type
 
 interface SerializerFor {
@@ -44,8 +45,10 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                              context: SerializationContext, debugIndent: Int
     ) {
-        data.withDescribed(descriptor) {
-            writeDescribedObject(uncheckedCast(obj), data, type, output, context)
+        ifThrowsAppend({ "CustomSerializer::writeObject - $type\n"}) {
+            data.withDescribed(descriptor) {
+                writeDescribedObject(uncheckedCast(obj), data, type, output, context)
+            }
         }
     }
 
@@ -129,10 +132,19 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
                                            withInheritance: Boolean = true) : CustomSerializerImp<T>(clazz, withInheritance) {
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
 
-        private val proxySerializer: ObjectSerializer by lazy { ObjectSerializer(proxyClass, factory) }
+        open val proxySerializer: ObjectSerializer by lazy {
+            ifThrowsAppend({"Constructing proxy serializer - Failed to construct object serializer - $type\n"}) {
+                ObjectSerializer(proxyClass, factory)
+            }
+        }
 
         override val schemaForDocumentation: Schema by lazy {
-            val typeNotations = mutableSetOf<TypeNotation>(CompositeType(nameForType(type), null, emptyList(), descriptor, (proxySerializer.typeNotation as CompositeType).fields))
+            val typeNotations = mutableSetOf<TypeNotation>(
+                    CompositeType(
+                            nameForType(type),
+                            null,
+                            emptyList(),
+                            descriptor, (proxySerializer.typeNotation as CompositeType).fields))
             for (additional in additionalSerializers) {
                 typeNotations.addAll(additional.schemaForDocumentation.types)
             }
@@ -150,9 +162,11 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
                                           context: SerializationContext
         ) {
             val proxy = toProxy(obj)
-            data.withList {
-                proxySerializer.propertySerializers.serializationOrder.forEach {
-                    it.getter.writeProperty(proxy, this, output, context)
+            ifThrowsAppend({ "Proxy::writeDescribedObject - $type\n" }) {
+                data.withList {
+                    proxySerializer.propertySerializers.serializationOrder.forEach {
+                        it.getter.writeProperty(proxy, this, output, context)
+                    }
                 }
             }
         }

@@ -9,6 +9,7 @@ import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
+import net.corda.nodeapi.internal.serialization.amqp.custom.RXNotificationSerializer
 
 class AMQPClientSerializationScheme (corDapps: List<Cordapp>) : AbstractAMQPSerializationScheme(corDapps) {
     companion object {
@@ -34,7 +35,9 @@ class AMQPClientSerializationScheme (corDapps: List<Cordapp>) : AbstractAMQPSeri
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         return SerializerFactory(context.whitelist, ClassLoader.getSystemClassLoader()).apply {
-            register(RpcClientObservableSerializer())
+            register(RpcClientObservableSerializer)
+            register(RpcClientCordaFutureSerializer(this))
+            register(RXNotificationSerializer(this))
         }
     }
 
