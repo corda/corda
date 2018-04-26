@@ -128,10 +128,9 @@ class NodeVaultService(
 
     private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord): List<Vault.Update<ContractState>> {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState>? {
-            val myKeys = keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
-                StatesToRecord.ONLY_RELEVANT -> tx.outputs.filter { isRelevant(it.data, myKeys.toSet()) }
+                StatesToRecord.ONLY_RELEVANT -> tx.outputs.filter { isRelevant(it.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet()) }
                 StatesToRecord.ALL_VISIBLE -> tx.outputs
             }.map { tx.outRef<ContractState>(it.data) }
 
@@ -156,12 +155,16 @@ class NodeVaultService(
                 is ContractUpgradeWireTransaction -> tx.resolve(servicesForResolution, emptyList())
                 else -> throw IllegalArgumentException("Unsupported transaction type: ${tx.javaClass.name}")
             }
-            val myKeys = keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
+            val myKeys by lazy { keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } }) }
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
                     zip(ltx.outputs).
                     filter { (_, output) ->
-                        if (statesToRecord == StatesToRecord.ONLY_RELEVANT) isRelevant(output.data, myKeys.toSet())
-                        else true
+                        if (statesToRecord == StatesToRecord.ONLY_RELEVANT) {
+                            isRelevant(output.data, myKeys.toSet())
+                        }
+                        else {
+                            true
+                        }
                     }.
                     unzip()
 
