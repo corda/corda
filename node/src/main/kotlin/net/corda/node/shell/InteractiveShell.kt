@@ -270,11 +270,18 @@ object InteractiveShell {
             } catch (e: InterruptedException) {
                 // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
             }
+            stateObservable.returnValue.get()?.apply {
+                if (this !is Throwable) {
+                    output.println("Flow completed with result: $this")
+                }
+            }
         } catch (e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }
         } catch (e: PermissionException) {
             output.println(e.message ?: "Access denied", Color.red)
+        } catch (e: ExecutionException) {
+          // ignoring it as already logged by the progress handler subscriber
         } finally {
             InputStreamDeserializer.closeAll()
         }
