@@ -1,6 +1,6 @@
 package net.corda.behave.process
 
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import rx.observers.TestSubscriber
 
@@ -21,8 +21,7 @@ class CommandTests {
     @Test
     fun `output stream for command can be observed`() {
         val subscriber = TestSubscriber<String>()
-        val exitCode = Command(listOf("ls", "/")).use { _, output ->
-            output.subscribe(subscriber)
+        val exitCode = Command(listOf("ls", "/")).use(subscriber) { _, output ->
             subscriber.awaitTerminalEvent()
             subscriber.assertCompleted()
             subscriber.assertNoErrors()
@@ -30,5 +29,4 @@ class CommandTests {
         }
         assertThat(exitCode).isEqualTo(0)
     }
-
 }

@@ -1,10 +1,10 @@
 package net.corda.explorer.model
 
 import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.nio.file.Files
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -26,9 +26,9 @@ class SettingsModelTest {
         setting.portProperty.value = "100"
         assertEquals("host", setting.hostProperty.value)
         assertEquals("100", setting.portProperty.value)
-        assertFalse(Files.exists(config))
+        assertFalse(config.exists())
         setting.commit()
-        assertTrue(Files.exists(config))
+        assertTrue(config.exists())
         setting.hostProperty.value = "host2"
         setting.portProperty.value = "200"
         assertEquals("host2", setting.hostProperty.value)

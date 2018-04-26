@@ -18,9 +18,11 @@ import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
 import net.corda.nodeapi.internal.network.*
 import rx.Subscription
 import rx.subjects.PublishSubject
+import java.net.URL
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Duration
+import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
@@ -29,7 +31,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val fileWatcher: NodeInfoWatcher,
                         private val networkMapClient: NetworkMapClient?,
                         private val currentParametersHash: SecureHash,
-                        private val baseDirectory: Path
+                        private val baseDirectory: Path,
+                        private val extraNetworkMapKeys: List<UUID>
 ) : AutoCloseable {
     companion object {
         private val logger = contextLogger()
@@ -76,16 +79,25 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
 
     private fun updateNetworkMapCache(networkMapClient: NetworkMapClient): Duration {
-        val (networkMap, cacheTimeout) = networkMapClient.getNetworkMap()
-        networkMap.parametersUpdate?.let { handleUpdateNetworkParameters(networkMapClient, it) }
+        val (globalNetworkMap, cacheTimeout) = networkMapClient.getNetworkMap()
+        globalNetworkMap.parametersUpdate?.let { handleUpdateNetworkParameters(networkMapClient, it) }
+        val additionalHashes = extraNetworkMapKeys.flatMap {
+            try {
+                networkMapClient.getNetworkMap(it).payload.nodeInfoHashes
+            } catch (e: Exception) {
+                // Failure to retrieve one network map using UUID shouldn't stop the whole update.
+                logger.warn("Error encountered when downloading network map with uuid '$it', skipping...", e)
+                emptyList<SecureHash>()
+            }
+        }
+        val allHashesFromNetworkMap = (globalNetworkMap.nodeInfoHashes + additionalHashes).toSet()
 
-        if (currentParametersHash != networkMap.networkParameterHash) {
-            exitOnParametersMismatch(networkMap)
+        if (currentParametersHash != globalNetworkMap.networkParameterHash) {
+            exitOnParametersMismatch(globalNetworkMap)
         }
 
         val currentNodeHashes = networkMapCache.allNodeHashes
-        val hashesFromNetworkMap = networkMap.nodeInfoHashes
-        (hashesFromNetworkMap - currentNodeHashes).mapNotNull {
+        (allHashesFromNetworkMap - currentNodeHashes).mapNotNull {
             // Download new node info from network map
             try {
                 networkMapClient.getNodeInfo(it)
@@ -100,7 +112,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         }
 
         // Remove node info from network map.
-        (currentNodeHashes - hashesFromNetworkMap - fileWatcher.processedNodeInfoHashes)
+        (currentNodeHashes - allHashesFromNetworkMap - fileWatcher.processedNodeInfoHashes)
                 .mapNotNull(networkMapCache::getNodeByHash)
                 .forEach(networkMapCache::removeNode)
 
@@ -116,9 +128,10 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             0
         } else {
             // TODO This needs special handling (node omitted update process or didn't accept new parameters)
-            logger.error("Node is using parameters with hash: $currentParametersHash but network map is " +
-                    "advertising: ${networkMap.networkParameterHash}.\n" +
-                    "Node will shutdown now. Please update node to use correct network parameters file.")
+            logger.error(
+                    """Node is using network parameters with hash $currentParametersHash but the network map is advertising ${networkMap.networkParameterHash}.
+To resolve this mismatch, and move to the current parameters, delete the $NETWORK_PARAMS_FILE_NAME file from the node's directory and restart.
+The node will shutdown now.""")
             1
         }
         exitProcess(exitCode)

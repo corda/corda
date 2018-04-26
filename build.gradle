@@ -47,6 +47,7 @@ buildscript {
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.caffeine_version = constants.getProperty("caffeineVersion")
+    ext.metrics_version = constants.getProperty("metricsVersion")
     ext.okhttp_version = '3.5.0'
     ext.netty_version = '4.1.9.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
@@ -56,7 +57,7 @@ buildscript {
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
-    ext.h2_version = '1.4.194' // Update docs if renamed or removed.
+    ext.h2_version = '1.4.197' // Update docs if renamed or removed.
     ext.postgresql_version = '42.1.4'
     ext.rxjava_version = '1.2.4'
     ext.dokka_version = '0.9.16-eap-2'
@@ -165,8 +166,8 @@ allprojects {
 
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
         kotlinOptions {
-            languageVersion = "1.1"
-            apiVersion = "1.1"
+            languageVersion = "1.2"
+            apiVersion = "1.2"
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
         }

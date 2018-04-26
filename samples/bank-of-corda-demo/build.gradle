@@ -23,7 +23,7 @@ configurations {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // The bank of corda CorDapp depends upon Cash CorDapp features
     cordapp project(':finance')

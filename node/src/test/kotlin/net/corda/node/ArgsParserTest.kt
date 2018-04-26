@@ -1,6 +1,7 @@
 package net.corda.node
 
 import joptsimple.OptionException
+import net.corda.core.internal.delete
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import org.assertj.core.api.Assertions.assertThat
@@ -8,7 +9,6 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.BeforeClass
 import org.junit.Test
 import org.slf4j.event.Level
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.assertEquals
@@ -140,7 +140,7 @@ class ArgsParserTest {
             assertEquals(truststorePath.toAbsolutePath(), cmdLineOptions.nodeRegistrationOption?.networkRootTrustStorePath)
             assertEquals("password-test", cmdLineOptions.nodeRegistrationOption?.networkRootTrustStorePassword)
         } finally {
-            Files.delete(truststorePath)
+            truststorePath.delete()
         }
     }
 

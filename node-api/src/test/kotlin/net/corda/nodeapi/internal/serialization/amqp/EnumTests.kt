@@ -5,7 +5,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import org.assertj.core.api.Assertions
 import org.junit.Test
-import java.io.File
 import java.io.NotSerializableException
 import java.time.DayOfWeek
 import kotlin.test.assertEquals
@@ -151,8 +150,7 @@ class EnumTests {
 
     @Test(expected = NotSerializableException::class)
     fun changedEnum1() {
-        val path = EnumTests::class.java.getResource("EnumTests.changedEnum1")
-        val f = File(path.toURI())
+        val url = EnumTests::class.java.getResource("EnumTests.changedEnum1")
 
         data class C(val a: OldBras)
 
@@ -163,7 +161,7 @@ class EnumTests {
         // f.writeBytes(sc.bytes)
         // println(path)
 
-        val sc2 = f.readBytes()
+        val sc2 = url.readBytes()
 
         // we expect this to throw
         DeserializationInput(sf1).deserialize(SerializedBytes<C>(sc2))
@@ -171,8 +169,7 @@ class EnumTests {
 
     @Test(expected = NotSerializableException::class)
     fun changedEnum2() {
-        val path = EnumTests::class.java.getResource("EnumTests.changedEnum2")
-        val f = File(path.toURI())
+        val url = EnumTests::class.java.getResource("EnumTests.changedEnum2")
 
         data class C(val a: OldBras2)
 
@@ -186,7 +183,7 @@ class EnumTests {
         // f.writeBytes(sc.bytes)
         // println(path)
 
-        val sc2 = f.readBytes()
+        val sc2 = url.readBytes()
 
         // we expect this to throw
         DeserializationInput(sf1).deserialize(SerializedBytes<C>(sc2))

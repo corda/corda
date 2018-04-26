@@ -34,8 +34,8 @@ import com.opengamma.strata.report.ReportCalculationResults
 import com.opengamma.strata.report.trade.TradeReport
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
+import net.corda.core.internal.toPath
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.time.LocalDate
 
 /**
@@ -65,7 +65,7 @@ class SwapPricingCcpExample {
      */
     private val resourcesUri = run {
         // Find src/main/resources by walking up the directory tree starting at a classpath root:
-        var module = Paths.get(javaClass.getResource("/").toURI())
+        var module = javaClass.getResource("/").toPath()
         val relative = "src" / "main" / "resources"
         var path: Path
         while (true) {

@@ -65,7 +65,10 @@ class ArtemisTcpTransport {
                     // TODO further investigate how to ensure we use a well defined wire level protocol for Node to Node communications.
                     TransportConstants.PROTOCOLS_PROP_NAME to "CORE,AMQP",
                     TransportConstants.USE_GLOBAL_WORKER_POOL_PROP_NAME to (nodeSerializationEnv != null),
-                    TransportConstants.REMOTING_THREADS_PROPNAME to (if (nodeSerializationEnv != null) -1 else 1)
+                    TransportConstants.REMOTING_THREADS_PROPNAME to (if (nodeSerializationEnv != null) -1 else 1),
+                    // turn off direct delivery in Artemis - this is latency optimisation that can lead to
+                    //hick-ups under high load (CORDA-1336)
+                    TransportConstants.DIRECT_DELIVER to false
             )
 
             if (config != null && enableSSL) {
@@ -93,6 +96,20 @@ class ArtemisTcpTransport {
                 is ConnectionDirection.Outbound -> direction.connectorFactoryClassName
             }
             return TransportConfiguration(factoryName, options)
+        }
+
+        /** Create as list of [TransportConfiguration]. **/
+        fun tcpTransportsFromList(
+                direction: ConnectionDirection,
+                hostAndPortList: List<NetworkHostAndPort>,
+                config: SSLConfiguration?,
+                enableSSL: Boolean = true): List<TransportConfiguration>{
+            val tcpTransports = ArrayList<TransportConfiguration>(hostAndPortList.size)
+            hostAndPortList.forEach {
+                tcpTransports.add(tcpTransport(direction, it, config, enableSSL))
+            }
+
+            return tcpTransports
         }
     }
 }

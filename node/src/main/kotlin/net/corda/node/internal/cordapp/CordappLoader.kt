@@ -17,17 +17,16 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.nodeapi.internal.serialization.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
-import java.io.File
-import java.io.FileOutputStream
 import java.lang.reflect.Modifier
 import java.net.JarURLConnection
 import java.net.URI
 import java.net.URL
 import java.net.URLClassLoader
-import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.attribute.FileTime
 import java.time.Instant
 import java.util.*
@@ -77,8 +76,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * Create a dev mode CordappLoader for test environments that creates and loads cordapps from the classpath
          * and cordapps directory. This is intended mostly for use by the driver.
          *
-         * @param baseDir See [createDefault.baseDir]
-         * @param testPackages See [createWithTestPackages.testPackages]
+         * @param testPackages See [createWithTestPackages]
          */
         @VisibleForTesting
         fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
@@ -128,31 +126,26 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         }
 
         /** Takes a package of classes and creates a JAR from them - only use in tests. */
-        private fun createDevCordappJar(scanPackage: String, path: URL, jarPackageName: String): URI {
-            if (!generatedCordapps.contains(path)) {
-                val cordappDir = File("build/tmp/generated-test-cordapps")
-                cordappDir.mkdirs()
-                val cordappJAR = File(cordappDir, "$scanPackage-${UUID.randomUUID()}.jar")
+        private fun createDevCordappJar(scanPackage: String, url: URL, jarPackageName: String): URI {
+            return generatedCordapps.computeIfAbsent(url) {
+                val cordappDir = (Paths.get("build") / "tmp" / "generated-test-cordapps").createDirectories()
+                val cordappJAR = cordappDir / "$scanPackage-${UUID.randomUUID()}.jar"
                 logger.info("Generating a test-only cordapp of classes discovered in $scanPackage at $cordappJAR")
-                FileOutputStream(cordappJAR).use {
-                    JarOutputStream(it).use { jos ->
-                        val scanDir = File(path.toURI())
-                        scanDir.walkTopDown().forEach {
-                            val entryPath = jarPackageName + "/" + scanDir.toPath().relativize(it.toPath()).toString().replace('\\', '/')
-                            val time = FileTime.from(Instant.EPOCH)
-                            val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-                            jos.putNextEntry(entry)
-                            if (it.isFile) {
-                                Files.copy(it.toPath(), jos)
-                            }
-                            jos.closeEntry()
+                JarOutputStream(cordappJAR.outputStream()).use { jos ->
+                    val scanDir = url.toPath()
+                    scanDir.walk { it.forEach {
+                        val entryPath = "$jarPackageName/${scanDir.relativize(it).toString().replace('\\', '/')}"
+                        val time = FileTime.from(Instant.EPOCH)
+                        val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
+                        jos.putNextEntry(entry)
+                        if (it.isRegularFile()) {
+                            it.copyTo(jos)
                         }
-                    }
+                        jos.closeEntry()
+                    } }
                 }
-                generatedCordapps[path] = cordappJAR.toURI()
+                cordappJAR.toUri()
             }
-
-            return generatedCordapps[path]!!
         }
 
         private fun getCordappsInDirectory(cordappsDir: Path): List<RestrictedURL> {
@@ -241,13 +234,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     }
 
     private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
-        return (scanResult.getNamesOfClassesImplementing(Contract::class) +
-                scanResult.getNamesOfClassesImplementing(UpgradedContract::class) +
-                // Even though UpgradedContractWithLegacyConstraint implements UpgradedContract
-                // we need to specify it separately. Otherwise, classes implementing UpgradedContractWithLegacyConstraint
-                // don't get picked up.
-                scanResult.getNamesOfClassesImplementing(UpgradedContractWithLegacyConstraint::class))
-                .distinct()
+        return coreContractClasses.flatMap { scanResult.getNamesOfClassesImplementing(it) }.distinct()
     }
 
     private fun findPlugins(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {

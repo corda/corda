@@ -52,14 +52,10 @@ class FlowsDrainingModeContentionTest {
 
     @Test
     fun `draining mode does not deadlock with acks between 2 nodes`() {
-
         val message = "Ground control to Major Tom"
-
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = portAllocation, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
-
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()
-            defaultNotaryNode.getOrThrow()
 
             val nodeARpcInfo = RpcInfo(nodeA.rpcAddress, user.username, user.password)
             val flow = nodeA.rpc.startFlow(::ProposeTransactionAndWaitForCommit, message, nodeARpcInfo, nodeB.nodeInfo.singleIdentity(), defaultNotaryIdentity)

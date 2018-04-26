@@ -3,9 +3,10 @@ package net.corda.node.internal
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.delete
+import net.corda.core.internal.list
 import net.corda.core.internal.readObject
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
@@ -18,7 +19,7 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -32,14 +33,21 @@ class NodeTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    private fun nodeInfoFile() = temporaryFolder.root.listFiles().singleOrNull { it.name.startsWith(NODE_INFO_FILE_NAME_PREFIX) }
+    private fun nodeInfoFile(): Path? {
+        return temporaryFolder.root.toPath().list { paths ->
+            paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findAny().orElse(null)
+        }
+    }
+
     private fun AbstractNode.generateNodeInfo(): NodeInfo {
         assertNull(nodeInfoFile())
         generateAndSaveNodeInfo()
-        val path = nodeInfoFile()!!.toPath()
-        val nodeInfo = path.readObject<SignedNodeInfo>().raw.deserialize()
-        Files.delete(path)
-        return nodeInfo
+        val path = nodeInfoFile()!!
+        try {
+            return path.readObject<SignedNodeInfo>().verified()
+        } finally {
+            path.delete()
+        }
     }
 
     @Test

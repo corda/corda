@@ -2,9 +2,9 @@ package net.corda.node.services.config
 
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.tools.shell.SSHDConfiguration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.tools.shell.SSHDConfiguration
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.nio.file.Paths
@@ -77,7 +77,6 @@ class NodeConfigurationImplTest {
                 certificateChainCheckPolicies = emptyList(),
                 devMode = true,
                 noLocalShell = false,
-                activeMQServer = ActiveMqServerConfiguration(BridgeConfiguration(0, 0, 0.0)),
                 rpcSettings = rpcSettings
         )
     }

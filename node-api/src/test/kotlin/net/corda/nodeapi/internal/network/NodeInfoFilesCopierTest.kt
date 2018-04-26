@@ -1,18 +1,20 @@
 package net.corda.nodeapi.internal.network
 
 import net.corda.cordform.CordformNode
+import net.corda.core.internal.div
+import net.corda.core.internal.list
+import net.corda.core.internal.write
 import net.corda.nodeapi.eventually
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import rx.schedulers.TestScheduler
-import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
-import kotlin.test.assertEquals
 
 class NodeInfoFilesCopierTest {
     companion object {
@@ -21,9 +23,9 @@ class NodeInfoFilesCopierTest {
         private const val NODE_2_PATH = "node2"
 
         private val content = "blah".toByteArray(Charsets.UTF_8)
-        private val GOOD_NODE_INFO_NAME = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}test"
-        private val GOOD_NODE_INFO_NAME_2 = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}anotherNode"
-        private val BAD_NODE_INFO_NAME = "something"
+        private const val GOOD_NODE_INFO_NAME = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}test"
+        private const val GOOD_NODE_INFO_NAME_2 = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}anotherNode"
+        private const val BAD_NODE_INFO_NAME = "something"
     }
 
     @Rule
@@ -55,8 +57,8 @@ class NodeInfoFilesCopierTest {
         advanceTime()
 
         // Create 2 files, a nodeInfo and another file in node1 folder.
-        Files.write(node1RootPath.resolve(GOOD_NODE_INFO_NAME), content)
-        Files.write(node1RootPath.resolve(BAD_NODE_INFO_NAME), content)
+        (node1RootPath / GOOD_NODE_INFO_NAME).write(content)
+        (node1RootPath / BAD_NODE_INFO_NAME).write(content)
 
         // Configure the second node.
         nodeInfoFilesCopier.addConfig(node2RootPath)
@@ -76,8 +78,8 @@ class NodeInfoFilesCopierTest {
         advanceTime()
 
         // Create 2 files, one of which to be copied, in a node root path.
-        Files.write(node2RootPath.resolve(GOOD_NODE_INFO_NAME), content)
-        Files.write(node2RootPath.resolve(BAD_NODE_INFO_NAME), content)
+        (node2RootPath / GOOD_NODE_INFO_NAME).write(content)
+        (node2RootPath / BAD_NODE_INFO_NAME).write(content)
         advanceTime()
 
         eventually<AssertionError, Unit>(Duration.ofMinutes(1)) {
@@ -94,14 +96,14 @@ class NodeInfoFilesCopierTest {
         advanceTime()
 
         // Create a file, in node 2 root path.
-        Files.write(node2RootPath.resolve(GOOD_NODE_INFO_NAME), content)
+        (node2RootPath / GOOD_NODE_INFO_NAME).write(content)
         advanceTime()
 
         // Remove node 2
         nodeInfoFilesCopier.removeConfig(node2RootPath)
 
         // Create another file in node 2 directory.
-        Files.write(node2RootPath.resolve(GOOD_NODE_INFO_NAME_2), content)
+        (node2RootPath / GOOD_NODE_INFO_NAME).write(content)
         advanceTime()
 
         eventually<AssertionError, Unit>(Duration.ofMinutes(1)) {
@@ -120,11 +122,11 @@ class NodeInfoFilesCopierTest {
         nodeInfoFilesCopier.reset()
 
         advanceTime()
-        Files.write(node2RootPath.resolve(GOOD_NODE_INFO_NAME_2), content)
+        (node2RootPath / GOOD_NODE_INFO_NAME_2).write(content)
 
         // Give some time to the filesystem to report the change.
         Thread.sleep(100)
-        assertEquals(0, Files.list(node1AdditionalNodeInfoPath).toList().size)
+        assertThat(node1AdditionalNodeInfoPath.list()).isEmpty()
     }
 
     private fun advanceTime() {
@@ -132,8 +134,8 @@ class NodeInfoFilesCopierTest {
     }
 
     private fun checkDirectoryContainsSingleFile(path: Path, filename: String) {
-        assertEquals(1, Files.list(path).toList().size)
-        val onlyFileName = Files.list(path).toList().first().fileName.toString()
-        assertEquals(filename, onlyFileName)
+        val files = path.list()
+        assertThat(files).hasSize(1)
+        assertThat(files[0].fileName.toString()).isEqualTo(filename)
     }
 }

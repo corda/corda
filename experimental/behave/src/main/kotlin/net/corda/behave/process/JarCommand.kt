@@ -1,12 +1,13 @@
 package net.corda.behave.process
 
 import java.io.File
+import java.nio.file.Path
 import java.time.Duration
 
 class JarCommand(
-        jarFile: File,
+        jarFile: Path,
         arguments: Array<String>,
-        directory: File,
+        directory: Path,
         timeout: Duration,
         enableRemoteDebugging: Boolean = false
 ) : Command(
