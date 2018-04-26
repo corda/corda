@@ -90,6 +90,9 @@ class HibernateConfiguration(
             }
             config.setProperty("hibernate.default_schema", schemaName)
         }
+        databaseConfig.hibernateDialect?.apply {
+            config.setProperty("hibernate.dialect", this)
+        }
 
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session

@@ -78,6 +78,9 @@ absolute path to the node's base directory.
     :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
                  (the value is passed to Hibernate property 'hibernate.default_schema').
 
+    :hibernateDialect: (optional) for explicit definition of ``hibernate.dialect`` property, for most cases Hibernate properly detect
+                       the correct value
+
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.

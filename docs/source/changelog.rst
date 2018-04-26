@@ -37,6 +37,8 @@ Unreleased
 * Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
   all the needed network data, waiting in the background for network map to become available.
 
+* Added `database.hibernateDialect` node configuration option
+
 .. _changelog_r3_v3:
 
 R3 Corda 3.0 Developer Preview
