@@ -115,7 +115,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
 ) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver, AutoCloseable {
     companion object {
         private val log = contextLogger()
-        private const val messageMaxRetryCount: Int = 3
 
         fun createMessageToRedeliver(): PersistentMap<Long, Pair<Message, MessageRecipients>, RetryMessage, Long> {
             return PersistentMap(
@@ -143,6 +142,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
         }
     }
 
+    private val messageMaxRetryCount: Int = config.p2pMessagingRetry.maxRetryCount
+    private val backoffBase: Double = config.p2pMessagingRetry.backoffBase
+
     private class InnerState {
         var started = false
         var running = false
@@ -168,7 +170,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     data class HandlerRegistration(val topic: String, val callback: Any) : MessageHandlerRegistration
 
     override val myAddress: SingleMessageRecipient = NodeAddress(myIdentity, advertisedAddress)
-    private val messageRedeliveryDelaySeconds = config.messageRedeliveryDelaySeconds.toLong()
+    private val messageRedeliveryDelaySeconds = config.p2pMessagingRetry.messageRedeliveryDelay.seconds
     private val state = ThreadBox(InnerState())
     private val knownQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
     private val externalBridge: Boolean = config.enterpriseConfiguration.externalBridge ?: false
@@ -551,7 +553,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
         scheduledMessageRedeliveries[retryId] = nodeExecutor.schedule({
             sendWithRetry(retryCount + 1, message, target, retryId)
-        }, messageRedeliveryDelaySeconds, TimeUnit.SECONDS)
+        }, messageRedeliveryDelaySeconds * Math.pow(backoffBase, retryCount.toDouble()).toLong(), TimeUnit.SECONDS)
     }
 
     override fun cancelRedelivery(retryId: Long) {

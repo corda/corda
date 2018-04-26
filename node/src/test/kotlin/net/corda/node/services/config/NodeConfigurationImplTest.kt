@@ -14,6 +14,7 @@ import com.zaxxer.hikari.HikariConfig
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
+import net.corda.core.utilities.seconds
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
@@ -114,6 +115,7 @@ class NodeConfigurationImplTest {
                 verifierType = VerifierType.InMemory,
                 p2pAddress = NetworkHostAndPort("localhost", 0),
                 messagingServerAddress = null,
+                p2pMessagingRetry = P2PMessagingRetryConfiguration(5.seconds, 3, 1.0),
                 notary = null,
                 certificateChainCheckPolicies = emptyList(),
                 devMode = true,

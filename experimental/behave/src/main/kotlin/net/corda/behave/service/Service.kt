@@ -10,7 +10,7 @@
 
 package net.corda.behave.service
 
-import net.corda.behave.logging.getLogger
+import net.corda.core.utilities.loggerFor
 import java.io.Closeable
 
 abstract class Service(
@@ -21,7 +21,7 @@ abstract class Service(
 
     private var isRunning: Boolean = false
 
-    protected val log = getLogger<Service>()
+    protected val log = loggerFor<Service>()
 
     fun start(): Boolean {
         if (isRunning) {
