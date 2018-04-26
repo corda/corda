@@ -18,6 +18,7 @@ import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
+import javafx.collections.ListChangeListener
 import javafx.geometry.Bounds
 import javafx.geometry.Insets
 import javafx.geometry.Point2D
@@ -79,7 +80,15 @@ class Network : CordaView() {
     private val notaryButtons = notaryComponents.map { it.button }
     private val peerComponents = peers.map { it.render() }
     private val peerButtons = peerComponents.filtered { myIdentity.value !in it.nodeInfo.legalIdentitiesAndCerts.map { it.party } }.map { it.button }
-    private val allComponents = FXCollections.observableArrayList(notaryComponents, peerComponents).concatenate()
+    private val allComponents = FXCollections.observableArrayList(notaryComponents, peerComponents).concatenate().apply {
+        addListener(ListChangeListener {
+            if(it.next()){
+                it.removed.forEach {
+                    mapPane.children.remove(it.label)
+                }
+            }
+        })
+    }
     private val mapLabels = allComponents.map { it.label }
 
     private data class MapViewComponents(val nodeInfo: NodeInfo, val button: Button, val label: Label)

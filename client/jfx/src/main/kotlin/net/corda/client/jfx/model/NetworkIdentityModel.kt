@@ -36,7 +36,9 @@ class NetworkIdentityModel {
                         else -> false
                     }
                 }
-                list.addAll(update.node)
+                if(update is MapChange.Modified || update is MapChange.Added){
+                    list.addAll(update.node)
+                }
             }
 
     private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)
