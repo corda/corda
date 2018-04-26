@@ -66,14 +66,13 @@ class PersistentMap<K : Any, V, E, out EK>(
         val existingInCache = cache.get(key) {
             // Thread safe, if multiple threads may wait until the first one has loaded.
             insertionAttempt = true
-            // Value wasn't in the cache and wasn't in DB (because the cache is unbound).
-            // Store the value, depending on store implementation this may replace existing entry in DB.
+            // Value wasn't in the cache and wasn't in DB (because the cache is unbound) so save it.
             merge(key, value)
             Optional.of(value)
         }!!
         if (!insertionAttempt) {
             if (existingInCache.isPresent) {
-                // Key already exists in cache, store the new value in the DB (depends on tore implementation) and refresh cache.
+                // Key already exists in cache, store the new value in the DB and refresh cache.
                 isUnique = false
                 replaceValue(key, value)
             } else {
