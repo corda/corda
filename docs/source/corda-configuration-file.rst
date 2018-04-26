@@ -184,7 +184,7 @@ absolute path to the node's base directory.
 :extraNetworkMapKeys: An optional list of private network map UUIDs. Your node will fetch the public network and private network maps based on
             these keys. Private network UUID should be provided by network operator and lets you see nodes not visible on public network.
 
-            .. note:: This is temporary feature for onboarding network participants in batches that limits their visibility for privacy reasons.
+            .. note:: This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.
 
 Examples
 --------

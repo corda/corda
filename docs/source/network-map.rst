@@ -37,7 +37,7 @@ The set of REST end-points for the network map service are as follows.
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /network-map                            | Retrieve the current signed public network map object. The entire object is signed with the network map certificate which is also attached.  |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map/{uuid}                     | Retrieve the current signed private network map object with given uuid. Return format is the same as for ``/network-map`` endpoint.          |
+| GET            | /network-map/{uuid}                     | Retrieve the current signed private network map object with given uuid. Format is the same as for ``/network-map`` endpoint.                 |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /network-map/node-info/{hash}           | Retrieve a signed ``NodeInfo`` as specified in the network map object.                                                                       |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
