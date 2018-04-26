@@ -38,6 +38,7 @@ import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import java.util.concurrent.TimeUnit
 import kotlin.reflect.KProperty1
 
@@ -174,11 +175,16 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
     }
 
+    fun setLoggingContext() {
+        context.pushToLoggingContext()
+        MDC.put("flow-id", id.uuid.toString())
+    }
+
     @Suspendable
     override fun run() {
         logic.stateMachine = this
 
-        context.pushToLoggingContext()
+        setLoggingContext()
 
         initialiseFlow()
 
@@ -331,6 +337,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             require(continuation == FlowContinuation.ProcessEvents)
             Fiber.unparkDeserialized(this, scheduler)
         }
+        setLoggingContext()
         return uncheckedCast(processEventsUntilFlowIsResumed(
                 isDbTransactionOpenOnEntry = false,
                 isDbTransactionOpenOnExit = true
