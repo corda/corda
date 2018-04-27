@@ -40,7 +40,7 @@ abstract class AbstractCashSelection {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
                 } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver name '${_metadata.driverName}'." +
-                        "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.java}" +
+                        "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.java}." +
                         "\nAvailable implementations: $cashSelectionAlgos")
             }.invoke()
         }
