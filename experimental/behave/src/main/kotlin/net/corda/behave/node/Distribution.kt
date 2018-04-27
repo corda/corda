@@ -85,7 +85,7 @@ class Distribution private constructor(
 
         private val distributions = mutableListOf<Distribution>()
 
-        private val nodePrefix = stagingRoot / "deps/corda"
+        private val nodePrefix = stagingRoot / "corda"
 
         val MASTER = fromJarFile("corda-master")
 

@@ -17,9 +17,6 @@ class Cash(state: ScenarioState) : Substeps(state) {
 
     fun numberOfIssuableCurrencies(nodeName: String): Int {
         return withClient(nodeName) {
-            for (flow in it.registeredFlows()) {
-                log.info(flow)
-            }
             try {
                 val config = it.startFlow(::CashConfigDataFlow).returnValue.get(10, TimeUnit.SECONDS)
                 for (supportedCurrency in config.supportedCurrencies) {
