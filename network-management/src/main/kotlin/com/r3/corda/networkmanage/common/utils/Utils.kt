@@ -17,6 +17,7 @@ import net.corda.core.CordaOID
 import net.corda.core.internal.CertRole
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -46,7 +47,7 @@ data class CertPathAndKey(val certPath: List<X509Certificate>, val key: PrivateK
 inline fun <reified T : Any> parseConfig(file: Path): T {
     val config = ConfigFactory.parseFile(file.toFile(), ConfigParseOptions.defaults().setAllowMissing(true)).resolve()
     logger.info(config.root().render(ConfigRenderOptions.defaults()))
-    return config.parseAs(strict = false)
+    return config.parseAs(UnknownConfigKeysPolicy.IGNORE::handle)
 }
 
 fun buildCertPath(certPathBytes: ByteArray): CertPath = X509CertificateFactory().delegate.generateCertPath(certPathBytes.inputStream())

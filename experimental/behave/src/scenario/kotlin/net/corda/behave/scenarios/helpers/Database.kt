@@ -12,7 +12,7 @@ package net.corda.behave.scenarios.helpers
 
 import net.corda.behave.await
 import net.corda.behave.scenarios.ScenarioState
-import net.corda.behave.seconds
+import net.corda.core.utilities.seconds
 import org.assertj.core.api.Assertions.assertThat
 import java.util.concurrent.CountDownLatch
 

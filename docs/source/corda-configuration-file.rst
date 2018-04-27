@@ -31,6 +31,9 @@ e.g.:
 The property `"dataSourceProperties.dataSourceClassName" = "val"` in ``reference.conf``
 would be not overwritten by the property `dataSourceProperties.dataSourceClassName = "val2"` in ``node.conf``.
 
+By default the node will fail to start in presence of unknown property keys. To alter this behaviour, program line argument
+``on-unknown-config-keys`` can be set to ``WARN`` or ``IGNORE``. Default is ``FAIL`` if unspecified.
+
 Defaults
 --------
 A set of default configuration options are loaded from the built-in resource file ``/node/src/main/resources/reference.conf``.

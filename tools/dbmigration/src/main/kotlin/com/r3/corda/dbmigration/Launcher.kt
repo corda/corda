@@ -29,6 +29,7 @@ import net.corda.node.services.config.configOf
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.node.services.persistence.MigrationExporter
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration
@@ -149,7 +150,7 @@ private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: P
             it
         }
     }
-    val config = parsedConfig.parseAs(Configuration::class, false)
+    val config = parsedConfig.parseAs(Configuration::class, UnknownConfigKeysPolicy.IGNORE::handle)
 
     fun runMigrationCommand(withMigration: (SchemaMigration) -> Unit): Unit = runWithDataSource(config, baseDirectory, classLoader) { dataSource ->
         withMigration(SchemaMigration(schemas, dataSource, true, config.database, classLoader))

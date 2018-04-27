@@ -5,7 +5,17 @@ Here's a summary of what's changed in each Corda release. For guidance on how to
 release, see :doc:`upgrade-notes`.
 
 Unreleased
-----------
+==========
+
+* Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
+  Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
+
+* Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
+  as the raw type, List for example.
+
+* java.security.cert.CRLReason added to the default Whitelist.
+
+* java.security.cert.X509CRL serialization support added.
 
 * Upgraded H2 to v1.4.197.
 
@@ -32,7 +42,7 @@ Unreleased
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
   .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
-  than 2.12.3 (including 2.12.4) exhibit a different issue.
+than 2.12.3 (including 2.12.4) exhibit a different issue.
 
 * Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
   all the needed network data, waiting in the background for network map to become available.

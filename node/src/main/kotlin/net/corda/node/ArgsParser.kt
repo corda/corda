@@ -19,6 +19,7 @@ import net.corda.core.internal.exists
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
+import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import org.slf4j.event.Level
 import java.io.PrintStream
 import java.nio.file.Path
@@ -52,6 +53,11 @@ class ArgsParser {
             .defaultsTo((Paths.get("certificates") / "network-root-truststore.jks"))
     private val networkRootTrustStorePasswordArg = optionParser.accepts("network-root-truststore-password", "Network root trust store password obtained from network operator.")
             .withRequiredArg()
+    private val unknownConfigKeysPolicy = optionParser.accepts("on-unknown-config-keys", "How to behave on unknown node configuration property keys: [WARN, FAIL, IGNORE].")
+            .withRequiredArg()
+            .withValuesConvertedBy(object : EnumConverter<UnknownConfigKeysPolicy>(UnknownConfigKeysPolicy::class.java) {})
+            .defaultsTo(UnknownConfigKeysPolicy.FAIL)
+
     private val isVersionArg = optionParser.accepts("version", "Print the version and exit")
     private val justGenerateNodeInfoArg = optionParser.accepts("just-generate-node-info",
             "Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit")
@@ -76,6 +82,7 @@ class ArgsParser {
         val bootstrapRaftCluster = optionSet.has(bootstrapRaftClusterArg)
         val networkRootTrustStorePath = optionSet.valueOf(networkRootTrustStorePathArg)
         val networkRootTrustStorePassword = optionSet.valueOf(networkRootTrustStorePasswordArg)
+        val unknownConfigKeysPolicy = optionSet.valueOf(unknownConfigKeysPolicy)
 
         val registrationConfig = if (isRegistration) {
             requireNotNull(networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
@@ -95,7 +102,8 @@ class ArgsParser {
                 noLocalShell,
                 sshdServer,
                 justGenerateNodeInfo,
-                bootstrapRaftCluster)
+                bootstrapRaftCluster,
+                unknownConfigKeysPolicy)
     }
 
     fun printHelp(sink: PrintStream) = optionParser.printHelpOn(sink)
@@ -113,13 +121,14 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val noLocalShell: Boolean,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean,
-                          val bootstrapRaftCluster: Boolean) {
+                          val bootstrapRaftCluster: Boolean,
+                          val unknownConfigKeysPolicy: UnknownConfigKeysPolicy) {
     fun loadConfig(): NodeConfiguration {
         val config = ConfigHelper.loadConfig(
                 baseDirectory,
                 configFile,
                 configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell))
-        ).parseAsNodeConfiguration()
+        ).parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
         if (nodeRegistrationOption != null) {
             require(!config.devMode) { "registration cannot occur in devMode" }
             requireNotNull(config.compatibilityZoneURL) {

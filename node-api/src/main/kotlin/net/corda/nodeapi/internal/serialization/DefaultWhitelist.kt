@@ -30,6 +30,7 @@ object DefaultWhitelist : SerializationWhitelist {
                     Notification.Kind::class.java,
                     ArrayList::class.java,
                     Pair::class.java,
+                    Triple::class.java,
                     ByteArray::class.java,
                     UUID::class.java,
                     LinkedHashSet::class.java,

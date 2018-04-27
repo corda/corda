@@ -17,6 +17,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
@@ -45,37 +46,34 @@ const val CUSTOM_NODE_PROPERTIES_ROOT = "custom"
 
 // TODO Move other config parsing to use parseAs and remove this
 operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
-    return getValueInternal(metadata.name, metadata.returnType)
+    return getValueInternal(metadata.name, metadata.returnType, UnknownConfigKeysPolicy.IGNORE::handle)
 }
 
-fun <T : Any> Config.parseAs(clazz: KClass<T>, strict: Boolean = true): T {
+fun <T : Any> Config.parseAs(clazz: KClass<T>, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle): T {
     require(clazz.isData) { "Only Kotlin data classes can be parsed. Offending: ${clazz.qualifiedName}" }
     val constructor = clazz.primaryConstructor!!
     val parameters = constructor.parameters
-    if (strict) {
-        val parameterNames = parameters.flatMap { param ->
-            mutableSetOf<String>().apply {
-                param.name?.let(this::add)
-                clazz.memberProperties.singleOrNull { it.name == param.name }?.let { matchingProperty ->
-                    matchingProperty.annotations.filterIsInstance<OldConfig>().map { it.value }.forEach { this.add(it) }
-                }
+    val parameterNames = parameters.flatMap { param ->
+        mutableSetOf<String>().apply {
+            param.name?.let(this::add)
+            clazz.memberProperties.singleOrNull { it.name == param.name }?.let { matchingProperty ->
+                matchingProperty.annotations.filterIsInstance<OldConfig>().map { it.value }.forEach { this.add(it) }
             }
-        }
-        val unknownConfigurationKeys = this.entrySet()
-                .mapNotNull { it.key.split(".").firstOrNull() }
-                .filterNot { it == CUSTOM_NODE_PROPERTIES_ROOT }
-                .filterNot(parameterNames::contains)
-                .toSortedSet()
-        if (unknownConfigurationKeys.isNotEmpty()) {
-            throw UnknownConfigurationKeysException.of(unknownConfigurationKeys)
         }
     }
+    val unknownConfigurationKeys = this.entrySet()
+            .mapNotNull { it.key.split(".").firstOrNull() }
+            .filterNot { it == CUSTOM_NODE_PROPERTIES_ROOT }
+            .filterNot(parameterNames::contains)
+            .toSortedSet()
+    onUnknownKeys.invoke(unknownConfigurationKeys, logger)
+
     val args = parameters.filterNot { it.isOptional && !hasPath(it.name!!) }.associateBy({ it }) { param ->
-                // Get the matching property for this parameter
-                val property = clazz.memberProperties.first { it.name == param.name }
-                val path = defaultToOldPath(property)
-                getValueInternal<Any>(path, param.type, strict)
-            }
+        // Get the matching property for this parameter
+        val property = clazz.memberProperties.first { it.name == param.name }
+        val path = defaultToOldPath(property)
+        getValueInternal<Any>(path, param.type, onUnknownKeys)
+    }
     try {
         return constructor.callBy(args)
     } catch (e: InvocationTargetException) {
@@ -94,7 +92,7 @@ class UnknownConfigurationKeysException private constructor(val unknownKeys: Set
     }
 }
 
-inline fun <reified T : Any> Config.parseAs(strict: Boolean = true): T = parseAs(T::class, strict)
+inline fun <reified T : Any> Config.parseAs(noinline onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle): T = parseAs(T::class, onUnknownKeys)
 
 fun Config.toProperties(): Properties {
     return entrySet().associateByTo(
@@ -103,11 +101,11 @@ fun Config.toProperties(): Properties {
             { it.value.unwrapped().toString() })
 }
 
-private fun <T : Any> Config.getValueInternal(path: String, type: KType, strict: Boolean = true): T {
-    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type, strict) else getCollectionValue(path, type, strict))
+private fun <T : Any> Config.getValueInternal(path: String, type: KType, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit)): T {
+    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type, onUnknownKeys) else getCollectionValue(path, type, onUnknownKeys))
 }
 
-private fun Config.getSingleValue(path: String, type: KType, strict: Boolean = true): Any? {
+private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set<String>, logger: Logger) -> Unit): Any? {
     if (type.isMarkedNullable && !hasPath(path)) return null
     val typeClass = type.jvmErasure
     return when (typeClass) {
@@ -125,7 +123,7 @@ private fun Config.getSingleValue(path: String, type: KType, strict: Boolean = t
         UUID::class -> UUID.fromString(getString(path))
         CordaX500Name::class -> {
             when (getValue(path).valueType()) {
-                ConfigValueType.OBJECT -> getConfig(path).parseAs(strict)
+                ConfigValueType.OBJECT -> getConfig(path).parseAs(onUnknownKeys)
                 else -> CordaX500Name.parse(getString(path))
             }
         }
@@ -134,12 +132,12 @@ private fun Config.getSingleValue(path: String, type: KType, strict: Boolean = t
         else -> if (typeClass.java.isEnum) {
             parseEnum(typeClass.java, getString(path))
         } else {
-            getConfig(path).parseAs(typeClass, strict)
+            getConfig(path).parseAs(typeClass, onUnknownKeys)
         }
     }
 }
 
-private fun Config.getCollectionValue(path: String, type: KType, strict: Boolean = true): Collection<Any> {
+private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: (Set<String>, logger: Logger) -> Unit): Collection<Any> {
     val typeClass = type.jvmErasure
     require(typeClass == List::class || typeClass == Set::class) { "$typeClass is not supported" }
     val elementClass = type.arguments[0].type?.jvmErasure ?: throw IllegalArgumentException("Cannot work with star projection: $type")
@@ -163,7 +161,7 @@ private fun Config.getCollectionValue(path: String, type: KType, strict: Boolean
         else -> if (elementClass.java.isEnum) {
             getStringList(path).map { parseEnum(elementClass.java, it) }
         } else {
-            getConfigList(path).map { it.parseAs(elementClass, strict) }
+            getConfigList(path).map { it.parseAs(elementClass, onUnknownKeys) }
         }
     }
     return if (typeClass == Set::class) values.toSet() else values
@@ -231,7 +229,7 @@ private fun Any.toConfigMap(): Map<String, Any> {
 private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
     val elementType = (field.genericType as ParameterizedType).actualTypeArguments[0] as Class<*>
     return when (elementType) {
-        // For the types already supported by Config we can use the Iterable as is
+    // For the types already supported by Config we can use the Iterable as is
         String::class.java -> this
         Integer::class.java -> this
         java.lang.Long::class.java -> this
@@ -254,3 +252,17 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
 }
 
 private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.config")
+
+enum class UnknownConfigKeysPolicy(private val handle: (Set<String>, logger: Logger) -> Unit) {
+
+    FAIL({ unknownKeys, _ -> throw UnknownConfigurationKeysException.of(unknownKeys) }),
+    WARN({ unknownKeys, logger -> logger.warn("Unknown configuration keys found: ${unknownKeys.joinToString(", ", "[", "]")}.") }),
+    IGNORE({ _, _ -> });
+
+    fun handle(unknownKeys: Set<String>, logger: Logger) {
+
+        if (unknownKeys.isNotEmpty()) {
+            handle.invoke(unknownKeys, logger)
+        }
+    }
+}
