@@ -9,21 +9,15 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.transactions.WireTransaction
-import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
-import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
-import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
-import net.corda.nodeapi.internal.serialization.amqp.testutils.testName
+import net.corda.nodeapi.internal.serialization.amqp.testutils.*
 import net.corda.testing.core.TestIdentity
 import org.hibernate.Transaction
 import java.io.File
 import java.net.URI
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.reflect.KProperty
 import kotlin.test.assertEquals
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 data class TestContractState(
         override val participants: List<AbstractParty>
@@ -309,7 +303,6 @@ class GenericsTests {
         val factory4 = SerializerFactory(AllWhitelist, cl())
         factory4.register(net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer)
         val des2 = DeserializationInput(factory4).deserializeAndReturnEnvelope(ser2.obj)
-
     }
 
     @Test
@@ -509,7 +502,8 @@ class GenericsTests {
         assertEquals(state.context.a,  des1.obj.state.context.a)
     }
 
-    fun implemntsGeneric() {
+    @Test
+    fun implementsGeneric() {
         open class B<out T>(open val a: T)
         class D(override val a: String) : B<String>(a)
 
@@ -525,7 +519,7 @@ class GenericsTests {
     }
 
     @Test
-    fun implemntsGenericInterface() {
+    fun implementsGenericInterface() {
         class D(override val a: String) : implementsGenericInterfaceI<String>
 
         val factory = testDefaultFactoryNoEvolution()
@@ -533,5 +527,52 @@ class GenericsTests {
         val bytes = SerializationOutput(factory).serialize(D("Test"))
 
         DeserializationInput(factory).deserialize(bytes).apply { assertEquals("Test", this.a) }
+    }
+
+    interface DataClassByInterface<V> {
+        val v : V
+    }
+
+    @Test
+    fun dataClassBy() {
+        data class C (val s: String) : DataClassByInterface<String> {
+            override val v: String = "-- $s"
+        }
+
+        data class Inner<T>(val wrapped: DataClassByInterface<T>) : DataClassByInterface<T> by wrapped {
+            override val v = wrapped.v
+        }
+
+        val i = Inner(C("hello"))
+
+        val bytes = SerializationOutput(testDefaultFactory()).serialize(i, testSerializationContext)
+
+        val i2 = DeserializationInput(testDefaultFactory()).deserialize(bytes, testSerializationContext)
+    }
+
+    @Test
+    fun simpleDelegate() {
+        class D {
+            operator fun getValue(thisRef: Any?, property: KProperty<*>): String {
+                return "$thisRef, thank you for delegating '${property.name}' to me!"
+            }
+            operator fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
+                println("$value has been assigned to '${property.name}' in $thisRef.")
+            }
+        }
+
+        class C (a_ : String) {
+            var a : String by D()
+
+            init {
+                a = a_
+            }
+        }
+
+        val c = C("YO YO YO")
+        println (c.a)
+
+        val bytes = SerializationOutput(testDefaultFactory()).serialize(c, testSerializationContext)
+        val c2 = DeserializationInput(testDefaultFactory()).deserialize(bytes, testSerializationContext)
     }
 }
