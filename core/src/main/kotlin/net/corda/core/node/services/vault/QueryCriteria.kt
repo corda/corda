@@ -156,7 +156,6 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         }
 
         companion object {
-
             inline fun <reified L : PersistentState> of(expression: CriteriaExpression<L, Boolean>, status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED, contractStateTypes: Set<Class<out ContractState>>? = null): VaultCustomQueryCriteria<L> {
                 return VaultCustomQueryCriteria(expression, status, contractStateTypes, L::class.java)
             }

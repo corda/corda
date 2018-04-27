@@ -197,7 +197,22 @@ class VaultQueryTests {
                         orderBy = Sort.Direction.ASC
                 )
             }
-            vaultService.queryBy<FungibleAsset<*>>(expression.toCustomCriteria())
+            val criteria = VaultCustomQueryCriteria.of(expression)
+            vaultService.queryBy<FungibleAsset<*>>(criteria)
+        }
+    }
+
+    @Test
+    fun `criteria with field from mapped superclass of superclass`() {
+        database.transaction {
+            val expression = builder {
+                SampleCashSchemaV2.PersistentCashState::quantity.sum(
+                        groupByColumns = listOf(SampleCashSchemaV2.PersistentCashState::currency, SampleCashSchemaV2.PersistentCashState::stateRef),
+                        orderBy = Sort.Direction.ASC
+                )
+            }
+            val criteria = VaultCustomQueryCriteria.of(expression)
+            vaultService.queryBy<FungibleAsset<*>>(criteria)
         }
     }
 

@@ -100,7 +100,6 @@ public class VaultQueryJavaTests {
 
     @Test
     public void criteriaWithFieldFromMappedSuperclass() throws NoSuchFieldException {
-
         Field quantity = getField("quantity", SampleCashSchemaV2.PersistentCashState.class);
         Field currency = getField("currency", SampleCashSchemaV2.PersistentCashState.class);
 
@@ -111,7 +110,6 @@ public class VaultQueryJavaTests {
     }
 
     private Field getField(String fieldName, Class<?> clazz) throws NoSuchFieldException {
-
         if (clazz == null) {
             throw new NoSuchFieldException(fieldName);
         }

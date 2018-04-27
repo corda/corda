@@ -96,10 +96,6 @@ fun <O, R> resolveEnclosingObjectFromExpression(expression: CriteriaExpression<O
 fun <O, C> resolveEnclosingObjectFromColumn(column: Column<O, C>): Class<O> = uncheckedCast(column.declaringClass)
 fun <O, C> getColumnName(column: Column<O, C>): String = column.name
 
-inline fun <reified L : PersistentState> CriteriaExpression<L, Boolean>.toCustomCriteria(status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED, contractStateTypes: Set<Class<out ContractState>>? = null): QueryCriteria.VaultCustomQueryCriteria<L> {
-    return QueryCriteria.VaultCustomQueryCriteria.of(this, status, contractStateTypes)
-}
-
 /**
  *  Pagination and Ordering
  *

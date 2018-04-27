@@ -7,8 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
-* Overloaded ``VaultCustomQueryCriteria`` constructor to allow clients to specify the Hibernate ``Entity`` class manually.
-  This is required in case a ``CriteriaExpression`` references a field from a ``MappedSuperclass``.
+* Overloaded ``VaultCustomQueryCriteria`` constructor to allow clients to specify the Hibernate ``Entity`` class exactly, in case Corda is not able to infer it.
+  An example of when this is required is in case a ``CriteriaExpression`` references a field from a ``MappedSuperclass``.
 
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
   Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.

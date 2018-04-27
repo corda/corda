@@ -115,7 +115,6 @@ There are four implementations of this interface which can be chained together t
 
     .. note:: ``VaultCustomQueryCriteria`` constructor can optionally specify the JPA ``Entity`` class manually.
        This is needed when a ``CriteriaExpression`` references a field declared in a super class annotated with ``MappedSuperclass``.
-       For more information on the issue, please refer to .. _StackOverflow: https://stackoverflow.com/questions/49511406/group-a-child-class-on-transient-parent-attributes-for-a-custom-fungiblestate-sc
 
 All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators.
 
