@@ -186,9 +186,11 @@ class NodeVaultService(
     }
 
     private fun loadStates(refs: Collection<StateRef>): Collection<StateAndRef<ContractState>> {
-        return if (refs.isNotEmpty())
-            queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refs.toList())).states
-        else emptySet()
+        return if (refs.isNotEmpty()) {
+            val stateRefQueryCriteria = QueryCriteria.VaultQueryCriteria(stateRefs = refs.toList())
+            val pageSpec = PageSpecification(MAX_PAGE_SIZE)
+            queryBy<ContractState>(stateRefQueryCriteria, pageSpec).states
+        } else emptySet()
     }
 
     private fun processAndNotify(updates: List<Vault.Update<ContractState>>) {
