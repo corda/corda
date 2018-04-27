@@ -12,6 +12,7 @@ package net.corda.node.services
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import com.typesafe.config.ConfigFactory
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.TransactionSignature
@@ -34,11 +35,7 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.node.inMemoryH2DataSourceConfig
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.junit.After
 import org.junit.Before
 import org.junit.ClassRule
@@ -139,7 +136,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
     }
 
     private fun createNotaryNode(): InternalMockNetwork.MockNode {
-        val dataStoreProperties = makeTestDataSourceProperties(configSupplier = ::inMemoryH2DataSourceConfig).apply {
+        val dataStoreProperties = makeTestDataSourceProperties(configSupplier = { _, _ ->ConfigFactory.empty() }, fallBackConfigSupplier = ::inMemoryH2DataSourceConfig).apply {
             setProperty("autoCommit", "false")
         }
         return mockNet.createUnstartedNode(

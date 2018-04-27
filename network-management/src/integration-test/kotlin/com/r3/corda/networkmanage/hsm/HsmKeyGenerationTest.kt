@@ -35,7 +35,8 @@ class HsmKeyGenerationTest : HsmBaseTest() {
     private lateinit var inputReader: InputReader
 
     @Before
-    fun setUp() {
+    override fun setUp() {
+        super.setUp()
         inputReader = mock()
         whenever(inputReader.readLine()).thenReturn(hsmSimulator.cryptoUserCredentials().username)
         whenever(inputReader.readPassword(any())).thenReturn(hsmSimulator.cryptoUserCredentials().password)

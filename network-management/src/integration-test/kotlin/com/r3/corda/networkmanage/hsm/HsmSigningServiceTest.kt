@@ -32,7 +32,6 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCH
 import net.corda.nodeapi.internal.crypto.X509Utilities.createCertificateSigningRequest
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.nodeapi.internal.crypto.x509
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -43,7 +42,8 @@ import kotlin.test.assertNotNull
 
 class HsmSigningServiceTest : HsmBaseTest() {
     @Before
-    fun setUp() {
+    override fun setUp() {
+        super.setUp()
         loadOrCreateKeyStore(rootKeyStoreFile, TRUSTSTORE_PASSWORD)
     }
 
@@ -154,7 +154,7 @@ class HsmSigningServiceTest : HsmBaseTest() {
                 inputReader = userInput),
                 keyName = CORDA_NETWORK_MAP)
 
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true))
+        val database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties())
         val networkMapStorage = PersistentNetworkMapStorage(database)
 
         // given network map parameters

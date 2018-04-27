@@ -4274,8 +4274,6 @@ public static final class net.corda.testing.node.MockServices$Companion$makeTest
 ##
 public final class net.corda.testing.node.MockServicesKt extends java.lang.Object
   @org.jetbrains.annotations.NotNull public static final net.corda.core.serialization.SerializeAsToken createMockCordaService(net.corda.testing.node.MockServices, kotlin.jvm.functions.Function1)
-  @org.jetbrains.annotations.NotNull public static final com.typesafe.config.Config databaseProviderDataSourceConfig(String, String)
-  @org.jetbrains.annotations.NotNull public static final com.typesafe.config.Config inMemoryH2DataSourceConfig(String, String)
   @org.jetbrains.annotations.NotNull public static final net.corda.node.services.identity.InMemoryIdentityService makeTestIdentityService(net.corda.core.identity.PartyAndCertificate...)
 ##
 public static final class net.corda.testing.node.MockServicesKt$createMockCordaService$MockAppServiceHubImpl extends java.lang.Object implements net.corda.core.node.AppServiceHub, net.corda.core.node.ServiceHub

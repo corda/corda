@@ -23,7 +23,13 @@ import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.internal.makeTestDatabaseProperties
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import java.net.URL
@@ -32,7 +38,7 @@ import java.util.*
 import com.r3.corda.networkmanage.hsm.authentication.AuthMode as SigningServiceAuthMode
 import com.r3.corda.networkmanage.hsm.generator.AuthMode as GeneratorAuthMode
 
-abstract class HsmBaseTest {
+abstract class HsmBaseTest : IntegrationTest() {
     companion object {
         const val ROOT_CERT_KEY_GROUP = "TEST.CORDACONNECT.ROOT"
         const val NETWORK_MAP_CERT_KEY_GROUP = "TEST.CORDACONNECT.OPS.NETMAP"
@@ -72,6 +78,10 @@ abstract class HsmBaseTest {
                     authToken = "INTEGRATION_TEST",
                     keyFilePassword = null))
         }
+
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(DOORMAN_DB_NAME)
     }
 
     protected lateinit var rootKeyStoreFile: Path
@@ -175,6 +185,10 @@ abstract class HsmBaseTest {
     }
 
     fun makeTestDataSourceProperties(): Properties {
-        return makeTestDataSourceProperties(dbName)
+        return makeTestDataSourceProperties(DOORMAN_DB_NAME)
+    }
+
+    fun makeTestDatabaseProperties(): DatabaseConfig {
+        return makeTestDatabaseProperties(DOORMAN_DB_NAME)
     }
 }

@@ -10,7 +10,8 @@
 
 package com.r3.corda.networkmanage.doorman
 
-import com.r3.corda.networkmanage.common.makeTestDataSourceProperties
+import com.r3.corda.networkmanage.common.DOORMAN_DB_NAME
+import com.r3.corda.networkmanage.common.networkMapInMemoryH2DataSourceConfig
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.cordform.CordformNode
@@ -27,7 +28,6 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeHandle
@@ -39,6 +39,8 @@ import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
+import net.corda.testing.node.internal.makeTestDataSourceProperties
+import net.corda.testing.node.internal.makeTestDatabaseProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.*
 import java.net.URL
@@ -56,7 +58,8 @@ class NodeRegistrationTest : IntegrationTest() {
 
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(notaryName.organisation, aliceName.organisation, genevieveName.organisation)
+        val databaseSchemas = IntegrationTestSchemas(notaryName.organisation, aliceName.organisation, genevieveName.organisation,
+                DOORMAN_DB_NAME)
     }
 
     @Rule
@@ -69,7 +72,8 @@ class NodeRegistrationTest : IntegrationTest() {
     private lateinit var rootCaCert: X509Certificate
     private lateinit var doormanCa: CertificateAndKeyPair
     private lateinit var networkMapCa: CertificateAndKeyPair
-    private lateinit var dbName: String
+    //for normal integration tests (not against standalone db) to create a unique db name for each tests against H2
+    private lateinit var dbNamePostfix: String
 
     private var server: NetworkManagementServer? = null
 
@@ -87,7 +91,7 @@ class NodeRegistrationTest : IntegrationTest() {
 
     @Before
     fun init() {
-        dbName = random63BitValue().toString()
+        dbNamePostfix = random63BitValue().toString()
         val (rootCa, doormanCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
         this.doormanCa = doormanCa
@@ -168,7 +172,7 @@ class NodeRegistrationTest : IntegrationTest() {
     }
 
     private fun startServer(startNetworkMap: Boolean = true): NetworkManagementServer {
-        val server = NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true), doormanConfig, revocationConfig)
+        val server = NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig), makeTestDatabaseProperties(DOORMAN_DB_NAME), doormanConfig, revocationConfig)
         server.start(
                 serverAddress,
                 CertPathAndKey(listOf(doormanCa.certificate, rootCaCert), doormanCa.keyPair.private),
@@ -186,7 +190,7 @@ class NodeRegistrationTest : IntegrationTest() {
 
     private fun applyNetworkParametersAndStart(networkParametersCmd: NetworkParametersCmd) {
         server?.close()
-        NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true), doormanConfig, revocationConfig).use {
+        NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig), makeTestDatabaseProperties(DOORMAN_DB_NAME), doormanConfig, revocationConfig).use {
             it.processNetworkParameters(networkParametersCmd)
         }
         server = startServer(startNetworkMap = true)

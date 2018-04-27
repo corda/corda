@@ -38,7 +38,6 @@ import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.createDevIntermediateCaCertPath
@@ -81,7 +80,8 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
 
 
     @Before
-    fun setUp() {
+    override fun setUp() {
+        super.setUp()
         dbName = random63BitValue().toString()
         timer = Timer()
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
@@ -90,7 +90,8 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
     }
 
     @After
-    fun tearDown() {
+    override fun tearDown() {
+        super.tearDown()
         timer.cancel()
     }
 
@@ -113,7 +114,7 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
     @Test
     fun `Signing service signs approved CSRs`() {
         //Start doorman server
-        NetworkManagementServer(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), doormanConfig, revocationConfig).use { server ->
+        NetworkManagementServer(makeTestDataSourceProperties(), makeTestDatabaseProperties(), doormanConfig, revocationConfig).use { server ->
             server.start(
                     hostAndPort = NetworkHostAndPort(HOST, 0),
                     csrCertPathAndKey = null,
@@ -124,7 +125,7 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
                 doReturn(ALICE_NAME).whenever(it).myLegalName
                 doReturn(URL("http://${doormanHostAndPort.host}:${doormanHostAndPort.port}")).whenever(it).compatibilityZoneURL
             }
-            val signingServiceStorage = DBSignedCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true)))
+            val signingServiceStorage = DBSignedCertificateRequestStorage(configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties()))
 
             val hsmSigner = givenSignerSigningAllRequests(signingServiceStorage)
             // Poll the database for approved requests

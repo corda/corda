@@ -51,4 +51,17 @@ DROP TABLE ${schema}.dummy_linear_states_v2 CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_mutual_exclusion CASCADE CONSTRAINTS
 DROP TABLE ${schema}.DATABASECHANGELOG CASCADE CONSTRAINTS
 DROP TABLE ${schema}.DATABASECHANGELOGLOCK CASCADE CONSTRAINTS
+DROP TABLE ${schema}.cert_revocation_request_AUD CASCADE CONSTRAINTS
+DROP TABLE ${schema}.cert_signing_request_AUD CASCADE CONSTRAINTS
+DROP TABLE ${schema}.network_map_AUD CASCADE CONSTRAINTS
+DROP TABLE ${schema}.REVINFO CASCADE CONSTRAINTS
+DROP TABLE ${schema}.cert_revocation_request CASCADE CONSTRAINTS
+DROP TABLE ${schema}.cert_data CASCADE CONSTRAINTS
+DROP TABLE ${schema}.cert_revocation_list CASCADE CONSTRAINTS
+DROP TABLE ${schema}.node_info CASCADE CONSTRAINTS
+DROP TABLE ${schema}.cert_signing_request CASCADE CONSTRAINTS
+DROP TABLE ${schema}.network_map CASCADE CONSTRAINTS
+DROP TABLE ${schema}.parameters_update CASCADE CONSTRAINTS
+DROP TABLE ${schema}.network_parameters CASCADE CONSTRAINTS
+DROP TABLE ${schema}.private_network CASCADE CONSTRAINTS
 DROP SEQUENCE ${schema}.hibernate_sequence

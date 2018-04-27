@@ -1,6 +1,7 @@
 package com.r3.corda.networkmanage.doorman
 
-import com.r3.corda.networkmanage.common.makeTestDataSourceProperties
+import com.r3.corda.networkmanage.common.DOORMAN_DB_NAME
+import com.r3.corda.networkmanage.common.networkMapInMemoryH2DataSourceConfig
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.random63BitValue
@@ -24,6 +25,7 @@ import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
+import net.corda.testing.node.internal.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.*
 import org.junit.Assert.assertEquals
@@ -37,7 +39,7 @@ class NetworkParametersUpdateTest : IntegrationTest() {
         @ClassRule
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
-                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName(), DOORMAN_DB_NAME)
     }
 
     @Rule
@@ -50,13 +52,14 @@ class NetworkParametersUpdateTest : IntegrationTest() {
     private lateinit var rootCaCert: X509Certificate
     private lateinit var doormanCa: CertificateAndKeyPair
     private lateinit var networkMapCa: CertificateAndKeyPair
-    private lateinit var dbName: String
+    //for normal integration tests (not against standalone db) to create a unique db name for each tests against H2
+    private lateinit var dbNamePostfix: String
 
     private var server: NetworkManagementServer? = null
 
     @Before
     fun init() {
-        dbName = random63BitValue().toString()
+        dbNamePostfix = random63BitValue().toString()
         val (rootCa, doormanCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
         this.doormanCa = doormanCa
@@ -149,7 +152,7 @@ class NetworkParametersUpdateTest : IntegrationTest() {
 
     private fun startServer(startNetworkMap: Boolean = true): NetworkManagementServer {
         val doormanConfig = DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis)
-        val server = NetworkManagementServer(makeTestDataSourceProperties(dbName), DatabaseConfig(runMigration = true), doormanConfig, null)
+        val server = NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig), DatabaseConfig(runMigration = true), doormanConfig, null)
         server.start(
                 serverAddress,
                 CertPathAndKey(listOf(doormanCa.certificate, rootCaCert), doormanCa.keyPair.private),
@@ -168,7 +171,7 @@ class NetworkParametersUpdateTest : IntegrationTest() {
     private fun applyNetworkParametersAndStart(networkParametersCmd: NetworkParametersCmd) {
         server?.close()
         NetworkManagementServer(
-                makeTestDataSourceProperties(dbName),
+                makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig),
                 DatabaseConfig(runMigration = true),
                 DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis),
                 null).use {

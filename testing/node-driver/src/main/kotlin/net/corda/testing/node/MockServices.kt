@@ -37,9 +37,6 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.node.services.config.ConfigHelper
-import net.corda.node.services.config.configOf
-import net.corda.node.services.config.parseToDbSchemaFriendlyName
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.schema.HibernateObserver
@@ -50,16 +47,9 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.database.DatabaseConstants
-import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_CLASSNAME
-import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_PASSWORD
-import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_URL
-import net.corda.testing.database.DatabaseConstants.DATA_SOURCE_USER
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
-import net.corda.testing.node.internal.MockKeyManagementService
-import net.corda.testing.node.internal.MockTransactionStorage
-import net.corda.testing.node.internal.makeTestDatabaseProperties
+import net.corda.testing.node.internal.*
 import net.corda.testing.services.MockAttachmentStorage
 import java.security.KeyPair
 import java.sql.Connection
@@ -91,24 +81,24 @@ open class MockServices private constructor(
     companion object {
         /**
          * Make properties appropriate for creating a DataSource for unit tests.
+         * Defaults configuration of in-memory H2 instance. If 'databaseProvider' system property is set then creates
+         * a config from the relevant config file is present in resources folder (used to parametrize test to run against a remote database).
          *
-         * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.  Defaults to a random string.
-         * @param nodeNameExtension Provides additional name extension for the "instance" of in-memory database to provide uniqueness when running unit tests against H2 db.
-         * @param configSupplier returns [Config] with dataSourceProperties entry.
+         * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.
+         * Defaults to a random string. Passed to [configSupplier] method.
+         * @param nodeNameExtension Provides additional name extension for [configSupplier].
+         * @param configSupplier Returns [Config] with dataSourceProperties, invoked with [nodeName] and [nodeNameExtension] parameters.
+         * Defaults to configuration created when 'databaseProvider' system property is set.
          */
         // TODO: Can we use an X509 principal generator here?
         @JvmStatic
-        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString(), nodeNameExtension: String? = null,
+        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString(),
+                                         nodeNameExtension: String? = null,
                                          configSupplier: (String, String?) -> Config = ::databaseProviderDataSourceConfig): Properties {
-            val config = configSupplier(nodeName, nodeNameExtension)
-            val props = Properties()
-            props.setProperty("dataSourceClassName", config.getString("dataSourceProperties.dataSourceClassName"))
-            props.setProperty("dataSource.url", config.getString("dataSourceProperties.dataSource.url"))
-            props.setProperty("dataSource.user", config.getString("dataSourceProperties.dataSource.user"))
-            props.setProperty("dataSource.password", config.getString("dataSourceProperties.dataSource.password"))
-            props["autoCommit"] = false
-            return props
+            return makeTestDataSourceProperties(nodeName, nodeNameExtension, configSupplier, ::inMemoryH2DataSourceConfig)
         }
+
+
 
         /**
          * Makes database and mock services appropriate for unit tests.
@@ -318,54 +308,4 @@ fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serv
         }
     }
     return MockAppServiceHubImpl(serviceHub, serviceConstructor).serviceInstance
-}
-
-/**
- * Reads database and dataSource configuration from a file denoted by 'databaseProvider' system property,
- * overwitten by system properties and defaults to H2 in memory db.
- * @param nodeName Reflects the "instance" of the database username/schema, the value will be used to replace ${custom.nodeOrganizationName} placeholder
- * if the placeholder is present in config.
- * @param postfix Additional postix added to database "instance" name in case config defaults to H2 in memory database.
- */
-fun databaseProviderDataSourceConfig(nodeName: String? = null, postfix: String? = null): Config {
-
-    val parseOptions = ConfigParseOptions.defaults()
-
-    //read overrides from command line (passed by Gradle as system properties)
-    val systemConfigOverride = ConfigFactory.parseMap(System.getProperties().filterKeys { (it as String).startsWith(ConfigHelper.CORDA_PROPERTY_PREFIX) }
-            .mapKeys { (it.key as String).removePrefix(ConfigHelper.CORDA_PROPERTY_PREFIX) }
-            .filterKeys { listOf(DATA_SOURCE_URL, DATA_SOURCE_CLASSNAME, DATA_SOURCE_USER, DATA_SOURCE_PASSWORD).contains(it) })
-
-    //read from db vendor specific configuration file
-    val databaseConfig = ConfigFactory.parseResources(System.getProperty("custom.databaseProvider") + ".conf", parseOptions.setAllowMissing(true))
-    val fixedOverride = ConfigFactory.parseString("baseDirectory = \"\"")
-
-    //implied property custom.nodeOrganizationName to fill the potential placeholders in db schema/ db user properties
-    val nodeOrganizationNameConfig = if (nodeName != null) configOf("custom.nodeOrganizationName" to parseToDbSchemaFriendlyName(nodeName)) else ConfigFactory.empty()
-
-    //defaults to H2
-    //for H2 the same db instance runs for all integration tests, so adding additional variable postfix create a unique database each time
-    val defaultConfig = inMemoryH2DataSourceConfig(nodeName, postfix)
-
-    return systemConfigOverride.withFallback(databaseConfig)
-            .withFallback(fixedOverride)
-            .withFallback(nodeOrganizationNameConfig)
-            .withFallback(defaultConfig)
-            .resolve()
-}
-
-/**
- * Creates data source configuration for in memory H2 as it would be specified in reference.conf 'datasource' snippet.
- * @param nodeName Reflects the "instance" of the database username/schema
- * @param postfix Additional postix added to database "instance" name to add uniqueness when running integration tests.
- */
-fun inMemoryH2DataSourceConfig(nodeName: String? = null, postfix: String? = null) : Config {
-    val nodeName = nodeName ?: SecureHash.randomSHA256().toString()
-    val h2InstanceName = if (postfix != null) nodeName + "_" + postfix else nodeName
-
-    return ConfigFactory.parseMap(mapOf(
-            DatabaseConstants.DATA_SOURCE_CLASSNAME to "org.h2.jdbcx.JdbcDataSource",
-            DatabaseConstants.DATA_SOURCE_URL to "jdbc:h2:mem:${h2InstanceName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE",
-            DatabaseConstants.DATA_SOURCE_USER to "sa",
-            DatabaseConstants.DATA_SOURCE_PASSWORD to ""))
 }

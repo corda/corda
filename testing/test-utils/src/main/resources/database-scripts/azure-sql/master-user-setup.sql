@@ -31,3 +31,4 @@ CREATE LOGIN RAFTNotaryService_1 WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN RAFTNotaryService_2 WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN Regulator WITH PASSWORD = 'yourStrong(!)Password';
 CREATE LOGIN RegulatorA WITH PASSWORD = 'yourStrong(!)Password';
+CREATE LOGIN doorman WITH PASSWORD = 'yourStrong(!)Password';
