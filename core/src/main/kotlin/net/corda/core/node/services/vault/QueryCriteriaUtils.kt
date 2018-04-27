@@ -57,12 +57,21 @@ enum class AggregateFunctionType {
 
 @CordaSerializable
 sealed class CriteriaExpression<O, out T> {
+
+    open fun entityClass(): Class<O> {
+        return resolveEnclosingObjectFromExpression(this)
+    }
+
     data class BinaryLogical<O>(val left: CriteriaExpression<O, Boolean>, val right: CriteriaExpression<O, Boolean>, val operator: BinaryLogicalOperator) : CriteriaExpression<O, Boolean>()
     data class Not<O>(val expression: CriteriaExpression<O, Boolean>) : CriteriaExpression<O, Boolean>()
     data class ColumnPredicateExpression<O, C>(val column: Column<O, C>, val predicate: ColumnPredicate<C>) : CriteriaExpression<O, Boolean>()
     data class AggregateFunctionExpression<O, C>(val column: Column<O, C>, val predicate: ColumnPredicate<C>,
                                                  val groupByColumns: List<Column<O, C>>?,
-                                                 val orderBy: Sort.Direction?) : CriteriaExpression<O, Boolean>()
+                                                 val orderBy: Sort.Direction?,
+                                                 private val entityClass: Class<O> = resolveEnclosingObjectFromColumn(column)) : CriteriaExpression<O, Boolean>() {
+
+        override fun entityClass() = entityClass
+    }
 }
 
 @CordaSerializable
@@ -219,8 +228,8 @@ object Builder {
 
     fun <R> Field.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column<Any, R>(this), predicate)
 
-    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<O, R>>? = null, orderBy: Sort.Direction? = null)
-            = CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy)
+    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<O, R>>? = null, orderBy: Sort.Direction? = null, entityClass: Class<O>? = null)
+            = entityClass?.let { CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy, it) } ?: CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy)
 
     fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null)
             = CriteriaExpression.AggregateFunctionExpression(Column<Any, R>(this), predicate, groupByColumns, orderBy)
@@ -297,8 +306,8 @@ object Builder {
     fun Field.notNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.NOT_NULL))
 
     /** aggregate functions */
-    fun <O, R> KProperty1<O, R?>.sum(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
-            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByColumns?.map { Column(it) }, orderBy)
+    inline fun <reified O, R> KProperty1<O, R?>.sum(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByColumns?.map { Column(it) }, orderBy, O::class.java)
 
     @JvmStatic
     @JvmOverloads

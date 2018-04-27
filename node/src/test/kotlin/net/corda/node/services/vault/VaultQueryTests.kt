@@ -20,6 +20,7 @@ import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -29,11 +30,11 @@ import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
 import net.corda.testing.internal.vault.DummyLinearContract
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
-import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.*
 import org.junit.rules.ExpectedException
@@ -186,6 +187,20 @@ class VaultQueryTests {
 
     /** Generic Query tests
     (combining both FungibleState and LinearState contract types) */
+
+    @Test
+    fun `criteria with field from mapped superclass`() {
+        database.transaction {
+            val sum = builder {
+                SampleCashSchemaV2.PersistentCashState::quantity.sum(
+                        groupByColumns = listOf(SampleCashSchemaV2.PersistentCashState::currency),
+                        orderBy = Sort.Direction.ASC
+                )
+            }
+            val criteria = VaultCustomQueryCriteria(sum)
+            vaultService.queryBy<FungibleAsset<*>>(criteria)
+        }
+    }
 
     @Test
     fun `unconsumed states simple`() {
