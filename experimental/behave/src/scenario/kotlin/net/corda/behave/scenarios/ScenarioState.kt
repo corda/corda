@@ -1,7 +1,6 @@
 package net.corda.behave.scenarios
 
 import cucumber.api.java.After
-import net.corda.behave.logging.getLogger
 import net.corda.behave.network.Network
 import net.corda.behave.node.Node
 import net.corda.core.messaging.CordaRPCOps
@@ -9,8 +8,6 @@ import org.assertj.core.api.Assertions.assertThat
 import java.time.Duration
 
 class ScenarioState {
-
-    private val log = getLogger<ScenarioState>()
 
     private val nodes = mutableListOf<Node.Builder>()
 

@@ -1,9 +1,9 @@
 package net.corda.behave.scenarios.helpers
 
-import net.corda.behave.minutes
 import net.corda.behave.process.JarCommand
 import net.corda.behave.scenarios.ScenarioState
 import net.corda.core.internal.div
+import net.corda.core.utilities.minutes
 
 class Startup(state: ScenarioState) : Substeps(state) {
 
