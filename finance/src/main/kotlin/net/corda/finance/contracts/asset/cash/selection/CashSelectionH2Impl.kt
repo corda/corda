@@ -22,7 +22,7 @@ class CashSelectionH2Impl : AbstractCashSelection() {
         return metadata.driverName == JDBC_DRIVER_NAME
     }
 
-    override fun toString() = "${this::class.java} for $JDBC_DRIVER_NAME"
+    override fun toString() = "${this::class.qualifiedName} for '$JDBC_DRIVER_NAME'"
 
     //       We are using an H2 specific means of selecting a minimum set of rows that match a request amount of coins:
     //       1) There is no standard SQL mechanism of calculating a cumulative total on a field and restricting row selection on the
