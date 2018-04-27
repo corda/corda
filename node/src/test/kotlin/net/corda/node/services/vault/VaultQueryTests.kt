@@ -191,14 +191,13 @@ class VaultQueryTests {
     @Test
     fun `criteria with field from mapped superclass`() {
         database.transaction {
-            val sum = builder {
+            val expression = builder {
                 SampleCashSchemaV2.PersistentCashState::quantity.sum(
                         groupByColumns = listOf(SampleCashSchemaV2.PersistentCashState::currency),
                         orderBy = Sort.Direction.ASC
                 )
             }
-            val criteria = VaultCustomQueryCriteria(sum)
-            vaultService.queryBy<FungibleAsset<*>>(criteria)
+            vaultService.queryBy<FungibleAsset<*>>(expression.toCustomCriteria())
         }
     }
 

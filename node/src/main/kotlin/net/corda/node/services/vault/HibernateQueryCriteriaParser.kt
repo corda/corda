@@ -400,7 +400,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         log.trace { "Parsing VaultCustomQueryCriteria: $criteria" }
 
         val predicateSet = mutableSetOf<Predicate>()
-        val entityClass = criteria.expression.entityClass()
+        val entityClass = criteria.entityClass
 
         try {
             val entityRoot = criteriaQuery.from(entityClass)

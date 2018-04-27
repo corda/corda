@@ -3,7 +3,9 @@
 package net.corda.core.node.services.vault
 
 import net.corda.core.DoNotImplement
+import net.corda.core.contracts.ContractState
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Field
@@ -57,21 +59,12 @@ enum class AggregateFunctionType {
 
 @CordaSerializable
 sealed class CriteriaExpression<O, out T> {
-
-    open fun entityClass(): Class<O> {
-        return resolveEnclosingObjectFromExpression(this)
-    }
-
     data class BinaryLogical<O>(val left: CriteriaExpression<O, Boolean>, val right: CriteriaExpression<O, Boolean>, val operator: BinaryLogicalOperator) : CriteriaExpression<O, Boolean>()
     data class Not<O>(val expression: CriteriaExpression<O, Boolean>) : CriteriaExpression<O, Boolean>()
     data class ColumnPredicateExpression<O, C>(val column: Column<O, C>, val predicate: ColumnPredicate<C>) : CriteriaExpression<O, Boolean>()
     data class AggregateFunctionExpression<O, C>(val column: Column<O, C>, val predicate: ColumnPredicate<C>,
                                                  val groupByColumns: List<Column<O, C>>?,
-                                                 val orderBy: Sort.Direction?,
-                                                 private val entityClass: Class<O> = resolveEnclosingObjectFromColumn(column)) : CriteriaExpression<O, Boolean>() {
-
-        override fun entityClass() = entityClass
-    }
+                                                 val orderBy: Sort.Direction?) : CriteriaExpression<O, Boolean>()
 }
 
 @CordaSerializable
@@ -102,6 +95,10 @@ fun <O, R> resolveEnclosingObjectFromExpression(expression: CriteriaExpression<O
 
 fun <O, C> resolveEnclosingObjectFromColumn(column: Column<O, C>): Class<O> = uncheckedCast(column.declaringClass)
 fun <O, C> getColumnName(column: Column<O, C>): String = column.name
+
+inline fun <reified L : PersistentState> CriteriaExpression<L, Boolean>.toCustomCriteria(status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED, contractStateTypes: Set<Class<out ContractState>>? = null): QueryCriteria.VaultCustomQueryCriteria<L> {
+    return QueryCriteria.VaultCustomQueryCriteria.of(this, status, contractStateTypes)
+}
 
 /**
  *  Pagination and Ordering
@@ -228,8 +225,8 @@ object Builder {
 
     fun <R> Field.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column<Any, R>(this), predicate)
 
-    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<O, R>>? = null, orderBy: Sort.Direction? = null, entityClass: Class<O>? = null)
-            = entityClass?.let { CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy, it) } ?: CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy)
+    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<O, R>>? = null, orderBy: Sort.Direction? = null)
+            = CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy)
 
     fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null)
             = CriteriaExpression.AggregateFunctionExpression(Column<Any, R>(this), predicate, groupByColumns, orderBy)
@@ -306,8 +303,8 @@ object Builder {
     fun Field.notNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.NOT_NULL))
 
     /** aggregate functions */
-    inline fun <reified O, R> KProperty1<O, R?>.sum(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
-            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByColumns?.map { Column(it) }, orderBy, O::class.java)
+    fun <O, R> KProperty1<O, R?>.sum(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByColumns?.map { Column(it) }, orderBy)
 
     @JvmStatic
     @JvmOverloads
