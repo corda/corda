@@ -5,13 +5,8 @@ import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.math.GroupElement
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
-import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1Integer
-import org.bouncycastle.asn1.DERNull
 import org.bouncycastle.asn1.DLSequence
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
@@ -26,25 +21,15 @@ import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
-import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
 import org.bouncycastle.jce.spec.ECParameterSpec
-import org.bouncycastle.jce.spec.ECPrivateKeySpec
-import org.bouncycastle.jce.spec.ECPublicKeySpec
-import org.bouncycastle.math.ec.ECConstants
-import org.bouncycastle.math.ec.FixedPointCombMultiplier
-import org.bouncycastle.math.ec.WNafUtil
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
-import sun.security.ec.ECPublicKeyImpl
 import java.math.BigInteger
 import java.security.*
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 
 /**
  * This object controls and provides the available and supported signature schemes for Corda.
@@ -131,6 +116,7 @@ object Crypto {
 
     /** DLSequence (ASN1Sequence) for SHA512 truncated to 256 bits, used in SPHINCS-256 signature scheme. */
     @JvmField
+    @Deprecated("Intended for internal use only")
     val SHA512_256 = DLSequence(arrayOf(NISTObjectIdentifiers.id_sha512_256))
 
     /**
@@ -173,32 +159,6 @@ object Crypto {
     @JvmField
     val DEFAULT_SIGNATURE_SCHEME = EDDSA_ED25519_SHA512
 
-    /**
-     * Supported digital signature schemes.
-     * Note: Only the schemes added in this map will be supported (see [Crypto]).
-     */
-    private val signatureSchemeMap: Map<String, SignatureScheme> = listOf(
-            RSA_SHA256,
-            ECDSA_SECP256K1_SHA256,
-            ECDSA_SECP256R1_SHA256,
-            EDDSA_ED25519_SHA512,
-            SPHINCS256_SHA256,
-            COMPOSITE_KEY
-    ).associateBy { it.schemeCodeName }
-
-    // Map of supported digital signature schemes associated by [SignatureScheme.schemeNumberID].
-    // SchemeNumberID is the scheme identifier attached to [SignatureMetadata].
-    private val signatureSchemeNumberIDMap: Map<Int, SignatureScheme> = supportedSignatureSchemes().associateBy { it.schemeNumberID }
-
-    /**
-     * Map of X.509 algorithm identifiers to signature schemes Corda recognises. See RFC 2459 for the format of
-     * algorithm identifiers.
-     */
-    private val algorithmMap: Map<AlgorithmIdentifier, SignatureScheme>
-            = (signatureSchemeMap.values.flatMap { scheme -> scheme.alternativeOIDs.map { Pair(it, scheme) } }
-            + signatureSchemeMap.values.map { Pair(it.signatureOID, it) })
-            .toMap()
-
     /** List of supported [SignatureScheme]s. */
     @JvmStatic
     fun supportedSignatureSchemes(): List<SignatureScheme> = ArrayList(signatureSchemeMap.values)
@@ -207,17 +167,6 @@ object Crypto {
     @JvmStatic
     fun findProvider(name: String): Provider {
         return providerMap[name] ?: throw IllegalArgumentException("Unrecognised provider: $name")
-    }
-
-    /**
-     * Normalise an algorithm identifier by converting [DERNull] parameters into a Kotlin null value.
-     */
-    private fun normaliseAlgorithmIdentifier(id: AlgorithmIdentifier): AlgorithmIdentifier {
-        return if (id.parameters is DERNull) {
-            AlgorithmIdentifier(id.algorithm, null)
-        } else {
-            id
-        }
     }
 
     /** Find supported [SignatureScheme] based on the [AlgorithmIdentifier] input. */
@@ -267,12 +216,6 @@ object Crypto {
     fun findSignatureScheme(key: PrivateKey): SignatureScheme {
         val keyInfo = PrivateKeyInfo.getInstance(key.encoded)
         return findSignatureScheme(keyInfo.privateKeyAlgorithm)
-    }
-
-    @JvmStatic
-    private fun findSignatureScheme(schemeNumberID: Int): SignatureScheme {
-        return signatureSchemeNumberIDMap[schemeNumberID]
-                ?: throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $schemeNumberID")
     }
 
     /**
@@ -518,11 +461,6 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(signatureScheme: SignatureScheme, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
-        require(isSupportedSignatureScheme(signatureScheme)) {
-            "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
-        }
-        if (signatureData.isEmpty()) throw IllegalArgumentException("Signature data is empty!")
-        if (clearData.isEmpty()) throw IllegalArgumentException("Clear data is empty, nothing to verify!")
         val verificationResult = isValid(signatureScheme, publicKey, signatureData, clearData)
         if (verificationResult) {
             return true
@@ -548,10 +486,13 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
-        require(transactionSignature.signatureMetadata.schemeNumberID in signatureSchemeNumberIDMap) { "Signature scheme with numberID: ${transactionSignature.signatureMetadata.schemeNumberID} is not supported"}
-        val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
-        val scheme: SignatureScheme = signatureSchemeNumberIDMap[transactionSignature.signatureMetadata.schemeNumberID]!!
-        return Crypto.doVerify(scheme, transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
+        val schemeAndSignableData = schemeAndSignableData(txId, transactionSignature)
+        return Crypto.doVerify(
+                schemeAndSignableData.first,
+                transactionSignature.by,
+                transactionSignature.bytes,
+                schemeAndSignableData.second.serialize().bytes
+        )
     }
 
     /**
@@ -569,12 +510,13 @@ object Crypto {
     @JvmStatic
     @Throws(SignatureException::class)
     fun isValid(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
-        val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
-        return isValid(
-                findSignatureScheme(transactionSignature.by),
+        val schemeAndSignableData = schemeAndSignableData(txId, transactionSignature)
+        return Crypto.isValid(
+                schemeAndSignableData.first,
                 transactionSignature.by,
                 transactionSignature.bytes,
-                signableData.serialize().bytes)
+                schemeAndSignableData.second.serialize().bytes
+        )
     }
 
     /**
@@ -600,7 +542,7 @@ object Crypto {
 
     /**
      * Method to verify a digital signature. In comparison to [doVerify] if the key and signature
-     * do not match it returns false rather than throwing an exception.
+     * do not match it returns false rather than throwing an exception, but otherwise they are similar.
      * Use this method if the signature scheme type is a-priori unknown.
      * @param signatureScheme a [SignatureScheme] object, retrieved from supported signature schemes, see [Crypto].
      * @param publicKey the signer's [PublicKey].
@@ -619,6 +561,8 @@ object Crypto {
         require(isSupportedSignatureScheme(signatureScheme)) {
             "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
+        require(signatureData.isNotEmpty()) { "Signature data is empty!" }
+        require(clearData.isNotEmpty()) { "Clear data is empty, nothing to verify!" }
         // Required for signatureSchemes that can support multiple key types/sizes, such as ECDSA (R1 and K1 curves).
         require (validatePublicKey(signatureScheme, publicKey)) { "Public key: ${publicKey.toStringShort()} is not valid" }
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
@@ -741,66 +685,6 @@ object Crypto {
         return deriveKeyPair(findSignatureScheme(privateKey), privateKey, seed)
     }
 
-    // Given the domain parameters, this routine deterministically generates an ECDSA key pair
-    // in accordance with X9.62 section 5.2.1 pages 26, 27.
-    private fun deriveKeyPairECDSA(parameterSpec: ECParameterSpec, privateKey: PrivateKey, seed: ByteArray): KeyPair {
-        // Compute HMAC(privateKey, seed).
-        val macBytes = deriveHMAC(privateKey, seed)
-        // Get the first EC curve fieldSized-bytes from macBytes.
-        // According to recommendations from the deterministic ECDSA rfc, see https://tools.ietf.org/html/rfc6979
-        // performing a simple modular reduction would induce biases that would be detrimental to security.
-        // Thus, the result is not reduced modulo q and similarly to BIP32, EC curve fieldSized-bytes are utilised.
-        val fieldSizeMacBytes = macBytes.copyOf(parameterSpec.curve.fieldSize / 8)
-
-        // Calculate value d for private key.
-        val deterministicD = BigInteger(1, fieldSizeMacBytes)
-
-        // Key generation checks follow the BC logic found in
-        // https://github.com/bcgit/bc-java/blob/master/core/src/main/java/org/bouncycastle/crypto/generators/ECKeyPairGenerator.java
-        // There is also an extra check to align with the BIP32 protocol, according to which
-        // if deterministicD >= order_of_the_curve the resulted key is invalid and we should proceed with another seed.
-        // TODO: We currently use SHA256(seed) when retrying, but BIP32 just skips a counter (i) that results to an invalid key.
-        //       Although our hashing approach seems reasonable, we should check if there are alternatives,
-        //       especially if we use counters as well.
-        if (deterministicD < ECConstants.TWO
-                || WNafUtil.getNafWeight(deterministicD) < parameterSpec.n.bitLength().ushr(2)
-                || deterministicD >= parameterSpec.n) {
-            // Instead of throwing an exception, we retry with SHA256(seed).
-            return deriveKeyPairECDSA(parameterSpec, privateKey, seed.sha256().bytes)
-        }
-        val privateKeySpec = ECPrivateKeySpec(deterministicD, parameterSpec)
-        val privateKeyD = BCECPrivateKey(privateKey.algorithm, privateKeySpec, BouncyCastleProvider.CONFIGURATION)
-
-        // Compute the public key by scalar multiplication.
-        // Note that BIP32 uses masterKey + mac_derived_key as the final private key and it consequently
-        // requires an extra point addition: master_public + mac_derived_public for the public part.
-        // In our model, the mac_derived_output, deterministicD, is not currently added to the masterKey and it
-        // it forms, by itself, the new private key, which in turn is used to compute the new public key.
-        val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, deterministicD)
-        // This is unlikely to happen, but we should check for point at infinity.
-        if (pointQ.isInfinity) {
-            // Instead of throwing an exception, we retry with SHA256(seed).
-            return deriveKeyPairECDSA(parameterSpec, privateKey, seed.sha256().bytes)
-        }
-        val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
-        val publicKeyD = BCECPublicKey(privateKey.algorithm, publicKeySpec, BouncyCastleProvider.CONFIGURATION)
-
-        return KeyPair(publicKeyD, privateKeyD)
-    }
-
-    // Deterministically generate an EdDSA key.
-    private fun deriveKeyPairEdDSA(privateKey: PrivateKey, seed: ByteArray): KeyPair {
-        // Compute HMAC(privateKey, seed).
-        val macBytes = deriveHMAC(privateKey, seed)
-
-        // Calculate key pair.
-        val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
-        val bytes = macBytes.copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
-        val privateKeyD = EdDSAPrivateKeySpec(bytes, params)
-        val publicKeyD = EdDSAPublicKeySpec(privateKeyD.a, params)
-        return KeyPair(EdDSAPublicKey(publicKeyD), EdDSAPrivateKey(privateKeyD))
-    }
-
     /**
      * Returns a key pair derived from the given [BigInteger] entropy. This is useful for unit tests
      * and other cases where you want hard-coded private keys.
@@ -828,58 +712,6 @@ object Crypto {
     @JvmStatic
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
-    // Custom key pair generator from entropy.
-    // The BigIntenger.toByteArray() uses the two's-complement representation.
-    // The entropy is transformed to a byte array in big-endian byte-order and
-    // only the first ed25519.field.getb() / 8 bytes are used.
-    private fun deriveEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
-        val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
-        val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
-        val priv = EdDSAPrivateKeySpec(bytes, params)
-        val pub = EdDSAPublicKeySpec(priv.a, params)
-        return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
-    }
-
-    // Custom key pair generator from an entropy required for various tests. It is similar to deriveKeyPairECDSA,
-    // but the accepted range of the input entropy is more relaxed:
-    // 2 <= entropy < N, where N is the order of base-point G.
-    private fun deriveECDSAKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
-        val parameterSpec = signatureScheme.algSpec as ECNamedCurveParameterSpec
-
-        // The entropy might be a negative number and/or out of range (e.g. PRNG output).
-        // In such cases we retry with hash(currentEntropy).
-        while (entropy < ECConstants.TWO || entropy >= parameterSpec.n) {
-            return deriveECDSAKeyPairFromEntropy(signatureScheme, BigInteger(1, entropy.toByteArray().sha256().bytes))
-        }
-
-        val privateKeySpec = ECPrivateKeySpec(entropy, parameterSpec)
-        val priv = BCECPrivateKey("EC", privateKeySpec, BouncyCastleProvider.CONFIGURATION)
-
-        val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, entropy)
-        while (pointQ.isInfinity) {
-            // Instead of throwing an exception, we retry with hash(entropy).
-            return deriveECDSAKeyPairFromEntropy(signatureScheme, BigInteger(1, entropy.toByteArray().sha256().bytes))
-        }
-        val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
-        val pub = BCECPublicKey("EC", publicKeySpec, BouncyCastleProvider.CONFIGURATION)
-
-        return KeyPair(pub, priv)
-    }
-
-    // Compute the HMAC-SHA512 using a privateKey as the MAC_key and a seed ByteArray.
-    private fun deriveHMAC(privateKey: PrivateKey, seed: ByteArray): ByteArray {
-        // Compute hmac(privateKey, seed).
-        val mac = Mac.getInstance("HmacSHA512", cordaBouncyCastleProvider)
-        val keyData = when (privateKey) {
-            is BCECPrivateKey -> privateKey.d.toByteArray()
-            is EdDSAPrivateKey -> privateKey.geta()
-            else -> throw InvalidKeyException("Key type ${privateKey.algorithm} is not supported for deterministic key derivation")
-        }
-        val key = SecretKeySpec(keyData, "HmacSHA512")
-        mac.init(key)
-        return mac.doFinal(seed)
-    }
-
     /**
      * Check if a point's coordinates are on the expected curve to avoid certain types of ECC attacks.
      * Point-at-infinity is not permitted as well.
@@ -906,45 +738,10 @@ object Crypto {
         }
     }
 
-    // Return true if EdDSA publicKey is point at infinity.
-    // For EdDSA a custom function is required as it is not supported by the I2P implementation.
-    private fun isEdDSAPointAtInfinity(publicKey: EdDSAPublicKey): Boolean {
-        return publicKey.a.toP3() == (EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3)
-    }
-
     /** Check if the requested [SignatureScheme] is supported by the system. */
     @JvmStatic
     fun isSupportedSignatureScheme(signatureScheme: SignatureScheme): Boolean {
         return signatureScheme.schemeCodeName in signatureSchemeMap
-    }
-
-    // Validate a key, by checking its algorithmic params.
-    private fun validateKey(signatureScheme: SignatureScheme, key: Key): Boolean {
-        return when (key) {
-            is PublicKey -> validatePublicKey(signatureScheme, key)
-            is PrivateKey -> validatePrivateKey(signatureScheme, key)
-            else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
-        }
-    }
-
-    // Check if a public key satisfies algorithm specs (for ECC: key should lie on the curve and not being point-at-infinity).
-    private fun validatePublicKey(signatureScheme: SignatureScheme, key: PublicKey): Boolean {
-        return when (key) {
-            is BCECPublicKey, is EdDSAPublicKey -> publicKeyOnCurve(signatureScheme, key)
-            is BCRSAPublicKey, is BCSphincs256PublicKey -> true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
-            is ECPublicKeyImpl -> publicKeyOnCurve(signatureScheme, decodePublicKey(key.encoded)) // If Java's default EC implementation, convert to BC.
-            else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
-        }
-    }
-
-    // Check if a private key satisfies algorithm specs.
-    private fun validatePrivateKey(signatureScheme: SignatureScheme, key: PrivateKey): Boolean {
-        return when (key) {
-            is BCECPrivateKey -> key.parameters == signatureScheme.algSpec
-            is EdDSAPrivateKey -> key.params == signatureScheme.algSpec
-            is BCRSAPrivateKey, is BCSphincs256PrivateKey -> true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
-            else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
-        }
     }
 
     /**
@@ -994,23 +791,6 @@ object Crypto {
             is BCSphincs256PrivateKey -> key
             is EdDSAPrivateKey -> key
             else -> decodePrivateKey(key.encoded)
-        }
-    }
-
-    /**
-     *  Get the hash value that is actually signed.
-     *  The txId is returned when [partialMerkleTree] is null,
-     *  else the root of the tree is computed and returned.
-     *  Note that the hash of the txId should be a leaf in the tree, not the txId itself.
-     */
-    private fun originalSignedHash(txId: SecureHash, partialMerkleTree: PartialMerkleTree?): SecureHash {
-        return if (partialMerkleTree != null) {
-            val usedHashes = mutableListOf<SecureHash>()
-            val root = PartialMerkleTree.rootAndUsedHashes(partialMerkleTree.root, usedHashes)
-            require(txId.sha256() in usedHashes) { "Transaction with id:$txId is not a leaf in the provided partial Merkle tree" }
-            root
-        } else {
-            txId
         }
     }
 
