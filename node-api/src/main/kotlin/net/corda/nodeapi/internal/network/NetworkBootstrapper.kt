@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.network
 
 import com.typesafe.config.ConfigFactory
 import net.corda.cordform.CordformNode
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
@@ -16,10 +17,11 @@ import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.internal.ContractsJar
+import net.corda.nodeapi.internal.ContractsJarFile
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
-import net.corda.nodeapi.internal.scanJarForContracts
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
@@ -78,7 +80,7 @@ class NetworkBootstrapper {
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
             println("Generating contract implementations whitelist")
-            val newWhitelist = generateWhitelist(existingNetParams, directory / EXCLUDE_WHITELIST_FILE_NAME, cordappJars)
+            val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.map(::ContractsJarFile))
             val netParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs)
             println("${if (existingNetParams == null) "New" else "Updated"} $netParams")
             println("Bootstrapping complete!")
@@ -228,29 +230,32 @@ class NetworkBootstrapper {
         return networkParameters
     }
 
-    private fun generateWhitelist(networkParameters: NetworkParameters?,
-                                  excludeWhitelistFile: Path,
-                                  cordappJars: List<Path>): Map<String, List<AttachmentId>> {
+    @VisibleForTesting
+    internal fun generateWhitelist(networkParameters: NetworkParameters?,
+                                   excludeContracts: List<ContractClassName>,
+                                   cordappJars: List<ContractsJar>): Map<ContractClassName, List<AttachmentId>> {
         val existingWhitelist = networkParameters?.whitelistedContractImplementations ?: emptyMap()
 
-        val excludeContracts = readExcludeWhitelist(excludeWhitelistFile)
         if (excludeContracts.isNotEmpty()) {
             println("Exclude contracts from whitelist: ${excludeContracts.joinToString()}")
+            existingWhitelist.keys.forEach {
+                require(it !in excludeContracts) { "$it is already part of the existing whitelist and cannot be excluded." }
+            }
         }
 
-        val newWhiteList = cordappJars.flatMap { cordappJar ->
-            val jarHash = cordappJar.hash
-            scanJarForContracts(cordappJar).map { contract -> contract to jarHash }
-        }.filter { (contractClassName, _) -> contractClassName !in excludeContracts }.toMap()
+        val newWhiteList = cordappJars
+                .flatMap { jar -> (jar.scan() - excludeContracts).map { it to jar.hash } }
+                .toMultiMap()
 
-        return (newWhiteList.keys + existingWhitelist.keys).map { contractClassName ->
-            val existing = existingWhitelist[contractClassName] ?: emptyList()
-            val newHash = newWhiteList[contractClassName]
-            contractClassName to (if (newHash == null || newHash in existing) existing else existing + newHash)
-        }.toMap()
+        return (newWhiteList.keys + existingWhitelist.keys).associateBy({ it }) {
+            val existingHashes = existingWhitelist[it] ?: emptyList()
+            val newHashes = newWhiteList[it] ?: emptyList()
+            (existingHashes + newHashes).distinct()
+        }
     }
 
-    private fun readExcludeWhitelist(file: Path): List<String> {
+    private fun readExcludeWhitelist(directory: Path): List<String> {
+        val file = directory / EXCLUDE_WHITELIST_FILE_NAME
         return if (file.exists()) file.readAllLines().map(String::trim) else emptyList()
     }
 

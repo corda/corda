@@ -57,7 +57,8 @@ Java
 3. Toggle "Accept License Agreement"
 4. Click the download link for jdk-8uXXX-windows-x64.exe (where "XXX" is the latest minor version number)
 5. Download and run the executable to install Java (use the default settings)
-6. Open a new command prompt and run ``java -version`` to test that Java is installed correctly
+6. Add Java to the PATH environment variable by following the instructions at https://docs.oracle.com/javase/7/docs/webnotes/install/windows/jdk-installation-windows.html#path
+7. Open a new command prompt and run ``java -version`` to test that Java is installed correctly
 
 Git
 ^^^

@@ -131,19 +131,21 @@ class NotaryFlow {
      */
     // See AbstractStateReplacementFlow.Acceptor for why it's Void?
     abstract class Service(val otherSideSession: FlowSession, val service: TrustedAuthorityNotaryService) : FlowLogic<Void?>() {
+        companion object {
+            // TODO: Determine an appropriate limit and also enforce in the network parameters and the transaction builder.
+            private const val maxAllowedInputs = 10_000
+        }
 
         @Suspendable
         override fun call(): Void? {
             check(serviceHub.myInfo.legalIdentities.any { serviceHub.networkMapCache.isNotary(it) }) {
                 "We are not a notary on the network"
             }
-
             val requestPayload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
             var txId: SecureHash? = null
             try {
                 val parts = validateRequest(requestPayload)
                 txId = parts.id
-                checkNotary(parts.notary)
                 service.validateTimeWindow(parts.timestamp)
                 service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature)
                 signTransactionAndSendResponse(txId)
@@ -151,6 +153,16 @@ class NotaryFlow {
                 throw NotaryException(e.error, txId)
             }
             return null
+        }
+
+        /** Checks whether the number of input states is too large. */
+        protected fun checkInputs(inputs: List<StateRef>) {
+            if (inputs.size > maxAllowedInputs) {
+                val error = NotaryError.TransactionInvalid(
+                        IllegalArgumentException("A transaction cannot have more than $maxAllowedInputs inputs, received: ${inputs.size}")
+                )
+                throw NotaryInternalException(error)
+            }
         }
 
         /**
