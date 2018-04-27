@@ -13,7 +13,7 @@ import java.util.*
 class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
 
     companion object {
-        val JDBC_DRIVER_NAME = "PostgreSQL JDBC Driver"
+        const val JDBC_DRIVER_NAME = "PostgreSQL JDBC Driver"
         private val log = contextLogger()
     }
 
@@ -21,7 +21,7 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
         return metadata.driverName == JDBC_DRIVER_NAME
     }
 
-    override fun toString() = "${this::class.java} for $JDBC_DRIVER_NAME"
+    override fun toString() = "${this::class.java} for '$JDBC_DRIVER_NAME'"
 
     //       This is using PostgreSQL window functions for selecting a minimum set of rows that match a request amount of coins:
     //       1) This may also be possible with user-defined functions (e.g. using PL/pgSQL)

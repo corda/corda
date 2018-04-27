@@ -23,5 +23,5 @@ class CashSelectionMySQLImpl : AbstractCashSelection() {
         TODO("MySQL cash selection not implemented")
     }
 
-    override fun toString() = "${this::class.java} for ${CashSelectionH2Impl.JDBC_DRIVER_NAME}"
+    override fun toString() = "${this::class.java} for '$JDBC_DRIVER_NAME'"
 }
