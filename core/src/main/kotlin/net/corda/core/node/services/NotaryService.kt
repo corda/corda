@@ -17,6 +17,7 @@ abstract class NotaryService : SingletonSerializeAsToken() {
     companion object {
         @Deprecated("No longer used")
         const val ID_PREFIX = "corda.notary."
+
         @Deprecated("No longer used")
         fun constructId(validating: Boolean, raft: Boolean = false, bft: Boolean = false, custom: Boolean = false): String {
             require(Booleans.countTrue(raft, bft, custom) <= 1) { "At most one of raft, bft or custom may be true" }
@@ -79,9 +80,9 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
      * A NotaryException is thrown if any of the states have been consumed by a different transaction. Note that
      * this method does not throw an exception when input states are present multiple times within the transaction.
      */
-    fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party, requestSignature: NotarisationRequestSignature) {
+    fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?) {
         try {
-            uniquenessProvider.commit(inputs, txId, caller, requestSignature)
+            uniquenessProvider.commit(inputs, txId, caller, requestSignature, timeWindow)
         } catch (e: NotaryInternalException) {
             if (e.error is NotaryError.Conflict) {
                 val conflicts = inputs.filterIndexed { _, stateRef ->
