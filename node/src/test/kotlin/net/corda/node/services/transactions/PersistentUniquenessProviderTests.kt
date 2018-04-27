@@ -65,15 +65,17 @@ class PersistentUniquenessProviderTests {
             val inputState = generateStateRef()
 
             val inputs = listOf(inputState)
-            provider.commit(inputs, txID, identity, requestSignature)
+            val firstTxId = txID
+            provider.commit(inputs, firstTxId, identity, requestSignature)
 
+            val secondTxId = SecureHash.randomSHA256()
             val ex = assertFailsWith<NotaryInternalException> {
-                provider.commit(inputs, txID, identity, requestSignature)
+                provider.commit(inputs, secondTxId, identity, requestSignature)
             }
             val error = ex.error as NotaryError.Conflict
 
             val conflictCause = error.consumedStates[inputState]!!
-            assertEquals(conflictCause.hashOfTransactionId, txID.sha256())
+            assertEquals(conflictCause.hashOfTransactionId, firstTxId.sha256())
         }
     }
 }

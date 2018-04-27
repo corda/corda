@@ -25,11 +25,13 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
@@ -124,6 +126,30 @@ class ValidatingNotaryServiceTests {
         val future = runNotaryClient(stx)
         val signatures = future.getOrThrow()
         signatures.forEach { it.verify(stx.id) }
+    }
+
+    @Test
+    fun `should re-sign a transaction with an expired time-window`() {
+        val stx = run {
+            val inputState = issueState(aliceNode.services, alice)
+            val tx = TransactionBuilder(notary)
+                    .addInputState(inputState)
+                    .addCommand(dummyCommand(alice.owningKey))
+                    .setTimeWindow(Instant.now(), 30.seconds)
+            aliceNode.services.signInitialTransaction(tx)
+        }
+
+        val sig1 = runNotaryClient(stx).getOrThrow().single()
+        assertEquals(sig1.by, notary.owningKey)
+        assertTrue(sig1.isValid(stx.id))
+
+        mockNet.nodes.forEach {
+            val nodeClock = (it.started!!.services.clock as TestClock)
+            nodeClock.advanceBy(Duration.ofDays(1))
+        }
+
+        val sig2 = runNotaryClient(stx).getOrThrow().single()
+        assertEquals(sig2.by, notary.owningKey)
     }
 
     @Test

@@ -12,16 +12,25 @@ import io.atomix.copycat.server.StateMachine
 import io.atomix.copycat.server.storage.snapshot.SnapshotReader
 import io.atomix.copycat.server.storage.snapshot.SnapshotWriter
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.StateConsumptionDetails
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.isConsumedByTheSameTx
+import net.corda.core.internal.validateTimeWindow
 import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.contextLogger
-import net.corda.node.services.transactions.RaftUniquenessProvider.Companion.encoded
-import net.corda.node.services.transactions.RaftUniquenessProvider.Companion.parseStateRef
+import net.corda.core.utilities.debug
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding
 import java.time.Clock
 
 /**
@@ -31,8 +40,8 @@ import java.time.Clock
  * State re-synchronisation is achieved by replaying the command log to the new (or re-joining) cluster member.
  */
 class RaftTransactionCommitLog<E, EK>(
-        val db: CordaPersistence,
-        val nodeClock: Clock,
+        private val db: CordaPersistence,
+        private val nodeClock: Clock,
         createMap: () -> AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, E, EK>
 ) : StateMachine(), Snapshottable {
     object Commands {
@@ -40,8 +49,9 @@ class RaftTransactionCommitLog<E, EK>(
                 val states: List<StateRef>,
                 val txId: SecureHash,
                 val requestingParty: String,
-                val requestSignature: ByteArray
-        ) : Command<Map<StateRef, SecureHash>> {
+                val requestSignature: ByteArray,
+                val timeWindow: TimeWindow? = null
+        ) : Command<NotaryError?> {
             override fun compaction(): Command.CompactionMode {
                 // The FULL compaction mode retains the command in the log until it has been stored and applied on all
                 // servers in the cluster. Once the commit has been applied to a state machine and closed it may be
@@ -62,25 +72,38 @@ class RaftTransactionCommitLog<E, EK>(
     private val map = db.transaction { createMap() }
 
     /** Commits the input states for the transaction as specified in the given [Commands.CommitTransaction]. */
-    fun commitTransaction(raftCommit: Commit<Commands.CommitTransaction>): Map<StateRef, SecureHash> {
+    fun commitTransaction(raftCommit: Commit<Commands.CommitTransaction>): NotaryError? {
         raftCommit.use {
             val index = it.index()
-            val conflicts = LinkedHashMap<StateRef, SecureHash>()
-            db.transaction {
+            return db.transaction {
                 val commitCommand = raftCommit.command()
                 logRequest(commitCommand)
                 val states = commitCommand.states
                 val txId = commitCommand.txId
                 log.debug("State machine commit: storing entries with keys (${states.joinToString()})")
+                val conflictingStates = LinkedHashMap<StateRef, StateConsumptionDetails>()
                 for (state in states) {
-                    map[state]?.let { conflicts[state] = it.second }
+                    map[state]?.let { conflictingStates[state] = StateConsumptionDetails(it.second.sha256()) }
                 }
-                if (conflicts.isEmpty()) {
-                    val entries = states.map { it to Pair(index, txId) }.toMap()
-                    map.putAll(entries)
+                if (conflictingStates.isNotEmpty()) {
+                    if (isConsumedByTheSameTx(commitCommand.txId.sha256(), conflictingStates)) {
+                        null
+                    } else {
+                        log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+                        NotaryError.Conflict(txId, conflictingStates)
+                    }
+                } else {
+                    val outsideTimeWindowError = validateTimeWindow(clock.instant(), commitCommand.timeWindow)
+                    if (outsideTimeWindowError == null) {
+                        val entries = states.map { it to Pair(index, txId) }.toMap()
+                        map.putAll(entries)
+                        log.debug { "Successfully committed all input states: $states" }
+                        null
+                    } else {
+                        outsideTimeWindowError
+                    }
                 }
             }
-            return conflicts
         }
     }
 
@@ -159,102 +182,34 @@ class RaftTransactionCommitLog<E, EK>(
     companion object {
         private val log = contextLogger()
 
-        // Add custom serializers so Catalyst doesn't attempt to fall back on Java serialization for these types, which is disabled process-wide:
+        @VisibleForTesting
         val serializer: Serializer by lazy {
             Serializer().apply {
-                register(RaftTransactionCommitLog.Commands.CommitTransaction::class.java) {
-                    object : TypeSerializer<Commands.CommitTransaction> {
-                        override fun write(obj: RaftTransactionCommitLog.Commands.CommitTransaction,
-                                           buffer: BufferOutput<out BufferOutput<*>>,
-                                           serializer: Serializer) {
-                            buffer.writeUnsignedShort(obj.states.size)
-                            with(serializer) {
-                                obj.states.forEach {
-                                    writeObject(it, buffer)
-                                }
-                                writeObject(obj.txId, buffer)
-                            }
-                            buffer.writeString(obj.requestingParty)
-                            buffer.writeInt(obj.requestSignature.size)
-                            buffer.write(obj.requestSignature)
-                        }
+                registerAbstract(SecureHash::class.java, CordaKryoSerializer::class.java)
+                registerAbstract(TimeWindow::class.java, CordaKryoSerializer::class.java)
+                registerAbstract(NotaryError::class.java, CordaKryoSerializer::class.java)
+                register(RaftTransactionCommitLog.Commands.CommitTransaction::class.java, CordaKryoSerializer::class.java)
+                register(RaftTransactionCommitLog.Commands.Get::class.java, CordaKryoSerializer::class.java)
+                register(StateRef::class.java, CordaKryoSerializer::class.java)
+                register(LinkedHashMap::class.java, CordaKryoSerializer::class.java)
+            }
+        }
 
-                        override fun read(type: Class<RaftTransactionCommitLog.Commands.CommitTransaction>,
-                                          buffer: BufferInput<out BufferInput<*>>,
-                                          serializer: Serializer): RaftTransactionCommitLog.Commands.CommitTransaction {
-                            val stateCount = buffer.readUnsignedShort()
-                            val states = (1..stateCount).map {
-                                serializer.readObject<StateRef>(buffer)
-                            }
-                            val txId = serializer.readObject<SecureHash>(buffer)
-                            val name = buffer.readString()
-                            val signatureSize = buffer.readInt()
-                            val signature = ByteArray(signatureSize)
-                            buffer.read(signature)
-                            return RaftTransactionCommitLog.Commands.CommitTransaction(states, txId, name, signature)
-                        }
-                    }
-                }
-                register(RaftTransactionCommitLog.Commands.Get::class.java) {
-                    object : TypeSerializer<Commands.Get> {
-                        override fun write(obj: RaftTransactionCommitLog.Commands.Get, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) {
-                            serializer.writeObject(obj.key, buffer)
-                        }
+        class CordaKryoSerializer<T : Any> : TypeSerializer<T> {
+            private val context = SerializationDefaults.CHECKPOINT_CONTEXT.withEncoding(CordaSerializationEncoding.SNAPPY)
+            private val factory = SerializationFactory.defaultFactory
 
-                        override fun read(type: Class<RaftTransactionCommitLog.Commands.Get>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer): RaftTransactionCommitLog.Commands.Get {
-                            val key = serializer.readObject<StateRef>(buffer)
-                            return RaftTransactionCommitLog.Commands.Get(key)
-                        }
+            override fun write(obj: T, buffer: BufferOutput<*>, serializer: Serializer) {
+                val serialized = obj.serialize(context = context)
+                buffer.writeInt(serialized.size)
+                buffer.write(serialized.bytes)
+            }
 
-                    }
-                }
-                register(StateRef::class.java) {
-                    object : TypeSerializer<StateRef> {
-                        override fun write(obj: StateRef, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) {
-                            buffer.writeString(obj.encoded())
-                        }
-
-                        override fun read(type: Class<StateRef>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer): StateRef {
-                            return buffer.readString().parseStateRef()
-                        }
-                    }
-                }
-                registerAbstract(SecureHash::class.java) {
-                    object : TypeSerializer<SecureHash> {
-                        override fun write(obj: SecureHash, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) {
-                            buffer.writeUnsignedShort(obj.bytes.size)
-                            buffer.write(obj.bytes)
-                        }
-
-                        override fun read(type: Class<SecureHash>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer): SecureHash {
-                            val size = buffer.readUnsignedShort()
-                            val bytes = ByteArray(size)
-                            buffer.read(bytes)
-                            return SecureHash.SHA256(bytes)
-                        }
-                    }
-                }
-                register(LinkedHashMap::class.java) {
-                    object : TypeSerializer<LinkedHashMap<*, *>> {
-                        override fun write(obj: LinkedHashMap<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) {
-                            buffer.writeInt(obj.size)
-                            obj.forEach {
-                                with(serializer) {
-                                    writeObject(it.key, buffer)
-                                    writeObject(it.value, buffer)
-                                }
-                            }
-                        }
-
-                        override fun read(type: Class<LinkedHashMap<*, *>>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer): LinkedHashMap<*, *> {
-                            return LinkedHashMap<Any, Any>().apply {
-                                repeat(buffer.readInt()) {
-                                    put(serializer.readObject(buffer), serializer.readObject(buffer))
-                                }
-                            }
-                        }
-                    }
-                }
+            override fun read(type: Class<T>, buffer: BufferInput<*>, serializer: Serializer): T {
+                val size = buffer.readInt()
+                val serialized = ByteArray(size)
+                buffer.read(serialized)
+                return factory.deserialize(ByteSequence.of(serialized), type, context)
             }
         }
     }
