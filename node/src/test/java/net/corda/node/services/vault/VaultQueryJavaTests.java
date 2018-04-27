@@ -44,6 +44,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static net.corda.core.node.services.vault.Builder.sum;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
@@ -71,7 +72,7 @@ public class VaultQueryJavaTests {
 
     @Before
     public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
-        List<String> cordappPackages = Arrays.asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
+        List<String> cordappPackages = asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
         IdentityService identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,
@@ -104,6 +105,18 @@ public class VaultQueryJavaTests {
         Field currency = getField("currency", SampleCashSchemaV2.PersistentCashState.class);
 
         CriteriaExpression.AggregateFunctionExpression<Object, Boolean> expression = sum(quantity, singletonList(currency), Sort.Direction.ASC);
+        VaultCustomQueryCriteria<SampleCashSchemaV2.PersistentCashState> criteria = new VaultCustomQueryCriteria(expression, Vault.StateStatus.UNCONSUMED, null, SampleCashSchemaV2.PersistentCashState.class);
+
+        database.transaction(tx -> vaultService.queryBy(FungibleAsset.class, criteria));
+    }
+
+    @Test
+    public void criteriaWithFieldFromMappedSuperclassOfSuperclass() throws NoSuchFieldException {
+        Field quantity = getField("quantity", SampleCashSchemaV2.PersistentCashState.class);
+        Field currency = getField("currency", SampleCashSchemaV2.PersistentCashState.class);
+        Field stateRef = getField("stateRef", SampleCashSchemaV2.PersistentCashState.class);
+
+        CriteriaExpression.AggregateFunctionExpression<Object, Boolean> expression = sum(quantity, asList(currency, stateRef), Sort.Direction.ASC);
         VaultCustomQueryCriteria<SampleCashSchemaV2.PersistentCashState> criteria = new VaultCustomQueryCriteria(expression, Vault.StateStatus.UNCONSUMED, null, SampleCashSchemaV2.PersistentCashState.class);
 
         database.transaction(tx -> vaultService.queryBy(FungibleAsset.class, criteria));
@@ -194,7 +207,7 @@ public class VaultQueryJavaTests {
 
     @Test
     public void consumedDealStatesPagedSorted() throws VaultQueryException {
-        List<String> dealIds = Arrays.asList("123", "456", "789");
+        List<String> dealIds = asList("123", "456", "789");
         @SuppressWarnings("unchecked")
         Triple<StateAndRef<LinearState>, UniqueIdentifier, Vault<DealState>> ids =
                 database.transaction((DatabaseTransaction tx) -> {
@@ -315,7 +328,7 @@ public class VaultQueryJavaTests {
 
     @Test
     public void trackDealStatesPagedSorted() {
-        List<String> dealIds = Arrays.asList("123", "456", "789");
+        List<String> dealIds = asList("123", "456", "789");
         UniqueIdentifier uid =
                 database.transaction(tx -> {
                     Vault<LinearState> states = vaultFiller.fillWithSomeTestLinearStates(10, null);
@@ -326,7 +339,7 @@ public class VaultQueryJavaTests {
         database.transaction(tx -> {
             // DOCSTART VaultJavaQueryExample5
             @SuppressWarnings("unchecked")
-            Set<Class<ContractState>> contractStateTypes = new HashSet(Arrays.asList(DealState.class, LinearState.class));
+            Set<Class<ContractState>> contractStateTypes = new HashSet(asList(DealState.class, LinearState.class));
             QueryCriteria vaultCriteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
 
             List<UniqueIdentifier> linearIds = singletonList(uid);
@@ -483,7 +496,7 @@ public class VaultQueryJavaTests {
                 Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
                 Field currency = CashSchemaV1.PersistentCashState.class.getDeclaredField("currency");
                 Field issuerPartyHash = CashSchemaV1.PersistentCashState.class.getDeclaredField("issuerPartyHash");
-                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(sum(pennies, Arrays.asList(issuerPartyHash, currency), Sort.Direction.DESC));
+                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(sum(pennies, asList(issuerPartyHash, currency), Sort.Direction.DESC));
                 Vault.Page<Cash.State> results = vaultService.queryBy(Cash.State.class, sumCriteria);
                 // DOCEND VaultJavaQueryExample23
 
