@@ -14,6 +14,8 @@ import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
+import net.corda.vega.contracts.IRSState
+import net.corda.vega.flows.IRSTradeFlow
 import net.corda.vega.plugin.customserializers.CurrencyParameterSensitivitiesSerializer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -43,7 +45,7 @@ class SimmValuationTest {
 
     @Test
     fun `runs SIMM valuation demo`() {
-        driver(DriverParameters(isDebug = true, extraCordappPackagesToScan = listOf("net.corda.vega.contracts", "net.corda.vega.plugin.customserializers"))) {
+        driver(DriverParameters(isDebug = true, extraCordappPackagesToScan = listOf(IRSTradeFlow::class.packageName, IRSState::class.packageName, "net.corda.vega.plugin.customserializers"))) {
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }

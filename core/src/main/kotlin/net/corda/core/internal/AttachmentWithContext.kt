@@ -19,4 +19,8 @@ class AttachmentWithContext(
             "This AttachmentWithContext was not initialised properly"
         }
     }
+
+    override fun toString(): String {
+        return "ContractAttachment: $contractAttachment, stateContract: $stateContract, whitelistedContractImplementations: $whitelistedContractImplementations"
+    }
 }

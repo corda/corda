@@ -4,12 +4,14 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
+import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
@@ -42,7 +44,7 @@ class DistributedServiceTests {
                 invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
         driver(DriverParameters(
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts"),
+                extraCordappPackagesToScan = listOf(Cash::class.packageName),
                 notarySpecs = listOf(
                         NotarySpec(
                                 DUMMY_NOTARY_NAME,

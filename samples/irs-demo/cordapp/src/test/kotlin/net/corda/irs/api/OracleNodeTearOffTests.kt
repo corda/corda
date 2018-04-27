@@ -1,12 +1,12 @@
 package net.corda.irs.api
 
-import com.google.common.collect.testing.Helpers
 import com.google.common.collect.testing.Helpers.assertContains
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TransactionState
 import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.packageName
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
@@ -50,7 +50,7 @@ class OracleNodeTearOffTests {
     @Before
     // DOCSTART 1
     fun setUp() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
+        mockNet = MockNetwork(cordappPackages = listOf(Cash::class.packageName, NodeInterestRates::class.packageName))
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         oracleNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME)).apply {
             transaction {

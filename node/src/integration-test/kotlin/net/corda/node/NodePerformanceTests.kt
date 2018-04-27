@@ -6,11 +6,13 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.finance.DOLLARS
+import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.startFlow
@@ -96,7 +98,7 @@ class NodePerformanceTests {
         internalDriver(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(user))),
                 startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.finance")
+                extraCordappPackagesToScan = listOf(Cash::class.packageName)
         ) {
             val notary = defaultNotaryNode.getOrThrow() as InProcess
             val metricRegistry = startReporter(this.shutdownManager, notary.internalServices.monitoringService.metrics)

@@ -25,6 +25,10 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
 
     companion object {
         private val log = loggerFor<CordappProviderImpl>()
+
+        private data class CorDappLight(val contractClassNames: Set<String>, val jarPath: URL) {
+            constructor(corDapp: Cordapp) : this(corDapp.contractClassNames.toSet(), corDapp.jarPath)
+        }
     }
 
     private val contextCache = ConcurrentHashMap<Cordapp, CordappContext>()
@@ -33,6 +37,10 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
      * Current known CorDapps loaded on this node
      */
     override val cordapps get() = cordappLoader.cordapps
+
+    /**
+     * cordappAttachments.size <= cordapps.size since not all CorDapps have contracts
+     */
     private val cordappAttachments = HashBiMap.create(loadContractsIntoAttachmentStore(attachmentStorage))
 
     init {
@@ -71,7 +79,7 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
     }
 
     override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
-        return getCordappForClass(contractClassName)?.let(this::getCordappAttachmentId)
+        return cordappAttachments.entries.find { it.value.contractClassNames.contains(contractClassName) }?.key
     }
 
     /**
@@ -80,18 +88,59 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
      * @param cordapp The cordapp to get the attachment ID
      * @return An attachment ID if it exists, otherwise nothing
      */
-    fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? = cordappAttachments.inverse().get(cordapp.jarPath)
+    fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? = cordappAttachments.inverse().get(CorDappLight(cordapp))
 
-    private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, URL> =
-            cordapps.filter { !it.contractClassNames.isEmpty() }.map {
+    private fun loadContractsIntoAttachmentStore(attachmentStorage: AttachmentStorage): Map<SecureHash, CorDappLight> =
+            cordapps.filter { !it.contractClassNames.isEmpty() }.deDupeSameContractClassNames().map {
                 it.jarPath.openStream().use { stream ->
                     try {
                         attachmentStorage.importAttachment(stream, DEPLOYED_CORDAPP_UPLOADER, null)
                     } catch (faee: java.nio.file.FileAlreadyExistsException) {
                         AttachmentId.parse(faee.message!!)
                     }
-                } to it.jarPath
+                } to it
             }.toMap()
+
+
+    /**
+     * There might be cases when there are CorDapps that have the same contract classes. E.g. during Gradle unit test run the following been observed:
+     *
+     *     1. contractClassNames=[net.corda.finance.contracts.asset.Cash, net.corda.finance.contracts.asset.CommodityContract, net.corda.finance.contracts.asset.Obligation, net.corda.finance.contracts.asset.OnLedgerAsset] ->
+     *          jarPath=file:/Z:/corda/finance/build/tmp/generated-test-cordapps/net.corda.finance.contracts.asset-9562408e-b372-4194-8259-91dedaedc0ea.jar
+     *
+     *     2. contractClassNames=[net.corda.finance.contracts.asset.Cash, net.corda.finance.contracts.asset.CommodityContract, net.corda.finance.contracts.asset.Obligation, net.corda.finance.contracts.asset.OnLedgerAsset] ->
+     *          jarPath=file:/Z:/corda/finance/build/libs/corda-finance-corda-4.0-snapshot.jar
+     *
+     *  These will be represented as distinct attachments with different hashes. Since underlying storage is `HashBiMap` when look-up is the ordering is not guaranteed and given contract e.g. `net.corda.finance.contracts.asset.Cash`
+     *  can be found in either of the Jars which causes flakiness.
+     *
+     *  To mitigate that we de-dupe CorDapps based on the same `contractClassNames`.
+     */
+    private fun List<Cordapp>.deDupeSameContractClassNames(): List<CorDappLight> {
+
+        val foldResult = this.map { CorDappLight(it) }.fold(Pair(HashMap<URL, CorDappLight>(), HashSet<String>())) { (acc, notedContracts), corDapp ->
+            val existingEntry = acc[corDapp.jarPath]
+            if(existingEntry != null) {
+                // This URL path already been seen. Amend existing entry with contract list.
+                acc[corDapp.jarPath] = existingEntry.copy(contractClassNames = existingEntry.contractClassNames + corDapp.contractClassNames)
+                notedContracts += corDapp.contractClassNames
+            } else if ((notedContracts - corDapp.contractClassNames).size == notedContracts.size) {
+                // Complete disconnect or "notedContracts" is empty.
+                acc += Pair(corDapp.jarPath, corDapp)
+                notedContracts += corDapp.contractClassNames
+            } else if (notedContracts.containsAll(corDapp.contractClassNames)) {
+                log.warn("Skipping $corDapp as all of it is contracts already included")
+            } else {
+                val modifiedContractsList = corDapp.contractClassNames - notedContracts
+                val modifiedCordapp = corDapp.copy(contractClassNames = modifiedContractsList)
+                log.warn("Cordapp $corDapp has it contracts list modified to: $modifiedContractsList")
+                acc += Pair(modifiedCordapp.jarPath, modifiedCordapp)
+                notedContracts += modifiedContractsList
+            }
+            Pair(acc, notedContracts)
+        }
+        return foldResult.first.values.toList()
+    }
 
     /**
      * Get the current cordapp context for the given CorDapp

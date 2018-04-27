@@ -9,6 +9,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.Try
+import net.corda.core.utilities.contextLogger
 import java.util.*
 import java.util.function.Predicate
 
@@ -51,6 +52,9 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     private companion object {
+
+        private val logger = contextLogger()
+
         private fun contractClassFor(className: ContractClassName, classLoader: ClassLoader?): Try<Class<out Contract>> {
             return Try.on {
                 (classLoader ?: this::class.java.classLoader)
@@ -109,6 +113,7 @@ data class LedgerTransaction @JvmOverloads constructor(
             val contractAttachment = uniqueAttachmentsForStateContract.first()
             val constraintAttachment = AttachmentWithContext(contractAttachment, state.contract, networkParameters?.whitelistedContractImplementations)
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
+                logger.warn("Constraint verification failed.\nState: $state\nAttachment: $constraintAttachment")
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
         }

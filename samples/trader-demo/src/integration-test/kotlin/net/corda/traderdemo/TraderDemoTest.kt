@@ -1,11 +1,15 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.internal.packageName
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
+import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.BOC_NAME
@@ -33,7 +37,9 @@ class TraderDemoTest {
                 startFlow<CashPaymentFlow>(),
                 startFlow<CommercialPaperIssueFlow>(),
                 all()))
-        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(startNodesInProcess = true,
+                extraCordappPackagesToScan = listOf(
+                        Cash::class.packageName, CommercialPaper::class.packageName, CashSchemaV1::class.packageName, SellerFlow::class.packageName))) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),

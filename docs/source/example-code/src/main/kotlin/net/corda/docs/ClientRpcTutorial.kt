@@ -4,6 +4,7 @@ package net.corda.docs
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Amount
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -50,7 +51,7 @@ fun main(args: Array<String>) {
             startFlow<CashExitFlow>(),
             invokeRpc(CordaRPCOps::nodeInfo)
     ))
-    driver(DriverParameters(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true)) {
+    driver(DriverParameters(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf(Cash::class.packageName), waitForAllNodesToFinish = true)) {
         val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).get()
         // END 1
 
