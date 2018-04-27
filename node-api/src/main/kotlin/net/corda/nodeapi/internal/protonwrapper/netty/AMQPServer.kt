@@ -14,7 +14,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
@@ -41,7 +40,7 @@ class AMQPServer(val hostName: String,
                  private val keyStore: KeyStore,
                  private val keyStorePrivateKeyPassword: CharArray,
                  private val trustStore: KeyStore,
-                 private val revocationCheckConfig: RevocationCheckConfig,
+                 private val crlCheckSoftFail: Boolean,
                  private val trace: Boolean = false) : AutoCloseable {
 
     companion object {
@@ -68,8 +67,8 @@ class AMQPServer(val hostName: String,
                 keyStore: KeyStore,
                 keyStorePrivateKeyPassword: String,
                 trustStore: KeyStore,
-                revocationCheckConfig: RevocationCheckConfig,
-                trace: Boolean = false) : this(hostName, port, userName, password, keyStore, keyStorePrivateKeyPassword.toCharArray(), trustStore, revocationCheckConfig, trace)
+                crlCheckSoftFail: Boolean,
+                trace: Boolean = false) : this(hostName, port, userName, password, keyStore, keyStorePrivateKeyPassword.toCharArray(), trustStore, crlCheckSoftFail, trace)
 
     private class ServerChannelInitializer(val parent: AMQPServer) : ChannelInitializer<SocketChannel>() {
         private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
@@ -77,7 +76,7 @@ class AMQPServer(val hostName: String,
 
         init {
             keyManagerFactory.init(parent.keyStore, parent.keyStorePrivateKeyPassword)
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(parent.trustStore, parent.revocationCheckConfig))
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(parent.trustStore, parent.crlCheckSoftFail))
         }
 
         override fun initChannel(ch: SocketChannel) {
@@ -111,11 +110,7 @@ class AMQPServer(val hostName: String,
 
             val server = ServerBootstrap()
             // TODO Needs more configuration control when we profile. e.g. to use EPOLL on Linux
-            server.group(bossGroup, workerGroup).
-                    channel(NioServerSocketChannel::class.java).
-                    option(ChannelOption.SO_BACKLOG, 100).
-                    handler(LoggingHandler(LogLevel.INFO)).
-                    childHandler(ServerChannelInitializer(this))
+            server.group(bossGroup, workerGroup).channel(NioServerSocketChannel::class.java).option(ChannelOption.SO_BACKLOG, 100).handler(LoggingHandler(LogLevel.INFO)).childHandler(ServerChannelInitializer(this))
 
             log.info("Try to bind $port")
             val channelFuture = server.bind(hostName, port).sync() // block/throw here as better to know we failed to claim port than carry on

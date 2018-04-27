@@ -14,7 +14,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
@@ -99,8 +98,8 @@ class CertificateRevocationListNodeTests {
 
     @Test
     fun `Simple AMPQ Client to Server connection works`() {
-        val revocationCheckConfig = RevocationCheckConfig()
-        val (amqpServer, _) = createServer(serverPort, revocationCheckConfig = revocationCheckConfig)
+        val crlCheckSoftFail = true
+        val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
             amqpServer.start()
             val receiveSubs = amqpServer.onReceive.subscribe {
@@ -109,7 +108,7 @@ class CertificateRevocationListNodeTests {
                 assertEquals("Test", String(it.payload))
                 it.complete(true)
             }
-            val (amqpClient, _) = createClient(serverPort, revocationCheckConfig)
+            val (amqpClient, _) = createClient(serverPort, crlCheckSoftFail)
             amqpClient.use {
                 val serverConnected = amqpServer.onConnection.toFuture()
                 val clientConnected = amqpClient.onConnection.toFuture()
@@ -131,14 +130,14 @@ class CertificateRevocationListNodeTests {
 
     @Test
     fun `AMPQ Client to Server connection fails when client's certificate is revoked`() {
-        val revocationCheckConfig = RevocationCheckConfig()
-        val (amqpServer, _) = createServer(serverPort, revocationCheckConfig = revocationCheckConfig)
+        val crlCheckSoftFail = true
+        val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
             amqpServer.start()
             amqpServer.onReceive.subscribe {
                 it.complete(true)
             }
-            val (amqpClient, clientCert) = createClient(serverPort, revocationCheckConfig)
+            val (amqpClient, clientCert) = createClient(serverPort, crlCheckSoftFail)
             revokedNodeCerts.add(clientCert.serialNumber)
             amqpClient.use {
                 val serverConnected = amqpServer.onConnection.toFuture()
@@ -152,15 +151,15 @@ class CertificateRevocationListNodeTests {
 
     @Test
     fun `AMPQ Client to Server connection fails when servers's certificate is revoked`() {
-        val revocationCheckConfig = RevocationCheckConfig()
-        val (amqpServer, serverCert) = createServer(serverPort, revocationCheckConfig = revocationCheckConfig)
+        val crlCheckSoftFail = true
+        val (amqpServer, serverCert) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         revokedNodeCerts.add(serverCert.serialNumber)
         amqpServer.use {
             amqpServer.start()
             amqpServer.onReceive.subscribe {
                 it.complete(true)
             }
-            val (amqpClient, _) = createClient(serverPort, revocationCheckConfig)
+            val (amqpClient, _) = createClient(serverPort, crlCheckSoftFail)
             amqpClient.use {
                 val serverConnected = amqpServer.onConnection.toFuture()
                 amqpClient.onConnection.toFuture()
@@ -173,15 +172,15 @@ class CertificateRevocationListNodeTests {
 
     @Test
     fun `AMPQ Client to Server connection fails when servers's certificate is revoked and soft fail is enabled`() {
-        val revocationCheckConfig = RevocationCheckConfig()
-        val (amqpServer, serverCert) = createServer(serverPort, revocationCheckConfig = revocationCheckConfig)
+        val crlCheckSoftFail = true
+        val (amqpServer, serverCert) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         revokedNodeCerts.add(serverCert.serialNumber)
         amqpServer.use {
             amqpServer.start()
             amqpServer.onReceive.subscribe {
                 it.complete(true)
             }
-            val (amqpClient, _) = createClient(serverPort, revocationCheckConfig)
+            val (amqpClient, _) = createClient(serverPort, crlCheckSoftFail)
             amqpClient.use {
                 val serverConnected = amqpServer.onConnection.toFuture()
                 amqpClient.onConnection.toFuture()
@@ -194,10 +193,10 @@ class CertificateRevocationListNodeTests {
 
     @Test
     fun `AMPQ Client to Server connection succeeds when CRL cannot be obtained and soft fail is enabled`() {
-        val revocationCheckConfig = RevocationCheckConfig()
+        val crlCheckSoftFail = true
         val (amqpServer, serverCert) = createServer(
                 serverPort,
-                revocationCheckConfig = revocationCheckConfig,
+                crlCheckSoftFail = crlCheckSoftFail,
                 nodeCrlDistPoint = "http://${server.hostAndPort}/crl/invalid.crl")
         amqpServer.use {
             amqpServer.start()
@@ -206,7 +205,7 @@ class CertificateRevocationListNodeTests {
             }
             val (amqpClient, _) = createClient(
                     serverPort,
-                    revocationCheckConfig,
+                    crlCheckSoftFail,
                     nodeCrlDistPoint = "http://${server.hostAndPort}/crl/invalid.crl")
             amqpClient.use {
                 val serverConnected = amqpServer.onConnection.toFuture()
@@ -220,10 +219,10 @@ class CertificateRevocationListNodeTests {
 
     @Test
     fun `Revocation status chceck fails when the CRL distribution point is not set and soft fail is disabled`() {
-        val revocationCheckConfig = RevocationCheckConfig(softFail = false)
+        val crlCheckSoftFail = false
         val (amqpServer, _) = createServer(
                 serverPort,
-                revocationCheckConfig = revocationCheckConfig,
+                crlCheckSoftFail = crlCheckSoftFail,
                 tlsCrlDistPoint = null)
         amqpServer.use {
             amqpServer.start()
@@ -232,7 +231,7 @@ class CertificateRevocationListNodeTests {
             }
             val (amqpClient, _) = createClient(
                     serverPort,
-                    revocationCheckConfig,
+                    crlCheckSoftFail,
                     tlsCrlDistPoint = null)
             amqpClient.use {
                 val serverConnected = amqpServer.onConnection.toFuture()
@@ -246,10 +245,10 @@ class CertificateRevocationListNodeTests {
 
     @Test
     fun `Revocation status chceck succeds when the CRL distribution point is not set and soft fail is enabled`() {
-        val revocationCheckConfig = RevocationCheckConfig()
+        val crlCheckSoftFail = true
         val (amqpServer, _) = createServer(
                 serverPort,
-                revocationCheckConfig = revocationCheckConfig,
+                crlCheckSoftFail = crlCheckSoftFail,
                 tlsCrlDistPoint = null)
         amqpServer.use {
             amqpServer.start()
@@ -258,7 +257,7 @@ class CertificateRevocationListNodeTests {
             }
             val (amqpClient, _) = createClient(
                     serverPort,
-                    revocationCheckConfig,
+                    crlCheckSoftFail,
                     tlsCrlDistPoint = null)
             amqpClient.use {
                 val serverConnected = amqpServer.onConnection.toFuture()
@@ -271,7 +270,7 @@ class CertificateRevocationListNodeTests {
     }
 
     private fun createClient(targetPort: Int,
-                             revocationCheckConfig: RevocationCheckConfig,
+                             crlCheckSoftFail: Boolean,
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl"): Pair<AMQPClient, X509Certificate> {
         val clientConfig = rigorousMock<AbstractNodeConfiguration>().also {
@@ -279,7 +278,7 @@ class CertificateRevocationListNodeTests {
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
-            doReturn(revocationCheckConfig).whenever(it).revocationCheckConfig
+            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
         val nodeCert = clientConfig.recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
@@ -293,11 +292,11 @@ class CertificateRevocationListNodeTests {
                 clientKeystore,
                 clientConfig.keyStorePassword,
                 clientTruststore,
-                revocationCheckConfig), nodeCert)
+                crlCheckSoftFail), nodeCert)
     }
 
     private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME,
-                             revocationCheckConfig: RevocationCheckConfig,
+                             crlCheckSoftFail: Boolean,
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
                              tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl"): Pair<AMQPServer, X509Certificate> {
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
@@ -305,7 +304,7 @@ class CertificateRevocationListNodeTests {
             doReturn(name).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
-            doReturn(revocationCheckConfig).whenever(it).revocationCheckConfig
+            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
         val nodeCert = serverConfig.recreateNodeCaAndTlsCertificates(nodeCrlDistPoint, tlsCrlDistPoint)
@@ -319,7 +318,7 @@ class CertificateRevocationListNodeTests {
                 serverKeystore,
                 serverConfig.keyStorePassword,
                 serverTruststore,
-                revocationCheckConfig), nodeCert)
+                crlCheckSoftFail), nodeCert)
     }
 
     private fun SSLConfiguration.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {

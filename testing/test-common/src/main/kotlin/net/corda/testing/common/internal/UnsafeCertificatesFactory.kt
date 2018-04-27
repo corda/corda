@@ -4,7 +4,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createFile
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.apache.commons.io.FileUtils
@@ -77,12 +76,13 @@ class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
             }
         }
     }
+
     data class TestSslOptions(override val certificatesDirectory: Path,
                               override val keyStorePassword: String,
                               override val trustStorePassword: String,
-                              override val revocationCheckConfig: RevocationCheckConfig) : SSLConfiguration
+                              override val crlCheckSoftFail: Boolean) : SSLConfiguration
 
-    private fun sslConfiguration(directory: Path) = TestSslOptions(directory, keyStore.password, trustStore.password, RevocationCheckConfig())
+    private fun sslConfiguration(directory: Path) = TestSslOptions(directory, keyStore.password, trustStore.password, true)
 }
 
 interface AutoClosableSSLConfiguration : AutoCloseable {
@@ -125,6 +125,7 @@ data class UnsafeKeyStore(private val delegate: KeyStore, val password: String) 
 
 class TemporaryFile(fileName: String, val directory: Path) : AutoCloseable {
     val file: Path = (directory / fileName).createFile().toAbsolutePath()
+
     init {
         file.toFile().deleteOnExit()
     }

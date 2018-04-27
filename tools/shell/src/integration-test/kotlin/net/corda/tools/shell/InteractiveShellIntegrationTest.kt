@@ -8,7 +8,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.testing.common.internal.withCertificates
 import net.corda.testing.common.internal.withKeyStores
 import net.corda.testing.core.ALICE_NAME
@@ -81,7 +80,7 @@ class InteractiveShellIntegrationTest {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.revocationCheckConfig)
+                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
                         val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                                 user = user.username, password = user.password,
                                 hostAndPort = node.rpcAddress,
@@ -118,7 +117,7 @@ class InteractiveShellIntegrationTest {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.revocationCheckConfig)
+                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
                         val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                                 user = user.username, password = user.password,
                                 hostAndPort = node.rpcAddress,
@@ -200,7 +199,7 @@ class InteractiveShellIntegrationTest {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.revocationCheckConfig)
+                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
                         val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                                 user = user.username, password = user.password,
                                 hostAndPort = node.rpcAddress,

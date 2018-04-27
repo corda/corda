@@ -22,7 +22,7 @@ fun NodeConfiguration.toShellConfig(): ShellConfiguration {
                     keyStorePassword,
                     trustStoreFile,
                     trustStorePassword,
-                    revocationCheckConfig)
+                    crlCheckSoftFail)
         }
     } else {
         null

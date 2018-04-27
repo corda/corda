@@ -64,15 +64,10 @@ absolute path to the node's base directory.
 
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
-:revocationCheckConfig:
-
-        :softFail: This is a boolean flag that when enabled (i.e. `true` value is set) the certificate revocation list (CRL) checking will use the soft fail mode.
-                   The soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
-                   If this parameter is set to `false` the rigorous CRL checking takes place, meaning that each certificate in the
-                   certificate path being checked needs to have the CRL distribution point extension set and pointing to a URL serving a valid CRL.
-        :preferCrl: When set the CRL checking is preferred over the OCSP and OCSP is considered as a fallback mechanism unless the `noFallback` flag is set.
-                    The OCSP is not supported yet, therefore, this flag should always be set.
-        :noFallback: When set the fallback mechanism is disabled. The OCSP is not supported yet, therefore, this flag should always be set.
+:crlCheckSoftFail: This is a boolean flag that when enabled (i.e. `true` value is set) the certificate revocation list (CRL) checking will use the soft fail mode.
+                  The soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
+                  If this parameter is set to `false` the rigorous CRL checking takes place, meaning that each certificate in the
+                  certificate path being checked needs to have the CRL distribution point extension set and pointing to a URL serving a valid CRL.
 
 :database: Database configuration:
 

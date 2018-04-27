@@ -3,7 +3,6 @@ package net.corda.nodeapi.internal.protonwrapper.netty
 import io.netty.handler.ssl.SslHandler
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import java.security.KeyStore
 import java.security.SecureRandom
 import java.security.cert.CertPathBuilder
@@ -43,21 +42,15 @@ internal fun createServerSslHelper(keyManagerFactory: KeyManagerFactory,
     return SslHandler(sslEngine)
 }
 
-internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: KeyStore, revocationCheckConfig: RevocationCheckConfig): ManagerFactoryParameters {
+internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: KeyStore, crlCheckSoftFail: Boolean): ManagerFactoryParameters {
     val certPathBuilder = CertPathBuilder.getInstance("PKIX")
     val revocationChecker = certPathBuilder.revocationChecker as PKIXRevocationChecker
     revocationChecker.options = EnumSet.of(
+            // Prefer CRL over OCSP
             PKIXRevocationChecker.Option.PREFER_CRLS,
+            // Don't fall back to OCSP checking
             PKIXRevocationChecker.Option.NO_FALLBACK)
-    if (revocationCheckConfig.preferCrl) {
-        // Prefer CRL over OCSP
-        revocationChecker.options = revocationChecker.options + PKIXRevocationChecker.Option.PREFER_CRLS
-    }
-    if (revocationCheckConfig.noFallback) {
-        // Don't fall back to OCSP checking
-        revocationChecker.options = revocationChecker.options + PKIXRevocationChecker.Option.NO_FALLBACK
-    }
-    if (revocationCheckConfig.softFail) {
+    if (crlCheckSoftFail) {
         // Allow revocation check to succeed if the revocation status cannot be determined for one of
         // the following reasons: The CRL or OCSP response cannot be obtained because of a network error.
         revocationChecker.options = revocationChecker.options + PKIXRevocationChecker.Option.SOFT_FAIL

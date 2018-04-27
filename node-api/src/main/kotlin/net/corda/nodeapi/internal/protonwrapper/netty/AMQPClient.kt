@@ -12,7 +12,6 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
@@ -39,7 +38,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                  private val keyStore: KeyStore,
                  private val keyStorePrivateKeyPassword: String,
                  private val trustStore: KeyStore,
-                 private val revocationCheckConfig: RevocationCheckConfig,
+                 private val crlCheckSoftFail: Boolean,
                  private val trace: Boolean = false,
                  private val sharedThreadPool: EventLoopGroup? = null) : AutoCloseable {
     companion object {
@@ -104,7 +103,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         init {
             keyManagerFactory.init(parent.keyStore, parent.keyStorePrivateKeyPassword.toCharArray())
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(parent.trustStore, parent.revocationCheckConfig))
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(parent.trustStore, parent.crlCheckSoftFail))
         }
 
         override fun initChannel(ch: SocketChannel) {
@@ -134,9 +133,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     private fun restart() {
         val bootstrap = Bootstrap()
         // TODO Needs more configuration control when we profile. e.g. to use EPOLL on Linux
-        bootstrap.group(workerGroup).
-                channel(NioSocketChannel::class.java).
-                handler(ClientChannelInitializer(this))
+        bootstrap.group(workerGroup).channel(NioSocketChannel::class.java).handler(ClientChannelInitializer(this))
         currentTarget = targets[targetIndex]
         val clientFuture = bootstrap.connect(currentTarget.host, currentTarget.port)
         clientFuture.addListener(connectListener)

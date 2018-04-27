@@ -3,7 +3,6 @@ package net.corda.node.services.config
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
@@ -63,7 +62,7 @@ class NodeConfigurationImplTest {
                 adminAddress = NetworkHostAndPort("localhost", 2),
                 standAloneBroker = false,
                 useSsl = false,
-                ssl = SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword, RevocationCheckConfig()))
+                ssl = SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword, true))
         return NodeConfigurationImpl(
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE_NAME,
@@ -81,7 +80,7 @@ class NodeConfigurationImplTest {
                 devMode = true,
                 noLocalShell = false,
                 rpcSettings = rpcSettings,
-                revocationCheckConfig = RevocationCheckConfig()
+                crlCheckSoftFail = true
         )
     }
 }

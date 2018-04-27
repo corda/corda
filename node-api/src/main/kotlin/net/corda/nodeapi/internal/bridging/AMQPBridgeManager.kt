@@ -16,7 +16,6 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.C
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.bridging.AMQPBridgeManager.AMQPBridge.Companion.getBridgeName
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -47,7 +46,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
     private val keyStorePrivateKeyPassword: String = config.keyStorePassword
     private val trustStore = config.loadTrustStore().internal
     private var artemis: ArtemisSessionProvider? = null
-    private val revocationCheckConfig: RevocationCheckConfig = config.revocationCheckConfig
+    private val crlCheckSoftFail: Boolean = config.crlCheckSoftFail
 
     constructor(config: NodeSSLConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int) : this(config, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
@@ -69,7 +68,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
                              keyStore: KeyStore,
                              keyStorePrivateKeyPassword: String,
                              trustStore: KeyStore,
-                             revocationCheckConfig: RevocationCheckConfig,
+                             crlCheckSoftFail: Boolean,
                              sharedEventGroup: EventLoopGroup,
                              private val artemis: ArtemisSessionProvider) {
         companion object {
@@ -78,7 +77,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
 
         private val log = LoggerFactory.getLogger("$bridgeName:${legalNames.first()}")
 
-        val amqpClient = AMQPClient(listOf(target), legalNames, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, revocationCheckConfig, sharedThreadPool = sharedEventGroup)
+        val amqpClient = AMQPClient(listOf(target), legalNames, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, crlCheckSoftFail, sharedThreadPool = sharedEventGroup)
         val bridgeName: String get() = getBridgeName(queueName, target)
         private val lock = ReentrantLock() // lock to serialise session level access
         private var session: ClientSession? = null
@@ -172,7 +171,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
         if (bridgeExists(getBridgeName(queueName, target))) {
             return
         }
-        val newBridge = AMQPBridge(queueName, target, legalNames, keyStore, keyStorePrivateKeyPassword, trustStore, revocationCheckConfig, sharedEventLoopGroup!!, artemis!!)
+        val newBridge = AMQPBridge(queueName, target, legalNames, keyStore, keyStorePrivateKeyPassword, trustStore, crlCheckSoftFail, sharedEventLoopGroup!!, artemis!!)
         lock.withLock {
             bridgeNameToBridgeMap[newBridge.bridgeName] = newBridge
         }

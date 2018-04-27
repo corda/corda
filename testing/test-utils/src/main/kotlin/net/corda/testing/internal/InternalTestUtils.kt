@@ -10,9 +10,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -67,7 +65,7 @@ fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration {
         override val certificatesDirectory = Files.createTempDirectory("certs")
         override val keyStorePassword: String get() = "cordacadevpass"
         override val trustStorePassword: String get() = "trustpass"
-        override val revocationCheckConfig: RevocationCheckConfig = RevocationCheckConfig()
+        override val crlCheckSoftFail: Boolean = true
 
         init {
             configureDevKeyAndTrustStores(legalName)
@@ -129,7 +127,7 @@ fun SSLConfiguration.useSslRpcOverrides(): Map<String, Any> {
             "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
             "rpcSettings.ssl.keyStorePassword" to keyStorePassword,
             "rpcSettings.ssl.trustStorePassword" to trustStorePassword,
-            "rpcSettings.ssl.revocationCheckConfig" to RevocationCheckConfig().toConfig().root().unwrapped()
+            "rpcSettings.ssl.crlCheckSoftFail" to true
     )
 }
 
@@ -140,7 +138,7 @@ fun SSLConfiguration.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map
             "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
             "rpcSettings.ssl.keyStorePassword" to keyStorePassword,
             "rpcSettings.ssl.trustStorePassword" to trustStorePassword,
-            "rpcSettings.ssl.revocationCheckConfig" to RevocationCheckConfig().toConfig().root().unwrapped()
+            "rpcSettings.ssl.crlCheckSoftFail" to true
     )
 }
 

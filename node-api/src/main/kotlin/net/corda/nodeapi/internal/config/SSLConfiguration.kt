@@ -12,7 +12,7 @@ interface SSLConfiguration {
     // TODO This looks like it should be in NodeSSLConfiguration
     val nodeKeystore: Path get() = certificatesDirectory / "nodekeystore.jks"
     val trustStoreFile: Path get() = certificatesDirectory / "truststore.jks"
-    val revocationCheckConfig: RevocationCheckConfig
+    val crlCheckSoftFail: Boolean
 
     fun loadTrustStore(createNew: Boolean = false): X509KeyStore {
         return X509KeyStore.fromFile(trustStoreFile, trustStorePassword, createNew)
@@ -26,12 +26,6 @@ interface SSLConfiguration {
         return X509KeyStore.fromFile(sslKeystore, keyStorePassword, createNew)
     }
 }
-
-data class RevocationCheckConfig(
-        val preferCrl: Boolean = true,
-        val noFallback: Boolean = true,
-        val softFail: Boolean = true
-)
 
 interface NodeSSLConfiguration : SSLConfiguration {
     val baseDirectory: Path

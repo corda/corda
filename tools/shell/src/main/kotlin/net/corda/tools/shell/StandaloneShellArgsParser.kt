@@ -6,7 +6,6 @@ import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.tools.shell.ShellConfiguration.Companion.COMMANDS_DIR
 import org.slf4j.event.Level
@@ -28,10 +27,10 @@ class CommandLineOptionParser {
             .accepts("commands-directory", "The directory with additional CrAsH shell commands.")
             .withOptionalArg()
     private val hostArg = optionParser
-            .acceptsAll(listOf("h","host"), "The host of the Corda node.")
+            .acceptsAll(listOf("h", "host"), "The host of the Corda node.")
             .withRequiredArg()
     private val portArg = optionParser
-            .acceptsAll(listOf("p","port"), "The port of the Corda node.")
+            .acceptsAll(listOf("p", "port"), "The port of the Corda node.")
             .withRequiredArg()
     private val userArg = optionParser
             .accepts("user", "The RPC user name.")
@@ -211,11 +210,12 @@ private class ShellConfigurationFile {
                                 keyStorePassword = it.keystore.password,
                                 trustStoreFile = Paths.get(it.truststore.path),
                                 trustStorePassword = it.truststore.password,
-                                revocationCheckConfig = RevocationCheckConfig())
+                                crlCheckSoftFail = true)
                     }
 
             return ShellConfiguration(
-                    commandsDirectory = extensions?.commands?.let { Paths.get(it.path) } ?: Paths.get(".") / COMMANDS_DIR,
+                    commandsDirectory = extensions?.commands?.let { Paths.get(it.path) } ?: Paths.get(".")
+                    / COMMANDS_DIR,
                     cordappsDirectory = extensions?.cordapps?.let { Paths.get(it.path) },
                     user = node.user ?: "",
                     password = node.password ?: "",

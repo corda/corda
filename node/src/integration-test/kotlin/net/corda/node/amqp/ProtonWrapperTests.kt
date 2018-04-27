@@ -15,7 +15,6 @@ import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
@@ -225,7 +224,7 @@ class ProtonWrapperTests {
             doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
-            doReturn(RevocationCheckConfig()).whenever(it).revocationCheckConfig
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         artemisConfig.configureWithDevSSLCertificate()
 
@@ -242,7 +241,7 @@ class ProtonWrapperTests {
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
-            doReturn(RevocationCheckConfig()).whenever(it).revocationCheckConfig
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
 
@@ -258,7 +257,7 @@ class ProtonWrapperTests {
                 clientKeystore,
                 clientConfig.keyStorePassword,
                 clientTruststore,
-                RevocationCheckConfig())
+                true)
     }
 
     private fun createSharedThreadsClient(sharedEventGroup: EventLoopGroup, id: Int): AMQPClient {
@@ -267,7 +266,7 @@ class ProtonWrapperTests {
             doReturn(CordaX500Name(null, "client $id", "Corda", "London", null, "GB")).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
-            doReturn(RevocationCheckConfig()).whenever(it).revocationCheckConfig
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
 
@@ -281,7 +280,7 @@ class ProtonWrapperTests {
                 clientKeystore,
                 clientConfig.keyStorePassword,
                 clientTruststore,
-                RevocationCheckConfig(),
+                true,
                 sharedThreadPool = sharedEventGroup)
     }
 
@@ -291,7 +290,7 @@ class ProtonWrapperTests {
             doReturn(name).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
-            doReturn(RevocationCheckConfig()).whenever(it).revocationCheckConfig
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
 
@@ -305,6 +304,6 @@ class ProtonWrapperTests {
                 serverKeystore,
                 serverConfig.keyStorePassword,
                 serverTruststore,
-                revocationCheckConfig = RevocationCheckConfig())
+                crlCheckSoftFail = true)
     }
 }

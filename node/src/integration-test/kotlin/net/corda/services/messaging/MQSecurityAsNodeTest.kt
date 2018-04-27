@@ -11,7 +11,6 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
-import net.corda.nodeapi.internal.config.RevocationCheckConfig
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -89,7 +88,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
             override val certificatesDirectory = Files.createTempDirectory("certs")
             override val keyStorePassword: String get() = "cordacadevpass"
             override val trustStorePassword: String get() = "trustpass"
-            override val revocationCheckConfig: RevocationCheckConfig = RevocationCheckConfig()
+            override val crlCheckSoftFail: Boolean = true
 
             init {
                 val legalName = CordaX500Name("MegaCorp", "London", "GB")
