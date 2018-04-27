@@ -1,12 +1,11 @@
 package net.corda.behave.node
 
 import net.corda.behave.file.stagingRoot
-import net.corda.behave.logging.getLogger
-import net.corda.behave.service.Service
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
+import net.corda.core.utilities.contextLogger
 import java.net.URL
 import java.nio.file.Path
 
@@ -82,11 +81,11 @@ class Distribution private constructor(
 
     companion object {
 
-        protected val log = getLogger<Service>()
+        private val log = contextLogger()
 
         private val distributions = mutableListOf<Distribution>()
 
-        private val nodePrefix = stagingRoot / "deps/corda"
+        private val nodePrefix = stagingRoot / "corda"
 
         val MASTER = fromJarFile("corda-master")
 

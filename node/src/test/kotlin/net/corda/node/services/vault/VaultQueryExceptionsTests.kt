@@ -56,7 +56,7 @@ class VaultQueryExceptionsTests {
 
 
         @BeforeClass @JvmStatic
-        fun bootstrapDb() {
+        fun setUpClass() {
             // register additional identities
             val databaseAndServices = makeTestDatabaseAndMockServices(
                     cordappPackages,
@@ -88,7 +88,7 @@ class VaultQueryExceptionsTests {
     val expectedEx: ExpectedException = ExpectedException.none()
 
     @Before
-    fun setuUp() {
+    fun setUp() {
         transaction = database.newTransaction()
     }
 

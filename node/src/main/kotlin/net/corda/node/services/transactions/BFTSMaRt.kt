@@ -13,12 +13,15 @@ import bftsmart.tom.server.defaultservices.DefaultRecoverable
 import bftsmart.tom.server.defaultservices.DefaultReplier
 import bftsmart.tom.util.Extractor
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.*
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.declaredField
+import net.corda.core.internal.isConsumedByTheSameTx
 import net.corda.core.internal.toTypedArray
+import net.corda.core.internal.validateTimeWindow
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -216,25 +219,27 @@ object BFTSMaRt {
          */
         abstract fun executeCommand(command: ByteArray): ByteArray?
 
-        protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerName: CordaX500Name, requestSignature: NotarisationRequestSignature) {
+        protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerName: CordaX500Name, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?) {
             log.debug { "Attempting to commit inputs for transaction: $txId" }
-
-            val conflicts = mutableMapOf<StateRef, SecureHash>()
             services.database.transaction {
                 logRequest(txId, callerName, requestSignature)
-                states.forEach { state ->
-                    commitLog[state]?.let { conflicts[state] = it }
+                val conflictingStates = LinkedHashMap<StateRef, StateConsumptionDetails>()
+                for (state in states) {
+                    commitLog[state]?.let { conflictingStates[state] = StateConsumptionDetails(it.sha256()) }
                 }
-                if (conflicts.isEmpty()) {
-                    log.debug { "No conflicts detected, committing input states: ${states.joinToString()}" }
-                    states.forEach { stateRef ->
-                        commitLog[stateRef] = txId
+                if (conflictingStates.isNotEmpty()) {
+                    if (!isConsumedByTheSameTx(txId.sha256(), conflictingStates)) {
+                        log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+                        throw NotaryInternalException(NotaryError.Conflict(txId, conflictingStates))
                     }
                 } else {
-                    log.debug { "Conflict detected – the following inputs have already been committed: ${conflicts.keys.joinToString()}" }
-                    val conflict = conflicts.mapValues { StateConsumptionDetails(it.value.sha256()) }
-                    val error = NotaryError.Conflict(txId, conflict)
-                    throw NotaryInternalException(error)
+                    val outsideTimeWindowError = validateTimeWindow(services.clock.instant(), timeWindow)
+                    if (outsideTimeWindowError == null) {
+                        states.forEach { commitLog[it] = txId }
+                        log.debug { "Successfully committed all input states: $states" }
+                    } else {
+                        throw NotaryInternalException(outsideTimeWindowError)
+                    }
                 }
             }
         }

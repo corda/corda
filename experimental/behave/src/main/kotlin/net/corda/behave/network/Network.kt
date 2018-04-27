@@ -4,14 +4,14 @@ import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
 import net.corda.behave.file.currentDirectory
 import net.corda.behave.file.stagingRoot
-import net.corda.behave.logging.getLogger
-import net.corda.behave.minutes
 import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
 import net.corda.behave.node.configuration.NotaryType
 import net.corda.behave.process.JarCommand
 import net.corda.core.CordaException
 import net.corda.core.internal.*
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.minutes
 import org.apache.commons.io.FileUtils
 import java.io.Closeable
 import java.nio.file.Path
@@ -93,11 +93,8 @@ class Network private constructor(
 
     fun copyDatabaseDrivers() {
         val driverDirectory = (targetDirectory / "libs").createDirectories()
-        log.info("Copying database drivers from $stagingRoot/deps/drivers to $driverDirectory")
-        FileUtils.copyDirectory(
-                (stagingRoot / "deps" / "drivers").toFile(),
-                driverDirectory.toFile()
-        )
+        log.info("Copying database drivers from $stagingRoot/drivers to $driverDirectory")
+        FileUtils.copyDirectory((stagingRoot / "drivers").toFile(), driverDirectory.toFile())
     }
 
     fun configureNodes(): Boolean {
@@ -285,7 +282,7 @@ class Network private constructor(
     }
 
     companion object {
-        val log = getLogger<Network>()
+        val log = contextLogger()
         const val CLEANUP_ON_ERROR = false
 
         fun new(timeout: Duration = 2.minutes

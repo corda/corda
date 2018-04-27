@@ -2,7 +2,7 @@ package net.corda.behave.network
 
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.node.configuration.NotaryType
-import net.corda.behave.seconds
+import net.corda.core.utilities.seconds
 import org.junit.Ignore
 import org.junit.Test
 
