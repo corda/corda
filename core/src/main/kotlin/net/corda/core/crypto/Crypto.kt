@@ -393,12 +393,14 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature {
-        val sigKey: SignatureScheme = findSignatureScheme(keyPair.private)
-        val sigMetaData: SignatureScheme = findSignatureScheme(signableData.signatureMetadata.schemeNumberID)
-        require(sigKey == sigMetaData) {
-            "Metadata schemeCodeName: ${sigMetaData.schemeCodeName} is not aligned with the key type: ${sigKey.schemeCodeName}."
+        val keyScheme: SignatureScheme = findSignatureScheme(keyPair.private)
+        val metaDataScheme: SignatureScheme = findSignatureScheme(signableData.signatureMetadata.schemeNumberID)
+        // TODO: COMPOSITE_KEY check (bypass) is required for CompositeKey signatures, in which case the metadata scheme
+        //      might not reflect each individual key in the structure. Example case is BFTSmart.
+        require(keyScheme == metaDataScheme || metaDataScheme == Crypto.COMPOSITE_KEY) {
+            "Metadata schemeCodeName: ${metaDataScheme.schemeCodeName} is not aligned with the key type: ${keyScheme.schemeCodeName}."
         }
-        val signatureBytes = doSign(sigKey.schemeCodeName, keyPair.private, signableData.serialize().bytes)
+        val signatureBytes = doSign(keyScheme.schemeCodeName, keyPair.private, signableData.serialize().bytes)
         return TransactionSignature(signatureBytes, keyPair.public, signableData.signatureMetadata)
     }
 
