@@ -161,6 +161,10 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 return VaultCustomQueryCriteria(expression, status, contractStateTypes, L::class.java)
             }
         }
+
+        fun copy(expression: CriteriaExpression<L, Boolean>, status: Vault.StateStatus, contractStateTypes: Set<Class<out ContractState>>?): VaultCustomQueryCriteria<L> {
+            return copy(expression = expression, status = status, contractStateTypes = contractStateTypes, entityClass = entityClass)
+        }
     }
 
     // timestamps stored in the vault states table [VaultSchema.VaultStates]
