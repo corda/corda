@@ -146,8 +146,8 @@ class NotaryFlow {
             try {
                 val parts = validateRequest(requestPayload)
                 txId = parts.id
-                service.validateTimeWindow(parts.timestamp)
-                service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature)
+                checkNotary(parts.notary)
+                service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature, parts.timestamp)
                 signTransactionAndSendResponse(txId)
             } catch (e: NotaryInternalException) {
                 throw NotaryException(e.error, txId)
