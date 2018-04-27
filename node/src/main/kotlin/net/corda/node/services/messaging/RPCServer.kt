@@ -46,6 +46,8 @@ import java.util.*
 import java.util.concurrent.*
 import kotlin.concurrent.thread
 
+typealias ObservableSubscriptionMap = Cache<InvocationId, ObservableSubscription>
+
 data class RPCServerConfiguration(
         /** The number of threads to use for handling RPC requests */
         val rpcThreadPoolSize: Int,
@@ -75,7 +77,7 @@ class RPCServer(
         private val ops: RPCOps,
         private val rpcServerUsername: String,
         private val rpcServerPassword: String,
-        private val serverLocator: ServerLocator?,
+        private val serverLocator: ServerLocator,
         private val securityManager: RPCSecurityManager,
         private val nodeLegalName: CordaX500Name,
         private val rpcConfiguration: RPCServerConfiguration = RPCServerConfiguration.default
@@ -163,9 +165,7 @@ class RPCServer(
                     TimeUnit.MILLISECONDS
             )
 
-            sessionFactory = serverLocator?.createSessionFactory() ?: throw IllegalStateException(
-                    "serverLocator cannot be null within an RPCServer intended for actual use")
-
+            sessionFactory = serverLocator.createSessionFactory()
             producerSession = sessionFactory!!.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
             createRpcProducer(producerSession!!)
             consumerSession = sessionFactory!!.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
@@ -413,13 +413,8 @@ class RPCServer(
      * muxed correctly. Note that the context construction itself is quite cheap.
      */
     inner class ObservableContext(
-            val observableMap: ObservableSubscriptionMap,
-            val clientAddressToObservables: ConcurrentHashMap<SimpleString, HashSet<InvocationId>>,
-            val deduplicationIdentity: String,
-            val clientAddress: SimpleString
-    ) {
             override val observableMap: ObservableSubscriptionMap,
-            override val clientAddressToObservables: SetMultimap<SimpleString, InvocationId>,
+            override val clientAddressToObservables: ConcurrentHashMap<SimpleString, HashSet<InvocationId>>,
             override val deduplicationIdentity: String,
             override val clientAddress: SimpleString
     ) : ObservableContextInterface {
@@ -489,5 +484,4 @@ class ObservableSubscription(
         val subscription: Subscription
 )
 
-typealias ObservableSubscriptionMap = Cache<InvocationId, ObservableSubscription>
 
