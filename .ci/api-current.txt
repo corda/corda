@@ -2112,7 +2112,7 @@ public final class net.corda.core.node.services.TimeWindowChecker extends java.l
 ##
 @net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.node.services.TrustedAuthorityNotaryService extends net.corda.core.node.services.NotaryService
   public <init>()
-  public final void commitInputStates(List, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party, net.corda.core.flows.NotarisationRequestSignature)
+  public final void commitInputStates(List, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party, net.corda.core.flows.NotarisationRequestSignature, net.corda.core.contracts.TimeWindow)
   @org.jetbrains.annotations.NotNull protected org.slf4j.Logger getLog()
   @org.jetbrains.annotations.NotNull protected net.corda.core.node.services.TimeWindowChecker getTimeWindowChecker()
   @org.jetbrains.annotations.NotNull protected abstract net.corda.core.node.services.UniquenessProvider getUniquenessProvider()
@@ -2128,7 +2128,7 @@ public static final class net.corda.core.node.services.TrustedAuthorityNotarySer
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.UniquenessProvider$Conflict getError()
 ##
 public interface net.corda.core.node.services.UniquenessProvider
-  public abstract void commit(List, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party, net.corda.core.flows.NotarisationRequestSignature)
+  public abstract void commit(List, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party, net.corda.core.flows.NotarisationRequestSignature, net.corda.core.contracts.TimeWindow)
 ##
 @net.corda.core.serialization.CordaSerializable public static final class net.corda.core.node.services.UniquenessProvider$Conflict extends java.lang.Object
   public <init>(Map)
