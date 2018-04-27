@@ -57,7 +57,14 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
                         }
                 )
         )
-        observableContext.clientAddressToObservables.put(observableContext.clientAddress, observableId)
+        observableContext.clientAddressToObservables.compute(observableContext.clientAddress) { _, observables ->
+            if (observables == null) {
+                hashSetOf(observableId)
+            } else {
+                observables.add(observableId)
+                observables
+            }
+        }
         observableContext.observableMap.put(observableId, observableWithSubscription)
     }
 

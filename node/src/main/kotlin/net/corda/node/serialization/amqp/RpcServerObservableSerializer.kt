@@ -84,13 +84,31 @@ class RpcServerObservableSerializer : CustomSerializer.Implements<Observable<*>>
                             }
 
                             override fun onCompleted() {
-
+                                observableContext.clientAddressToObservables.compute(observableContext.clientAddress) { _, observables ->
+                                    if (observables != null) {
+                                        observables.remove(observableId)
+                                        if (observables.isEmpty()) {
+                                            null
+                                        } else {
+                                            observables
+                                        }
+                                    } else {
+                                        null
+                                    }
+                                }
                             }
                         }
                 )
         )
 
-        observableContext.clientAddressToObservables.put(observableContext.clientAddress, observableId)
+        observableContext.clientAddressToObservables.compute(observableContext.clientAddress) { _, observables ->
+            if (observables == null) {
+                hashSetOf(observableId)
+            } else {
+                observables.add(observableId)
+                observables
+            }
+        }
         observableContext.observableMap.put(observableId, observableWithSubscription)
     }
 }

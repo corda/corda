@@ -1,10 +1,7 @@
 package net.corda.node.internal.serialization
 
-
-import bftsmart.communication.server.TestSerialization
 import net.corda.client.rpc.internal.ObservableContext as ClientObservableContext
 import net.corda.client.rpc.internal.RpcObservableMap
-import net.corda.core.serialization.SerializationContext
 import net.corda.core.internal.ThreadBox
 import net.corda.core.context.Trace
 import net.corda.node.internal.serialization.testutils.TestSubscription
@@ -12,17 +9,13 @@ import net.corda.node.internal.serialization.testutils.AMQPRoundTripRPCSerializa
 import net.corda.node.internal.serialization.testutils.TestObservableContext as ServerObservableContext
 import net.corda.node.services.messaging.ObservableSubscription
 import net.corda.node.services.messaging.ObservableSubscriptionMap
-import net.corda.nodeapi.internal.serialization.AllWhitelist
-import net.corda.nodeapi.internal.serialization.SerializationContextImpl
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
-import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
 
 import co.paralleluniverse.common.util.SameThreadExecutor
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalCause
 import com.github.benmanes.caffeine.cache.RemovalListener
-import com.google.common.collect.LinkedHashMultimap
 import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableSerializer
 import net.corda.node.internal.serialization.testutils.serializationContext
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
@@ -34,6 +27,7 @@ import rx.Observable
 import rx.subjects.UnicastSubject
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 class RoundTripObservableSerializerTests {
@@ -80,7 +74,7 @@ class RoundTripObservableSerializerTests {
 
         val serverObservableContext = ServerObservableContext(
                 subscriptionMap(id),
-                clientAddressToObservables = LinkedHashMultimap.create(),
+                clientAddressToObservables = ConcurrentHashMap(),
                 deduplicationIdentity = "thisIsATest",
                 clientAddress = SimpleString("clientAddress"))
 

@@ -20,6 +20,7 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Test
 import rx.Observable
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -53,7 +54,7 @@ class RpcServerObservableSerializerTests {
     fun canAssociateWithContext() {
         val observable = TestObservableContext(
                 subscriptionMap(),
-                clientAddressToObservables = LinkedHashMultimap.create(),
+                clientAddressToObservables = ConcurrentHashMap(),
                 deduplicationIdentity = "thisIsATest",
                 clientAddress = SimpleString ("clientAddress"))
 
@@ -69,7 +70,7 @@ class RpcServerObservableSerializerTests {
         val testClientAddress = "clientAddres"
         val observable = TestObservableContext(
                 subscriptionMap(),
-                clientAddressToObservables = LinkedHashMultimap.create(),
+                clientAddressToObservables = ConcurrentHashMap(),
                 deduplicationIdentity = "thisIsATest",
                 clientAddress = SimpleString (testClientAddress))
 
