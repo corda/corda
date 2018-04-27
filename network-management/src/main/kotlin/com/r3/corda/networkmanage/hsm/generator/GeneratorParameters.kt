@@ -12,6 +12,7 @@ package com.r3.corda.networkmanage.hsm.generator
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
+import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.CertificateType
 import java.nio.file.Path
@@ -65,5 +66,5 @@ fun parseParameters(configFile: Path): GeneratorParameters {
     return ConfigFactory
             .parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))
             .resolve()
-            .parseAs(false)
+            .parseAs(UnknownConfigKeysPolicy.IGNORE::handle)
 }

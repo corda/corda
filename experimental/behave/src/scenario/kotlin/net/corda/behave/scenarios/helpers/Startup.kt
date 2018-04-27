@@ -10,17 +10,17 @@
 
 package net.corda.behave.scenarios.helpers
 
-import net.corda.behave.minutes
 import net.corda.behave.process.JarCommand
 import net.corda.behave.scenarios.ScenarioState
 import net.corda.core.internal.div
+import net.corda.core.utilities.minutes
 
 class Startup(state: ScenarioState) : Substeps(state) {
 
     fun hasLoggingInformation(nodeName: String) {
         withNetwork {
             log.info("Retrieving logging information for node '$nodeName' ...")
-            if (!node(nodeName).nodeInfoGenerationOutput.find("Logs can be found in.*").any()) {
+            if (!node(nodeName).logOutput.find("Logs can be found in.*").any()) {
                 fail("Unable to find logging information for node $nodeName")
             }
 
@@ -36,7 +36,7 @@ class Startup(state: ScenarioState) : Substeps(state) {
     fun hasDatabaseDetails(nodeName: String) {
         withNetwork {
             log.info("Retrieving database details for node '$nodeName' ...")
-            if (!node(nodeName).nodeInfoGenerationOutput.find("Database connection url is.*").any()) {
+            if (!node(nodeName).logOutput.find("Database connection url is.*").any()) {
                 fail("Unable to find database details for node $nodeName")
             }
         }
@@ -114,7 +114,7 @@ class Startup(state: ScenarioState) : Substeps(state) {
             val cordappDirectory = node(nodeName).config.distribution.cordappDirectory
             val cordappJar = cordappDirectory / "$cordapp.jar"
             // Execute
-            val command = JarCommand(cordappJar, args as Array<String>, cordappDirectory, 1.minutes)
+            val command = JarCommand(cordappJar, args, cordappDirectory, 1.minutes)
             command.start()
             if (!command.waitFor())
                 fail("Failed to successfully run the CorDapp jar: $cordaApp")

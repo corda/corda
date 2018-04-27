@@ -11,4 +11,6 @@ Feature: Database - Connection
     Examples:
       | Node-Version    | Database-Type     |
       | master          | H2                |
-#     | master          | postgreSQL        |
+
+# To run this scenario using postgreSQL you must ensure that Docker is running locally
+#      | master          | postgreSQL        |

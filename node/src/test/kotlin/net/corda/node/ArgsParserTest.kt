@@ -13,6 +13,7 @@ package net.corda.node
 import joptsimple.OptionException
 import net.corda.core.internal.delete
 import net.corda.core.internal.div
+import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -52,7 +53,8 @@ class ArgsParserTest {
                 noLocalShell = false,
                 sshdServer = false,
                 justGenerateNodeInfo = false,
-                bootstrapRaftCluster = false))
+                bootstrapRaftCluster = false,
+                unknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL))
     }
 
     @Test
@@ -170,5 +172,14 @@ class ArgsParserTest {
     fun `bootstrap raft cluster`() {
         val cmdLineOptions = parser.parse("--bootstrap-raft-cluster")
         assertThat(cmdLineOptions.bootstrapRaftCluster).isTrue()
+    }
+
+    @Test
+    fun `on-unknown-config-keys options`() {
+
+        UnknownConfigKeysPolicy.values().forEach { onUnknownConfigKeyPolicy ->
+            val cmdLineOptions = parser.parse("--on-unknown-config-keys", onUnknownConfigKeyPolicy.name)
+            assertThat(cmdLineOptions.unknownConfigKeysPolicy).isEqualTo(onUnknownConfigKeyPolicy)
+        }
     }
 }
