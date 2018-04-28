@@ -284,7 +284,7 @@ open class MockNetwork(
                             forcedID: Int? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
                             configOverrides: (NodeConfiguration) -> Any? = {},
-                            cordappPackagesToExclude: List<String>): UnstartedMockNode {
+                            cordappPackagesToExclude: List<String> = emptyList()): UnstartedMockNode {
         val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, cordappPackagesToExclude)
         return UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(InternalMockNodeParameters(parameters)))
     }
