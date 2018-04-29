@@ -395,9 +395,8 @@ object Crypto {
     fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature {
         val keyScheme: SignatureScheme = findSignatureScheme(keyPair.private)
         val metaDataScheme: SignatureScheme = findSignatureScheme(signableData.signatureMetadata.schemeNumberID)
-        // TODO: COMPOSITE_KEY check (bypass) is required for CompositeKey signatures, in which case the metadata scheme
-        //      might not reflect each individual key in the structure. Example case is BFTSmart.
-        require(keyScheme == metaDataScheme || metaDataScheme == Crypto.COMPOSITE_KEY) {
+        // TODO: we can remove this sanity check and use metadataScheme directly.
+        require(keyScheme == metaDataScheme) {
             "Metadata schemeCodeName: ${metaDataScheme.schemeCodeName} is not aligned with the key type: ${keyScheme.schemeCodeName}."
         }
         val signatureBytes = doSign(keyScheme.schemeCodeName, keyPair.private, signableData.serialize().bytes)

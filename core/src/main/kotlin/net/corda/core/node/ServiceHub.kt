@@ -4,10 +4,7 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SignableData
-import net.corda.core.crypto.SignatureMetadata
-import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.*
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
@@ -230,8 +227,10 @@ interface ServiceHub : ServicesForResolution {
      * to sign with.
      * @return Returns a SignedTransaction with the new node signature attached.
      */
-    fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey) =
-            signInitialTransaction(builder, publicKey, SignatureMetadata(myInfo.platformVersion, Crypto.findSignatureScheme(publicKey).schemeNumberID))
+    fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey): SignedTransaction {
+        val pk = publicKey.keys.first { keyManagementService.keys.contains(it) }
+        return signInitialTransaction(builder, pk, SignatureMetadata(myInfo.platformVersion, Crypto.findSignatureScheme(pk).schemeNumberID))
+    }
 
     /**
      * Helper method to construct an initial partially signed transaction from a TransactionBuilder
