@@ -257,8 +257,9 @@ object BFTSMaRt {
 
         /** Generates a transaction signature over the specified transaction [txId]. */
         protected fun sign(txId: SecureHash): TransactionSignature {
-            val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(notaryIdentityKey).schemeNumberID))
-            return services.database.transaction { services.keyManagementService.sign(signableData, notaryIdentityKey) }
+            val pk = notaryIdentityKey.keys.first { services.keyManagementService.keys.contains(it) }
+            val signableData = SignableData(txId, SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(pk).schemeNumberID))
+            return services.database.transaction { services.keyManagementService.sign(signableData, pk) }
         }
 
         // TODO:

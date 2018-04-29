@@ -233,7 +233,7 @@ interface ServiceHub : ServicesForResolution {
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey): SignedTransaction {
-        val pk = publicKey.keys.first { keyManagementService.keys.contains(it) }
+        val pk = findFirstLeafKey(publicKey)
         return signInitialTransaction(builder, pk, SignatureMetadata(myInfo.platformVersion, Crypto.findSignatureScheme(pk).schemeNumberID))
     }
 
@@ -290,7 +290,7 @@ interface ServiceHub : ServicesForResolution {
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     fun createSignature(signedTransaction: SignedTransaction, publicKey: PublicKey): TransactionSignature {
-        val pk = publicKey.keys.first { keyManagementService.keys.contains(it) }
+        val pk = findFirstLeafKey(publicKey)
         return createSignature(signedTransaction, pk, SignatureMetadata(myInfo.platformVersion, Crypto.findSignatureScheme(pk).schemeNumberID))
     }
 
@@ -354,7 +354,7 @@ interface ServiceHub : ServicesForResolution {
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     fun createSignature(filteredTransaction: FilteredTransaction, publicKey: PublicKey): TransactionSignature {
-        val pk = publicKey.keys.first { keyManagementService.keys.contains(it) }
+        val pk = findFirstLeafKey(publicKey)
         return createSignature(filteredTransaction, pk, SignatureMetadata(myInfo.platformVersion, Crypto.findSignatureScheme(pk).schemeNumberID))
     }
 
@@ -370,6 +370,9 @@ interface ServiceHub : ServicesForResolution {
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     fun createSignature(filteredTransaction: FilteredTransaction) = createSignature(filteredTransaction, legalIdentityKey)
+
+    // Return the first leaf key found locally if the [PublicKey] is actually a [net.corda.core.crypto.CompositeKey]
+    private fun findFirstLeafKey(publicKey: PublicKey) = publicKey.keys.first { keyManagementService.keys.contains(it) }
 
     /**
      * Exposes a JDBC connection (session) object using the currently configured database.
