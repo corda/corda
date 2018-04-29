@@ -88,7 +88,9 @@ internal fun schemeAndSignableData(txId: SecureHash, transactionSignature: Trans
     val keyScheme = Crypto.findSignatureScheme(transactionSignature.by)
     val metadataScheme = signatureSchemeNumberIDMap[transactionSignature.signatureMetadata.schemeNumberID]
     require(metadataScheme != null) { "Signature scheme with numberID: $metadataScheme is not supported" }
-    require(keyScheme == metadataScheme) { "Signature scheme of metadata with numberID: $metadataScheme does not correspond to the public key scheme numberID: $keyScheme" }
+    // Bypassing the following requirement when metadataScheme == Crypto.COMPOSITE_KEY due to backwards compatibility purposes.
+    // TODO: consider removing the COMPOSITE_KEY check.
+    require(keyScheme == metadataScheme || metadataScheme == Crypto.COMPOSITE_KEY) { "Signature scheme of metadata with numberID: $metadataScheme does not correspond to the public key scheme numberID: $keyScheme" }
     val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
     return Pair(keyScheme, signableData)
 }
