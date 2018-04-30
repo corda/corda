@@ -213,14 +213,14 @@ data class RPCDriverDSL(
                 bindingsDirectory = "$artemisDir/bindings"
                 journalDirectory = "$artemisDir/journal"
                 largeMessagesDirectory = "$artemisDir/large-messages"
-                acceptorConfigurations = setOf(ArtemisTcpTransport.p2pAcceptorTcpTransport(hostAndPort, null))
+                acceptorConfigurations = setOf(ArtemisTcpTransport.rpcAcceptorTcpTransport(hostAndPort, null))
                 configureCommonSettings(maxFileSize, maxBufferedBytesPerClient)
             }
         }
 
         val inVmClientTransportConfiguration = TransportConfiguration(InVMConnectorFactory::class.java.name)
         fun createNettyClientTransportConfiguration(hostAndPort: NetworkHostAndPort): TransportConfiguration {
-            return ArtemisTcpTransport.p2pConnectorTcpTransport(hostAndPort, null)
+            return ArtemisTcpTransport.rpcConnectorTcpTransport(hostAndPort, null)
         }
     }
 
@@ -331,7 +331,7 @@ data class RPCDriverDSL(
             configuration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default
     ): CordaFuture<I> {
         return driverDSL.executorService.fork {
-            val client = RPCClient<I>(ArtemisTcpTransport.p2pConnectorTcpTransport(rpcAddress, null), configuration)
+            val client = RPCClient<I>(ArtemisTcpTransport.rpcConnectorTcpTransport(rpcAddress, null), configuration)
             val connection = client.start(rpcOpsClass, username, password, externalTrace)
             driverDSL.shutdownManager.registerShutdown {
                 connection.close()
