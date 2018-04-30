@@ -56,7 +56,7 @@ class InteractiveShellIntegrationTest {
     }
 
     @Test
-    fun `shell should log in with valid crentials`() {
+    fun `shell should log in with valid credentials`() {
         val user = User("u", "p", setOf())
         driver {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
@@ -101,7 +101,7 @@ class InteractiveShellIntegrationTest {
     }
 
     @Test
-    fun `shell shoud not log in with invalid keystore`() {
+    fun `shell shoud not log in with invalid truststore`() {
         val user = User("mark", "dadada", setOf("ALL"))
         val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
         val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
@@ -175,60 +175,54 @@ class InteractiveShellIntegrationTest {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SSHServerTest.FlowICanRun>(),
                 Permissions.invokeRpc(CordaRPCOps::registeredFlows),
                 Permissions.invokeRpc(CordaRPCOps::nodeInfo)/*all()*/))
-        withCertificates { server, client, createSelfSigned, createSignedBy ->
-            val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
-            val markCertificate = createSignedBy(CordaX500Name("shell", "IT", "R3 London", "London", "London", "GB"), rootCertificate)
 
-            // truststore needs to contain root CA for how the driver works...
-            server.keyStore["cordaclienttls"] = rootCertificate
-            server.trustStore["cordaclienttls"] = rootCertificate
-            server.trustStore["shell"] = markCertificate
+        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
+        val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
+        val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
+        val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-            client.keyStore["shell"] = markCertificate
-            client.trustStore["cordaclienttls"] = rootCertificate
+        var successful = false
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+            startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-            withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
-                var successful = false
-                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-                    startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
+                val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                        user = user.username, password = user.password,
+                        hostAndPort = node.rpcAddress,
+                        ssl = clientSslOptions,
+                        sshdPort = 2223)
 
-                        val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
-                                user = user.username, password = user.password,
-                                hostAndPort = node.rpcAddress,
-                                ssl = clientSslOptions,
-                                sshdPort = 2223)
+                InteractiveShell.startShell(conf)
+                InteractiveShell.nodeInfo()
 
-                        InteractiveShell.startShell(conf)
-                        InteractiveShell.nodeInfo()
+                val session = JSch().getSession("mark", "localhost", 2223)
+                session.setConfig("StrictHostKeyChecking", "no")
+                session.setPassword("dadada")
+                session.connect()
 
-                        val session = JSch().getSession("mark", "localhost", 2223)
-                        session.setConfig("StrictHostKeyChecking", "no")
-                        session.setPassword("dadada")
-                        session.connect()
+                assertTrue(session.isConnected)
 
-                        assertTrue(session.isConnected)
+                val channel = session.openChannel("exec") as ChannelExec
+                channel.setCommand("start FlowICanRun")
+                channel.connect(5000)
 
-                        val channel = session.openChannel("exec") as ChannelExec
-                        channel.setCommand("start FlowICanRun")
-                        channel.connect(5000)
+                assertTrue(channel.isConnected)
 
-                        assertTrue(channel.isConnected)
+                val response = String(Streams.readAll(channel.inputStream))
 
-                        val response = String(Streams.readAll(channel.inputStream))
+                val linesWithDoneCount = response.lines().filter { line -> line.contains("Done") }
 
-                        val linesWithDoneCount = response.lines().filter { line -> line.contains("Done") }
+                channel.disconnect()
+                session.disconnect() // TODO Simon make sure to close them
 
-                        channel.disconnect()
-                        session.disconnect() // TODO Simon make sure to close them
+                // There are ANSI control characters involved, so we want to avoid direct byte to byte matching.
+                assertThat(linesWithDoneCount).hasSize(1)
 
-                        // There are ANSI control characters involved, so we want to avoid direct byte to byte matching.
-                        assertThat(linesWithDoneCount).hasSize(1)
-
-                        successful = true
-                    }
-                }
-                assertThat(successful).isTrue()
+                successful = true
             }
+
+            assertThat(successful).isTrue()
+
         }
     }
 }
