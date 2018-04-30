@@ -76,7 +76,8 @@ absolute path to the node's base directory.
 
     :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
 
-    :runMigration: Boolean on whether to run the database migration scripts. Defaults to true.
+    :runMigration: Boolean on whether to run the database migration scripts at startup. Defaults to false.
+                   If migration is not run, the node will check if it's running on the correct database version.
 
     :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
                  (the value is passed to Hibernate property 'hibernate.default_schema').
