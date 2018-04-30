@@ -22,14 +22,14 @@ buildscript {
     }
 }
 
-apply plugin: 'java'
-apply plugin: 'kotlin'
 apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 mainClassName = 'com.r3.corda.dbmigration.DBMigration'
 
-dependencies{
+dependencies {
     compile project(':node')
     // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
@@ -41,3 +41,18 @@ shadowJar {
 }
 
 task buildMigrationTool(dependsOn: shadowJar)
+
+artifacts {
+    publish shadowJar {
+        classifier ""
+    }
+}
+
+jar {
+    classifier "ignore"
+}
+
+publish {
+    name 'migration-tool'
+    disableDefaultJar = true
+}
