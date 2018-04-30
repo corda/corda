@@ -9,10 +9,17 @@
  */
 
 apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'application'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 mainClassName = 'com.r3.corda.jmeter.Launcher'
+
+configurations{
+    runtimeArtifacts
+}
 
 dependencies {
     compile project(':client:rpc')
@@ -51,7 +58,6 @@ dependencies {
     runtime group: 'org.apache.jmeter', name: 'jorphan', version: "$jmVersion"
     //For Azure SQL and SQL Server support in persistence
     runtime group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '6.2.1.jre8'
-
 
     testCompile project(':test-utils')
     testCompile project(':node-driver')
@@ -159,4 +165,16 @@ task buildJMeterJAR(type: FatCapsule, dependsOn: 'jar') {
         // JVM configuration.  Can be overridden on java command line.
         jvmArgs = ['-Xms512m', '-Xmx512m', '-XX:+UseG1GC']
     }
+}
+
+artifacts {
+    runtimeArtifacts buildJMeterJAR
+    publish buildJMeterJAR {
+        classifier ""
+    }
+}
+
+publish {
+    disableDefaultJar = true
+    name 'jmeter-corda'
 }
