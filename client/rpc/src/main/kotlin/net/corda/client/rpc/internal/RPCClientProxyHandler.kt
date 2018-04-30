@@ -517,7 +517,11 @@ class RPCClientProxyHandler(
         val m = observableContext.observableMap.asMap()
         m.keys.forEach { k ->
             observationExecutorPool.run(k) {
-                m[k]?.onError(RPCException("Connection failure detected."))
+                try {
+                    m[k]?.onError(RPCException("Connection failure detected."))
+                } catch (th: Throwable) {
+                    log.error("Unexpected exception when RPC connection failure handling", th)
+                }
             }
         }
         observableContext.observableMap.invalidateAll()
