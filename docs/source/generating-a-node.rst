@@ -13,7 +13,7 @@ A node can be created manually by creating a folder that contains the following 
 
 * A node configuration file entitled ``node.conf``, configured as per :doc:`corda-configuration-file`
 
-* A folder entitied ``cordapps`` containing any CorDapp JARs you want the node to load
+* A folder entitled ``cordapps`` containing any CorDapp JARs you want the node to load
 
 * **Optional:** A webserver JAR entitled ``corda-webserver.jar`` that will connect to the node via RPC
 
