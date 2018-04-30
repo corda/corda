@@ -10,6 +10,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.Try
+import net.corda.core.utilities.hasDuplicates
 import java.util.*
 import java.util.function.Predicate
 
@@ -194,6 +195,16 @@ data class LedgerTransaction @JvmOverloads constructor(
                         TransactionVerificationException.Direction.OUTPUT)
             }
         }
+    }
+
+    // A State is only allowed to be encumbered by only one other states.
+    // A full cycle of encumbered (co-dependent) States should exist to achieve bi-directional encumbrance.
+    private fun checkBiDirectionalEncumbrance() {
+        val statesAndEncumbrance = outputs.withIndex().filter { it.value.encumbrance != null }.map { Pair(it.index, it.value.encumbrance) }
+        val withEncumbrance = statesAndEncumbrance.map { it.first }.toSet() // We are sure this contains distinct indices.
+        val beingEncumbered = statesAndEncumbrance.map { it.second }
+        if (beingEncumbered.hasDuplicates() || withEncumbrance.size != beingEncumbered.size || !withEncumbrance.containsAll(beingEncumbered))
+            throw TransactionVerificationException.TransactionBiDirectionalEncumbranceException(id)
     }
 
     /**

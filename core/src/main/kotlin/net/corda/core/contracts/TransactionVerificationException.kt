@@ -116,6 +116,13 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     class TransactionMissingEncumbranceException(txId: SecureHash, val missing: Int, val inOut: Direction)
         : TransactionVerificationException(txId, "Missing required encumbrance $missing in $inOut", null)
 
+    /**
+     * Bi-directional encumbrance is enforced. If more than one states are mutually encumbered then a full directed cycle graph
+     * should be present, so that all of the related states can only be consumed in the same transaction.
+     */
+    class TransactionBiDirectionalEncumbranceException(txId: SecureHash)
+        : TransactionVerificationException(txId, "The bi-directionality property of encumbered output states is not satisfied.", null)
+
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable
     @KeepForDJVM
