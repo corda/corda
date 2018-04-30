@@ -57,7 +57,7 @@ class NodeMonitorModel {
      */
     fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
         val client = CordaRPCClient(
-                nodeHostAndPort,
+                listOf(nodeHostAndPort, nodeHostAndPort),
                 object : CordaRPCClientConfiguration {
                     override val connectionMaxRetryInterval = 10.seconds
                 }
