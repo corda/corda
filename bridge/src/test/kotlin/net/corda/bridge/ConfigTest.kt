@@ -12,7 +12,9 @@ package net.corda.bridge
 
 import net.corda.bridge.services.api.BridgeMode
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyVersion
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -20,6 +22,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Paths
+import kotlin.test.assertFailsWith
 
 class ConfigTest {
     @Rule
@@ -103,5 +106,28 @@ class ConfigTest {
         assertEquals("tunnelkeypassword", config.floatOuterConfig!!.customSSLConfiguration!!.keyStorePassword)
         assertEquals("tunneltrustpassword", config.floatOuterConfig!!.customSSLConfiguration!!.trustStorePassword)
         assertNull(config.floatInnerConfig)
+    }
+
+    @Test
+    fun `Load config withsocks support`() {
+        val configResource = "/net/corda/bridge/withsocks/bridge.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(SocksProxyVersion.SOCKS5, config.outboundConfig!!.socksProxyConfig!!.version)
+        assertEquals(NetworkHostAndPort("localhost", 12345), config.outboundConfig!!.socksProxyConfig!!.proxyAddress)
+        assertEquals("proxyUser", config.outboundConfig!!.socksProxyConfig!!.userName)
+        assertEquals("pwd", config.outboundConfig!!.socksProxyConfig!!.password)
+        val badConfigResource4 = "/net/corda/bridge/withsocks/badconfig/badsocksversion4.conf"
+        assertFailsWith<IllegalArgumentException> {
+            createAndLoadConfigFromResource(tempFolder.root.toPath() / "4", badConfigResource4)
+        }
+        val badConfigResource5 = "/net/corda/bridge/withsocks/badconfig/badsocksversion5.conf"
+        assertFailsWith<IllegalArgumentException> {
+            createAndLoadConfigFromResource(tempFolder.root.toPath() / "5", badConfigResource5)
+        }
+        val badConfigResource = "/net/corda/bridge/withsocks/badconfig/socks4passwordsillegal.conf"
+        assertFailsWith<IllegalArgumentException> {
+            createAndLoadConfigFromResource(tempFolder.root.toPath() / "bad", badConfigResource)
+        }
+
     }
 }
