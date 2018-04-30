@@ -223,7 +223,6 @@ class ProtonWrapperTests {
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
-            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(true).whenever(it).crlCheckSoftFail
         }
         artemisConfig.configureWithDevSSLCertificate()

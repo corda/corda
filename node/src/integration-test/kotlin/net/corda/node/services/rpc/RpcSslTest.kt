@@ -1,52 +1,96 @@
 package net.corda.node.services.rpc
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.internal.createCordaRPCClientWithSsl
-import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.div
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
-import net.corda.testing.common.internal.withCertificates
-import net.corda.testing.common.internal.withKeyStores
+import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.ClientRpcSslOptions
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
+import net.corda.testing.internal.createKeyPairAndSelfSignedCertificate
+import net.corda.testing.internal.saveToKeyStore
+import net.corda.testing.internal.saveToTrustStore
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
+import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 class RpcSslTest {
+
+    @Rule
+    @JvmField
+    val tempFolder = TemporaryFolder()
+
     @Test
     fun rpc_client_using_ssl() {
         val user = User("mark", "dadada", setOf(all()))
-        withCertificates { server, client, createSelfSigned, createSignedBy ->
-            val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
-            val markCertificate = createSignedBy(CordaX500Name("mark", "IT", "R3 London", "London", "London", "GB"), rootCertificate)
+        var successfulLogin = false
+        var failedLogin = false
 
-            // truststore needs to contain root CA for how the driver works...
-            server.keyStore["cordaclienttls"] = rootCertificate
-            server.trustStore["cordaclienttls"] = rootCertificate
-            server.trustStore["mark"] = markCertificate
+        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
+        val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
 
-            client.keyStore["mark"] = markCertificate
-            client.trustStore["cordaclienttls"] = rootCertificate
+        val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
+        val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-            withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
-                var successful = false
-                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-                    startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
-                        createCordaRPCClientWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password).use { connection ->
-                            connection.proxy.apply {
-                                nodeInfo()
-                                successful = true
-                            }
-                        }
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+            startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
+                CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password).use { connection ->
+                    connection.proxy.apply {
+                        val nodeInfo = nodeInfo()
+                        assertThat(nodeInfo.legalIdentities).isNotEmpty
+                        successfulLogin = true
                     }
                 }
-                assertThat(successful).isTrue()
+                Assertions.assertThatThrownBy {
+                    CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, "wrong").use { connection ->
+                        connection.proxy.apply {
+                            nodeInfo()
+                            failedLogin = true
+                        }
+                    }
+                }.isInstanceOf(ActiveMQSecurityException::class.java)
             }
         }
+        assertThat(successfulLogin).isTrue()
+        assertThat(failedLogin).isFalse()
+    }
+
+    @Test
+    fun rpc_client_using_ssl_with_incorrect_truststore() {
+        val user = User("mark", "dadada", setOf(all()))
+        var successful = false
+
+        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
+        val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
+
+        val (_, cert1) = createKeyPairAndSelfSignedCertificate()
+        val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert1)
+        val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
+
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+            startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
+                Assertions.assertThatThrownBy {
+                    CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password).use { connection ->
+                        connection.proxy.apply {
+                            nodeInfo()
+                            successful = true
+                        }
+                    }
+                }.isInstanceOf(ActiveMQNotConnectedException::class.java)
+            }
+        }
+
+        assertThat(successful).isFalse()
     }
 
     @Test

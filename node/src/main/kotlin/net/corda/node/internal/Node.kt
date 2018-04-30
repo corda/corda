@@ -3,6 +3,7 @@ package net.corda.node.internal
 import com.codahale.metrics.JmxReporter
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
@@ -39,6 +40,7 @@ import net.corda.node.utilities.DemoClock
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
@@ -179,7 +181,7 @@ open class Node(configuration: NodeConfiguration,
 
         printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
         rpcServerAddresses?.let {
-            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
+            internalRpcMessagingClient = InternalRPCMessagingClient(configuration, it.admin, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, CordaX500Name.build(configuration.loadSslKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal))
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }
@@ -211,9 +213,9 @@ open class Node(configuration: NodeConfiguration,
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
+                        ArtemisRpcBroker.withSsl(configuration, this.address!!, adminAddress!!, sslConfig, securityManager, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     } else {
-                        ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
+                        ArtemisRpcBroker.withoutSsl(configuration, this.address!!, adminAddress!!, securityManager, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     }
                 }
                 return rpcBroker!!.addresses
@@ -279,12 +281,12 @@ open class Node(configuration: NodeConfiguration,
             start()
         }
         // Start up the MQ clients.
-        rpcMessagingClient?.run {
+        internalRpcMessagingClient?.run {
             runOnStop += this::close
             when (rpcOps) {
                 // not sure what this RPCOps base interface is for
-                is SecureCordaRPCOps -> start(RpcExceptionHandlingProxy(rpcOps), securityManager)
-                else -> start(rpcOps, securityManager)
+                is SecureCordaRPCOps -> init(RpcExceptionHandlingProxy(rpcOps), securityManager)
+                else -> init(rpcOps, securityManager)
             }
         }
         verifierMessagingClient?.run {
@@ -388,11 +390,11 @@ open class Node(configuration: NodeConfiguration,
                 rpcClientContext = if (configuration.shouldInitCrashShell()) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classloader) else null) //even Shell embeded in the node connects via RPC to the node
     }
 
-    private var rpcMessagingClient: RPCMessagingClient? = null
+    private var internalRpcMessagingClient: InternalRPCMessagingClient? = null
     private var verifierMessagingClient: VerifierMessagingClient? = null
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
-        rpcMessagingClient?.start2(rpcBroker!!.serverControl)
+        internalRpcMessagingClient?.start(rpcBroker!!.serverControl)
         verifierMessagingClient?.start2()
         (network as P2PMessagingClient).run()
     }

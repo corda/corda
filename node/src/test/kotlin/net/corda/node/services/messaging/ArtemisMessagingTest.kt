@@ -70,7 +70,6 @@ class ArtemisMessagingTest {
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
-            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(P2PMessagingRetryConfiguration(5.seconds, 3, backoffBase=1.0)).whenever(it).p2pMessagingRetry
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)

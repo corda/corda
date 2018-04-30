@@ -2,30 +2,32 @@ package net.corda.node.services.rpc
 
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.internal.artemis.BrokerJaasLoginModule
 import net.corda.node.internal.artemis.SecureArtemisConfiguration
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
-import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcAcceptorTcpTransport
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcInternalAcceptorTcpTransport
+import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
-import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import java.nio.file.Path
 
-internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, jmxEnabled: Boolean, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort?, sslOptions: SSLConfiguration?, useSsl: Boolean) : SecureArtemisConfiguration() {
+internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, jmxEnabled: Boolean, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort?, sslOptions: BrokerRpcSslOptions?, useSsl: Boolean, nodeConfiguration: SSLConfiguration) : SecureArtemisConfiguration() {
     val loginListener: (String) -> Unit
 
     init {
         setDirectories(baseDirectory)
 
-        val acceptorConfigurationsSet = mutableSetOf(acceptorConfiguration(address, useSsl, sslOptions))
+        val acceptorConfigurationsSet = mutableSetOf(
+                rpcAcceptorTcpTransport( address, sslOptions, useSsl)
+        )
         adminAddress?.let {
-            acceptorConfigurationsSet += acceptorConfiguration(adminAddress, true, sslOptions)
+            acceptorConfigurationsSet += rpcInternalAcceptorTcpTransport(it, nodeConfiguration)
         }
         acceptorConfigurations = acceptorConfigurationsSet
 
@@ -41,7 +43,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
 
         initialiseSettings(maxMessageSize)
 
-        val nodeInternalRole = Role(NodeLoginModule.NODE_ROLE, true, true, true, true, true, true, true, true)
+        val nodeInternalRole = Role(BrokerJaasLoginModule.NODE_ROLE, true, true, true, true, true, true, true, true)
 
         val rolesAdderOnLogin = RolesAdderOnLogin { username ->
             "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#" to setOf(nodeInternalRole, restrictedRole(
@@ -63,7 +65,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
 
     private fun configureAddressSecurity(nodeInternalRole: Role, rolesAdderOnLogin: RolesAdderOnLogin) {
         securityRoles["${ArtemisMessagingComponent.INTERNAL_PREFIX}#"] = setOf(nodeInternalRole)
-        securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(NodeLoginModule.RPC_ROLE, send = true))
+        securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(BrokerJaasLoginModule.RPC_ROLE, send = true))
         securitySettingPlugins.add(rolesAdderOnLogin)
     }
 
@@ -116,11 +118,6 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         configuration.isDurable = durable
 
         return configuration
-    }
-
-
-    private fun acceptorConfiguration(address: NetworkHostAndPort, enableSsl: Boolean, sslOptions: SSLConfiguration?): TransportConfiguration {
-        return tcpTransport(ConnectionDirection.Inbound(NettyAcceptorFactory::class.java.name), address, sslOptions, enableSsl)
     }
 
     private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,

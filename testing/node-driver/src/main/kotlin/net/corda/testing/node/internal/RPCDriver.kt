@@ -1,9 +1,9 @@
 package net.corda.testing.node.internal
 
 import net.corda.client.mock.Generator
+import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
-import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.AuthServiceId
 import net.corda.core.context.Trace
@@ -21,7 +21,6 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.messaging.RPCServer
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
 import net.corda.testing.common.internal.testNetworkParameters
@@ -41,7 +40,6 @@ import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory
-import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.security.CheckType
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
@@ -210,20 +208,19 @@ data class RPCDriverDSL(
         }
 
         fun createRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Long, baseDirectory: Path, hostAndPort: NetworkHostAndPort): Configuration {
-            val connectionDirection = ConnectionDirection.Inbound(acceptorFactoryClassName = NettyAcceptorFactory::class.java.name)
             return ConfigurationImpl().apply {
                 val artemisDir = "$baseDirectory/artemis"
                 bindingsDirectory = "$artemisDir/bindings"
                 journalDirectory = "$artemisDir/journal"
                 largeMessagesDirectory = "$artemisDir/large-messages"
-                acceptorConfigurations = setOf(ArtemisTcpTransport.tcpTransport(connectionDirection, hostAndPort, null))
+                acceptorConfigurations = setOf(ArtemisTcpTransport.p2pAcceptorTcpTransport(hostAndPort, null))
                 configureCommonSettings(maxFileSize, maxBufferedBytesPerClient)
             }
         }
 
         val inVmClientTransportConfiguration = TransportConfiguration(InVMConnectorFactory::class.java.name)
         fun createNettyClientTransportConfiguration(hostAndPort: NetworkHostAndPort): TransportConfiguration {
-            return ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), hostAndPort, null)
+            return ArtemisTcpTransport.p2pConnectorTcpTransport(hostAndPort, null)
         }
     }
 
@@ -334,7 +331,7 @@ data class RPCDriverDSL(
             configuration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default
     ): CordaFuture<I> {
         return driverDSL.executorService.fork {
-            val client = RPCClient<I>(ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), rpcAddress, null), configuration)
+            val client = RPCClient<I>(ArtemisTcpTransport.p2pConnectorTcpTransport(rpcAddress, null), configuration)
             val connection = client.start(rpcOpsClass, username, password, externalTrace)
             driverDSL.shutdownManager.registerShutdown {
                 connection.close()

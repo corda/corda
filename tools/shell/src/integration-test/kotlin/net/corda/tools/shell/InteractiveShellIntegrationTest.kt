@@ -4,16 +4,22 @@ import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
+import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.ClientRpcSslOptions
 import net.corda.testing.common.internal.withCertificates
 import net.corda.testing.common.internal.withKeyStores
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
+import net.corda.testing.internal.createKeyPairAndSelfSignedCertificate
+import net.corda.testing.internal.saveToKeyStore
+import net.corda.testing.internal.saveToTrustStore
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
@@ -22,10 +28,16 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import kotlin.test.assertTrue
 
 class InteractiveShellIntegrationTest {
+
+    @Rule
+    @JvmField
+    val tempFolder = TemporaryFolder()
 
     @Test
     fun `shell should not log in with invalid credentials`() {
@@ -62,72 +74,54 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `shell should log in with ssl`() {
         val user = User("mark", "dadada", setOf(all()))
-        withCertificates { server, client, createSelfSigned, createSignedBy ->
-            val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
-            val markCertificate = createSignedBy(CordaX500Name("shell", "IT", "R3 London", "London", "London", "GB"), rootCertificate)
+        var successful = false
 
-            // truststore needs to contain root CA for how the driver works...
-            server.keyStore["cordaclienttls"] = rootCertificate
-            server.trustStore["cordaclienttls"] = rootCertificate
-            server.trustStore["shell"] = markCertificate
+        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
+        val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
 
-            client.keyStore["shell"] = markCertificate
-            client.trustStore["cordaclienttls"] = rootCertificate
+        val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
+        val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-            withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
-                var successful = false
-                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-                    startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+            startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-                        val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
-                        val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
-                                user = user.username, password = user.password,
-                                hostAndPort = node.rpcAddress,
-                                ssl = sslConfiguration)
+                val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                        user = user.username, password = user.password,
+                        hostAndPort = node.rpcAddress,
+                        ssl = clientSslOptions)
 
-                        InteractiveShell.startShell(conf)
+                InteractiveShell.startShell(conf)
 
-                        InteractiveShell.nodeInfo()
-                        successful = true
-                    }
-                }
-                assertThat(successful).isTrue()
+                InteractiveShell.nodeInfo()
+                successful = true
             }
         }
+        assertThat(successful).isTrue()
     }
 
     @Test
-    fun `shell shoud not log in without ssl keystore`() {
+    fun `shell shoud not log in with invalid keystore`() {
         val user = User("mark", "dadada", setOf("ALL"))
-        withCertificates { server, client, createSelfSigned, createSignedBy ->
-            val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
-            val markCertificate = createSignedBy(CordaX500Name("shell", "IT", "R3 London", "London", "London", "GB"), rootCertificate)
+        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
+        val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
 
-            // truststore needs to contain root CA for how the driver works...
-            server.keyStore["cordaclienttls"] = rootCertificate
-            server.trustStore["cordaclienttls"] = rootCertificate
-            server.trustStore["shell"] = markCertificate
+        val (_, cert1) = createKeyPairAndSelfSignedCertificate()
+        val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert1)
+        val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-            //client key store doesn't have "mark" certificate
-            client.trustStore["cordaclienttls"] = rootCertificate
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+            startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-            withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
-                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-                    startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
+                val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                        user = user.username, password = user.password,
+                        hostAndPort = node.rpcAddress,
+                        ssl = clientSslOptions)
 
-                        val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
-                        val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
-                                user = user.username, password = user.password,
-                                hostAndPort = node.rpcAddress,
-                                ssl = sslConfiguration)
+                InteractiveShell.startShell(conf)
 
-                        InteractiveShell.startShell(conf)
-
-                        assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQNotConnectedException::class.java)
-                    }
-                }
+                assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQNotConnectedException::class.java)
             }
         }
     }
@@ -198,12 +192,10 @@ class InteractiveShellIntegrationTest {
                 driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-                        val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
                         val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                                 user = user.username, password = user.password,
                                 hostAndPort = node.rpcAddress,
-                                ssl = sslConfiguration,
+                                ssl = clientSslOptions,
                                 sshdPort = 2223)
 
                         InteractiveShell.startShell(conf)

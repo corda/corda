@@ -4,6 +4,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createFile
 import net.corda.core.internal.deleteIfExists
 import net.corda.core.internal.div
+import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.*
 import org.apache.commons.io.FileUtils
@@ -189,7 +191,8 @@ private fun newKeyStore(type: String, password: String): KeyStore {
     return keyStore
 }
 
-fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOptions: SSLConfiguration, clientSslOptions: SSLConfiguration) -> Unit) {
+fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOptions: BrokerRpcSslOptions, clientSslOptions: ClientRpcSslOptions) -> Unit) {
+    //todo refactor this to use the configurations
     val serverDir = Files.createTempDirectory(null)
     FileUtils.forceDeleteOnExit(serverDir.toFile())
 
@@ -198,7 +201,7 @@ fun withKeyStores(server: KeyStores, client: KeyStores, action: (brokerSslOption
 
     server.save(serverDir).use { serverSslConfiguration ->
         client.save(clientDir).use { clientSslConfiguration ->
-            action(serverSslConfiguration.value, clientSslConfiguration.value)
+//            action(serverSslConfiguration.value, clientSslConfiguration.value)
         }
     }
     clientDir.deleteIfExists()

@@ -4,13 +4,13 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.nodeapi.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.User
 import net.corda.tools.shell.ShellConfiguration
 import net.corda.tools.shell.ShellConfiguration.Companion.COMMANDS_DIR
 import net.corda.tools.shell.ShellConfiguration.Companion.CORDAPPS_DIR
 import net.corda.tools.shell.ShellConfiguration.Companion.SSHD_HOSTKEY_DIR
 import net.corda.tools.shell.ShellConfiguration.Companion.SSH_PORT
-import net.corda.tools.shell.ShellSslOptions
 
 
 //re-packs data to Shell specific classes
@@ -18,11 +18,7 @@ fun NodeConfiguration.toShellConfig(): ShellConfiguration {
 
     val sslConfiguration = if (this.rpcOptions.useSsl) {
         with(this.rpcOptions.sslConfig) {
-            ShellSslOptions(sslKeystore,
-                    keyStorePassword,
-                    trustStoreFile,
-                    trustStorePassword,
-                    crlCheckSoftFail)
+            ClientRpcSslOptions(sslKeystore, keyStorePassword)
         }
     } else {
         null

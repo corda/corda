@@ -12,6 +12,7 @@ import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
+import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
@@ -24,6 +25,7 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -94,6 +96,44 @@ object InteractiveShell {
                         override val maxReconnectAttempts = 1
                     },
                     sslConfiguration = configuration.ssl,
+                    classLoader = classLoader)
+            this.connection = client.start(username, credentials)
+            connection.proxy
+        }
+        InteractiveShell.classLoader = classLoader
+        val runSshDaemon = configuration.sshdPort != null
+
+        val config = Properties()
+        if (runSshDaemon) {
+            // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
+            config["crash.ssh.port"] = configuration.sshdPort?.toString()
+            config["crash.auth"] = "corda"
+            configuration.sshHostKeyDirectory?.apply {
+                val sshKeysDir = configuration.sshHostKeyDirectory
+                sshKeysDir.createDirectories()
+                config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
+                config["crash.ssh.keygen"] = "true"
+            }
+        }
+
+        ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
+        ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
+        ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
+        shell = ShellLifecycle(configuration.commandsDirectory).start(config, configuration.user, configuration.password)
+    }
+
+    /**
+     * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
+     * internals.
+     */
+    fun startShellInternal(configuration: ShellConfiguration, sslConfiguration: SSLConfiguration, classLoader: ClassLoader? = null) {
+        shellConfiguration = configuration
+        rpcOps = { username: String, credentials: String ->
+            val client = createCordaRPCClientWithInternalSslAndClassLoader(hostAndPort = configuration.hostAndPort,
+                    configuration = object : CordaRPCClientConfiguration {
+                        override val maxReconnectAttempts = 1
+                    },
+                    sslConfiguration = sslConfiguration,
                     classLoader = classLoader)
             this.connection = client.start(username, credentials)
             connection.proxy
