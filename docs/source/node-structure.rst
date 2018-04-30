@@ -15,7 +15,7 @@ A Corda node has the following structure:
     ├── corda-webserver.jar     // The built-in node webserver
     ├── corda.jar               // The core Corda libraries
     ├── cordapps                // The CorDapp JARs installed on the node
-    ├── drivers                 // Contains a Jolokia driving used to export JMX metrics
+    ├── drivers                 // Contains a Jolokia driver used to export JMX metrics
     ├── logs                    // The node logs
     ├── network-parameters      // The network parameters automatically downloaded from the network map server
     ├── node.conf               // The node's configuration files
