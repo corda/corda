@@ -172,3 +172,21 @@ shell (see :doc:`shell`):
 If the administrator does not accept the update then next time the node polls network map after the deadline, the
 advertised network parameters will be the updated ones. The previous set of parameters will no longer be valid.
 At this point the node will automatically shutdown and will require the node operator to bring it back again.
+
+Private networks
+----------------
+
+To allow business network operators to onboard nodes in the early period of the Corda Network and not to reveal their membership
+to other entities on the network, the concept of private network maps was introduced. This is a temporary solution which will only
+be used in the early stages when it's possible to deduce the members of a business network. Once sufficient number of entities have
+joined the Network, this feature will be turned off and previously private nodes will be made visible in the public network map.
+
+An additional REST ``/network-map/{uuid}`` endpoint serving private network maps was introduced. For nodes to be able to query
+that information automatically you need to change ``node.conf`` to include private network UUIDs in ``extraNetworkMapKeys`` see :doc:`corda-configuration-file`.
+
+From the node operator's perspective the process is simple. During the initial registration the Compatibility Zone operator will
+mark the node as belonging to the private network map and will provide the node operator with UUID that should be put in the node's config file.
+Then node can be started as usual. At some point in time, nodes will gradually join public network without leaking confidential
+information on business relations with operators. Private networks are not separate networks, nodes are still part of bigger
+compatibility zone, only hidden. We reuse all the infrastructure of the compatibility zone like notaries, permissioning service,
+so the interoperability between nodes is kept.

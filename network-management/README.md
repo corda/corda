@@ -348,6 +348,10 @@ set private_network = '<<private_network_id>>'
 where status = 'APPROVED'
 ```
 
+**Important**
+If notary is to be used by private network participants add private network UUIDs to notary's ``node.conf`` using
+``extraNetworkMapKeys`` list.
+
 ### Move a node from its private network and into the global network map**
 
 ```
