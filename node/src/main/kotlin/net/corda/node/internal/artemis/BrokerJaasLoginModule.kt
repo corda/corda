@@ -102,10 +102,6 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
                 Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(NODE_ROLE)))
             }
             else -> rpcJaasConfig!!.run {
-                if(useSslForRPC){
-                    certificateChainCheckPolicy?.checkCertificateChain(certificates)
-                }
-
                 securityManager.authenticate(username, Password(password))
                 loginListener(username)
                 // This enables the RPC client to send requests and to receive responses
@@ -118,17 +114,12 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
 data class RPCJaasConfig(
         val securityManager: RPCSecurityManager,
         val loginListener: LoginListener,
-        val useSslForRPC: Boolean,
-        val certificateChainCheckPolicy: CertificateChainCheckPolicy.Check?
-)
+        val useSslForRPC: Boolean)
 
-data class P2PJaasConfig(
-        val certificateChainCheckPolicy: CertificateChainCheckPolicy.Check
-)
+data class P2PJaasConfig(val certificateChainCheckPolicy: CertificateChainCheckPolicy.Check)
 
-data class NodeJaasConfig(
-        val certificateChainCheckPolicy: CertificateChainCheckPolicy.Check
-)
+data class NodeJaasConfig(val certificateChainCheckPolicy: CertificateChainCheckPolicy.Check)
+
 
 // boilerplate required for JAAS
 abstract class BaseBrokerJaasLoginModule : LoginModule {
