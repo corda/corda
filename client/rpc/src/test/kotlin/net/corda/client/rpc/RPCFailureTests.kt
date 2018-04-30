@@ -11,6 +11,7 @@ import net.corda.testing.node.internal.startRpcClient
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Rule
 import org.junit.Test
+import java.io.NotSerializableException
 
 class RPCFailureTests {
     @Rule
@@ -59,7 +60,7 @@ class RPCFailureTests {
 
     @Test
     fun `unserializable`() = rpc {
-        assertThatThrownBy { it.getUnserializable() }.isInstanceOf(KryoException::class.java)
+        assertThatThrownBy { it.getUnserializable() }.isInstanceOf(NotSerializableException::class.java)
     }
 
     @Test

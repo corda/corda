@@ -549,30 +549,4 @@ class GenericsTests {
 
         val i2 = DeserializationInput(testDefaultFactory()).deserialize(bytes, testSerializationContext)
     }
-
-    @Test
-    fun simpleDelegate() {
-        class D {
-            operator fun getValue(thisRef: Any?, property: KProperty<*>): String {
-                return "$thisRef, thank you for delegating '${property.name}' to me!"
-            }
-            operator fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
-                println("$value has been assigned to '${property.name}' in $thisRef.")
-            }
-        }
-
-        class C (a_ : String) {
-            var a : String by D()
-
-            init {
-                a = a_
-            }
-        }
-
-        val c = C("YO YO YO")
-        println (c.a)
-
-        val bytes = SerializationOutput(testDefaultFactory()).serialize(c, testSerializationContext)
-        val c2 = DeserializationInput(testDefaultFactory()).deserialize(bytes, testSerializationContext)
-    }
 }
