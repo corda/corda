@@ -449,6 +449,10 @@ For example, you may end up with the following layout:
 
 After starting each node, the nodes will be able to see one another and agree IOUs among themselves.
 
+.. note:: If you are using H2 and wish to use the same ``h2port`` value for all the nodes, then only assign them that
+   value after the nodes have been moved to their machines. The initial bootstrapping process requires access to the nodes'
+   databases and if they share the same H2 port then the process will fail.
+
 Testing and debugging
 ---------------------
 
