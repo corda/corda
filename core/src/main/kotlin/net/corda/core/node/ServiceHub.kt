@@ -372,7 +372,13 @@ interface ServiceHub : ServicesForResolution {
     fun createSignature(filteredTransaction: FilteredTransaction) = createSignature(filteredTransaction, legalIdentityKey)
 
     // Return the first leaf key found locally if the [PublicKey] is actually a [net.corda.core.crypto.CompositeKey]
-    private fun findFirstLeafKey(publicKey: PublicKey) = publicKey.keys.first { keyManagementService.keys.contains(it) }
+    private fun findFirstLeafKey(publicKey: PublicKey): PublicKey {
+        return if (publicKey is CompositeKey) {
+            publicKey.keys.first { keyManagementService.keys.contains(it) }
+        } else {
+            publicKey
+        }
+    }
 
     /**
      * Exposes a JDBC connection (session) object using the currently configured database.
