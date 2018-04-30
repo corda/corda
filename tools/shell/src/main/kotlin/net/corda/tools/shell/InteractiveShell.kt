@@ -89,7 +89,6 @@ object InteractiveShell {
      * internals.
      */
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
-        shellConfiguration = configuration
         rpcOps = { username: String, credentials: String ->
             val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
                     configuration = object : CordaRPCClientConfiguration {
@@ -100,26 +99,7 @@ object InteractiveShell {
             this.connection = client.start(username, credentials)
             connection.proxy
         }
-        InteractiveShell.classLoader = classLoader
-        val runSshDaemon = configuration.sshdPort != null
-
-        val config = Properties()
-        if (runSshDaemon) {
-            // Enable SSH access. Note: these have to be strings, even though raw object assignments also work.
-            config["crash.ssh.port"] = configuration.sshdPort?.toString()
-            config["crash.auth"] = "corda"
-            configuration.sshHostKeyDirectory?.apply {
-                val sshKeysDir = configuration.sshHostKeyDirectory
-                sshKeysDir.createDirectories()
-                config["crash.ssh.keypath"] = (sshKeysDir / "hostkey.pem").toString()
-                config["crash.ssh.keygen"] = "true"
-            }
-        }
-
-        ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
-        shell = ShellLifecycle(configuration.commandsDirectory).start(config, configuration.user, configuration.password)
+        _startShell(configuration, classLoader)
     }
 
     /**
@@ -127,7 +107,6 @@ object InteractiveShell {
      * internals.
      */
     fun startShellInternal(configuration: ShellConfiguration, sslConfiguration: SSLConfiguration, classLoader: ClassLoader? = null) {
-        shellConfiguration = configuration
         rpcOps = { username: String, credentials: String ->
             val client = createCordaRPCClientWithInternalSslAndClassLoader(hostAndPort = configuration.hostAndPort,
                     configuration = object : CordaRPCClientConfiguration {
@@ -138,6 +117,11 @@ object InteractiveShell {
             this.connection = client.start(username, credentials)
             connection.proxy
         }
+        _startShell(configuration, classLoader)
+    }
+
+    private fun _startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
+        shellConfiguration = configuration
         InteractiveShell.classLoader = classLoader
         val runSshDaemon = configuration.sshdPort != null
 

@@ -63,7 +63,7 @@ class NodeConfigurationImplTest {
                 adminAddress = NetworkHostAndPort("localhost", 2),
                 standAloneBroker = false,
                 useSsl = false,
-                ssl = BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword)) //todo ?? - what keystore
+                ssl = BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword))
         return NodeConfigurationImpl(
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE_NAME,
