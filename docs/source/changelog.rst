@@ -264,6 +264,8 @@ Version 3.0
 * ``TransactionSignature`` includes a new ``partialMerkleTree`` property, required for future support of signing over
   multiple transactions at once.
 
+* Updating Jolokia dependency to latest version (includes security fixes)
+
 .. _changelog_v1:
 
 Release 1.0
