@@ -67,6 +67,11 @@ absolute path to the node's base directory.
 
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
+:crlCheckSoftFail: This is a boolean flag that when enabled (i.e. `true` value is set) the certificate revocation list (CRL) checking will use the soft fail mode.
+                  The soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
+                  If this parameter is set to `false` the rigorous CRL checking takes place, meaning that each certificate in the
+                  certificate path being checked needs to have the CRL distribution point extension set and pointing to a URL serving a valid CRL.
+
 :database: Database configuration:
 
         :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
