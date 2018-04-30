@@ -57,7 +57,6 @@ include 'tools:loadtest'
 include 'tools:graphs'
 include 'tools:bootstrapper'
 include 'tools:dbmigration'
-include 'tools:notaryhealthcheck'
 include 'tools:shell'
 include 'example-code'
 project(':example-code').projectDir = file("$settingsDir/docs/source/example-code")
