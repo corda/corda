@@ -122,6 +122,11 @@ open class VaultQueryTests {
                 services.identityService.verifyAndRegisterIdentity(identity)
             }
         }
+
+        @AfterClass @JvmStatic
+        fun afterClass() {
+            database.close()
+        }
     }
 
     private lateinit var transaction: DatabaseTransaction
