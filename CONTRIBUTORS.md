@@ -10,6 +10,7 @@ see changes to this list.
 
 * acetheultimate
 * Adrian Flethcehr (TD)
+* agoldvarg
 * Alberto Arri (R3)
 * amiracam
 * Andras Slemmer (R3)
@@ -22,6 +23,7 @@ see changes to this list.
 * Anton Semenov (Commerzbank)
 * Antonio Cerrato (SEB)
 * Antony Lewis (R3)
+* anttiai
 * Arijit Das (Northern Trust)
 * Arnaud Stevens (Natixis)
 * Arun Battu (BNY Mellon)
@@ -162,6 +164,7 @@ see changes to this list.
 * Stephen Lane-Smith (BMO)
 * stevenroose
 * Szymon Sztuka (R3)
+* tb-pq
 * Thiago Rafael Ferreira (Scorpius IT Solutions)
 * Thomas O'Donnell (Macquarie)
 * Thomas Schroeter (R3)
