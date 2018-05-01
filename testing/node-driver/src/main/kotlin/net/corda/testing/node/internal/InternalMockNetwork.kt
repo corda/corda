@@ -75,7 +75,7 @@ data class MockNodeArgs(
         val id: Int,
         val entropyRoot: BigInteger,
         val version: VersionInfo = MOCK_VERSION_INFO,
-        val cordappPackagesToExclude: List<String> = emptyList()
+        val extraCordappPackages: List<String> = emptyList()
 )
 
 data class InternalMockNodeParameters(
@@ -84,14 +84,14 @@ data class InternalMockNodeParameters(
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
         val configOverrides: (NodeConfiguration) -> Any? = {},
         val version: VersionInfo = MOCK_VERSION_INFO,
-        val cordappPackagesToExclude: List<String> = emptyList()) {
+        val extraCordappPackages: List<String> = emptyList()) {
     constructor(mockNodeParameters: MockNodeParameters) : this(
             mockNodeParameters.forcedID,
             mockNodeParameters.legalName,
             mockNodeParameters.entropyRoot,
             mockNodeParameters.configOverrides,
             MOCK_VERSION_INFO,
-            mockNodeParameters.cordappPackagesToExclude
+            mockNodeParameters.extraCordappPackages
     )
 }
 
@@ -224,7 +224,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
             TestClock(Clock.systemUTC()),
             args.version,
             // Exclude the specified CorDapps.
-            CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages - args.cordappPackagesToExclude),
+            CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages + args.extraCordappPackages),
             args.network.busyLatch
     ) {
         companion object {
@@ -375,7 +375,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             parameters.configOverrides(it)
         }
-        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version, parameters.cordappPackagesToExclude))
+        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version, parameters.extraCordappPackages))
         _nodes += node
         if (start) {
             node.start()
