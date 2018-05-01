@@ -116,10 +116,8 @@ class CordaPersistence(
      * @param isolationLevel isolation level for the transaction.
      * @param statement to be executed in the scope of this transaction.
      */
-    fun <T> transaction(isolationLevel: TransactionIsolationLevel, statement: DatabaseTransaction.() -> T): T {
-        _contextDatabase.set(this)
-        return transaction(isolationLevel, 2, statement)
-    }
+    fun <T> transaction(isolationLevel: TransactionIsolationLevel, statement: DatabaseTransaction.() -> T): T =
+            transaction(isolationLevel, 2, false, statement)
 
     /**
      * Executes given statement in the scope of transaction with the transaction level specified at the creation time.
@@ -127,16 +125,26 @@ class CordaPersistence(
      */
     fun <T> transaction(statement: DatabaseTransaction.() -> T): T = transaction(defaultIsolationLevel, statement)
 
-    private fun <T> transaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int, statement: DatabaseTransaction.() -> T): T {
+    /**
+     * Executes given statement in the scope of transaction, with the given isolation level.
+     * @param isolationLevel isolation level for the transaction.
+     * @param recoverableFailureTolerance number of transaction commit retries for SQL while SQL exception is encountered.
+     * @param recoverAnyNestedSQLException retry transaction on any SQL Exception wrapped as a clause of [Throwable].
+     * @param statement to be executed in the scope of this transaction.
+     */
+    fun <T> transaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
+                        recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -> T): T {
+        _contextDatabase.set(this)
         val outer = contextTransactionOrNull
         return if (outer != null) {
             outer.statement()
         } else {
-            inTopLevelTransaction(isolationLevel, recoverableFailureTolerance, statement)
+            inTopLevelTransaction(isolationLevel, recoverableFailureTolerance, recoverAnyNestedSQLException, statement)
         }
     }
 
-    private fun <T> inTopLevelTransaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int, statement: DatabaseTransaction.() -> T): T {
+    private fun <T> inTopLevelTransaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
+                                          recoverAnyNestedSQLException: Boolean, statement: DatabaseTransaction.() -> T): T {
         var recoverableFailureCount = 0
         fun <T> quietly(task: () -> T) = try {
             task()
@@ -149,13 +157,14 @@ class CordaPersistence(
                 val answer = transaction.statement()
                 transaction.commit()
                 return answer
-            } catch (e: SQLException) {
+           } catch (e: Throwable) {
                 quietly(transaction::rollback)
-                if (++recoverableFailureCount > recoverableFailureTolerance) throw e
-                log.warn("Caught failure, will retry:", e)
-            } catch (e: Throwable) {
-                quietly(transaction::rollback)
-                throw e
+                if (e is SQLException || (recoverAnyNestedSQLException && e.hasSQLExceptionCause)) {
+                    if (++recoverableFailureCount > recoverableFailureTolerance) throw e
+                    log.warn("Caught failure, will retry $recoverableFailureCount/$recoverableFailureTolerance:", e)
+                } else {
+                    throw e
+                }
             } finally {
                 quietly(transaction::close)
             }
@@ -246,3 +255,13 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
         }
     }
 }
+
+/** Check if any nested cause is of [SQLException] type. */
+private val Throwable.hasSQLExceptionCause: Boolean
+    get() =
+        if (cause == null)
+            false
+        else if (cause is SQLException)
+            true
+        else
+            cause?.hasSQLExceptionCause ?: false
