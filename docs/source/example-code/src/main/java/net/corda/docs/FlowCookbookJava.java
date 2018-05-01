@@ -531,10 +531,7 @@ public class FlowCookbookJava {
             ------------------------*/
             progressTracker.setCurrentStep(VERIFYING_SIGS);
 
-            /*
             try {
-            */
-
                 // We can verify that a transaction has all the required
                 // signatures, and that they're all valid, by running:
                 // DOCSTART 35
@@ -563,11 +560,9 @@ public class FlowCookbookJava {
                 // DOCSTART 37
                 twiceSignedTx.checkSignaturesAreValid();
                 // DOCEND 37
-                /*
             } catch (GeneralSecurityException e) {
                 // Handle this as required.
             }
-            */
 
             /*------------------------------
              * FINALISING THE TRANSACTION *
