@@ -8,7 +8,8 @@ Unreleased
 ==========
 
 * Due to ongoing work the experimental interfaces for defining custom notary services have been moved to the internal package.
-  It can still be used in CorDapps, but further changes may be required in the future.
+  CorDapps implementing custom notary services will need to be updated, see ``samples/notary-demo`` for an example.
+  Further changes may be required in the future.
 
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
   Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
