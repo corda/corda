@@ -4,8 +4,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.BrokerRpcSslOptions
 
 interface NodeRpcOptions {
-    val address: NetworkHostAndPort?
-    val adminAddress: NetworkHostAndPort?
+    val address: NetworkHostAndPort
+    val adminAddress: NetworkHostAndPort
     val standAloneBroker: Boolean
     val useSsl: Boolean
     val sslConfig: BrokerRpcSslOptions

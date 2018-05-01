@@ -215,8 +215,8 @@ data class NodeConfigurationImpl(
 }
 
 data class NodeRpcSettings(
-        val address: NetworkHostAndPort?,
-        val adminAddress: NetworkHostAndPort?,
+        val address: NetworkHostAndPort,
+        val adminAddress: NetworkHostAndPort,
         val standAloneBroker: Boolean = false,
         val useSsl: Boolean = false,
         val ssl: BrokerRpcSslOptions?

@@ -12,6 +12,7 @@ import org.apache.activemq.artemis.spi.core.security.jaas.CertificateCallback
 import org.apache.activemq.artemis.spi.core.security.jaas.RolePrincipal
 import org.apache.activemq.artemis.spi.core.security.jaas.UserPrincipal
 import java.io.IOException
+import java.security.KeyStore
 import java.security.Principal
 import java.util.*
 import javax.security.auth.Subject
@@ -37,7 +38,7 @@ import javax.security.cert.X509Certificate
  * If someone connects with [ArtemisMessagingComponent.PEER_USER] then we confirm they belong on our P2P network by checking their root CA is
  * the same as our root CA. If that's the case, the only access they're given is the ability to send to our P2P address.
  *
- * If someone connects with [ArtemisMessagingComponent.NODE_USER] then we confirm it's the current node by checking their TLS certificate
+ * If someone connects with [ArtemisMessagingComponent.NODE_P2P_USER] then we confirm it's the current node by checking their TLS certificate
  * is the same as our one in our key store. Then they're given full access to all valid queues.
  *
  * (In both cases the messages these authenticated nodes send to us are tagged with their subject DN and we assume
@@ -50,7 +51,8 @@ import javax.security.cert.X509Certificate
 class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
     companion object {
         const val PEER_ROLE = "SystemRoles/Peer"
-        const val NODE_ROLE = "SystemRoles/Node"
+        const val NODE_P2P_ROLE = "SystemRoles/NodeP2P"
+        const val NODE_RPC_ROLE = "SystemRoles/NodeRPC"
         const val RPC_ROLE = "SystemRoles/RPC"
 
         internal val RPC_SECURITY_CONFIG = "RPC_SECURITY_CONFIG"
@@ -87,38 +89,48 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
     // The Main authentication logic.
     // responsible for running all the configured checks for each user type
     // and return the actual User and principals
-    private fun authenticateAndAuthorise(username: String, certificates: Array<X509Certificate>, password: String): Pair<String, List<RolePrincipal>> {
-        fun requireTls(certificates: Array<X509Certificate>?) = require(certificates != null) { "No TLS?" }
+    private fun authenticateAndAuthorise(username: String, certificates: Array<X509Certificate>?, password: String): Pair<String, List<RolePrincipal>> {
+        fun requireTls(certificates: Array<X509Certificate>?) = require(certificates != null) { "No client certificates presented." }
 
         return when (username) {
-            ArtemisMessagingComponent.PEER_USER -> {
+            ArtemisMessagingComponent.NODE_P2P_USER -> {
                 requireTls(certificates)
-                p2pJaasConfig!!.certificateChainCheckPolicy.checkCertificateChain(certificates)
+                CertificateChainCheckPolicy.LeafMustMatch.createCheck(nodeJaasConfig.keyStore, nodeJaasConfig.trustStore).checkCertificateChain(certificates!!)
+                Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(NODE_P2P_ROLE)))
+            }
+            ArtemisMessagingComponent.NODE_RPC_USER -> {
+                requireTls(certificates)
+                CertificateChainCheckPolicy.LeafMustMatch.createCheck(nodeJaasConfig.keyStore, nodeJaasConfig.trustStore).checkCertificateChain(certificates!!)
+                Pair(ArtemisMessagingComponent.NODE_RPC_USER, listOf(RolePrincipal(NODE_RPC_ROLE)))
+            }
+            ArtemisMessagingComponent.PEER_USER -> {
+                require(p2pJaasConfig != null) { "Attempted to connect as a peer to the rpc broker." }
+                requireTls(certificates)
+                CertificateChainCheckPolicy.RootMustMatch.createCheck(p2pJaasConfig!!.keyStore, p2pJaasConfig!!.trustStore).checkCertificateChain(certificates!!)
                 Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(PEER_ROLE)))
             }
-            ArtemisMessagingComponent.NODE_USER -> {
-                requireTls(certificates)
-                nodeJaasConfig.certificateChainCheckPolicy.checkCertificateChain(certificates)
-                Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(NODE_ROLE)))
-            }
-            else -> rpcJaasConfig!!.run {
-                securityManager.authenticate(username, Password(password))
-                loginListener(username)
-                // This enables the RPC client to send requests and to receive responses
-                Pair(username, listOf(RolePrincipal(RPC_ROLE), RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")))
+            else -> {
+                require(rpcJaasConfig != null) { "Attempted to connect as an rpc user to the P2P broker." }
+                rpcJaasConfig!!.run {
+                    securityManager.authenticate(username, Password(password))
+                    loginListener(username)
+                    // This enables the RPC client to send requests and to receive responses
+                    Pair(username, listOf(RolePrincipal(RPC_ROLE), RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")))
+                }
             }
         }
     }
+
 }
 
 data class RPCJaasConfig(
-        val securityManager: RPCSecurityManager,
-        val loginListener: LoginListener,
+        val securityManager: RPCSecurityManager, //used to authenticate users - implemented with Shiro
+        val loginListener: LoginListener, //callback that dynamically assigns security roles to RPC users on their authentication
         val useSslForRPC: Boolean)
 
-data class P2PJaasConfig(val certificateChainCheckPolicy: CertificateChainCheckPolicy.Check)
+data class P2PJaasConfig(val keyStore: KeyStore, val trustStore: KeyStore)
 
-data class NodeJaasConfig(val certificateChainCheckPolicy: CertificateChainCheckPolicy.Check)
+data class NodeJaasConfig(val keyStore: KeyStore, val trustStore: KeyStore)
 
 
 // boilerplate required for JAAS
@@ -128,8 +140,7 @@ abstract class BaseBrokerJaasLoginModule : LoginModule {
     protected lateinit var callbackHandler: CallbackHandler
     protected val principals = ArrayList<Principal>()
 
-    // boilerplate required for JAAS
-    protected fun getUsernamePasswordAndCerts(): Triple<String, String, Array<X509Certificate>> {
+    protected fun getUsernamePasswordAndCerts(): Triple<String, String, Array<X509Certificate>?> {
         val nameCallback = NameCallback("Username: ")
         val passwordCallback = PasswordCallback("Password: ", false)
         val certificateCallback = CertificateCallback()

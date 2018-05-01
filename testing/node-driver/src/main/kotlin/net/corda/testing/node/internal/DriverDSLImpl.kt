@@ -141,8 +141,8 @@ class DriverDSLImpl(
     }
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
-        val rpcAddress = config.corda.rpcOptions.address!!
-        val client = createCordaRPCClientWithInternalSslAndClassLoader(config.corda.rpcOptions.adminAddress!!, sslConfiguration = config.corda)
+        val rpcAddress = config.corda.rpcOptions.address
+        val client = createCordaRPCClientWithInternalSslAndClassLoader(config.corda.rpcOptions.adminAddress, sslConfiguration = config.corda)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }

@@ -1,17 +1,13 @@
 package net.corda.node.services.config.shell
 
 import net.corda.core.internal.div
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.Permissions
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.ClientRpcSslOptions
-import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
 import net.corda.tools.shell.ShellConfiguration
 import net.corda.tools.shell.ShellConfiguration.Companion.COMMANDS_DIR
 import net.corda.tools.shell.ShellConfiguration.Companion.CORDAPPS_DIR
 import net.corda.tools.shell.ShellConfiguration.Companion.SSHD_HOSTKEY_DIR
-import net.corda.tools.shell.ShellConfiguration.Companion.SSH_PORT
-
 
 //re-packs data to Shell specific classes
 fun NodeConfiguration.toShellConfig(): ShellConfiguration {
@@ -23,17 +19,14 @@ fun NodeConfiguration.toShellConfig(): ShellConfiguration {
     } else {
         null
     }
-    val localShellUser: User = localShellUser()
     return ShellConfiguration(
             commandsDirectory = this.baseDirectory / COMMANDS_DIR,
             cordappsDirectory = this.baseDirectory.toString() / CORDAPPS_DIR,
-            user = localShellUser.username,
-            password = localShellUser.password,
-            hostAndPort = this.rpcOptions.address ?: NetworkHostAndPort("localhost", SSH_PORT),
+            user = NODE_RPC_USER,
+            password = NODE_RPC_USER,
+            hostAndPort = this.rpcOptions.adminAddress,
             ssl = sslConfiguration,
             sshdPort = this.sshd?.port,
             sshHostKeyDirectory = this.baseDirectory / SSHD_HOSTKEY_DIR,
             noLocalShell = this.noLocalShell)
 }
-
-fun localShellUser() = User("shell", "shell", setOf(Permissions.all()))

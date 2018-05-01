@@ -7,7 +7,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.artemis.*
-import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_ROLE
+import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_P2P_ROLE
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pAcceptorTcpTransport
@@ -131,7 +131,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
      * 4. Verifiers. These are given read access to the verification request queue and write access to the response queue.
      */
     private fun ConfigurationImpl.configureAddressSecurity(): Configuration {
-        val nodeInternalRole = Role(NODE_ROLE, true, true, true, true, true, true, true, true)
+        val nodeInternalRole = Role(NODE_P2P_ROLE, true, true, true, true, true, true, true, true)
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles["$P2P_PREFIX#"] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
         return this
@@ -153,8 +153,8 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             // Override to make it work with our login module
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
                 val options = mapOf(
-                        BrokerJaasLoginModule.P2P_SECURITY_CONFIG to P2PJaasConfig(CertificateChainCheckPolicy.RootMustMatch.createCheck(keyStore, trustStore)),
-                        BrokerJaasLoginModule.NODE_SECURITY_CONFIG to NodeJaasConfig(CertificateChainCheckPolicy.LeafMustMatch.createCheck(keyStore, trustStore))
+                        BrokerJaasLoginModule.P2P_SECURITY_CONFIG to P2PJaasConfig(keyStore, trustStore),
+                        BrokerJaasLoginModule.NODE_SECURITY_CONFIG to NodeJaasConfig(keyStore, trustStore)
                 )
                 return arrayOf(AppConfigurationEntry(name, REQUIRED, options))
             }

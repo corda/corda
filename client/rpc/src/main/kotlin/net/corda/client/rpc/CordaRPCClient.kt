@@ -109,7 +109,8 @@ class CordaRPCClient private constructor(
         private val sslConfiguration: ClientRpcSslOptions? = null,
         private val nodeSslConfiguration: SSLConfiguration? = null,
         private val classLoader: ClassLoader? = null,
-        private val haAddressPool: List<NetworkHostAndPort> = emptyList()
+        private val haAddressPool: List<NetworkHostAndPort> = emptyList(),
+        private val internalConnection: Boolean = false
 ) {
     @JvmOverloads
     constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) : this(hostAndPort, configuration, null)
@@ -147,7 +148,7 @@ class CordaRPCClient private constructor(
                 sslConfiguration: SSLConfiguration?,
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {
-            return CordaRPCClient(hostAndPort, configuration, null, sslConfiguration, classLoader)
+            return CordaRPCClient(hostAndPort, configuration, null, sslConfiguration, classLoader, internalConnection = true)
         }
     }
 
@@ -163,17 +164,22 @@ class CordaRPCClient private constructor(
         }
     }
 
-    private fun getRpcClient(): RPCClient<CordaRPCOps> = when {
-        nodeSslConfiguration != null -> RPCClient(hostAndPort, nodeSslConfiguration)
-        haAddressPool.isEmpty() -> RPCClient(
-                rpcConnectorTcpTransport(hostAndPort, config = sslConfiguration),
-                configuration,
-                if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT)
-        else -> {
-            RPCClient(haAddressPool,
-                    sslConfiguration,
+    private fun getRpcClient(): RPCClient<CordaRPCOps> {
+        return when {
+            // Node->RPC broker, mutually authenticated SSL. This is used when connecting the integrated shell
+            internalConnection == true -> RPCClient(hostAndPort, nodeSslConfiguration!!)
+
+            // Client->RPC broker
+            haAddressPool.isEmpty() -> RPCClient(
+                    rpcConnectorTcpTransport(hostAndPort, config = sslConfiguration),
                     configuration,
                     if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT)
+            else -> {
+                RPCClient(haAddressPool,
+                        sslConfiguration,
+                        configuration,
+                        if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT)
+            }
         }
     }
 

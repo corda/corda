@@ -80,7 +80,7 @@ internal class ArtemisRpcBroker internal constructor(
             override fun getAppConfigurationEntry(name: String): Array<AppConfigurationEntry> {
                 val options = mapOf(
                         RPC_SECURITY_CONFIG to RPCJaasConfig(securityManager, loginListener, useSsl),
-                        NODE_SECURITY_CONFIG to NodeJaasConfig(CertificateChainCheckPolicy.LeafMustMatch.createCheck(keyStore, trustStore))
+                        NODE_SECURITY_CONFIG to NodeJaasConfig(keyStore, trustStore)
                 )
                 return arrayOf(AppConfigurationEntry(name, AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options))
             }

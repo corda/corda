@@ -24,7 +24,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
         setDirectories(baseDirectory)
 
         val acceptorConfigurationsSet = mutableSetOf(
-                rpcAcceptorTcpTransport( address, sslOptions, useSsl)
+                rpcAcceptorTcpTransport(address, sslOptions, useSsl)
         )
         adminAddress?.let {
             acceptorConfigurationsSet += rpcInternalAcceptorTcpTransport(it, nodeConfiguration)
@@ -43,9 +43,9 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
 
         initialiseSettings(maxMessageSize)
 
-        val nodeInternalRole = Role(BrokerJaasLoginModule.NODE_ROLE, true, true, true, true, true, true, true, true)
+        val nodeInternalRole = Role(BrokerJaasLoginModule.NODE_RPC_ROLE, true, true, true, true, true, true, true, true)
 
-        val rolesAdderOnLogin = RolesAdderOnLogin { username ->
+        val rolesAdderOnLogin = RolesAdderOnLogin(listOf(ArtemisMessagingComponent.NODE_RPC_USER)) { username ->
             "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#" to setOf(nodeInternalRole, restrictedRole(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username",
                     consume = true,

@@ -27,19 +27,21 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
 import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.node.services.Permissions
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
-import net.corda.node.services.config.shell.localShellUser
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.DemoClock
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
+import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.serialization.*
@@ -159,18 +161,21 @@ open class Node(configuration: NodeConfiguration,
                                       networkParameters: NetworkParameters): MessagingService {
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
-        val securityManagerConfig = configuration.security?.authService ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
+        val securityManagerConfig = configuration.security?.authService
+                ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
         securityManager = with(RPCSecurityManagerImpl(securityManagerConfig)) {
-            if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this, localShellUser()) else this
+            if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this, User(NODE_RPC_USER, NODE_RPC_USER, setOf(Permissions.all()))) else this
         }
 
         if (!configuration.messagingServerExternal) {
-            val brokerBindAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
+            val brokerBindAddress = configuration.messagingServerAddress
+                    ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
             messageBroker = ArtemisMessagingServer(configuration, brokerBindAddress, MAX_FILE_SIZE)
         }
 
-        val serverAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port)
+        val serverAddress = configuration.messagingServerAddress
+                ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port)
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
             BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress)
         } else {
@@ -207,18 +212,17 @@ open class Node(configuration: NodeConfiguration,
     }
 
     private fun startLocalRpcBroker(networkParameters: NetworkParameters): BrokerAddresses? {
-        with(configuration) {
-            return rpcOptions.address?.let {
-                require(rpcOptions.address != null) { "RPC address needs to be specified for local RPC broker." }
+        return with(configuration) {
+            rpcOptions.address.let {
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(configuration, this.address!!, adminAddress!!, sslConfig, securityManager, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
+                        ArtemisRpcBroker.withSsl(configuration, this.address, adminAddress, sslConfig, securityManager, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     } else {
-                        ArtemisRpcBroker.withoutSsl(configuration, this.address!!, adminAddress!!, securityManager, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
+                        ArtemisRpcBroker.withoutSsl(configuration, this.address, adminAddress, securityManager, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
                     }
                 }
-                return rpcBroker!!.addresses
+                rpcBroker!!.addresses
             }
         }
     }
@@ -284,7 +288,7 @@ open class Node(configuration: NodeConfiguration,
         internalRpcMessagingClient?.run {
             runOnStop += this::close
             when (rpcOps) {
-                // not sure what this RPCOps base interface is for
+            // not sure what this RPCOps base interface is for
                 is SecureCordaRPCOps -> init(RpcExceptionHandlingProxy(rpcOps), securityManager)
                 else -> init(rpcOps, securityManager)
             }
@@ -346,20 +350,15 @@ open class Node(configuration: NodeConfiguration,
                 // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
                 //
                 // https://jolokia.org/agent/jvm.html
-                JmxReporter.
-                        forRegistry(started.services.monitoringService.metrics).
-                        inDomain("net.corda").
-                        createsObjectNamesWith { _, domain, name ->
-                            // Make the JMX hierarchy a bit better organised.
-                            val category = name.substringBefore('.')
-                            val subName = name.substringAfter('.', "")
-                            if (subName == "")
-                                ObjectName("$domain:name=$category")
-                            else
-                                ObjectName("$domain:type=$category,name=$subName")
-                        }.
-                        build().
-                        start()
+                JmxReporter.forRegistry(started.services.monitoringService.metrics).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
+                    // Make the JMX hierarchy a bit better organised.
+                    val category = name.substringBefore('.')
+                    val subName = name.substringAfter('.', "")
+                    if (subName == "")
+                        ObjectName("$domain:name=$category")
+                    else
+                        ObjectName("$domain:type=$category,name=$subName")
+                }.build().start()
 
                 _startupComplete.set(Unit)
             }

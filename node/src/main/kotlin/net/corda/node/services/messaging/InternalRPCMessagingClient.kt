@@ -7,7 +7,7 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ServerLocator
@@ -32,7 +32,7 @@ class InternalRPCMessagingClient(val sslConfig: SSLConfiguration, val serverAddr
             isUseGlobalPools = nodeSerializationEnv != null
         }
 
-        rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator!!, securityManager, nodeName)
+        rpcServer = RPCServer(rpcOps, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName)
     }
 
     fun start(serverControl: ActiveMQServerControl) = synchronized(this) {
