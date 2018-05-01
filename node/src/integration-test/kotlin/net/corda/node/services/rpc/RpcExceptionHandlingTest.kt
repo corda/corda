@@ -1,6 +1,7 @@
 package net.corda.node.services.rpc
 
 import co.paralleluniverse.fibers.Suspendable
+import junit.framework.TestCase.assertTrue
 import net.corda.ClientRelevantException
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -68,7 +69,8 @@ class RpcExceptionHandlingTest {
             val nodeA = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = users)).getOrThrow()
             val nodeB = startNode(NodeParameters(providedName = BOB_NAME, rpcUsers = users)).getOrThrow()
 
-            assertThatCode { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+            assertThatCode { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }
+                    .isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()

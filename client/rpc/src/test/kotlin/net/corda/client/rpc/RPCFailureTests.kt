@@ -1,6 +1,6 @@
 package net.corda.client.rpc
 
-import com.esotericsoftware.kryo.KryoException
+import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
@@ -11,7 +11,6 @@ import net.corda.testing.node.internal.startRpcClient
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Rule
 import org.junit.Test
-import java.io.NotSerializableException
 
 class RPCFailureTests {
     @Rule
@@ -49,23 +48,29 @@ class RPCFailureTests {
 
     @Test
     fun `kotlin NPE`() = rpc {
-        assertThatThrownBy { it.kotlinNPE() }.isInstanceOf(KotlinNullPointerException::class.java)
+        assertThatThrownBy { it.kotlinNPE() }.isInstanceOf(CordaRuntimeException::class.java)
+                .hasMessageContaining("kotlin.KotlinNullPointerException")
     }
 
     @Test
     fun `kotlin NPE async`() = rpc {
         val future = it.kotlinNPEAsync()
-        assertThatThrownBy { future.getOrThrow() }.isInstanceOf(KotlinNullPointerException::class.java)
+        assertThatThrownBy { future.getOrThrow() }.isInstanceOf(CordaRuntimeException::class.java)
+                .hasMessageContaining("kotlin.KotlinNullPointerException")
     }
 
     @Test
     fun `unserializable`() = rpc {
-        assertThatThrownBy { it.getUnserializable() }.isInstanceOf(NotSerializableException::class.java)
+        assertThatThrownBy { it.getUnserializable() }.isInstanceOf(CordaRuntimeException::class.java)
+                .hasMessageContaining("java.io.NotSerializableException:")
+                .hasMessageContaining("Unserializable is not on the whitelist or annotated with @CordaSerializable.")
     }
 
     @Test
     fun `unserializable async`() = rpc {
         val future = it.getUnserializableAsync()
-        assertThatThrownBy { future.getOrThrow() }.isInstanceOf(KryoException::class.java)
+        assertThatThrownBy { future.getOrThrow() }.isInstanceOf(CordaRuntimeException::class.java)
+                .hasMessageContaining("java.io.NotSerializableException:")
+                .hasMessageContaining("Unserializable is not on the whitelist or annotated with @CordaSerializable.")
     }
 }
