@@ -36,7 +36,7 @@ buildscript {
      * The issue has been reported to upstream:
      * https://issues.apache.org/jira/browse/ARTEMIS-1559
      */
-    ext.artemis_version = '2.2.0'
+    ext.artemis_version = '2.5.0'
     ext.jackson_version = '2.9.3'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
@@ -49,7 +49,7 @@ buildscript {
     ext.caffeine_version = constants.getProperty("caffeineVersion")
     ext.metrics_version = constants.getProperty("metricsVersion")
     ext.okhttp_version = '3.5.0'
-    ext.netty_version = '4.1.9.Final'
+    ext.netty_version = '4.1.22.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.3.3'
     ext.junit_version = '4.12'
@@ -377,4 +377,9 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
             }
         }
     }
+}
+
+wrapper {
+    gradleVersion = "4.4.1"
+    distributionType = Wrapper.DistributionType.ALL
 }

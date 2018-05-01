@@ -88,6 +88,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
             override val certificatesDirectory = Files.createTempDirectory("certs")
             override val keyStorePassword: String get() = "cordacadevpass"
             override val trustStorePassword: String get() = "trustpass"
+            override val crlCheckSoftFail: Boolean = true
 
             init {
                 val legalName = CordaX500Name("MegaCorp", "London", "GB")

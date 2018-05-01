@@ -76,9 +76,13 @@ class KeyStores(val keyStore: UnsafeKeyStore, val trustStore: UnsafeKeyStore) {
             }
         }
     }
-    data class TestSslOptions(override val certificatesDirectory: Path, override val keyStorePassword: String, override val trustStorePassword: String) : SSLConfiguration
 
-    private fun sslConfiguration(directory: Path) = TestSslOptions(directory, keyStore.password, trustStore.password)
+    data class TestSslOptions(override val certificatesDirectory: Path,
+                              override val keyStorePassword: String,
+                              override val trustStorePassword: String,
+                              override val crlCheckSoftFail: Boolean) : SSLConfiguration
+
+    private fun sslConfiguration(directory: Path) = TestSslOptions(directory, keyStore.password, trustStore.password, true)
 }
 
 interface AutoClosableSSLConfiguration : AutoCloseable {
@@ -121,6 +125,7 @@ data class UnsafeKeyStore(private val delegate: KeyStore, val password: String) 
 
 class TemporaryFile(fileName: String, val directory: Path) : AutoCloseable {
     val file: Path = (directory / fileName).createFile().toAbsolutePath()
+
     init {
         file.toFile().deleteOnExit()
     }
