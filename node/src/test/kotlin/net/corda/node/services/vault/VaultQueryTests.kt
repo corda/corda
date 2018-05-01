@@ -1,9 +1,7 @@
 package net.corda.node.services.vault
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.toStringShort
+import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
@@ -29,12 +27,13 @@ import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
 import net.corda.testing.internal.vault.DummyLinearContract
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
-import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.*
 import org.junit.rules.ExpectedException
 import java.lang.Thread.sleep
@@ -2092,6 +2091,25 @@ class VaultQueryTests {
             assertThat(exitStates).hasSize(0)
         }
     }
+
+    @Test
+    fun `record a transaction with number of inputs greater than vault page size`() {
+
+        val notary = Companion.dummyNotary
+        val issuerKey = notary.keyPair
+        val signatureMetadata = SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(issuerKey.public).schemeNumberID)
+        val states = database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(PageSpecification().pageSize + 1).states
+        }
+
+        database.transaction {
+            val statesExitingTx = TransactionBuilder(notary.party).withItems(*states.toList().toTypedArray()).addCommand(dummyCommand())
+            val signedStatesExitingTx = services.signInitialTransaction(statesExitingTx).withAdditionalSignature(issuerKey, signatureMetadata)
+
+            assertThatCode { services.recordTransactions(signedStatesExitingTx) }.doesNotThrowAnyException()
+        }
+    }
+
     /**
      *  USE CASE demonstrations (outside of mainline Corda)
      *
