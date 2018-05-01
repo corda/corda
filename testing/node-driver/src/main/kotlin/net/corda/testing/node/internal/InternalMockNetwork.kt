@@ -223,7 +223,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
             args.config,
             TestClock(Clock.systemUTC()),
             args.version,
-            // Exclude the specified CorDapps.
+            // Add the specified additional CorDapps.
             CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages + args.extraCordappPackages),
             args.network.busyLatch
     ) {
