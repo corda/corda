@@ -8,7 +8,7 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-package net.corda.node.services
+package net.corda.node.services.distributed
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Amount

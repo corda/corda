@@ -12,6 +12,7 @@ package net.corda.core.node.services
 
 import net.corda.core.CordaException
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
@@ -25,7 +26,13 @@ import net.corda.core.serialization.CordaSerializable
  */
 interface UniquenessProvider {
     /** Commits all input states of the given transaction. */
-    fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature)
+    fun commit(
+            states: List<StateRef>,
+            txId: SecureHash,
+            callerIdentity: Party,
+            requestSignature: NotarisationRequestSignature,
+            timeWindow: TimeWindow? = null
+    )
 
     /** Specifies the consuming transaction for every conflicting state. */
     @CordaSerializable

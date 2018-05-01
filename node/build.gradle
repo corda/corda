@@ -157,12 +157,9 @@ dependencies {
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
     // Java Atomix: RAFT library
-    compile 'io.atomix.copycat:copycat-client:1.2.3'
-    compile 'io.atomix.copycat:copycat-server:1.2.3'
-    compile 'io.atomix.catalyst:catalyst-netty:1.1.2'
-
-    // Netty: All of it.
-    compile "io.netty:netty-all:$netty_version"
+    compile 'io.atomix.copycat:copycat-client:1.2.8'
+    compile 'io.atomix.copycat:copycat-server:1.2.8'
+    compile 'io.atomix.catalyst:catalyst-netty:1.2.1'
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
