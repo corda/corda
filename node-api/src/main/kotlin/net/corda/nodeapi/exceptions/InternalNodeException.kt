@@ -2,10 +2,12 @@ package net.corda.nodeapi.exceptions
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.flows.FlowException
 import java.io.InvalidClassException
 
 // could change to use package name matching but trying to avoid reflection for now
 private val whitelisted = setOf(
+        FlowException::class,
         InvalidClassException::class,
         RpcSerializableError::class,
         TransactionVerificationException::class
@@ -23,7 +25,6 @@ class InternalNodeException(message: String) : CordaRuntimeException(message) {
         fun defaultMessage(): String = DEFAULT_MESSAGE
 
         fun obfuscateIfInternal(wrapped: Throwable): Throwable {
-
             (wrapped as? CordaRuntimeException)?.setCause(null)
             return when {
                 whitelisted.any { it.isInstance(wrapped) } -> wrapped
