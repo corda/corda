@@ -7,6 +7,10 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialised in
+  a factory without a serialiser as the subtype check for the class instance failed. Fix is to compare the raw
+  type.
+  
 * Fixed incorrect exception handling in ``NodeVaultService._query()``.
 
 * Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
