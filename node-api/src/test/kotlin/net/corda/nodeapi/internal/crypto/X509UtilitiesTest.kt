@@ -183,6 +183,7 @@ class X509UtilitiesTest {
             override val certificatesDirectory = tempFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"
+            override val crlCheckSoftFail: Boolean = true
         }
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
@@ -218,6 +219,7 @@ class X509UtilitiesTest {
             override val certificatesDirectory = tempFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"
+            override val crlCheckSoftFail: Boolean = true
         }
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()

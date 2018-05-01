@@ -15,8 +15,8 @@ import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class ArgsParserTest {
-    private val parser = ArgsParser()
+class NodeArgsParserTest {
+    private val parser = NodeArgsParser()
 
     companion object {
         private lateinit var workingDirectory: Path
@@ -35,7 +35,6 @@ class ArgsParserTest {
         assertThat(parser.parse()).isEqualTo(CmdLineOptions(
                 baseDirectory = workingDirectory,
                 configFile = workingDirectory / "node.conf",
-                help = false,
                 logToConsole = false,
                 loggingLevel = Level.INFO,
                 nodeRegistrationOption = null,
@@ -166,7 +165,6 @@ class ArgsParserTest {
 
     @Test
     fun `on-unknown-config-keys options`() {
-
         UnknownConfigKeysPolicy.values().forEach { onUnknownConfigKeyPolicy ->
             val cmdLineOptions = parser.parse("--on-unknown-config-keys", onUnknownConfigKeyPolicy.name)
             assertThat(cmdLineOptions.unknownConfigKeysPolicy).isEqualTo(onUnknownConfigKeyPolicy)
