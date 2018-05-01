@@ -306,7 +306,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     open fun startShell() {
         if (configuration.shouldInitCrashShell()) {
-            InteractiveShell.startShellInternal(configuration.toShellConfig(), configuration, cordappLoader.appClassLoader)
+            InteractiveShell.startShellInternal(configuration.toShellConfig(), cordappLoader.appClassLoader)
         }
     }
 
