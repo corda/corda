@@ -170,7 +170,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     fun createMessage(payload: ByteArray,
                       topic: String,
                       destinationLegalName: String,
-                      properties: Map<Any?, Any?>): SendableMessage {
+                      properties: Map<String, Any?>): SendableMessage {
         return SendableMessageImpl(payload, topic, destinationLegalName, currentTarget, properties)
     }
 
