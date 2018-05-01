@@ -12,14 +12,24 @@ import net.corda.node.services.transactions.minClusterSize
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 
-class BFTSMaRtTests {
+class BFTSMaRtTests : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2", "node_3", "node_4", "node_5",
+                "node_6", "node_7", "node_8", "node_9")
+    }
+
     private lateinit var mockNet: InternalMockNetwork
 
     @Before

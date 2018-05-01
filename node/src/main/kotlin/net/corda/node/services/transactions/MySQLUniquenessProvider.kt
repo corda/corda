@@ -17,6 +17,7 @@ import com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotarisationRequestSignature
@@ -44,6 +45,7 @@ class MySQLUniquenessProvider(
         metrics: MetricRegistry,
         configuration: MySQLConfiguration
 ) : UniquenessProvider, SingletonSerializeAsToken() {
+
     companion object {
         private val log = loggerFor<MySQLUniquenessProvider>()
 
@@ -123,7 +125,7 @@ class MySQLUniquenessProvider(
         dataSource.close()
     }
 
-    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature) {
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?) {
         val s = Stopwatch.createStarted()
         try {
             runWithRetry(CommitAll(states, txId, callerIdentity, requestSignature))

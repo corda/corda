@@ -41,7 +41,6 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.TestClock
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -55,7 +54,6 @@ import org.junit.Assert.assertThat
 import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
-import java.util.*
 import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -75,6 +73,7 @@ class BFTNotaryServiceTests {
         @BeforeClass
         @JvmStatic
         fun before() {
+            IntegrationTest.globalSetUp() //Enterprise only - remote db setup
             mockNet = InternalMockNetwork(listOf("net.corda.testing.contracts"))
             val clusterSize = minClusterSize(1)
             val started = startBftClusterAndNode(clusterSize, mockNet)
@@ -86,6 +85,7 @@ class BFTNotaryServiceTests {
         @JvmStatic
         fun stopNodes() {
             mockNet.stopNodes()
+            IntegrationTest.globalTearDown() //Enterprise only - remote db cleanup
         }
 
         fun startBftClusterAndNode(clusterSize: Int, mockNet: InternalMockNetwork, exposeRaces: Boolean = false): Pair<Party, StartedNode<MockNode>> {
@@ -113,10 +113,12 @@ class BFTNotaryServiceTests {
                 networkParameters.install(mockNet.baseDirectory(node.id))
                 node.start()
             }.last()
-
             return Pair(notaryIdentity, node)
         }
     }
+
+
+
 
     @Test
     fun `detect double spend`() {
@@ -124,6 +126,8 @@ class BFTNotaryServiceTests {
             val issueTx = signInitialTransaction(notary) {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
+            //val latch = CountDownLatch(1)
+            //latch.await()
             database.transaction {
                 services.recordTransactions(issueTx)
             }
