@@ -161,8 +161,7 @@ class NodeVaultService(
                     filter { (_, output) ->
                         if (statesToRecord == StatesToRecord.ONLY_RELEVANT) {
                             isRelevant(output.data, myKeys.toSet())
-                        }
-                        else {
+                        } else {
                             true
                         }
                     }.
