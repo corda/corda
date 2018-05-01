@@ -61,14 +61,14 @@ import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests {
     companion object {
-        private lateinit var mockNet: InternalMockNetwork
-        private lateinit var notary: Party
-        private lateinit var node: StartedNode<MockNode>
-
         @ClassRule
         @JvmField
         val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2", "node_3", "node_4", "node_5",
                 "node_6", "node_7", "node_8", "node_9")
+
+        private lateinit var mockNet: InternalMockNetwork
+        private lateinit var notary: Party
+        private lateinit var node: StartedNode<MockNode>
 
         @BeforeClass
         @JvmStatic
@@ -126,8 +126,6 @@ class BFTNotaryServiceTests {
             val issueTx = signInitialTransaction(notary) {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
-            //val latch = CountDownLatch(1)
-            //latch.await()
             database.transaction {
                 services.recordTransactions(issueTx)
             }
