@@ -6,7 +6,7 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
-* Enforced a maximum of 2000 inputs for a LedgerTransaction.
+* Enforced a maximum of 2000 inputs for a LedgerTransaction. Needed because Corda loads transaction inputs in memory and because the ``Notary`` cannot cope with too many states in input for a transaction.
 
 * Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
 

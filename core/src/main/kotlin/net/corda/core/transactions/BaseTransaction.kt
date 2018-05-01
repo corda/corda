@@ -13,6 +13,11 @@ import java.util.function.Predicate
  */
 @DoNotImplement
 abstract class BaseTransaction : NamedByHash {
+
+    internal companion object {
+        internal const val maxInputsCount = 2000
+    }
+
     /** The inputs of this transaction. Note that in BaseTransaction subclasses the type of this list may change! */
     abstract val inputs: List<*>
     /** Ordered list of states defined by this transaction, along with the associated notaries. */
@@ -27,6 +32,7 @@ abstract class BaseTransaction : NamedByHash {
     protected open fun checkBaseInvariants() {
         checkNotarySetIfInputsPresent()
         checkNoDuplicateInputs()
+        check(inputs.size <= maxInputsCount) { "Transaction with ${inputs.size} inputs exceeded maximum inputs count of $maxInputsCount." }
     }
 
     private fun checkNotarySetIfInputsPresent() {
