@@ -157,7 +157,7 @@ class CordaPersistence(
                 val answer = transaction.statement()
                 transaction.commit()
                 return answer
-           } catch (e: Throwable) {
+            } catch (e: Throwable) {
                 quietly(transaction::rollback)
                 if (e is SQLException || (recoverAnyNestedSQLException && e.hasSQLExceptionCause)) {
                     if (++recoverableFailureCount > recoverableFailureTolerance) throw e
