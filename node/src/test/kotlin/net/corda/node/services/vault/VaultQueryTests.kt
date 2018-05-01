@@ -135,12 +135,12 @@ open class VaultQueryTests {
     val expectedEx: ExpectedException = ExpectedException.none()
 
     @Before
-    fun setUp() {
+    open fun setUp() {
         transaction = database.newTransaction()
     }
 
     @After
-    fun tearDown() {
+    open fun tearDown() {
         transaction.rollback()
         transaction.close()
     }

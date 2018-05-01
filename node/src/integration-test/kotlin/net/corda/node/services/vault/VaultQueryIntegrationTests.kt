@@ -18,6 +18,7 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import org.junit.*
 
+@Ignore // TODO - refactor VaultQuery integration tests with external junit resource
 class VaultQueryIntegrationTests : VaultQueryTests() {
 
     private val adapter = object: IntegrationTest() {
