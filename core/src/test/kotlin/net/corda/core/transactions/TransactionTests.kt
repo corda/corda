@@ -193,4 +193,24 @@ class TransactionTests {
 
         assertNotEquals(issueTx1.id, issueTx2.id)
     }
+
+    @Test
+    fun `ledger transaction fails if number of inputs exceeds limit`() {
+        val notary: Party = DUMMY_NOTARY
+        val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, notary)
+
+        val inputs = (1..LedgerTransaction.maxInputsCount + 1).map { StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)) }.toList()
+
+        fun buildTransaction() = LedgerTransaction(inputs,
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                SecureHash.randomSHA256(),
+                notary,
+                null,
+                PrivacySalt()
+        )
+
+        assertFailsWith<IllegalStateException> { buildTransaction() }
+    }
 }

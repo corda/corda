@@ -48,9 +48,13 @@ data class LedgerTransaction @JvmOverloads constructor(
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
         checkNoNotaryChange()
         checkEncumbrancesValid()
+        check(inputs.size <= maxInputsCount) { "Transaction with ${inputs.size} inputs exceeded maximum inputs count of $maxInputsCount." }
     }
 
-    private companion object {
+    internal companion object {
+        // We might decide in the future to move this as part of the [NetworkParameters].
+        internal const val maxInputsCount = 2000
+
         private fun contractClassFor(className: ContractClassName, classLoader: ClassLoader?): Try<Class<out Contract>> {
             return Try.on {
                 (classLoader ?: this::class.java.classLoader)

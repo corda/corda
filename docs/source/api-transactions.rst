@@ -96,6 +96,8 @@ Since a transaction's output states do not exist until the transaction is commit
 outputs of previous transactions. Instead, we create the desired output states as ``ContractState`` instances, and
 add them to the transaction directly:
 
+.. note:: Corda supports a maximum of 2000 inputs for any given transaction.
+
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt

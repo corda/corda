@@ -2094,7 +2094,6 @@ class VaultQueryTests {
 
     @Test
     fun `record a transaction with number of inputs greater than vault page size`() {
-
         val notary = Companion.dummyNotary
         val issuerKey = notary.keyPair
         val signatureMetadata = SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(issuerKey.public).schemeNumberID)
