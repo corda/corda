@@ -118,6 +118,7 @@ open class Baseform : DefaultTask() {
                 "'directory' cannot be used when 'definitionClass' is specified. Use CordformDefinition.nodesDirectory instead."
             }
             directory = cd.nodesDirectory
+            deleteRootDir()
             val cordapps = cd.getMatchingCordapps()
             cd.nodeConfigurers.forEach {
                 val node = node { }
@@ -127,21 +128,26 @@ open class Baseform : DefaultTask() {
             }
             cd.setup { nodeName -> project.projectDir.toPath().resolve(getNodeByName(nodeName)!!.nodeDir.toPath()) }
         } else {
+            deleteRootDir()
             nodes.forEach {
                 it.rootDir(directory)
             }
         }
     }
 
+    private fun deleteRootDir() {
+        project.logger.info("Deleting $directory")
+        project.delete(directory)
+    }
+
     protected fun bootstrapNetwork() {
         val networkBootstrapperClass = loadNetworkBootstrapperClass()
         val networkBootstrapper = networkBootstrapperClass.newInstance()
         val bootstrapMethod = networkBootstrapperClass.getMethod("bootstrap", Path::class.java, List::class.java).apply { isAccessible = true }
-        // Call NetworkBootstrapper.bootstrap
+        val allCordapps = nodes.flatMap { it.additionalCordapps + it.getCordappList() }.distinct().map { it.absolutePath }
+        val rootDir = project.projectDir.toPath().resolve(directory).toAbsolutePath().normalize()
         try {
-            // Create a list of all cordapps used in this network and pass it to the bootstrapper.
-            val allCordapps = nodes.flatMap { it.additionalCordapps + it.getCordappList() }.distinct().map { it.absolutePath }
-            val rootDir = project.projectDir.toPath().resolve(directory).toAbsolutePath().normalize()
+            // Call NetworkBootstrapper.bootstrap
             bootstrapMethod.invoke(networkBootstrapper, rootDir, allCordapps)
         } catch (e: InvocationTargetException) {
             throw e.cause!!
