@@ -505,8 +505,6 @@ class FlowFrameworkTripartyTests {
 
     @Test
     fun `sending to multiple parties`() {
-//        val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
-//        val charlie = charlieNode.info.singleIdentity()
         bobNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
         charlieNode.registerFlowFactory(SendFlow::class) { InitiatedReceiveFlow(it).nonTerminating() }
         val payload = "Hello World"
@@ -536,8 +534,6 @@ class FlowFrameworkTripartyTests {
 
     @Test
     fun `receiving from multiple parties`() {
-//        val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
-//        val charlie = charlieNode.info.singleIdentity()
         val bobPayload = "Test 1"
         val charliePayload = "Test 2"
         bobNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow(bobPayload, it) }
@@ -566,9 +562,6 @@ class FlowFrameworkTripartyTests {
 
     @Test
     fun `FlowException only propagated to parent`() {
-//        val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
-//        val charlie = charlieNode.info.singleIdentity()
-
         charlieNode.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
         bobNode.registerFlowFactory(ReceiveFlow::class) { ReceiveFlow(charlie) }
         val receivingFiber = aliceNode.services.startFlow(ReceiveFlow(bob))
@@ -579,9 +572,6 @@ class FlowFrameworkTripartyTests {
 
     @Test
     fun `FlowException thrown and there is a 3rd unrelated party flow`() {
-//        val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
-//        val charlie = charlieNode.info.singleIdentity()
-
         // Bob will send its payload and then block waiting for the receive from Alice. Meanwhile Alice will move
         // onto Charlie which will throw the exception
         val node2Fiber = bobNode
@@ -746,90 +736,6 @@ class FlowFrameworkPersistenceTests {
         assertEquals(payload + 1, secondFlow.getOrThrow().receivedPayload2, "Received payload does not match the expected second value on Node 2")
     }
 
-
-
-//    @Test
-//    fun `non-FlowException thrown on other side`() {
-//        val erroringFlowFuture = bobNode.registerFlowFactory(ReceiveFlow::class) {
-//            ExceptionFlow { Exception("evil bug!") }
-//        }
-//        val erroringFlowSteps = erroringFlowFuture.flatMap { it.progressSteps }
-//
-//        val receiveFlow = ReceiveFlow(bob)
-//        val receiveFlowSteps = receiveFlow.progressSteps
-//        val receiveFlowResult = aliceNode.services.startFlow(receiveFlow).resultFuture
-//
-//        mockNet.runNetwork()
-//
-//        erroringFlowFuture.getOrThrow()
-//        val flowSteps = erroringFlowSteps.get()
-//        assertThat(flowSteps).containsExactly(
-//                Notification.createOnNext(ExceptionFlow.START_STEP),
-//                Notification.createOnError(erroringFlowFuture.get().exceptionThrown)
-//        )
-//
-//        val receiveFlowException = assertFailsWith(UnexpectedFlowEndException::class) {
-//            receiveFlowResult.getOrThrow()
-//        }
-//        assertThat(receiveFlowException.message).doesNotContain("evil bug!")
-//        assertThat(receiveFlowSteps.get()).containsExactly(
-//                Notification.createOnNext(ReceiveFlow.START_STEP),
-//                Notification.createOnError(receiveFlowException)
-//        )
-//
-//        assertSessionTransfers(
-//                aliceNode sent sessionInit(ReceiveFlow::class) to bobNode,
-//                bobNode sent sessionConfirm() to aliceNode,
-//                bobNode sent errorMessage() to aliceNode
-//        )
-//    }
-
-//    @Test
-//    fun `FlowException only propagated to parent`() {
-//        val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
-//        val charlie = charlieNode.info.singleIdentity()
-//
-//        charlieNode.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
-//        bobNode.registerFlowFactory(ReceiveFlow::class) { ReceiveFlow(charlie) }
-//        val receivingFiber = aliceNode.services.startFlow(ReceiveFlow(bob))
-//        mockNet.runNetwork()
-//        assertThatExceptionOfType(UnexpectedFlowEndException::class.java)
-//                .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
-//    }
-//
-//    @Test
-//    fun `FlowException thrown and there is a 3rd unrelated party flow`() {
-//        val charlieNode = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
-//        val charlie = charlieNode.info.singleIdentity()
-//
-//        // Bob will send its payload and then block waiting for the receive from Alice. Meanwhile Alice will move
-//        // onto Charlie which will throw the exception
-//        val node2Fiber = bobNode
-//                .registerFlowFactory(ReceiveFlow::class) { SendAndReceiveFlow(it, "Hello") }
-//                .map { it.stateMachine }
-//        charlieNode.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Nothing useful") } }
-//
-//        val aliceFiber = aliceNode.services.startFlow(ReceiveFlow(bob, charlie)) as FlowStateMachineImpl
-//        mockNet.runNetwork()
-//
-//        // Alice will terminate with the error it received from Charlie but it won't propagate that to Bob (as it's
-//        // not relevant to it) but it will end its session with it
-//        assertThatExceptionOfType(MyFlowException::class.java).isThrownBy {
-//            aliceFiber.resultFuture.getOrThrow()
-//        }
-//        val bobResultFuture = node2Fiber.getOrThrow().resultFuture
-//        assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
-//            bobResultFuture.getOrThrow()
-//        }
-//
-//        assertSessionTransfers(bobNode,
-//                aliceNode sent sessionInit(ReceiveFlow::class) to bobNode,
-//                bobNode sent sessionConfirm() to aliceNode,
-//                bobNode sent sessionData("Hello") to aliceNode,
-//                aliceNode sent errorMessage() to bobNode
-//        )
-//    }
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //region Helpers
 
@@ -858,16 +764,13 @@ class FlowFrameworkPersistenceTests {
     }
 
     //endregion Helpers
-
 }
 
 private fun sessionConfirm(flowVersion: Int = 1) = ExistingSessionMessage(SessionId(0), ConfirmSessionMessage(SessionId(0), FlowInfo(flowVersion, "")))
 
-
 private inline fun <reified P : FlowLogic<*>> StartedNode<*>.getSingleFlow(): Pair<P, CordaFuture<*>> {
     return smm.findStateMachines(P::class.java).single()
 }
-
 
 private fun sanitise(message: SessionMessage) = when (message) {
     is InitialSessionMessage -> message.copy(initiatorSessionId = SessionId(0), initiationEntropy = 0, appName = "")
@@ -937,8 +840,6 @@ private val FlowLogic<*>.progressSteps: CordaFuture<List<Notification<ProgressTr
                 .toList()
                 .toFuture()
     }
-
-
 
 class ThrowingActionExecutor(private val exception: Exception, val delegate: ActionExecutor) : ActionExecutor {
     var thrown = false
@@ -1061,14 +962,11 @@ private class InitiatedReceiveFlow(val otherPartySession: FlowSession) : FlowLog
     }
 }
 
-
-
 private class LazyServiceHubAccessFlow : FlowLogic<Unit>() {
     val lazyTime: Instant by lazy { serviceHub.clock.instant() }
     @Suspendable
     override fun call() = Unit
 }
-
 
 private open class InitiatedSendFlow(val payload: Any, val otherPartySession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
@@ -1116,7 +1014,6 @@ private class MyFlowException(override val message: String) : FlowException() {
     override fun equals(other: Any?): Boolean = other is MyFlowException && other.message == this.message
     override fun hashCode(): Int = message.hashCode()
 }
-
 
 @InitiatingFlow
 private class VaultQueryFlow(val stx: SignedTransaction, val otherParty: Party) : FlowLogic<List<StateAndRef<ContractState>>>() {
