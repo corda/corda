@@ -6,6 +6,7 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
 
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
   Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
