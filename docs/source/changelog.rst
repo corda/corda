@@ -10,6 +10,10 @@ Unreleased
 
 * Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
 
+* Fixed incorrect exception handling in ``NodeVaultService._query()``.
+
+* Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
+
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
   Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
 
