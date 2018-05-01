@@ -225,9 +225,13 @@ class DriverDSLImpl(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = configOf(
-                        "p2pAddress" to "localhost:1222", // required argument, not really used
+                        "p2pAddress" to portAllocation.nextHostAndPort().toString(),
                         "compatibilityZoneURL" to compatibilityZoneURL.toString(),
                         "myLegalName" to providedName.toString(),
+                        "rpcSettings" to mapOf(
+                                "address" to portAllocation.nextHostAndPort().toString(),
+                                "adminAddress" to portAllocation.nextHostAndPort().toString()
+                        ),
                         "devMode" to false)
         ))
 
@@ -326,17 +330,13 @@ class DriverDSLImpl(
         val rpcAddress = if (cordform.rpcAddress == null) {
             val overrides = mutableMapOf<String, Any>("rpcSettings.address" to portAllocation.nextHostAndPort().toString())
             cordform.config.apply {
-                if (!hasPath("rpcSettings.useSsl") || !getBoolean("rpcSettings.useSsl")) {
-                    overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
-                }
+                overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
             }
             overrides
         } else {
             val overrides = mutableMapOf<String, Any>()
             cordform.config.apply {
-                if ((!hasPath("rpcSettings.useSsl") || !getBoolean("rpcSettings.useSsl")) && !hasPath("rpcSettings.adminAddress")) {
-                    overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
-                }
+                overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
             }
             overrides
         }
@@ -806,10 +806,10 @@ class DriverDSLImpl(
 
         private val propertiesInScope = setOf("java.io.tmpdir", AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
 
-        private fun inheritFromParentProcess() : Iterable<Pair<String, String>> {
+        private fun inheritFromParentProcess(): Iterable<Pair<String, String>> {
             return propertiesInScope.flatMap { propName ->
-                val propValue : String? = System.getProperty(propName)
-                if(propValue == null) {
+                val propValue: String? = System.getProperty(propName)
+                if (propValue == null) {
                     emptySet()
                 } else {
                     setOf(Pair(propName, propValue))
@@ -822,7 +822,7 @@ class DriverDSLImpl(
             var config = ConfigFactory.empty()
             config += "webAddress" to webAddress.toString()
             config += "myLegalName" to configuration.myLegalName.toString()
-            config += "rpcAddress" to configuration.rpcOptions.address!!.toString()
+            config += "rpcAddress" to configuration.rpcOptions.address.toString()
             config += "rpcUsers" to configuration.toConfig().getValue("rpcUsers")
             config += "useHTTPS" to useHTTPS
             config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()
@@ -844,8 +844,8 @@ class DriverDSLImpl(
             val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
             if (index == -1) return emptyList()
-            val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?:
-                    throw IllegalStateException("Function instantiating driver must be defined in a package.")
+            val callerPackage = Class.forName(stackTrace[index + 1].className).`package`
+                    ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
             return listOf(callerPackage.name)
         }
 
@@ -893,16 +893,18 @@ private class NetworkVisibilityController {
             val (snapshot, updates) = rpc.networkMapFeed()
             visibleNodeCount = snapshot.size
             checkIfAllVisible()
-            subscription = updates.subscribe { when (it) {
-                is NetworkMapCache.MapChange.Added -> {
-                    visibleNodeCount++
-                    checkIfAllVisible()
+            subscription = updates.subscribe {
+                when (it) {
+                    is NetworkMapCache.MapChange.Added -> {
+                        visibleNodeCount++
+                        checkIfAllVisible()
+                    }
+                    is NetworkMapCache.MapChange.Removed -> {
+                        visibleNodeCount--
+                        checkIfAllVisible()
+                    }
                 }
-                is NetworkMapCache.MapChange.Removed -> {
-                    visibleNodeCount--
-                    checkIfAllVisible()
-                }
-            } }
+            }
             return future
         }
 
