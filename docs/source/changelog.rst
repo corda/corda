@@ -11,6 +11,10 @@ Unreleased
   CorDapps implementing custom notary services will need to be updated, see ``samples/notary-demo`` for an example.
   Further changes may be required in the future.
 
+* Fixed incorrect exception handling in ``NodeVaultService._query()``.
+
+* Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
+
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
   Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
 
@@ -290,6 +294,8 @@ Version 3.0
 
 * ``TransactionSignature`` includes a new ``partialMerkleTree`` property, required for future support of signing over
   multiple transactions at once.
+
+* Updating Jolokia dependency to latest version (includes security fixes)
 
 .. _changelog_v1:
 

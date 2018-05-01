@@ -224,6 +224,7 @@ class ProtonWrapperTests {
             doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         artemisConfig.configureWithDevSSLCertificate()
 
@@ -240,6 +241,7 @@ class ProtonWrapperTests {
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
 
@@ -247,14 +249,15 @@ class ProtonWrapperTests {
         val clientKeystore = clientConfig.loadSslKeyStore().internal
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
-                NetworkHostAndPort("localhost", serverPort2),
-                NetworkHostAndPort("localhost", artemisPort)),
+                        NetworkHostAndPort("localhost", serverPort2),
+                        NetworkHostAndPort("localhost", artemisPort)),
                 setOf(ALICE_NAME, CHARLIE_NAME),
                 PEER_USER,
                 PEER_USER,
                 clientKeystore,
                 clientConfig.keyStorePassword,
-                clientTruststore, true)
+                clientTruststore,
+                true)
     }
 
     private fun createSharedThreadsClient(sharedEventGroup: EventLoopGroup, id: Int): AMQPClient {
@@ -263,6 +266,7 @@ class ProtonWrapperTests {
             doReturn(CordaX500Name(null, "client $id", "Corda", "London", null, "GB")).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
 
@@ -275,7 +279,9 @@ class ProtonWrapperTests {
                 PEER_USER,
                 clientKeystore,
                 clientConfig.keyStorePassword,
-                clientTruststore, true, sharedEventGroup)
+                clientTruststore,
+                true,
+                sharedThreadPool = sharedEventGroup)
     }
 
     private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME): AMQPServer {
@@ -284,6 +290,7 @@ class ProtonWrapperTests {
             doReturn(name).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
 
@@ -296,6 +303,7 @@ class ProtonWrapperTests {
                 PEER_USER,
                 serverKeystore,
                 serverConfig.keyStorePassword,
-                serverTruststore)
+                serverTruststore,
+                crlCheckSoftFail = true)
     }
 }

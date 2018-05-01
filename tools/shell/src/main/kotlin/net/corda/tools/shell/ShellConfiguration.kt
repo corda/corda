@@ -23,6 +23,12 @@ data class ShellConfiguration(
     }
 }
 
-data class ShellSslOptions(override val sslKeystore: Path, override val keyStorePassword: String, override val trustStoreFile:Path, override val trustStorePassword: String) : SSLConfiguration {
+//TODO: sslKeystore -> it's a path not the keystore itself.
+//TODO: trustStoreFile -> it's a path not the file itself.
+data class ShellSslOptions(override val sslKeystore: Path,
+                           override val keyStorePassword: String,
+                           override val trustStoreFile: Path,
+                           override val trustStorePassword: String,
+                           override val crlCheckSoftFail: Boolean) : SSLConfiguration {
     override val certificatesDirectory: Path get() = Paths.get("")
 }

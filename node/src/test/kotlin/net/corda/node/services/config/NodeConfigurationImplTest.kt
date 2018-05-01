@@ -62,7 +62,7 @@ class NodeConfigurationImplTest {
                 adminAddress = NetworkHostAndPort("localhost", 2),
                 standAloneBroker = false,
                 useSsl = false,
-                ssl = SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword))
+                ssl = SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword, true))
         return NodeConfigurationImpl(
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE_NAME,
@@ -79,7 +79,8 @@ class NodeConfigurationImplTest {
                 certificateChainCheckPolicies = emptyList(),
                 devMode = true,
                 noLocalShell = false,
-                rpcSettings = rpcSettings
+                rpcSettings = rpcSettings,
+                crlCheckSoftFail = true
         )
     }
 }
