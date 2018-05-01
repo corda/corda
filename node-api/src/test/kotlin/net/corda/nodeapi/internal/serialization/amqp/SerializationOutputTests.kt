@@ -1146,4 +1146,29 @@ class SerializationOutputTests {
         // The "test" is that this doesn't throw, anything else is a success
         PrivateAckWrapper.serialize()
     }
+
+    interface DataClassByInterface<V> {
+        val v : V
+    }
+
+    @Test
+    fun dataClassBy() {
+        data class C (val s: String) : DataClassByInterface<String> {
+            override val v: String = "-- $s"
+        }
+
+        data class Inner<T>(val wrapped: DataClassByInterface<T>) : DataClassByInterface<T> by wrapped {
+            override val v = wrapped.v
+        }
+
+        val i = Inner(C("hello"))
+
+        val bytes = SerializationOutput(testDefaultFactory()).serialize(i)
+
+        try {
+            val i2 = DeserializationInput(testDefaultFactory()).deserialize(bytes)
+        } catch (e : NotSerializableException) {
+            throw Error ("Deserializing serialized \$C should not throw")
+        }
+    }
 }
