@@ -42,6 +42,26 @@ open class MappedSchema(schemaFamily: Class<*>,
                         val mappedTypes: Iterable<Class<*>>) {
     val name: String = schemaFamily.name
     override fun toString(): String = "${this.javaClass.simpleName}(name=$name, version=$version)"
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as MappedSchema
+
+        if (version != other.version) return false
+        if (mappedTypes != other.mappedTypes) return false
+        if (name != other.name) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = version
+        result = 31 * result + mappedTypes.hashCode()
+        result = 31 * result + name.hashCode()
+        return result
+    }
 }
 //DOCEND MappedSchema
 
