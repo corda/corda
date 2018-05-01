@@ -6,6 +6,9 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+
+* Fixed incorrect exception handling in ``NodeVaultService._query()``.
+
 * Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
 
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
