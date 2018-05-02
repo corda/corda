@@ -3,9 +3,9 @@ package net.corda.node.internal
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NotaryService
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.MessagingService

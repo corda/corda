@@ -1,4 +1,4 @@
-package net.corda.client.rpc.internal
+package net.corda.client.rpc.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.serialization.SerializationContext
