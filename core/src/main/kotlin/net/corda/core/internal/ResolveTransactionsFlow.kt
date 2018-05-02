@@ -21,7 +21,7 @@ import java.util.*
  * @return a list of verified [SignedTransaction] objects, in a depth-first order.
  */
 class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
-                              private val otherSide: FlowSession) : FlowLogic<List<SignedTransaction>>() {
+                              private val otherSide: FlowSession) : FlowLogic<Unit>() {
     /**
      * Resolves and validates the dependencies of the specified [SignedTransaction]. Fetches the attachments, but does
      * *not* validate or store the [SignedTransaction] itself.
@@ -83,7 +83,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
 
     @Suspendable
     @Throws(FetchDataFlow.HashNotFound::class)
-    override fun call(): List<SignedTransaction> {
+    override fun call() {
         // Start fetching data.
         val newTxns = downloadDependencies(txHashes)
         fetchMissingAttachments(signedTransaction?.let { newTxns + it } ?: newTxns)
@@ -99,10 +99,6 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             it.verify(serviceHub)
             serviceHub.recordTransactions(StatesToRecord.NONE, listOf(it))
         }
-
-        return signedTransaction?.let {
-            result + it
-        } ?: result
     }
 
     @Suspendable
