@@ -3,10 +3,12 @@ package net.corda.behave.process
 import net.corda.behave.file.currentDirectory
 import net.corda.behave.file.doormanConfigDirectory
 import net.corda.behave.node.Distribution
+import net.corda.core.CordaRuntimeException
 import net.corda.core.internal.div
 import net.corda.core.utilities.minutes
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.nio.file.Paths
 
 class DoormanCommandTests {
 
@@ -16,12 +18,12 @@ class DoormanCommandTests {
      */
 
     private val source = doormanConfigDirectory
-    private val doormanRunDir = currentDirectory / "build/runs/doorman"
+    private val doormanRunDir = currentDirectory / "build" / "runs" / "doorman"
 
-    // TODO: use environment variables to specify build location & SQL driver to use
-    // Configure the following to point to valid Corda node configurations
-    private val notaryRunDir = currentDirectory / "build" / "runs" / "Notary"
-    private val participantRunDir = currentDirectory / "build" / "runs" / "PartyA"
+    // Set corresponding Java properties to point to valid Corda node configurations
+    // eg. -DNOTARY_NODE_DIR=<location of notary node configuration directory>
+    private val notaryRunDir = Paths.get(System.getProperty("NOTARY_NODE_DIR") ?: throw CordaRuntimeException("Please set NOTARY_NODE_DIR to point to valid Notary node configuration"))
+    private val nodeRunDir = Paths.get(System.getProperty("NODE_DIR") ?: throw CordaRuntimeException("Please set NODE_DIR to point to valid Node configuration"))
 
     @Test
     fun `step 1 - create key stores for local signer`() {
@@ -96,12 +98,12 @@ class DoormanCommandTests {
 
     @Test
     fun `step 8 - initial registration of network participant nodes`() {
-        println(participantRunDir)
+        println(nodeRunDir)
         val command = JarCommand(Distribution.R3_MASTER.cordaJar,
                 arrayOf("--initial-registration",
                         "--network-root-truststore", "../doorman/certificates/distribute-nodes/network-root-truststore.jks",
                         "--network-root-truststore-password", "password",
-                        "--base-directory", "$participantRunDir"),
+                        "--base-directory", "$nodeRunDir"),
                 doormanRunDir, 2.minutes)
         assertThat(command.run()).isEqualTo(0)
     }

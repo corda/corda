@@ -1,11 +1,12 @@
 package net.corda.behave.process
 
-import net.corda.behave.file.currentDirectory
 import net.corda.behave.node.Distribution
+import net.corda.core.CordaRuntimeException
 import net.corda.core.internal.div
 import net.corda.core.utilities.minutes
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.nio.file.Paths
 
 class DBMigrationToolTests {
 
@@ -14,10 +15,10 @@ class DBMigrationToolTests {
      * http://docs.corda.r3.com/website/releases/docs_head/api-persistence.html#database-migration
      */
 
-    // TODO: use environment variables to specify build location & SQL driver to use
-    // Configure the following to point to valid Corda node configurations
-    private val nodeRunDir = currentDirectory / "build" / "runs" / "PartyA"
-    private val jdbcDriver = nodeRunDir / ".." / "libs" / "postgresql-42.1.4.jar"
+    // Set corresponding Java properties to point to valid Corda node configurations
+    // eg. -DNODE_DIR=<location of node configuration directory> -DJDBC_DRIVER=postgresql-42.1.4.jar
+    private val nodeRunDir = Paths.get(System.getProperty("NODE_DIR") ?: throw CordaRuntimeException("Please set NODE_DIR to point to valid Node configuration"))
+    private val jdbcDriver = nodeRunDir / ".." / "libs" / (System.getProperty("JDBC_DRIVER") ?: throw CordaRuntimeException("Please set JDBC_DRIVER to point to valid JDBC driver jar file located under $nodeRunDir\\..\\libs"))
 
     private val migrationToolMain = "com.r3.corda.dbmigration.DBMigration"
 
