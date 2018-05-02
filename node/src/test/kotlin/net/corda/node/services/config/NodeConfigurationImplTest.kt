@@ -103,7 +103,7 @@ class NodeConfigurationImplTest {
                 adminAddress = NetworkHostAndPort("localhost", 2),
                 standAloneBroker = false,
                 useSsl = false,
-                ssl = SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword))
+                ssl = SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword, true))
         return NodeConfigurationImpl(
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE_NAME,
@@ -122,7 +122,8 @@ class NodeConfigurationImplTest {
                 noLocalShell = false,
                 rpcSettings = rpcSettings,
                 relay = null,
-                enterpriseConfiguration = EnterpriseConfiguration((MutualExclusionConfiguration(false, "", 20000, 40000)))
+                enterpriseConfiguration = EnterpriseConfiguration((MutualExclusionConfiguration(false, "", 20000, 40000))),
+                crlCheckSoftFail = true
         )
     }
 }

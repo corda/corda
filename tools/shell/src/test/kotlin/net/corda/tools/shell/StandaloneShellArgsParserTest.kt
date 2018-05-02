@@ -112,12 +112,13 @@ class StandaloneShellArgsParserTest {
                 trustStoreFile = Paths.get("/x/y/truststore.jks"),
                 keyStoreType = "dummy",
                 trustStoreType = "dummy"
-                )
+        )
 
         val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/keystore.jks"),
                 keyStorePassword = "pass1",
                 trustStoreFile = Paths.get("/x/y/truststore.jks"),
-                trustStorePassword = "pass2")
+                trustStorePassword = "pass2",
+                crlCheckSoftFail = true)
         val expectedConfig = ShellConfiguration(
                 commandsDirectory = Paths.get("/x/y/commands"),
                 cordappsDirectory = Paths.get("/x/y/cordapps"),
@@ -158,7 +159,8 @@ class StandaloneShellArgsParserTest {
         val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/keystore.jks"),
                 keyStorePassword = "pass1",
                 trustStoreFile = Paths.get("/x/y/truststore.jks"),
-                trustStorePassword = "pass2")
+                trustStorePassword = "pass2",
+                crlCheckSoftFail = true)
         val expectedConfig = ShellConfiguration(
                 commandsDirectory = Paths.get("/x/y/commands"),
                 cordappsDirectory = Paths.get("/x/y/cordapps"),
@@ -197,7 +199,8 @@ class StandaloneShellArgsParserTest {
         val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/cmd.jks"),
                 keyStorePassword = "pass1",
                 trustStoreFile = Paths.get("/x/y/truststore.jks"),
-                trustStorePassword = "pass2")
+                trustStorePassword = "pass2",
+                crlCheckSoftFail = true)
         val expectedConfig = ShellConfiguration(
                 commandsDirectory = Paths.get("/x/y/commands"),
                 cordappsDirectory = Paths.get("/x/y/cordapps"),

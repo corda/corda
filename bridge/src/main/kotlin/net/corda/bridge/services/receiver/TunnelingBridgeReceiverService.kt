@@ -72,7 +72,7 @@ class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
         statusSubscriber = statusFollower.activeChange.subscribe {
             if (it) {
                 val floatAddresses = conf.floatInnerConfig!!.floatAddresses
-                val controlClient = AMQPClient(floatAddresses, setOf(expectedCertificateSubject), null, null, controlLinkKeyStore, controLinkKeyStorePrivateKeyPassword, controlLinkTrustStore, conf.enableAMQPPacketTrace)
+                val controlClient = AMQPClient(floatAddresses, setOf(expectedCertificateSubject), null, null, controlLinkKeyStore, controLinkKeyStorePrivateKeyPassword, controlLinkTrustStore, conf.crlCheckSoftFail, conf.enableAMQPPacketTrace)
                 connectSubscriber = controlClient.onConnection.subscribe { onConnectToControl(it) }
                 receiveSubscriber = controlClient.onReceive.subscribe { onFloatMessage(it) }
                 amqpControlClient = controlClient

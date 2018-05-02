@@ -94,7 +94,8 @@ class AMQPListenerTest {
                 PEER_USER,
                 clientKeyStore,
                 clientConfig.keyStorePassword,
-                clientTrustStore)
+                clientTrustStore,
+                true)
 
         amqpClient.start()
         // Should see events to show we got a valid connection
@@ -163,7 +164,8 @@ class AMQPListenerTest {
                 PEER_USER,
                 clientKeyStore.internal,
                 "password",
-                clientTrustStore.internal)
+                clientTrustStore.internal,
+                 true)
         amqpClient.start()
         val connectionEvent = connectionFollower.next()
         assertEquals(false, connectionEvent.connected)

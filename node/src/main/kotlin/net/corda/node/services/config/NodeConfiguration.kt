@@ -163,6 +163,7 @@ data class NodeConfigurationImpl(
         override val emailAddress: String,
         override val keyStorePassword: String,
         override val trustStorePassword: String,
+        override val crlCheckSoftFail: Boolean,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
         override val rpcUsers: List<User>,
@@ -198,12 +199,12 @@ data class NodeConfigurationImpl(
         private val h2port: Int = 0,
         // do not use or remove (used by Capsule)
         private val jarDirs: List<String> = emptyList()
-    ) : NodeConfiguration {
+) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
     }
 
-    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword))
+    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword, crlCheckSoftFail))
 
     private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
         return when {
@@ -384,8 +385,8 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                 }
             }
 
-            fun copyWithAdditionalUser(user: User) : DataSource{
-                val extendedList = this.users?.toMutableList()?: mutableListOf()
+            fun copyWithAdditionalUser(user: User): DataSource {
+                val extendedList = this.users?.toMutableList() ?: mutableListOf()
                 extendedList.add(user)
                 return DataSource(this.type, this.passwordEncryption, this.connection, listOf(*extendedList.toTypedArray()))
             }

@@ -335,7 +335,7 @@ class SocksTests {
                 PEER_USER,
                 clientKeystore,
                 clientConfig.keyStorePassword,
-                clientTruststore, true, sharedEventGroup,
+                clientTruststore, true, true, sharedEventGroup,
                 socksProxyConfig = SocksProxyConfig(SocksProxyVersion.SOCKS5, NetworkHostAndPort("127.0.0.1", socksPort), null, null))
     }
 
@@ -357,6 +357,7 @@ class SocksTests {
                 PEER_USER,
                 serverKeystore,
                 serverConfig.keyStorePassword,
-                serverTruststore)
+                serverTruststore,
+                true)
     }
 }

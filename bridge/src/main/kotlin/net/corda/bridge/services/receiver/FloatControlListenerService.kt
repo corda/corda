@@ -82,7 +82,7 @@ class FloatControlListenerService(val conf: BridgeConfiguration,
 
     private fun startControlListener() {
         lock.withLock {
-            val controlServer = AMQPServer(floatControlAddress.host, floatControlAddress.port, null, null, keyStore, keyStorePrivateKeyPassword, trustStore, conf.enableAMQPPacketTrace)
+            val controlServer = AMQPServer(floatControlAddress.host, floatControlAddress.port, null, null, keyStore, keyStorePrivateKeyPassword, trustStore, conf.crlCheckSoftFail, conf.enableAMQPPacketTrace)
             connectSubscriber = controlServer.onConnection.subscribe { onConnectToControl(it) }
             receiveSubscriber = controlServer.onReceive.subscribe { onControlMessage(it) }
             amqpControlServer = controlServer

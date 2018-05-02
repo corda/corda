@@ -57,6 +57,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
     private val keyStorePrivateKeyPassword: String = config.keyStorePassword
     private val trustStore = config.loadTrustStore().internal
     private var artemis: ArtemisSessionProvider? = null
+    private val crlCheckSoftFail: Boolean = config.crlCheckSoftFail
 
     constructor(config: NodeSSLConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int, socksProxyConfig: SocksProxyConfig? = null) : this(config, socksProxyConfig, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
@@ -78,6 +79,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
                              keyStore: KeyStore,
                              keyStorePrivateKeyPassword: String,
                              trustStore: KeyStore,
+                             crlCheckSoftFail: Boolean,
                              sharedEventGroup: EventLoopGroup,
                              socksProxyConfig: SocksProxyConfig?,
                              private val artemis: ArtemisSessionProvider) {
@@ -87,7 +89,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
 
         private val log = LoggerFactory.getLogger("$bridgeName:${legalNames.first()}")
 
-        val amqpClient = AMQPClient(listOf(target), legalNames, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, sharedThreadPool = sharedEventGroup, socksProxyConfig = socksProxyConfig)
+        val amqpClient = AMQPClient(listOf(target), legalNames, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, crlCheckSoftFail, sharedThreadPool = sharedEventGroup, socksProxyConfig = socksProxyConfig)
         val bridgeName: String get() = getBridgeName(queueName, target)
         private val lock = ReentrantLock() // lock to serialise session level access
         private var session: ClientSession? = null
@@ -181,7 +183,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
         if (bridgeExists(getBridgeName(queueName, target))) {
             return
         }
-        val newBridge = AMQPBridge(queueName, target, legalNames, keyStore, keyStorePrivateKeyPassword, trustStore, sharedEventLoopGroup!!, socksProxyConfig, artemis!!)
+        val newBridge = AMQPBridge(queueName, target, legalNames, keyStore, keyStorePrivateKeyPassword, trustStore, crlCheckSoftFail, sharedEventLoopGroup!!, socksProxyConfig, artemis!!)
         lock.withLock {
             bridgeNameToBridgeMap[newBridge.bridgeName] = newBridge
         }

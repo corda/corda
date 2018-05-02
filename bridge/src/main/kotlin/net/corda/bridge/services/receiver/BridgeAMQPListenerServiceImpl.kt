@@ -60,7 +60,7 @@ class BridgeAMQPListenerServiceImpl(val conf: BridgeConfiguration,
         val keyStore = loadKeyStoreAndWipeKeys(keyStoreBytes, keyStorePassword)
         val trustStore = loadKeyStoreAndWipeKeys(trustStoreBytes, trustStorePassword)
         val bindAddress = conf.inboundConfig!!.listeningAddress
-        val server = AMQPServer(bindAddress.host, bindAddress.port, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, conf.enableAMQPPacketTrace)
+        val server = AMQPServer(bindAddress.host, bindAddress.port, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, conf.crlCheckSoftFail, conf.enableAMQPPacketTrace)
         onConnectSubscription = server.onConnection.subscribe(_onConnection)
         onConnectAuditSubscription = server.onConnection.subscribe {
             if (it.connected) {

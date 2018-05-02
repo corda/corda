@@ -29,8 +29,9 @@ data class BridgeSSLConfigurationImpl(override val keyStorePassword: String,
                                       override val trustStorePassword: String,
                                       override val certificatesDirectory: Path = Paths.get("certificates"),
                                       override val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
-                                      override val trustStoreFile: Path = certificatesDirectory / "truststore.jks") : BridgeSSLConfiguration {
-    constructor(config: NodeSSLConfiguration) : this(config.keyStorePassword, config.trustStorePassword, config.certificatesDirectory, config.sslKeystore, config.trustStoreFile)
+                                      override val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
+                                      override val crlCheckSoftFail: Boolean) : BridgeSSLConfiguration {
+    constructor(config: NodeSSLConfiguration) : this(config.keyStorePassword, config.trustStorePassword, config.certificatesDirectory, config.sslKeystore, config.trustStoreFile, config.crlCheckSoftFail)
 }
 
 data class BridgeOutboundConfigurationImpl(override val artemisBrokerAddress: NetworkHostAndPort,
@@ -57,6 +58,7 @@ data class BridgeConfigurationImpl(
         override val certificatesDirectory: Path = baseDirectory / "certificates",
         override val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
         override val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
+        override val crlCheckSoftFail: Boolean,
         override val keyStorePassword: String,
         override val trustStorePassword: String,
         override val bridgeMode: BridgeMode,
