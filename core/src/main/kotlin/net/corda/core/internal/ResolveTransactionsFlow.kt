@@ -46,8 +46,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
 
         private const val RESOLUTION_PAGE_SIZE = 100
 
-        /**
-         * Topologically sorts the given transactions such that dependencies are listed before dependers. */
+        /** Topologically sorts the given transactions such that dependencies are listed before dependers. */
         @JvmStatic
         fun topologicalSort(transactions: Collection<SignedTransaction>): List<SignedTransaction> {
             val sort = TopologicalSort()
@@ -61,7 +60,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     @CordaSerializable
     class ExcessivelyLargeTransactionGraph : FlowException()
 
-    /** Transaction for fetch attachments for */
+    /** Transaction to fetch attachments for. */
     private var signedTransaction: SignedTransaction? = null
 
     // TODO: Figure out a more appropriate DOS limit here, 5000 is simply a very bad guess.

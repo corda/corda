@@ -52,10 +52,11 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
      * - list of each attachment that is present
      * - The notary [Party], if present (list with one element)
      * - The time-window of the transaction, if present (list with one element)
+     * - list of each reference input that is present
      */
     val availableComponentGroups: List<List<Any>>
         get() {
-            val result = mutableListOf(references, inputs, outputs, commands, attachments)
+            val result = mutableListOf(inputs, outputs, commands, attachments, references)
             notary?.let { result += listOf(it) }
             timeWindow?.let { result += listOf(it) }
             return result

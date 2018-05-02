@@ -4,6 +4,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.contracts.Requirements.using
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -19,6 +20,7 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import org.junit.Rule
 import org.junit.Test
+import kotlin.test.assertFailsWith
 
 val CONTRACT_ID = "net.corda.core.transactions.ReferenceStateTests\$ExampleContract"
 
@@ -173,6 +175,15 @@ class ReferenceStateTests {
                 verifies()
             }
             fails() // "double spend" of ExampleState!! Alice updated it in the 3rd transaction.
+        }
+    }
+
+    @Test
+    fun `state ref cannot be a reference input and regular input in the same transaction`() {
+        val state = ExampleState(ALICE_PARTY, "HELLO CORDA")
+        val stateAndRef = StateAndRef(TransactionState(state, CONTRACT_ID, DUMMY_NOTARY), StateRef(SecureHash.zeroHash, 0))
+        assertFailsWith(IllegalArgumentException::class, "A StateRef cannot be both an input and a reference input in the same transaction.") {
+            TransactionBuilder(notary = DUMMY_NOTARY).addInputState(stateAndRef).addReferenceState(stateAndRef.referenced())
         }
     }
 }

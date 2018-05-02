@@ -56,9 +56,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                               commands: List<Command<*>>,
                               notary: Party?,
                               timeWindow: TimeWindow?,
-                              privacySalt: PrivacySalt = PrivacySalt(),
-                              references: List<StateRef> = emptyList()
-    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, references), privacySalt)
+                              privacySalt: PrivacySalt = PrivacySalt()
+    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow), privacySalt)
 
     init {
         check(componentGroups.all { it.components.isNotEmpty() }) { "Empty component groups are not allowed" }

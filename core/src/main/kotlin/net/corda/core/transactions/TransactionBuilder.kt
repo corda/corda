@@ -47,7 +47,6 @@ open class TransactionBuilder @JvmOverloads constructor(
         protected val references: MutableList<StateRef> = arrayListOf()
 ) {
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
-    private val referenceInputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 
     /**
      * Creates a copy of the builder.
@@ -64,7 +63,6 @@ open class TransactionBuilder @JvmOverloads constructor(
                 references = references
         )
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
-        t.referenceInputsWithTransactionState.addAll(this.referenceInputsWithTransactionState)
         return t
     }
 
@@ -130,6 +128,7 @@ open class TransactionBuilder @JvmOverloads constructor(
      * TODO - review this logic
      */
     private fun makeContractAttachments(cordappProvider: CordappProvider): List<AttachmentId> {
+        // Reference inputs not included as it is not necessary to verify them.
         return (inputsWithTransactionState + outputs).map { state ->
             cordappProvider.getContractAttachmentID(state.contract)
                     ?: throw MissingContractAttachments(listOf(state))
@@ -155,18 +154,19 @@ open class TransactionBuilder @JvmOverloads constructor(
 
     private fun checkForInputsAndReferencesOverlap() {
         val intersection = inputs intersect references
-        require(intersection.isEmpty()) { "A StateRef cannot be both an input as well as a reference input." }
+        require(intersection.isEmpty()) { "A StateRef cannot be both an input and a reference input in the same transaction." }
     }
 
+    /** Adds a reference input [StateRef] to the transaction. */
     open fun addReferenceState(referencedStateAndRef: ReferencedStateAndRef<*>): TransactionBuilder {
         val stateAndRef = referencedStateAndRef.stateAndRef
         checkNotary(stateAndRef)
         references.add(stateAndRef.ref)
         checkForInputsAndReferencesOverlap()
-        referenceInputsWithTransactionState.add(stateAndRef.state)
         return this
     }
 
+    /** Adds an input [StateRef] to the transaction. */
     open fun addInputState(stateAndRef: StateAndRef<*>): TransactionBuilder {
         checkNotary(stateAndRef)
         inputs.add(stateAndRef.ref)
@@ -175,11 +175,13 @@ open class TransactionBuilder @JvmOverloads constructor(
         return this
     }
 
+    /** Adds an attachment with the specified hash to the TransactionBuilder. */
     fun addAttachment(attachmentId: SecureHash): TransactionBuilder {
         attachments.add(attachmentId)
         return this
     }
 
+    /** Adds an output state to the transaction. */
     fun addOutputState(state: TransactionState<*>): TransactionBuilder {
         outputs.add(state)
         return this
@@ -198,11 +200,13 @@ open class TransactionBuilder @JvmOverloads constructor(
         return this
     }
 
+    /** Adds a [Command] to the transaction. */
     fun addCommand(arg: Command<*>): TransactionBuilder {
         commands.add(arg)
         return this
     }
 
+    /** Adds a [Command] to the transaction, specified by the encapsulated [CommandData] object and required list of signing [PublicKey]s. */
     fun addCommand(data: CommandData, vararg keys: PublicKey) = addCommand(Command(data, listOf(*keys)))
     fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
 
@@ -231,13 +235,19 @@ open class TransactionBuilder @JvmOverloads constructor(
         return this
     }
 
-    // Accessors that yield immutable snapshots.
+    /** Returns an immutable list of input [StateRefs]. */
     fun inputStates(): List<StateRef> = ArrayList(inputs)
 
+    /** Returns an immutable list of reference input [StateRefs]. */
     fun referenceStates(): List<StateRef> = ArrayList(references)
 
+    /** Returns an immutable list of attachment hashes. */
     fun attachments(): List<SecureHash> = ArrayList(attachments)
+
+    /** Returns an immutable list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
+
+    /** Returns an immutable list of [Command]s. */
     fun commands(): List<Command<*>> = ArrayList(commands)
 
     /**
