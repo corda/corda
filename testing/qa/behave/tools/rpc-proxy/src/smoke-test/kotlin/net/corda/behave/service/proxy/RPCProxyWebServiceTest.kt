@@ -20,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Ignore
 import org.junit.Test
+import java.net.URL
 
 class RPCProxyWebServiceTest {
 
@@ -323,6 +324,6 @@ class RPCProxyWebServiceTest {
     }
 
     private inline fun <reified T : Any> doGet(path: String): T {
-        return java.net.URL("http://$hostAndPort/rpc/$path").openHttpConnection().responseAs()
+        return URL("http://$hostAndPort/rpc/$path").openHttpConnection().responseAs()
     }
 }

@@ -4,6 +4,7 @@ import net.corda.core.internal.checkOkResponse
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.utilities.NetworkHostAndPort
 import org.junit.Test
+import java.net.URL
 
 class RPCProxyServerTest {
 
@@ -20,6 +21,6 @@ class RPCProxyServerTest {
     }
 
     private fun RPCProxyServer.doGet(path: String) {
-        return java.net.URL("http://$rpcProxyHostAndPort/rpc/$path").openHttpConnection().checkOkResponse()
+        return URL("http://$rpcProxyHostAndPort/rpc/$path").openHttpConnection().checkOkResponse()
     }
 }

@@ -23,8 +23,10 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import java.io.InputStream
+import java.net.URL
 import java.security.PublicKey
 import java.time.Instant
+import javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM
 
 class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : CordaRPCOps {
 
@@ -62,6 +64,14 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
 
     override fun networkMapSnapshot(): List<NodeInfo> {
         return doGet(targetHostAndPort, "network-map-snapshot")
+    }
+
+    override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
+        return doPost(targetHostAndPort, "parties-from-name", query.serialize().bytes)
+    }
+
+    override fun registeredFlows(): List<String> {
+        return doGet(targetHostAndPort, "registered-flows")
     }
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
@@ -192,14 +202,6 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
         TODO("not implemented") 
     }
 
-    override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
-        return doPost(targetHostAndPort, "parties-from-name", query.serialize().bytes)
-    }
-
-    override fun registeredFlows(): List<String> {
-        return doGet(targetHostAndPort, "registered-flows")
-    }
-
     override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
         TODO("not implemented") 
     }
@@ -225,17 +227,17 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
     }
 
     private inline fun <reified T : Any> doPost(hostAndPort: NetworkHostAndPort, path: String, payload: ByteArray) : T {
-        val url = java.net.URL("http://$hostAndPort/rpc/$path")
+        val url = URL("http://$hostAndPort/rpc/$path")
         val connection = url.openHttpConnection().apply {
             doOutput = true
             requestMethod = "POST"
-            setRequestProperty("Content-Type", javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM)
+            setRequestProperty("Content-Type", APPLICATION_OCTET_STREAM)
             outputStream.write(payload)
         }
         return connection.responseAs()
     }
 
     private inline fun <reified T : Any> doGet(hostAndPort: NetworkHostAndPort, path: String): T {
-        return java.net.URL("http://$hostAndPort/rpc/$path").openHttpConnection().responseAs()
+        return URL("http://$hostAndPort/rpc/$path").openHttpConnection().responseAs()
     }
 }

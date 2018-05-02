@@ -2,6 +2,7 @@
 
 DISTRO_DIR=$1
 PORT="${2:-13000}"
+TMPDIR="${TMPDIR:-/tmp}"
 
 if [ ! -d "$DISTRO_DIR" ]; then
     echo "Must specify location of Corda distribution (directory does not exist: $DISTRO_DIR)"
@@ -38,5 +39,5 @@ $(ls ${DISTRO_DIR}/proxy/*.jar | tr '\n' ':'):\
 $(ls ${DISTRO_DIR}/apps/*.jar | tr '\n' ':') \
 net.corda.behave.service.proxy.RPCProxyServerKt ${PORT} &> rpcproxy-${PORT}.log &
 
-echo $! > /tmp/rpcProxy-pid-${PORT}
-echo "RPCProxyServer PID: $(cat /tmp/rpcProxy-pid-${PORT})"
+echo $! > ${TMPDIR}/rpcProxy-pid-${PORT}
+echo "RPCProxyServer PID: $(cat ${TMPDIR}/rpcProxy-pid-${PORT})"

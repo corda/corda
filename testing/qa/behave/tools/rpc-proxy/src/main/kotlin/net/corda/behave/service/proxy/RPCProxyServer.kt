@@ -30,7 +30,7 @@ class RPCProxyServer(hostAndPort: NetworkHostAndPort, val webService: RPCProxyWe
             server.start()
         }
         catch(e: Exception) {
-            log.info("Failed to start RPC Proxy server: ${e.message}")
+            log.error("Failed to start RPC Proxy server: ${e.message}", e)
             return false
         }
         log.info("RPC Proxy web services started on $hostAndPort with ${webService.javaClass.simpleName}}")
