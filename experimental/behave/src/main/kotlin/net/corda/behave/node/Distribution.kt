@@ -11,8 +11,6 @@
 package net.corda.behave.node
 
 import net.corda.behave.file.stagingRoot
-import net.corda.behave.logging.getLogger
-import net.corda.behave.service.Service
 import net.corda.core.CordaRuntimeException
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories

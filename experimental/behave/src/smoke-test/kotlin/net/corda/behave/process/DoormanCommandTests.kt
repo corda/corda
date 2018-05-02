@@ -2,14 +2,10 @@ package net.corda.behave.process
 
 import net.corda.behave.file.currentDirectory
 import net.corda.behave.file.doormanConfigDirectory
-import net.corda.behave.network.Network
 import net.corda.behave.node.Distribution
-import net.corda.behave.node.configuration.NotaryType
 import net.corda.core.internal.div
 import net.corda.core.utilities.minutes
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.AfterClass
-import org.junit.BeforeClass
 import org.junit.Test
 
 class DoormanCommandTests {

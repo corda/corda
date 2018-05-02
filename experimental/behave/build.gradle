@@ -16,7 +16,6 @@ buildscript {
     ext.docker_client_version = '8.11.0'
 
     repositories {
-        mavenLocal()
         maven {
             jcenter()
             url 'https://jitpack.io'
@@ -37,7 +36,6 @@ apply plugin: 'net.corda.plugins.publish-utils'
 sourceCompatibility = 1.8
 
 repositories {
-    mavenLocal()
     mavenCentral()
 }
 
@@ -48,21 +46,12 @@ sourceSets {
             runtimeClasspath += main.output
             srcDirs = ['src/main/kotlin', 'src/scenario/kotlin']
         }
-    }
-    scenario {
-        java {
-            compileClasspath += main.output
-            runtimeClasspath += main.output
-            srcDir file('src/scenario/kotlin')
-        }
-        resources {
-            srcDirs = ['src/scenario/resources']
-        }
+        resources.srcDir file('src/scenario/resources')
     }
     smokeTest {
         kotlin {
-            compileClasspath += main.output
-            runtimeClasspath += main.output
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
             srcDir file('src/smoke-test/kotlin')
         }
         resources {
@@ -72,14 +61,11 @@ sourceSets {
 }
 
 configurations {
-    scenarioCompile.extendsFrom testCompile
-    scenarioRuntime.extendsFrom testRuntime
+    behaveCompile.extendsFrom testCompile
+    behaveRuntime.extendsFrom testRuntime
 
-    behaveCompile.extendsFrom scenarioCompile
-    behaveRuntime.extendsFrom scenarioRuntime
-
-    smokeTestCompile.extendsFrom compile
-    smokeTestRuntime.extendsFrom runtime
+    smokeTestCompile.extendsFrom testCompile
+    smokeTestRuntime.extendsFrom testRuntime
 
     testArtifacts.extendsFrom behaveRuntime
 }
@@ -131,14 +117,9 @@ dependencies {
     testCompile "org.assertj:assertj-core:$assertj_version"
 
     // Scenarios / End-to-End Tests
-    scenarioCompile "info.cukes:cucumber-java8:$cucumber_version"
-    scenarioCompile "info.cukes:cucumber-junit:$cucumber_version"
-    scenarioCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
-
-    // Smoke tests
-    smokeTestCompile project(':smoke-test-utils')
-    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
-    smokeTestCompile "junit:junit:$junit_version"
+    behaveCompile "info.cukes:cucumber-java8:$cucumber_version"
+    behaveCompile "info.cukes:cucumber-junit:$cucumber_version"
+    behaveCompile "info.cukes:cucumber-picocontainer:$cucumber_version"
 }
 
 compileKotlin {
