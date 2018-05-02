@@ -12,7 +12,7 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.BaseTransaction
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
@@ -283,7 +283,7 @@ class ValidatingNotaryServiceTests {
     @Test
     fun `can handle max allowed inputs count for a transaction`() {
         val stx = run {
-            val inputStates = (1..BaseTransaction.maxInputsCount).map { issueState(aliceNode.services, alice) }
+            val inputStates = (1..CoreTransaction.maxTransactionDependencies).map { issueState(aliceNode.services, alice) }
 
             val tx = TransactionBuilder(notary).addCommand(dummyCommand(alice.owningKey))
             inputStates.forEach { tx.addInputState(it) }

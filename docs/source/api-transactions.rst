@@ -90,7 +90,7 @@ The ``StateRef`` links an input state back to the transaction that created it. T
 "chains" linking each input back to an original issuance transaction. This allows nodes verifying the transaction
 to "walk the chain" and verify that each input was generated through a valid sequence of transactions.
 
-.. note:: Corda supports a maximum of 300 inputs for any given transaction.
+.. note:: A transaction supports a maximum of 300 transaction dependencies from inputs. More than that will result in the transaction being rejected.
 
 Output states
 ^^^^^^^^^^^^^

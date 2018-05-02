@@ -199,7 +199,7 @@ class TransactionTests {
         val notary: Party = DUMMY_NOTARY
         val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, notary)
 
-        val inputs = (1..BaseTransaction.maxInputsCount + 1).map { StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)) }.toList()
+        val inputs = (1..CoreTransaction.maxTransactionDependencies + 1).map { StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)) }.toList()
 
         fun buildTransaction() = LedgerTransaction(inputs,
                 emptyList(),
