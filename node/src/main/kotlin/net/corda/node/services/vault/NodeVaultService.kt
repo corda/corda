@@ -192,7 +192,7 @@ class NodeVaultService(
         if (refs.isNotEmpty()) {
             val refsList = refs.toList()
             val pageSize = PageSpecification().pageSize
-            (0..refsList.size / pageSize).forEach {
+            (0..(refsList.size - 1) / pageSize).forEach {
                 val offset = it * pageSize
                 val limit = minOf(offset + pageSize, refsList.size)
                 val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refsList.subList(offset, limit))).states
