@@ -30,5 +30,5 @@ Feature: Compatibility - CZ Network Parameters changes
       | Corda-Node-Version           |
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 |
 
-  Scenario Outline: Many more scenarios to be added here (eg. CZ whitelist updates, minimumPlatformVersion, maxMessageSize, maxTransactionSize)
+  Scenario Outline: Many more scenarios to be added here (eg. CZ whitelist updates, minimumPlatformVersion, increase/reduce maxMessageSize, increase/reduce maxTransactionSize)
     Examples: TODO

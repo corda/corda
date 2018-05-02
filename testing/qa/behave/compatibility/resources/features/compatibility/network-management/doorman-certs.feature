@@ -46,3 +46,6 @@ Feature: Compatibility - Doorman certificate issuance
       | Corda-Node-Version-X         | Corda-Node-Version-Y  | Doorman-Version-X           | Doorman-Version-Y |
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.0             | doorman-3.0.0-DEV-PREVIEW-3 | doorman-master    |
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.1             | doorman-3.0.0-DEV-PREVIEW-3 | doorman-master    |
+
+  Scenario Outline: Unhappy path scenarios to be added (eg. rejected issuance request). Please also see the OAT Test Suite (https://bitbucket.org/R3-CEV/corda-connect/qa/testing) which covers the CSR process from a functional perspective.
+    Examples: TODO
