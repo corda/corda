@@ -12,6 +12,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.exactAdd
 import java.util.*
+import kotlin.collections.ArrayList
 
 // TODO: This code is currently unit tested by TwoPartyTradeFlowTests, it should have its own tests.
 /**
@@ -20,8 +21,11 @@ import java.util.*
  *
  * @return a list of verified [SignedTransaction] objects, in a depth-first order.
  */
-class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
+class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
                               private val otherSide: FlowSession) : FlowLogic<Unit>() {
+
+    private val txHashes = txHashesArg.toList()
+
     /**
      * Resolves and validates the dependencies of the specified [SignedTransaction]. Fetches the attachments, but does
      * *not* validate or store the [SignedTransaction] itself.
@@ -34,6 +38,8 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
 
     companion object {
         private fun dependencyIDs(stx: SignedTransaction) = stx.inputs.map { it.txhash }.toSet()
+
+        private const val RESOLUTION_PAGE_SIZE = 100
 
         /**
          * Topologically sorts the given transactions such that dependencies are listed before dependers. */
@@ -84,9 +90,15 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     @Suspendable
     @Throws(FetchDataFlow.HashNotFound::class)
     override fun call() {
+        val newTxns = ArrayList<SignedTransaction>(txHashes.size)
         // Start fetching data.
-        val newTxns = downloadDependencies(txHashes)
-        fetchMissingAttachments(signedTransaction?.let { newTxns + it } ?: newTxns)
+        for (pageNumber in 0..(txHashes.size - 1) / RESOLUTION_PAGE_SIZE) {
+            val page = page(pageNumber, RESOLUTION_PAGE_SIZE)
+
+            newTxns += downloadDependencies(page)
+            val txsWithMissingAttachments = if (pageNumber == 0) signedTransaction?.let { newTxns + it } ?: newTxns else newTxns
+            fetchMissingAttachments(txsWithMissingAttachments)
+        }
         otherSide.send(FetchDataFlow.Request.End)
         // Finish fetching data.
 
@@ -99,6 +111,12 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             it.verify(serviceHub)
             serviceHub.recordTransactions(StatesToRecord.NONE, listOf(it))
         }
+    }
+
+    private fun page(pageNumber: Int, pageSize: Int): Set<SecureHash> {
+        val offset = pageNumber * pageSize
+        val limit = minOf(offset + pageSize, txHashes.size)
+        return txHashes.subList(offset, limit).toSet()
     }
 
     @Suspendable
@@ -135,7 +153,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
                 break
 
             // Request the standalone transaction data (which may refer to things we don't yet have).
-            // TODO sollecitom maybe page here
+            // TODO maybe page here
             val downloads: List<SignedTransaction> = subFlow(FetchTransactionsFlow(notAlreadyFetched, otherSide)).downloaded
 
             for (stx in downloads)
