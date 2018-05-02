@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -117,7 +118,9 @@ class EnumEvolutionSerializer(
         }
     }
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
+                            context: SerializationContext
+    ) : Any {
         val enumName = (obj as List<*>)[0] as String
 
         if (enumName !in conversions) {
@@ -131,7 +134,9 @@ class EnumEvolutionSerializer(
         throw UnsupportedOperationException("It should be impossible to write an evolution serializer")
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
+                             context: SerializationContext, debugIndent: Int
+    ) {
         throw UnsupportedOperationException("It should be impossible to write an evolution serializer")
     }
 }

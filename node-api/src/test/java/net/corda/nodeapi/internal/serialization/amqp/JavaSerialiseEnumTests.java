@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp;
 
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationContext;
 import org.junit.Test;
 
 import net.corda.nodeapi.internal.serialization.AllWhitelist;
@@ -33,6 +34,6 @@ public class JavaSerialiseEnumTests {
                 new EvolutionSerializerGetter(),
                 new SerializerFingerPrinter());
         SerializationOutput ser = new SerializationOutput(factory1);
-        SerializedBytes<Object> bytes = ser.serialize(bra);
+        SerializedBytes<Object> bytes = ser.serialize(bra, TestSerializationContext.testSerializationContext);
     }
 }

@@ -5,6 +5,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.objectOrNewInstance
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.core.utilities.ByteSequence
@@ -64,7 +65,7 @@ abstract class AbstractAMQPSerializationScheme(
         }
     }
 
-    private fun registerCustomSerializers(factory: SerializerFactory) {
+    private fun registerCustomSerializers(context: SerializationContext, factory: SerializerFactory) {
         with(factory) {
             register(publicKeySerializer)
             register(net.corda.nodeapi.internal.serialization.amqp.custom.PrivateKeySerializer)
@@ -121,7 +122,7 @@ abstract class AbstractAMQPSerializationScheme(
 
     protected abstract fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory
     protected abstract fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory
-    open protected val publicKeySerializer: CustomSerializer.Implements<PublicKey>
+    protected open val publicKeySerializer: CustomSerializer.Implements<PublicKey>
             = net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer
 
     private fun getSerializerFactory(context: SerializationContext): SerializerFactory {
@@ -135,19 +136,20 @@ abstract class AbstractAMQPSerializationScheme(
                     rpcServerSerializerFactory(context)
                 else -> sff.make(context)
             }.also {
-                registerCustomSerializers(it)
+                registerCustomSerializers(context, it)
             }
         }
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
         val serializerFactory = getSerializerFactory(context)
-        return DeserializationInput(serializerFactory).deserialize(byteSequence, clazz)
+        return DeserializationInput(serializerFactory).deserialize(byteSequence, clazz, context)
     }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
         val serializerFactory = getSerializerFactory(context)
-        return SerializationOutput(serializerFactory).serialize(obj)
+
+        return SerializationOutput(serializerFactory).serialize(obj, context)
     }
 
     protected fun canDeserializeVersion(magic: CordaSerializationMagic) = magic == amqpMagic

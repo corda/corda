@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.serialization.SerializationContext
 import net.corda.nodeapi.internal.serialization.carpenter.getTypeAsClass
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -39,8 +40,9 @@ abstract class EvolutionSerializer(
      * @param property object to read the actual property value
      */
     data class OldParam(var resultsIndex: Int, val property: PropertySerializer) {
-        fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput, new: Array<Any?>) =
-                property.readProperty(obj, schemas, input).apply {
+        fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput,
+                         new: Array<Any?>, context: SerializationContext
+        ) = property.readProperty(obj, schemas, input, context).apply {
                     if(resultsIndex >= 0) {
                         new[resultsIndex] = this
                     }
@@ -150,7 +152,9 @@ abstract class EvolutionSerializer(
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
+                             context: SerializationContext, debugIndent: Int
+    ) {
         throw UnsupportedOperationException("It should be impossible to write an evolution serializer")
     }
 }
@@ -170,11 +174,13 @@ class EvolutionSerializerViaConstructor(
      *
      * TODO: Object references
      */
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
+                            context: SerializationContext
+    ) : Any {
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 
         // *must* read all the parameters in the order they were serialized
-        oldReaders.values.zip(obj).map { it.first.readProperty(it.second, schemas, input, constructorArgs) }
+        oldReaders.values.zip(obj).map { it.first.readProperty(it.second, schemas, input, constructorArgs, context) }
 
         return javaConstructor?.newInstance(*(constructorArgs)) ?:
                 throw NotSerializableException(
@@ -193,7 +199,9 @@ class EvolutionSerializerViaSetters(
         kotlinConstructor: KFunction<Any>?,
         private val setters: Map<String, PropertyAccessor>) : EvolutionSerializer (clazz, factory, oldReaders, kotlinConstructor) {
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
+                            context: SerializationContext
+    ) : Any {
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 
         val instance : Any = javaConstructor?.newInstance() ?: throw NotSerializableException (
@@ -202,7 +210,7 @@ class EvolutionSerializerViaSetters(
         // *must* read all the parameters in the order they were serialized
         oldReaders.values.zip(obj).forEach {
             // if that property still exists on the new object then set it
-            it.first.property.readProperty(it.second, schemas, input).apply {
+            it.first.property.readProperty(it.second, schemas, input, context).apply {
                 setters[it.first.property.name]?.set(instance, this)
             }
         }

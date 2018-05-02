@@ -483,7 +483,7 @@ internal fun Type.isSubClassOf(type: Type): Boolean {
     return TypeToken.of(this).isSubtypeOf(TypeToken.of(type).rawType)
 }
 
-// ByteArrays, primitives and boxed primitives are not stored in the object history
+// ByteArrays, primtives and boxed primitives are not stored in the object history
 internal fun suitableForObjectReference(type: Type): Boolean {
     val clazz = type.asClass()
     return type != ByteArray::class.java && (clazz != null && !clazz.isPrimitive && !Primitives.unwrap(clazz).isPrimitive)

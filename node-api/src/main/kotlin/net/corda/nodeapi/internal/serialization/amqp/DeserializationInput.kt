@@ -4,6 +4,7 @@ import com.esotericsoftware.kryo.io.ByteBufferInputStream
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.serialization.EncodingWhitelist
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding
@@ -96,11 +97,8 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
     fun getEnvelope(byteSequence: ByteSequence) = Companion.getEnvelope(byteSequence, encodingWhitelist)
 
     @Throws(NotSerializableException::class)
-    inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>): T = deserialize(bytes, T::class.java)
+    inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>, context: SerializationContext): T = deserialize(bytes, T::class.java, context)
 
-    @Throws(NotSerializableException::class)
-    inline internal fun <reified T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>): ObjectAndEnvelope<T> =
-            deserializeAndReturnEnvelope(bytes, T::class.java)
 
     @Throws(NotSerializableException::class)
     private fun <R> des(generator: () -> R): R {
@@ -123,21 +121,24 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>): T = des {
         val envelope = getEnvelope(bytes, encodingWhitelist)
-        clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema), clazz))
+        clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema),
+		clazz, context))
     }
 
     @Throws(NotSerializableException::class)
     fun <T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>, clazz: Class<T>): ObjectAndEnvelope<T> = des {
         val envelope = getEnvelope(bytes, encodingWhitelist)
         // Now pick out the obj and schema from the envelope.
-        ObjectAndEnvelope(clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema), clazz)), envelope)
+        ObjectAndEnvelope(clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema), clazz, context)), envelope)
     }
 
-    internal fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type, offset: Int = 0): Any? {
-        return if (obj == null) null else readObject(obj, schema, type, offset)
+    internal fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type, context: SerializationContext,
+                                  offset: Int = 0
+    ) : Any? {
+        return if (obj == null) null else readObject(obj, schema, type, context, offset)
     }
 
-    internal fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, debugIndent: Int = 0): Any =
+    internal fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, context: SerializationContext, debugIndent: Int = 0): Any =
             if (obj is DescribedType && ReferencedObject.DESCRIPTOR == obj.descriptor) {
                 // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
                 val objectIndex = (obj.described as UnsignedInteger).toInt()
@@ -163,14 +164,15 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
                             throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
                                     "expected to be of type $type but was ${serializer.type}")
                         }
-                        serializer.readObject(obj.described, schemas, this)
+                        serializer.readObject(obj.described, schemas, this, context)
                     }
                     is Binary -> obj.array
                     else -> obj // this will be the case for primitive types like [boolean] et al.
                 }
 
                 // Store the reference in case we need it later on.
-                // Skip for primitive types as they are too small and overhead of referencing them will be much higher than their content
+                // Skip for primitive types as they are too small and overhead of referencing them will be much higher
+                // than their content
                 if (suitableForObjectReference(objectRead.javaClass)) {
                     objectHistory.add(objectRead)
                 }
