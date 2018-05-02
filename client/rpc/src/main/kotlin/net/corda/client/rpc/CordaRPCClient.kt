@@ -127,16 +127,16 @@ class CordaRPCClient private constructor(
     companion object {
         fun createWithSsl(
                 hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
-                sslConfiguration: ClientRpcSslOptions? = null
+                sslConfiguration: ClientRpcSslOptions,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()
         ): CordaRPCClient {
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
         }
 
         fun createWithSsl(
                 haAddressPool: List<NetworkHostAndPort>,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
-                sslConfiguration: ClientRpcSslOptions? = null
+                sslConfiguration: ClientRpcSslOptions,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()
         ): CordaRPCClient {
             return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, haAddressPool = haAddressPool)
         }
