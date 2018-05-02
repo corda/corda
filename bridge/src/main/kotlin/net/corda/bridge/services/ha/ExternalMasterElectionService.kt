@@ -35,11 +35,11 @@ class ExternalMasterElectionService(val conf: BridgeConfiguration,
 
     init {
         require(conf.haConfig != null) { "Undefined HA Config" }
-        require(conf.haConfig!!.haConnectionString.split(',').all { it.startsWith("zk//:") }) { "Only Zookeeper HA mode 'zk//:IPADDR:PORT supported" }
+        require(conf.haConfig!!.haConnectionString.split(',').all { it.startsWith("zk://") }) { "Only Zookeeper HA mode 'zk://IPADDR:PORT supported" }
     }
 
     override fun start() {
-        val zkConf = conf.haConfig!!.haConnectionString.split(',').map { it.replace("zk//:", "") }.joinToString(",")
+        val zkConf = conf.haConfig!!.haConnectionString.split(',').map { it.replace("zk://", "") }.joinToString(",")
         val leaderPriority = conf.haConfig!!.haPriority
         val hostName: String = InetAddress.getLocalHost().hostName
         val info = ManagementFactory.getRuntimeMXBean()
