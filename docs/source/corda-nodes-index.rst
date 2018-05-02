@@ -4,6 +4,7 @@ Corda nodes
 .. toctree::
    :maxdepth: 1
 
+   node-structure
    generating-a-node
    running-a-node
    deploying-a-node

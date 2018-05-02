@@ -8,7 +8,7 @@ import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.serialization.AllWhitelist
@@ -183,6 +183,7 @@ class X509UtilitiesTest {
             override val certificatesDirectory = tempFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"
+            override val crlCheckSoftFail: Boolean = true
         }
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
@@ -218,6 +219,7 @@ class X509UtilitiesTest {
             override val certificatesDirectory = tempFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"
+            override val crlCheckSoftFail: Boolean = true
         }
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()

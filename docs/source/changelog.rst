@@ -7,6 +7,22 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Refactor RPC Server Kryo observable serializer into it's own sub module
+
+* Refactor RPC Client Kryo observable serializer into it's own sub module
+
+* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialized in
+  a factory without a serializer as the subtype check for the class instance failed. Fix is to compare the raw
+  type.
+  
+* Due to ongoing work the experimental interfaces for defining custom notary services have been moved to the internal package.
+  CorDapps implementing custom notary services will need to be updated, see ``samples/notary-demo`` for an example.
+  Further changes may be required in the future.
+  
+* Fixed incorrect exception handling in ``NodeVaultService._query()``.
+
+* Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
+
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
   Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
 
@@ -286,6 +302,8 @@ Version 3.0
 
 * ``TransactionSignature`` includes a new ``partialMerkleTree`` property, required for future support of signing over
   multiple transactions at once.
+
+* Updating Jolokia dependency to latest version (includes security fixes)
 
 .. _changelog_v1:
 

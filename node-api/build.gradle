@@ -18,6 +18,9 @@ dependencies {
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
     compile "org.apache.activemq:artemis-commons:${artemis_version}"
 
+    // Netty: All of it.
+    compile "io.netty:netty-all:$netty_version"
+
     // For adding serialisation of file upload streams to RPC
     // TODO: Remove this dependency and the code that requires it
     compile "commons-fileupload:commons-fileupload:$fileupload_version"
@@ -32,7 +35,7 @@ dependencies {
     compile "de.javakaffee:kryo-serializers:0.41"
 
     // For AMQP serialisation.
-    compile "org.apache.qpid:proton-j:0.21.0"
+    compile "org.apache.qpid:proton-j:0.27.1"
 
     // FastClasspathScanner: classpath scanning - needed for the NetworkBootstraper
     compile 'io.github.lukehutch:fast-classpath-scanner:2.12.3'
