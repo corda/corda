@@ -15,6 +15,10 @@ Unreleased
   a factory without a serializer as the subtype check for the class instance failed. Fix is to compare the raw
   type.
   
+* Due to ongoing work the experimental interfaces for defining custom notary services have been moved to the internal package.
+  CorDapps implementing custom notary services will need to be updated, see ``samples/notary-demo`` for an example.
+  Further changes may be required in the future.
+  
 * Fixed incorrect exception handling in ``NodeVaultService._query()``.
 
 * Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
