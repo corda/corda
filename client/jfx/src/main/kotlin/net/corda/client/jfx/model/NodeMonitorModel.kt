@@ -15,6 +15,7 @@ import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -34,6 +35,7 @@ data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val mess
  */
 class NodeMonitorModel {
 
+    private val retryableStateMachineUpdatesSubject = PublishSubject.create<StateMachineUpdate>()
     private val stateMachineUpdatesSubject = PublishSubject.create<StateMachineUpdate>()
     private val vaultUpdatesSubject = PublishSubject.create<Vault.Update<ContractState>>()
     private val transactionsSubject = PublishSubject.create<SignedTransaction>()
@@ -51,24 +53,53 @@ class NodeMonitorModel {
     val proxyObservable = SimpleObjectProperty<CordaRPCOps?>()
     lateinit var notaryIdentities: List<Party>
 
+    companion object {
+        val logger = contextLogger()
+    }
+
     /**
      * Register for updates to/from a given vault.
      * TODO provide an unsubscribe mechanism
      */
     fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
-        val client = CordaRPCClient(
-                listOf(nodeHostAndPort, nodeHostAndPort),
-                object : CordaRPCClientConfiguration {
-                    override val connectionMaxRetryInterval = 10.seconds
-                }
-        )
-        val connection = client.start(username, password)
-        val proxy = connection.proxy
-        notaryIdentities = proxy.notaryIdentities()
 
-        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesFeed()
+        // `retryableStateMachineUpdatesSubject` will change it's upstream subscriber in case of RPC connection failure, this `Observable` should
+        // never produce an error.
+        // `stateMachineUpdatesSubject` will stay firmly subscribed to `retryableStateMachineUpdatesSubject`
+        retryableStateMachineUpdatesSubject.subscribe(stateMachineUpdatesSubject)
+
+        // Proxy may change during re-connect, ensure that subject wiring accurately reacts to this activity.
+        proxyObservable.addListener { _, _, proxy ->
+            if(proxy != null) {
+                // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates
+                val (statesSnapshot, vaultUpdates) = proxy.vaultTrackBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
+                        PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
+                val unconsumedStates = statesSnapshot.states.filterIndexed { index, _ ->
+                    statesSnapshot.statesMetadata[index].status == Vault.StateStatus.UNCONSUMED
+                }.toSet()
+                val consumedStates = statesSnapshot.states.toSet() - unconsumedStates
+                val initialVaultUpdate = Vault.Update(consumedStates, unconsumedStates)
+                vaultUpdates.startWith(initialVaultUpdate).onErrorResumeNext { Observable.empty() }.subscribe(vaultUpdatesSubject)
+
+                // Transactions
+                val (transactions, newTransactions) = proxy.internalVerifiedTransactionsFeed()
+                newTransactions.startWith(transactions).onErrorResumeNext { Observable.empty() }.subscribe(transactionsSubject)
+
+                // SM -> TX mapping
+                val (smTxMappings, futureSmTxMappings) = proxy.stateMachineRecordedTransactionMappingFeed()
+                futureSmTxMappings.startWith(smTxMappings).onErrorResumeNext { Observable.empty() }.subscribe(stateMachineTransactionMappingSubject)
+
+                // Parties on network
+                val (parties, futurePartyUpdate) = proxy.networkMapFeed()
+                futurePartyUpdate.startWith(parties.map { MapChange.Added(it) }).onErrorResumeNext { Observable.empty() }.subscribe(networkMapSubject)
+            }
+        }
+
+        val stateMachines = performRpcReconnect(nodeHostAndPort, username, password)
+
         // Extract the flow tracking stream
         // TODO is there a nicer way of doing this? Stream of streams in general results in code like this...
+        // TODO `progressTrackingSubject` doesn't seem to be used anymore - should it be removed?
         val currentProgressTrackerUpdates = stateMachines.mapNotNull { stateMachine ->
             ProgressTrackingEvent.createStreamFromStateMachineInfo(stateMachine)
         }
@@ -82,33 +113,39 @@ class NodeMonitorModel {
 
         // We need to retry, because when flow errors, we unsubscribe from progressTrackingSubject. So we end up with stream of state machine updates and no progress trackers.
         futureProgressTrackerUpdates.startWith(currentProgressTrackerUpdates).flatMap { it }.retry().subscribe(progressTrackingSubject)
+    }
 
-        // Now the state machines
-        val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
-        stateMachineUpdates.startWith(currentStateMachines).subscribe(stateMachineUpdatesSubject)
+    private fun performRpcReconnect(nodeHostAndPort: NetworkHostAndPort, username: String, password: String): List<StateMachineInfo> {
 
-        // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates
-        val (statesSnapshot, vaultUpdates) = proxy.vaultTrackBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
-                PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
-        val unconsumedStates = statesSnapshot.states.filterIndexed { index, _ ->
-            statesSnapshot.statesMetadata[index].status == Vault.StateStatus.UNCONSUMED
-        }.toSet()
-        val consumedStates = statesSnapshot.states.toSet() - unconsumedStates
-        val initialVaultUpdate = Vault.Update(consumedStates, unconsumedStates)
-        vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject)
+        logger.info("Connecting to: $nodeHostAndPort")
 
-        // Transactions
-        val (transactions, newTransactions) = proxy.internalVerifiedTransactionsFeed()
-        newTransactions.startWith(transactions).subscribe(transactionsSubject)
+        val retryInterval = 10.seconds
+        val client = CordaRPCClient(
+                nodeHostAndPort,
+                object : CordaRPCClientConfiguration {
+                    override val connectionMaxRetryInterval = retryInterval
+                }
+        )
+        val connection = client.start(username, password)
+        val proxy = connection.proxy
 
-        // SM -> TX mapping
-        val (smTxMappings, futureSmTxMappings) = proxy.stateMachineRecordedTransactionMappingFeed()
-        futureSmTxMappings.startWith(smTxMappings).subscribe(stateMachineTransactionMappingSubject)
+        val (stateMachineInfos, stateMachineUpdatesRaw) = proxy.stateMachinesFeed()
 
-        // Parties on network
-        val (parties, futurePartyUpdate) = proxy.networkMapFeed()
-        futurePartyUpdate.startWith(parties.map { MapChange.Added(it) }).subscribe(networkMapSubject)
+        stateMachineUpdatesRaw
+                .startWith(stateMachineInfos.map { StateMachineUpdate.Added(it) })
+                .onErrorResumeNext {
+                    // Failure has occurred for a reason, perhaps because the server backend is being re-started.
+                    // Give it some time to come back online before trying to re-connect.
+                    Thread.sleep(retryInterval.toMillis())
+                    performRpcReconnect(nodeHostAndPort, username, password)
+                    // Returning empty observable such that error will not be propagated downstream.
+                    Observable.empty()
+                }
+                .subscribe(retryableStateMachineUpdatesSubject)
 
         proxyObservable.set(proxy)
+        notaryIdentities = proxy.notaryIdentities()
+
+        return stateMachineInfos
     }
 }
