@@ -9,8 +9,6 @@ import net.corda.nodeapi.internal.serialization.amqp.*
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.Symbol
-import org.apache.qpid.proton.codec.Data
-import java.nio.ByteBuffer
 
 /**
  * Print a string to the console only if the verbose config option is set.

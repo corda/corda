@@ -18,11 +18,11 @@ dependencies {
 /**
  * To run from within gradle use
  *
- *      ./gradlew -PrunArgs="<cmd> <line> <args>" :tools:blobinspector:run
+ *      ./gradlew -PrunArgs="<cmd> <line> <args>" :experimental:blobinspector:run
  *
- * For example, to parse a file from the command line and print out the deserialised properties
+ * For example, to parse a file from the command line and print out the deserialized properties
  *
- *      ./gradlew -PrunArgs="-f <path/to/file> -d" :tools:blobinspector:run
+ *      ./gradlew -PrunArgs="-f <path/to/file> -d" :experimental:blobinspector:run
  *
  * at the command line.
  */
@@ -45,7 +45,7 @@ jar {
     baseName 'blobinspector'
     manifest {
         attributes(
-                'Automatic-Module-Name': 'net.corda.tools.blobinspector',
+                'Automatic-Module-Name': 'net.corda.experimental.blobinspector',
                 'Main-Class': 'net.corda.blobinspector.MainKt'
         )
     }

@@ -3,8 +3,6 @@ package net.corda.blobinspector
 import java.net.URI
 
 import org.junit.Test
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 
 
