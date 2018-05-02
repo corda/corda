@@ -1,0 +1,52 @@
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'application'
+
+mainClassName = 'net.corda.blobinspector.MainKt'
+
+dependencies {
+    compile project(':core')
+    compile project(':node-api')
+
+    compile "commons-cli:commons-cli:$commons_cli_version"
+
+    testCompile project(':test-utils')
+
+    testCompile "junit:junit:$junit_version"
+}
+
+/**
+ * To run from within gradle use
+ *
+ *      ./gradlew -PrunArgs="<cmd> <line> <args>" :tools:blobinspector:run
+ *
+ * For example, to parse a file from the command line and print out the deserialised properties
+ *
+ *      ./gradlew -PrunArgs="-f <path/to/file> -d" :tools:blobinspector:run
+ *
+ * at the command line.
+ */
+run {
+    if (project.hasProperty('runArgs')) {
+        args = [ project.findProperty('runArgs').toString().split(" ") ].flatten()
+    }
+
+    if (System.properties.getProperty('consoleLogLevel') != null) {
+        logging.captureStandardOutput(LogLevel.valueOf(System.properties.getProperty('consoleLogLevel')))
+        logging.captureStandardError(LogLevel.valueOf(System.properties.getProperty('consoleLogLevel')))
+        systemProperty "consoleLogLevel", System.properties.getProperty('consoleLogLevel')
+    }
+}
+
+/**
+ * Build a executable jar
+ */
+jar {
+    baseName 'blobinspector'
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.tools.blobinspector',
+                'Main-Class': 'net.corda.blobinspector.MainKt'
+        )
+    }
+}

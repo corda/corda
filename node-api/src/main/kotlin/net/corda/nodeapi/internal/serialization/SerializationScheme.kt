@@ -80,7 +80,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
 
 open class SerializationFactoryImpl : SerializationFactory() {
     companion object {
-        private val magicSize = sequenceOf(kryoMagic, amqpMagic).map { it.size }.distinct().single()
+        val magicSize = sequenceOf(kryoMagic, amqpMagic).map { it.size }.distinct().single()
     }
 
     private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
