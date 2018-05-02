@@ -35,10 +35,10 @@ import javax.security.cert.X509Certificate
  *
  * Based on the provided username, we execute logic based on the presented client certificates:
  *
- * If someone connects with [ArtemisMessagingComponent.PEER_USER] then we confirm they belong on our P2P network by checking their root CA is
+ * If someone connects with [PEER_USER] then we confirm they belong on our P2P network by checking their root CA is
  * the same as our root CA. If that's the case, the only access they're given is the ability to send to our P2P address.
  *
- * If someone connects with [ArtemisMessagingComponent.NODE_P2P_USER] then we confirm it's the current node by checking their TLS certificate
+ * If someone connects with [NODE_P2P_USER] or [NODE_RPC_USER] then we confirm it's the current node by checking their TLS certificate
  * is the same as our one in our key store. Then they're given full access to all valid queues.
  *
  * (In both cases the messages these authenticated nodes send to us are tagged with their subject DN and we assume
@@ -123,6 +123,7 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
 
 }
 
+//configs used for setting up the broker custom security module
 data class RPCJaasConfig(
         val securityManager: RPCSecurityManager, //used to authenticate users - implemented with Shiro
         val loginListener: LoginListener, //callback that dynamically assigns security roles to RPC users on their authentication

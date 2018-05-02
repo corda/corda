@@ -7,6 +7,12 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
+  a certificate to be added to a truststore.
+
+* RPC requires 2 mandatory endpoints: ``address`` and ``adminAddress``. RPC Clients would connect to the address, while the node will connect
+  to the adminAddress.
+
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
   Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
 

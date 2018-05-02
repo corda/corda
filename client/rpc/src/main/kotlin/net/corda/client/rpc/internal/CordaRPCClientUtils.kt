@@ -10,12 +10,6 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import rx.Observable
 
 /** Utility which exposes the internal Corda RPC constructor to other internal Corda components */
-fun createCordaRPCClientWithSsl(
-        hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
-        sslConfiguration: ClientRpcSslOptions? = null
-) = CordaRPCClient.createWithSsl(hostAndPort, configuration, sslConfiguration)
-
 fun createCordaRPCClientWithSslAndClassLoader(
         hostAndPort: NetworkHostAndPort,
         configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),

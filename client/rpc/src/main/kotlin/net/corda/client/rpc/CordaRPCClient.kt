@@ -133,7 +133,15 @@ class CordaRPCClient private constructor(
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
         }
 
-        fun createWithSslAndClassLoader(
+        fun createWithSsl(
+                haAddressPool: List<NetworkHostAndPort>,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+                sslConfiguration: ClientRpcSslOptions? = null
+        ): CordaRPCClient {
+            return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, haAddressPool = haAddressPool)
+        }
+
+        internal fun createWithSslAndClassLoader(
                 hostAndPort: NetworkHostAndPort,
                 configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
                 sslConfiguration: ClientRpcSslOptions? = null,
@@ -166,10 +174,10 @@ class CordaRPCClient private constructor(
 
     private fun getRpcClient(): RPCClient<CordaRPCOps> {
         return when {
-            // Node->RPC broker, mutually authenticated SSL. This is used when connecting the integrated shell
+        // Node->RPC broker, mutually authenticated SSL. This is used when connecting the integrated shell
             internalConnection == true -> RPCClient(hostAndPort, nodeSslConfiguration!!)
 
-            // Client->RPC broker
+        // Client->RPC broker
             haAddressPool.isEmpty() -> RPCClient(
                     rpcConnectorTcpTransport(hostAndPort, config = sslConfiguration),
                     configuration,
