@@ -51,8 +51,9 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
                 cashSelectionAlgo?.let {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
-                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
-                        "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.java}")
+                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver name '${_metadata.driverName}'." +
+                        "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.qualifiedName}." +
+                        "\nAvailable implementations: $cashSelectionAlgos")
             }.invoke()
         }
 
