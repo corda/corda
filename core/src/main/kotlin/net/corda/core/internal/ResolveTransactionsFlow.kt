@@ -132,13 +132,14 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
         while (nextRequests.isNotEmpty()) {
             // Don't re-download the same tx when we haven't verified it yet but it's referenced multiple times in the
             // graph we're traversing.
-            val notAlreadyFetched = nextRequests.filterNot { it in resultQ }.toSet()
+            val notAlreadyFetched = nextRequests - resultQ.keys
             nextRequests.clear()
 
             if (notAlreadyFetched.isEmpty())   // Done early.
                 break
 
             // Request the standalone transaction data (which may refer to things we don't yet have).
+            // TODO sollecitom maybe page here
             val downloads: List<SignedTransaction> = subFlow(FetchTransactionsFlow(notAlreadyFetched, otherSide)).downloaded
 
             for (stx in downloads)

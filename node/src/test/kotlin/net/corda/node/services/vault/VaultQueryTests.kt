@@ -7,6 +7,7 @@ import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
+import net.corda.core.transactions.BaseTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
 import net.corda.finance.*
@@ -2106,6 +2107,25 @@ class VaultQueryTests {
             val signedStatesExitingTx = services.signInitialTransaction(statesExitingTx).withAdditionalSignature(issuerKey, signatureMetadata)
 
             assertThatCode { services.recordTransactions(signedStatesExitingTx) }.doesNotThrowAnyException()
+        }
+    }
+
+    @Test
+    fun `transaction with max number of inputs work`() {
+        val notary = Companion.dummyNotary
+        val issuerKey = notary.keyPair
+        val signatureMetadata = SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(issuerKey.public).schemeNumberID)
+        val states = database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(BaseTransaction.maxInputsCount).states
+        }
+
+        database.transaction {
+            val statesExitingTx = TransactionBuilder(notary.party).withItems(*states.toList().toTypedArray()).addCommand(dummyCommand())
+
+            assertThatCode {
+                val signedStatesExitingTx = services.signInitialTransaction(statesExitingTx).withAdditionalSignature(issuerKey, signatureMetadata)
+                services.recordTransactions(signedStatesExitingTx)
+            }.doesNotThrowAnyException()
         }
     }
 

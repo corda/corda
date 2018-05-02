@@ -14,8 +14,8 @@ import java.util.function.Predicate
 @DoNotImplement
 abstract class BaseTransaction : NamedByHash {
 
-    internal companion object {
-        internal const val maxInputsCount = 2000
+    companion object {
+        const val maxInputsCount = 1000
     }
 
     /** The inputs of this transaction. Note that in BaseTransaction subclasses the type of this list may change! */
