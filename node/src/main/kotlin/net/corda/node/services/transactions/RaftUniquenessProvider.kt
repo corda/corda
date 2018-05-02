@@ -17,9 +17,9 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.NotarisationRequestSignature
-import net.corda.core.flows.NotaryInternalException
 import net.corda.core.identity.Party
-import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize

@@ -6,8 +6,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryInternalException
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
