@@ -18,11 +18,14 @@ import net.corda.core.internal.CertRole
 import net.corda.core.internal.div
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.parseAs
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
+
+const val NOTARY_PRIVATE_KEY_ALIAS = "${DevIdentityGenerator.DISTRIBUTED_NOTARY_ALIAS_PREFIX}-private-key"
 
 fun RegistrationOption.runRegistration() {
     println("**********************************************************")
@@ -51,7 +54,9 @@ fun RegistrationOption.runRegistration() {
             config.email,
             HTTPNetworkRegistrationService(config.compatibilityZoneURL),
             config.networkRootTrustStorePath,
-            config.networkRootTrustStorePassword ?: readPassword("Network trust root password:"), CertRole.SERVICE_IDENTITY).buildKeystore()
+            config.networkRootTrustStorePassword ?: readPassword("Network trust root password:"),
+            NOTARY_PRIVATE_KEY_ALIAS,
+            CertRole.SERVICE_IDENTITY).buildKeystore()
 }
 
 data class NotaryRegistrationConfig(val legalName: CordaX500Name,

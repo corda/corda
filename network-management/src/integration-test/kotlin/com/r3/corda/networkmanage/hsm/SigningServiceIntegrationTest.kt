@@ -33,7 +33,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
-import net.corda.node.utilities.registration.NetworkRegistrationHelper
+import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -163,7 +163,7 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
                 doReturn(sslKeyStore).whenever(it).loadSslKeyStore(any())
             }
             val regConfig = NodeRegistrationOption(networkTrustStorePath, networkTrustStorePassword)
-            NetworkRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!), regConfig).buildKeystore()
+            NodeRegistrationHelper(config, HTTPNetworkRegistrationService(config.compatibilityZoneURL!!), regConfig).buildKeystore()
             verify(hsmSigner).sign(any())
         }
     }

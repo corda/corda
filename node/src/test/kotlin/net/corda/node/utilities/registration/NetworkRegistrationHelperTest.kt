@@ -19,6 +19,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.CertRole
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.x500Name
@@ -162,11 +163,12 @@ class NetworkRegistrationHelperTest {
         val serviceIdentityCertPath = createServiceIdentityCertPath()
 
         saveNetworkTrustStore(serviceIdentityCertPath.last())
-        createRegistrationHelper(serviceIdentityCertPath).buildKeystore()
+        createRegistrationHelper(serviceIdentityCertPath, CertRole.SERVICE_IDENTITY).buildKeystore()
 
         val nodeKeystore = config.loadNodeKeyStore()
-        val trustStore = config.loadTrustStore()
+
         assertThat(config.sslKeystore).doesNotExist()
+        assertThat(config.trustStoreFile).doesNotExist()
 
         val serviceIdentityAlias = "${DevIdentityGenerator.DISTRIBUTED_NOTARY_ALIAS_PREFIX}-private-key"
 
@@ -176,12 +178,6 @@ class NetworkRegistrationHelperTest {
             assertFalse(contains(X509Utilities.CORDA_CLIENT_TLS))
             assertFalse(contains(X509Utilities.CORDA_CLIENT_CA))
             assertThat(getCertificateChain(serviceIdentityAlias)).containsExactlyElementsOf(serviceIdentityCertPath)
-        }
-
-        trustStore.run {
-            assertFalse(contains(X509Utilities.CORDA_CLIENT_CA))
-            assertFalse(contains(X509Utilities.CORDA_INTERMEDIATE_CA))
-            assertThat(getCertificate(X509Utilities.CORDA_ROOT_CA)).isEqualTo(serviceIdentityCertPath.last())
         }
     }
 
@@ -213,12 +209,25 @@ class NetworkRegistrationHelperTest {
         return listOf(serviceIdentityCert, intermediateCa.certificate, rootCa.certificate)
     }
 
-    private fun createRegistrationHelper(response: List<X509Certificate>): NetworkRegistrationHelper {
+    private fun createRegistrationHelper(response: List<X509Certificate>, certRole: CertRole = CertRole.NODE_CA): NetworkRegistrationHelper {
         val certService = rigorousMock<NetworkRegistrationService>().also {
             doReturn(requestId).whenever(it).submitRequest(any())
             doReturn(CertificateResponse(5.seconds, response)).whenever(it).retrieveCertificates(eq(requestId))
         }
-        return NetworkRegistrationHelper(config, certService, NodeRegistrationOption(config.certificatesDirectory / networkRootTrustStoreFileName, networkRootTrustStorePassword))
+
+        return when (certRole) {
+            CertRole.NODE_CA -> NodeRegistrationHelper(config, certService, NodeRegistrationOption(config.certificatesDirectory / networkRootTrustStoreFileName, networkRootTrustStorePassword))
+            CertRole.SERVICE_IDENTITY -> NetworkRegistrationHelper(
+                    config,
+                    config.myLegalName,
+                    config.emailAddress,
+                    certService,
+                    config.certificatesDirectory / networkRootTrustStoreFileName,
+                    networkRootTrustStorePassword,
+                    "${DevIdentityGenerator.DISTRIBUTED_NOTARY_ALIAS_PREFIX}-private-key",
+                    CertRole.SERVICE_IDENTITY)
+            else -> throw IllegalArgumentException("Unsupported cert role.")
+        }
     }
 
     private fun saveNetworkTrustStore(rootCert: X509Certificate) {
