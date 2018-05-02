@@ -65,8 +65,8 @@ class NotaryFlow {
         protected fun checkTransaction(): Party {
             val notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
             check(serviceHub.networkMapCache.isNotary(notaryParty)) { "$notaryParty is not a notary on the network" }
-            check(serviceHub.loadStates(stx.inputs.toSet()).all { it.state.notary == notaryParty }) {
-                "Input states must have the same Notary"
+            check(serviceHub.loadStates(stx.inputs.toSet() + stx.references.toSet()).all { it.state.notary == notaryParty }) {
+                "Input states and reference input states must have the same Notary"
             }
             stx.resolveTransactionWithSignatures(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
             return notaryParty

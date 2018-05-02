@@ -39,8 +39,9 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAut
                     verify()
                     checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
                     checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
+                    checkAllComponentsVisible(ComponentGroupEnum.REFERENCES_GROUP)
                 }
-                TransactionParts(tx.id, tx.inputs, tx.timeWindow, tx.notary)
+                TransactionParts(tx.id, tx.inputs, tx.timeWindow, tx.notary, tx.references)
             }
             is ContractUpgradeFilteredTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary)
             is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary)

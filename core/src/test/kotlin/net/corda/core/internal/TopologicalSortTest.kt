@@ -24,8 +24,9 @@ class TopologicalSortTest {
     class DummyTransaction constructor(
             override val id: SecureHash,
             override val inputs: List<StateRef>,
-            @Suppress("CanBeParameter") private val numberOfOutputs: Int,
-            override val notary: Party
+            @Suppress("CanBeParameter") val numberOfOutputs: Int,
+            override val notary: Party,
+            override val references: List<StateRef> = emptyList()
     ) : CoreTransaction() {
         override val outputs: List<TransactionState<ContractState>> = (1..numberOfOutputs).map {
             TransactionState(DummyState(), "", notary)
