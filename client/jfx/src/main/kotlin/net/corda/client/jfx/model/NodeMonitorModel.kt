@@ -134,7 +134,7 @@ class NodeMonitorModel {
 
         logger.info("Connecting to: $nodeHostAndPort")
 
-        val retryInterval = 10.seconds
+        val retryInterval = 30.seconds
         val client = CordaRPCClient(
                 nodeHostAndPort,
                 object : CordaRPCClientConfiguration {
@@ -144,11 +144,17 @@ class NodeMonitorModel {
         val connection = client.start(username, password)
         val proxy = connection.proxy
 
+        // TODO: Before performing sophisticated operations with this proxy or announce it being available,
+        // check that it can return sensible response i.e. serve correctly `NodeInfo`.
+
         val (stateMachineInfos, stateMachineUpdatesRaw) = proxy.stateMachinesFeed()
 
         stateMachineUpdatesRaw
                 .startWith(stateMachineInfos.map { StateMachineUpdate.Added(it) })
                 .onErrorResumeNext {
+                    // It is good idea to close connection to properly mark the end of it. During re-connect we will create a new
+                    // client and a new connection, so no going back to this one.
+                    //connection.close()
                     // Failure has occurred for a reason, perhaps because the server backend is being re-started.
                     // Give it some time to come back online before trying to re-connect.
                     Thread.sleep(retryInterval.toMillis())
