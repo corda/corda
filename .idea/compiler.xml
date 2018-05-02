@@ -164,6 +164,8 @@
       <module name="testing-test-common_test" target="1.8" />
       <module name="testing-test-utils_main" target="1.8" />
       <module name="testing-test-utils_test" target="1.8" />
+      <module name="testing_main" target="1.8" />
+      <module name="testing_test" target="1.8" />
       <module name="tools_main" target="1.8" />
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />
