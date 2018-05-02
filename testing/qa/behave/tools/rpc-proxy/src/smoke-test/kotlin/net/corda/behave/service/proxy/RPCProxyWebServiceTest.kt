@@ -2,7 +2,9 @@ package net.corda.behave.service.proxy
 
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.responseAs
+import net.corda.core.internal.sumByLong
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.services.Vault
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -13,14 +15,19 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Ignore
 import org.junit.Test
 
 class RPCProxyWebServiceTest {
 
     /**
      *  client -> HTTPtoRPCProxy -> Corda Node
+     *
+     *  Please note these tests require a running network with at 3 Nodes
+     *  (listening on ports 12002, 12007, and 12012) and a Notary
      */
     private val hostAndPort = NetworkHostAndPort("localhost", 13002)
     private val rpcProxyClient = CordaRPCProxyClient(hostAndPort)
@@ -42,24 +49,32 @@ class RPCProxyWebServiceTest {
     fun nodeInfo() {
         val response = rpcProxyClient.nodeInfo()
         println(response)
+        assertThat(response.toString()).matches("NodeInfo\\(addresses=\\[.*\\], legalIdentitiesAndCerts=\\[.*\\], platformVersion=.*, serial=.*\\)")
     }
 
     @Test
     fun registeredFlows() {
         val response = rpcProxyClient.registeredFlows()
         println(response)
+        // Node built-in flows
+        assertThat(response).contains("net.corda.core.flows.ContractUpgradeFlow\$Authorise",
+                "net.corda.core.flows.ContractUpgradeFlow\$Deauthorise",
+                "net.corda.core.flows.ContractUpgradeFlow\$Initiate")
     }
 
     @Test
     fun notaryIdentities() {
         val response = rpcProxyClient.notaryIdentities()
         println(response)
+        assertThat(response.first().name.toString()).isEqualTo("O=Notary, L=London, C=GB")
     }
 
     @Test
     fun networkMapSnapshot() {
         val response = rpcProxyClient.networkMapSnapshot()
         println(response)
+        assertThat(response).contains(rpcProxyClient.nodeInfo())
+        assertThat(response.size).isEqualTo(4)
     }
 
     @Test
@@ -68,6 +83,7 @@ class RPCProxyWebServiceTest {
         val response = rpcProxyClient.startFlow(::CashIssueFlow, POUNDS(500), OpaqueBytes.of(1), notary)
         val result = response.returnValue.getOrThrow().stx
         println(result)
+        assertThat(result.toString()).matches("SignedTransaction\\(id=.*\\)")
     }
 
     @Test
@@ -76,6 +92,7 @@ class RPCProxyWebServiceTest {
         val response = rpcProxyClientB.startFlow(::CashIssueFlow, DOLLARS(1000), OpaqueBytes.of(1), notary)
         val result = response.returnValue.getOrThrow().stx
         println(result)
+        assertThat(result.toString()).matches("SignedTransaction\\(id=.*\\)")
     }
 
     @Test
@@ -84,6 +101,7 @@ class RPCProxyWebServiceTest {
         val response = rpcProxyClientB.startFlow(::CashPaymentFlow, DOLLARS(100), recipient)
         val result = response.returnValue.getOrThrow().stx
         println(result)
+        assertThat(result.toString()).matches("SignedTransaction\\(id=.*\\)")
     }
 
     @Test
@@ -92,6 +110,7 @@ class RPCProxyWebServiceTest {
         val response = rpcProxyClient.startFlow(::CashPaymentFlow, POUNDS(250), recipient)
         val result = response.returnValue.getOrThrow().stx
         println(result)
+        assertThat(result.toString()).matches("SignedTransaction\\(id=.*\\)")
     }
 
     @Test
@@ -100,6 +119,7 @@ class RPCProxyWebServiceTest {
         val response = rpcProxyClientB.startFlow(::CashPaymentFlow, DOLLARS(500), recipient)
         val result = response.returnValue.getOrThrow().stx
         println(result)
+        assertThat(result.toString()).matches("SignedTransaction\\(id=.*\\)")
     }
 
     @Test
@@ -107,6 +127,7 @@ class RPCProxyWebServiceTest {
         val response = rpcProxyClient.startFlow(::CashExitFlow, POUNDS(500), OpaqueBytes.of(1))
         val result = response.returnValue.getOrThrow().stx
         println(result)
+        assertThat(result.toString()).matches("SignedTransaction\\(id=.*\\)")
     }
 
     @Test
@@ -149,8 +170,11 @@ class RPCProxyWebServiceTest {
         responseB.states.forEach { state ->
             println("PartyB: ${state.state.data.amount}")
         }
+
+        assertVaultHoldsCash(responseA, responseB)
     }
 
+    @Ignore
     @Test
     fun startMultiABCPartyCashFlows() {
         val notary = rpcProxyClient.notaryIdentities()[0]
@@ -213,6 +237,7 @@ class RPCProxyWebServiceTest {
     }
 
     // enable Flow Draining on Node B
+    @Ignore
     @Test
     fun startMultiACPartyCashFlows() {
         val notary = rpcProxyClient.notaryIdentities()[0]
@@ -279,10 +304,21 @@ class RPCProxyWebServiceTest {
             responseC.states.forEach { state ->
                 println("PartyC: ${state.state.data.amount}")
             }
+
+            assertVaultHoldsCash(responseA, responseB, responseC)
         }
         catch (e: Exception) {
             println("Vault Cash query error: ${e.message}")
             fail()
+        }
+    }
+
+    private fun assertVaultHoldsCash(vararg vaultPages: Vault.Page<Cash.State>) {
+        vaultPages.forEach { vaultPage ->
+            assertThat(vaultPage.states.size).isGreaterThan(0)
+            vaultPage.states.groupBy { it.state.data.amount.token.product.currencyCode }.forEach { _, value ->
+                assertThat(value.sumByLong { it.state.data.amount.quantity }).isGreaterThan(0L)
+            }
         }
     }
 

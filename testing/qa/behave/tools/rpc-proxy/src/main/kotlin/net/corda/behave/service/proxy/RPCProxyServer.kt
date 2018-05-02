@@ -1,6 +1,7 @@
 package net.corda.behave.service.proxy
 
 import net.corda.behave.service.proxy.RPCProxyServer.Companion.initialiseSerialization
+import net.corda.behave.service.proxy.RPCProxyServer.Companion.log
 import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -88,6 +89,6 @@ fun main(args: Array<String>) {
     initialiseSerialization()
     val portNo = args.singleOrNull() ?: throw IllegalArgumentException("Please specify a port number")
     val hostAndPort = NetworkHostAndPort("localhost", portNo.toIntOrNull() ?: 13000)
-    println("Starting RPC Proxy Server on [$hostAndPort] ...")
+    log.info("Starting RPC Proxy Server on [$hostAndPort] ...")
     RPCProxyServer(hostAndPort, webService = RPCProxyWebService(hostAndPort)).start()
 }
