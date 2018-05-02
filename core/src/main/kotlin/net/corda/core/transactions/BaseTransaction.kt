@@ -15,7 +15,7 @@ import java.util.function.Predicate
 abstract class BaseTransaction : NamedByHash {
 
     companion object {
-        const val maxInputsCount = 1000
+        const val maxInputsCount = 300
     }
 
     /** The inputs of this transaction. Note that in BaseTransaction subclasses the type of this list may change! */

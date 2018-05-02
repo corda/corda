@@ -85,7 +85,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
             for (hash in toFetch) {
                 // We skip the validation here (with unwrap { it }) because we will do it below in validateFetchResponse.
                 // The only thing checked is the object type. It is a protocol violation to send results out of order.
-                // TODO sollecitom page here
+                // TODO we need to page here after large messages will work
                 maybeItems += otherSideSession.sendAndReceive<List<W>>(Request.Data(NonEmptySet.of(hash), dataType)).unwrap { it }
             }
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
