@@ -143,7 +143,7 @@ class BridgeIntegrationTest {
         val configResource = "/net/corda/bridge/hasingleprocess/bridge.conf"
         createNetworkParams(tempFolder.root.toPath())
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(BridgeHAConfigImpl("zk//:localhost:11105", 10), config.haConfig)
+        assertEquals(BridgeHAConfigImpl("zk://localhost:11105,zk://localhost:11106", 10), config.haConfig)
         config.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val (artemisServer, artemisClient) = createArtemis()
         val zkServer = TestingServer(11105, false)
@@ -192,7 +192,7 @@ class BridgeIntegrationTest {
         val bridgeFolder = tempFolder.root.toPath()
         val bridgeConfigResource = "/net/corda/bridge/hawithfloat/bridge/bridge.conf"
         val bridgeConfig = createAndLoadConfigFromResource(bridgeFolder, bridgeConfigResource)
-        assertEquals(BridgeHAConfigImpl("zk//:localhost:11105", 10), bridgeConfig.haConfig)
+        assertEquals(BridgeHAConfigImpl("zk://localhost:11105", 10), bridgeConfig.haConfig)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         createNetworkParams(bridgeFolder)
         val floatFolder = tempFolder.root.toPath() / "float"
