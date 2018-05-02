@@ -45,12 +45,13 @@ class RaftTransactionCommitLog<E, EK>(
         createMap: () -> AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, E, EK>
 ) : StateMachine(), Snapshottable {
     object Commands {
-        class CommitTransaction(
+        class CommitTransaction @JvmOverloads constructor(
                 val states: List<StateRef>,
                 val txId: SecureHash,
                 val requestingParty: String,
                 val requestSignature: ByteArray,
-                val timeWindow: TimeWindow? = null
+                val timeWindow: TimeWindow? = null,
+                val references: List<StateRef> = emptyList()
         ) : Command<NotaryError?> {
             override fun compaction(): Command.CompactionMode {
                 // The FULL compaction mode retains the command in the log until it has been stored and applied on all
@@ -78,11 +79,11 @@ class RaftTransactionCommitLog<E, EK>(
             return db.transaction {
                 val commitCommand = raftCommit.command()
                 logRequest(commitCommand)
-                val states = commitCommand.states
+                val allStates = commitCommand.states + commitCommand.references
                 val txId = commitCommand.txId
-                log.debug("State machine commit: storing entries with keys (${states.joinToString()})")
+                log.debug("State machine commit: storing entries with keys (${allStates.joinToString()})")
                 val conflictingStates = LinkedHashMap<StateRef, StateConsumptionDetails>()
-                for (state in states) {
+                for (state in allStates) {
                     map[state]?.let { conflictingStates[state] = StateConsumptionDetails(it.second.sha256()) }
                 }
                 if (conflictingStates.isNotEmpty()) {
@@ -95,9 +96,10 @@ class RaftTransactionCommitLog<E, EK>(
                 } else {
                     val outsideTimeWindowError = validateTimeWindow(clock.instant(), commitCommand.timeWindow)
                     if (outsideTimeWindowError == null) {
-                        val entries = states.map { it to Pair(index, txId) }.toMap()
+                        // ONLY commit the input states and NOT the reference inputs states.
+                        val entries = commitCommand.states.map { it to Pair(index, txId) }.toMap()
                         map.putAll(entries)
-                        log.debug { "Successfully committed all input states: $states" }
+                        log.debug { "Successfully committed all input states: $allStates" }
                         null
                     } else {
                         outsideTimeWindowError

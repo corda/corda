@@ -104,16 +104,22 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?) {
+            timeWindow: TimeWindow?,
+            references: List<StateRef>
+    ) {
         mutex.locked {
             logRequest(txId, callerIdentity, requestSignature)
-            val conflictingStates = findAlreadyCommitted(states, commitLog)
+            val conflictingStates = findAlreadyCommitted(states + references, commitLog)
             if (conflictingStates.isNotEmpty()) {
                 handleConflicts(txId, conflictingStates)
             } else {
                 handleNoConflicts(timeWindow, states, txId, commitLog)
             }
         }
+    }
+
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?) {
+        commit(states, txId, callerIdentity, requestSignature, timeWindow, emptyList())
     }
 
     private fun logRequest(txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature) {

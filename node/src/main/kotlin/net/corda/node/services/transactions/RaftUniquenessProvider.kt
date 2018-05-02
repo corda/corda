@@ -186,19 +186,26 @@ class RaftUniquenessProvider(
         })
     }
 
+    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?) {
+        commit(states, txId, callerIdentity, requestSignature, timeWindow, emptyList())
+    }
+
     override fun commit(
             states: List<StateRef>,
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
-            timeWindow: TimeWindow?) {
+            timeWindow: TimeWindow?,
+            references: List<StateRef>
+    ) {
         log.debug { "Attempting to commit input states: ${states.joinToString()}" }
         val commitCommand = CommitTransaction(
                 states,
                 txId,
                 callerIdentity.name.toString(),
                 requestSignature.serialize().bytes,
-                timeWindow
+                timeWindow,
+                references
         )
         val commitError = client.submit(commitCommand).get()
         if (commitError != null) throw NotaryInternalException(commitError)

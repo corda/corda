@@ -42,7 +42,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
 
     @DeleteForDJVM
     companion object {
-        private fun dependencyIDs(stx: SignedTransaction) = stx.inputs.map { it.txhash }.toSet()
+        private fun dependencyIDs(stx: SignedTransaction) = stx.inputs.map { it.txhash }.toSet() + stx.references.map { it.txhash }.toSet()
 
         private const val RESOLUTION_PAGE_SIZE = 100
 
@@ -146,8 +146,8 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             for (stx in downloads)
                 check(resultQ.putIfAbsent(stx.id, stx) == null)   // Assert checks the filter at the start.
 
-            // Add all input states to the work queue.
-            val inputHashes = downloads.flatMap { it.inputs }.map { it.txhash }
+            // Add all input states and reference input states to the work queue.
+            val inputHashes = downloads.flatMap { it.inputs + it.references }.map { it.txhash }
             nextRequests.addAll(inputHashes)
 
             limitCounter = limitCounter exactAdd nextRequests.size

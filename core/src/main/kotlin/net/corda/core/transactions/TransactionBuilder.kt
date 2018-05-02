@@ -35,7 +35,7 @@ import kotlin.collections.ArrayList
  * [TransactionState] with this notary specified will be generated automatically.
  */
 @DeleteForDJVM
-open class TransactionBuilder(
+open class TransactionBuilder @JvmOverloads constructor(
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
@@ -43,11 +43,11 @@ open class TransactionBuilder(
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
-        protected var privacySalt: PrivacySalt = PrivacySalt()
+        protected var privacySalt: PrivacySalt = PrivacySalt(),
+        protected val references: MutableList<StateRef> = arrayListOf()
 ) {
-    constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
-
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
+    private val referenceInputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 
     /**
      * Creates a copy of the builder.
@@ -60,9 +60,11 @@ open class TransactionBuilder(
                 outputs = ArrayList(outputs),
                 commands = ArrayList(commands),
                 window = window,
-                privacySalt = privacySalt
+                privacySalt = privacySalt,
+                references = references
         )
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
+        t.referenceInputsWithTransactionState.addAll(this.referenceInputsWithTransactionState)
         return t
     }
 
@@ -72,6 +74,7 @@ open class TransactionBuilder(
         for (t in items) {
             when (t) {
                 is StateAndRef<*> -> addInputState(t)
+                is ReferencedStateAndRef<*> -> addReferenceState(t)
                 is SecureHash -> addAttachment(t)
                 is TransactionState<*> -> addOutputState(t)
                 is StateAndContract -> addOutputState(t.state, t.contract)
@@ -113,7 +116,7 @@ open class TransactionBuilder(
         }
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + makeContractAttachments(services.cordappProvider), notary, window), privacySalt)
+            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + makeContractAttachments(services.cordappProvider), notary, window, referenceStates()), privacySalt)
         }
     }
 
@@ -145,10 +148,29 @@ open class TransactionBuilder(
         toLedgerTransaction(services).verify()
     }
 
-    open fun addInputState(stateAndRef: StateAndRef<*>): TransactionBuilder {
+    private fun checkNotary(stateAndRef: StateAndRef<*>) {
         val notary = stateAndRef.state.notary
         require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
+    }
+
+    private fun checkForInputsAndReferencesOverlap() {
+        val intersection = inputs intersect references
+        require(intersection.isEmpty()) { "A StateRef cannot be both an input as well as a reference input." }
+    }
+
+    open fun addReferenceState(referencedStateAndRef: ReferencedStateAndRef<*>): TransactionBuilder {
+        val stateAndRef = referencedStateAndRef.stateAndRef
+        checkNotary(stateAndRef)
+        references.add(stateAndRef.ref)
+        checkForInputsAndReferencesOverlap()
+        referenceInputsWithTransactionState.add(stateAndRef.state)
+        return this
+    }
+
+    open fun addInputState(stateAndRef: StateAndRef<*>): TransactionBuilder {
+        checkNotary(stateAndRef)
         inputs.add(stateAndRef.ref)
+        checkForInputsAndReferencesOverlap()
         inputsWithTransactionState.add(stateAndRef.state)
         return this
     }
@@ -211,6 +233,8 @@ open class TransactionBuilder(
 
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)
+
+    fun referenceStates(): List<StateRef> = ArrayList(references)
 
     fun attachments(): List<SecureHash> = ArrayList(attachments)
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
