@@ -3,12 +3,14 @@ package net.corda.tools.shell
 import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
+import net.corda.client.rpc.PermissionException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
+import net.corda.node.services.config.shell.toShellConfig
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.ClientRpcSslOptions
 import net.corda.testing.common.internal.withCertificates
@@ -16,6 +18,7 @@ import net.corda.testing.common.internal.withKeyStores
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.createKeyPairAndSelfSignedCertificate
 import net.corda.testing.internal.saveToKeyStore
@@ -122,6 +125,17 @@ class InteractiveShellIntegrationTest {
                 InteractiveShell.startShell(conf)
 
                 assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQNotConnectedException::class.java)
+            }
+        }
+    }
+
+    @Test
+    fun `internal shell user should not have permissions to run commands if node started with devMode=false`() {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+            startNode().getOrThrow().use { node ->
+                val conf = (node as NodeHandleInternal).configuration.toShellConfig()
+                InteractiveShell.startShellInternal(conf)
+                assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(PermissionException::class.java)
             }
         }
     }

@@ -52,6 +52,8 @@ interface NodeHandle : AutoCloseable {
     val p2pAddress: NetworkHostAndPort
     /** Get the rpc address for this node **/
     val rpcAddress: NetworkHostAndPort
+    /** Get the rpc admin address for this node **/
+    val rpcAdminAddress: NetworkHostAndPort
     /** Get a [List] of [User]'s for this node **/
     val rpcUsers: List<User>
     /** The location of the node's base directory **/
