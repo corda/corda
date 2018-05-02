@@ -50,11 +50,25 @@ class NodeMonitorModel {
     val progressTracking: Observable<ProgressTrackingEvent> = progressTrackingSubject
     val networkMap: Observable<MapChange> = networkMapSubject
 
-    val proxyObservable = SimpleObjectProperty<CordaRPCOps?>()
+    val proxyObservable = SimpleObjectProperty<CordaRPCOpsWrapper?>()
     lateinit var notaryIdentities: List<Party>
 
     companion object {
         val logger = contextLogger()
+    }
+
+    /**
+     * This is needed as JavaFX listener framework attempts to call `equals()` before dispatching notification change.
+     * And calling `CordaRPCOps.equals()` results in (unhandled) remote call.
+     */
+    class CordaRPCOpsWrapper(val cordaRPCOps: CordaRPCOps) {
+        override fun equals(other: Any?): Boolean {
+            return this === other
+        }
+
+        override fun hashCode(): Int {
+            throw IllegalArgumentException()
+        }
     }
 
     /**
@@ -69,8 +83,9 @@ class NodeMonitorModel {
         retryableStateMachineUpdatesSubject.subscribe(stateMachineUpdatesSubject)
 
         // Proxy may change during re-connect, ensure that subject wiring accurately reacts to this activity.
-        proxyObservable.addListener { _, _, proxy ->
-            if(proxy != null) {
+        proxyObservable.addListener { _, _, wrapper ->
+            if(wrapper != null) {
+                val proxy = wrapper.cordaRPCOps
                 // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates
                 val (statesSnapshot, vaultUpdates) = proxy.vaultTrackBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
                         PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
@@ -143,7 +158,7 @@ class NodeMonitorModel {
                 }
                 .subscribe(retryableStateMachineUpdatesSubject)
 
-        proxyObservable.set(proxy)
+        proxyObservable.set(CordaRPCOpsWrapper(proxy))
         notaryIdentities = proxy.notaryIdentities()
 
         return stateMachineInfos
