@@ -63,13 +63,13 @@ are compatible with TLS 1.2, while the default scheme per key type is also shown
 | ECDSA using the         | This is the default choice for most systems that support    | YES | root network CA       |
 | NIST P-256 curve        | elliptic curve cryptography today and is recommended by     |     | doorman CA            |
 | (secp256r1)             | NIST. It is also supported by the majority of the HSM       |     | network map           |
-| and SHA-512             | vendors.                                                    |     | node CA               |
+| and SHA-256             | vendors.                                                    |     | node CA               |
 |                         |                                                             |     | tls                   |
 +-------------------------+-------------------------------------------------------------+-----+-----------------------+
 | ECDSA using the         | secp256k1 is the curve adopted by Bitcoin and as such there | YES |                       |
 | Koblitz k1 curve        | is a wealth of infrastructure, code and advanced algorithms |     |                       |
 | (secp256k1)             | designed for use with it. This curve is standardised by     |     |                       |
-| and SHA-512             | NIST as part of the "Suite B" cryptographic algorithms and  |     |                       |
+| and SHA-256             | NIST as part of the "Suite B" cryptographic algorithms and  |     |                       |
 |                         | as such is more widely supported than ed25519. By           |     |                       |
 |                         | supporting it we gain access to the ecosystem of advanced   |     |                       |
 |                         | cryptographic techniques and devices pioneered by the       |     |                       |
