@@ -39,13 +39,15 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
      */
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
         properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean == true || return this
-        val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContextImpl ?: return this // Some tests don't set one.
+        val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContextImpl
+                ?: return this // Some tests don't set one.
         try {
             return withClassLoader(cache.get(attachmentHashes) {
                 val missing = ArrayList<SecureHash>()
                 val attachments = ArrayList<Attachment>()
                 attachmentHashes.forEach { id ->
-                    serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
+                    serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it }
+                            ?: run { missing += id }
                 }
                 missing.isNotEmpty() && throw MissingAttachmentsException(missing)
                 AttachmentsClassLoader(attachments, parent = deserializationClassLoader)
@@ -141,8 +143,6 @@ open class SerializationFactoryImpl : SerializationFactory() {
 
     override fun hashCode(): Int = registeredSchemes.hashCode()
 }
-
-
 
 
 interface SerializationScheme {

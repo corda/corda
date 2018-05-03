@@ -165,6 +165,40 @@ Nodes are created on the ``MockNetwork`` using:
             }
         }
 
+Nodes added using ``createPartyNode`` are provided a default set of node parameters. However, it is also possible to
+provide different parameters to each node using the following methods on ``MockNetwork``:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        /**
+         * Create a started node with the given parameters.
+         *
+         * @param legalName The node's legal name.
+         * @param forcedID A unique identifier for the node.
+         * @param entropyRoot The initial entropy value to use when generating keys. Defaults to an (insecure) random value,
+         * but can be overridden to cause nodes to have stable or colliding identity/service keys.
+         * @param configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
+         * @param extraCordappPackages Extra CorDapp packages to add for this node.
+         */
+        @JvmOverloads
+        fun createNode(legalName: CordaX500Name? = null,
+                       forcedID: Int? = null,
+                       entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
+                       configOverrides: (NodeConfiguration) -> Any? = {},
+                       extraCordappPackages: List<String> = emptyList()
+        ): StartedMockNode
+
+        /** Create a started node with the given parameters. **/
+        fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedMockNode
+
+As you can see above, parameters can be added individually or encapsulated within a ``MockNodeParameters`` object. Of
+particular interest are ``configOverrides`` which allow you to override any default config option specified within the
+``NodeConfiguration`` object. Also, the ``extraCordappPackages`` parameter allows you to add extra CorDapps to a
+specific node. This is useful when you wish for all nodes to load a common CorDapp but for a subset of nodes to load
+CorDapps specific to their role in the network.
+
 Running the network
 ^^^^^^^^^^^^^^^^^^^
 
