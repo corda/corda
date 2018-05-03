@@ -19,45 +19,39 @@ import java.nio.file.Paths
 @InitiatingFlow
 class DummyFlow : FlowLogic<Unit>() {
     @Suspendable
-    override fun call() {
-    }
+    override fun call() = Unit
 }
 
 @InitiatedBy(DummyFlow::class)
-class LoaderTestFlow(unusedSession: FlowSession) : FlowLogic<Unit>() {
+class LoaderTestFlow(@Suppress("UNUSED_PARAMETER") unusedSession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
-    override fun call() {
-    }
+    override fun call() = Unit
 }
 
 @SchedulableFlow
 class DummySchedulableFlow : FlowLogic<Unit>() {
     @Suspendable
-    override fun call() {
-    }
+    override fun call() = Unit
 }
 
 @StartableByRPC
 class DummyRPCFlow : FlowLogic<Unit>() {
     @Suspendable
-    override fun call() {
-    }
+    override fun call() = Unit
 }
 
 class CordappLoaderTest {
     private companion object {
-        val testScanPackages = listOf("net.corda.node.internal.cordapp")
-        val isolatedContractId = "net.corda.finance.contracts.isolated.AnotherDummyContract"
-        val isolatedFlowName = "net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator"
+        const val testScanPackage = "net.corda.node.internal.cordapp"
+        const val isolatedContractId = "net.corda.finance.contracts.isolated.AnotherDummyContract"
+        const val isolatedFlowName = "net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator"
     }
 
     @Test
     fun `test that classes that aren't in cordapps aren't loaded`() {
         // Basedir will not be a corda node directory so the dummy flow shouldn't be recognised as a part of a cordapp
         val loader = CordappLoader.createDefault(Paths.get("."))
-        assertThat(loader.cordapps)
-                .hasSize(1)
-                .contains(CordappLoader.coreCordapp)
+        assertThat(loader.cordapps).containsOnly(CordappLoader.coreCordapp)
     }
 
     @Test
@@ -81,7 +75,7 @@ class CordappLoaderTest {
 
     @Test
     fun `flows are loaded by loader`() {
-        val loader = CordappLoader.createWithTestPackages(testScanPackages)
+        val loader = CordappLoader.createWithTestPackages(listOf(testScanPackage))
 
         val actual = loader.cordapps.toTypedArray()
         // One core cordapp, one cordapp from this source tree, and two others due to identically named locations
@@ -93,6 +87,20 @@ class CordappLoaderTest {
         assertThat(actualCordapp.initiatedFlows).first().hasSameClassAs(DummyFlow::class.java)
         assertThat(actualCordapp.rpcFlows).first().hasSameClassAs(DummyRPCFlow::class.java)
         assertThat(actualCordapp.schedulableFlows).first().hasSameClassAs(DummySchedulableFlow::class.java)
+    }
+
+    @Test
+    fun `duplicate packages are ignored`() {
+        val loader = CordappLoader.createWithTestPackages(listOf(testScanPackage, testScanPackage))
+        val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
+        assertThat(cordapps).hasSize(1)
+    }
+
+    @Test
+    fun `sub-packages are ignored`() {
+        val loader = CordappLoader.createWithTestPackages(listOf("net.corda", testScanPackage))
+        val cordapps = loader.cordapps.filter { LoaderTestFlow::class.java in it.initiatedFlows }
+        assertThat(cordapps).hasSize(1)
     }
 
     // This test exists because the appClassLoader is used by serialisation and we need to ensure it is the classloader

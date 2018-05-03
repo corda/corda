@@ -24,7 +24,7 @@ import net.corda.core.internal.FetchDataFlow
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
-import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.testing.core.ALICE_NAME

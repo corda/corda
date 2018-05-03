@@ -28,8 +28,8 @@ import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.isConsumedByTheSameTx
-import net.corda.core.internal.validateTimeWindow
+import net.corda.core.internal.notary.isConsumedByTheSameTx
+import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.deserialize

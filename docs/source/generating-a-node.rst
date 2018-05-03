@@ -3,92 +3,24 @@ Creating nodes locally
 
 .. contents::
 
-Node structure
---------------
-A Corda node has the following structure:
+Handcrafting a node
+-------------------
+A node can be created manually by creating a folder that contains the following items:
 
-.. sourcecode:: none
+* The Corda JAR
 
-    .
-    ├── certificates            // The node's certificates
-    ├── corda-webserver.jar     // The built-in node webserver
-    ├── corda.jar               // The core Corda libraries
-    ├── logs                    // The node logs
-    ├── node.conf               // The node's configuration files
-    ├── persistence.mv.db       // The node's database
-    └── cordapps                // The CorDapps jars installed on the node
+    * Can be downloaded from https://r3.bintray.com/corda/net/corda/corda/ (under /VERSION_NUMBER/corda-VERSION_NUMBER.jar)
 
-The node is configured by editing its ``node.conf`` file. You install CorDapps on the node by dropping the CorDapp JARs
-into the ``cordapps`` folder.
+* A node configuration file entitled ``node.conf``, configured as per :doc:`corda-configuration-file`
 
-In development mode (i.e. when ``devMode = true``, see :doc:`corda-configuration-file` for more information), the ``certificates``
-directory is filled with pre-configured keystores if the required keystores do not exist. This ensures that developers
-can get the nodes working as quickly as possible. However, these pre-configured keystores are not secure, to learn more see :doc:`permissioning`.
+* A folder entitled ``cordapps`` containing any CorDapp JARs you want the node to load
 
-.. _node_naming:
+* **Optional:** A webserver JAR entitled ``corda-webserver.jar`` that will connect to the node via RPC
 
-Node naming
------------
-A node's name must be a valid X.500 distinguished name. In order to be compatible with other implementations
-(particularly TLS implementations), we constrain the allowed X.500 name attribute types to a subset of the minimum
-supported set for X.509 certificates (specified in RFC 3280), plus the locality attribute:
+    * The (deprecated) default webserver can be downloaded from http://r3.bintray.com/corda/net/corda/corda-webserver/ (under /VERSION_NUMBER/corda-VERSION_NUMBER.jar)
+    * A Spring Boot alternative can be found here: https://github.com/corda/spring-webserver
 
-* Organization (O)
-* State (ST)
-* Locality (L)
-* Country (C)
-* Organizational-unit (OU)
-* Common name (CN)
-
-Note that the serial number is intentionally excluded in order to minimise scope for uncertainty in the distinguished name format.
-The distinguished name qualifier has been removed due to technical issues; consideration was given to "Corda" as qualifier,
-however the qualifier needs to reflect the compatibility zone, not the technology involved. There may be many Corda namespaces,
-but only one R3 namespace on Corda. The ordering of attributes is important.
-
-``State`` should be avoided unless required to differentiate from other ``localities`` with the same or similar names at the
-country level. For example, London (GB) would not need a ``state``, but St Ives would (there are two, one in Cornwall, one
-in Cambridgeshire). As legal entities in Corda are likely to be located in major cities, this attribute is not expected to be
-present in the majority of names, but is an option for the cases which require it.
-
-The name must also obey the following constraints:
-
-* The ``organisation``, ``locality`` and ``country`` attributes are present
-
-    * The ``state``, ``organisational-unit`` and ``common name`` attributes are optional
-
-* The fields of the name have the following maximum character lengths:
-
-    * Common name: 64
-    * Organisation: 128
-    * Organisation unit: 64
-    * Locality: 64
-    * State: 64
-
-* The ``country`` attribute is a valid ISO 3166-1 two letter code in upper-case
-
-* All attributes must obey the following constraints:
-
-    * Upper-case first letter
-    * Has at least two letters
-    * No leading or trailing whitespace
-    * Does not include the following characters: ``,`` , ``=`` , ``$`` , ``"`` , ``'`` , ``\``
-    * Is in NFKC normalization form
-    * Does not contain the null character
-    * Only the latin, common and inherited unicode scripts are supported
-
-* The ``organisation`` field of the name also obeys the following constraints:
-
-    * No double-spacing
-
-        * This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
-          character confusability attacks
-
-External identifiers
-^^^^^^^^^^^^^^^^^^^^
-Mappings to external identifiers such as Companies House nos., LEI, BIC, etc. should be stored in custom X.509
-certificate extensions. These values may change for operational reasons, without the identity they're associated with
-necessarily changing, and their inclusion in the distinguished name would cause significant logistical complications.
-The OID and format for these extensions will be described in a further specification.
+The remaining files and folders described in :doc:`node-structure` will be generated at runtime.
 
 The Cordform task
 -----------------
@@ -205,9 +137,9 @@ The webserver JAR will be copied into the node's ``build`` folder with the name 
 The Dockerform task
 -------------------
 
-The ```Dockerform``` is a sister task of ```Cordform```. It has nearly the same syntax and produces very
-similar results - enhanced by an extra file to enable easy spin up of nodes using ```docker-compose```.
-Below you can find the example task from the ```IRS Demo<https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>```
+The ``Dockerform`` is a sister task of ``Cordform``. It has nearly the same syntax and produces very
+similar results - enhanced by an extra file to enable easy spin up of nodes using ``docker-compose``.
+Below you can find the example task from the ``IRS Demo<https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>``
 included in the samples directory of main Corda GitHub repository:
 
 .. sourcecode:: groovy
@@ -228,7 +160,7 @@ included in the samples directory of main Corda GitHub repository:
 
     // (...)
 
-    task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar']) {
+    task deployNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar']) {
 
         node {
             name "O=Notary Service,L=Zurich,C=CH"
@@ -257,12 +189,10 @@ included in the samples directory of main Corda GitHub repository:
         }
     }
 
-There is no need to specify the ports, as every node is a separated container, so no ports conflict will occur.
-Running the task will create the same folders structure as described in :ref:`The Cordform task` with an additional
-```Dockerfile`` in each node directory, and ```docker-compose.yml``` in ```build/nodes``` directory. Every node
-by default exposes port 10003 which is the default one for RPC connections.
+There is no need to specify the ports, as every node is a separated container, so no ports conflict will occur. Every
+node by default will expose port 10003 which is the default port for RPC connections.
 
-.. warning:: Webserver is not supported by this task!
+.. warning:: The node webserver is not supported by this task!
 
 .. warning:: Nodes are run without the local shell enabled!
 
@@ -278,5 +208,8 @@ This will create the nodes in the ``build/nodes`` folder. There will be a node f
 in the ``deployNodes`` task, plus a ``runnodes`` shell script (or batch file on Windows) to run all the nodes at once
 for testing and development purposes. If you make any changes to your CorDapp source or ``deployNodes`` task, you will
 need to re-run the task to see the changes take effect.
+
+If the task is a ``Dockerform`` task, running the task will also create an additional ``Dockerfile`` in each node
+directory, and a ``docker-compose.yml`` file in the ``build/nodes`` directory.
 
 You can now run the nodes by following the instructions in :doc:`Running a node <running-a-node>`.

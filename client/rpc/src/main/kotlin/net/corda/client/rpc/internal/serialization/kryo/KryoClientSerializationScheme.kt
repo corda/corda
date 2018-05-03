@@ -8,7 +8,7 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-package net.corda.client.rpc.internal
+package net.corda.client.rpc.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.serialization.SerializationContext

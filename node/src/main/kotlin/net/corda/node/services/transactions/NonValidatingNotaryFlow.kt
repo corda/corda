@@ -12,15 +12,17 @@ package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ComponentGroupEnum
-import net.corda.core.flows.*
-import net.corda.core.internal.validateRequestSignature
-import net.corda.core.node.services.TrustedAuthorityNotaryService
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.NotarisationPayload
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.internal.notary.NotaryServiceFlow
+import net.corda.core.internal.notary.TrustedAuthorityNotaryService
 import net.corda.core.transactions.ContractUpgradeFilteredTransaction
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 
-class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthorityNotaryService) : NotaryFlow.Service(otherSideSession, service) {
+class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthorityNotaryService) : NotaryServiceFlow(otherSideSession, service) {
     /**
      * The received transaction is not checked for contract-validity, as that would require fully
      * resolving it into a [TransactionForVerification], for which the caller would have to reveal the whole transaction

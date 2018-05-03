@@ -81,7 +81,35 @@ Build
 
 .. sourcecode:: shell
 
-    ext.corda_release_distribution = 'net.corda'    // Corda (Open Source)
+  ext.corda_release_distribution = 'net.corda'    // Corda (Open Source)
+
+Network Map Service
+^^^^^^^^^^^^^^^^^^^
+
+With the re-designed network map service the following changes need to be made:
+
+* The network map is no longer provided by a node and thus the ``networkMapService`` config is ignored. Instead the
+  network map is either provided by the compatibility zone (CZ) operator (who operates the doorman) and available
+  using the ``compatibilityZoneURL`` config, or is provided using signed node info files which are copied locally.
+  See :doc:`network-map` for more details, and :doc:`setting-up-a-corda-network` on how to use the network
+  bootstrapper for deploying a local network.
+
+* Configuration for a notary has been simplified. ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses``
+  and ``bftSMaRt`` configs have been replaced by a single ``notary`` config object. See :doc:`corda-configuration-file`
+  for more details.
+
+* The advertisement of the notary to the rest of the network, and its validation type, is no longer determined by the
+  ``extraAdvertisedServiceIds`` config. Instead it has been moved to the control of the network operator via
+  the introduction of network parameters. The network bootstrapper automatically includes the configured notaries
+  when generating the network parameters file for a local deployment.
+
+* Any nodes defined in a ``deployNodes`` gradle task performing the function of the network map can be removed, or the
+  ``NetworkMap`` parameter can be removed for any "controller" node which is both the network map and a notary.
+
+* For registering a node with the doorman the ``certificateSigningService`` config has been replaced by ``compatibilityZoneURL``.
+
+Corda Plugins
+^^^^^^^^^^^^^
 
 * Corda plugins have been modularised further so the following additional gradle entries are necessary:
 

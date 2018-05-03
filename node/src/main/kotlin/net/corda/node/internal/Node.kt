@@ -11,7 +11,7 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
@@ -35,7 +35,7 @@ import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
-import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
@@ -96,10 +96,10 @@ open class Node(configuration: NodeConfiguration,
         }
 
         private val sameVmNodeCounter = AtomicInteger()
-        val scanPackagesSystemProperty = "net.corda.node.cordapp.scan.packages"
-        val scanPackagesSeparator = ","
-        @JvmStatic
-        protected fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
+        const val scanPackagesSystemProperty = "net.corda.node.cordapp.scan.packages"
+        const val scanPackagesSeparator = ","
+
+        private fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
             return System.getProperty(scanPackagesSystemProperty)?.let { scanPackages ->
                 CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
             } ?: CordappLoader.createDefault(configuration.baseDirectory)

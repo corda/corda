@@ -36,7 +36,8 @@ data class DatabaseConfig(
         val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ,
         val schema: String? = null,
         val exportHibernateJMXStatistics: Boolean = false,
-        val hibernateDialect: String? = null
+        val hibernateDialect: String? = null,
+        val mappedSchemaCacheSize: Long = 100
 )
 
 // This class forms part of the node config and so any changes to it must be handled with care

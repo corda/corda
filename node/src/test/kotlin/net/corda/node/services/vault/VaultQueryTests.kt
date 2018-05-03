@@ -108,17 +108,17 @@ open class VaultQueryTests {
             // register additional identities
             val databaseAndServices = makeTestDatabaseAndMockServices(
                     cordappPackages,
-                    makeTestIdentityService(Companion.MEGA_CORP_IDENTITY, Companion.MINI_CORP_IDENTITY, Companion.dummyCashIssuer.identity, Companion.dummyNotary.identity),
+                    makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                     Companion.megaCorp,
-                    moreKeys = Companion.DUMMY_NOTARY_KEY)
+                    moreKeys = DUMMY_NOTARY_KEY)
             database = databaseAndServices.first
             services = databaseAndServices.second
-            vaultFiller = VaultFiller(services, Companion.dummyNotary)
-            vaultFillerCashNotary = VaultFiller(services, Companion.dummyNotary, Companion.CASH_NOTARY)
-            notaryServices = MockServices(cordappPackages, Companion.dummyNotary, rigorousMock(), Companion.dummyCashIssuer.keyPair, Companion.BOC_KEY, Companion.MEGA_CORP_KEY)
+            vaultFiller = VaultFiller(services, dummyNotary)
+            vaultFillerCashNotary = VaultFiller(services, dummyNotary, CASH_NOTARY)
+            notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock(), dummyCashIssuer.keyPair, BOC_KEY, MEGA_CORP_KEY)
             identitySvc = services.identityService
             // Register all of the identities we're going to use
-            (notaryServices.myInfo.legalIdentitiesAndCerts + Companion.BOC_IDENTITY + Companion.CASH_NOTARY_IDENTITY + Companion.MINI_CORP_IDENTITY + Companion.MEGA_CORP_IDENTITY).forEach { identity ->
+            (notaryServices.myInfo.legalIdentitiesAndCerts + BOC_IDENTITY + CASH_NOTARY_IDENTITY + MINI_CORP_IDENTITY + MEGA_CORP_IDENTITY).forEach { identity ->
                 services.identityService.verifyAndRegisterIdentity(identity)
             }
         }

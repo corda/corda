@@ -25,7 +25,7 @@ internal class SendableMessageImpl(override val payload: ByteArray,
                                    override val topic: String,
                                    override val destinationLegalName: String,
                                    override val destinationLink: NetworkHostAndPort,
-                                   override val applicationProperties: Map<Any?, Any?>) : SendableMessage {
+                                   override val applicationProperties: Map<String, Any?>) : SendableMessage {
     var buf: ByteBuf? = null
     @Volatile
     var status: MessageStatus = MessageStatus.Unsent

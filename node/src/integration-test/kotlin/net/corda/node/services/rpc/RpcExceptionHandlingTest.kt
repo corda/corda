@@ -41,61 +41,70 @@ class RpcExceptionHandlingTest : IntegrationTest() {
 
     @Test
     fun `rpc client handles exceptions thrown on node side`() {
-
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
 
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
 
-            assertThatCode { node.rpc.startFlow(::Flow).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
-
-                assertThat(exception).hasNoCause()
-                assertThat(exception.stackTrace).isEmpty()
-                assertThat(exception.message).isEqualTo(InternalNodeException.defaultMessage())
-            }
+            assertThatCode { node.rpc.startFlow(::Flow).returnValue.getOrThrow() }
+                    .isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+                        assertThat(exception).hasNoCause()
+                        assertThat(exception.stackTrace).isEmpty()
+                        assertThat(exception.message).isEqualTo(InternalNodeException.defaultMessage())
+                    }
         }
     }
 
     @Test
     fun `rpc client handles client-relevant exceptions thrown on node side`() {
-
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
 
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
             val clientRelevantMessage = "This is for the players!"
 
-            assertThatCode { node.rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
+            assertThatCode { node.rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow() }
+                    .isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
+                        assertThat(exception).hasNoCause()
+                        assertThat(exception.stackTrace).isEmpty()
+                        assertThat(exception.message).isEqualTo(clientRelevantMessage)
+                    }
+        }
+    }
 
-                assertThat(exception).hasNoCause()
-                assertThat(exception.stackTrace).isEmpty()
-                assertThat(exception.message).isEqualTo(clientRelevantMessage)
-            }
+    @Test
+    fun `FlowException is received by the RPC client`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
+            val exceptionMessage = "Flow error!"
+            assertThatCode { node.rpc.startFlow(::FlowExceptionFlow, exceptionMessage).returnValue.getOrThrow() }
+                    .isInstanceOfSatisfying(FlowException::class.java) { exception ->
+                        assertThat(exception).hasNoCause()
+                        assertThat(exception.stackTrace).isEmpty()
+                        assertThat(exception.message).isEqualTo(exceptionMessage)
+                    }
         }
     }
 
     @Test
     fun `rpc client handles exceptions thrown on counter-party side`() {
-
-        driver(DriverParameters(startNodesInProcess = true)) {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
 
             val nodeA = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = users)).getOrThrow()
             val nodeB = startNode(NodeParameters(providedName = BOB_NAME, rpcUsers = users)).getOrThrow()
 
-            assertThatCode { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
-
-                assertThat(exception).hasNoCause()
-                assertThat(exception.stackTrace).isEmpty()
-                assertThat(exception.message).isEqualTo(InternalNodeException.defaultMessage())
-            }
+            assertThatCode { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }
+                    .isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+                        assertThat(exception).hasNoCause()
+                        assertThat(exception.stackTrace).isEmpty()
+                        assertThat(exception.message).isEqualTo(InternalNodeException.defaultMessage())
+                    }
         }
     }
 }
 
 @StartableByRPC
 class Flow : FlowLogic<String>() {
-
     @Suspendable
     override fun call(): String {
-
         throw GenericJDBCException("Something went wrong!", SQLException("Oops!"))
     }
 }
@@ -103,10 +112,8 @@ class Flow : FlowLogic<String>() {
 @StartableByRPC
 @InitiatingFlow
 class InitFlow(private val party: Party) : FlowLogic<String>() {
-
     @Suspendable
     override fun call(): String {
-
         val session = initiateFlow(party)
         return session.sendAndReceive<String>("hey").unwrap { it }
     }
@@ -114,10 +121,8 @@ class InitFlow(private val party: Party) : FlowLogic<String>() {
 
 @InitiatedBy(InitFlow::class)
 class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit>() {
-
     @Suspendable
     override fun call() {
-
         initiatingSession.receive<String>().unwrap { it }
         throw GenericJDBCException("Something went wrong!", SQLException("Oops!"))
     }
@@ -125,10 +130,12 @@ class InitiatedFlow(private val initiatingSession: FlowSession) : FlowLogic<Unit
 
 @StartableByRPC
 class ClientRelevantErrorFlow(private val message: String) : FlowLogic<String>() {
-
     @Suspendable
-    override fun call(): String {
+    override fun call(): String = throw ClientRelevantException(message, SQLException("Oops!"))
+}
 
-        throw ClientRelevantException(message, SQLException("Oops!"))
-    }
+@StartableByRPC
+class FlowExceptionFlow(private val message: String) : FlowLogic<String>() {
+    @Suspendable
+    override fun call(): String = throw FlowException(message)
 }
