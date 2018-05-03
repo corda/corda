@@ -1004,10 +1004,10 @@ object Crypto {
         //      if key and metadata schemes match.
         val keyScheme = Crypto.findSignatureScheme(transactionSignature.by)
         val metadataScheme = signatureSchemeNumberIDMap[transactionSignature.signatureMetadata.schemeNumberID]
-        require(metadataScheme != null) { "Signature scheme with numberID: $metadataScheme is not supported" }
+        require(metadataScheme != null) { "Signature scheme with numberID: ${transactionSignature.signatureMetadata.schemeNumberID} is not supported" }
         // Bypassing the following requirement when metadataScheme == Crypto.COMPOSITE_KEY due to backwards compatibility purposes.
         // TODO: consider removing the COMPOSITE_KEY check when minimum platform is enforced.
-        require(keyScheme == metadataScheme || metadataScheme == Crypto.COMPOSITE_KEY) { "Signature scheme of metadata with numberID: $metadataScheme does not correspond to the public key scheme numberID: $keyScheme" }
+        require(keyScheme == metadataScheme || metadataScheme == Crypto.COMPOSITE_KEY) { "Signature scheme of metadata with numberID: ${metadataScheme!!.schemeNumberID} does not correspond to the public key scheme numberID: ${keyScheme.schemeNumberID}" }
         val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
         return Pair(keyScheme, signableData)
     }
