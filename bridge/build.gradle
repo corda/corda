@@ -34,7 +34,41 @@ processResources {
 }
 
 dependencies {
-    compile project(':node-api')
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+
+    compile(project(':core')) {
+        transitive = false // we control dependencies directly as the bridge is likely to be audited
+    }
+
+    compile(project(':node-api')) {
+        transitive = false// we control dependencies directly as the bridge is likely to be audited
+    }
+
+    // Here we pull in dependencies that would normally be pulled in transitively from :core and :node-api, but we need more fine grained control
+    // For AMQP serialisation.
+    compile "org.apache.qpid:proton-j:${protonj_version}"
+    // RxJava: observable streams of events.
+    compile "io.reactivex:rxjava:$rxjava_version"
+    compile("org.apache.activemq:artemis-core-client:${artemis_version}")
+    compile "org.apache.activemq:artemis-commons:${artemis_version}"
+    // Netty: All of it! Dn't depend upon ActiveMQ to pull it in correctly
+    compile "io.netty:netty-all:$netty_version"
+    // TypeSafe Config: for simple and human friendly config files.
+    compile "com.typesafe:config:$typesafe_config_version"
+
+    // The following dependencies are required to load and deserialize network-info, or other static initializers that get triggered.
+    // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/ for deserializing our public keys and certs.
+    compile "net.i2p.crypto:eddsa:$eddsa_version"
+    // Bouncy castle support needed for X509 certificate manipulation
+    compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
+    compile "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
+    // Seems to be needed?
+    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
+    // Pulled in by whitelist
+    compile "com.esotericsoftware:kryo:4.0.0"
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
@@ -50,6 +84,7 @@ dependencies {
     integrationTestCompile project(':node-driver')
     integrationTestCompile "org.apache.curator:curator-test:${curator_version}"
     testCompile "junit:junit:$junit_version"
+    testCompile "org.apache.curator:curator-test:${curator_version}"
     testCompile project(':test-utils')
 }
 
