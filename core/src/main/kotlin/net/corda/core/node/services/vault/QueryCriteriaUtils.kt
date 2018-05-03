@@ -3,12 +3,12 @@
 package net.corda.core.node.services.vault
 
 import net.corda.core.DoNotImplement
-import net.corda.core.contracts.ContractState
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Field
+import kotlin.jvm.internal.CallableReference
+import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.javaGetter
 
@@ -70,7 +70,16 @@ sealed class CriteriaExpression<O, out T> {
 @CordaSerializable
 class Column<O, out C>(val name: String, val declaringClass: Class<*>) {
     constructor(field: Field) : this(field.name, field.declaringClass)
-    constructor(property: KProperty1<O, C?>) : this(property.name, property.javaGetter!!.declaringClass)
+    constructor(property: KProperty1<O, C?>) : this(property.name, declaringClass(property))
+
+    private companion object {
+        fun <O, C> declaringClass(property: KProperty1<O, C?>): Class<*> {
+            return when (property) {
+                is CallableReference -> ((property as CallableReference).owner as KClass<*>).javaObjectType
+                else -> property.javaGetter!!.declaringClass
+            }
+        }
+    }
 }
 
 @CordaSerializable
@@ -337,3 +346,34 @@ object Builder {
 }
 
 inline fun <A> builder(block: Builder.() -> A) = block(Builder)
+
+@Throws(NoSuchFieldException::class, IllegalAccessException::class)
+fun Class<*>.getField(fieldName: String): Field {
+    return getField(fieldName, this, this)
+}
+
+@Throws(NoSuchFieldException::class, IllegalAccessException::class)
+private fun getField(fieldName: String, clazz: Class<*>?, invokingClazz: Class<*>): Field {
+    if (clazz == null) {
+        throw NoSuchFieldException(fieldName)
+    }
+    return try {
+        val field = clazz.getDeclaredField(fieldName)
+        setFieldValue(invokingClazz, "clazz", field)
+        field
+    } catch (e: NoSuchFieldException) {
+        getField(fieldName, clazz.superclass, invokingClazz)
+    }
+
+}
+
+@Throws(NoSuchFieldException::class, IllegalAccessException::class)
+private fun setFieldValue(value: Any, fieldName: String, target: Any) {
+    val clazzField = target.javaClass.getDeclaredField(fieldName)
+    try {
+        clazzField.isAccessible = true
+        clazzField.set(target, value)
+    } finally {
+        clazzField.isAccessible = false
+    }
+}

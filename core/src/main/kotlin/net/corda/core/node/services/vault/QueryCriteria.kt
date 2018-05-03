@@ -139,30 +139,17 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      * (see Persistence documentation for more information)
      *
      * Params
-     *  [expression] refers to a (composable) type safe [CriteriaExpression].
-     *
-     *  [entityClass] allows to manually specify [Entity] class. Needed when referencing a field declared in a mapped supertype in the [CriteriaExpression].
+     *  [expression] refers to a (composable) type safe [CriteriaExpression]
      *
      * Refer to [CommercialPaper.State] for a concrete example.
      */
     data class VaultCustomQueryCriteria<L : PersistentState> @JvmOverloads constructor
     (val expression: CriteriaExpression<L, Boolean>,
      override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-     override val contractStateTypes: Set<Class<out ContractState>>? = null,
-     val entityClass: Class<L> = resolveEnclosingObjectFromExpression(expression)) : CommonQueryCriteria() {
+     override val contractStateTypes: Set<Class<out ContractState>>? = null) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
-        }
-
-        companion object {
-            inline fun <reified L : PersistentState> of(expression: CriteriaExpression<L, Boolean>, status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED, contractStateTypes: Set<Class<out ContractState>>? = null): VaultCustomQueryCriteria<L> {
-                return VaultCustomQueryCriteria(expression, status, contractStateTypes, L::class.java)
-            }
-        }
-
-        fun copy(expression: CriteriaExpression<L, Boolean>, status: Vault.StateStatus, contractStateTypes: Set<Class<out ContractState>>?): VaultCustomQueryCriteria<L> {
-            return copy(expression = expression, status = status, contractStateTypes = contractStateTypes, entityClass = entityClass)
         }
     }
 

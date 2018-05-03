@@ -197,7 +197,7 @@ class VaultQueryTests {
                         orderBy = Sort.Direction.ASC
                 )
             }
-            val criteria = VaultCustomQueryCriteria.of(expression)
+            val criteria = VaultCustomQueryCriteria(expression)
             vaultService.queryBy<FungibleAsset<*>>(criteria)
         }
     }
@@ -211,7 +211,7 @@ class VaultQueryTests {
                         orderBy = Sort.Direction.ASC
                 )
             }
-            val criteria = VaultCustomQueryCriteria.of(expression)
+            val criteria = VaultCustomQueryCriteria(expression)
             vaultService.queryBy<FungibleAsset<*>>(criteria)
         }
     }

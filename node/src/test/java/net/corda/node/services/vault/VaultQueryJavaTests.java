@@ -49,6 +49,7 @@ import static java.util.Collections.singletonList;
 import static net.corda.core.node.services.vault.Builder.sum;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
+import static net.corda.core.node.services.vault.QueryCriteriaUtils.getField;
 import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.testing.core.TestConstants.*;
 import static net.corda.testing.internal.InternalTestUtilsKt.rigorousMock;
@@ -100,37 +101,26 @@ public class VaultQueryJavaTests {
      */
 
     @Test
-    public void criteriaWithFieldFromMappedSuperclass() throws NoSuchFieldException {
-        Field quantity = getField("quantity", SampleCashSchemaV2.PersistentCashState.class);
-        Field currency = getField("currency", SampleCashSchemaV2.PersistentCashState.class);
+    public void criteriaWithFieldFromMappedSuperclass() throws NoSuchFieldException, IllegalAccessException {
+        Field quantity = getField(SampleCashSchemaV2.PersistentCashState.class, "quantity");
+        Field currency = getField(SampleCashSchemaV2.PersistentCashState.class, "currency");
 
         CriteriaExpression.AggregateFunctionExpression<Object, Boolean> expression = sum(quantity, singletonList(currency), Sort.Direction.ASC);
-        VaultCustomQueryCriteria<SampleCashSchemaV2.PersistentCashState> criteria = new VaultCustomQueryCriteria(expression, Vault.StateStatus.UNCONSUMED, null, SampleCashSchemaV2.PersistentCashState.class);
+        VaultCustomQueryCriteria<SampleCashSchemaV2.PersistentCashState> criteria = new VaultCustomQueryCriteria(expression, Vault.StateStatus.UNCONSUMED, null);
 
         database.transaction(tx -> vaultService.queryBy(FungibleAsset.class, criteria));
     }
 
     @Test
-    public void criteriaWithFieldFromMappedSuperclassOfSuperclass() throws NoSuchFieldException {
-        Field quantity = getField("quantity", SampleCashSchemaV2.PersistentCashState.class);
-        Field currency = getField("currency", SampleCashSchemaV2.PersistentCashState.class);
-        Field stateRef = getField("stateRef", SampleCashSchemaV2.PersistentCashState.class);
+    public void criteriaWithFieldFromMappedSuperclassOfSuperclass() throws NoSuchFieldException, IllegalAccessException {
+        Field quantity = getField(SampleCashSchemaV2.PersistentCashState.class, "quantity");
+        Field currency = getField(SampleCashSchemaV2.PersistentCashState.class, "currency");
+        Field stateRef = getField(SampleCashSchemaV2.PersistentCashState.class, "stateRef");
 
         CriteriaExpression.AggregateFunctionExpression<Object, Boolean> expression = sum(quantity, asList(currency, stateRef), Sort.Direction.ASC);
-        VaultCustomQueryCriteria<SampleCashSchemaV2.PersistentCashState> criteria = new VaultCustomQueryCriteria(expression, Vault.StateStatus.UNCONSUMED, null, SampleCashSchemaV2.PersistentCashState.class);
+        VaultCustomQueryCriteria<SampleCashSchemaV2.PersistentCashState> criteria = new VaultCustomQueryCriteria(expression, Vault.StateStatus.UNCONSUMED, null);
 
         database.transaction(tx -> vaultService.queryBy(FungibleAsset.class, criteria));
-    }
-
-    private Field getField(String fieldName, Class<?> clazz) throws NoSuchFieldException {
-        if (clazz == null) {
-            throw new NoSuchFieldException(fieldName);
-        }
-        try {
-            return clazz.getDeclaredField(fieldName);
-        } catch (NoSuchFieldException e) {
-            return getField(fieldName, clazz.getSuperclass());
-        }
     }
 
     @Test
