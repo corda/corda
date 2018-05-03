@@ -56,8 +56,9 @@ open class NodeStartup(val args: Array<String>) {
 
         initLogging(cmdlineOptions)
 
-        // Register all cryptography [Provider]s first thing on boot.
+        // Register all cryptography [Provider]s.
         // Required to install our [SecureRandom] before e.g., UUID asks for one.
+        // This needs to go after initLogging(netty clashes with our logging).
         Crypto.registerProviders()
 
         val versionInfo = getVersionInfo()
