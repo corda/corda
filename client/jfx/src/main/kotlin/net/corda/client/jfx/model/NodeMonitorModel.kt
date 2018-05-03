@@ -18,7 +18,9 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import rx.Observable
+import rx.Subscription
 import rx.subjects.PublishSubject
+import java.util.concurrent.atomic.AtomicReference
 
 data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String) {
     companion object {
@@ -139,6 +141,7 @@ class NodeMonitorModel {
                 nodeHostAndPort,
                 object : CordaRPCClientConfiguration {
                     override val connectionMaxRetryInterval = retryInterval
+                    override val trackRpcCallSites = true
                 }
         )
         val connection = client.start(username, password)
@@ -149,9 +152,12 @@ class NodeMonitorModel {
 
         val (stateMachineInfos, stateMachineUpdatesRaw) = proxy.stateMachinesFeed()
 
-        stateMachineUpdatesRaw
+        val retryableStateMachineUpdatesSubscription: AtomicReference<Subscription?> = AtomicReference(null)
+        val subscription: Subscription = stateMachineUpdatesRaw
                 .startWith(stateMachineInfos.map { StateMachineUpdate.Added(it) })
-                .onErrorResumeNext {
+                .doOnError {
+                    // Terminate subscription such that nothing gets past this point to downstream Observables.
+                    retryableStateMachineUpdatesSubscription.get()?.unsubscribe()
                     // It is good idea to close connection to properly mark the end of it. During re-connect we will create a new
                     // client and a new connection, so no going back to this one. Also the server might be down, so we are
                     // force closing the connection to avoid propagation of notification to the server side.
@@ -160,11 +166,10 @@ class NodeMonitorModel {
                     // Give it some time to come back online before trying to re-connect.
                     Thread.sleep(retryInterval.toMillis())
                     performRpcReconnect(nodeHostAndPort, username, password)
-                    // Returning empty observable such that error will not be propagated downstream.
-                    Observable.empty()
                 }
                 .subscribe(retryableStateMachineUpdatesSubject)
 
+        retryableStateMachineUpdatesSubscription.set(subscription)
         proxyObservable.set(CordaRPCOpsWrapper(proxy))
         notaryIdentities = proxy.notaryIdentities()
 
