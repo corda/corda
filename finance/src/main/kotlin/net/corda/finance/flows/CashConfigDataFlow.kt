@@ -17,7 +17,6 @@ import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.flows.ConfigHolder.Companion.supportedCurrencies
 import java.io.IOException
-import java.nio.file.Path
 import java.util.*
 
 // TODO Until apps have access to their own config, we'll hack things by first getting the baseDirectory, read the node.conf
