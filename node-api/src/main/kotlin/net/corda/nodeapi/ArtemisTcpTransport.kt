@@ -147,7 +147,6 @@ class ArtemisTcpTransport {
     }
 }
 
-//todo where should these live
 data class ClientRpcSslOptions(val trustStorePath: Path, val trustStorePassword: String, val trustStoreProvider: String = "JKS")
 
 data class BrokerRpcSslOptions(val keyStorePath: Path, val keyStorePassword: String)

@@ -27,26 +27,44 @@ import javax.security.cert.X509Certificate
 
 /**
  *
- * The Participants in the system are "The current node", "Peer nodes", "The Artemis P2P broker", "RPC clients", "The Artemis RPC broker"
+ * The Participants in the system are "The current node", "Peer nodes", "The Artemis P2P broker", "RPC clients", "The Artemis RPC broker".
+ *
  * These participants need to communicate and authenticate each other.
- * Peer Nodes must use TLS when connecting to the P2P broker
- * RPC Clients may use TLS, and need to provide a username/password
- * The current Node must use TLS when connecting to the brokers.
  *
- * Based on the provided username, we execute logic based on the presented client certificates:
+ * Peer Nodes must use TLS when connecting to the current node's P2P broker.
  *
- * If someone connects with [PEER_USER] then we confirm they belong on our P2P network by checking their root CA is
+ * RPC Clients may use TLS, and need to provide a username/password.
+ *
+ * Note that the "login" method is called after the SSL handshake was successful.
+ * Based on the provided username, we execute extra authentication logic based on the presented client certificates or the username/password:
+ *
+ * * If someone connects with [PEER_USER] then we confirm they belong on our P2P network by checking their root CA is
  * the same as our root CA. If that's the case, the only access they're given is the ability to send to our P2P address.
+ * The messages these authenticated nodes send to us are tagged with their subject DN and we assume
+ * the CN within that is their legal name.
  *
- * If someone connects with [NODE_P2P_USER] or [NODE_RPC_USER] then we confirm it's the current node by checking their TLS certificate
+ * * If someone connects with [NODE_P2P_USER] or [NODE_RPC_USER] then we confirm it's the current node by checking their TLS certificate
  * is the same as our one in our key store. Then they're given full access to all valid queues.
  *
- * (In both cases the messages these authenticated nodes send to us are tagged with their subject DN and we assume
- * the CN within that is their legal name.)
+ * * Otherwise, if the username is neither of the above, we assume it's an RPC user and authenticate against our list of valid RPC users.
+ * RPC clients are given permission to perform RPC and nothing else.
  *
- * Otherwise if the username is neither of the above we assume it's an RPC user and authenticate against our list of
- * valid RPC users. RPC clients are given permission to perform RPC and nothing else.
- * RPC can be configured to use ssl. In that case, an optional certificate check policy can be configured.
+ *
+ * Basically, our security policy is to use some hardcoded usernames as discriminators to determine what checks to run on the presented client certificates,
+ * and after the checks pass, what roles to assign.
+ *
+ * The node starts one broker for RPC and one broker for P2P.
+ *
+ * The P2P broker has only 1 acceptor to which only clients that have a doorman signed certificate can connect.
+ * If a Peer attempts to connect as the current node, it would fail because it can't present the node's certificate.
+ *
+ * The RPC broker has 2 acceptors:
+ * * The Admin acceptor to which only the current node should connect. This port should be blocked to any outside connection.
+ * To connect as the current Node, you need to present the nodes ssl certificate.
+ * Theoretically, if the port is open, any Peer Node could connect to this endpoint, but to actually run commands it would have to know a valid rpc username/password.
+ * If the connection was made as [NODE_RPC_USER], the client would have to present the owner node's certificate.
+ * * The RPC client acceptor. This can be configured to use SSL. The authentication is based on username/password.
+ *
  */
 class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
     companion object {
@@ -86,11 +104,10 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
         return true
     }
 
-    // The Main authentication logic.
-    // responsible for running all the configured checks for each user type
+    // The Main authentication logic, responsible for running all the configured checks for each user type
     // and return the actual User and principals
     private fun authenticateAndAuthorise(username: String, certificates: Array<X509Certificate>?, password: String): Pair<String, List<RolePrincipal>> {
-        fun requireTls(certificates: Array<X509Certificate>?) = require(certificates != null) { "No client certificates presented." }
+        fun requireTls(certificates: Array<X509Certificate>?) = requireNotNull(certificates) { "No client certificates presented." }
 
         return when (username) {
             ArtemisMessagingComponent.NODE_P2P_USER -> {
@@ -104,17 +121,19 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
                 Pair(ArtemisMessagingComponent.NODE_RPC_USER, listOf(RolePrincipal(NODE_RPC_ROLE)))
             }
             ArtemisMessagingComponent.PEER_USER -> {
-                require(p2pJaasConfig != null) { "Attempted to connect as a peer to the rpc broker." }
+                requireNotNull(p2pJaasConfig) { "Attempted to connect as a peer to the rpc broker." }
                 requireTls(certificates)
+                // This check is redundant as it was performed already during the SSL handshake
                 CertificateChainCheckPolicy.RootMustMatch.createCheck(p2pJaasConfig!!.keyStore, p2pJaasConfig!!.trustStore).checkCertificateChain(certificates!!)
                 Pair(certificates.first().subjectDN.name, listOf(RolePrincipal(PEER_ROLE)))
             }
             else -> {
-                require(rpcJaasConfig != null) { "Attempted to connect as an rpc user to the P2P broker." }
+                requireNotNull(rpcJaasConfig) { "Attempted to connect as an rpc user to the P2P broker." }
                 rpcJaasConfig!!.run {
                     securityManager.authenticate(username, Password(password))
+                    // This will assign the username the actual rights.
                     loginListener(username)
-                    // This enables the RPC client to send requests and to receive responses
+                    // This enables the RPC client to send requests and to receive responses.
                     Pair(username, listOf(RolePrincipal(RPC_ROLE), RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")))
                 }
             }
@@ -123,7 +142,7 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
 
 }
 
-//configs used for setting up the broker custom security module
+//Configs used for setting up the broker custom security module.
 data class RPCJaasConfig(
         val securityManager: RPCSecurityManager, //used to authenticate users - implemented with Shiro
         val loginListener: LoginListener, //callback that dynamically assigns security roles to RPC users on their authentication
@@ -134,7 +153,7 @@ data class P2PJaasConfig(val keyStore: KeyStore, val trustStore: KeyStore)
 data class NodeJaasConfig(val keyStore: KeyStore, val trustStore: KeyStore)
 
 
-// boilerplate required for JAAS
+// Boilerplate required for JAAS.
 abstract class BaseBrokerJaasLoginModule : LoginModule {
     protected var loginSucceeded: Boolean = false
     protected lateinit var subject: Subject

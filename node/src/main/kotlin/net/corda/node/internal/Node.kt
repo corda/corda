@@ -288,7 +288,6 @@ open class Node(configuration: NodeConfiguration,
         internalRpcMessagingClient?.run {
             runOnStop += this::close
             when (rpcOps) {
-            // not sure what this RPCOps base interface is for
                 is SecureCordaRPCOps -> init(RpcExceptionHandlingProxy(rpcOps), securityManager)
                 else -> init(rpcOps, securityManager)
             }

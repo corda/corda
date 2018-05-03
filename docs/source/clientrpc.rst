@@ -311,11 +311,11 @@ Wire security
 communication with the node using SSL. Default ``null`` value means no SSL used in the context of RPC.
 
 To use this feature, the ``CordaRPCClient`` object provides a static factory method ``createWithSsl``.
-The communication is configured on the server-side with ``clientAuth=false``, as the client already authenticates using the mechanism described above.
-In order for this to work, the client needs to provide a truststore containing the key received from the node admin.
+
+In order for this to work, the client needs to provide a truststore containing a certificate received from the node admin.
+(The Node does not expect the RPC client to present a certificate, as the client already authenticates using the mechanism described above.)
 
 For the communication to be secure, we recommend using the standard SSL best practices for key management.
-Todo - decide what to recommend.
 
 
 Whitelisting classes with the Corda node
