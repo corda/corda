@@ -96,19 +96,19 @@ class NodeMonitorModel {
                 }.toSet()
                 val consumedStates = statesSnapshot.states.toSet() - unconsumedStates
                 val initialVaultUpdate = Vault.Update(consumedStates, unconsumedStates)
-                vaultUpdates.startWith(initialVaultUpdate).onErrorResumeNext { Observable.empty() }.subscribe(vaultUpdatesSubject)
+                vaultUpdates.startWith(initialVaultUpdate).subscribe({ vaultUpdatesSubject.onNext(it) }, {})
 
                 // Transactions
                 val (transactions, newTransactions) = proxy.internalVerifiedTransactionsFeed()
-                newTransactions.startWith(transactions).onErrorResumeNext { Observable.empty() }.subscribe(transactionsSubject)
+                newTransactions.startWith(transactions).subscribe({ transactionsSubject.onNext(it) }, {})
 
                 // SM -> TX mapping
                 val (smTxMappings, futureSmTxMappings) = proxy.stateMachineRecordedTransactionMappingFeed()
-                futureSmTxMappings.startWith(smTxMappings).onErrorResumeNext { Observable.empty() }.subscribe(stateMachineTransactionMappingSubject)
+                futureSmTxMappings.startWith(smTxMappings).subscribe({ stateMachineTransactionMappingSubject.onNext(it) }, {})
 
                 // Parties on network
                 val (parties, futurePartyUpdate) = proxy.networkMapFeed()
-                futurePartyUpdate.startWith(parties.map { MapChange.Added(it) }).onErrorResumeNext { Observable.empty() }.subscribe(networkMapSubject)
+                futurePartyUpdate.startWith(parties.map { MapChange.Added(it) }).subscribe({ networkMapSubject.onNext(it) }, {})
             }
         }
 
@@ -141,7 +141,6 @@ class NodeMonitorModel {
                 nodeHostAndPort,
                 object : CordaRPCClientConfiguration {
                     override val connectionMaxRetryInterval = retryInterval
-                    override val trackRpcCallSites = true
                 }
         )
         val connection = client.start(username, password)
