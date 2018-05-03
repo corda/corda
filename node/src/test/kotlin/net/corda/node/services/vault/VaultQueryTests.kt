@@ -773,6 +773,72 @@ class VaultQueryTests {
     }
 
     @Test
+    fun `aggregate functions with single group clause desc first column`() {
+        database.transaction {
+            listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->
+                vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
+            }
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency), orderBy = Sort.Direction.DESC) }
+            val max = builder { CashSchemaV1.PersistentCashState::pennies.max(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val min = builder { CashSchemaV1.PersistentCashState::pennies.min(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+
+            val results = vaultService.queryBy<FungibleAsset<*>>(VaultCustomQueryCriteria(sum)
+                    .and(VaultCustomQueryCriteria(max))
+                    .and(VaultCustomQueryCriteria(min)))
+
+            assertThat(results.otherResults).hasSize(12)
+
+            assertThat(results.otherResults.subList(0,4)).isEqualTo(listOf(60000L, 11298L, 8702L, "USD"))
+            assertThat(results.otherResults.subList(4,8)).isEqualTo(listOf(50000L, 10274L, 9481L, "CHF"))
+            assertThat(results.otherResults.subList(8,12)).isEqualTo(listOf(40000L, 10343L, 9351L, "GBP"))
+        }
+    }
+
+    @Test
+    fun `aggregate functions with single group clause desc mid column`() {
+        database.transaction {
+            listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->
+                vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
+            }
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val max = builder { CashSchemaV1.PersistentCashState::pennies.max(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency), orderBy = Sort.Direction.DESC) }
+            val min = builder { CashSchemaV1.PersistentCashState::pennies.min(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+
+            val results = vaultService.queryBy<FungibleAsset<*>>(VaultCustomQueryCriteria(sum)
+                    .and(VaultCustomQueryCriteria(max))
+                    .and(VaultCustomQueryCriteria(min)))
+
+            assertThat(results.otherResults).hasSize(12)
+
+            assertThat(results.otherResults.subList(0,4)).isEqualTo(listOf(60000L, 11298L, 8702L, "USD"))
+            assertThat(results.otherResults.subList(4,8)).isEqualTo(listOf(40000L, 10343L, 9351L, "GBP"))
+            assertThat(results.otherResults.subList(8,12)).isEqualTo(listOf(50000L, 10274L, 9481L, "CHF"))
+        }
+    }
+
+    @Test
+    fun `aggregate functions with single group clause desc last column`() {
+        database.transaction {
+            listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->
+                vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
+            }
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val max = builder { CashSchemaV1.PersistentCashState::pennies.max(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val min = builder { CashSchemaV1.PersistentCashState::pennies.min(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency), orderBy = Sort.Direction.DESC) }
+
+            val results = vaultService.queryBy<FungibleAsset<*>>(VaultCustomQueryCriteria(sum)
+                    .and(VaultCustomQueryCriteria(max))
+                    .and(VaultCustomQueryCriteria(min)))
+
+            assertThat(results.otherResults).hasSize(12)
+
+            assertThat(results.otherResults.subList(0,4)).isEqualTo(listOf(50000L, 10274L, 9481L, "CHF"))
+            assertThat(results.otherResults.subList(4,8)).isEqualTo(listOf(40000L, 10343L, 9351L, "GBP"))
+            assertThat(results.otherResults.subList(8,12)).isEqualTo(listOf(60000L, 11298L, 8702L, "USD"))
+        }
+    }
+
+    @Test
     fun `aggregate functions sum by issuer and currency and sort by aggregate sum`() {
         database.transaction {
             identitySvc.verifyAndRegisterIdentity(BOC_IDENTITY)

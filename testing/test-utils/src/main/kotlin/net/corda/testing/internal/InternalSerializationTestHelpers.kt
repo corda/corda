@@ -5,7 +5,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
 import net.corda.core.DoNotImplement
 import net.corda.core.serialization.internal.*
-import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme

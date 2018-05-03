@@ -6,11 +6,13 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
-  
-* Refactor RPC Client Kryo observable serialiser into it's own sub module
 
-* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialised in
-  a factory without a serialiser as the subtype check for the class instance failed. Fix is to compare the raw
+* Refactor RPC Server Kryo observable serializer into it's own sub module
+
+* Refactor RPC Client Kryo observable serializer into it's own sub module
+
+* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialized in
+  a factory without a serializer as the subtype check for the class instance failed. Fix is to compare the raw
   type.
   
 * Due to ongoing work the experimental interfaces for defining custom notary services have been moved to the internal package.
