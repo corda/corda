@@ -13,7 +13,6 @@ package com.r3.corda.networkmanage.doorman
 import com.jcabi.manifests.Manifests
 import com.r3.corda.networkmanage.common.utils.*
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
-import net.corda.core.crypto.CordaSecurityProvider
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -85,7 +84,14 @@ private fun caKeyGenMode(config: NetworkManagementServerConfig) {
 private fun doormanMode(cmdLineOptions: DoormanCmdLineOptions, config: NetworkManagementServerConfig) {
     val networkManagementServer = NetworkManagementServer(config.dataSourceProperties, config.database, config.doorman, config.revocation)
 
-    if (cmdLineOptions.networkParametersCmd == null) {
+    val networkParametersCmd = when {
+        cmdLineOptions.setNetworkParametersFile != null ->
+            networkManagementServer.netParamsUpdateHandler.loadParametersFromFile(cmdLineOptions.setNetworkParametersFile)
+        cmdLineOptions.flagDay -> NetworkParametersCmd.FlagDay
+        cmdLineOptions.cancelUpdate -> NetworkParametersCmd.CancelUpdate
+        else -> null
+    }
+    if (networkParametersCmd == null) {
         // TODO: move signing to signing server.
         val csrAndNetworkMap = processKeyStore(config)
         if (csrAndNetworkMap != null) {
@@ -108,7 +114,7 @@ private fun doormanMode(cmdLineOptions: DoormanCmdLineOptions, config: NetworkMa
         })
     } else {
         networkManagementServer.use {
-            it.processNetworkParameters(cmdLineOptions.networkParametersCmd)
+            it.netParamsUpdateHandler.processNetworkParameters(networkParametersCmd)
         }
     }
 }

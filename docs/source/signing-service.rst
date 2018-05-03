@@ -61,17 +61,22 @@ It is ready to be included into the certificate revocation list.
 * The signed list is serialised and stored in the networking service database ready to be served. Also, all approved requests become revoked now.
 
 
-Signing Network Map
--------------------
+Signing Network Map and Network Parameters
+------------------------------------------
 
 * The networking service receives a new (or updated) node info.
 
-* Periodically (the time interval is pre-configured at the deployment time), the signing service fetches from the database current network map, all node info objects with valid certificates and current network parameters.
+* Periodically (the time interval is pre-configured at the deployment time), the signing service fetches from the database all information needed to construct new network map, which includes:
+    - current network map,
+    - all node info objects with valid certificates,
+    - current network parameters
+    - information on parameters update (if exists).
 
 * A new network map object is created out of the fetched data.
 
 * If the new network map hash does not differ from the current network map hash, then nothing happens and current network map remains unchanged.
 
 * If they are different, then the newly created network map object is serialized using the Corda AMQP serialisation format and signed by the dedicated intermediate certificate stored in HSM.
+The same process applies to network parameters which need to be signed separately.
 
 * Once signed, the new network map data is stored in the networking service database and available for nodes to retrieve when they next poll for the network map.

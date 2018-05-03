@@ -175,7 +175,7 @@ class NetworkParametersUpdateTest : IntegrationTest() {
                 DatabaseConfig(runMigration = true),
                 DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis),
                 null).use {
-            it.processNetworkParameters(networkParametersCmd)
+            it.netParamsUpdateHandler.processNetworkParameters(networkParametersCmd)
         }
         server = startServer(startNetworkMap = true)
         // Wait for server to process the parameters update and for the nodes to poll again

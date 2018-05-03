@@ -41,7 +41,10 @@ class NotaryConfigTest {
         val file = fs.getPath(UUID.randomUUID().toString())
         signedNodeInfo.serialize().open().copyTo(file)
 
-        val notaryInfo = NotaryConfig(file, true).toNotaryInfo()
+        val notaryConfig = NotaryConfig(file, true)
+        val notaryInfo = notaryConfig.toNotaryInfo()
+        val nodeInfoFromFile = notaryConfig.nodeInfo
+        assertThat(nodeInfoFromFile).isEqualTo(nodeInfo)
         assertThat(notaryInfo.identity).isEqualTo(nodeInfo.legalIdentities[0])
         assertThat(notaryInfo.validating).isTrue()
     }

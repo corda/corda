@@ -2,15 +2,12 @@ package com.r3.corda.networkmanage.doorman
 
 import com.google.common.primitives.Booleans
 import com.r3.corda.networkmanage.common.utils.ArgsParser
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
 import joptsimple.OptionSet
 import joptsimple.util.EnumConverter
 import joptsimple.util.PathConverter
 import joptsimple.util.PathProperties
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
-import net.corda.nodeapi.internal.config.parseAs
 import java.nio.file.Path
 import java.time.Instant
 
@@ -44,21 +41,18 @@ class DoormanArgsParser : ArgsParser<DoormanCmdLineOptions>() {
         require(Booleans.countTrue(setNetworkParametersFile != null, flagDay, cancelUpdate) <= 1) {
             "Only one of $setNetworkParametersArg, $flagDay and $cancelUpdate can be specified"
         }
-        val networkParametersOption = when {
-            setNetworkParametersFile != null -> NetworkParametersCmd.Set.fromFile(setNetworkParametersFile)
-            flagDay -> NetworkParametersCmd.FlagDay
-            cancelUpdate -> NetworkParametersCmd.CancelUpdate
-            else -> null
-        }
         val trustStorePassword = optionSet.valueOf(trustStorePasswordArg)
-        return DoormanCmdLineOptions(configFile, mode, networkParametersOption, trustStorePassword)
+        return DoormanCmdLineOptions(configFile, mode, trustStorePassword, setNetworkParametersFile, flagDay, cancelUpdate)
     }
 }
 
 data class DoormanCmdLineOptions(val configFile: Path,
                                  val mode: Mode,
-                                 val networkParametersCmd: NetworkParametersCmd?,
-                                 val trustStorePassword: String?) {
+                                 val trustStorePassword: String?,
+                                 val setNetworkParametersFile: Path?,
+                                 val flagDay: Boolean,
+                                 val cancelUpdate: Boolean
+) {
     init {
         // Make sure trust store password is only specified in root keygen mode.
         if (mode != Mode.ROOT_KEYGEN) {
@@ -76,20 +70,17 @@ sealed class NetworkParametersCmd {
                    val notaries: List<NotaryInfo>,
                    val maxMessageSize: Int,
                    val maxTransactionSize: Int,
-                   val parametersUpdate: ParametersUpdateConfig?) : NetworkParametersCmd() {
+                   val parametersUpdate: ParametersUpdateConfig?
+    ) : NetworkParametersCmd() {
         companion object {
-            fun fromFile(file: Path): Set {
-                return ConfigFactory.parseFile(file.toFile(), ConfigParseOptions.defaults())
-                        .parseAs<NetworkParametersConfig>()
-                        .let {
-                            Set(
-                                    it.minimumPlatformVersion,
-                                    it.notaries.map { it.toNotaryInfo() },
-                                    it.maxMessageSize,
-                                    it.maxTransactionSize,
-                                    it.parametersUpdate
-                            )
-                        }
+            fun fromConfig(config: NetworkParametersConfig): Set {
+                return Set(
+                        config.minimumPlatformVersion,
+                        config.notaries.map { it.toNotaryInfo() },
+                        config.maxMessageSize,
+                        config.maxTransactionSize,
+                        config.parametersUpdate
+                )
             }
         }
 

@@ -254,12 +254,12 @@ class PersistentNodeInfoStorageTest : TestBase() {
     }
 }
 
-private fun createValidNodeInfo(organisation: String, storage: CertificateSigningRequestStorage): Pair<NodeInfo, PrivateKey> {
+internal fun createValidNodeInfo(organisation: String, storage: CertificateSigningRequestStorage): Pair<NodeInfo, PrivateKey> {
     val (nodeInfo, keys) = createValidNodeInfo(storage, CertRole.NODE_CA to organisation)
     return Pair(nodeInfo, keys.single())
 }
 
-private fun createValidNodeInfo(storage: CertificateSigningRequestStorage, vararg identities: Pair<CertRole, String>): Pair<NodeInfo, List<PrivateKey>> {
+internal fun createValidNodeInfo(storage: CertificateSigningRequestStorage, vararg identities: Pair<CertRole, String>): Pair<NodeInfo, List<PrivateKey>> {
     val nodeInfoBuilder = TestNodeInfoBuilder()
     val keys = identities.map { (certRole, name) ->
         val (csr, nodeKeyPair) = createRequest(name, certRole = certRole)

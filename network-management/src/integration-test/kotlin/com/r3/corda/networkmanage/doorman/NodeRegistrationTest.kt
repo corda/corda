@@ -191,7 +191,7 @@ class NodeRegistrationTest : IntegrationTest() {
     private fun applyNetworkParametersAndStart(networkParametersCmd: NetworkParametersCmd) {
         server?.close()
         NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig), makeTestDatabaseProperties(DOORMAN_DB_NAME), doormanConfig, revocationConfig).use {
-            it.processNetworkParameters(networkParametersCmd)
+            it.netParamsUpdateHandler.processNetworkParameters(networkParametersCmd)
         }
         server = startServer(startNetworkMap = true)
         // Wait for server to process the parameters update and for the nodes to poll again

@@ -13,6 +13,7 @@ package com.r3.corda.networkmanage.doorman
 import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.nodeapi.internal.SignedNodeInfo
 import java.nio.file.Path
@@ -25,14 +26,15 @@ import java.time.Instant
  */
 data class NotaryConfig(private val notaryNodeInfoFile: Path,
                         private val validating: Boolean) {
-    // TODO ENT-1608 - Check that the identity belongs to us
+    val nodeInfo by lazy { toNodeInfo() }
     fun toNotaryInfo(): NotaryInfo {
-        val nodeInfo = notaryNodeInfoFile.readObject<SignedNodeInfo>().verified()
         // It is always the last identity (in the list of identities) that corresponds to the notary identity.
         // In case of a single notary, the list has only one element. In case of distributed notaries the list has
         // two items and the second one corresponds to the notary identity.
         return NotaryInfo(nodeInfo.legalIdentities.last(), validating)
     }
+
+    private fun toNodeInfo(): NodeInfo = notaryNodeInfoFile.readObject<SignedNodeInfo>().verified()
 }
 
 data class ParametersUpdateConfig(val description: String, val updateDeadline: Instant) {
