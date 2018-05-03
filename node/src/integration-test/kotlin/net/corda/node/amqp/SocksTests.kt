@@ -210,7 +210,7 @@ class SocksTests {
         artemis.session.createQueue(sendAddress, RoutingType.ANYCAST, "queue", true)
         val consumer = artemis.session.createConsumer("queue")
         val testData = "Test".toByteArray()
-        val testProperty = mutableMapOf<Any?, Any?>()
+        val testProperty = mutableMapOf<String, Any?>()
         testProperty["TestProp"] = "1"
         val message = amqpClient.createMessage(testData, sendAddress, CHARLIE_NAME.toString(), testProperty)
         amqpClient.write(message)

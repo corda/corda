@@ -186,7 +186,7 @@ class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
         log.debug { "Received message from ${innerMessage.sourceLegalName}" }
         val onwardMessage = object : ReceivedMessage {
             override val topic: String = innerMessage.topic
-            override val applicationProperties: Map<Any?, Any?> = innerMessage.originalHeaders.toMap()
+            override val applicationProperties: Map<String, Any?> = innerMessage.originalHeaders.toMap()
             override val payload: ByteArray = innerMessage.originalPayload
             override val sourceLegalName: String = innerMessage.sourceLegalName.toString()
             override val sourceLink: NetworkHostAndPort = receivedMessage.sourceLink

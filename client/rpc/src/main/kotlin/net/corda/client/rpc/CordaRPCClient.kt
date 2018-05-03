@@ -10,9 +10,9 @@
 
 package net.corda.client.rpc
 
-import KryoClientSerializationScheme
 import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.client.rpc.internal.RPCClient
+import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.messaging.CordaRPCOps

@@ -99,7 +99,8 @@ open class Node(configuration: NodeConfiguration,
         const val scanPackagesSystemProperty = "net.corda.node.cordapp.scan.packages"
         const val scanPackagesSeparator = ","
 
-        private fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
+        @JvmStatic
+        protected fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
             return System.getProperty(scanPackagesSystemProperty)?.let { scanPackages ->
                 CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
             } ?: CordappLoader.createDefault(configuration.baseDirectory)
