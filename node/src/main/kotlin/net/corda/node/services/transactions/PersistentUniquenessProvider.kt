@@ -4,6 +4,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.flows.ConsumedStateType
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
@@ -109,17 +110,13 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
     ) {
         mutex.locked {
             logRequest(txId, callerIdentity, requestSignature)
-            val conflictingStates = findAlreadyCommitted(states + references, commitLog)
+            val conflictingStates = findAlreadyCommitted(states, references, commitLog)
             if (conflictingStates.isNotEmpty()) {
                 handleConflicts(txId, conflictingStates)
             } else {
                 handleNoConflicts(timeWindow, states, txId, commitLog)
             }
         }
-    }
-
-    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?) {
-        commit(states, txId, callerIdentity, requestSignature, timeWindow, emptyList())
     }
 
     private fun logRequest(txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature) {
@@ -133,16 +130,26 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
         session.persist(request)
     }
 
-    private fun findAlreadyCommitted(states: List<StateRef>, commitLog: AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef>): LinkedHashMap<StateRef, StateConsumptionDetails> {
+    private fun findAlreadyCommitted(
+            states: List<StateRef>,
+            references: List<StateRef>,
+            commitLog: AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef>
+    ): LinkedHashMap<StateRef, StateConsumptionDetails> {
         val conflictingStates = LinkedHashMap<StateRef, StateConsumptionDetails>()
-        for (inputState in states) {
-            val consumingTx = commitLog[inputState]
-            if (consumingTx != null) conflictingStates[inputState] = StateConsumptionDetails(consumingTx.sha256())
+
+        fun checkConflicts(toCheck: List<StateRef>, type: ConsumedStateType) = toCheck.forEach { stateRef ->
+            val consumingTx = commitLog[stateRef]
+            if (consumingTx != null) conflictingStates[stateRef] = StateConsumptionDetails(consumingTx.sha256(), type)
         }
+
+        checkConflicts(states, ConsumedStateType.INPUT_STATE)
+        checkConflicts(references, ConsumedStateType.REFERENCE_INPUT_STATE)
+
         return conflictingStates
     }
 
     private fun handleConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
+        // TODO: Deal with old reference states here.
         if (isConsumedByTheSameTx(txId.sha256(), conflictingStates)) {
             log.debug { "Transaction $txId already notarised" }
             return

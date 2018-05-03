@@ -38,6 +38,7 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
                 }
                 if (conflicts.isNotEmpty()) {
                     // TODO: Create a new UniquenessException that only contains the conflicts filtered above.
+                    // TODO: Check if this was a reference input state only conflict.
                     log.info("Notary conflicts for $txId: $conflicts")
                     throw e
                 }

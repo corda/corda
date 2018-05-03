@@ -186,10 +186,6 @@ class RaftUniquenessProvider(
         })
     }
 
-    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?) {
-        commit(states, txId, callerIdentity, requestSignature, timeWindow, emptyList())
-    }
-
     override fun commit(
             states: List<StateRef>,
             txId: SecureHash,

@@ -34,7 +34,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             val parts = validateRequest(requestPayload)
             txId = parts.id
             checkNotary(parts.notary)
-            service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature, parts.timestamp)
+            service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature, parts.timestamp, parts.references)
             signTransactionAndSendResponse(txId)
         } catch (e: NotaryInternalException) {
             throw NotaryException(e.error, txId)
@@ -82,7 +82,17 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
      * The minimum amount of information needed to notarise a transaction. Note that this does not include
      * any sensitive transaction details.
      */
-    protected data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: TimeWindow?, val notary: Party?)
+    protected data class TransactionParts @JvmOverloads constructor(
+            val id: SecureHash,
+            val inputs: List<StateRef>,
+            val timestamp: TimeWindow?,
+            val notary: Party?,
+            val references: List<StateRef> = emptyList()
+    ) {
+        fun copy(id: SecureHash, inputs: List<StateRef>, timestamp: TimeWindow?, notary: Party?): TransactionParts {
+            return TransactionParts(id, inputs, timestamp, notary, references)
+        }
+    }
 }
 
 /** Exception internal to the notary service. Does not get exposed to CorDapps and flows calling [NotaryFlow.Client]. */
