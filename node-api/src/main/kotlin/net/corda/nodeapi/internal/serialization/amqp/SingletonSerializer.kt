@@ -33,7 +33,7 @@ class SingletonSerializer(override val type: Class<*>, val singleton: Any, facto
     }
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext
-    ) : Any {
+    ): Any {
         return singleton
     }
 }

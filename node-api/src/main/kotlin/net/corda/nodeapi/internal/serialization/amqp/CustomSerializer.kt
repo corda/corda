@@ -5,7 +5,6 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.reflect.Type
 
 interface SerializerFor {
@@ -202,7 +201,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
 
         override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                                 context: SerializationContext
-        ) : T {
+        ): T {
             val proxy = obj as String
             return maker(proxy)
         }

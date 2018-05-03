@@ -66,7 +66,8 @@ class EnumEvolutionSerializer(
                  new: AMQPSerializer<Any>,
                  factory: SerializerFactory,
                  schemas: SerializationSchemas): AMQPSerializer<Any> {
-            val wireTransforms = schemas.transforms.types[old.name] ?: EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
+            val wireTransforms = schemas.transforms.types[old.name]
+                    ?: EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
             val localTransforms = TransformsSchema.get(old.name, factory)
 
             // remember, the longer the list the newer we're assuming the transform set it as we assume
@@ -120,7 +121,7 @@ class EnumEvolutionSerializer(
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext
-    ) : Any {
+    ): Any {
         val enumName = (obj as List<*>)[0] as String
 
         if (enumName !in conversions) {

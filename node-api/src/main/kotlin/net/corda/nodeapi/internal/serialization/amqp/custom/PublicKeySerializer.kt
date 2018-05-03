@@ -22,7 +22,7 @@ object PublicKeySerializer : CustomSerializer.Implements<PublicKey>(PublicKey::c
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext
-    ) : PublicKey {
+    ): PublicKey {
         val bits = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray
         return Crypto.decodePublicKey(bits)
     }

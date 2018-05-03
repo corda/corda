@@ -25,7 +25,7 @@ object X509CRLSerializer : CustomSerializer.Implements<X509CRL>(X509CRL::class.j
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext
-    ) : X509CRL {
+    ): X509CRL {
         val bytes = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray
         return X509CertificateFactory().delegate.generateCRL(bytes.inputStream()) as X509CRL
     }

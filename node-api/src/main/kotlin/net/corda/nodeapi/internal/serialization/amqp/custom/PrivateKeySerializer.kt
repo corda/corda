@@ -2,7 +2,8 @@ package net.corda.nodeapi.internal.serialization.amqp.custom
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationContext.UseCase.*
+import net.corda.core.serialization.SerializationContext.UseCase.Checkpoint
+import net.corda.core.serialization.SerializationContext.UseCase.Storage
 import net.corda.nodeapi.internal.serialization.amqp.*
 import net.corda.nodeapi.internal.serialization.checkUseCase
 import org.apache.qpid.proton.codec.Data
@@ -25,7 +26,7 @@ object PrivateKeySerializer : CustomSerializer.Implements<PrivateKey>(PrivateKey
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext
-    ) : PrivateKey {
+    ): PrivateKey {
         val bits = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray
         return Crypto.decodePrivateKey(bits)
     }

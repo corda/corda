@@ -129,7 +129,7 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
 
         override fun readProperty(obj: Any?, schemas: SerializationSchemas,
                                   input: DeserializationInput, context: SerializationContext
-        ) : Any? {
+        ): Any? {
             return if (obj == null) null else (obj as Short).toChar()
         }
 

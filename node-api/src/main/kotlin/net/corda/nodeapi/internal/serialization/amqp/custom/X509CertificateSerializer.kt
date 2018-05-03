@@ -25,7 +25,7 @@ object X509CertificateSerializer : CustomSerializer.Implements<X509Certificate>(
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext
-    ) : X509Certificate {
+    ): X509Certificate {
         val bits = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray
         return X509CertificateFactory().generateCertificate(bits.inputStream())
     }

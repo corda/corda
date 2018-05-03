@@ -63,7 +63,8 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
         @Throws(NotSerializableException::class)
         fun <T> withDataBytes(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist, task: (ByteBuffer) -> T): T {
             // Check that the lead bytes match expected header
-            val amqpSequence = amqpMagic.consume(byteSequence) ?: throw NotSerializableException("Serialization header does not match.")
+            val amqpSequence = amqpMagic.consume(byteSequence)
+                    ?: throw NotSerializableException("Serialization header does not match.")
             var stream: InputStream = ByteBufferInputStream(amqpSequence)
             try {
                 while (true) {
@@ -134,7 +135,7 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
 
     internal fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type, context: SerializationContext,
                                   offset: Int = 0
-    ) : Any? {
+    ): Any? {
         return if (obj == null) null else readObject(obj, schema, type, context, offset)
     }
 
@@ -159,8 +160,8 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
                         // Look up serializer in factory by descriptor
                         val serializer = serializerFactory.get(obj.descriptor, schemas)
                         if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) {
-                            !isSubClassOf(type) && !materiallyEquivalentTo(type)
-                        }) {
+                                    !isSubClassOf(type) && !materiallyEquivalentTo(type)
+                                }) {
                             throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
                                     "expected to be of type $type but was ${serializer.type}")
                         }

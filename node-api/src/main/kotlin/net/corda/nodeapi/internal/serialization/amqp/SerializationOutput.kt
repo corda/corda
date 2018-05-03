@@ -63,7 +63,7 @@ open class SerializationOutput @JvmOverloads constructor(
         schemaHistory.clear()
     }
 
-    internal fun <T : Any> _serialize(obj: T, context : SerializationContext): SerializedBytes<T> {
+    internal fun <T : Any> _serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
         val data = Data.Factory.create()
         data.withDescribed(Envelope.DESCRIPTOR_OBJECT) {
             withList {

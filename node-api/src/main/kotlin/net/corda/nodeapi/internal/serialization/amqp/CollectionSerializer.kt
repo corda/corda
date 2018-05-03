@@ -9,15 +9,14 @@ import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
-import kotlin.collections.Collection
 import kotlin.collections.LinkedHashSet
-import kotlin.collections.Set
 
 /**
  * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
  */
 class CollectionSerializer(val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
-    override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
+    override val type: Type = declaredType as? DeserializedParameterizedType
+            ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
     override val typeDescriptor by lazy {
         Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
     }
@@ -51,7 +50,8 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
         }
 
         private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Collection<*>>): ParameterizedType =
-                (declaredType as? ParameterizedType) ?: DeserializedParameterizedType(collectionClass, arrayOf(SerializerFactory.AnyType))
+                (declaredType as? ParameterizedType)
+                        ?: DeserializedParameterizedType(collectionClass, arrayOf(SerializerFactory.AnyType))
 
 
         private fun findMostSuitableCollectionType(actualClass: Class<*>): Class<out Collection<*>> =

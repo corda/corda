@@ -31,7 +31,7 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Seria
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext
-    ) : Any {
+    ): Any {
         val enumName = (obj as List<*>)[0] as String
         val enumOrd = obj[1] as Int
         val fromOrd = type.asClass()!!.enumConstants[enumOrd] as Enum<*>?
