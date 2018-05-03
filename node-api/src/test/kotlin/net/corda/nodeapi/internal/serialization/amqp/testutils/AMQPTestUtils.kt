@@ -40,7 +40,6 @@ inline fun <reified T : Any> DeserializationInput.deserializeAndReturnEnvelope(
         bytes: SerializedBytes<T>,
         context: SerializationContext? = null
 ) : ObjectAndEnvelope<T> {
-
     return deserializeAndReturnEnvelope(bytes, T::class.java,
             context ?: testSerializationContext)
 }

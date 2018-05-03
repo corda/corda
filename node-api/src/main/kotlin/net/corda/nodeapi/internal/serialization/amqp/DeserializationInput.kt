@@ -98,7 +98,8 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
     fun getEnvelope(byteSequence: ByteSequence) = Companion.getEnvelope(byteSequence, encodingWhitelist)
 
     @Throws(NotSerializableException::class)
-    inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>, context: SerializationContext): T = deserialize(bytes, T::class.java, context)
+    inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>, context: SerializationContext): T =
+            deserialize(bytes, T::class.java, context)
 
 
     @Throws(NotSerializableException::class)
@@ -120,17 +121,28 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
      * be deserialized and a schema describing the types of the objects.
      */
     @Throws(NotSerializableException::class)
-    fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>): T = des {
-        val envelope = getEnvelope(bytes, encodingWhitelist)
-        clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema),
-		clazz, context))
-    }
+    fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationContext): T =
+            des {
+                val envelope = getEnvelope(bytes, encodingWhitelist)
+                clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema),
+                        clazz, context))
+            }
 
     @Throws(NotSerializableException::class)
-    fun <T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>, clazz: Class<T>): ObjectAndEnvelope<T> = des {
+    fun <T : Any> deserializeAndReturnEnvelope(
+            bytes: SerializedBytes<T>,
+            clazz: Class<T>,
+            context: SerializationContext
+    ): ObjectAndEnvelope<T> = des {
         val envelope = getEnvelope(bytes, encodingWhitelist)
         // Now pick out the obj and schema from the envelope.
-        ObjectAndEnvelope(clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema), clazz, context)), envelope)
+        ObjectAndEnvelope(
+                clazz.cast(readObjectOrNull(
+                        envelope.obj,
+                        SerializationSchemas(envelope.schema, envelope.transformsSchema),
+                        clazz,
+                        context)),
+                envelope)
     }
 
     internal fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type, context: SerializationContext,
