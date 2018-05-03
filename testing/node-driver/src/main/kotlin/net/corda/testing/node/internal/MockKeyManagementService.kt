@@ -6,6 +6,7 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.keys.freshCertificate
+import net.corda.testing.node.MockServices
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey

@@ -60,7 +60,8 @@ class E2ETestKeyManagementService(val identityService: IdentityService,
 
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
         return mutex.locked {
-            val pk = publicKey.keys.first { keys.containsKey(it) }
+            val pk = publicKey.keys.firstOrNull { keys.containsKey(it) }
+                    ?: throw IllegalArgumentException("Public key not found: ${publicKey.toStringShort()}")
             KeyPair(pk, keys[pk]!!)
         }
     }

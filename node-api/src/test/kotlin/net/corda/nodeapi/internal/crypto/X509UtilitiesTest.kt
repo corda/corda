@@ -188,10 +188,10 @@ class X509UtilitiesTest {
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
 
-        // Generate server cert and private key and populate another keystore suitable for SSL
+        // Generate server cert and private key and populate another keystore suitable for SSL.
         sslConfig.createDevKeyStores(MEGA_CORP.name, rootCa.certificate, intermediateCa)
 
-        // Load back server certificate
+        // Load back server certificate.
         val serverKeyStore = loadKeyStore(sslConfig.nodeKeystore, sslConfig.keyStorePassword)
         val (serverCert, serverKeyPair) = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, sslConfig.keyStorePassword)
 
@@ -199,7 +199,7 @@ class X509UtilitiesTest {
         serverCert.verify(intermediateCa.certificate.publicKey)
         assertThat(CordaX500Name.build(serverCert.subjectX500Principal)).isEqualTo(MEGA_CORP.name)
 
-        // Load back SSL certificate
+        // Load back SSL certificate.
         val sslKeyStore = loadKeyStore(sslConfig.sslKeystore, sslConfig.keyStorePassword)
         val (sslCert) = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, sslConfig.keyStorePassword)
 
@@ -207,10 +207,13 @@ class X509UtilitiesTest {
         sslCert.verify(serverCert.publicKey)
         assertThat(CordaX500Name.build(sslCert.subjectX500Principal)).isEqualTo(MEGA_CORP.name)
 
-        // Now sign something with private key and verify against certificate public key
+        // Now sign something with private key and verify against certificate public key.
         val testData = "123456".toByteArray()
         val signature = Crypto.doSign(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, serverKeyPair.private, testData)
-        assertTrue { Crypto.isValid(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, serverCert.publicKey, signature, testData) }
+
+        // X509Cert serverCert.pubKey is ECPublicKeyImpl, so we convert it to BCECPublicKey.
+        val serverCertPubKey = Crypto.toSupportedPublicKey(serverCert.publicKey)
+        assertTrue { Crypto.isValid(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME, serverCertPubKey, signature, testData) }
     }
 
     @Test

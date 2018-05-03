@@ -2,11 +2,13 @@ package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.PartyAndCertificate
-import java.security.PublicKey
+import java.security.*
+import java.security.cert.X509Certificate
 
 /**
  * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
@@ -50,7 +52,9 @@ interface KeyManagementService {
      * @param publicKey The [PublicKey] partner to an internally held [PrivateKey], either derived from the node's primary identity,
      * or previously generated via the [freshKey] method.
      * If the [PublicKey] is actually a [CompositeKey] the first leaf signing key hosted by the node is used.
-     * @throws IllegalArgumentException if the input key is not a member of [keys].
+     * @throws IllegalArgumentException if the input key is not a member of [keys] or if the signature scheme is not supported for this private key.
+     * @throws InvalidKeyException if the private key is invalid.
+     * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     @Suspendable
     fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey
@@ -61,7 +65,9 @@ interface KeyManagementService {
      * @param publicKey The [PublicKey] partner to an internally held [PrivateKey], either derived from the node's primary identity,
      * or previously generated via the [freshKey] method.
      * If the [PublicKey] is actually a [CompositeKey] the first leaf signing key hosted by the node is used.
-     * @throws IllegalArgumentException if the input key is not a member of [keys].
+     * @throws IllegalArgumentException if the input key is not a member of [keys] or if the signature scheme is not supported for this private key.
+     * @throws InvalidKeyException if the private key is invalid.
+     * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     @Suspendable
     fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature
