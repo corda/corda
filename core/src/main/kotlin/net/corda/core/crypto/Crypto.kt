@@ -604,6 +604,8 @@ object Crypto {
         require(isSupportedSignatureScheme(signatureScheme)) {
             "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
+        require(signatureData.isNotEmpty()) { "Signature data is empty!" }
+        require(clearData.isNotEmpty()) { "Clear data is empty, nothing to verify!" }
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
         signature.initVerify(publicKey)
         signature.update(clearData)
