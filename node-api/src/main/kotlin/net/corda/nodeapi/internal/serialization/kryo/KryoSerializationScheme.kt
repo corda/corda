@@ -1,6 +1,5 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
-import java.util.concurrent.ConcurrentHashMap
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.esotericsoftware.kryo.Kryo
@@ -12,14 +11,14 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
-import net.corda.core.serialization.*
-import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
-import net.corda.nodeapi.internal.serialization.CordaClassResolver
-import net.corda.nodeapi.internal.serialization.SectionId
-import net.corda.nodeapi.internal.serialization.SerializationScheme
 import net.corda.nodeapi.internal.serialization.*
+import net.corda.nodeapi.internal.serialization.SectionId
 import java.security.PublicKey
+import java.util.concurrent.ConcurrentHashMap
 
 val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0))
 
@@ -86,7 +85,8 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-        val dataBytes = kryoMagic.consume(byteSequence) ?: throw KryoException("Serialized bytes header does not match expected format.")
+        val dataBytes = kryoMagic.consume(byteSequence)
+                ?: throw KryoException("Serialized bytes header does not match expected format.")
         return context.kryo {
             kryoInput(ByteBufferInputStream(dataBytes)) {
                 val result: T
