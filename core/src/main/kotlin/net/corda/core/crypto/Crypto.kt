@@ -194,6 +194,12 @@ object Crypto {
             + signatureSchemeMap.values.map { Pair(it.signatureOID, it) })
             .toMap()
 
+    /**
+     * Map of supported digital signature schemes associated by [SignatureScheme.schemeNumberID].
+     * SchemeNumberID is the scheme identifier attached to [SignatureMetadata].
+     */
+    private val signatureSchemeNumberIDMap: Map<Int, SignatureScheme> = Crypto.supportedSignatureSchemes().associateBy { it.schemeNumberID }
+
     @JvmStatic
     fun supportedSignatureSchemes(): List<SignatureScheme> = ArrayList(signatureSchemeMap.values)
 
@@ -436,13 +442,10 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature {
-        val sigKey: SignatureScheme = findSignatureScheme(keyPair.private)
-        val sigMetaData: SignatureScheme = findSignatureScheme(keyPair.public)
-        require(sigKey == sigMetaData) {
-            "Metadata schemeCodeName: ${sigMetaData.schemeCodeName} is not aligned with the key type: ${sigKey.schemeCodeName}."
-        }
-        val signatureBytes = doSign(sigKey.schemeCodeName, keyPair.private, signableData.serialize().bytes)
-        return TransactionSignature(signatureBytes, keyPair.public, signableData.signatureMetadata)
+        val keyScheme: SignatureScheme = findSignatureScheme(keyPair.private)
+        val normalisedSignableData = normalisedSignableData(keyScheme, signableData)
+        val signatureBytes = doSign(keyScheme.schemeCodeName, keyPair.private, normalisedSignableData.serialize().bytes)
+        return TransactionSignature(signatureBytes, keyPair.public, normalisedSignableData.signatureMetadata)
     }
 
     /**
@@ -504,16 +507,11 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(signatureScheme: SignatureScheme, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
-        require(isSupportedSignatureScheme(signatureScheme)) {
-            "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
-        }
-        if (signatureData.isEmpty()) throw IllegalArgumentException("Signature data is empty!")
-        if (clearData.isEmpty()) throw IllegalArgumentException("Clear data is empty, nothing to verify!")
         val verificationResult = isValid(signatureScheme, publicKey, signatureData, clearData)
         if (verificationResult) {
             return true
         } else {
-            throw SignatureException("Signature Verification failed!")
+            throw SignatureException("Signature verification failed for [scheme: ${signatureScheme.algorithmName}, keyShort: ${publicKey.toStringShort()}, signatureHash: ${signatureData.sha256()}, clearDataHash: ${clearData.sha256()}]")
         }
     }
 
@@ -532,8 +530,13 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
-        val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
-        return Crypto.doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
+        val schemeAndSignableData = schemeAndSignableData(txId, transactionSignature)
+        return Crypto.doVerify(
+                schemeAndSignableData.first,
+                transactionSignature.by,
+                transactionSignature.bytes,
+                schemeAndSignableData.second.serialize().bytes
+        )
     }
 
     /**
@@ -551,12 +554,13 @@ object Crypto {
     @JvmStatic
     @Throws(SignatureException::class)
     fun isValid(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
-        val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
-        return isValid(
-                findSignatureScheme(transactionSignature.by),
+        val schemeAndSignableData = schemeAndSignableData(txId, transactionSignature)
+        return Crypto.isValid(
+                schemeAndSignableData.first,
                 transactionSignature.by,
                 transactionSignature.bytes,
-                signableData.serialize().bytes)
+                schemeAndSignableData.second.serialize().bytes
+        )
     }
 
     /**
@@ -991,6 +995,41 @@ object Crypto {
             txId
         }
     }
+
+    /** Required from Crypto.doVerify and Crypto.isValid functions. */
+    private fun schemeAndSignableData(txId: SecureHash, transactionSignature: TransactionSignature) : Pair<SignatureScheme, SignableData> {
+        // TODO: consider accepting only metadata advertised scheme. At the moment we are proactively checking
+        //      if key and metadata schemes match.
+        val keyScheme = Crypto.findSignatureScheme(transactionSignature.by)
+        val metadataScheme = signatureSchemeNumberIDMap[transactionSignature.signatureMetadata.schemeNumberID]
+        require(metadataScheme != null) { "Signature scheme with numberID: $metadataScheme is not supported" }
+        // Bypassing the following requirement when metadataScheme == Crypto.COMPOSITE_KEY due to backwards compatibility purposes.
+        // TODO: consider removing the COMPOSITE_KEY check when minimum platform is enforced.
+        require(keyScheme == metadataScheme || metadataScheme == Crypto.COMPOSITE_KEY) { "Signature scheme of metadata with numberID: $metadataScheme does not correspond to the public key scheme numberID: $keyScheme" }
+        val signableData = SignableData(originalSignedHash(txId, transactionSignature.partialMerkleTree), transactionSignature.signatureMetadata)
+        return Pair(keyScheme, signableData)
+    }
+
+    /** Required fro doSign to check for key-type and metadata scheme consistency; special handling when CompositeKey metadata is advertised. */
+    private fun normalisedSignableData(keyScheme: SignatureScheme, signableData: SignableData): SignableData {
+        val metadataScheme: SignatureScheme = findSignatureScheme(signableData.signatureMetadata.schemeNumberID)
+        return if (metadataScheme != COMPOSITE_KEY) {
+            // TODO: we can remove this sanity check and use metadataScheme directly.
+            require(keyScheme == metadataScheme) {
+                "Metadata schemeCodeName: ${metadataScheme.schemeCodeName} is not aligned with the key type: ${keyScheme.schemeCodeName}"
+            }
+            signableData
+        } else {
+            // TODO: ensure that metadataScheme != COMPOSITE_KEY beforehand (i.e., before invoking doSign),
+            //      so we don't need to rewrite SignableData.
+            SignableData(signableData.txId, signableData.signatureMetadata.copy(schemeNumberID = keyScheme.schemeNumberID))
+        }
+    }
+
+    /** Find [SignatureScheme] by schemeNumberID. */
+    private fun findSignatureScheme(schemeNumberID: Int): SignatureScheme =
+            signatureSchemeNumberIDMap[schemeNumberID]
+                    ?: throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $schemeNumberID")
 
     /**
      * Method to force registering all [Crypto]-related cryptography [Provider]s.
