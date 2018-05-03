@@ -76,10 +76,16 @@ public final class net.corda.core.concurrent.ConcurrencyUtils extends java.lang.
   @NotNull
   public static final String shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
 ##
+<<<<<<< HEAD
 public interface net.corda.core.concurrent.CordaFuture extends java.util.concurrent.Future
   public abstract void then(kotlin.jvm.functions.Function1<? super net.corda.core.concurrent.CordaFuture<V>, ? extends W>)
   @NotNull
   public abstract java.util.concurrent.CompletableFuture<V> toCompletableFuture()
+=======
+@net.corda.core.serialization.CordaSerializable public interface net.corda.core.concurrent.CordaFuture extends java.util.concurrent.Future
+  public abstract void then(kotlin.jvm.functions.Function1)
+  @org.jetbrains.annotations.NotNull public abstract concurrent.CompletableFuture toCompletableFuture()
+>>>>>>> CORDA-847 - Update api doc with additon of @CordaSerializable annotation
 ##
 @CordaSerializable
 public final class net.corda.core.context.Actor extends java.lang.Object
@@ -2615,8 +2621,12 @@ public final class net.corda.core.messaging.DataFeed extends java.lang.Object
   public int hashCode()
   public String toString()
 ##
+<<<<<<< HEAD
 @DoNotImplement
 public interface net.corda.core.messaging.FlowHandle extends java.lang.AutoCloseable
+=======
+@net.corda.core.DoNotImplement @net.corda.core.serialization.CordaSerializable public interface net.corda.core.messaging.FlowHandle extends java.lang.AutoCloseable
+>>>>>>> CORDA-847 - Update api doc with additon of @CordaSerializable annotation
   public abstract void close()
   @NotNull
   public abstract net.corda.core.flows.StateMachineRunId getId()
@@ -2642,8 +2652,12 @@ public final class net.corda.core.messaging.FlowHandleImpl extends java.lang.Obj
   public int hashCode()
   public String toString()
 ##
+<<<<<<< HEAD
 @DoNotImplement
 public interface net.corda.core.messaging.FlowProgressHandle extends net.corda.core.messaging.FlowHandle
+=======
+@net.corda.core.DoNotImplement @net.corda.core.serialization.CordaSerializable public interface net.corda.core.messaging.FlowProgressHandle extends net.corda.core.messaging.FlowHandle
+>>>>>>> CORDA-847 - Update api doc with additon of @CordaSerializable annotation
   public abstract void close()
   @NotNull
   public abstract rx.Observable<String> getProgress()

@@ -12,6 +12,7 @@ import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.*
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.serialization.*
+import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
 import net.corda.node.serialization.kryo.KryoServerSerializationScheme
@@ -76,11 +77,12 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         assertThat(bits.deserialize(factory, context)).isEqualTo(Person("bob", null))
     }
 
+
     @Test
     fun `serialised form is stable when the same object instance is added to the deserialised object graph`() {
         val noReferencesContext = context.withoutReferences()
-        val obj = Ints.toByteArray(0x01234567).sequence()
-        val originalList = arrayListOf(obj)
+        val obj : ByteSequence = Ints.toByteArray(0x01234567).sequence()
+        val originalList : ArrayList<ByteSequence> = arrayListOf(obj)
         val deserialisedList = originalList.serialize(factory, noReferencesContext).deserialize(factory, noReferencesContext)
         originalList += obj
         deserialisedList += obj

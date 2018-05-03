@@ -115,7 +115,7 @@ open class SerializationFactoryImpl(
         return schemes.computeIfAbsent(lookupKey) {
             registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
             logger.warn("Cannot find serialization scheme for: $lookupKey, registeredSchemes are: $registeredSchemes")
-            throw UnsupportedOperationException("Serialization scheme not supported.")
+            throw UnsupportedOperationException("Serialization scheme $lookupKey not supported.")
         } to magic
     }
 

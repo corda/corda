@@ -19,6 +19,7 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     private object RpcObservableContextKey
 
     private val log = LoggerFactory.getLogger(javaClass)
+
     fun createContext(observableContext: RPCServer.ObservableContext): SerializationContext {
         return SerializationDefaults.RPC_SERVER_CONTEXT.withProperty(RpcServerObservableSerializer.RpcObservableContextKey, observableContext)
     }
@@ -80,7 +81,6 @@ object RpcServerObservableSerializer : Serializer<Observable<*>>() {
     }
 
     private fun Output.writeInvocationId(id: Trace.InvocationId) {
-
         writeString(id.value)
         writeLong(id.timestamp.toEpochMilli())
     }
