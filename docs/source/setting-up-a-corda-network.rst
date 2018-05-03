@@ -42,7 +42,8 @@ The most important fields regarding network configuration are:
   is the hostname *that must be externally resolvable by other nodes in the network*. In the above configuration this is the
   resolvable name of a machine in a VPN.
 * ``rpcAddress``: The address to which Artemis will bind for RPC calls.
-* ``webAddress``: The address the webserver should bind. Note that the port must be distinct from that of ``p2pAddress`` and ``rpcAddress`` if they are on the same machine.
+* ``webAddress``: The address the webserver should bind. Note that the port must be distinct from that of ``p2pAddress``
+  and ``rpcAddress`` if they are on the same machine.
 
 Bootstrapping the network
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -61,7 +62,7 @@ be done with the network bootstrapper. This is a tool that scans all the node co
 generate the network parameters file which is copied to the nodes' directories. It also copies each node's node-info file
 to every other node so that they can all transact with each other.
 
-The bootstrapper tool can be downloaded from http://downloads.corda.net/network-bootstrapper-corda-X.Y.jar, where ``X``
+The bootstrapper tool can be downloaded from https://downloads.corda.net/network-bootstrapper-corda-X.Y.jar, where ``X``
 is the major Corda version and ``Y`` is the minor Corda version.
 
 To use it, create a directory containing a node config file, ending in "_node.conf", for each node you want to create.

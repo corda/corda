@@ -65,6 +65,7 @@ fun configureTestSSL(legalName: CordaX500Name): SSLConfiguration {
         override val certificatesDirectory = Files.createTempDirectory("certs")
         override val keyStorePassword: String get() = "cordacadevpass"
         override val trustStorePassword: String get() = "trustpass"
+        override val crlCheckSoftFail: Boolean = true
 
         init {
             configureDevKeyAndTrustStores(legalName)
@@ -120,22 +121,24 @@ fun createDevNodeCaCertPath(
 /** Application of [doAnswer] that gets a value from the given [map] using the arg at [argIndex] as key. */
 fun doLookup(map: Map<*, *>, argIndex: Int = 0) = doAnswer { map[it.arguments[argIndex]] }
 
-fun SSLConfiguration.useSslRpcOverrides(): Map<String, String> {
+fun SSLConfiguration.useSslRpcOverrides(): Map<String, Any> {
     return mapOf(
             "rpcSettings.useSsl" to "true",
             "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
             "rpcSettings.ssl.keyStorePassword" to keyStorePassword,
-            "rpcSettings.ssl.trustStorePassword" to trustStorePassword
+            "rpcSettings.ssl.trustStorePassword" to trustStorePassword,
+            "rpcSettings.ssl.crlCheckSoftFail" to true
     )
 }
 
-fun SSLConfiguration.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<String, String> {
+fun SSLConfiguration.noSslRpcOverrides(rpcAdminAddress: NetworkHostAndPort): Map<String, Any> {
     return mapOf(
             "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
             "rpcSettings.useSsl" to "false",
             "rpcSettings.ssl.certificatesDirectory" to certificatesDirectory.toString(),
             "rpcSettings.ssl.keyStorePassword" to keyStorePassword,
-            "rpcSettings.ssl.trustStorePassword" to trustStorePassword
+            "rpcSettings.ssl.trustStorePassword" to trustStorePassword,
+            "rpcSettings.ssl.crlCheckSoftFail" to true
     )
 }
 

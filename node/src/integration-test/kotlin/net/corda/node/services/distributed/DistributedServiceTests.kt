@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.services.distributed
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Amount

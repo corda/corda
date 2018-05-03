@@ -17,6 +17,9 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
         }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
     }
 }
 

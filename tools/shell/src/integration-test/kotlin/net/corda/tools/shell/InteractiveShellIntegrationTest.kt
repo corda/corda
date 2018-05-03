@@ -80,7 +80,7 @@ class InteractiveShellIntegrationTest {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword)
+                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
                         val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                                 user = user.username, password = user.password,
                                 hostAndPort = node.rpcAddress,
@@ -117,7 +117,7 @@ class InteractiveShellIntegrationTest {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword)
+                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
                         val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                                 user = user.username, password = user.password,
                                 hostAndPort = node.rpcAddress,
@@ -199,7 +199,7 @@ class InteractiveShellIntegrationTest {
                     startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
                         val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword)
+                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
                         val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
                                 user = user.username, password = user.password,
                                 hostAndPort = node.rpcAddress,

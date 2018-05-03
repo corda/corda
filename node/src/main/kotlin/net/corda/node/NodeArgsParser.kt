@@ -1,7 +1,7 @@
 package net.corda.node
 
 import com.typesafe.config.ConfigFactory
-import joptsimple.OptionParser
+import joptsimple.OptionSet
 import joptsimple.util.EnumConverter
 import joptsimple.util.PathConverter
 import net.corda.core.internal.div
@@ -9,21 +9,21 @@ import net.corda.core.internal.exists
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
+import net.corda.node.utilities.AbstractArgsParser
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import org.slf4j.event.Level
-import java.io.PrintStream
 import java.nio.file.Path
 import java.nio.file.Paths
 
 // NOTE: Do not use any logger in this class as args parsing is done before the logger is setup.
-class ArgsParser {
-    private val optionParser = OptionParser()
+class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
     // The intent of allowing a command line configurable directory and config path is to allow deployment flexibility.
     // Other general configuration should live inside the config file unless we regularly need temporary overrides on the command line
     private val baseDirectoryArg = optionParser
             .accepts("base-directory", "The node working directory where all the files are kept")
             .withRequiredArg()
-            .defaultsTo(".")
+            .withValuesConvertedBy(PathConverter())
+            .defaultsTo(Paths.get("."))
     private val configFileArg = optionParser
             .accepts("config-file", "The path to the config file")
             .withRequiredArg()
@@ -43,7 +43,7 @@ class ArgsParser {
             .defaultsTo((Paths.get("certificates") / "network-root-truststore.jks"))
     private val networkRootTrustStorePasswordArg = optionParser.accepts("network-root-truststore-password", "Network root trust store password obtained from network operator.")
             .withRequiredArg()
-    private val unknownConfigKeysPolicy = optionParser.accepts("on-unknown-config-keys", "How to behave on unknown node configuration property keys: [WARN, FAIL, IGNORE].")
+    private val unknownConfigKeysPolicy = optionParser.accepts("on-unknown-config-keys", "How to behave on unknown node configuration.")
             .withRequiredArg()
             .withValuesConvertedBy(object : EnumConverter<UnknownConfigKeysPolicy>(UnknownConfigKeysPolicy::class.java) {})
             .defaultsTo(UnknownConfigKeysPolicy.FAIL)
@@ -52,16 +52,13 @@ class ArgsParser {
     private val justGenerateNodeInfoArg = optionParser.accepts("just-generate-node-info",
             "Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit")
     private val bootstrapRaftClusterArg = optionParser.accepts("bootstrap-raft-cluster", "Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster.")
-    private val helpArg = optionParser.accepts("help").forHelp()
 
-    fun parse(vararg args: String): CmdLineOptions {
-        val optionSet = optionParser.parse(*args)
+    override fun doParse(optionSet: OptionSet): CmdLineOptions {
         require(!optionSet.has(baseDirectoryArg) || !optionSet.has(configFileArg)) {
             "${baseDirectoryArg.options()[0]} and ${configFileArg.options()[0]} cannot be specified together"
         }
-        val baseDirectory = Paths.get(optionSet.valueOf(baseDirectoryArg)).normalize().toAbsolutePath()
+        val baseDirectory = optionSet.valueOf(baseDirectoryArg).normalize().toAbsolutePath()
         val configFile = baseDirectory / optionSet.valueOf(configFileArg)
-        val help = optionSet.has(helpArg)
         val loggingLevel = optionSet.valueOf(loggerLevel)
         val logToConsole = optionSet.has(logToConsoleArg)
         val isRegistration = optionSet.has(isRegistrationArg)
@@ -84,7 +81,6 @@ class ArgsParser {
 
         return CmdLineOptions(baseDirectory,
                 configFile,
-                help,
                 loggingLevel,
                 logToConsole,
                 registrationConfig,
@@ -95,15 +91,12 @@ class ArgsParser {
                 bootstrapRaftCluster,
                 unknownConfigKeysPolicy)
     }
-
-    fun printHelp(sink: PrintStream) = optionParser.printHelpOn(sink)
 }
 
 data class NodeRegistrationOption(val networkRootTrustStorePath: Path, val networkRootTrustStorePassword: String)
 
 data class CmdLineOptions(val baseDirectory: Path,
                           val configFile: Path,
-                          val help: Boolean,
                           val loggingLevel: Level,
                           val logToConsole: Boolean,
                           val nodeRegistrationOption: NodeRegistrationOption?,

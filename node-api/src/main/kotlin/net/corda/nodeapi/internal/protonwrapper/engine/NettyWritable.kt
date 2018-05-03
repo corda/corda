@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.protonwrapper.engine
 
 import io.netty.buffer.ByteBuf
+import org.apache.qpid.proton.codec.ReadableBuffer
 import org.apache.qpid.proton.codec.WritableBuffer
 import java.nio.ByteBuffer
 
@@ -55,6 +56,10 @@ internal class NettyWritable(val nettyBuffer: ByteBuf) : WritableBuffer {
 
     override fun put(payload: ByteBuffer) {
         nettyBuffer.writeBytes(payload)
+    }
+
+    override fun put(payload: ReadableBuffer) {
+        nettyBuffer.writeBytes(payload.byteBuffer())
     }
 
     override fun limit(): Int {

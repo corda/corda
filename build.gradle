@@ -36,7 +36,7 @@ buildscript {
      * The issue has been reported to upstream:
      * https://issues.apache.org/jira/browse/ARTEMIS-1559
      */
-    ext.artemis_version = '2.2.0'
+    ext.artemis_version = '2.5.0'
     ext.jackson_version = '2.9.3'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
@@ -49,7 +49,7 @@ buildscript {
     ext.caffeine_version = constants.getProperty("caffeineVersion")
     ext.metrics_version = constants.getProperty("metricsVersion")
     ext.okhttp_version = '3.5.0'
-    ext.netty_version = '4.1.9.Final'
+    ext.netty_version = '4.1.22.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.3.3'
     ext.junit_version = '4.12'
@@ -76,6 +76,7 @@ buildscript {
     ext.ghostdriver_version = '2.1.0'
     ext.eaagentloader_version = '1.0.3'
     ext.jsch_version = '0.1.54'
+    ext.commons_cli_version = '1.4'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'
@@ -209,6 +210,14 @@ allprojects {
     }
 
     configurations {
+        all {
+            resolutionStrategy {
+                // Force dependencies to use the same version of Kotlin as Corda.
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+            }
+        }
         compile {
             // We want to use SLF4J's version of these bindings: jcl-over-slf4j
             // Remove any transitive dependency on Apache's version.
@@ -377,4 +386,9 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
             }
         }
     }
+}
+
+wrapper {
+    gradleVersion = "4.4.1"
+    distributionType = Wrapper.DistributionType.ALL
 }
