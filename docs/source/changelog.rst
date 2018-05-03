@@ -7,7 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
-* Overloaded ``VaultCustomQueryCriteria`` constructor to allow clients to specify the Hibernate ``Entity`` class exactly, in case Corda is not able to infer it.
+* Derived JPA entity class for ``VaultCustomQueryCriteria`` queries from the ``CallableReference.owner`` in Kotlin.
+  Also, introduced a function ``Field getField(Class<T>, String)`` allowing Java clients to obtain fields with a reference to the entity class.
   An example of when this is required is in case a ``CriteriaExpression`` references a field from a ``MappedSuperclass``.
 
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.

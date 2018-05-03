@@ -113,9 +113,6 @@ There are four implementations of this interface which can be chained together t
        :doc:`Persistence </api-persistence>` for mechanisms of registering custom schemas for different testing
        purposes.
 
-    .. note:: ``VaultCustomQueryCriteria`` constructor can optionally specify the JPA ``Entity`` class manually.
-       This is needed when a ``CriteriaExpression`` references a field declared in a super class annotated with ``MappedSuperclass``.
-
 All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators.
 
 All ``QueryCriteria`` implementations provide an explicitly specifiable set of common attributes:
