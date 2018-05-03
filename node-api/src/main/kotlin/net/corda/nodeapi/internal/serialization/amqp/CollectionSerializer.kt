@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.NonEmptySet
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
@@ -8,15 +9,14 @@ import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
-import kotlin.collections.Collection
 import kotlin.collections.LinkedHashSet
-import kotlin.collections.Set
 
 /**
  * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
  */
 class CollectionSerializer(val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
-    override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
+    override val type: Type = declaredType as? DeserializedParameterizedType
+            ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
     override val typeDescriptor by lazy {
         Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
     }
@@ -50,7 +50,8 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
         }
 
         private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Collection<*>>): ParameterizedType =
-                (declaredType as? ParameterizedType) ?: DeserializedParameterizedType(collectionClass, arrayOf(SerializerFactory.AnyType))
+                (declaredType as? ParameterizedType)
+                        ?: DeserializedParameterizedType(collectionClass, arrayOf(SerializerFactory.AnyType))
 
 
         private fun findMostSuitableCollectionType(actualClass: Class<*>): Class<out Collection<*>> =
@@ -73,12 +74,13 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
             data: Data,
             type: Type,
             output: SerializationOutput,
+            context: SerializationContext,
             debugIndent: Int) = ifThrowsAppend({ declaredType.typeName }) {
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             withList {
                 for (entry in obj as Collection<*>) {
-                    output.writeObjectOrNull(entry, this, declaredType.actualTypeArguments[0], debugIndent)
+                    output.writeObjectOrNull(entry, this, declaredType.actualTypeArguments[0], context, debugIndent)
                 }
             }
         }
@@ -87,8 +89,11 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
     override fun readObject(
             obj: Any,
             schemas: SerializationSchemas,
-            input: DeserializationInput): Any = ifThrowsAppend({ declaredType.typeName }) {
+            input: DeserializationInput,
+            context: SerializationContext): Any = ifThrowsAppend({ declaredType.typeName }) {
         // TODO: Can we verify the entries in the list?
-        concreteBuilder((obj as List<*>).map { input.readObjectOrNull(it, schemas, declaredType.actualTypeArguments[0]) })
+        concreteBuilder((obj as List<*>).map {
+            input.readObjectOrNull(it, schemas, declaredType.actualTypeArguments[0], context)
+        })
     }
 }

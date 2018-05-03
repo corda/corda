@@ -5,6 +5,7 @@ import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import org.junit.Test
 import kotlin.test.*
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
 
 @CordaSerializable
 interface J {

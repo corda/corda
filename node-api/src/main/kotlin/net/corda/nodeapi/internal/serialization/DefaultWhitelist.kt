@@ -66,5 +66,5 @@ object DefaultWhitelist : SerializationWhitelist {
                     // Implementation of X509Certificate.
                     X509CertImpl::class.java,
                     CRLReason::class.java
-                    )
+            )
 }

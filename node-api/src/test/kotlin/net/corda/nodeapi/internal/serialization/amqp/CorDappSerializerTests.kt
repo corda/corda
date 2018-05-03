@@ -3,9 +3,15 @@ package net.corda.nodeapi.internal.serialization.amqp
 import org.junit.Test
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationCustomSerializer
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
 import org.assertj.core.api.Assertions
 import java.io.NotSerializableException
 import kotlin.test.assertEquals
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
+
 
 class CorDappSerializerTests {
     data class NeedsProxy (val a: String)

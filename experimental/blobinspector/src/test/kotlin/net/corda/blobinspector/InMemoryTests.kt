@@ -4,6 +4,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import org.junit.Test
 
 
@@ -21,13 +22,13 @@ class InMemoryTests {
     @Test
     fun test1() {
         data class C (val a: Int, val b: Long, val c: String)
-        inspect (SerializationOutput(factory).serialize(C(100, 567L, "this is a test")))
+        inspect (SerializationOutput(factory).serialize(C(100, 567L, "this is a test"), AMQP_P2P_CONTEXT))
     }
 
     @Test
     fun test2() {
         data class C (val i: Int, val c: C?)
-        inspect (SerializationOutput(factory).serialize(C(1, C(2, C(3, C(4, null))))))
+        inspect (SerializationOutput(factory).serialize(C(1, C(2, C(3, C(4, null)))), AMQP_P2P_CONTEXT))
     }
 
     @Test
@@ -37,7 +38,7 @@ class InMemoryTests {
         val a = IntArray(10) { i -> i }
         val c = C(a, arrayOf("aaa", "bbb", "ccc"))
 
-        inspect (SerializationOutput(factory).serialize(c))
+        inspect (SerializationOutput(factory).serialize(c, AMQP_P2P_CONTEXT))
     }
 
     @Test
@@ -51,7 +52,7 @@ class InMemoryTests {
                                 Elem(1L, "First element"),
                                 Elem(2L, "Second element"),
                                 Elem(3L, "Third element")
-                        ))))
+                        )), AMQP_P2P_CONTEXT))
     }
 
     @Test
@@ -72,7 +73,7 @@ class InMemoryTests {
                                         Elem(5L, "Fifth element"),
                                         Elem(6L, "Sixth element")
                                 )
-                        ))))
+                        )), AMQP_P2P_CONTEXT))
     }
 
     @Test
@@ -83,7 +84,8 @@ class InMemoryTests {
                 C(mapOf(
                         "a" to "a a a",
                         "b" to "b b b",
-                        "c" to "c c c"))
+                        "c" to "c c c")),
+                AMQP_P2P_CONTEXT
         ))
     }
 }
