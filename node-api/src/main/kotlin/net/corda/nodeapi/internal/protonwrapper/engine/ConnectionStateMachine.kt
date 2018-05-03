@@ -351,7 +351,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
                 val connection = event.connection
                 val channel = connection?.context as? Channel
                 if (channel != null) {
-                    val appProperties = HashMap(amqpMessage.applicationProperties.value)
+                    val appProperties = HashMap(amqpMessage.applicationProperties.value as Map<String, Any?>)
                     appProperties["_AMQ_VALIDATED_USER"] = remoteLegalName
                     val localAddress = channel.localAddress() as InetSocketAddress
                     val remoteAddress = channel.remoteAddress() as InetSocketAddress
