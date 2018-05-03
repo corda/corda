@@ -153,8 +153,9 @@ class NodeMonitorModel {
                 .startWith(stateMachineInfos.map { StateMachineUpdate.Added(it) })
                 .onErrorResumeNext {
                     // It is good idea to close connection to properly mark the end of it. During re-connect we will create a new
-                    // client and a new connection, so no going back to this one.
-                    //connection.close()
+                    // client and a new connection, so no going back to this one. Also the server might be down, so we are
+                    // force closing the connection to avoid propagation of notification to the server side.
+                    connection.forceClose()
                     // Failure has occurred for a reason, perhaps because the server backend is being re-started.
                     // Give it some time to come back online before trying to re-connect.
                     Thread.sleep(retryInterval.toMillis())
