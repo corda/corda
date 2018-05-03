@@ -55,6 +55,7 @@ class NodeKeystoreCheckTest : IntegrationTest() {
                 override val keyStorePassword: String = keystorePassword
                 override val trustStorePassword: String = keystorePassword
                 override val certificatesDirectory: Path = baseDirectory(ALICE_NAME) / "certificates"
+                override val crlCheckSoftFail: Boolean = true
             }
             config.configureDevKeyAndTrustStores(ALICE_NAME)
 

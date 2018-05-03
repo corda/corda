@@ -24,6 +24,7 @@ import java.nio.file.Path
 class WebServerConfig(override val baseDirectory: Path, val config: Config) : NodeSSLConfiguration {
     override val keyStorePassword: String by config
     override val trustStorePassword: String by config
+    override val crlCheckSoftFail: Boolean by config
     val useHTTPS: Boolean by config
     val myLegalName: String by config
     val rpcAddress: NetworkHostAndPort by lazy {

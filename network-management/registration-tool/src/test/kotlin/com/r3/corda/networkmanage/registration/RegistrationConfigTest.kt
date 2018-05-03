@@ -13,9 +13,9 @@ package com.r3.corda.networkmanage.registration
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.CertRole
 import net.corda.nodeapi.internal.config.parseAs
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.file.Paths
 
@@ -37,6 +37,7 @@ keystorePath = "notaryidentitykeystore.jks"
 networkRootTrustStorePassword = "password"
 keyStorePassword = "password"
 trustStorePassword = "password"
+crlCheckSoftFail = true
 """.trimIndent()
 
         val config = ConfigFactory.parseString(testConfig, ConfigParseOptions.defaults().setAllowMissing(false))
@@ -49,5 +50,6 @@ trustStorePassword = "password"
         assertEquals(Paths.get("networkRootTrustStore.jks"), config.networkRootTrustStorePath)
         assertEquals("password", config.networkRootTrustStorePassword)
         assertEquals(Paths.get("notaryidentitykeystore.jks"), config.keystorePath)
+        assertTrue(config.crlCheckSoftFail)
     }
 }

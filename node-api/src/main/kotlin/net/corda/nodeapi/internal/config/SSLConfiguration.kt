@@ -22,6 +22,7 @@ interface SSLConfiguration {
     // TODO This looks like it should be in NodeSSLConfiguration
     val nodeKeystore: Path get() = certificatesDirectory / "nodekeystore.jks"
     val trustStoreFile: Path get() = certificatesDirectory / "truststore.jks"
+    val crlCheckSoftFail: Boolean
 
     fun loadTrustStore(createNew: Boolean = false): X509KeyStore {
         return X509KeyStore.fromFile(trustStoreFile, trustStorePassword, createNew)

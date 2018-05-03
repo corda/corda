@@ -64,6 +64,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                  private val keyStore: KeyStore,
                  private val keyStorePrivateKeyPassword: String,
                  private val trustStore: KeyStore,
+                 private val crlCheckSoftFail: Boolean,
                  private val trace: Boolean = false,
                  private val sharedThreadPool: EventLoopGroup? = null,
                  private val socksProxyConfig: SocksProxyConfig? = null) : AutoCloseable {
@@ -129,7 +130,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         init {
             keyManagerFactory.init(parent.keyStore, parent.keyStorePrivateKeyPassword.toCharArray())
-            trustManagerFactory.init(parent.trustStore)
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(parent.trustStore, parent.crlCheckSoftFail))
         }
 
         override fun initChannel(ch: SocketChannel) {
@@ -178,9 +179,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     private fun restart() {
         val bootstrap = Bootstrap()
         // TODO Needs more configuration control when we profile. e.g. to use EPOLL on Linux
-        bootstrap.group(workerGroup).
-                channel(NioSocketChannel::class.java).
-                handler(ClientChannelInitializer(this))
+        bootstrap.group(workerGroup).channel(NioSocketChannel::class.java).handler(ClientChannelInitializer(this))
         currentTarget = targets[targetIndex]
         val clientFuture = bootstrap.connect(currentTarget.host, currentTarget.port)
         clientFuture.addListener(connectListener)

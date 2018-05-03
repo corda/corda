@@ -158,7 +158,7 @@ object X509Utilities {
      * @param crlDistPoint CRL distribution point.
      * @param crlIssuer X500Name of the CRL issuer.
      */
-    private fun createPartialCertificate(certificateType: CertificateType,
+    fun createPartialCertificate(certificateType: CertificateType,
                                  issuer: X500Principal,
                                  issuerPublicKey: PublicKey,
                                  subject: X500Principal,

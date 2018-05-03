@@ -80,6 +80,21 @@ class ProtonWrapperTests {
     }
 
     @Test
+    fun `AMPQ Client fails to connect when crl soft fail check is disabled`() {
+        val amqpServer = createServer(serverPort, CordaX500Name("Rogue 1", "London", "GB"), false)
+        amqpServer.use {
+            amqpServer.start()
+            val amqpClient = createClient()
+            amqpClient.use {
+                val clientConnected = amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val clientConnect = clientConnected.get()
+                assertEquals(false, clientConnect.connected)
+            }
+        }
+    }
+
+    @Test
     fun `AMPQ Client refuses to connect to unexpected server`() {
         val amqpServer = createServer(serverPort, CordaX500Name("Rogue 1", "London", "GB"))
         amqpServer.use {
@@ -233,6 +248,7 @@ class ProtonWrapperTests {
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         artemisConfig.configureWithDevSSLCertificate()
 
@@ -249,6 +265,7 @@ class ProtonWrapperTests {
             doReturn(BOB_NAME).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
 
@@ -256,14 +273,15 @@ class ProtonWrapperTests {
         val clientKeystore = clientConfig.loadSslKeyStore().internal
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
-                NetworkHostAndPort("localhost", serverPort2),
-                NetworkHostAndPort("localhost", artemisPort)),
+                        NetworkHostAndPort("localhost", serverPort2),
+                        NetworkHostAndPort("localhost", artemisPort)),
                 setOf(ALICE_NAME, CHARLIE_NAME),
                 PEER_USER,
                 PEER_USER,
                 clientKeystore,
                 clientConfig.keyStorePassword,
-                clientTruststore, true)
+                clientTruststore,
+                true)
     }
 
     private fun createSharedThreadsClient(sharedEventGroup: EventLoopGroup, id: Int): AMQPClient {
@@ -272,6 +290,7 @@ class ProtonWrapperTests {
             doReturn(CordaX500Name(null, "client $id", "Corda", "London", null, "GB")).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         clientConfig.configureWithDevSSLCertificate()
 
@@ -284,15 +303,18 @@ class ProtonWrapperTests {
                 PEER_USER,
                 clientKeystore,
                 clientConfig.keyStorePassword,
-                clientTruststore, true, sharedEventGroup)
+                clientTruststore,
+                true,
+                sharedThreadPool = sharedEventGroup)
     }
 
-    private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME): AMQPServer {
+    private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME, crlCheckSoftFail: Boolean = true): AMQPServer {
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
             doReturn(name).whenever(it).myLegalName
             doReturn("trustpass").whenever(it).trustStorePassword
             doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
 
@@ -305,6 +327,7 @@ class ProtonWrapperTests {
                 PEER_USER,
                 serverKeystore,
                 serverConfig.keyStorePassword,
-                serverTruststore)
+                serverTruststore,
+                crlCheckSoftFail = true)
     }
 }
