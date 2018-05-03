@@ -138,11 +138,20 @@ class MapProperty(
             return
         }
 
+        // TODO this will not produce pretty output
         sb.apply {
             appendln("$name : $type : {")
             map.forEach {
-                (it.key as Stringify).stringify(this)
-                (it.value as Stringify).stringify(this)
+                try {
+                    (it.key as Stringify).stringify(this)
+                } catch (e: ClassCastException) {
+                    append (it.key.toString() + " : ")
+                }
+                try {
+                    (it.value as Stringify).stringify(this)
+                } catch (e: ClassCastException) {
+                    appendln("\"${it.value.toString()}\"")
+                }
             }
             appendln("}")
         }

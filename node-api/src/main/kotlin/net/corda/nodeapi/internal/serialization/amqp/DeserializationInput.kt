@@ -81,7 +81,7 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
         }
 
         @Throws(NotSerializableException::class)
-        fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist): Envelope {
+        fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist): Envelope {
             return withDataBytes(byteSequence, encodingWhitelist) { dataBytes ->
                 val data = Data.Factory.create()
                 val expectedSize = dataBytes.remaining()
@@ -90,6 +90,10 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
             }
         }
     }
+
+
+    @Throws(NotSerializableException::class)
+    fun getEnvelope(byteSequence: ByteSequence) = Companion.getEnvelope(byteSequence, encodingWhitelist)
 
     @Throws(NotSerializableException::class)
     inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>): T = deserialize(bytes, T::class.java)
