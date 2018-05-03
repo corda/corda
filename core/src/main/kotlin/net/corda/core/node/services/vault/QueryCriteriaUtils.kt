@@ -69,6 +69,7 @@ sealed class CriteriaExpression<O, out T> {
 
 @CordaSerializable
 class Column<O, out C>(val name: String, val declaringClass: Class<*>) {
+    @Deprecated("Use the one that takes a [FieldInfo] instead.")
     constructor(field: Field) : this(field.name, field.declaringClass)
     constructor(field: FieldInfo) : this(field.name, field.entityClass)
     constructor(property: KProperty1<O, C?>) : this(property.name, declaringClass(property))
@@ -237,8 +238,7 @@ object Builder {
             = CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy)
 
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a [FieldInfo].")
-    fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null)
-            = CriteriaExpression.AggregateFunctionExpression(Column<Any, R>(this), predicate, groupByColumns, orderBy)
+    fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null) = info().functionPredicate(predicate, groupByColumns, orderBy)
 
     fun <R> FieldInfo.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null)
             = CriteriaExpression.AggregateFunctionExpression(Column<Any, R>(this), predicate, groupByColumns, orderBy)
