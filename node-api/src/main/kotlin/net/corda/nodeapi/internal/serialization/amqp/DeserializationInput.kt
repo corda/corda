@@ -35,7 +35,7 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
                                                      private val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist) {
     private val objectHistory: MutableList<Any> = mutableListOf()
 
-    internal companion object {
+    companion object {
         private val BYTES_NEEDED_TO_PEEK: Int = 23
 
         fun peekSize(bytes: ByteArray): Int {
@@ -60,7 +60,7 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
 
         @VisibleForTesting
         @Throws(NotSerializableException::class)
-        internal fun <T> withDataBytes(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist, task: (ByteBuffer) -> T): T {
+        fun <T> withDataBytes(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist, task: (ByteBuffer) -> T): T {
             // Check that the lead bytes match expected header
             val amqpSequence = amqpMagic.consume(byteSequence) ?: throw NotSerializableException("Serialization header does not match.")
             var stream: InputStream = ByteBufferInputStream(amqpSequence)
@@ -79,7 +79,21 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
                 stream.close()
             }
         }
+
+        @Throws(NotSerializableException::class)
+        fun getEnvelope(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist): Envelope {
+            return withDataBytes(byteSequence, encodingWhitelist) { dataBytes ->
+                val data = Data.Factory.create()
+                val expectedSize = dataBytes.remaining()
+                if (data.decode(dataBytes) != expectedSize.toLong()) throw NotSerializableException("Unexpected size of data")
+                Envelope.get(data)
+            }
+        }
     }
+
+
+    @Throws(NotSerializableException::class)
+    fun getEnvelope(byteSequence: ByteSequence) = Companion.getEnvelope(byteSequence, encodingWhitelist)
 
     @Throws(NotSerializableException::class)
     inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>): T = deserialize(bytes, T::class.java)
@@ -87,16 +101,6 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
     @Throws(NotSerializableException::class)
     inline internal fun <reified T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>): ObjectAndEnvelope<T> =
             deserializeAndReturnEnvelope(bytes, T::class.java)
-
-    @Throws(NotSerializableException::class)
-    internal fun getEnvelope(byteSequence: ByteSequence): Envelope {
-        return withDataBytes(byteSequence, encodingWhitelist) { dataBytes ->
-            val data = Data.Factory.create()
-            val expectedSize = dataBytes.remaining()
-            if (data.decode(dataBytes) != expectedSize.toLong()) throw NotSerializableException("Unexpected size of data")
-            Envelope.get(data)
-        }
-    }
 
     @Throws(NotSerializableException::class)
     private fun <R> des(generator: () -> R): R {
@@ -118,13 +122,13 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
      */
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>): T = des {
-        val envelope = getEnvelope(bytes)
+        val envelope = getEnvelope(bytes, encodingWhitelist)
         clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema), clazz))
     }
 
     @Throws(NotSerializableException::class)
     fun <T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>, clazz: Class<T>): ObjectAndEnvelope<T> = des {
-        val envelope = getEnvelope(bytes)
+        val envelope = getEnvelope(bytes, encodingWhitelist)
         // Now pick out the obj and schema from the envelope.
         ObjectAndEnvelope(clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema), clazz)), envelope)
     }

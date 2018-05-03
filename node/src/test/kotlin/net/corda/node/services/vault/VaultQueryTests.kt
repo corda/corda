@@ -99,17 +99,17 @@ class VaultQueryTests {
             // register additional identities
             val databaseAndServices = makeTestDatabaseAndMockServices(
                     cordappPackages,
-                    makeTestIdentityService(Companion.MEGA_CORP_IDENTITY, Companion.MINI_CORP_IDENTITY, Companion.dummyCashIssuer.identity, Companion.dummyNotary.identity),
+                    makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                     Companion.megaCorp,
-                    moreKeys = Companion.DUMMY_NOTARY_KEY)
+                    moreKeys = DUMMY_NOTARY_KEY)
             database = databaseAndServices.first
             services = databaseAndServices.second
-            vaultFiller = VaultFiller(services, Companion.dummyNotary)
-            vaultFillerCashNotary = VaultFiller(services, Companion.dummyNotary, Companion.CASH_NOTARY)
-            notaryServices = MockServices(cordappPackages, Companion.dummyNotary, rigorousMock(), Companion.dummyCashIssuer.keyPair, Companion.BOC_KEY, Companion.MEGA_CORP_KEY)
+            vaultFiller = VaultFiller(services, dummyNotary)
+            vaultFillerCashNotary = VaultFiller(services, dummyNotary, CASH_NOTARY)
+            notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock(), dummyCashIssuer.keyPair, BOC_KEY, MEGA_CORP_KEY)
             identitySvc = services.identityService
             // Register all of the identities we're going to use
-            (notaryServices.myInfo.legalIdentitiesAndCerts + Companion.BOC_IDENTITY + Companion.CASH_NOTARY_IDENTITY + Companion.MINI_CORP_IDENTITY + Companion.MEGA_CORP_IDENTITY).forEach { identity ->
+            (notaryServices.myInfo.legalIdentitiesAndCerts + BOC_IDENTITY + CASH_NOTARY_IDENTITY + MINI_CORP_IDENTITY + MEGA_CORP_IDENTITY).forEach { identity ->
                 services.identityService.verifyAndRegisterIdentity(identity)
             }
         }
@@ -769,6 +769,72 @@ class VaultQueryTests {
             assertThat(expectedRows["CHF"]).isEqualTo(actualRows["CHF"])
             assertThat(expectedRows["GBP"]).isEqualTo(actualRows["GBP"])
             assertThat(expectedRows["USD"]).isEqualTo(actualRows["USD"])
+        }
+    }
+
+    @Test
+    fun `aggregate functions with single group clause desc first column`() {
+        database.transaction {
+            listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->
+                vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
+            }
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency), orderBy = Sort.Direction.DESC) }
+            val max = builder { CashSchemaV1.PersistentCashState::pennies.max(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val min = builder { CashSchemaV1.PersistentCashState::pennies.min(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+
+            val results = vaultService.queryBy<FungibleAsset<*>>(VaultCustomQueryCriteria(sum)
+                    .and(VaultCustomQueryCriteria(max))
+                    .and(VaultCustomQueryCriteria(min)))
+
+            assertThat(results.otherResults).hasSize(12)
+
+            assertThat(results.otherResults.subList(0,4)).isEqualTo(listOf(60000L, 11298L, 8702L, "USD"))
+            assertThat(results.otherResults.subList(4,8)).isEqualTo(listOf(50000L, 10274L, 9481L, "CHF"))
+            assertThat(results.otherResults.subList(8,12)).isEqualTo(listOf(40000L, 10343L, 9351L, "GBP"))
+        }
+    }
+
+    @Test
+    fun `aggregate functions with single group clause desc mid column`() {
+        database.transaction {
+            listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->
+                vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
+            }
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val max = builder { CashSchemaV1.PersistentCashState::pennies.max(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency), orderBy = Sort.Direction.DESC) }
+            val min = builder { CashSchemaV1.PersistentCashState::pennies.min(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+
+            val results = vaultService.queryBy<FungibleAsset<*>>(VaultCustomQueryCriteria(sum)
+                    .and(VaultCustomQueryCriteria(max))
+                    .and(VaultCustomQueryCriteria(min)))
+
+            assertThat(results.otherResults).hasSize(12)
+
+            assertThat(results.otherResults.subList(0,4)).isEqualTo(listOf(60000L, 11298L, 8702L, "USD"))
+            assertThat(results.otherResults.subList(4,8)).isEqualTo(listOf(40000L, 10343L, 9351L, "GBP"))
+            assertThat(results.otherResults.subList(8,12)).isEqualTo(listOf(50000L, 10274L, 9481L, "CHF"))
+        }
+    }
+
+    @Test
+    fun `aggregate functions with single group clause desc last column`() {
+        database.transaction {
+            listOf(100.DOLLARS, 200.DOLLARS, 300.DOLLARS, 400.POUNDS, 500.SWISS_FRANCS).zip(1..5).forEach { (howMuch, states) ->
+                vaultFiller.fillWithSomeTestCash(howMuch, notaryServices, states, DUMMY_CASH_ISSUER)
+            }
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val max = builder { CashSchemaV1.PersistentCashState::pennies.max(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val min = builder { CashSchemaV1.PersistentCashState::pennies.min(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency), orderBy = Sort.Direction.DESC) }
+
+            val results = vaultService.queryBy<FungibleAsset<*>>(VaultCustomQueryCriteria(sum)
+                    .and(VaultCustomQueryCriteria(max))
+                    .and(VaultCustomQueryCriteria(min)))
+
+            assertThat(results.otherResults).hasSize(12)
+
+            assertThat(results.otherResults.subList(0,4)).isEqualTo(listOf(50000L, 10274L, 9481L, "CHF"))
+            assertThat(results.otherResults.subList(4,8)).isEqualTo(listOf(40000L, 10343L, 9351L, "GBP"))
+            assertThat(results.otherResults.subList(8,12)).isEqualTo(listOf(60000L, 11298L, 8702L, "USD"))
         }
     }
 

@@ -29,7 +29,7 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
-import net.corda.node.utilities.registration.NetworkRegistrationHelper
+import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
@@ -247,7 +247,7 @@ class DriverDSLImpl(
 
         return if (startNodesInProcess) {
             executorService.fork {
-                NetworkRegistrationHelper(
+                NodeRegistrationHelper(
                         config.corda,
                         HTTPNetworkRegistrationService(compatibilityZoneURL),
                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
@@ -849,8 +849,7 @@ class DriverDSLImpl(
             val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
             if (index == -1) return emptyList()
-            val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?:
-                    throw IllegalStateException("Function instantiating driver must be defined in a package.")
+            val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
             return listOf(callerPackage.name)
         }
 
@@ -898,16 +897,18 @@ private class NetworkVisibilityController {
             val (snapshot, updates) = rpc.networkMapFeed()
             visibleNodeCount = snapshot.size
             checkIfAllVisible()
-            subscription = updates.subscribe { when (it) {
-                is NetworkMapCache.MapChange.Added -> {
-                    visibleNodeCount++
-                    checkIfAllVisible()
+            subscription = updates.subscribe {
+                when (it) {
+                    is NetworkMapCache.MapChange.Added -> {
+                        visibleNodeCount++
+                        checkIfAllVisible()
+                    }
+                    is NetworkMapCache.MapChange.Removed -> {
+                        visibleNodeCount--
+                        checkIfAllVisible()
+                    }
                 }
-                is NetworkMapCache.MapChange.Removed -> {
-                    visibleNodeCount--
-                    checkIfAllVisible()
-                }
-            } }
+            }
             return future
         }
 

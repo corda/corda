@@ -1,7 +1,9 @@
 Contributing
 ============
 
-Corda is an open-source project and we welcome contributions. This guide explains how to contribute back to Corda.
+Corda is an open-source project and contributions are welcome. Our contributing philosophy is described in 
+`CONTRIBUTING.md <https://github.com/corda/corda/blob/master/CONTRIBUTING.md>`_. This guide explains the mechanics 
+of contributing to Corda.
 
 .. contents::
 
@@ -9,19 +11,19 @@ Identifying an area to contribute
 ---------------------------------
 There are several ways to identify an area where you can contribute to Corda:
 
+* Ask in the ``#design`` channel of the `Corda Slack <http://slack.corda.net/>`_
+
+* Browse the `Corda GitHub issues <https://github.com/corda/corda/issues>`_
+
+  * It's always worth checking in the ``#design`` channel whether a given issue is a good target for your
+    contribution. Someone else may already be working on it, or it may be blocked by an on-going piece of work
+
 * Browse issues labelled as ``HelpWanted`` on the
   `Corda JIRA board <https://r3-cev.atlassian.net/issues/?jql=labels%20%3D%20HelpWanted>`_
 
   * Any issue with a ``HelpWanted`` label is considered ideal for open-source contributions
   * If there is a feature you would like to add and there isn't a corresponding issue labelled as ``HelpWanted``, that
-    doesn't mean your contribution isn't welcome. Please reach out on the Corda Slack channel (see below) to clarify
-
-* Check the `Corda GitHub issues <https://github.com/corda/corda/issues>`_
-
-  * It's always worth checking in the Corda Slack channel (see below) whether a given issue is a good target for your
-    contribution. Someone else may already be working on it, or it may be blocked by an on-going piece of work
-
-* Ask in the `Corda Slack channel <http://slack.corda.net/>`_
+    doesn't mean your contribution isn't welcome. Please reach out on the ``#design`` channel to clarify
 
 Making the required changes
 ---------------------------
@@ -39,8 +41,17 @@ Your changes must pass the tests described :doc:`here </testing>`.
 
 Building against the master branch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-You may also want to test your changes against a CorDapp defined outside of the Corda repo. To do so, please follow the
-instructions :doc:`here </building-against-master>`.
+You can test your changes against CorDapps defined in other repos by following the instructions :doc:`here </building-against-master>`.
+
+Updating the docs
+-----------------
+
+Any changes to Corda's public API must be documented as follows:
+
+1. Update the relevant `.rst file(s) <https://github.com/corda/corda/tree/master/docs/source>`_
+2. Include the change in the :doc:`changelog </changelog>` and :doc:`release notes </release-notes>` where applicable
+3. :doc:`Build the docs locally </building-the-docs>`
+4. Open the built .html files for the modified pages to ensure they render correctly
 
 Merging the changes back into Corda
 -----------------------------------
@@ -55,7 +66,7 @@ Merging the changes back into Corda
     * State that you are in agreement with the terms of
       `CONTRIBUTING.md <https://github.com/corda/corda/blob/master/CONTRIBUTING.md>`_
 
-3. Request a review from a member of the Corda platform team via the `Corda Slack channel <http://slack.corda.net/>`_
+3. Request a review from a member of the Corda platform team via the `#design channel <http://slack.corda.net/>`_
 4. Wait for your PR to pass all four types of continuous integration tests (integration, API stability, build and unit)
 
    * Currently, external contributors cannot see the output of these tests. If your PR fails a test that passed
