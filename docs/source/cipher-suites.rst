@@ -69,7 +69,7 @@ are compatible with TLS 1.2, while the default scheme per key type is also shown
 | ECDSA using the         | secp256k1 is the curve adopted by Bitcoin and as such there | YES |                       |
 | Koblitz k1 curve        | is a wealth of infrastructure, code and advanced algorithms |     |                       |
 | (secp256k1)             | designed for use with it. This curve is standardised by     |     |                       |
-| and SHA-512             | NIST as part of the "Suite B" cryptographic algorithms and  |     |                       |                          |     | node CA               |
+| and SHA-512             | NIST as part of the "Suite B" cryptographic algorithms and  |     |                       |
 |                         | as such is more widely supported than ed25519. By           |     |                       |
 |                         | supporting it we gain access to the ecosystem of advanced   |     |                       |
 |                         | cryptographic techniques and devices pioneered by the       |     |                       |
