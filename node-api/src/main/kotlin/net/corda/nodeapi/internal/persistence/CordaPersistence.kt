@@ -129,7 +129,7 @@ class CordaPersistence(
      * Executes given statement in the scope of transaction, with the given isolation level.
      * @param isolationLevel isolation level for the transaction.
      * @param recoverableFailureTolerance number of transaction commit retries for SQL while SQL exception is encountered.
-     * @param recoverAnyNestedSQLException retry transaction on any SQL Exception wrapped as a clause of [Throwable].
+     * @param recoverAnyNestedSQLException retry transaction on any SQL Exception wrapped as a cause of [Throwable].
      * @param statement to be executed in the scope of this transaction.
      */
     fun <T> transaction(isolationLevel: TransactionIsolationLevel, recoverableFailureTolerance: Int,
@@ -159,7 +159,7 @@ class CordaPersistence(
                 return answer
             } catch (e: Throwable) {
                 quietly(transaction::rollback)
-                if (e is SQLException || (recoverAnyNestedSQLException && e.hasSQLExceptionCause)) {
+                if (e is SQLException || (recoverAnyNestedSQLException && e.hasSQLExceptionCause())) {
                     if (++recoverableFailureCount > recoverableFailureTolerance) throw e
                     log.warn("Caught failure, will retry $recoverableFailureCount/$recoverableFailureTolerance:", e)
                 } else {
@@ -257,11 +257,10 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: CordaPersistence?
 }
 
 /** Check if any nested cause is of [SQLException] type. */
-private val Throwable.hasSQLExceptionCause: Boolean
-    get() =
+private fun Throwable.hasSQLExceptionCause(): Boolean =
         if (cause == null)
             false
         else if (cause is SQLException)
             true
         else
-            cause?.hasSQLExceptionCause ?: false
+            cause?.hasSQLExceptionCause() ?: false
