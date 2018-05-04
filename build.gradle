@@ -52,7 +52,6 @@ buildscript {
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.3.3'
     ext.junit_version = '4.12'
-    ext.mockito_version = '2.10.0'
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
