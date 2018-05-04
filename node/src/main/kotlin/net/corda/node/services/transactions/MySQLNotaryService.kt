@@ -12,12 +12,10 @@ package net.corda.node.services.transactions
 
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.node.services.TimeWindowChecker
-import net.corda.core.node.services.TrustedAuthorityNotaryService
+import net.corda.core.internal.notary.TrustedAuthorityNotaryService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.MySQLConfiguration
 import java.security.PublicKey
-import java.util.*
 
 /** Notary service backed by a replicated MySQL database. */
 abstract class MySQLNotaryService(

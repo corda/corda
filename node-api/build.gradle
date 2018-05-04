@@ -44,7 +44,7 @@ dependencies {
     compile "de.javakaffee:kryo-serializers:0.41"
 
     // For AMQP serialisation.
-    compile "org.apache.qpid:proton-j:0.21.0"
+    compile "org.apache.qpid:proton-j:0.27.1"
 
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:$hikari_version"

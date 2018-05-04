@@ -165,7 +165,7 @@ class AMQPServer(val hostName: String,
                       topic: String,
                       destinationLegalName: String,
                       destinationLink: NetworkHostAndPort,
-                      properties: Map<Any?, Any?>): SendableMessage {
+                      properties: Map<String, Any?>): SendableMessage {
         val dest = InetSocketAddress(destinationLink.host, destinationLink.port)
         require(dest in clientChannels.keys) {
             "Destination not available"

@@ -1320,5 +1320,30 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
             C(12).serializeE()
         }.withMessageContaining("has synthetic fields and is likely a nested inner class")
     }
+
+    interface DataClassByInterface<V> {
+        val v : V
+    }
+
+    @Test
+    fun dataClassBy() {
+        data class C (val s: String) : DataClassByInterface<String> {
+            override val v: String = "-- $s"
+        }
+
+        data class Inner<T>(val wrapped: DataClassByInterface<T>) : DataClassByInterface<T> by wrapped {
+            override val v = wrapped.v
+        }
+
+        val i = Inner(C("hello"))
+
+        val bytes = SerializationOutput(testDefaultFactory()).serialize(i)
+
+        try {
+            val i2 = DeserializationInput(testDefaultFactory()).deserialize(bytes)
+        } catch (e : NotSerializableException) {
+            throw Error ("Deserializing serialized \$C should not throw")
+        }
+    }
 }
 

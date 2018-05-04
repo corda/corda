@@ -142,7 +142,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
 
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
             val data = ByteArray(artemisMessage.bodySize).apply { artemisMessage.bodyBuffer.readBytes(this) }
-            val properties = HashMap<Any?, Any?>()
+            val properties = HashMap<String, Any?>()
             for (key in P2PMessagingHeaders.whitelistedHeaders) {
                 if (artemisMessage.containsProperty(key)) {
                     var value = artemisMessage.getObjectProperty(key)

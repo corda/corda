@@ -12,7 +12,7 @@ package net.corda.smoketesting
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
 import net.corda.core.internal.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger

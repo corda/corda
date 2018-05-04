@@ -265,6 +265,14 @@ allprojects {
     }
 
     configurations {
+        all {
+            resolutionStrategy {
+                // Force dependencies to use the same version of Kotlin as Corda.
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+            }
+        }
         compile {
             // We want to use SLF4J's version of these bindings: jcl-over-slf4j
             // Remove any transitive dependency on Apache's version.
@@ -433,4 +441,9 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
             }
         }
     }
+}
+
+wrapper {
+    gradleVersion = "4.4.1"
+    distributionType = Wrapper.DistributionType.ALL
 }

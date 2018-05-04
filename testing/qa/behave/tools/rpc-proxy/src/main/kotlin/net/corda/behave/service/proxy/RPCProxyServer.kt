@@ -2,7 +2,7 @@ package net.corda.behave.service.proxy
 
 import net.corda.behave.service.proxy.RPCProxyServer.Companion.initialiseSerialization
 import net.corda.behave.service.proxy.RPCProxyServer.Companion.log
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort

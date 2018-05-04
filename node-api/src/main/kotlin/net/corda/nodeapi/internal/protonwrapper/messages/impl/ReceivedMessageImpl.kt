@@ -26,7 +26,7 @@ internal class ReceivedMessageImpl(override val payload: ByteArray,
                                    override val sourceLink: NetworkHostAndPort,
                                    override val destinationLegalName: String,
                                    override val destinationLink: NetworkHostAndPort,
-                                   override val applicationProperties: Map<Any?, Any?>,
+                                   override val applicationProperties: Map<String, Any?>,
                                    private val channel: Channel,
                                    private val delivery: Delivery) : ReceivedMessage {
     data class MessageCompleter(val status: MessageStatus, val delivery: Delivery)

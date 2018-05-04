@@ -28,7 +28,7 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
         resources {
-            srcDir file('../../testing/test-utils/src/main/resources')
+            srcDir file('src/integration-test/resources')
         }
     }
 }

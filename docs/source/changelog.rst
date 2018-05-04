@@ -7,6 +7,22 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Refactor RPC Server Kryo observable serializer into it's own sub module
+
+* Refactor RPC Client Kryo observable serializer into it's own sub module
+
+* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialized in
+  a factory without a serializer as the subtype check for the class instance failed. Fix is to compare the raw
+  type.
+  
+* Due to ongoing work the experimental interfaces for defining custom notary services have been moved to the internal package.
+  CorDapps implementing custom notary services will need to be updated, see ``samples/notary-demo`` for an example.
+  Further changes may be required in the future.
+  
+* Fixed incorrect exception handling in ``NodeVaultService._query()``.
+
+* Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
+
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
   Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
 
@@ -329,6 +345,8 @@ Corda 2.0
   with flows and their use will be prevented at some point in the future.  Pay attention to the warnings and limitations
   described in the documentation for this method.  This helps resolve a bug in ``Cash`` coin selection.
   A new static property `currentTopLevel` returns the top most `FlowLogic` instance, or null if not in a flow.
+
+* Updating Jolokia dependency to latest version (includes security fixes)
 
 .. _changelog_v1:
 

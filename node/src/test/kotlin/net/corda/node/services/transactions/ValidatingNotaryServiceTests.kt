@@ -17,7 +17,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.generateSignature
+import net.corda.core.internal.notary.generateSignature
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.deserialize
