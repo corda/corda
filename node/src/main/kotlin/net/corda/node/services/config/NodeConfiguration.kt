@@ -211,6 +211,11 @@ data class NodeConfigurationImpl(
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
         }
+        if(certificateChainCheckPolicies.isNotEmpty()) {
+            logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
+                |Please contact the R3 team on the public slack to discuss your use case.
+            """.trimMargin())
+        }
     }
 }
 
