@@ -14,6 +14,7 @@ import net.corda.core.utilities.days
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
+import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
@@ -30,6 +31,7 @@ import org.slf4j.Logger
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import kotlin.test.assertEquals
 
 open class NodeSchedulerServiceTestBase {
     protected class Event(time: Instant) {
@@ -48,8 +50,14 @@ open class NodeSchedulerServiceTestBase {
             rigorousMock<DatabaseTransaction>().block()
         }.whenever(it).transaction(any())
     }
+
     protected val flowStarter = rigorousMock<FlowStarter>().also {
-        doReturn(openFuture<FlowStateMachine<*>>()).whenever(it).startFlow(any<FlowLogic<*>>(), any(), any())
+        doAnswer {
+            val dedupe = it.arguments[2] as DeduplicationHandler
+            dedupe.insideDatabaseTransaction()
+            dedupe.afterDatabaseTransaction()
+            openFuture<FlowStateMachine<*>>()
+        }.whenever(it).startFlow(any<FlowLogic<*>>(), any(), any())
     }
     private val flowsDraingMode = rigorousMock<NodePropertiesStore.FlowsDrainingModeOperations>().also {
         doReturn(false).whenever(it).isEnabled()
@@ -88,6 +96,31 @@ open class NodeSchedulerServiceTestBase {
     protected fun assertStarted(event: Event) = assertStarted(event.flowLogic)
 }
 
+class MockScheduledFlowRepository : ScheduledFlowRepository {
+    private val map = HashMap<StateRef, ScheduledStateRef>()
+
+    override fun getLatest(lookahead: Int): List<Pair<StateRef, ScheduledStateRef>> {
+        return map.values.sortedBy { it.scheduledAt }.map { Pair(it.ref, it) }
+    }
+
+    override fun merge(value: ScheduledStateRef): Boolean {
+        var result = false
+        if (map.containsKey(value.ref)) {
+            result = true
+        }
+        map.put(value.ref, value)
+        return result
+    }
+
+    override fun delete(key: StateRef): Boolean {
+        if (map.containsKey(key)) {
+            map.remove(key)
+            return true
+        }
+        return false
+    }
+}
+
 class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     private val database = rigorousMock<CordaPersistence>().also {
         doAnswer {
@@ -105,7 +138,9 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
             nodeProperties = nodeProperties,
             drainingModePollPeriod = Duration.ofSeconds(5),
             log = log,
-            scheduledStates = mutableMapOf()).apply { start() }
+            schedulerRepo = MockScheduledFlowRepository()
+    ).apply { start() }
+
     @Rule
     @JvmField
     val tearDown = object : TestWatcher() {
@@ -229,25 +264,42 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
     }
 
     @Test
+    fun `test that correct item is returned`() {
+        val dataSourceProps = MockServices.makeTestDataSourceProperties()
+        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
+        database.transaction {
+            val repo = PersistentScheduledFlowRepository(database)
+            val stateRef = StateRef(SecureHash.randomSHA256(), 0)
+            val ssr = ScheduledStateRef(stateRef, mark)
+            repo.merge(ssr)
+
+            val output = repo.getLatest(5).firstOrNull()
+            assertEquals(output?.first, stateRef)
+            assertEquals(output?.second, ssr)
+        }
+    }
+
+    @Test
     fun `test that schedule is persisted`() {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
         val timeInTheFuture = mark + 1.days
         val stateRef = StateRef(SecureHash.zeroHash, 0)
 
-        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
-        val scheduler = database.transaction {
-            createScheduler(database)
-        }
+        configureDatabase(dataSourceProps, databaseConfig, rigorousMock()).use { database ->
+            val scheduler = database.transaction {
+                createScheduler(database)
+            }
 
-        val ssr1 = ScheduledStateRef(stateRef, timeInTheFuture)
-        database.transaction {
-            scheduler.scheduleStateActivity(ssr1)
+            val ssr1 = ScheduledStateRef(stateRef, timeInTheFuture)
+            database.transaction {
+                scheduler.scheduleStateActivity(ssr1)
+            }
+            // XXX: For some reason without the commit the db closes without writing the transactions
+            database.dataSource.connection.commit()
+
+            // Force the thread to shut down with operations waiting
+            scheduler.cancelAndWait()
         }
-        // XXX: For some reason without the commit the db closes without writing the transactions
-        database.dataSource.connection.commit()
-        // Force the thread to shut down with operations waiting
-        scheduler.cancelAndWait()
-        database.close()
 
         val flowLogic = rigorousMock<FlowLogic<*>>()
         val logicRef = rigorousMock<FlowLogicRef>()
@@ -255,15 +307,15 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         transactionStates[stateRef] = transactionStateMock(logicRef, timeInTheFuture)
         flows[logicRef] = flowLogic
 
-        val newDatabase = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
-        val newScheduler = newDatabase.transaction {
-            createScheduler(newDatabase)
-        }
-        testClock.advanceBy(1.days)
-        assertStarted(flowLogic)
+        configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock()).use { database ->
+            val newScheduler = database.transaction {
+                createScheduler(database)
+            }
+            testClock.advanceBy(1.days)
+            assertStarted(flowLogic)
 
-        newScheduler.join()
-        newDatabase.close()
+            newScheduler.join()
+        }
     }
 
     @Ignore("Temporarily")
@@ -277,25 +329,25 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         val ssr2 = ScheduledStateRef(stateRef, timeInTheFuture)
         val logicRef = rigorousMock<FlowLogicRef>()
         val flowLogic = rigorousMock<FlowLogic<*>>()
-        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
 
-        val scheduler = database.transaction {
-            createScheduler(database)
+        configureDatabase(dataSourceProps, databaseConfig, rigorousMock()).use { database ->
+            val scheduler = database.transaction {
+                createScheduler(database)
+            }
+
+            transactionStates[stateRef] = transactionStateMock(logicRef, timeInTheFuture)
+            flows[logicRef] = flowLogic
+
+            database.transaction {
+                scheduler.scheduleStateActivity(ssr1)
+                session.flush()
+                scheduler.scheduleStateActivity(ssr2)
+            }
+            assertWaitingFor(ssr1)
+            testClock.advanceBy(1.days)
+            assertStarted(flowLogic)
+
+            scheduler.join()
         }
-
-        transactionStates[stateRef] = transactionStateMock(logicRef, timeInTheFuture)
-        flows[logicRef] = flowLogic
-
-        database.transaction {
-            scheduler.scheduleStateActivity(ssr1)
-            session.flush()
-            scheduler.scheduleStateActivity(ssr2)
-        }
-        assertWaitingFor(ssr1)
-        testClock.advanceBy(1.days)
-        assertStarted(flowLogic)
-
-        scheduler.join()
-        database.close()
     }
 }
