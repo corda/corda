@@ -12,9 +12,7 @@ Unreleased
 
 * Refactor RPC Server Kryo observable serializer into it's own sub module
 
-* Derived JPA entity class for ``VaultCustomQueryCriteria`` queries from the ``CallableReference.owner`` in Kotlin.
-  Also, introduced a function ``Field getField(Class<T>, String)`` allowing Java clients to obtain fields with a reference to the entity class.
-  An example of when this is required is in case a ``CriteriaExpression`` references a field from a ``MappedSuperclass``.
+* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work - the new methods avoid bugs that can occur when JPA schemas inherit from each other.
 
 * Refactor RPC Client Kryo observable serializer into it's own sub module
 
