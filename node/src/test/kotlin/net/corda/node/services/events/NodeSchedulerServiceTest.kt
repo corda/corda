@@ -234,20 +234,21 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         val timeInTheFuture = mark + 1.days
         val stateRef = StateRef(SecureHash.zeroHash, 0)
 
-        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
-        val scheduler = database.transaction {
-            createScheduler(database)
-        }
+        configureDatabase(dataSourceProps, databaseConfig, rigorousMock()).use { database ->
+            val scheduler = database.transaction {
+                createScheduler(database)
+            }
 
-        val ssr1 = ScheduledStateRef(stateRef, timeInTheFuture)
-        database.transaction {
-            scheduler.scheduleStateActivity(ssr1)
+            val ssr1 = ScheduledStateRef(stateRef, timeInTheFuture)
+            database.transaction {
+                scheduler.scheduleStateActivity(ssr1)
+            }
+            // XXX: For some reason without the commit the db closes without writing the transactions
+            database.dataSource.connection.commit()
+
+            // Force the thread to shut down with operations waiting
+            scheduler.cancelAndWait()
         }
-        // XXX: For some reason without the commit the db closes without writing the transactions
-        database.dataSource.connection.commit()
-        // Force the thread to shut down with operations waiting
-        scheduler.cancelAndWait()
-        database.close()
 
         val flowLogic = rigorousMock<FlowLogic<*>>()
         val logicRef = rigorousMock<FlowLogicRef>()
@@ -255,15 +256,15 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         transactionStates[stateRef] = transactionStateMock(logicRef, timeInTheFuture)
         flows[logicRef] = flowLogic
 
-        val newDatabase = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
-        val newScheduler = newDatabase.transaction {
-            createScheduler(newDatabase)
-        }
-        testClock.advanceBy(1.days)
-        assertStarted(flowLogic)
+        configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock()).use { database ->
+            val newScheduler = database.transaction {
+                createScheduler(database)
+            }
+            testClock.advanceBy(1.days)
+            assertStarted(flowLogic)
 
-        newScheduler.join()
-        newDatabase.close()
+            newScheduler.join()
+        }
     }
 
     @Ignore("Temporarily")
@@ -277,25 +278,25 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         val ssr2 = ScheduledStateRef(stateRef, timeInTheFuture)
         val logicRef = rigorousMock<FlowLogicRef>()
         val flowLogic = rigorousMock<FlowLogic<*>>()
-        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
 
-        val scheduler = database.transaction {
-            createScheduler(database)
+        configureDatabase(dataSourceProps, databaseConfig, rigorousMock()).use { database ->
+            val scheduler = database.transaction {
+                createScheduler(database)
+            }
+
+            transactionStates[stateRef] = transactionStateMock(logicRef, timeInTheFuture)
+            flows[logicRef] = flowLogic
+
+            database.transaction {
+                scheduler.scheduleStateActivity(ssr1)
+                session.flush()
+                scheduler.scheduleStateActivity(ssr2)
+            }
+            assertWaitingFor(ssr1)
+            testClock.advanceBy(1.days)
+            assertStarted(flowLogic)
+
+            scheduler.join()
         }
-
-        transactionStates[stateRef] = transactionStateMock(logicRef, timeInTheFuture)
-        flows[logicRef] = flowLogic
-
-        database.transaction {
-            scheduler.scheduleStateActivity(ssr1)
-            session.flush()
-            scheduler.scheduleStateActivity(ssr2)
-        }
-        assertWaitingFor(ssr1)
-        testClock.advanceBy(1.days)
-        assertStarted(flowLogic)
-
-        scheduler.join()
-        database.close()
     }
 }
