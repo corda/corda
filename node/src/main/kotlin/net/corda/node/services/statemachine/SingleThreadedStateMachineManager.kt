@@ -21,7 +21,8 @@ import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationContext.UseCase
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -37,8 +38,6 @@ import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.services.statemachine.transitions.StateMachineConfiguration
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.serialization.internal.SerializeAsTokenContextImpl
-import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -61,6 +60,10 @@ class SingleThreadedStateMachineManager(
         val executor: ExecutorService,
         val database: CordaPersistence,
         val secureRandom: SecureRandom,
+        private val serializationImpl: (List<Any>) -> StateMachineSerialization,
+        private val persistence: StateMachinePersistence,
+        private val sessionIdFactory: () -> SessionId,
+        private val flowMessagingFactory: (StateMachineSerialization) -> FlowMessaging,
         private val unfinishedFibers: ReusableLatch = ReusableLatch(),
         private val classloader: ClassLoader = SingleThreadedStateMachineManager::class.java.classLoader
 ) : StateMachineManager, StateMachineManagerInternal {
@@ -87,12 +90,10 @@ class SingleThreadedStateMachineManager(
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
     private val sessionToFlow = ConcurrentHashMap<SessionId, StateMachineRunId>()
-    private val flowMessaging: FlowMessaging = FlowMessagingImpl(serviceHub)
+    private lateinit var flowMessaging: FlowMessaging
     private val fiberDeserializationChecker = if (serviceHub.configuration.shouldCheckCheckpoints()) FiberDeserializationChecker() else null
     private val transitionExecutor = makeTransitionExecutor()
-
-    private var checkpointSerializationContext: SerializationContext? = null
-    private var tokenizableServices: List<Any>? = null
+    private lateinit var serialization: StateMachineSerialization
     private var actionExecutor: ActionExecutor? = null
 
     override val allStateMachines: List<FlowLogic<*>>
@@ -112,13 +113,10 @@ class SingleThreadedStateMachineManager(
 
     override fun start(tokenizableServices: List<Any>) {
         checkQuasarJavaAgentPresence()
-        this.tokenizableServices = tokenizableServices
-        val checkpointSerializationContext = SerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
-                SerializeAsTokenContextImpl(tokenizableServices, SerializationDefaults.SERIALIZATION_FACTORY, SerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
-        )
-        this.checkpointSerializationContext = checkpointSerializationContext
-        this.actionExecutor = makeActionExecutor(checkpointSerializationContext)
-        fiberDeserializationChecker?.start(checkpointSerializationContext)
+        serialization = serializationImpl(tokenizableServices)
+        flowMessaging = flowMessagingFactory(serialization)
+        actionExecutor = makeActionExecutor()
+        fiberDeserializationChecker?.start(serialization)
         val fibers = restoreFlowsFromCheckpoints()
         metrics.register("Flows.InFlight", Gauge<Int> { mutex.content.flows.size })
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
@@ -313,7 +311,7 @@ class SingleThreadedStateMachineManager(
     private fun onSessionMessage(message: ReceivedMessage, deduplicationHandler: DeduplicationHandler) {
         val peer = message.peer
         val sessionMessage = try {
-            message.data.deserialize<SessionMessage>()
+            serialization.deserialize<SessionMessage>(message.data)
         } catch (ex: Exception) {
             logger.error("Received corrupt SessionMessage data from $peer")
             deduplicationHandler.afterDatabaseTransaction()
@@ -362,8 +360,8 @@ class SingleThreadedStateMachineManager(
         }
         val replyError = try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionMessage)
-            val initiatedSessionId = SessionId.createRandom(secureRandom)
-            val senderSession = FlowSessionImpl(sender, initiatedSessionId)
+            val initiatedSessionId = sessionIdFactory()
+            val senderSession = FlowSessionImpl(sender, initiatedSessionId, serialization)
             val flowLogic = initiatedFlowFactory.createFlow(senderSession)
             val initiatedFlowInfo = when (initiatedFlowFactory) {
                 is InitiatedFlowFactory.Core -> FlowInfo(serviceHub.myInfo.platformVersion, "corda")
@@ -446,8 +444,7 @@ class SingleThreadedStateMachineManager(
         val resultFuture = openFuture<Any?>()
         flowStateMachineImpl.transientValues = TransientReference(createTransientValues(flowId, resultFuture))
         flowLogic.stateMachine = flowStateMachineImpl
-        val frozenFlowLogic = (flowLogic as FlowLogic<*>).serialize(context = checkpointSerializationContext!!)
-
+        val frozenFlowLogic = serialization.serialize(flowLogic, UseCase.Checkpoint)
         val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, deduplicationSeed).getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
@@ -471,7 +468,7 @@ class SingleThreadedStateMachineManager(
 
     private fun deserializeCheckpoint(serializedCheckpoint: SerializedBytes<Checkpoint>): Checkpoint? {
         return try {
-            serializedCheckpoint.deserialize(context = checkpointSerializationContext!!)
+            serialization.deserialize(serializedCheckpoint, UseCase.Checkpoint)
         } catch (exception: Throwable) {
             logger.error("Encountered unrestorable checkpoint!", exception)
             null
@@ -498,10 +495,10 @@ class SingleThreadedStateMachineManager(
                 database = database,
                 transitionExecutor = transitionExecutor,
                 actionExecutor = actionExecutor!!,
-                stateMachine = StateMachine(id, stateMachineConfiguration, secureRandom),
+                stateMachine = StateMachine(id, stateMachineConfiguration, secureRandom, serialization, sessionIdFactory),
                 serviceHub = serviceHub,
-                checkpointSerializationContext = checkpointSerializationContext!!
-        )
+                serialization = serialization,
+                persistence = persistence)
     }
 
     private fun createFlowFromCheckpoint(
@@ -515,7 +512,7 @@ class SingleThreadedStateMachineManager(
         val resultFuture = openFuture<Any?>()
         val fiber = when (flowState) {
             is FlowState.Unstarted -> {
-                val logic = flowState.frozenFlowLogic.deserialize(context = checkpointSerializationContext!!)
+                val logic = serialization.deserialize(flowState.frozenFlowLogic, UseCase.Checkpoint)
                 val state = StateMachineState(
                         checkpoint = checkpoint,
                         pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
@@ -533,7 +530,7 @@ class SingleThreadedStateMachineManager(
                 fiber
             }
             is FlowState.Started -> {
-                val fiber = flowState.frozenFiber.deserialize(context = checkpointSerializationContext!!)
+                val fiber = serialization.deserialize(flowState.frozenFiber, UseCase.Checkpoint)
                 val state = StateMachineState(
                         checkpoint = checkpoint,
                         pendingDeduplicationHandlers = initialDeduplicationHandler?.let { listOf(it) } ?: emptyList(),
@@ -591,13 +588,14 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun makeActionExecutor(checkpointSerializationContext: SerializationContext): ActionExecutor {
+    private fun makeActionExecutor(): ActionExecutorImpl {
         return ActionExecutorImpl(
                 serviceHub,
                 checkpointStorage,
                 flowMessaging,
                 this,
-                checkpointSerializationContext,
+                serialization,
+                persistence,
                 metrics
         )
     }
@@ -614,7 +612,7 @@ class SingleThreadedStateMachineManager(
         if (logger.isDebugEnabled) {
             interceptors.add { PrintingInterceptor(it) }
         }
-        val transitionExecutor: TransitionExecutor = TransitionExecutorImpl(secureRandom, database)
+        val transitionExecutor: TransitionExecutor = TransitionExecutorImpl(secureRandom, database, persistence)
         return interceptors.fold(transitionExecutor) { executor, interceptor -> interceptor(executor) }
     }
 

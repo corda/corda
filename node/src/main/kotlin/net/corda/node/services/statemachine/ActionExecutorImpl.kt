@@ -4,16 +4,11 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.*
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.SerializationContext.UseCase
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.nodeapi.internal.persistence.contextDatabase
-import net.corda.nodeapi.internal.persistence.contextTransaction
-import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -27,7 +22,8 @@ class ActionExecutorImpl(
         private val checkpointStorage: CheckpointStorage,
         private val flowMessaging: FlowMessaging,
         private val stateMachineManager: StateMachineManagerInternal,
-        private val checkpointSerializationContext: SerializationContext,
+        private val serialization: StateMachineSerialization,
+        private val persistence: StateMachinePersistence,
         metrics: MetricRegistry
 ) : ActionExecutor {
 
@@ -68,9 +64,9 @@ class ActionExecutorImpl(
             is Action.RemoveSessionBindings -> executeRemoveSessionBindings(action)
             is Action.SignalFlowHasStarted -> executeSignalFlowHasStarted(action)
             is Action.RemoveFlow -> executeRemoveFlow(action)
-            is Action.CreateTransaction -> executeCreateTransaction()
-            is Action.RollbackTransaction -> executeRollbackTransaction()
-            is Action.CommitTransaction -> executeCommitTransaction()
+            is Action.CreateTransaction -> persistence.executeCreateTransaction()
+            is Action.RollbackTransaction -> persistence.executeRollbackTransaction()
+            is Action.CommitTransaction -> persistence.executeCommitTransaction()
             is Action.ExecuteAsyncOperation -> executeAsyncOperation(fiber, action)
             is Action.ReleaseSoftLocks -> executeReleaseSoftLocks(action)
         }
@@ -94,7 +90,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executePersistCheckpoint(action: Action.PersistCheckpoint) {
-        val checkpointBytes = serializeCheckpoint(action.checkpoint)
+        val checkpointBytes = serialization.serialize(action.checkpoint, UseCase.Checkpoint)
         checkpointStorage.addCheckpoint(action.id, checkpointBytes)
         checkpointingMeter.mark()
         checkpointSizesThisSecond.update(checkpointBytes.size.toLong())
@@ -191,29 +187,6 @@ class ActionExecutorImpl(
     }
 
     @Suspendable
-    private fun executeCreateTransaction() {
-        if (contextTransactionOrNull != null) {
-            throw IllegalStateException("Refusing to create a second transaction")
-        }
-        contextDatabase.newTransaction()
-    }
-
-    @Suspendable
-    private fun executeRollbackTransaction() {
-        contextTransactionOrNull?.close()
-    }
-
-    @Suspendable
-    private fun executeCommitTransaction() {
-        try {
-            contextTransaction.commit()
-        } finally {
-            contextTransaction.close()
-            contextTransactionOrNull = null
-        }
-    }
-
-    @Suspendable
     private fun executeAsyncOperation(fiber: FlowFiber, action: Action.ExecuteAsyncOperation) {
         val operationFuture = action.operation.execute()
         operationFuture.thenMatch(
@@ -224,9 +197,5 @@ class ActionExecutorImpl(
                     fiber.scheduleEvent(Event.Error(exception))
                 }
         )
-    }
-
-    private fun serializeCheckpoint(checkpoint: Checkpoint): SerializedBytes<Checkpoint> {
-        return checkpoint.serialize(context = checkpointSerializationContext)
     }
 }

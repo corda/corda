@@ -22,9 +22,10 @@ data class StateMachineConfiguration(
 class StateMachine(
         val id: StateMachineRunId,
         val configuration: StateMachineConfiguration,
-        val secureRandom: SecureRandom
-) {
+        val secureRandom: SecureRandom,
+        private val serialization: StateMachineSerialization,
+        private val sessionIdFactory: () -> SessionId) {
     fun transition(event: Event, state: StateMachineState): TransitionResult {
-        return TopLevelTransition(TransitionContext(id, configuration, secureRandom), state, event).transition()
+        return TopLevelTransition(TransitionContext(id, configuration, secureRandom), state, event, serialization, sessionIdFactory).transition()
     }
 }

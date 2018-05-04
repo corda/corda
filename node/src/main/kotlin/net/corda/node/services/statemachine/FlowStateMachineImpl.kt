@@ -11,8 +11,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.SerializationContext.UseCase
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
@@ -24,8 +23,6 @@ import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
-import net.corda.nodeapi.internal.persistence.contextTransaction
-import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -59,8 +56,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val actionExecutor: ActionExecutor,
             val stateMachine: StateMachine,
             val serviceHub: ServiceHubInternal,
-            val checkpointSerializationContext: SerializationContext
-    )
+            val serialization: StateMachineSerialization,
+            val persistence: StateMachinePersistence)
 
     internal var transientValues: TransientReference<TransientValues>? = null
     internal var transientState: TransientReference<StateMachineState>? = null
@@ -71,9 +68,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun extractThreadLocalTransaction(): TransientReference<DatabaseTransaction> {
-        val transaction = contextTransaction
-        contextTransactionOrNull = null
-        return TransientReference(transaction)
+        return TransientReference(getTransientField(TransientValues::persistence).removeContextTransaction())
     }
 
     /**
@@ -117,7 +112,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     @Suspendable
     private fun processEventsUntilFlowIsResumed(isDbTransactionOpenOnEntry: Boolean, isDbTransactionOpenOnExit: Boolean): Any? {
-        checkDbTransaction(isDbTransactionOpenOnEntry)
+        val persistence = TransientReference(getTransientField(TransientValues::persistence))
+        persistence.value.checkContextTransaction(isDbTransactionOpenOnEntry)
         val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
         val eventQueue = getTransientField(TransientValues::eventQueue)
         try {
@@ -135,7 +131,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 }
             }
         } finally {
-            checkDbTransaction(isDbTransactionOpenOnExit)
+            persistence.value.checkContextTransaction(isDbTransactionOpenOnExit)
         }
     }
 
@@ -150,19 +146,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     @Suspendable
     private fun processEventImmediately(event: Event, isDbTransactionOpenOnEntry: Boolean, isDbTransactionOpenOnExit: Boolean): FlowContinuation {
-        checkDbTransaction(isDbTransactionOpenOnEntry)
+        val persistence = TransientReference(getTransientField(TransientValues::persistence))
+        persistence.value.checkContextTransaction(isDbTransactionOpenOnEntry)
         val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
         val continuation = processEvent(transitionExecutor, event)
-        checkDbTransaction(isDbTransactionOpenOnExit)
+        persistence.value.checkContextTransaction(isDbTransactionOpenOnExit)
         return continuation
-    }
-
-    private fun checkDbTransaction(isPresent: Boolean) {
-        if (isPresent) {
-            requireNotNull(contextTransactionOrNull)
-        } else {
-            require(contextTransactionOrNull == null)
-        }
     }
 
     fun setLoggingContext() {
@@ -301,18 +290,17 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun <R : Any> suspend(ioRequest: FlowIORequest<R>, maySkipCheckpoint: Boolean): R {
-        val serializationContext = TransientReference(getTransientField(TransientValues::checkpointSerializationContext))
+        val serialization = TransientReference(getTransientField(TransientValues::serialization))
+        val persistence = TransientReference(getTransientField(TransientValues::persistence))
         val transaction = extractThreadLocalTransaction()
         parkAndSerialize { _, _ ->
             logger.trace { "Suspended on $ioRequest" }
-
-            contextTransactionOrNull = transaction.value
+            persistence.value.setContextTransaction(transaction.value)
             val event = try {
                 Event.Suspend(
                         ioRequest = ioRequest,
                         maySkipCheckpoint = maySkipCheckpoint,
-                        fiber = this.serialize(context = serializationContext.value)
-                )
+                        fiber = serialization.value.serialize(this, UseCase.Checkpoint))
             } catch (throwable: Throwable) {
                 Event.Error(throwable)
             }

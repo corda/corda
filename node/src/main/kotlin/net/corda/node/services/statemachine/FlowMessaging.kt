@@ -6,7 +6,6 @@ import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.ServiceHubInternal
@@ -32,10 +31,14 @@ interface FlowMessaging {
     fun start(onMessage: (ReceivedMessage, DeduplicationHandler) -> Unit)
 }
 
+class NodeFlowMessagingFactory(private val serviceHub: ServiceHubInternal) : (StateMachineSerialization) -> FlowMessagingImpl {
+    override fun invoke(serialization: StateMachineSerialization) = FlowMessagingImpl(serviceHub, serialization)
+}
+
 /**
  * Implementation of [FlowMessaging] using a [ServiceHubInternal] to do the messaging and routing.
  */
-class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
+class FlowMessagingImpl(val serviceHub: ServiceHubInternal, private val serialization: StateMachineSerialization): FlowMessaging {
     companion object {
         val log = contextLogger()
 
@@ -73,14 +76,14 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
 
     private fun serializeSessionMessage(message: SessionMessage): SerializedBytes<SessionMessage> {
         return try {
-            message.serialize()
+            serialization.serialize(message)
         } catch (exception: Exception) {
             // Handling Kryo and AMQP serialization problems. Unfortunately the two exception types do not share much of a common exception interface.
             if ((exception is KryoException || exception is NotSerializableException)
                     && message is ExistingSessionMessage && message.payload is ErrorSessionMessage) {
                 val error = message.payload.flowException
                 val rewrappedError = FlowException(error?.message)
-                message.copy(payload = message.payload.copy(flowException = rewrappedError)).serialize()
+                serialization.serialize(message.copy(payload = message.payload.copy(flowException = rewrappedError)))
             } else {
                 throw exception
             }

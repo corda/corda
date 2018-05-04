@@ -14,8 +14,9 @@ import net.corda.node.services.statemachine.*
 class TopLevelTransition(
         override val context: TransitionContext,
         override val startingState: StateMachineState,
-        val event: Event
-) : Transition {
+        val event: Event,
+        private val serialization: StateMachineSerialization,
+        private val sessionIdFactory: () -> SessionId) : Transition {
     override fun transition(): TransitionResult {
         return when (event) {
                 is Event.DoRemainingWork -> DoRemainingWorkTransition(context, startingState).transition()
@@ -207,8 +208,8 @@ class TopLevelTransition(
                 freshErrorTransition(IllegalStateException("Tried to initiate in a flow not annotated with @${InitiatingFlow::class.java.simpleName}"))
                 return@builder FlowContinuation.ProcessEvents
             }
-            val sourceSessionId = SessionId.createRandom(context.secureRandom)
-            val sessionImpl = FlowSessionImpl(event.party, sourceSessionId)
+            val sourceSessionId = sessionIdFactory()
+            val sessionImpl = FlowSessionImpl(event.party, sourceSessionId, serialization)
             val newSessions = checkpoint.sessions + (sourceSessionId to SessionState.Uninitiated(event.party, initiatingSubFlow))
             currentState = currentState.copy(checkpoint = checkpoint.copy(sessions = newSessions))
             actions.add(Action.AddSessionBinding(context.id, sourceSessionId))

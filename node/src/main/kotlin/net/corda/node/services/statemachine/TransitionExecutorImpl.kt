@@ -5,8 +5,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.contextDatabase
-import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import java.security.SecureRandom
 
 /**
@@ -18,8 +16,8 @@ import java.security.SecureRandom
  */
 class TransitionExecutorImpl(
         val secureRandom: SecureRandom,
-        val database: CordaPersistence
-) : TransitionExecutor {
+        val database: CordaPersistence,
+        private val persistence: StateMachinePersistence) : TransitionExecutor {
     private companion object {
         val log = contextLogger()
     }
@@ -32,12 +30,12 @@ class TransitionExecutorImpl(
             transition: TransitionResult,
             actionExecutor: ActionExecutor
     ): Pair<FlowContinuation, StateMachineState> {
-        contextDatabase = database
+        persistence.setContextDatabase(database)
         for (action in transition.actions) {
             try {
                 actionExecutor.executeAction(fiber, action)
             } catch (exception: Throwable) {
-                contextTransactionOrNull?.close()
+                persistence.executeRollbackTransaction()
                 if (transition.newState.checkpoint.errorState is ErrorState.Errored) {
                     // If we errored while transitioning to an error state then we cannot record the additional
                     // error as that may result in an infinite loop, e.g. error propagation fails -> record error -> propagate fails again.

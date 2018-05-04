@@ -406,12 +406,17 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
     protected open fun makeStateMachineManager(database: CordaPersistence): StateMachineManager {
+        val secureRandom = newSecureRandom()
         return SingleThreadedStateMachineManager(
                 services,
                 checkpointStorage,
                 serverThread,
                 database,
-                newSecureRandom(),
+                secureRandom,
+                NodeStateMachineSerializationImplementation(services),
+                NodeStateMachinePersistence(),
+                NodeSessionIdFactory(secureRandom),
+                NodeFlowMessagingFactory(services),
                 busyNodeLatch,
                 cordappLoader.appClassLoader
         )
