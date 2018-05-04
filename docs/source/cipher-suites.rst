@@ -34,7 +34,8 @@ A Corda network has 8 types of keys and a regular node requires 4 of them:
 * The **tls** key(s) (per node)
 * The **confidential identity** key(s) (per node)
 
-We can visualise the certificate structure as follows:
+We can visualise the certificate structure as follows (for a detailed description of cert-hierarchy,
+see :doc:`permissioning`):
 
 .. image:: resources/certificate_structure.png
    :scale: 55%
@@ -42,9 +43,11 @@ We can visualise the certificate structure as follows:
 
 Supported cipher suites
 -----------------------
-Due to the shared certificate hierarchy the following 4 key/certificate types: **root network CA**, **doorman CA**,
+Due to the shared certificate hierarchy, the following 4 key/certificate types: **root network CA**, **doorman CA**,
 **node CA** and **tls** should be compatible with the standard TLS 1.2 protocol. The latter is a requirement from the
-TLS certificate-path validator.
+TLS certificate-path validator. It is highlighted that the rest of the keys can be any of the 5 supported cipher suites.
+For instance, **network map** is ECDSA NIST P-256 (secp256r1) in the Corda Network (CN) as it is well-supported by the
+underlying HSM device, but the default for dev-mode is Pure EdDSA (ed25519).
 
 The following table presents the 5 signature schemes currently supported by Corda. The TLS column shows which of them
 are compatible with TLS 1.2, while the default scheme per key type is also shown.
@@ -54,7 +57,7 @@ are compatible with TLS 1.2, while the default scheme per key type is also shown
 +=========================+=============================================================|=====+=======================+
 | Pure EdDSA using the    | EdDSA represents the current state of the art in mainstream | NO  | node identity         |
 | ed25519 curve           | cryptography. It implements elliptic curve cryptography     |     | confidential identity |
-| and SHA-512             | with deterministic signatures a fast implementation,        |     |                       |
+| and SHA-512             | with deterministic signatures a fast implementation,        |     | network map (dev)     |
 |                         | explained constants, side channel resistance and many other |     |                       |
 |                         | desirable characteristics. However, it is relatively new    |     |                       |
 |                         | and not widely supported, for example, you can't use it in  |     |                       |
@@ -62,9 +65,9 @@ are compatible with TLS 1.2, while the default scheme per key type is also shown
 +-------------------------+-------------------------------------------------------------+-----+-----------------------+
 | ECDSA using the         | This is the default choice for most systems that support    | YES | root network CA       |
 | NIST P-256 curve        | elliptic curve cryptography today and is recommended by     |     | doorman CA            |
-| (secp256r1)             | NIST. It is also supported by the majority of the HSM       |     | network map           |
-| and SHA-256             | vendors.                                                    |     | node CA               |
-|                         |                                                             |     | tls                   |
+| (secp256r1)             | NIST. It is also supported by the majority of the HSM       |     | node CA               |
+| and SHA-256             | vendors.                                                    |     | tls                   |
+|                         |                                                             |     | network map (CN)      |
 +-------------------------+-------------------------------------------------------------+-----+-----------------------+
 | ECDSA using the         | secp256k1 is the curve adopted by Bitcoin and as such there | YES |                       |
 | Koblitz k1 curve        | is a wealth of infrastructure, code and advanced algorithms |     |                       |
