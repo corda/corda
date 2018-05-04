@@ -8,10 +8,6 @@ Unreleased
 ==========
 * Node will now gracefully fail to start if ``devMode`` is true and ``compatibilityZoneURL`` is specified.
 
-* Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
-
-* Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.
-
 * Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
 
   * ``Instant`` and ``Date`` objects are serialised as ISO-8601 formatted strings rather than timestamps
@@ -22,43 +18,26 @@ Unreleased
   * ``PartyAndCertificate`` is serialised as an object containing the name and owning key
   * ``SignedTransaction`` can now be serialized to JSON and deserialized back into an object.
 
-* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used
+* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used.
 
-* Refactor AMQP Serializer to pass context object down the serialization call hierarchy. Will allow per thread
-  extensions to be set and used by the RPC work (Observable Context Key)
+* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This
+  primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work -
+  the new methods avoid bugs that can occur when JPA schemas inherit from each other.
 
-* Refactor RPC Server Kryo observable serializer into it's own sub module
-
-* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work - the new methods avoid bugs that can occur when JPA schemas inherit from each other.
-
-* Refactor RPC Client Kryo observable serializer into it's own sub module
-
-* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialized in
-  a factory without a serializer as the subtype check for the class instance failed. Fix is to compare the raw
-  type.
-  
 * Due to ongoing work the experimental interfaces for defining custom notary services have been moved to the internal package.
   CorDapps implementing custom notary services will need to be updated, see ``samples/notary-demo`` for an example.
   Further changes may be required in the future.
-  
-* Fixed incorrect exception handling in ``NodeVaultService._query()``.
 
-* Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
+* Configuration file changes:
+  * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
+    Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
+  * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
+  * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
+  * Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
 
-* Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
-  Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
+* More types can be serialized now: java.security.cert.CRLReason, java.security.cert.X509CRL, java.math.BigInteger
 
-* Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
-  as the raw type, List for example.
-
-* java.security.cert.CRLReason added to the default Whitelist.
-
-* java.security.cert.X509CRL serialization support added.
-
-* Replaced the ``PersistentMap`` in ``NodeSchedulerService`` with an implementation that only loads the next scheduled
-  state from the database into memory, rather than them all.
-
-* Upgraded H2 to v1.4.197.
+* Upgraded H2 to v1.4.197
 
 * Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
   To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
@@ -74,30 +53,9 @@ Unreleased
   framework. Prior to this change it didn't work, but the error thrown was opaque (complaining about too few arguments
   to a constructor). Whilst this was possible in the older Kryo implementation (Kryo passing null as the synthesised
   reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
-  we are disallowing this as the paradigm in general makes little sense for Contract States
-
-* Fix CORDA-1258. Custom serializers were spuriously registered every time a serialization factory was fetched from the cache rather than
-  only once when it was created. Whilst registering serializers that already exist is essentially a no-op, it's a performance overhead for
-  a very frequent operation that hits a synchronisation point (and is thus flagged as contended by our perfomance suite)
+  we are disallowing this as the paradigm in general makes little sense for contract states.
 
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
-
-* Carpenter Exceptions will be caught internally by the Serializer and rethrown as a ``NotSerializableException``
-
-  * Specific details of the error encountered are logged to the node's log file. More information can be enabled by setting the debug level to
-    ``trace`` ; this will cause the full stack trace of the error to be dumped into the log.
-
-* Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
-
-* The web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
-
-* Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
-
-* Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
-
-* java.math.BigInteger serialization support added.
-
-* Fix CORDA-1355: Reduce amount of classpath scanning during integration tests execution.
 
 .. _changelog_v3.1:
 
