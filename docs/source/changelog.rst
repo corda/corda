@@ -12,6 +12,8 @@ Unreleased
 
 * Refactor RPC Server Kryo observable serializer into it's own sub module
 
+* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work - the new methods avoid bugs that can occur when JPA schemas inherit from each other.
+
 * Refactor RPC Client Kryo observable serializer into it's own sub module
 
 * Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialized in

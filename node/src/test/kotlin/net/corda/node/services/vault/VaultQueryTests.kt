@@ -21,6 +21,7 @@ import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -29,12 +30,18 @@ import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.*
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.vault.*
+import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
+import net.corda.testing.internal.vault.DummyLinearContract
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
+import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.*
+import org.junit.ClassRule
+import org.junit.Ignore
+import org.junit.Rule
+import org.junit.Test
 import org.junit.rules.ExpectedException
 import org.junit.rules.ExternalResource
 import java.lang.Thread.sleep
@@ -228,6 +235,34 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
 
     /** Generic Query tests
     (combining both FungibleState and LinearState contract types) */
+
+    @Test
+    fun `criteria with field from mapped superclass`() {
+        database.transaction {
+            val expression = builder {
+                SampleCashSchemaV2.PersistentCashState::quantity.sum(
+                        groupByColumns = listOf(SampleCashSchemaV2.PersistentCashState::currency),
+                        orderBy = Sort.Direction.ASC
+                )
+            }
+            val criteria = VaultCustomQueryCriteria(expression)
+            vaultService.queryBy<FungibleAsset<*>>(criteria)
+        }
+    }
+
+    @Test
+    fun `criteria with field from mapped superclass of superclass`() {
+        database.transaction {
+            val expression = builder {
+                SampleCashSchemaV2.PersistentCashState::quantity.sum(
+                        groupByColumns = listOf(SampleCashSchemaV2.PersistentCashState::currency, SampleCashSchemaV2.PersistentCashState::stateRef),
+                        orderBy = Sort.Direction.ASC
+                )
+            }
+            val criteria = VaultCustomQueryCriteria(expression)
+            vaultService.queryBy<FungibleAsset<*>>(criteria)
+        }
+    }
 
     @Test
     fun `unconsumed states simple`() {
