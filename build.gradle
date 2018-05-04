@@ -93,6 +93,7 @@ buildscript {
     ext.eaagentloader_version = '1.0.3'
     ext.curator_version = '4.0.0'
     ext.jsch_version = '0.1.54'
+    ext.commons_cli_version = '1.4'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'

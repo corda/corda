@@ -19,18 +19,18 @@ import org.objectweb.asm.Type
 abstract class ClassCarpenterException(msg: String) : CordaRuntimeException(msg)
 
 /**
- * Thrown by the [ClassCarpenter] when trying to build 
+ * Thrown by the [ClassCarpenter] when trying to build
  */
 abstract class InterfaceMismatchException(msg: String) : ClassCarpenterException(msg)
 
-class DuplicateNameException(val name : String) : ClassCarpenterException (
+class DuplicateNameException(val name: String) : ClassCarpenterException(
         "An attempt was made to register two classes with the name '$name' within the same ClassCarpenter namespace.")
 
 class NullablePrimitiveException(val name: String, val field: Class<out Any>) : ClassCarpenterException(
         "Field $name is primitive type ${Type.getDescriptor(field)} and thus cannot be nullable")
 
 class UncarpentableException(name: String, field: String, type: String) :
-       ClassCarpenterException("Class $name is loadable yet contains field $field of unknown type $type")
+        ClassCarpenterException("Class $name is loadable yet contains field $field of unknown type $type")
 
 /**
  * A meta exception used by the [MetaCarpenter] to wrap any exceptions generated during the build

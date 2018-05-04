@@ -130,7 +130,6 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         try {
-            log.debug { "Received $msg" }
             if (msg is ByteBuf) {
                 eventProcessor!!.transportProcessInput(msg)
             }
@@ -143,7 +142,6 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise) {
         try {
             try {
-                log.debug { "Sent $msg" }
                 when (msg) {
                 // Transfers application packet into the AMQP engine.
                     is SendableMessageImpl -> {

@@ -11,6 +11,8 @@
 package net.corda.nodeapi.internal.serialization.amqp;
 
 import net.corda.nodeapi.internal.serialization.AllWhitelist;
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationContext;
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationContextKt;
 import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -51,7 +53,7 @@ public class ErrorMessageTests {
 
         SerializationOutput ser = new SerializationOutput(factory1);
 
-        Assertions.assertThatThrownBy(() -> ser.serialize(new C(1)))
+        Assertions.assertThatThrownBy(() -> ser.serialize(new C(1), TestSerializationContext.testSerializationContext))
                 .isInstanceOf(NotSerializableException.class)
                 .hasMessage(errMsg("a", getClass().getName()));
     }

@@ -36,11 +36,11 @@ class CarpenterClassLoader(parentClassLoader: ClassLoader = Thread.currentThread
     fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
 }
 
-class InterfaceMismatchNonGetterException (val clazz: Class<*>, val method: Method) : InterfaceMismatchException(
-    "Requested interfaces must consist only of methods that start with 'get': ${clazz.name}.${method.name}")
+class InterfaceMismatchNonGetterException(val clazz: Class<*>, val method: Method) : InterfaceMismatchException(
+        "Requested interfaces must consist only of methods that start with 'get': ${clazz.name}.${method.name}")
 
-class InterfaceMismatchMissingAMQPFieldException (val clazz: Class<*>, val field: String) : InterfaceMismatchException(
-    "Interface ${clazz.name} requires a field named $field but that isn't found in the schema or any superclass schemas")
+class InterfaceMismatchMissingAMQPFieldException(val clazz: Class<*>, val field: String) : InterfaceMismatchException(
+        "Interface ${clazz.name} requires a field named $field but that isn't found in the schema or any superclass schemas")
 
 /**
  * Which version of the java runtime are we constructing objects against

@@ -224,8 +224,8 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
                             // ignore them it feels like a good thing to alert the user to since this is
                             // more than likely a typo in their code so best make it an actual error
                             if (transforms.computeIfAbsent(transform.enum) { mutableListOf() }
-                                    .filter { t == it }
-                                    .isNotEmpty()) {
+                                            .filter { t == it }
+                                            .isNotEmpty()) {
                                 throw NotSerializableException(
                                         "Repeated unique transformation annotation of type ${t.name}")
                             }
@@ -284,12 +284,12 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
                 throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
             }
 
-            val map = describedType.described as? Map<*, *> ?:
-                    throw NotSerializableException("Transform schema must be encoded as a map")
+            val map = describedType.described as? Map<*, *>
+                    ?: throw NotSerializableException("Transform schema must be encoded as a map")
 
             map.forEach { type ->
-                val fingerprint = type.key as? String ?:
-                        throw NotSerializableException("Fingerprint must be encoded as a string")
+                val fingerprint = type.key as? String
+                        ?: throw NotSerializableException("Fingerprint must be encoded as a string")
 
                 rtn[fingerprint] = EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
 
@@ -298,8 +298,8 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
 
                     rtn[fingerprint]!![transform] = mutableListOf()
                     (transforms as List<*>).forEach {
-                        rtn[fingerprint]!![TransformTypes.newInstance(transformType)]?.add(Transform.newInstance(it)) ?:
-                                throw NotSerializableException("De-serialization error with transform for class "
+                        rtn[fingerprint]!![TransformTypes.newInstance(transformType)]?.add(Transform.newInstance(it))
+                                ?: throw NotSerializableException("De-serialization error with transform for class "
                                         + "${type.key} ${transform.name}")
                     }
                 }

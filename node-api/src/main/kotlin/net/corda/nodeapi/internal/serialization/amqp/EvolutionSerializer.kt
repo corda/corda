@@ -11,10 +11,11 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.serialization.SerializationContext
 import net.corda.nodeapi.internal.serialization.carpenter.getTypeAsClass
 import org.apache.qpid.proton.codec.Data
-import java.lang.reflect.Type
 import java.io.NotSerializableException
+import java.lang.reflect.Type
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.javaType
@@ -49,12 +50,13 @@ abstract class EvolutionSerializer(
      * @param property object to read the actual property value
      */
     data class OldParam(var resultsIndex: Int, val property: PropertySerializer) {
-        fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput, new: Array<Any?>) =
-                property.readProperty(obj, schemas, input).apply {
-                    if(resultsIndex >= 0) {
-                        new[resultsIndex] = this
-                    }
-                }
+        fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput,
+                         new: Array<Any?>, context: SerializationContext
+        ) = property.readProperty(obj, schemas, input, context).apply {
+            if (resultsIndex >= 0) {
+                new[resultsIndex] = this
+            }
+        }
     }
 
     companion object {
@@ -106,7 +108,7 @@ abstract class EvolutionSerializer(
                             "New parameter ${it.value.name} is mandatory, should be nullable for evolution to worK")
                 }
             }
-            return EvolutionSerializerViaConstructor (new.type, factory, readersAsSerialized, constructor, constructorArgs)
+            return EvolutionSerializerViaConstructor(new.type, factory, readersAsSerialized, constructor, constructorArgs)
         }
 
         private fun makeWithSetters(
@@ -118,7 +120,7 @@ abstract class EvolutionSerializer(
             val setters = propertiesForSerializationFromSetters(classProperties,
                     new.type,
                     factory).associateBy({ it.getter.name }, { it })
-            return EvolutionSerializerViaSetters (new.type, factory, readersAsSerialized, constructor, setters)
+            return EvolutionSerializerViaSetters(new.type, factory, readersAsSerialized, constructor, setters)
         }
 
         /**
@@ -153,14 +155,15 @@ abstract class EvolutionSerializer(
 
             return if (classProperties.isNotEmpty() && constructor.parameters.isEmpty()) {
                 makeWithSetters(new, factory, constructor, readersAsSerialized, classProperties)
-            }
-            else {
+            } else {
                 makeWithConstructor(new, factory, constructor, readersAsSerialized)
             }
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
+                             context: SerializationContext, debugIndent: Int
+    ) {
         throw UnsupportedOperationException("It should be impossible to write an evolution serializer")
     }
 }
@@ -170,7 +173,7 @@ class EvolutionSerializerViaConstructor(
         factory: SerializerFactory,
         oldReaders: Map<String, EvolutionSerializer.OldParam>,
         kotlinConstructor: KFunction<Any>?,
-        private val constructorArgs: Array<Any?>) : EvolutionSerializer (clazz, factory, oldReaders, kotlinConstructor) {
+        private val constructorArgs: Array<Any?>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
     /**
      * Unlike a normal [readObject] call where we simply apply the parameter deserialisers
      * to the object list of values we need to map that list, which is ordered per the
@@ -180,15 +183,16 @@ class EvolutionSerializerViaConstructor(
      *
      * TODO: Object references
      */
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
+                            context: SerializationContext
+    ): Any {
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 
         // *must* read all the parameters in the order they were serialized
-        oldReaders.values.zip(obj).map { it.first.readProperty(it.second, schemas, input, constructorArgs) }
+        oldReaders.values.zip(obj).map { it.first.readProperty(it.second, schemas, input, constructorArgs, context) }
 
-        return javaConstructor?.newInstance(*(constructorArgs)) ?:
-                throw NotSerializableException(
-                        "Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
+        return javaConstructor?.newInstance(*(constructorArgs)) ?: throw NotSerializableException(
+                "Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
     }
 }
 
@@ -201,18 +205,20 @@ class EvolutionSerializerViaSetters(
         factory: SerializerFactory,
         oldReaders: Map<String, EvolutionSerializer.OldParam>,
         kotlinConstructor: KFunction<Any>?,
-        private val setters: Map<String, PropertyAccessor>) : EvolutionSerializer (clazz, factory, oldReaders, kotlinConstructor) {
+        private val setters: Map<String, PropertyAccessor>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
+                            context: SerializationContext
+    ): Any {
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 
-        val instance : Any = javaConstructor?.newInstance() ?: throw NotSerializableException (
+        val instance: Any = javaConstructor?.newInstance() ?: throw NotSerializableException(
                 "Failed to instantiate instance of object $clazz")
 
         // *must* read all the parameters in the order they were serialized
         oldReaders.values.zip(obj).forEach {
             // if that property still exists on the new object then set it
-            it.first.property.readProperty(it.second, schemas, input).apply {
+            it.first.property.readProperty(it.second, schemas, input, context).apply {
                 setters[it.first.property.name]?.set(instance, this)
             }
         }

@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import net.corda.core.contracts.ContractState;
 import net.corda.core.identity.AbstractParty;
 import net.corda.nodeapi.internal.serialization.AllWhitelist;
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationContext;
 import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
@@ -38,7 +39,7 @@ public class JavaNestedInheritenceTests extends JavaNestedInheritenceTestsBase {
 
         SerializationOutput ser = new SerializationOutput(factory);
 
-        Assertions.assertThatThrownBy(() -> ser.serialize(new DummyState())).isInstanceOf(
+        Assertions.assertThatThrownBy(() -> ser.serialize(new DummyState(), TestSerializationContext.testSerializationContext)).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }
@@ -50,7 +51,7 @@ public class JavaNestedInheritenceTests extends JavaNestedInheritenceTestsBase {
                 new SerializerFingerPrinter());
 
         SerializationOutput ser = new SerializationOutput(factory);
-        Assertions.assertThatThrownBy(() -> ser.serialize(new Wrapper (new DummyState()))).isInstanceOf(
+        Assertions.assertThatThrownBy(() -> ser.serialize(new Wrapper (new DummyState()), TestSerializationContext.testSerializationContext)).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }
@@ -63,7 +64,7 @@ public class JavaNestedInheritenceTests extends JavaNestedInheritenceTestsBase {
 
         SerializationOutput ser = new SerializationOutput(factory1);
 
-        Assertions.assertThatThrownBy(() -> ser.serialize(new TemplateWrapper<ContractState> (new DummyState()))).isInstanceOf(
+        Assertions.assertThatThrownBy(() -> ser.serialize(new TemplateWrapper<ContractState> (new DummyState()), TestSerializationContext.testSerializationContext)).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }

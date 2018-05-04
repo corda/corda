@@ -11,6 +11,7 @@
 package net.corda.nodeapi.internal.serialization.amqp;
 
 import net.corda.nodeapi.internal.serialization.AllWhitelist;
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationContext;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -93,7 +94,7 @@ public class JavaPrivatePropertyTests {
         DeserializationInput des = new DeserializationInput(factory);
 
         B b = new B(true);
-        B b2 = des.deserialize(ser.serialize(b), B.class);
+        B b2 = des.deserialize(ser.serialize(b, TestSerializationContext.testSerializationContext), B.class, TestSerializationContext.testSerializationContext);
         assertEquals (b.b, b2.b);
     }
 
@@ -108,7 +109,7 @@ public class JavaPrivatePropertyTests {
 
         B2 b = new B2();
         b.setB(false);
-        B2 b2 = des.deserialize(ser.serialize(b), B2.class);
+        B2 b2 = des.deserialize(ser.serialize(b, TestSerializationContext.testSerializationContext), B2.class, TestSerializationContext.testSerializationContext);
         assertEquals (b.b, b2.b);
     }
 
@@ -122,7 +123,7 @@ public class JavaPrivatePropertyTests {
 
         B3 b = new B3();
         b.setB(false);
-        B3 b2 = des.deserialize(ser.serialize(b), B3.class);
+        B3 b2 = des.deserialize(ser.serialize(b, TestSerializationContext.testSerializationContext), B3.class, TestSerializationContext.testSerializationContext);
 
         // since we can't find a getter for b (isb != isB) then we won't serialize that parameter
         assertEquals (null, b2.b);
@@ -138,7 +139,7 @@ public class JavaPrivatePropertyTests {
 
         C3 c = new C3();
         c.setA(12345);
-        C3 c2 = des.deserialize(ser.serialize(c), C3.class);
+        C3 c2 = des.deserialize(ser.serialize(c, TestSerializationContext.testSerializationContext), C3.class, TestSerializationContext.testSerializationContext);
 
         assertEquals (c.a, c2.a);
     }
@@ -153,7 +154,7 @@ public class JavaPrivatePropertyTests {
         DeserializationInput des = new DeserializationInput(factory);
 
         C c = new C("dripping taps");
-        C c2 = des.deserialize(ser.serialize(c), C.class);
+        C c2 = des.deserialize(ser.serialize(c, TestSerializationContext.testSerializationContext), C.class, TestSerializationContext.testSerializationContext);
 
         assertEquals (c.a, c2.a);
 
@@ -185,7 +186,7 @@ public class JavaPrivatePropertyTests {
         DeserializationInput des = new DeserializationInput(factory);
 
         C2 c = new C2("dripping taps");
-        C2 c2 = des.deserialize(ser.serialize(c), C2.class);
+        C2 c2 = des.deserialize(ser.serialize(c, TestSerializationContext.testSerializationContext), C2.class, TestSerializationContext.testSerializationContext);
 
         assertEquals (c.a, c2.a);
 
