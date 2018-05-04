@@ -10,6 +10,7 @@
  * This build.gradle exists to publish our capsule (executable fat jar) to maven. It cannot be placed in the
  * bridges project because the bintray plugin cannot publish two modules from one project.
  */
+apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'com.jfrog.artifactory'
@@ -19,11 +20,48 @@ description 'Corda bridge server capsule'
 configurations {
     runtimeArtifacts
     capsuleRuntime
+
+    smokeTestCompile.extendsFrom testCompile
+    smokeTestRuntime.extendsFrom testRuntime
+}
+
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+sourceSets {
+    smokeTest {
+        kotlin {
+            // We must NOT have any Bridge code on the classpath, so do NOT
+            // include the test or integrationTest dependencies here.
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+            srcDir file('src/smoke-test/kotlin')
+        }
+        resources {
+            srcDir file('src/smoke-test/resources')
+        }
+    }
 }
 
 dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     capsuleRuntime "com.typesafe:config:$typesafe_config_version"
+
+
+    // Smoke tests do NOT have any Node code on the classpath!
+    smokeTestCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    smokeTestCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    smokeTestCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    smokeTestCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    smokeTestCompile "org.apache.logging.log4j:log4j-core:$log4j_version"
+    smokeTestCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
+    smokeTestCompile project(':node-driver')
+    smokeTestCompile project(':test-utils')
+    smokeTestCompile "org.apache.curator:curator-test:${curator_version}"
+    smokeTestCompile "junit:junit:$junit_version"
+
 }
 
 // Force the Caplet to target Java 6. This ensures that running 'java -jar corda.jar' on any Java 6 VM upwards
@@ -63,6 +101,19 @@ task buildBridgeServerJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
         // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
         jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
     }
+}
+
+processSmokeTestResources {
+    
+    from(project.tasks['buildBridgeServerJar']) {
+        rename 'corda-bridgeserver-(.*)', 'corda-bridgeserver.jar'
+        into "net/corda/bridge/smoketest"
+    }
+}
+
+task smokeTest(type: Test) {
+    testClassesDirs = sourceSets.smokeTest.output.classesDirs
+    classpath = sourceSets.smokeTest.runtimeClasspath
 }
 
 artifacts {
