@@ -33,6 +33,7 @@ dependencies {
     // Kryo: object graph serialization.
     compile "com.esotericsoftware:kryo:4.0.0"
     compile "de.javakaffee:kryo-serializers:0.41"
+    compile "org.ow2.asm:asm:$asm_version"
 
     // For AMQP serialisation.
     compile "org.apache.qpid:proton-j:0.27.1"
