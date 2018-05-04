@@ -2,6 +2,7 @@ package net.corda.explorer.views
 
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
 import javafx.beans.binding.Bindings
+import javafx.beans.binding.ObjectBinding
 import javafx.beans.value.ObservableValue
 import javafx.collections.ObservableList
 import javafx.geometry.HPos
@@ -57,7 +58,7 @@ class TransactionViewer : CordaView("Transactions") {
 
     private var scrollPosition: Int = 0
     private lateinit var expander: ExpanderColumn<TransactionViewer.Transaction>
-    var txIdToScroll: SecureHash? = null // Passed as param.
+    private var txIdToScroll: SecureHash? = null // Passed as param.
 
     /**
      * This is what holds data for a single transaction node. Note how a lot of these are nullable as we often simply don't
@@ -189,7 +190,7 @@ class TransactionViewer : CordaView("Transactions") {
                     }
                 }
             }
-            column("Command type", Transaction::commandTypes).cellFormat { text = it.map { it.simpleName }.joinToString() }
+            column("Command type", Transaction::commandTypes).cellFormat { text = it.joinToString { it.simpleName } }
             column("Total value", Transaction::totalValueEquiv).cellFormat {
                 text = "${it.positivity.sign}${AmountFormatter.boring.format(it.amount)}"
                 titleProperty.bind(reportingCurrency.map { "Total value ($it equiv)" })
@@ -211,9 +212,9 @@ class TransactionViewer : CordaView("Transactions") {
     }
 
     private fun ObservableList<List<ObservableValue<Party?>>>.formatJoinPartyNames(separator: String = ",", formatter: Formatter<CordaX500Name>): String {
-        return flatten().map {
+        return flatten().mapNotNull {
             it.value?.let { formatter.format(it.name) }
-        }.filterNotNull().toSet().joinToString(separator)
+        }.toSet().joinToString(separator)
     }
 
     private fun ObservableList<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { it.owningKey.toKnownParty() } }
@@ -227,8 +228,17 @@ class TransactionViewer : CordaView("Transactions") {
         init {
             right {
                 label {
-                    val hash = SecureHash.randomSHA256()
-                    graphic = identicon(hash, 30.0)
+                    val hashList = partiallyResolvedTransactions.map { it.id }
+                    val hashBinding = object : ObjectBinding<SecureHash>() {
+                        init {
+                            bind(hashList)
+                        }
+                        override fun computeValue(): SecureHash {
+                            return if (hashList.isEmpty()) SecureHash.zeroHash
+                            else hashList.fold(hashList[0], { one, another -> one.hashConcat(another) })
+                        }
+                    }
+                    graphicProperty().bind(hashBinding.map { identicon(it, 30.0) })
                     textProperty().bind(Bindings.size(partiallyResolvedTransactions).map(Number::toString))
                     BorderPane.setAlignment(this, Pos.BOTTOM_RIGHT)
                 }
@@ -320,15 +330,13 @@ private fun calculateTotalEquiv(myIdentity: Party?,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>): AmountDiff<Currency> {
     val (reportingCurrency, exchange) = reportingCurrencyExchange
-    fun List<ContractState>.sum() = this.map { it as? Cash.State }
-            .filterNotNull()
+    fun List<ContractState>.sum() = this.mapNotNull { it as? Cash.State }
             .filter { it.owner.owningKey.toKnownParty().value == myIdentity }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum()
 
     // For issuing cash, if I am the issuer and not the owner (e.g. issuing cash to other party), count it as negative.
-    val issuedAmount = if (inputs.isEmpty()) outputs.map { it as? Cash.State }
-            .filterNotNull()
+    val issuedAmount = if (inputs.isEmpty()) outputs.mapNotNull { it as? Cash.State }
             .filter { it.amount.token.issuer.party.owningKey.toKnownParty().value == myIdentity && it.owner.owningKey.toKnownParty().value != myIdentity }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum() else 0
