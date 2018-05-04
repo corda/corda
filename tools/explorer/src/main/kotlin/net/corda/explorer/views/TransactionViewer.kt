@@ -16,17 +16,13 @@ import javafx.scene.control.TitledPane
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.VBox
 import net.corda.client.jfx.model.*
-import net.corda.client.jfx.utils.filterNotNull
-import net.corda.client.jfx.utils.lift
-import net.corda.client.jfx.utils.map
-import net.corda.client.jfx.utils.sequence
+import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.AmountDiff
@@ -136,7 +132,7 @@ class TransactionViewer : CordaView("Transactions") {
                             resolvedInputs.map { it.state.data }.lift(),
                             resolvedOutputs.map { it.state.data }.lift())
             )
-        }
+        }.distinctBy { it.id }
 
         val searchField = SearchField(transactions,
                 "Transaction ID" to { tx, s -> "${tx.id}".contains(s, true) },

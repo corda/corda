@@ -300,6 +300,10 @@ fun <T : Any> ObservableList<T>.unique(): ObservableList<T> {
     return AggregatedList(this, { it }, { key, _ -> key })
 }
 
+fun <T : Any, K : Any> ObservableList<T>.distinctBy(toKey: (T) -> K): ObservableList<T> {
+    return AggregatedList(this, toKey, { _, entryList -> entryList[0] })
+}
+
 fun ObservableValue<*>.isNotNull(): BooleanBinding {
     return Bindings.createBooleanBinding({ this.value != null }, arrayOf(this))
 }
