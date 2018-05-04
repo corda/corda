@@ -34,12 +34,14 @@ import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
 import net.corda.testing.internal.vault.DummyLinearContract
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.internal.vault.VaultFiller
-import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.*
+import org.junit.ClassRule
+import org.junit.Ignore
+import org.junit.Rule
+import org.junit.Test
 import org.junit.rules.ExpectedException
 import org.junit.rules.ExternalResource
 import java.lang.Thread.sleep
