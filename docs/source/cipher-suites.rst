@@ -1,9 +1,9 @@
-Cipher Suites
-=============
+Supported cipher suites
+=======================
 
 .. contents::
 
-The set of signature schemes supported forms a part of the consensus rules for a CORDA DLT network.
+The set of signature schemes supported forms a part of the consensus rules for a Corda DLT network.
 Thus, it is important that implementations do not support pluggability of any crypto algorithms and do take measures
 to prevent algorithms supported by any underlying cryptography library from becoming accidentally accessible.
 Signing a transaction with an algorithm that is not a part of the base specification would result in a transaction
@@ -40,7 +40,7 @@ We can visualise the certificate structure as follows:
    :scale: 55%
    :align: center
 
-Available cipher suites
+Supported cipher suites
 -----------------------
 Due to the shared certificate hierarchy the following 4 key/certificate types: **root network CA**, **doorman CA**,
 **node CA** and **tls** should be compatible with the standard TLS 1.2 protocol. The latter is a requirement from the

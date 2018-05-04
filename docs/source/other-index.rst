@@ -7,4 +7,3 @@ Other
    corda-repo-layout
    building-the-docs
    json
-   cipher-suites
