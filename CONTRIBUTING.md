@@ -18,13 +18,15 @@ We believe one of the things that makes Corda special is its coherent design and
 
 Contributions from the community are welcomed and strongly encouraged. From the outset we defined some guidelines to ensure new contributions only ever enhance the project:
 
-* **Quality**: Code in the Corda project should meet the [Corda coding style guidelines](https://docs.corda.net/codestyle.html), with sufficient test-cases, evidence that the contribution does not break any compatibility commitments or cause adverse feature interactions, and evidence of high-quality peer-review.
+* **Quality**: Code in the Corda project should meet the [Corda coding style guidelines](https://docs.corda.net/codestyle.html), with sufficient test-cases, descriptive commit messages, evidence that the contribution does not break any compatibility commitments or cause adverse feature interactions, and evidence of high-quality peer-review.
 * **Size**: The Corda project's culture is one of small pull-requests, regularly submitted. The larger a pull-request, the more likely it is that you will be asked to resubmit as a series of self-contained and individually reviewable smaller PRs.
 * **Scope**: We try to ensure the Corda project remains coherent and focused so we ask that the feature's scope is within the definition specified in the Technical White Paper.
 * **Maintainability**: If the feature will require ongoing maintenance (eg support for a particular brand of database), we may ask you to accept responsibility for maintaining this feature.
 * **Non-duplicative**: If the contribution duplicates features that already exist or are already in progress, you may be asked to work with the project maintainers to reconcile this. As the major contributor to Corda, many employees of [R3](https://r3.com) will be working on features at any given time. To avoid surprises and foster transparency, our work tracking system, [Jira](https://r3-cev.atlassian.net/projects/CORDA/summary), is public. In addition, the maintainers and developers on the project are available on the [design](https://cordaledger.slack.com/messages/C3J04VC3V/) channel of our [Slack](https://slack.corda.net/) and they would be delighted to discuss any work you plan to do.
 
 **Advice to contributors**: You are encouraged to join our [Slack](https://slack.corda.net/), observe the [Pull Request](https://github.com/corda/corda/pulls) process in action, contribute to code reviews and start by submitting small changes. [This page](https://docs.corda.net/head/contributing.html) in our docsite shares tips on how to identify areas in which to contribute, and outlines the mechanics for doing so.
+
+To start contributing you can clone our repo and begin making pull requests. All contributions to this project are subject to the terms of the Developer Certificate of Origin, reproduced at the bottom of this page.
 
 ## Project Leadership and Maintainers
 
@@ -41,10 +43,6 @@ The Corda maintainers, developers and extended community make active use of the 
 The project is supported and maintained by the [R3 Alliance](https://www.r3.com), which consists of over two hundred firms working together to build and maintain this open source enterprise-grade blockchain platform. We develop in the open and publish our [Jira](https://r3-cev.atlassian.net/projects/CORDA/summary) to give everyone visibility. R3 also maintains and distributes a commercial distribution of Corda. Our vision is that distributions of Corda be compatible and interoperable, and our contribution and code review guidelines are designed in part to enable this.
 
 As the R3 Alliance is maintainer of the project and also develops a commercial distribution of Corda, what happens if a member of the community contributes a feature which the R3 team have implemented only in their commercial product? How is this apparent conflict managed? Our approach is simple: if the contribution meets the standards for the project (see above), then the existence of a competing commercial implementation will not be used as a reason to reject it. In other words, it is our policy that should a community feature be contributed which meets the criteria above, we will accept it or work with the contributor to merge/reconcile it with the commercial feature.
-
-## How to Contribute
-
-To start contributing you can clone our repo and begin making pull requests. Please use descriptive commit messages and follow our [coding style guidelines](https://docs.corda.net/codestyle.html). All contributions to this project are subject to the terms of the Developer Certificate of Origin, reproduced at the bottom of this page.
 
 ## Developer Certificate of Origin
 
