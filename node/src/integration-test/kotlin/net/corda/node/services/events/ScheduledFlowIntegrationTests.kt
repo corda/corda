@@ -34,14 +34,13 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.node.User
 import org.junit.Test
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
 
-class ScheduledFlowIntegrationTests : IntegrationTest() {
+class ScheduledFlowIntegrationTests {
     @StartableByRPC
     class InsertInitialStateFlow(private val destination: Party, private val notary: Party, private val identity: Int = 1, private val scheduledFor: Instant? = null) : FlowLogic<Unit>() {
         @Suspendable
