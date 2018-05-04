@@ -120,6 +120,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     }
 
     @Suspendable
+    // TODO use paging here
     private fun downloadDependencies(depsToCheck: Set<SecureHash>): List<SignedTransaction> {
         // Maintain a work queue of all hashes to load/download, initialised with our starting set. Then do a breadth
         // first traversal across the dependency graph.
@@ -153,7 +154,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
                 break
 
             // Request the standalone transaction data (which may refer to things we don't yet have).
-            // TODO maybe page here
+            // TODO use paging here
             val downloads: List<SignedTransaction> = subFlow(FetchTransactionsFlow(notAlreadyFetched, otherSide)).downloaded
 
             for (stx in downloads)
