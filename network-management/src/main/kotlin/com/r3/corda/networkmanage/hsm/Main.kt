@@ -20,6 +20,7 @@ import com.r3.corda.networkmanage.hsm.configuration.SigningServiceConfig
 import com.r3.corda.networkmanage.hsm.processor.CrrProcessor
 import com.r3.corda.networkmanage.hsm.processor.CsrProcessor
 import com.r3.corda.networkmanage.hsm.processor.NetworkMapProcessor
+import net.corda.core.internal.exists
 import org.apache.logging.log4j.LogManager
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
@@ -34,7 +35,12 @@ fun main(args: Array<String>) {
 
     val cmdLineOptions = SigningServiceArgsParser().parseOrExit(*args)
 
-    val config = parseConfig<SigningServiceConfig>(cmdLineOptions.configFile)
+    val config = if (cmdLineOptions.configFile.exists()) {
+        parseConfig<SigningServiceConfig>(cmdLineOptions.configFile)
+    } else {
+        println("Please provide existing HSM config file using --config-file option")
+        return
+    }
 
     // Validate
     // Grabbed from https://stackoverflow.com/questions/7953567/checking-if-unlimited-cryptography-is-available

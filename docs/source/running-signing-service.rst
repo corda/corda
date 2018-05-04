@@ -15,8 +15,11 @@ Configuration file
 ------------------
 At startup the signing service reads a configuration file, passed with ``--config-file`` on the command line.
 
-This is an example of what a signing service configuration file might look like:
-    .. literalinclude:: ../../network-management/hsm.conf
+This is an example of what a signing service configuration file might look like for doorman:
+    .. literalinclude:: ../../network-management/hsm-for-doorman.conf
+
+For network map:
+    .. literalinclude:: ../../network-management/hsm-for-networkmap.conf
 
 Invoke the signing service with ``-?`` for a full list of supported command-line arguments.
 

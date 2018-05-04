@@ -89,10 +89,11 @@ class SigningServiceArgsParser : ArgsParser<SigningServiceCmdLineOptions>() {
             .accepts("config-file", "The path to the config file")
             .withRequiredArg()
             .withValuesConvertedBy(PathConverter(PathProperties.FILE_EXISTING))
+            .required()
 
     override fun parse(optionSet: OptionSet): SigningServiceCmdLineOptions {
         val baseDir = optionSet.valueOf(baseDirArg)
-        val configFile = optionSet.valueOf(configFileArg) ?: baseDir / "signing_service.conf"
+        val configFile = optionSet.valueOf(configFileArg)
         return SigningServiceCmdLineOptions(baseDir, configFile)
     }
 }

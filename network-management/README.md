@@ -28,7 +28,7 @@ To run the HSM signing server:
 
 ```
 cd network-management
-java -jar capsule-hsm/build/libs/hsm-<version>.jar --config-file hsm.conf
+java -jar capsule-hsm/build/libs/hsm-<version>.jar --config-file [hsm-configuration-file]
 ```
 
 For a list of options the HSM signing server takes, run with the `--help` option:
