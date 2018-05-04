@@ -12,7 +12,7 @@ package net.corda.node.services.transactions
 
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
-import net.corda.core.internal.notary.TrustedAuthorityNotaryService
+import net.corda.core.internal.notary.AsyncCFTNotaryService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.MySQLConfiguration
 import java.security.PublicKey
@@ -23,19 +23,20 @@ abstract class MySQLNotaryService(
         override val notaryIdentityKey: PublicKey,
         configuration: MySQLConfiguration,
         /** Database table will be automatically created in dev mode */
-        val devMode: Boolean) : TrustedAuthorityNotaryService() {
+        val devMode: Boolean) : AsyncCFTNotaryService() {
 
-    override val uniquenessProvider = MySQLUniquenessProvider(
+    override val asyncUniquenessProvider = MySQLUniquenessProvider(
             services.monitoringService.metrics,
+            services.clock,
             configuration
     )
 
     override fun start() {
-        if (devMode) uniquenessProvider.createTable()
+        if (devMode) asyncUniquenessProvider.createTable()
     }
 
     override fun stop() {
-        uniquenessProvider.stop()
+        asyncUniquenessProvider.stop()
     }
 }
 
@@ -47,8 +48,8 @@ class MySQLNonValidatingNotaryService(services: ServiceHubInternal,
 }
 
 class MySQLValidatingNotaryService(services: ServiceHubInternal,
-                                      notaryIdentityKey: PublicKey,
-                                      configuration: MySQLConfiguration,
-                                      devMode: Boolean = false) : MySQLNotaryService(services, notaryIdentityKey, configuration, devMode) {
+                                   notaryIdentityKey: PublicKey,
+                                   configuration: MySQLConfiguration,
+                                   devMode: Boolean = false) : MySQLNotaryService(services, notaryIdentityKey, configuration, devMode) {
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = ValidatingNotaryFlow(otherPartySession, this)
 }

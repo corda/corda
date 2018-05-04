@@ -28,19 +28,8 @@ abstract class TrustedAuthorityNotaryService : NotaryService() {
     fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?) {
         try {
             uniquenessProvider.commit(inputs, txId, caller, requestSignature, timeWindow)
-        } catch (e: NotaryInternalException) {
-            if (e.error is NotaryError.Conflict) {
-                val conflicts = inputs.filterIndexed { _, stateRef ->
-                    val cause = e.error.consumedStates[stateRef]
-                    cause != null && cause.hashOfTransactionId != txId.sha256()
-                }
-                if (conflicts.isNotEmpty()) {
-                    // TODO: Create a new UniquenessException that only contains the conflicts filtered above.
-                    log.info("Notary conflicts for $txId: $conflicts")
-                    throw e
-                }
-            } else throw e
         } catch (e: Exception) {
+            if (e is NotaryInternalException) throw  e
             log.error("Internal error", e)
             throw NotaryInternalException(NotaryError.General(Exception("Service unavailable, please try again later")))
         }

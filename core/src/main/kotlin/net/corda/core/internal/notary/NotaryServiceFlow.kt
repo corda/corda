@@ -6,6 +6,8 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.executeAsync
+import net.corda.core.internal.notary.AsyncUniquenessProvider.Result
 import net.corda.core.utilities.unwrap
 
 /**
@@ -34,7 +36,12 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             val parts = validateRequest(requestPayload)
             txId = parts.id
             checkNotary(parts.notary)
-            service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature, parts.timestamp)
+            if (service is AsyncCFTNotaryService) {
+                val result = executeAsync(AsyncCFTNotaryService.CommitOperation(service, parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature, parts.timestamp))
+                if (result is Result.Failure) throw NotaryInternalException(result.error)
+            } else {
+                service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature, parts.timestamp)
+            }
             signTransactionAndSendResponse(txId)
         } catch (e: NotaryInternalException) {
             throw NotaryException(e.error, txId)
