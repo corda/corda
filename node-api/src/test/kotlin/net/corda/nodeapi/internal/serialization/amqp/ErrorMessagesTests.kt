@@ -10,17 +10,10 @@
 
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
-import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
-import net.corda.nodeapi.internal.serialization.amqp.testutils.testName
 import org.assertj.core.api.Assertions
 import org.junit.Ignore
 import org.junit.Test
 import java.io.NotSerializableException
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 class ErrorMessagesTests {
     companion object {

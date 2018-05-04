@@ -10,7 +10,6 @@
 
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -39,9 +38,7 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Seria
         output.writeTypeNotations(typeNotation)
     }
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
-                            context: SerializationContext
-    ): Any {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any {
         val enumName = (obj as List<*>)[0] as String
         val enumOrd = obj[1] as Int
         val fromOrd = type.asClass()!!.enumConstants[enumOrd] as Enum<*>?
@@ -53,9 +50,7 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Seria
         return fromOrd
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
-                             context: SerializationContext, debugIndent: Int
-    ) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
         if (obj !is Enum<*>) throw NotSerializableException("Serializing $obj as enum when it isn't")
 
         data.withDescribed(typeNotation.descriptor) {

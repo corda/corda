@@ -12,9 +12,7 @@ package net.corda.nodeapi.internal.serialization.amqp.custom
 
 import net.corda.nodeapi.internal.serialization.amqp.CustomSerializer
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
+import java.time.*
 
 /**
  * A serializer for [OffsetDateTime] that uses a proxy object to write out the date and zone offset.

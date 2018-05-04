@@ -14,8 +14,6 @@
       <module name="behave_main" target="1.8" />
       <module name="behave_scenario" target="1.8" />
       <module name="behave_test" target="1.8" />
-      <module name="blobinspector_main" target="1.8" />
-      <module name="blobinspector_test" target="1.8" />
       <module name="bootstrapper_main" target="1.8" />
       <module name="bootstrapper_test" target="1.8" />
       <module name="bridge_integrationTest" target="1.8" />

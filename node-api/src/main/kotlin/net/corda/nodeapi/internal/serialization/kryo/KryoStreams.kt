@@ -13,10 +13,7 @@ package net.corda.nodeapi.internal.serialization.kryo
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import net.corda.core.internal.LazyPool
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
-import java.io.OutputStream
-import java.io.SequenceInputStream
+import java.io.*
 import java.nio.ByteBuffer
 
 class ByteBufferOutputStream(size: Int) : ByteArrayOutputStream(size) {

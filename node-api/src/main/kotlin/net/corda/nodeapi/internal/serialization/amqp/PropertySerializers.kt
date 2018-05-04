@@ -12,12 +12,12 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.utilities.loggerFor
 import java.io.NotSerializableException
-import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Type
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.javaGetter
 import kotlin.reflect.jvm.kotlinProperty
+import java.lang.reflect.Field
 
 abstract class PropertyReader {
     abstract fun read(obj: Any?): Any?
@@ -151,7 +151,6 @@ class PropertyAccessorGetterSetter(
          */
         setter.isAccessible = true
     }
-
     /**
      * Invokes the setter on the underlying object passing in the serialized value.
      */
@@ -173,7 +172,7 @@ class PropertyAccessorConstructor(
      * calls to the explicit setter should be an error.
      */
     override fun set(instance: Any, obj: Any?) {
-        NotSerializableException("Attempting to access a setter on an object being instantiated " +
+        NotSerializableException ("Attempting to access a setter on an object being instantiated " +
                 "via its constructor.")
     }
 }
@@ -198,7 +197,7 @@ abstract class PropertySerializers(
                     is PropertyAccessorGetterSetter -> PropertySerializersSetter(serializationOrder)
                     null -> PropertySerializersNoProperties()
                     else -> {
-                        throw NotSerializableException("Unknown Property Accessor type, cannot create set")
+                        throw NotSerializableException ("Unknown Property Accessor type, cannot create set")
                     }
                 }
     }
@@ -207,7 +206,7 @@ abstract class PropertySerializers(
     abstract val byConstructor: Boolean
 }
 
-class PropertySerializersNoProperties : PropertySerializers(emptyList()) {
+class PropertySerializersNoProperties : PropertySerializers (emptyList()) {
     override val byConstructor get() = true
 }
 

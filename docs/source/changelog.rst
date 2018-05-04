@@ -7,9 +7,6 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
-* Refactor AMQP Serializer to pass context object down the serialization call hierarchy. Will allow per thread
-  extensions to be set and used by the RPC work (Observable Context Key)
-
 * Refactor RPC Server Kryo observable serializer into it's own sub module
 
 * Refactor RPC Client Kryo observable serializer into it's own sub module

@@ -268,7 +268,7 @@ object NotaryChangeWireTransactionSerializer : Serializer<NotaryChangeWireTransa
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<NotaryChangeWireTransaction>): NotaryChangeWireTransaction {
-        val components: List<OpaqueBytes> = uncheckedCast(kryo.readClassAndObject(input))
+        val components : List<OpaqueBytes> = uncheckedCast(kryo.readClassAndObject(input))
         return NotaryChangeWireTransaction(components)
     }
 }

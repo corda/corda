@@ -10,7 +10,6 @@
 
 package net.corda.nodeapi.internal.serialization.amqp.custom
 
-import net.corda.core.serialization.SerializationContext
 import net.corda.nodeapi.internal.serialization.amqp.*
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
@@ -26,9 +25,7 @@ object InputStreamSerializer : CustomSerializer.Implements<InputStream>(InputStr
 
     override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), SerializerFactory.primitiveTypeName(ByteArray::class.java)!!, descriptor, emptyList())))
 
-    override fun writeDescribedObject(obj: InputStream, data: Data, type: Type, output: SerializationOutput,
-                                      context: SerializationContext
-    ) {
+    override fun writeDescribedObject(obj: InputStream, data: Data, type: Type, output: SerializationOutput) {
         val startingSize = maxOf(4096, obj.available() + 1)
         var buffer = ByteArray(startingSize)
         var pos = 0
@@ -47,10 +44,8 @@ object InputStreamSerializer : CustomSerializer.Implements<InputStream>(InputStr
         }
     }
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
-                            context: SerializationContext
-    ): InputStream {
-        val bits = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): InputStream {
+        val bits = input.readObject(obj, schemas, ByteArray::class.java) as ByteArray
         return bits.inputStream()
     }
 }

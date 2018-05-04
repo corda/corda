@@ -14,7 +14,7 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.*
 import net.corda.nodeapi.internal.serialization.amqp.Field
 import net.corda.nodeapi.internal.serialization.amqp.Schema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
+import net.corda.nodeapi.internal.serialization.AllWhitelist
 
 fun mangleName(name: String) = "${name}__carpenter"
 

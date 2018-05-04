@@ -11,7 +11,6 @@
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
-import net.corda.core.crypto.Crypto
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.createDirectories
@@ -66,11 +65,6 @@ open class NodeStartup(val args: Array<String>) {
         enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
 
         initLogging(cmdlineOptions)
-
-        // Register all cryptography [Provider]s.
-        // Required to install our [SecureRandom] before e.g., UUID asks for one.
-        // This needs to go after initLogging(netty clashes with our logging).
-        Crypto.registerProviders()
 
         val versionInfo = getVersionInfo()
 

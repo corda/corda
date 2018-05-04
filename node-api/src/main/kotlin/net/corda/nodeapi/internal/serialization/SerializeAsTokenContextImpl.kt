@@ -62,6 +62,5 @@ class SerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: Ser
         }
     }
 
-    override fun getSingleton(className: String) = classNameToSingleton[className]
-            ?: throw IllegalStateException("Unable to find tokenized instance of $className in context $this")
+    override fun getSingleton(className: String) = classNameToSingleton[className] ?: throw IllegalStateException("Unable to find tokenized instance of $className in context $this")
 }

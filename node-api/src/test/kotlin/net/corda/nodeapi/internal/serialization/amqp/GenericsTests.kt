@@ -17,8 +17,12 @@ import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.junit.Test
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.nodeapi.internal.serialization.amqp.testutils.*
+import net.corda.core.identity.Party
+import net.corda.core.transactions.WireTransaction
 import net.corda.testing.core.TestIdentity
+import org.hibernate.Transaction
+import java.io.File
+import java.net.URI
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
@@ -307,6 +311,7 @@ class GenericsTests {
         val factory4 = SerializerFactory(AllWhitelist, cl())
         factory4.register(net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer)
         val des2 = DeserializationInput(factory4).deserializeAndReturnEnvelope(ser2.obj)
+
     }
 
     @Test

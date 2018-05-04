@@ -10,7 +10,6 @@
 
 package net.corda.nodeapi.internal.serialization.amqp
 
-import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding
@@ -34,10 +33,7 @@ data class BytesAndSchemas<T : Any>(
  * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
-open class SerializationOutput @JvmOverloads constructor(
-        internal val serializerFactory: SerializerFactory,
-        private val encoding: SerializationEncoding? = null
-) {
+open class SerializationOutput @JvmOverloads constructor(internal val serializerFactory: SerializerFactory, private val encoding: SerializationEncoding? = null) {
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
     private val serializerHistory: MutableSet<AMQPSerializer<*>> = LinkedHashSet()
     internal val schemaHistory: MutableSet<TypeNotation> = LinkedHashSet()
@@ -48,18 +44,19 @@ open class SerializationOutput @JvmOverloads constructor(
      * of AMQP serialization constructed the serialized form.
      */
     @Throws(NotSerializableException::class)
-    fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
+    fun <T : Any> serialize(obj: T): SerializedBytes<T> {
         try {
-            return _serialize(obj, context)
+            return _serialize(obj)
         } finally {
             andFinally()
         }
     }
 
+
     @Throws(NotSerializableException::class)
-    fun <T : Any> serializeAndReturnSchema(obj: T, context: SerializationContext): BytesAndSchemas<T> {
+    fun <T : Any> serializeAndReturnSchema(obj: T): BytesAndSchemas<T> {
         try {
-            val blob = _serialize(obj, context)
+            val blob = _serialize(obj)
             val schema = Schema(schemaHistory.toList())
             return BytesAndSchemas(blob, schema, TransformsSchema.build(schema, serializerFactory))
         } finally {
@@ -73,11 +70,11 @@ open class SerializationOutput @JvmOverloads constructor(
         schemaHistory.clear()
     }
 
-    internal fun <T : Any> _serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
+    internal fun <T : Any> _serialize(obj: T): SerializedBytes<T> {
         val data = Data.Factory.create()
         data.withDescribed(Envelope.DESCRIPTOR_OBJECT) {
             withList {
-                writeObject(obj, this, context)
+                writeObject(obj, this)
                 val schema = Schema(schemaHistory.toList())
                 writeSchema(schema, this)
                 writeTransformSchema(TransformsSchema.build(schema, serializerFactory), this)
@@ -100,8 +97,8 @@ open class SerializationOutput @JvmOverloads constructor(
         })
     }
 
-    internal fun writeObject(obj: Any, data: Data, context: SerializationContext) {
-        writeObject(obj, data, obj.javaClass, context)
+    internal fun writeObject(obj: Any, data: Data) {
+        writeObject(obj, data, obj.javaClass)
     }
 
     open fun writeSchema(schema: Schema, data: Data) {
@@ -112,15 +109,15 @@ open class SerializationOutput @JvmOverloads constructor(
         data.putObject(transformsSchema)
     }
 
-    internal fun writeObjectOrNull(obj: Any?, data: Data, type: Type, context: SerializationContext, debugIndent: Int) {
+    internal fun writeObjectOrNull(obj: Any?, data: Data, type: Type, debugIndent: Int) {
         if (obj == null) {
             data.putNull()
         } else {
-            writeObject(obj, data, if (type == SerializerFactory.AnyType) obj.javaClass else type, context, debugIndent)
+            writeObject(obj, data, if (type == SerializerFactory.AnyType) obj.javaClass else type, debugIndent)
         }
     }
 
-    internal fun writeObject(obj: Any, data: Data, type: Type, context: SerializationContext, debugIndent: Int = 0) {
+    internal fun writeObject(obj: Any, data: Data, type: Type, debugIndent: Int = 0) {
         val serializer = serializerFactory.get(obj.javaClass, type)
         if (serializer !in serializerHistory) {
             serializerHistory.add(serializer)
@@ -129,7 +126,7 @@ open class SerializationOutput @JvmOverloads constructor(
 
         val retrievedRefCount = objectHistory[obj]
         if (retrievedRefCount == null) {
-            serializer.writeObject(obj, data, type, this, context, debugIndent)
+            serializer.writeObject(obj, data, type, this, debugIndent)
             // Important to do it after serialization such that dependent object will have preceding reference numbers
             // assigned to them first as they will be first read from the stream on receiving end.
             // Skip for primitive types as they are too small and overhead of referencing them will be much higher than their content

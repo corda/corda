@@ -16,7 +16,6 @@ import net.corda.core.identity.AbstractParty;
 import net.corda.core.serialization.ConstructorForDeserialization;
 import net.corda.nodeapi.internal.serialization.AllWhitelist;
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationContext;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.jetbrains.annotations.NotNull;
@@ -200,7 +199,7 @@ public class JavaSerializationOutputTests {
                 evolutionSerialiserGetter,
                 fingerPrinter);
         SerializationOutput ser = new SerializationOutput(factory1);
-        SerializedBytes<Object> bytes = ser.serialize(obj, TestSerializationContext.testSerializationContext);
+        SerializedBytes<Object> bytes = ser.serialize(obj);
 
         DecoderImpl decoder = new DecoderImpl();
 
@@ -220,15 +219,13 @@ public class JavaSerializationOutputTests {
         assertTrue(result != null);
 
         DeserializationInput des = new DeserializationInput(factory2);
-        Object desObj = des.deserialize(bytes, Object.class, TestSerializationContext.testSerializationContext);
+        Object desObj = des.deserialize(bytes, Object.class);
         assertTrue(Objects.deepEquals(obj, desObj));
 
         // Now repeat with a re-used factory
         SerializationOutput ser2 = new SerializationOutput(factory1);
         DeserializationInput des2 = new DeserializationInput(factory1);
-        Object desObj2 = des2.deserialize(ser2.serialize(obj, TestSerializationContext.testSerializationContext),
-                Object.class, TestSerializationContext.testSerializationContext);
-
+        Object desObj2 = des2.deserialize(ser2.serialize(obj), Object.class);
         assertTrue(Objects.deepEquals(obj, desObj2));
         // TODO: check schema is as expected
         return desObj2;

@@ -12,7 +12,6 @@ package net.corda.nodeapi.internal.serialization.amqp;
 
 import net.corda.core.serialization.SerializedBytes;
 import net.corda.nodeapi.internal.serialization.AllWhitelist;
-import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationContext;
 import org.junit.Test;
 import java.io.NotSerializableException;
 
@@ -44,10 +43,10 @@ public class JavaGenericsTest {
                 new SerializerFingerPrinter());
 
         SerializationOutput ser = new SerializationOutput(factory);
-        SerializedBytes<?> bytes = ser.serialize(a1, TestSerializationContext.testSerializationContext);
+        SerializedBytes<?> bytes = ser.serialize(a1);
 
         DeserializationInput des = new DeserializationInput(factory);
-        A a2 = des.deserialize(bytes, A.class, TestSerializationContext.testSerializationContext);
+        A a2 = des.deserialize(bytes, A.class);
 
         assertEquals(1, a2.getT());
     }
@@ -59,13 +58,13 @@ public class JavaGenericsTest {
                 new EvolutionSerializerGetter(),
                 new SerializerFingerPrinter());
 
-       return (new SerializationOutput(factory)).serialize(a, TestSerializationContext.testSerializationContext);
+       return (new SerializationOutput(factory)).serialize(a);
     }
 
     private SerializedBytes<?> forceWildcardSerializeFactory(
             A<?> a,
             SerializerFactory factory) throws NotSerializableException {
-        return (new SerializationOutput(factory)).serialize(a, TestSerializationContext.testSerializationContext);
+        return (new SerializationOutput(factory)).serialize(a);
     }
 
     private A<?> forceWildcardDeserialize(SerializedBytes<?> bytes) throws NotSerializableException {
@@ -76,14 +75,13 @@ public class JavaGenericsTest {
                 new SerializerFingerPrinter());
 
         DeserializationInput des = new DeserializationInput(factory);
-        return des.deserialize(bytes, A.class, TestSerializationContext.testSerializationContext);
+        return des.deserialize(bytes, A.class);
     }
 
     private A<?> forceWildcardDeserializeFactory(
             SerializedBytes<?> bytes,
             SerializerFactory factory) throws NotSerializableException {
-        return (new DeserializationInput(factory)).deserialize(bytes, A.class,
-                TestSerializationContext.testSerializationContext);
+        return (new DeserializationInput(factory)).deserialize(bytes, A.class);
     }
 
     @Test

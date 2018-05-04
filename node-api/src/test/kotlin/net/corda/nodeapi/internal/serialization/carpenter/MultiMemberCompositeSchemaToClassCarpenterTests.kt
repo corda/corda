@@ -17,7 +17,6 @@ import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
 
 class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 

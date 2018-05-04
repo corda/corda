@@ -13,7 +13,6 @@ package net.corda.nodeapi.internal.serialization.amqp;
 import net.corda.core.serialization.CordaSerializable;
 import net.corda.core.serialization.SerializedBytes;
 import net.corda.nodeapi.internal.serialization.AllWhitelist;
-import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationContext;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -143,9 +142,9 @@ public class ListsSerializationJavaTest {
                 evolutionSerializerGetter,
                 fingerPrinter);
         SerializationOutput ser = new SerializationOutput(factory1);
-        SerializedBytes<Object> bytes = ser.serialize(container, TestSerializationContext.testSerializationContext);
+        SerializedBytes<Object> bytes = ser.serialize(container);
         DeserializationInput des = new DeserializationInput(factory1);
-        T deserialized = des.deserialize(bytes, clazz, TestSerializationContext.testSerializationContext);
+        T deserialized = des.deserialize(bytes, clazz);
         Assert.assertEquals(container, deserialized);
     }
 }

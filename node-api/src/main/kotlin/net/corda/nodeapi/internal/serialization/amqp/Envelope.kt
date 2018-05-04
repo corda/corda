@@ -39,7 +39,7 @@ data class Envelope(val obj: Any?, val schema: Schema, val transformsSchema: Tra
         fun get(data: Data): Envelope {
             val describedType = data.`object` as DescribedType
             if (describedType.descriptor != DESCRIPTOR) {
-                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}, should be $DESCRIPTOR.")
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
             }
             val list = describedType.described as List<*>
 

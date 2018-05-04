@@ -4,8 +4,6 @@ import com.google.common.reflect.TypeToken
 import junit.framework.Assert.assertTrue
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.*
-import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
-import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.io.NotSerializableException
@@ -13,8 +11,6 @@ import java.lang.reflect.Type
 import java.net.URL
 import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertEquals
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 // Simple way to ensure we end up trying to carpent a class, "remove" it from the class loader (if only
 // actually doing that was simple)

@@ -1,11 +1,8 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.ConstructorForDeserialization
-import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
 import org.assertj.core.api.Assertions
 import org.junit.Test
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 class RoundTripTests {
     @Test

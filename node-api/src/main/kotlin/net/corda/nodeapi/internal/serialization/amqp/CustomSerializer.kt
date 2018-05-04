@@ -11,7 +11,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.serialization.SerializationContext
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
@@ -51,16 +50,13 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     override val revealSubclassesInSchema: Boolean get() = false
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
-                             context: SerializationContext, debugIndent: Int
-    ) {
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int) {
         data.withDescribed(descriptor) {
-            writeDescribedObject(uncheckedCast(obj), data, type, output, context)
+            writeDescribedObject(uncheckedCast(obj), data, type, output)
         }
     }
 
-    abstract fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,
-                                      context: SerializationContext)
+    abstract fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput)
 
     /**
      * This custom serializer represents a sort of symbolic link from a subclass to a super class, where the super
@@ -91,16 +87,12 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
 
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
 
-        override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,
-                                          context: SerializationContext
-        ) {
-            superClassSerializer.writeDescribedObject(obj, data, type, output, context)
+        override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput) {
+            superClassSerializer.writeDescribedObject(obj, data, type, output)
         }
 
-        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
-                                context: SerializationContext
-        ): T {
-            return superClassSerializer.readObject(obj, schemas, input, context)
+        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): T {
+            return superClassSerializer.readObject(obj, schemas, input)
         }
     }
 
@@ -142,12 +134,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         private val proxySerializer: ObjectSerializer by lazy { ObjectSerializer(proxyClass, factory) }
 
         override val schemaForDocumentation: Schema by lazy {
-            val typeNotations = mutableSetOf<TypeNotation>(
-                    CompositeType(
-                            nameForType(type),
-                            null,
-                            emptyList(),
-                            descriptor, (proxySerializer.typeNotation as CompositeType).fields))
+            val typeNotations = mutableSetOf<TypeNotation>(CompositeType(nameForType(type), null, emptyList(), descriptor, (proxySerializer.typeNotation as CompositeType).fields))
             for (additional in additionalSerializers) {
                 typeNotations.addAll(additional.schemaForDocumentation.types)
             }
@@ -161,21 +148,17 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
 
         protected abstract fun fromProxy(proxy: P): T
 
-        override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,
-                                          context: SerializationContext
-        ) {
+        override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput) {
             val proxy = toProxy(obj)
             data.withList {
                 proxySerializer.propertySerializers.serializationOrder.forEach {
-                    it.getter.writeProperty(proxy, this, output, context)
+                    it.getter.writeProperty(proxy, this, output)
                 }
             }
         }
 
-        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
-                                context: SerializationContext
-        ): T {
-            val proxy: P = uncheckedCast(proxySerializer.readObject(obj, schemas, input, context))
+        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): T {
+            val proxy: P = uncheckedCast(proxySerializer.readObject(obj, schemas, input))
             return fromProxy(proxy)
         }
     }
@@ -203,15 +186,11 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
                         SerializerFactory.primitiveTypeName(String::class.java)!!,
                         descriptor, emptyList())))
 
-        override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,
-                                          context: SerializationContext
-        ) {
+        override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput) {
             data.putString(unmaker(obj))
         }
 
-        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
-                                context: SerializationContext
-        ): T {
+        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): T {
             val proxy = obj as String
             return maker(proxy)
         }

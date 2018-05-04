@@ -23,15 +23,11 @@ class OverridePKSerializerTest {
     class SerializerTestException(message: String) : Exception(message)
 
     class TestPublicKeySerializer : CustomSerializer.Implements<PublicKey>(PublicKey::class.java) {
-        override fun writeDescribedObject(obj: PublicKey, data: Data, type: Type, output: SerializationOutput,
-                                          context: SerializationContext
-        ) {
+        override fun writeDescribedObject(obj: PublicKey, data: Data, type: Type, output: SerializationOutput) {
             throw SerializerTestException("Custom write call")
         }
 
-        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
-                                context: SerializationContext
-        ) : PublicKey {
+        override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): PublicKey {
             throw SerializerTestException("Custom read call")
         }
 
