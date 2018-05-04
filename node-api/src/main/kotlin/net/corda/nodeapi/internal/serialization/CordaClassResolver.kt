@@ -80,10 +80,10 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
         val objectInstance = try {
             targetType.declaredFields.singleOrNull {
                 it.name == "INSTANCE" &&
-                it.type == type &&
-                Modifier.isStatic(it.modifiers) &&
-                Modifier.isFinal(it.modifiers) &&
-                Modifier.isPublic(it.modifiers)
+                        it.type == type &&
+                        Modifier.isStatic(it.modifiers) &&
+                        Modifier.isFinal(it.modifiers) &&
+                        Modifier.isPublic(it.modifiers)
             }?.let {
                 it.isAccessible = true
                 type.cast(it.get(null)!!)
@@ -162,7 +162,7 @@ object AllWhitelist : ClassWhitelist {
     override fun hasListed(type: Class<*>): Boolean = true
 }
 
-sealed class AbstractMutableClassWhitelist(private val whitelist: MutableSet<String>,  private val delegate: ClassWhitelist) : MutableClassWhitelist {
+sealed class AbstractMutableClassWhitelist(private val whitelist: MutableSet<String>, private val delegate: ClassWhitelist) : MutableClassWhitelist {
 
     override fun hasListed(type: Class<*>): Boolean {
         /**

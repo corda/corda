@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -8,9 +9,6 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
 import kotlin.collections.LinkedHashMap
-import kotlin.collections.Map
-import kotlin.collections.iterator
-import kotlin.collections.map
 
 private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
 
@@ -18,8 +16,8 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
  * Serialization / deserialization of certain supported [Map] types.
  */
 class MapSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
-    override val type: Type = (declaredType as? DeserializedParameterizedType) ?:
-            DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType), factory.classloader)
+    override val type: Type = (declaredType as? DeserializedParameterizedType)
+            ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType), factory.classloader)
     override val typeDescriptor: Symbol = Symbol.valueOf(
             "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
 
@@ -57,7 +55,8 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
         }
 
         private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Map<*, *>>): ParameterizedType =
-                (declaredType as? ParameterizedType) ?: DeserializedParameterizedType(collectionClass, arrayOf(SerializerFactory.AnyType, SerializerFactory.AnyType))
+                (declaredType as? ParameterizedType)
+                        ?: DeserializedParameterizedType(collectionClass, arrayOf(SerializerFactory.AnyType, SerializerFactory.AnyType))
 
 
         private fun findMostSuitableMapType(actualClass: Class<*>): Class<out Map<*, *>> =
@@ -80,6 +79,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
             data: Data,
             type: Type,
             output: SerializationOutput,
+            context: SerializationContext,
             debugIndent: Int) = ifThrowsAppend({ declaredType.typeName }) {
         obj.javaClass.checkSupportedMapType()
         // Write described
@@ -88,22 +88,25 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
             data.putMap()
             data.enter()
             for ((key, value) in obj as Map<*, *>) {
-                output.writeObjectOrNull(key, data, declaredType.actualTypeArguments[0], debugIndent)
-                output.writeObjectOrNull(value, data, declaredType.actualTypeArguments[1], debugIndent)
+                output.writeObjectOrNull(key, data, declaredType.actualTypeArguments[0], context, debugIndent)
+                output.writeObjectOrNull(value, data, declaredType.actualTypeArguments[1], context, debugIndent)
             }
             data.exit() // exit map
         }
     }
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): Any = ifThrowsAppend({ declaredType.typeName }) {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
+                            context: SerializationContext
+    ): Any = ifThrowsAppend({ declaredType.typeName }) {
         // TODO: General generics question. Do we need to validate that entries in Maps and Collections match the generic type?  Is it a security hole?
-        val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(schemas, input, it) }
+        val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(schemas, input, it, context) }
         concreteBuilder(entries.toMap())
     }
 
-    private fun readEntry(schemas: SerializationSchemas, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) =
-            input.readObjectOrNull(entry.key, schemas, declaredType.actualTypeArguments[0]) to
-                    input.readObjectOrNull(entry.value, schemas, declaredType.actualTypeArguments[1])
+    private fun readEntry(schemas: SerializationSchemas, input: DeserializationInput, entry: Map.Entry<Any?, Any?>,
+                          context: SerializationContext
+    ) = input.readObjectOrNull(entry.key, schemas, declaredType.actualTypeArguments[0], context) to
+            input.readObjectOrNull(entry.value, schemas, declaredType.actualTypeArguments[1], context)
 
     // Cannot use * as a bound for EnumMap and EnumSet since * is not an enum.  So, we use a sample enum instead.
     // We don't actually care about the type, we just need to make the compiler happier.

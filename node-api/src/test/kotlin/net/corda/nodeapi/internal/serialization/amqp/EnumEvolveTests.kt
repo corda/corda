@@ -4,6 +4,8 @@ import net.corda.core.internal.toPath
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.SerializedBytes
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testName
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -12,6 +14,8 @@ import java.io.NotSerializableException
 import java.net.URI
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 // NOTE: To recreate the test files used by these tests uncomment the original test classes and comment
 //       the new ones out, then change each test to write out the serialized bytes rather than read
