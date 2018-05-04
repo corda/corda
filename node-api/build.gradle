@@ -35,7 +35,7 @@ dependencies {
     compile "de.javakaffee:kryo-serializers:0.41"
 
     // For AMQP serialisation.
-    compile "org.apache.qpid:proton-j:0.27.1"
+    compile "org.apache.qpid:proton-j:${protonj_version}"
 
     // FastClasspathScanner: classpath scanning - needed for the NetworkBootstraper
     compile 'io.github.lukehutch:fast-classpath-scanner:2.12.3'
