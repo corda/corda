@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="info">
+
+    <Properties>
+        <Property name="log-path">logs</Property>
+        <Property name="log-name">node-${hostName}</Property>
+        <Property name="archive">${log-path}/archive</Property>
+    </Properties>
+
+    <ThresholdFilter level="trace"/>
+
+    <Appenders>
+        <Console name="Console-Appender" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%-5level] %date{HH:mm:ss,SSSZ} [%t] %c{2}.%method - %msg%n"/>
+        </Console>
+
+        <!-- Required for printBasicInfo -->
+        <Console name="Console-Appender-Println" target="SYSTEM_OUT">
+            <PatternLayout pattern="%msg%n" />
+        </Console>
+
+        <!-- Will generate up to 10 log files for a given day. During every rollover it will delete
+             those that are older than 60 days, but keep the most recent 10 GB -->
+        <RollingFile name="RollingFile-Appender"
+                     fileName="${log-path}/${log-name}.log"
+                     filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
+
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2} - %msg%n"/>
+
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+
+            <DefaultRolloverStrategy min="1" max="10">
+                <Delete basePath="${archive}" maxDepth="1">
+                    <IfFileName glob="${log-name}*.log.gz"/>
+                    <IfLastModified age="60d">
+                        <IfAny>
+                            <IfAccumulatedFileSize exceeds="10 GB"/>
+                        </IfAny>
+                    </IfLastModified>
+                </Delete>
+            </DefaultRolloverStrategy>
+
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <Root level="trace">
+            <AppenderRef ref="Console-Appender" level="info"/>
+            <AppenderRef ref="RollingFile-Appender" level="debug"/>
+        </Root>
+        <Logger name="BasicInfo" additivity="false">
+            <AppenderRef ref="Console-Appender-Println"/>
+            <AppenderRef ref="RollingFile-Appender" />
+        </Logger>
+    </Loggers>
+
+</Configuration>
