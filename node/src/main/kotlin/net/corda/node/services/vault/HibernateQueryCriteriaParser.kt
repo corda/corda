@@ -422,7 +422,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             e.message?.let { message ->
                 if (message.contains("Not an entity"))
                     throw VaultQueryException("""
-                    Please register the entity '${entityClass.name.substringBefore('$')}'
+                    Please register the entity '${entityClass.name}'
                     See https://docs.corda.net/api-persistence.html#custom-schema-registration for more information""")
             }
             throw VaultQueryException("Parsing error: ${e.message}")
