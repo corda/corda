@@ -130,12 +130,12 @@ class InteractiveShellIntegrationTest {
     }
 
     @Test
-    fun `internal shell user should not have permissions to run commands if node started with devMode=false`() {
+    fun `internal shell user should not be able to connect if node started with devMode=false`() {
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
             startNode().getOrThrow().use { node ->
                 val conf = (node as NodeHandleInternal).configuration.toShellConfig()
                 InteractiveShell.startShellInternal(conf)
-                assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(PermissionException::class.java)
+                assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQSecurityException::class.java)
             }
         }
     }
