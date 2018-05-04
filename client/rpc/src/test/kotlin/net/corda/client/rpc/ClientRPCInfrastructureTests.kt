@@ -1,5 +1,6 @@
 package net.corda.client.rpc
 
+import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
@@ -11,6 +12,7 @@ import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.rpcDriver
 import net.corda.testing.node.internal.rpcTestUser
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -77,9 +79,10 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
             // Does nothing, doesn't throw.
             proxy.void()
 
-            assertEquals("Barf!", assertFailsWith<IllegalArgumentException> {
-                proxy.barf()
-            }.message)
+            assertThatThrownBy { proxy.barf() }
+                    .isInstanceOf(CordaRuntimeException::class.java)
+                    .hasMessage("java.lang.IllegalArgumentException: Barf!")
+
 
             assertEquals("hi 5", proxy.someCalculation("hi", 5))
         }

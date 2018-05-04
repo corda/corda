@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
@@ -21,6 +22,7 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
 import net.corda.finance.schemas.SampleCashSchemaV2
+import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -32,12 +34,14 @@ import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
 import net.corda.testing.internal.vault.DummyLinearContract
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.internal.vault.VaultFiller
+import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.*
 import org.junit.rules.ExpectedException
+import org.junit.rules.ExternalResource
 import java.lang.Thread.sleep
 import java.time.Instant
 import java.time.LocalDate
@@ -45,98 +49,140 @@ import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-class VaultQueryTests {
-    private companion object {
-        val alice = TestIdentity(ALICE_NAME, 70)
-        val bankOfCorda = TestIdentity(BOC_NAME)
-        val bigCorp = TestIdentity(CordaX500Name("BigCorporation", "New York", "US"))
-        val bob = TestIdentity(BOB_NAME, 80)
-        val cashNotary = TestIdentity(CordaX500Name("Cash Notary Service", "Zurich", "CH"), 21)
-        val charlie = TestIdentity(CHARLIE_NAME, 90)
-        val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
-        val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
-        val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
-        val DUMMY_OBLIGATION_ISSUER = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).party
-        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
-        val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
-        val ALICE get() = alice.party
-        val ALICE_IDENTITY get() = alice.identity
-        val BIG_CORP get() = bigCorp.party
-        val BIG_CORP_IDENTITY get() = bigCorp.identity
-        val BOB get() = bob.party
-        val BOB_IDENTITY get() = bob.identity
-        val BOC get() = bankOfCorda.party
-        val BOC_IDENTITY get() = bankOfCorda.identity
-        val BOC_KEY get() = bankOfCorda.keyPair
-        val BOC_PUBKEY get() = bankOfCorda.publicKey
-        val CASH_NOTARY get() = cashNotary.party
-        val CASH_NOTARY_IDENTITY get() = cashNotary.identity
-        val CHARLIE get() = charlie.party
-        val CHARLIE_IDENTITY get() = charlie.identity
-        val DUMMY_NOTARY get() = dummyNotary.party
-        val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
-        val MEGA_CORP_IDENTITY get() = megaCorp.identity
-        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
-        val MEGA_CORP_KEY get() = megaCorp.keyPair
-        val MEGA_CORP get() = megaCorp.party
-        val MINI_CORP_IDENTITY get() = miniCorp.identity
-        val MINI_CORP get() = miniCorp.party
+interface VaultQueryParties {
+    val alice: TestIdentity
+    val bankOfCorda: TestIdentity
+    val bigCorp: TestIdentity
+    val bob: TestIdentity
+    val cashNotary: TestIdentity
+    val charlie: TestIdentity
+    val dummyCashIssuer: TestIdentity
+    val DUMMY_CASH_ISSUER: PartyAndReference
+    val dummyNotary: TestIdentity
+    val DUMMY_OBLIGATION_ISSUER: Party
+    val megaCorp: TestIdentity
+    val miniCorp: TestIdentity
 
-        private val cordappPackages = listOf(
-                "net.corda.testing.contracts",
-                "net.corda.finance.contracts",
-                CashSchemaV1::class.packageName,
-                DummyLinearStateSchemaV1::class.packageName)
-        private lateinit var services: MockServices
-        private lateinit var vaultFiller: VaultFiller
-        private lateinit var vaultFillerCashNotary: VaultFiller
-        private lateinit var notaryServices: MockServices
-        private val vaultService: VaultService get() = services.vaultService
-        private lateinit var identitySvc: IdentityService
-        private lateinit var database: CordaPersistence
+    val ALICE get() = alice.party
+    val ALICE_IDENTITY get() = alice.identity
+    val BIG_CORP get() = bigCorp.party
+    val BIG_CORP_IDENTITY get() = bigCorp.identity
+    val BOB get() = bob.party
+    val BOB_IDENTITY get() = bob.identity
+    val BOC get() = bankOfCorda.party
+    val BOC_IDENTITY get() = bankOfCorda.identity
+    val BOC_KEY get() = bankOfCorda.keyPair
+    val BOC_PUBKEY get() = bankOfCorda.publicKey
+    val CASH_NOTARY get() = cashNotary.party
+    val CASH_NOTARY_IDENTITY get() = cashNotary.identity
+    val CHARLIE get() = charlie.party
+    val CHARLIE_IDENTITY get() = charlie.identity
+    val DUMMY_NOTARY get() = dummyNotary.party
+    val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
+    val MEGA_CORP_IDENTITY get() = megaCorp.identity
+    val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
+    val MEGA_CORP_KEY get() = megaCorp.keyPair
+    val MEGA_CORP get() = megaCorp.party
+    val MINI_CORP_IDENTITY get() = miniCorp.identity
+    val MINI_CORP get() = miniCorp.party
 
-        @BeforeClass @JvmStatic
-        fun setUpClass() {
-            // register additional identities
-            val databaseAndServices = makeTestDatabaseAndMockServices(
-                    cordappPackages,
-                    makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
-                    Companion.megaCorp,
-                    moreKeys = DUMMY_NOTARY_KEY)
-            database = databaseAndServices.first
-            services = databaseAndServices.second
-            vaultFiller = VaultFiller(services, dummyNotary)
-            vaultFillerCashNotary = VaultFiller(services, dummyNotary, CASH_NOTARY)
-            notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock(), dummyCashIssuer.keyPair, BOC_KEY, MEGA_CORP_KEY)
-            identitySvc = services.identityService
-            // Register all of the identities we're going to use
-            (notaryServices.myInfo.legalIdentitiesAndCerts + BOC_IDENTITY + CASH_NOTARY_IDENTITY + MINI_CORP_IDENTITY + MEGA_CORP_IDENTITY).forEach { identity ->
-                services.identityService.verifyAndRegisterIdentity(identity)
-            }
+    val services: MockServices
+    val vaultFiller: VaultFiller
+    val vaultFillerCashNotary: VaultFiller
+    val notaryServices: MockServices
+    val vaultService: VaultService
+    val identitySvc: IdentityService
+    val database: CordaPersistence
+
+    val cordappPackages: List<String>
+}
+
+open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
+
+    override val alice = TestIdentity(ALICE_NAME, 70)
+    override val bankOfCorda = TestIdentity(BOC_NAME)
+    override val bigCorp = TestIdentity(CordaX500Name("BigCorporation", "New York", "US"))
+    override val bob = TestIdentity(BOB_NAME, 80)
+    override val cashNotary = TestIdentity(CordaX500Name("Cash Notary Service", "Zurich", "CH"), 21)
+    override val charlie = TestIdentity(CHARLIE_NAME, 90)
+    override val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
+    override val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
+    override val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
+    override val DUMMY_OBLIGATION_ISSUER = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).party
+    override val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+    override val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
+    override val MINI_CORP get() = miniCorp.party
+
+    override val cordappPackages = listOf(
+            "net.corda.testing.contracts",
+            "net.corda.finance.contracts",
+            CashSchemaV1::class.packageName,
+            DummyLinearStateSchemaV1::class.packageName,
+            SampleCashSchemaV3::class.packageName)
+
+    override lateinit var services: MockServices
+    override lateinit var vaultFiller: VaultFiller
+    override lateinit var vaultFillerCashNotary: VaultFiller
+    override lateinit var notaryServices: MockServices
+    override val vaultService: VaultService get() = services.vaultService
+    override lateinit var identitySvc: IdentityService
+    override lateinit var database: CordaPersistence
+
+
+    override fun before() {
+        // register additional identities
+        val databaseAndServices = makeTestDatabaseAndMockServices(
+                cordappPackages,
+                makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
+                megaCorp,
+                moreKeys = DUMMY_NOTARY_KEY)
+        database = databaseAndServices.first
+        services = databaseAndServices.second
+        vaultFiller = VaultFiller(services, dummyNotary)
+        vaultFillerCashNotary = VaultFiller(services, dummyNotary, CASH_NOTARY)
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock(), dummyCashIssuer.keyPair, BOC_KEY, MEGA_CORP_KEY)
+        identitySvc = services.identityService
+        // Register all of the identities we're going to use
+        (notaryServices.myInfo.legalIdentitiesAndCerts + BOC_IDENTITY + CASH_NOTARY_IDENTITY + MINI_CORP_IDENTITY + MEGA_CORP_IDENTITY).forEach { identity ->
+            services.identityService.verifyAndRegisterIdentity(identity)
         }
     }
 
-    private lateinit var transaction: DatabaseTransaction
+    override fun after() {
+        database.close()
+    }
+}
 
+class VaultQueryRollbackRule(val vaultQueryParties: VaultQueryParties) : ExternalResource() {
 
-    @Rule
-    @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    lateinit var transaction: DatabaseTransaction
+
+    override fun before() {
+        transaction = vaultQueryParties.database.newTransaction()
+    }
+
+    override fun after() {
+        transaction.rollback()
+        transaction.close()
+    }
+}
+
+abstract class VaultQueryTestsBase : VaultQueryParties {
 
     @Rule
     @JvmField
     val expectedEx: ExpectedException = ExpectedException.none()
 
-    @Before
-    fun setUp() {
-        transaction = database.newTransaction()
+    @Suppress("LeakingThis")
+    @Rule
+    @JvmField
+    val transactionRule = VaultQueryRollbackRule(this)
+
+    companion object {
+        @ClassRule @JvmField
+        val testSerialization = SerializationEnvironmentRule()
     }
 
-    @After
-    fun tearDown() {
-        transaction.rollback()
-        transaction.close()
-    }
 
     /**
      * Helper method for generating a Persistent H2 test database
@@ -2195,4 +2241,12 @@ class VaultQueryTests {
      *  3) Template / Tutorial CorDapp service query extension executing Named Queries via JPA
      *  4) Advanced pagination queries using Spring Data (and/or Hibernate/JPQL)
      */
+}
+
+class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by vaultQueryTestRule {
+
+    companion object {
+        @ClassRule @JvmField
+        val vaultQueryTestRule = VaultQueryTestRule()
+    }
 }

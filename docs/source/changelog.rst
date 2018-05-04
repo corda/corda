@@ -38,6 +38,9 @@ Unreleased
 
 * java.security.cert.X509CRL serialization support added.
 
+* Replaced the ``PersistentMap`` in ``NodeSchedulerService`` with an implementation that only loads the next scheduled
+  state from the database into memory, rather than them all.
+
 * Upgraded H2 to v1.4.197.
 
 * Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
