@@ -27,17 +27,18 @@ internal class ArtemisRpcBroker internal constructor(
         private val maxMessageSize: Int,
         private val jmxEnabled: Boolean = false,
         private val baseDirectory: Path,
-        private val nodeConfiguration: SSLConfiguration) : ArtemisBroker {
+        private val nodeConfiguration: SSLConfiguration,
+        private val shouldStartLocalShell: Boolean) : ArtemisBroker {
 
     companion object {
         private val logger = loggerFor<ArtemisRpcBroker>()
 
-        fun withSsl(configuration: SSLConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path): ArtemisBroker {
-            return ArtemisRpcBroker(address, adminAddress, sslOptions, true, securityManager, maxMessageSize, jmxEnabled, baseDirectory, configuration)
+        fun withSsl(configuration: SSLConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, sslOptions: BrokerRpcSslOptions, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
+            return ArtemisRpcBroker(address, adminAddress, sslOptions, true, securityManager, maxMessageSize, jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
         }
 
-        fun withoutSsl(configuration: SSLConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path): ArtemisBroker {
-            return ArtemisRpcBroker(address, adminAddress, null, false, securityManager, maxMessageSize, jmxEnabled, baseDirectory, configuration)
+        fun withoutSsl(configuration: SSLConfiguration, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort, securityManager: RPCSecurityManager, maxMessageSize: Int, jmxEnabled: Boolean, baseDirectory: Path, shouldStartLocalShell: Boolean): ArtemisBroker {
+            return ArtemisRpcBroker(address, adminAddress, null, false, securityManager, maxMessageSize, jmxEnabled, baseDirectory, configuration, shouldStartLocalShell)
         }
     }
 
@@ -62,7 +63,7 @@ internal class ArtemisRpcBroker internal constructor(
     private val server = initialiseServer()
 
     private fun initialiseServer(): ActiveMQServer {
-        val serverConfiguration = RpcBrokerConfiguration(baseDirectory, maxMessageSize, jmxEnabled, addresses.primary, adminAddressOptional, sslOptions, useSsl, nodeConfiguration)
+        val serverConfiguration = RpcBrokerConfiguration(baseDirectory, maxMessageSize, jmxEnabled, addresses.primary, adminAddressOptional, sslOptions, useSsl, nodeConfiguration, shouldStartLocalShell)
         val serverSecurityManager = createArtemisSecurityManager(serverConfiguration.loginListener)
 
         return ActiveMQServerImpl(serverConfiguration, serverSecurityManager).apply {

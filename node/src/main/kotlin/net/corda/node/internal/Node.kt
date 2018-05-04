@@ -37,7 +37,7 @@ import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.DemoClock
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
@@ -165,7 +165,7 @@ open class Node(configuration: NodeConfiguration,
                 ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
         securityManager = with(RPCSecurityManagerImpl(securityManagerConfig)) {
-            if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this, User(NODE_RPC_USER, NODE_RPC_USER, setOf(Permissions.all()))) else this
+            if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this, User(INTERNAL_SHELL_USER, INTERNAL_SHELL_USER, setOf(Permissions.all()))) else this
         }
 
         if (!configuration.messagingServerExternal) {
@@ -217,9 +217,9 @@ open class Node(configuration: NodeConfiguration,
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(configuration, this.address, adminAddress, sslConfig, securityManager, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
+                        ArtemisRpcBroker.withSsl(configuration, this.address, adminAddress, sslConfig, securityManager, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     } else {
-                        ArtemisRpcBroker.withoutSsl(configuration, this.address, adminAddress, securityManager, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
+                        ArtemisRpcBroker.withoutSsl(configuration, this.address, adminAddress, securityManager, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     }
                 }
                 rpcBroker!!.addresses

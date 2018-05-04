@@ -17,7 +17,7 @@ import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import java.nio.file.Path
 
-internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, jmxEnabled: Boolean, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort?, sslOptions: BrokerRpcSslOptions?, useSsl: Boolean, nodeConfiguration: SSLConfiguration) : SecureArtemisConfiguration() {
+internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, jmxEnabled: Boolean, address: NetworkHostAndPort, adminAddress: NetworkHostAndPort?, sslOptions: BrokerRpcSslOptions?, useSsl: Boolean, nodeConfiguration: SSLConfiguration, shouldStartLocalShell: Boolean) : SecureArtemisConfiguration() {
     val loginListener: (String) -> Unit
 
     init {
@@ -45,7 +45,8 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
 
         val nodeInternalRole = Role(BrokerJaasLoginModule.NODE_RPC_ROLE, true, true, true, true, true, true, true, true)
 
-        val rolesAdderOnLogin = RolesAdderOnLogin(listOf(ArtemisMessagingComponent.NODE_RPC_USER)) { username ->
+        val addRPCRoleToUsers = if (shouldStartLocalShell) listOf(ArtemisMessagingComponent.INTERNAL_SHELL_USER) else emptyList()
+        val rolesAdderOnLogin = RolesAdderOnLogin(addRPCRoleToUsers) { username ->
             "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#" to setOf(nodeInternalRole, restrictedRole(
                     "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username",
                     consume = true,
