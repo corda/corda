@@ -365,7 +365,7 @@ class RPCClientProxyHandler(
             // This is going to send remote message, see `org.apache.activemq.artemis.core.client.impl.ClientConsumerImpl.doCleanUp()`.
             sessionFactory?.close()
         } else {
-            // This performs a cheaper and fater version of local cleanup.
+            // This performs a cheaper and faster version of local cleanup.
             sessionFactory?.cleanup()
         }
 
