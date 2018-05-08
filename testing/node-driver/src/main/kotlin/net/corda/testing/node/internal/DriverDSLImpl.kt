@@ -82,6 +82,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.concurrent.thread
 import net.corda.nodeapi.internal.config.User as InternalUser
@@ -117,8 +118,13 @@ class DriverDSLImpl(
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
+    interface Waitable {
+        @Throws(InterruptedException::class)
+        fun waitFor(): Unit
+    }
+
     class State {
-        val processes = ArrayList<Process>()
+        val processes = ArrayList<Waitable>()
     }
 
     private val state = ThreadBox(State())
@@ -623,20 +629,32 @@ class DriverDSLImpl(
                         }
                     }
             )
-            return nodeAndThreadFuture.flatMap { (node, thread) ->
+            val nodeFuture: CordaFuture<NodeHandle> = nodeAndThreadFuture.flatMap { (node, thread) ->
                 establishRpc(config, openFuture()).flatMap { rpc ->
                     visibilityHandle.listen(rpc).map {
                         InProcessImpl(rpc.nodeInfo(), rpc, config.corda, webAddress, useHTTPS, thread, onNodeExit, node)
                     }
                 }
             }
+            state.locked {
+                processes += object : Waitable {
+                    override fun waitFor() {
+                        nodeAndThreadFuture.getOrThrow().second.join()
+                    }
+                }
+            }
+            return nodeFuture
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
             if (waitForAllNodesToFinish) {
                 state.locked {
-                    processes += process
+                    processes += object : Waitable {
+                        override fun waitFor() {
+                            process.waitFor()
+                        }
+                    }
                 }
             } else {
                 shutdownManager.registerProcessShutdown(process)

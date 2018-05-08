@@ -61,8 +61,8 @@ This command line will start the node with JMX metrics accessible via HTTP on po
 
 See :ref:`Monitoring your node <jolokia_ref>` for further details.
 
-Starting all nodes at once from the command line
-------------------------------------------------
+Starting all nodes at once from the command line (native)
+---------------------------------------------------------
 If you created your nodes using ``deployNodes``, a ``runnodes`` shell script (or batch file on Windows) will have been
 generated to allow you to quickly start up all nodes and their webservers. ``runnodes`` should only be used for testing
 purposes.
@@ -73,4 +73,20 @@ Start the nodes with ``runnodes`` by running the following command from the root
 * Windows: ``call build\nodes\runnodes.bat``
 
 .. warning:: On macOS, do not click/change focus until all the node terminal windows have opened, or some processes may
-fail to start.
+   fail to start.
+
+If you receive an ``OutOfMemoryError`` exception when interacting with the nodes, you need to increase the amount of
+Java heap memory available to them, which you can do when running them individually. See
+:ref:`starting-an-individual-corda-node`.
+
+Starting all nodes at once from the command line (docker-compose)
+-----------------------------------------------------------------
+If you created your nodes using ``Dockerform``, the ``docker-compose.yml`` file and corresponding ``Dockerfile`` for
+nodes has been created and configured appropriately. Navigate to ``build/nodes`` directory and run ``docker-compose up``
+command. This will startup nodes inside new, internal network.
+After the nodes are started up, you can use ``docker ps`` command to see how the ports are mapped.
+
+.. warning:: You need both ``Docker`` and ``docker-compose`` installed and enabled to use this method. Docker CE
+   (Community Edition) is enough. Please refer to `Docker CE documentation <https://www.docker.com/community-edition>`_
+   and `Docker Compose documentation <https://docs.docker.com/compose/install/>`_ for installation instructions for all
+   major operating systems.

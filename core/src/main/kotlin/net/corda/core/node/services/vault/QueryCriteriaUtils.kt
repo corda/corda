@@ -17,6 +17,8 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Field
+import kotlin.jvm.internal.CallableReference
+import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.javaGetter
 
@@ -77,8 +79,21 @@ sealed class CriteriaExpression<O, out T> {
 
 @CordaSerializable
 class Column<O, out C>(val name: String, val declaringClass: Class<*>) {
+    @Deprecated("Does not support fields from a MappedSuperclass. Use the equivalent that accepts a FieldInfo.")
     constructor(field: Field) : this(field.name, field.declaringClass)
-    constructor(property: KProperty1<O, C?>) : this(property.name, property.javaGetter!!.declaringClass)
+    constructor(field: FieldInfo) : this(field.name, field.entityClass)
+    constructor(property: KProperty1<O, C?>) : this(property.name, declaringClass(property))
+
+    private companion object {
+        fun <O, C> declaringClass(property: KProperty1<O, C?>): Class<*> {
+            return when (property) {
+                // This is to ensure that, for a JPA Entity, a field declared in a MappedSuperclass will not cause Hibernate to reject a query referencing it.
+                // TODO remove the cast and access the owner properly after it will be exposed as Kotlin's public API (https://youtrack.jetbrains.com/issue/KT-24170).
+                is CallableReference -> ((property as CallableReference).owner as KClass<*>).javaObjectType
+                else -> property.javaGetter!!.declaringClass
+            }
+        }
+    }
 }
 
 @CordaSerializable
@@ -227,16 +242,23 @@ object Builder {
     fun <R : Comparable<R>> compare(operator: BinaryComparisonOperator, value: R) = ColumnPredicate.BinaryComparison(operator, value)
     fun <O, R> KProperty1<O, R?>.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column(this), predicate)
 
-    fun <R> Field.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column<Any, R>(this), predicate)
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R> Field.predicate(predicate: ColumnPredicate<R>) = info().predicate(predicate)
+    fun <R> FieldInfo.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column<Any, R>(this), predicate)
 
     fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<O, R>>? = null, orderBy: Sort.Direction? = null)
             = CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy)
 
-    fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null)
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null) = info().functionPredicate(predicate, groupByColumns, orderBy)
+
+    fun <R> FieldInfo.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null)
             = CriteriaExpression.AggregateFunctionExpression(Column<Any, R>(this), predicate, groupByColumns, orderBy)
 
     fun <O, R : Comparable<R>> KProperty1<O, R?>.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
-    fun <R : Comparable<R>> Field.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R : Comparable<R>> Field.comparePredicate(operator: BinaryComparisonOperator, value: R) = info().comparePredicate(operator, value)
+    fun <R : Comparable<R>> FieldInfo.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
 
     fun <O, R> KProperty1<O, R?>.equal(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, value))
     fun <O, R> KProperty1<O, R?>.notEqual(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.NOT_EQUAL, value))
@@ -249,31 +271,57 @@ object Builder {
     fun <O, R : Comparable<R>> KProperty1<O, R?>.notIn(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.NOT_IN, collection))
 
     @JvmStatic
-    fun <R> Field.equal(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, value))
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R> Field.equal(value: R) = info().equal(value)
+    @JvmStatic
+    fun <R> FieldInfo.equal(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, value))
 
     @JvmStatic
-    fun <R> Field.notEqual(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.NOT_EQUAL, value))
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R> Field.notEqual(value: R) = info().notEqual(value)
+    @JvmStatic
+    fun <R> FieldInfo.notEqual(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.NOT_EQUAL, value))
 
     @JvmStatic
-    fun <R : Comparable<R>> Field.lessThan(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN, value)
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R : Comparable<R>> Field.lessThan(value: R) = info().lessThan(value)
+    @JvmStatic
+    fun <R : Comparable<R>> FieldInfo.lessThan(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN, value)
 
     @JvmStatic
-    fun <R : Comparable<R>> Field.lessThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN_OR_EQUAL, value)
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R : Comparable<R>> Field.lessThanOrEqual(value: R) = info().lessThanOrEqual(value)
+    @JvmStatic
+    fun <R : Comparable<R>> FieldInfo.lessThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN_OR_EQUAL, value)
 
     @JvmStatic
-    fun <R : Comparable<R>> Field.greaterThan(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN, value)
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R : Comparable<R>> Field.greaterThan(value: R) = info().greaterThan(value)
+    @JvmStatic
+    fun <R : Comparable<R>> FieldInfo.greaterThan(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN, value)
 
     @JvmStatic
-    fun <R : Comparable<R>> Field.greaterThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, value)
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R : Comparable<R>> Field.greaterThanOrEqual(value: R) = info().greaterThanOrEqual(value)
+    @JvmStatic
+    fun <R : Comparable<R>> FieldInfo.greaterThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, value)
 
     @JvmStatic
-    fun <R : Comparable<R>> Field.between(from: R, to: R) = predicate(ColumnPredicate.Between(from, to))
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R : Comparable<R>> Field.between(from: R, to: R) = info().between(from, to)
+    @JvmStatic
+    fun <R : Comparable<R>> FieldInfo.between(from: R, to: R) = predicate(ColumnPredicate.Between(from, to))
 
     @JvmStatic
-    fun <R : Comparable<R>> Field.`in`(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.IN, collection))
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R : Comparable<R>> Field.`in`(collection: Collection<R>) = info().`in`(collection)
+    fun <R : Comparable<R>> FieldInfo.`in`(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.IN, collection))
 
     @JvmStatic
-    fun <R : Comparable<R>> Field.notIn(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.NOT_IN, collection))
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R : Comparable<R>> Field.notIn(collection: Collection<R>) = info().notIn(collection)
+    @JvmStatic
+    fun <R : Comparable<R>> FieldInfo.notIn(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.NOT_IN, collection))
 
     fun <R> equal(value: R) = ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, value)
     fun <R> notEqual(value: R) = ColumnPredicate.EqualityComparison(EqualityComparisonOperator.NOT_EQUAL, value)
@@ -292,19 +340,31 @@ object Builder {
 
     fun <O> KProperty1<O, String?>.like(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.LIKE, string))
     @JvmStatic
-    fun Field.like(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.LIKE, string))
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun Field.like(string: String) = info().like(string)
+    @JvmStatic
+    fun FieldInfo.like(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.LIKE, string))
 
     fun <O> KProperty1<O, String?>.notLike(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.NOT_LIKE, string))
     @JvmStatic
-    fun Field.notLike(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.NOT_LIKE, string))
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun Field.notLike(string: String) = info().notLike(string)
+    @JvmStatic
+    fun FieldInfo.notLike(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.NOT_LIKE, string))
 
     fun <O, R> KProperty1<O, R?>.isNull() = predicate(ColumnPredicate.NullExpression(NullOperator.IS_NULL))
     @JvmStatic
-    fun Field.isNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.IS_NULL))
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun Field.isNull() = info().isNull()
+    @JvmStatic
+    fun FieldInfo.isNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.IS_NULL))
 
     fun <O, R> KProperty1<O, R?>.notNull() = predicate(ColumnPredicate.NullExpression(NullOperator.NOT_NULL))
     @JvmStatic
-    fun Field.notNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.NOT_NULL))
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun Field.notNull() = info().notNull()
+    @JvmStatic
+    fun FieldInfo.notNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.NOT_NULL))
 
     /** aggregate functions */
     fun <O, R> KProperty1<O, R?>.sum(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
@@ -312,19 +372,31 @@ object Builder {
 
     @JvmStatic
     @JvmOverloads
-    fun <R> Field.sum(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) =
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R> Field.sum(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = info().sum<R>(groupByColumns?.map { it.info() }, orderBy)
+    @JvmStatic
+    @JvmOverloads
+    fun <R> FieldInfo.sum(groupByColumns: List<FieldInfo>? = null, orderBy: Sort.Direction? = null) =
             functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.SUM), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
 
     fun <O, R> KProperty1<O, R?>.count() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.COUNT))
     @JvmStatic
-    fun Field.count() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.COUNT))
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun Field.count() = info().count()
+    @JvmStatic
+    fun FieldInfo.count() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.COUNT))
 
     fun <O, R> KProperty1<O, R?>.avg(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
             functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.AVG), groupByColumns?.map { Column(it) }, orderBy)
 
     @JvmStatic
     @JvmOverloads
-    fun <R> Field.avg(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) =
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R> Field.avg(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = info().avg<R>(groupByColumns?.map { it.info() }, orderBy)
+
+    @JvmStatic
+    @JvmOverloads
+    fun <R> FieldInfo.avg(groupByColumns: List<FieldInfo>? = null, orderBy: Sort.Direction? = null) =
             functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.AVG), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
 
     fun <O, R> KProperty1<O, R?>.min(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
@@ -332,7 +404,12 @@ object Builder {
 
     @JvmStatic
     @JvmOverloads
-    fun <R> Field.min(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) =
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R> Field.min(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = info().min<R>(groupByColumns?.map { it.info() }, orderBy)
+
+    @JvmStatic
+    @JvmOverloads
+    fun <R> FieldInfo.min(groupByColumns: List<FieldInfo>? = null, orderBy: Sort.Direction? = null) =
             functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MIN), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
 
     fun <O, R> KProperty1<O, R?>.max(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
@@ -340,8 +417,50 @@ object Builder {
 
     @JvmStatic
     @JvmOverloads
-    fun <R> Field.max(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) =
+    @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
+    fun <R> Field.max(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = info().max<R>(groupByColumns?.map { it.info() }, orderBy)
+
+    @JvmStatic
+    @JvmOverloads
+    fun <R> FieldInfo.max(groupByColumns: List<FieldInfo>? = null, orderBy: Sort.Direction? = null) =
             functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MAX), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
+
+    private fun Field.info(): FieldInfo = FieldInfo(name, declaringClass)
 }
 
 inline fun <A> builder(block: Builder.() -> A) = block(Builder)
+
+/**
+ * Contains information about a field from an entity class.
+ * Used as part of query criteria construction through [Builder], produced by function [getField].
+ * The constructor should not be invoked manually.
+ *
+ * @param name field name
+ * @param entityClass JPA entity class for the query
+ */
+class FieldInfo internal constructor(val name: String, val entityClass: Class<*>)
+
+/**
+ * Returns a [FieldInfo] for field with name [fieldName] in [entityClass].
+ *
+ * @param fieldName name of the field
+ * @param entityClass JPA entity class containing the field
+ * @throws NoSuchFieldException if no field with name [fieldName] is found in the class hierarchy of [entityClass]
+ */
+@Throws(NoSuchFieldException::class)
+fun getField(fieldName: String, entityClass: Class<*>): FieldInfo {
+    return getField(fieldName, entityClass, entityClass)
+}
+
+@Throws(NoSuchFieldException::class)
+private fun getField(fieldName: String, clazz: Class<*>?, invokingClazz: Class<*>): FieldInfo {
+    if (clazz == null) {
+        throw NoSuchFieldException(fieldName)
+    }
+    return try {
+        val field = clazz.getDeclaredField(fieldName)
+        return FieldInfo(field.name, invokingClazz)
+    } catch (e: NoSuchFieldException) {
+        getField(fieldName, clazz.superclass, invokingClazz)
+    }
+}

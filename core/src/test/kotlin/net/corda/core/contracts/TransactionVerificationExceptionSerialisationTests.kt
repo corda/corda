@@ -12,6 +12,7 @@ package net.corda.core.contracts
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.nodeapi.internal.serialization.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
@@ -29,13 +30,17 @@ class TransactionVerificationExceptionSerialisationTests {
             ClassLoader.getSystemClassLoader()
     )
 
+    private val context get() = AMQP_RPC_CLIENT_CONTEXT
+
     private val txid = SecureHash.allOnesHash
     private val factory = defaultFactory()
 
     @Test
     fun contractConstraintRejectionTest() {
         val excp = TransactionVerificationException.ContractConstraintRejection(txid, "This is only a test")
-        val excp2 = DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(excp))
+        val excp2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(excp, context),
+                context)
 
         assertEquals(excp.message, excp2.message)
         assertEquals(excp.cause, excp2.cause)
@@ -52,7 +57,9 @@ class TransactionVerificationExceptionSerialisationTests {
         val cause = Throwable("wibble")
 
         val exception = TransactionVerificationException.ContractRejection(txid, contract, cause)
-        val exception2 = DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(exception))
+        val exception2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exception, context),
+                context)
 
         assertEquals(exception.message, exception2.message)
         assertEquals(exception.cause?.message, exception2.cause?.message)
@@ -62,7 +69,9 @@ class TransactionVerificationExceptionSerialisationTests {
     @Test
     fun missingAttachmentRejectionTest() {
         val exception = TransactionVerificationException.MissingAttachmentRejection(txid, "Some contract class")
-        val exception2 = DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(exception))
+        val exception2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exception, context),
+                context)
 
         assertEquals(exception.message, exception2.message)
         assertEquals(exception.cause?.message, exception2.cause?.message)
@@ -72,7 +81,9 @@ class TransactionVerificationExceptionSerialisationTests {
     @Test
     fun conflictingAttachmentsRejectionTest() {
         val exception = TransactionVerificationException.ContractConstraintRejection(txid, "Some contract class")
-        val exception2 = DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(exception))
+        val exception2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exception, context),
+                context)
 
         assertEquals(exception.message, exception2.message)
         assertEquals(exception.cause?.message, exception2.cause?.message)
@@ -83,7 +94,9 @@ class TransactionVerificationExceptionSerialisationTests {
     fun contractCreationErrorTest() {
         val cause = Throwable("wibble")
         val exception = TransactionVerificationException.ContractCreationError(txid, "Some contract class", cause)
-        val exception2 = DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(exception))
+        val exception2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exception, context),
+                context)
 
         assertEquals(exception.message, exception2.message)
         assertEquals(exception.cause?.message, exception2.cause?.message)
@@ -94,7 +107,9 @@ class TransactionVerificationExceptionSerialisationTests {
     fun transactionMissingEncumbranceTest() {
         val exception = TransactionVerificationException.TransactionMissingEncumbranceException(
                 txid, 12, TransactionVerificationException.Direction.INPUT)
-        val exception2 = DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(exception))
+        val exception2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exception, context),
+                context)
 
         assertEquals(exception.message, exception2.message)
         assertEquals(exception.cause?.message, exception2.cause?.message)
@@ -109,7 +124,9 @@ class TransactionVerificationExceptionSerialisationTests {
         val factory = defaultFactory()
         factory.register(PublicKeySerializer)
         val exception = TransactionVerificationException.NotaryChangeInWrongTransactionType(txid, dummyBankA, dummyNotary)
-        val exception2 = DeserializationInput(factory).deserialize(SerializationOutput(factory).serialize(exception))
+        val exception2 = DeserializationInput(factory).deserialize(
+                SerializationOutput(factory).serialize(exception, context),
+                context)
 
         assertEquals(exception.message, exception2.message)
         assertEquals(exception.cause?.message, exception2.cause?.message)

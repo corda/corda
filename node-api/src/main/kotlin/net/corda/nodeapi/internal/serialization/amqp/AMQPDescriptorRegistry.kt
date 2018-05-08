@@ -20,7 +20,7 @@ import org.apache.qpid.proton.amqp.UnsignedLong
  * Repeated here for brevity:
  *   50530 - R3 - Mike Hearn - mike&r3.com
  */
-const val DESCRIPTOR_TOP_32BITS: Long = 0xc562L shl(32 + 16)
+const val DESCRIPTOR_TOP_32BITS: Long = 0xc562L shl (32 + 16)
 
 /**
  * AMQP descriptor ID's for our custom types.

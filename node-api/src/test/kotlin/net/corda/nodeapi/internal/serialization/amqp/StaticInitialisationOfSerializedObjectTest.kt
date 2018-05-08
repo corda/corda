@@ -20,6 +20,10 @@ import java.io.NotSerializableException
 import java.lang.reflect.Type
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 class InStatic : Exception("Help!, help!, I'm being repressed")
 
