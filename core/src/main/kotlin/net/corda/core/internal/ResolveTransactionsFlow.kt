@@ -13,6 +13,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.exactAdd
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.math.min
 
 // TODO: This code is currently unit tested by TwoPartyTradeFlowTests, it should have its own tests.
 /**
@@ -24,6 +25,7 @@ import kotlin.collections.ArrayList
 class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
                               private val otherSide: FlowSession) : FlowLogic<Unit>() {
 
+    // Need it ordered in terms of iteration. Needs to be a variable for the check-pointing logic to work.
     private val txHashes = txHashesArg.toList()
 
     /**
@@ -92,7 +94,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     override fun call() {
         val newTxns = ArrayList<SignedTransaction>(txHashes.size)
         // Start fetching data.
-        for (pageNumber in 0..(txHashes.size - 1) / RESOLUTION_PAGE_SIZE) {
+        for (pageNumber in 0 until txHashes.size / RESOLUTION_PAGE_SIZE) {
             val page = page(pageNumber, RESOLUTION_PAGE_SIZE)
 
             newTxns += downloadDependencies(page)
@@ -115,7 +117,8 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
 
     private fun page(pageNumber: Int, pageSize: Int): Set<SecureHash> {
         val offset = pageNumber * pageSize
-        val limit = minOf(offset + pageSize, txHashes.size)
+        val limit = min(offset + pageSize, txHashes.size)
+        // call toSet() is needed because sub-lists are not checkpoint-friendly.
         return txHashes.subList(offset, limit).toSet()
     }
 
@@ -147,7 +150,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
         while (nextRequests.isNotEmpty()) {
             // Don't re-download the same tx when we haven't verified it yet but it's referenced multiple times in the
             // graph we're traversing.
-            val notAlreadyFetched = nextRequests - resultQ.keys
+            val notAlreadyFetched: Set<SecureHash> = nextRequests - resultQ.keys
             nextRequests.clear()
 
             if (notAlreadyFetched.isEmpty())   // Done early.
