@@ -28,7 +28,7 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
     }
 
     override fun isCompatible(metadata: DatabaseMetaData): Boolean {
-        return metadata.driverName == JDBC_DRIVER_NAME
+        return metadata.driverName.startsWith(JDBC_DRIVER_NAME, ignoreCase = true)
     }
 
     override fun toString() = "${this::class.qualifiedName} for '$JDBC_DRIVER_NAME'"

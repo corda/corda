@@ -28,15 +28,15 @@ import java.util.*
 class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retrySleep = 1000, retryCap = 5000) {
 
     companion object {
-        val JDBC_DRIVER_NAME = "Microsoft JDBC Driver 6.2 for SQL Server"
+        const val JDBC_DRIVER_NAME = "Microsoft JDBC Driver"
         private val log = contextLogger()
     }
 
     override fun isCompatible(metaData: DatabaseMetaData): Boolean {
-        return metaData.driverName == JDBC_DRIVER_NAME
+        return metaData.driverName.startsWith(JDBC_DRIVER_NAME, ignoreCase = true)
     }
 
-    override fun toString() = "${this::class.java} for $JDBC_DRIVER_NAME"
+    override fun toString() = "${this::class.qualifiedName} for '$JDBC_DRIVER_NAME'"
 
     override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
                               onlyFromIssuerParties: Set<AbstractParty>,
