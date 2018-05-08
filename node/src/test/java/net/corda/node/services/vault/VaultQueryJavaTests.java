@@ -29,8 +29,8 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
+import net.corda.finance.sampleschemas.SampleCashSchemaV2;
 import net.corda.finance.schemas.CashSchemaV1;
-import net.corda.finance.schemas.SampleCashSchemaV2;
 import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
