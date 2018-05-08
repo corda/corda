@@ -168,6 +168,21 @@ class BFTNotaryServiceTests {
         }
     }
 
+     @Test
+    fun `notarise issue tx with time-window`() {
+        node.run {
+            val issueTx = signInitialTransaction(notary) {
+                setTimeWindow(TimeWindow.fromOnly(Instant.MIN))
+                addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
+            }
+            val resultFuture = services.startFlow(NotaryFlow.Client(issueTx)).resultFuture
+
+            mockNet.runNetwork()
+            val signatures = resultFuture.get()
+            verifySignatures(signatures, issueTx.id)
+        }
+    }
+
     @Test
     fun `transactions can be re-notarised outside their time window`() {
         node.run {
