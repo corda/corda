@@ -404,7 +404,7 @@ class NodeVaultService(
             val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
             val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
             val results = queryBy(contractStateType, criteria.and(countCriteria))
-            totalStates = results.otherResults[0] as Long
+            totalStates = results.otherResults.last() as Long
         }
 
         val session = getSession()
