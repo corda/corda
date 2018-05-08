@@ -8,7 +8,7 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-package net.corda.finance.sampleschemas
+package net.corda.finance.schemas
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
