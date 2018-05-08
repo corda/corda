@@ -100,7 +100,6 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     val classloader = CarpenterClassLoader(cl)
 
     private val _loaded = HashMap<String, Class<*>>()
-    private val String.jvm: String get() = replace(".", "/")
 
     /** Returns a snapshot of the currently loaded classes as a map of full class name (package names+dots) -> class object */
     val loaded: Map<String, Class<*>> = HashMap(_loaded)
@@ -374,7 +373,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
                 var slot = 1
                 superclassFields.values.forEach { slot += load(slot, it) }
                 val superDesc = sc.descriptorsIncludingSuperclasses().values.joinToString("")
-                visitMethodInsn(INVOKESPECIAL, sc.name.jvm, "<init>", "($superDesc)V", false)
+                visitMethodInsn(INVOKESPECIAL, sc.jvmName, "<init>", "($superDesc)V", false)
             }
 
             // Assign the fields from parameters.
