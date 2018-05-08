@@ -3,6 +3,7 @@ package net.corda.client.jfx.model
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
@@ -134,20 +135,8 @@ class NodeMonitorModel {
 
     private fun performRpcReconnect(nodeHostAndPort: NetworkHostAndPort, username: String, password: String): List<StateMachineInfo> {
 
-        logger.info("Connecting to: $nodeHostAndPort")
-
-        val retryInterval = 30.seconds
-        val client = CordaRPCClient(
-                nodeHostAndPort,
-                object : CordaRPCClientConfiguration {
-                    override val connectionMaxRetryInterval = retryInterval
-                }
-        )
-        val connection = client.start(username, password)
+        val connection = establishConnectionWithRetry(nodeHostAndPort, username, password)
         val proxy = connection.proxy
-
-        // TODO: Before performing sophisticated operations with this proxy or announce it being available,
-        // check that it can return sensible response i.e. serve correctly `NodeInfo`.
 
         val (stateMachineInfos, stateMachineUpdatesRaw) = proxy.stateMachinesFeed()
 
@@ -157,13 +146,13 @@ class NodeMonitorModel {
                 .doOnError {
                     // Terminate subscription such that nothing gets past this point to downstream Observables.
                     retryableStateMachineUpdatesSubscription.get()?.unsubscribe()
+                    // Flag to everyone that proxy is no longer available.
+                    //proxyObservable.set(null)
                     // It is good idea to close connection to properly mark the end of it. During re-connect we will create a new
                     // client and a new connection, so no going back to this one. Also the server might be down, so we are
                     // force closing the connection to avoid propagation of notification to the server side.
                     connection.forceClose()
-                    // Failure has occurred for a reason, perhaps because the server backend is being re-started.
-                    // Give it some time to come back online before trying to re-connect.
-                    Thread.sleep(retryInterval.toMillis())
+                    // Perform re-connect.
                     performRpcReconnect(nodeHostAndPort, username, password)
                 }
                 .subscribe(retryableStateMachineUpdatesSubject)
@@ -173,5 +162,40 @@ class NodeMonitorModel {
         notaryIdentities = proxy.notaryIdentities()
 
         return stateMachineInfos
+    }
+
+    private fun establishConnectionWithRetry(nodeHostAndPort: NetworkHostAndPort, username: String, password: String): CordaRPCConnection {
+
+        val retryInterval = 5.seconds
+
+        do {
+            val connection = try {
+                logger.info("Connecting to: $nodeHostAndPort")
+                val client = CordaRPCClient(
+                        nodeHostAndPort,
+                        object : CordaRPCClientConfiguration {
+                            override val connectionMaxRetryInterval = retryInterval
+                        }
+                )
+                val _connection = client.start(username, password)
+                // Check connection is truly operational before returning it.
+                val nodeInfo = _connection.proxy.nodeInfo()
+                require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
+                _connection
+            } catch (th: Throwable) {
+                // Deliberately not logging full stack trace as it will be full of internal stacktraces.
+                logger.info("Exception upon establishing connection: " + th.message)
+                null
+            }
+
+            if(connection != null) {
+                logger.info("Connection successfully established with: $nodeHostAndPort")
+                return connection
+            }
+            // Could not connect this time round - pause before giving another try.
+            Thread.sleep(retryInterval.toMillis())
+        } while (connection == null)
+
+        throw IllegalArgumentException("Never reaches here")
     }
 }
