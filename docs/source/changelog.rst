@@ -10,6 +10,23 @@ Unreleased
 
 * Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
 
+* Refactor AMQP Serializer to pass context object down the serialization call hierarchy. Will allow per thread
+  extensions to be set and used by the RPC work (Observable Context Key)
+
+* Refactor RPC Server Kryo observable serializer into it's own sub module
+
+* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work - the new methods avoid bugs that can occur when JPA schemas inherit from each other.
+
+* Refactor RPC Client Kryo observable serializer into it's own sub module
+
+* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialized in
+  a factory without a serializer as the subtype check for the class instance failed. Fix is to compare the raw
+  type.
+  
+* Due to ongoing work the experimental interfaces for defining custom notary services have been moved to the internal package.
+  CorDapps implementing custom notary services will need to be updated, see ``samples/notary-demo`` for an example.
+  Further changes may be required in the future.
+  
 * Fixed incorrect exception handling in ``NodeVaultService._query()``.
 
 * Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
@@ -23,6 +40,9 @@ Unreleased
 * java.security.cert.CRLReason added to the default Whitelist.
 
 * java.security.cert.X509CRL serialization support added.
+
+* Replaced the ``PersistentMap`` in ``NodeSchedulerService`` with an implementation that only loads the next scheduled
+  state from the database into memory, rather than them all.
 
 * Upgraded H2 to v1.4.197.
 

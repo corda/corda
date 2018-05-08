@@ -95,7 +95,7 @@ data class PropertyDescriptor(var field: Field?, var setter: Method?, var getter
 
     constructor() : this(null, null, null, null)
 
-    fun preferredGetter() : Method? = getter ?: iser
+    fun preferredGetter(): Method? = getter ?: iser
 }
 
 object PropertyDescriptorsRegex {
@@ -163,8 +163,7 @@ fun Class<out Any?>.propertyDescriptors(): Map<String, PropertyDescriptor> {
                 // fails the getter doesn't refer to a property directly, but may refer to a constructor
                 // parameter that shadows a property
                 val properties =
-                        classProperties[groups[2]!!.value] ?:
-                        classProperties[groups[2]!!.value.decapitalize()] ?:
+                        classProperties[groups[2]!!.value] ?: classProperties[groups[2]!!.value.decapitalize()] ?:
                         // take into account those constructor properties that don't directly map to a named
                         // property which are, by default, already added to the map
                         classProperties.computeIfAbsent(groups[2]!!.value) { PropertyDescriptor() }
@@ -245,9 +244,9 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
             // We will already have disambiguated getA for property A or a but we still need to cope
             // with the case we don't know the case of A when the parameter doesn't match a property
             // but has a getter
-            val matchingProperty = classProperties[name] ?: classProperties[name.capitalize()] ?:
-                    throw NotSerializableException(
-                            "Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
+            val matchingProperty = classProperties[name] ?: classProperties[name.capitalize()]
+            ?: throw NotSerializableException(
+                    "Constructor parameter - \"$name\" -  doesn't refer to a property of \"$clazz\"")
 
             // If the property has a getter we'll use that to retrieve it's value from the instance, if it doesn't
             // *for *know* we switch to a reflection based method
@@ -267,8 +266,8 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
 
                 Pair(PublicPropertyReader(getter), returnType)
             } else {
-                val field = classProperties[name]!!.field ?:
-                        throw NotSerializableException("No property matching constructor parameter named - \"$name\" - " +
+                val field = classProperties[name]!!.field
+                        ?: throw NotSerializableException("No property matching constructor parameter named - \"$name\" - " +
                                 "of \"$clazz\". If using Java, check that you have the -parameters option specified " +
                                 "in the Java compiler. Alternately, provide a proxy serializer " +
                                 "(SerializationCustomSerializer) if recompiling isn't an option")
@@ -315,7 +314,7 @@ fun propertiesForSerializationFromSetters(
             }
 
             // Make sure the getter returns the same type (within inheritance bounds) the setter accepts.
-            if (!(TypeToken.of (getter.genericReturnType).isSupertypeOf(setterType))) {
+            if (!(TypeToken.of(getter.genericReturnType).isSupertypeOf(setterType))) {
                 throw NotSerializableException("Defined setter for parameter ${property.value.field?.name} " +
                         "takes parameter of type $setterType yet the defined getter returns a value of type " +
                         "${getter.returnType} [${getter.genericReturnType}]")
@@ -480,10 +479,10 @@ internal fun Type.asParameterizedType(): ParameterizedType {
 }
 
 internal fun Type.isSubClassOf(type: Type): Boolean {
-    return TypeToken.of(this).isSubtypeOf(type)
+    return TypeToken.of(this).isSubtypeOf(TypeToken.of(type).rawType)
 }
 
-// ByteArrays, primtives and boxed primitives are not stored in the object history
+// ByteArrays, primitives and boxed primitives are not stored in the object history
 internal fun suitableForObjectReference(type: Type): Boolean {
     val clazz = type.asClass()
     return type != ByteArray::class.java && (clazz != null && !clazz.isPrimitive && !Primitives.unwrap(clazz).isPrimitive)

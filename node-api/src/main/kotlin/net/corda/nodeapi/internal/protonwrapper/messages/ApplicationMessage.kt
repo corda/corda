@@ -10,5 +10,5 @@ interface ApplicationMessage {
     val topic: String
     val destinationLegalName: String
     val destinationLink: NetworkHostAndPort
-    val applicationProperties: Map<Any?, Any?>
+    val applicationProperties: Map<String, Any?>
 }
