@@ -31,17 +31,30 @@ import net.corda.testMessage.SpentState
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
+import org.junit.ClassRule
 import org.junit.Test
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
 
 class ScheduledFlowIntegrationTests : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(
+                ALICE_NAME.toDatabaseSchemaName(),
+                BOB_NAME.toDatabaseSchemaName(),
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
+
     @StartableByRPC
     class InsertInitialStateFlow(private val destination: Party, private val notary: Party, private val identity: Int = 1, private val scheduledFor: Instant? = null) : FlowLogic<Unit>() {
         @Suspendable
