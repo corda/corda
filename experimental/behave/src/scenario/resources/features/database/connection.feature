@@ -10,7 +10,8 @@ Feature: Database - Connection
 
     Examples:
       | Node-Version    | Database-Type     |
-      | master          | H2                |
+      | r3-master          | H2                |
 
-# To run this scenario using postgreSQL you must ensure that Docker is running locally
-#      | master          | postgreSQL        |
+# To run this scenario using other DB providers you must ensure that Docker is running locally
+#      | r3-master          | postgreSQL        |
+#      | r3-master          | SQL Server        |

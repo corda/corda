@@ -14,7 +14,7 @@ import java.nio.file.Path
 import java.time.Duration
 
 class JarCommand(
-        jarFile: Path,
+        val jarFile: Path,
         arguments: Array<out String>,
         directory: Path,
         timeout: Duration,

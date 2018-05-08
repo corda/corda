@@ -14,4 +14,4 @@ cd ${BEHAVE_DIR}
 ../../gradlew behaveJar
 
 # QA functional
-java -jar ${BEHAVE_DIR}/build/libs/corda-behave.jar -d --glue net.corda.behave.scenarios -path ${R3CORDA_HOME}/testing/qa/behave/functional/resources/features/qa-functional-testing.feature
+java -jar ${BEHAVE_DIR}/build/libs/corda-behave.jar -d --glue net.corda.behave.scenarios -path ${R3CORDA_HOME}/testing/qa/behave/functional/resources/features/functional.feature
