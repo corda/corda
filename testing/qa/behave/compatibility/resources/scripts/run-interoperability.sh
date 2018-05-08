@@ -13,4 +13,4 @@ cd ${BEHAVE_DIR}
 ../../gradlew behaveJar
 
 # QA interoperability
-java -jar ${BEHAVE_DIR}/build/libs/corda-behave.jar -d --glue net.corda.behave.scenarios -path ${R3CORDA_HOME}/testing/qa/behave/compatibility/resources/features/qa-interop-testing.feature
+java -jar ${BEHAVE_DIR}/build/libs/corda-behave.jar -d --glue net.corda.behave.scenarios -path ${R3CORDA_HOME}/testing/qa/behave/compatibility/resources/features/interoperability.feature
