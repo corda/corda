@@ -36,13 +36,13 @@ dependencies {
     compile "org.ow2.asm:asm:$asm_version"
 
     // For AMQP serialisation.
-    compile "org.apache.qpid:proton-j:0.27.1"
+    compile "org.apache.qpid:proton-j:$protonj_version"
 
-    // FastClasspathScanner: classpath scanning - needed for the NetworkBootstraper
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.12.3'
+    // FastClasspathScanner: classpath scanning - needed for the NetworkBootstrapper and AMQP.
+    compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
 
     // Pure-Java Snappy compression
-    compile 'org.iq80.snappy:snappy:0.4'
+    compile "org.iq80.snappy:snappy:$snappy_version"
 
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
