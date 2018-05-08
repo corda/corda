@@ -2,8 +2,20 @@ package net.corda.client.jackson
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.core.*
-import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonToken
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.Module
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
@@ -11,8 +23,13 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.AddressFormatException
+import net.corda.core.crypto.Base58
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.MerkleTree
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -24,12 +41,13 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.*
+import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.base58ToByteArray
 import net.corda.core.utilities.base64ToByteArray
 import net.corda.core.utilities.toBase64
-import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
@@ -99,6 +117,9 @@ object JacksonSupport {
             addDeserializer(OpaqueBytes::class.java, OpaqueBytesDeserializer)
             addSerializer(OpaqueBytes::class.java, OpaqueBytesSerializer)
 
+            addDeserializer(TransactionSignature::class.java, TransactionSignatureSerDe.Deserializer)
+            addSerializer(TransactionSignature::class.java, TransactionSignatureSerDe.Serializer)
+
             // For X.500 distinguished names
             addDeserializer(CordaX500Name::class.java, CordaX500NameDeserializer)
             addSerializer(CordaX500Name::class.java, CordaX500NameSerializer)
@@ -146,6 +167,28 @@ object JacksonSupport {
         registerModule(JavaTimeModule())
         registerModule(cordaModule)
         registerModule(KotlinModule())
+    }
+
+    object TransactionSignatureSerDe {
+
+        object Serializer: JsonSerializer<TransactionSignature>() {
+            override fun serialize(value: TransactionSignature, json: JsonGenerator, serializers: SerializerProvider) {
+                with(json) {
+                    writeStartObject()
+                    writeObjectField("by", value.by)
+                    writeObjectField("signatureMetadata", value.signatureMetadata)
+                    writeObjectField("bytes", value.bytes)
+                    writeObjectField("partialMerkleTree", value.partialMerkleTree)
+                    writeEndObject()
+                }
+            }
+        }
+
+        object Deserializer: JsonDeserializer<TransactionSignature>() {
+            override fun deserialize(parser: JsonParser, context: DeserializationContext): TransactionSignature {
+                TODO("sollecitom")
+            }
+        }
     }
 
     object ToStringSerializer : JsonSerializer<Any>() {

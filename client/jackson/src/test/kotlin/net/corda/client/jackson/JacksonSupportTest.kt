@@ -5,7 +5,11 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.Amount
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
@@ -13,10 +17,12 @@ import net.corda.finance.USD
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -30,6 +36,7 @@ class JacksonSupportTest {
         val SEED = BigInteger.valueOf(20170922L)!!
         val mapper = JacksonSupport.createNonRpcMapper()
         val ALICE_PUBKEY = TestIdentity(ALICE_NAME, 70).publicKey
+        val BOB_PUBKEY = TestIdentity(BOB_NAME, 70).publicKey
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val MINI_CORP = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).party
     }
@@ -103,22 +110,34 @@ class JacksonSupportTest {
         val attachmentRef = SecureHash.randomSHA256()
         doReturn(attachmentRef).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
         doReturn(testNetworkParameters()).whenever(services).networkParameters
-        fun makeDummyTx(): SignedTransaction {
-            val wtx = DummyContract.generateInitial(1, DUMMY_NOTARY, MINI_CORP.ref(1))
-                    .toWireTransaction(services)
-            val signatures = TransactionSignature(
-                    ByteArray(1),
-                    ALICE_PUBKEY,
-                    SignatureMetadata(
-                            1,
-                            Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID
-                    )
-            )
-            return SignedTransaction(wtx, listOf(signatures))
-        }
 
         val writer = mapper.writer()
         // We don't particularly care about the serialized format, just need to make sure it completes successfully.
         writer.writeValueAsString(makeDummyTx())
+    }
+
+    @Test
+    fun `wire transaction can be serialized and de-serialized`() {
+        val attachmentRef = SecureHash.randomSHA256()
+        doReturn(attachmentRef).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
+        doReturn(testNetworkParameters()).whenever(services).networkParameters
+
+        val writer = mapper.writer()
+        val transaction = makeDummyTx()
+        val json = writer.writeValueAsString(transaction)
+
+        val deserializedTransaction = mapper.readValue(json, SignedTransaction::class.java)
+
+        assertThat(deserializedTransaction).isEqualTo(transaction)
+    }
+
+    private fun makeDummyTx(): SignedTransaction {
+        val wtx = DummyContract.generateInitial(1, DUMMY_NOTARY, MINI_CORP.ref(1))
+                .toWireTransaction(services)
+        val signatures = listOf(
+                TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID)),
+                TransactionSignature(ByteArray(1), BOB_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(BOB_PUBKEY).schemeNumberID))
+        )
+        return SignedTransaction(wtx, signatures)
     }
 }
