@@ -18,6 +18,29 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.rules.ExternalResource
 
+sealed class DatabaseRule(val databaseSchemas: List<String>, val dbScriptPrefix: String) : ExternalResource() {
+
+    private val DATABASE_PROVIDER = "custom.databaseProvider"
+    private val dbProvider = System.getProperty(DATABASE_PROVIDER, "")
+    private val TEST_DB_SCRIPT_DIR = "test.db.script.dir"
+    private val testDbScriptDir = System.getProperty(TEST_DB_SCRIPT_DIR, "database-scripts")
+
+    public override fun before() {
+        if (dbProvider.isNotEmpty()) {
+            runDbScript(dbProvider,"$testDbScriptDir/$dbScriptPrefix-cleanup.sql", databaseSchemas)
+            runDbScript(dbProvider,"$testDbScriptDir/$dbScriptPrefix-setup.sql", databaseSchemas)
+        }
+    }
+    public override fun after() {
+        if (dbProvider.isNotEmpty()) {
+            runDbScript(dbProvider,"$testDbScriptDir/$dbScriptPrefix-cleanup.sql", databaseSchemas)
+        }
+    }
+}
+
+class GlobalDatabaseRule(databaseSchemas: List<String> = emptyList()) : DatabaseRule(databaseSchemas, "db-global")
+class LocalDatabaseRule(databaseSchemas: List<String> = emptyList()) : DatabaseRule(databaseSchemas, "db")
+
 /**
  * Base class for all integration tests that require common setup and/or teardown.
  * eg. serialization, database schema creation and data population / clean-up

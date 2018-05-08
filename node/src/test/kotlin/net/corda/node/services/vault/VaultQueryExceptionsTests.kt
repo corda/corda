@@ -18,9 +18,6 @@ import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.sampleschemas.SampleCashSchemaV3
 import net.corda.finance.schemas.CashSchemaV1
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseTransaction
-import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.testing.core.*
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -47,10 +44,6 @@ class VaultQueryExceptionsTests : VaultQueryParties by rule {
     @Rule
     @JvmField
     val expectedEx: ExpectedException = ExpectedException.none()
-
-    @Rule
-    @JvmField
-    val rollbackRule = VaultQueryRollbackRule(this)
 
     @Test
     fun `query attempting to use unregistered schema`() {
