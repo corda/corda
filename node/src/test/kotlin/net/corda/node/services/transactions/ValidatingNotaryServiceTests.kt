@@ -4,15 +4,24 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
-import net.corda.core.flows.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.sha256
+import net.corda.core.crypto.sign
+import net.corda.core.flows.NotarisationPayload
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.generateSignature
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
@@ -27,7 +36,12 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.TestClock
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.InMemoryMessage
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.MessagingServiceSpy
+import net.corda.testing.node.internal.setMessagingServiceSpy
+import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -278,22 +292,6 @@ class ValidatingNotaryServiceTests {
     @Test
     fun `should reject a transaction with too many inputs`() {
         NotaryServiceTests.notariseWithTooManyInputs(aliceNode, alice, notary, mockNet)
-    }
-
-    @Test
-    fun `can handle max allowed inputs count for a transaction`() {
-        val stx = run {
-            val inputStates = (1..CoreTransaction.maxTransactionDependencies).map { issueState(aliceNode.services, alice) }
-
-            val tx = TransactionBuilder(notary).addCommand(dummyCommand(alice.owningKey))
-            inputStates.forEach { tx.addInputState(it) }
-
-            aliceNode.services.signInitialTransaction(tx)
-        }
-
-        val future = runNotaryClient(stx)
-        val signatures = future.getOrThrow()
-        signatures.forEach { it.verify(stx.id) }
     }
 
     private fun runNotarisationAndInterceptClientPayload(payloadModifier: (NotarisationPayload) -> NotarisationPayload) {

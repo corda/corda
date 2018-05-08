@@ -6,7 +6,7 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
-* Enforced a maximum of 300 transaction dependencies from inputs for a Transaction. Needed because Corda loads transaction dependencies in memory.
+* Prepared ``ResolveTransactionsFlow`` for paging resolution approach.
 
 * Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
 

@@ -2,12 +2,33 @@ package net.corda.core.transactions
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.CommandWithParties
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.sign
 import net.corda.core.identity.Party
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.rigorousMock
 import org.junit.Rule
 import org.junit.Test
@@ -192,25 +213,5 @@ class TransactionTests {
         val issueTx2 = buildTransaction()
 
         assertNotEquals(issueTx1.id, issueTx2.id)
-    }
-
-    @Test
-    fun `ledger transaction fails if number of inputs exceeds limit`() {
-        val notary: Party = DUMMY_NOTARY
-        val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, notary)
-
-        val inputs = (1..CoreTransaction.maxTransactionDependencies + 1).map { StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)) }.toList()
-
-        fun buildTransaction() = LedgerTransaction(inputs,
-                emptyList(),
-                emptyList(),
-                emptyList(),
-                SecureHash.randomSHA256(),
-                notary,
-                null,
-                PrivacySalt()
-        )
-
-        assertFailsWith<IllegalStateException> { buildTransaction() }
     }
 }

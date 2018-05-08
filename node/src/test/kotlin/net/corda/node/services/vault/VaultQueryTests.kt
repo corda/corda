@@ -1,16 +1,56 @@
 package net.corda.node.services.vault
 
-import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.LinearState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.packageName
-import net.corda.core.node.services.*
-import net.corda.core.node.services.vault.*
-import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.transactions.CoreTransaction
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.VaultQueryException
+import net.corda.core.node.services.VaultService
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.trackBy
+import net.corda.core.node.services.vault.BinaryComparisonOperator
+import net.corda.core.node.services.vault.ColumnPredicate
+import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
+import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
+import net.corda.core.node.services.vault.MAX_PAGE_SIZE
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.QueryCriteria.FungibleAssetQueryCriteria
+import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria
+import net.corda.core.node.services.vault.QueryCriteria.SoftLockingCondition
+import net.corda.core.node.services.vault.QueryCriteria.SoftLockingType
+import net.corda.core.node.services.vault.QueryCriteria.TimeCondition
+import net.corda.core.node.services.vault.QueryCriteria.TimeInstantType
+import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
+import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
-import net.corda.finance.*
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.days
+import net.corda.core.utilities.seconds
+import net.corda.core.utilities.toHexString
+import net.corda.finance.AMOUNT
+import net.corda.finance.CHF
+import net.corda.finance.DOLLARS
+import net.corda.finance.GBP
+import net.corda.finance.POUNDS
+import net.corda.finance.SWISS_FRANCS
+import net.corda.finance.USD
+import net.corda.finance.`issued by`
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.DealState
@@ -23,7 +63,18 @@ import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.dummyCommand
+import net.corda.testing.core.expect
+import net.corda.testing.core.expectEvents
+import net.corda.testing.core.sequence
+import net.corda.testing.core.singleIdentityAndCert
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
@@ -35,7 +86,12 @@ import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServ
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Ignore
+import org.junit.Rule
+import org.junit.Test
 import org.junit.rules.ExpectedException
 import java.lang.Thread.sleep
 import java.time.Instant
@@ -2107,25 +2163,6 @@ class VaultQueryTests {
             val signedStatesExitingTx = services.signInitialTransaction(statesExitingTx).withAdditionalSignature(issuerKey, signatureMetadata)
 
             assertThatCode { services.recordTransactions(signedStatesExitingTx) }.doesNotThrowAnyException()
-        }
-    }
-
-    @Test
-    fun `transaction with max number of transaction dependencies work`() {
-        val notary = Companion.dummyNotary
-        val issuerKey = notary.keyPair
-        val signatureMetadata = SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(issuerKey.public).schemeNumberID)
-        val states = database.transaction {
-            vaultFiller.fillWithSomeTestLinearStates(CoreTransaction.maxTransactionDependencies).states
-        }
-
-        database.transaction {
-            val statesExitingTx = TransactionBuilder(notary.party).withItems(*states.toList().toTypedArray()).addCommand(dummyCommand())
-
-            assertThatCode {
-                val signedStatesExitingTx = services.signInitialTransaction(statesExitingTx).withAdditionalSignature(issuerKey, signatureMetadata)
-                services.recordTransactions(signedStatesExitingTx)
-            }.doesNotThrowAnyException()
         }
     }
 

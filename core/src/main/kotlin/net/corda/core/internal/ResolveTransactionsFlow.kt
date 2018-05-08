@@ -120,7 +120,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     }
 
     @Suspendable
-    // TODO use paging here
+    // TODO use paging here (we literally get the entire dependencies graph in memory)
     private fun downloadDependencies(depsToCheck: Set<SecureHash>): List<SignedTransaction> {
         // Maintain a work queue of all hashes to load/download, initialised with our starting set. Then do a breadth
         // first traversal across the dependency graph.
