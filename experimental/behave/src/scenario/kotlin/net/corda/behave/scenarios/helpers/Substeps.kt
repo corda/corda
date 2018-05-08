@@ -30,4 +30,14 @@ abstract class Substeps(protected val state: ScenarioState) {
             }
         })
     }
+
+    protected fun <T> withClientProxy(nodeName: String, action: ScenarioState.(CordaRPCOps) -> T): T {
+        return state.withClientProxy(nodeName, {
+            return@withClientProxy try {
+                action(state, it)
+            } catch (ex: Exception) {
+                state.error<T>(ex.message ?: "Failed to execute HTTP call")
+            }
+        })
+    }
 }

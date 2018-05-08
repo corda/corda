@@ -12,6 +12,7 @@ package net.corda.behave.database
 
 import net.corda.behave.database.configuration.H2ConfigurationTemplate
 import net.corda.behave.database.configuration.PostgresConfigurationTemplate
+import net.corda.behave.database.configuration.SqlServerConfigurationTemplate
 import net.corda.behave.node.configuration.Configuration
 import net.corda.behave.node.configuration.DatabaseConfiguration
 import net.corda.behave.service.database.H2Service
@@ -29,8 +30,18 @@ enum class DatabaseType(val settings: DatabaseSettings) {
             }
     ),
 
+    SQL_SERVER(DatabaseSettings()
+            .withDatabase(SqlServerService.database)
+            .withDriver(SqlServerService.driver)
+            .withSchema(SqlServerService.schema)
+            .withUser(SqlServerService.username)
+            .withConfigTemplate(SqlServerConfigurationTemplate())
+            .withServiceInitiator {
+                PostgreSQLService("postgres-${it.name}", it.database.port, it.database.password)
+            }
+    ),
+
     POSTGRES(DatabaseSettings()
-            .withDatabase(PostgreSQLService.database)
             .withDriver(PostgreSQLService.driver)
             .withSchema(PostgreSQLService.schema)
             .withUser(PostgreSQLService.username)
@@ -48,8 +59,9 @@ enum class DatabaseType(val settings: DatabaseSettings) {
 
     companion object {
 
-        fun fromName(name: String): DatabaseType? = when (name.toLowerCase()) {
+        fun fromName(name: String): DatabaseType? = when (name.replace("[ _-]".toRegex(), "").toLowerCase()) {
             "h2" -> H2
+            "sqlserver" -> SQL_SERVER
             "postgres" -> POSTGRES
             "postgresql" -> POSTGRES
             else -> null

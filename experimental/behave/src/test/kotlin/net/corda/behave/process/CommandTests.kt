@@ -31,7 +31,7 @@ class CommandTests {
     @Test
     fun `output stream for command can be observed`() {
         val subscriber = TestSubscriber<String>()
-        val exitCode = Command(listOf("ls", "/")).use(subscriber) { _, output ->
+        val exitCode = Command(listOf("ls", "/")).use(subscriber) { _, _ ->
             subscriber.awaitTerminalEvent()
             subscriber.assertCompleted()
             subscriber.assertNoErrors()

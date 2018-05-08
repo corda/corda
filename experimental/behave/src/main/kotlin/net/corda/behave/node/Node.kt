@@ -18,16 +18,20 @@ import net.corda.behave.file.stagingRoot
 import net.corda.behave.monitoring.PatternWatch
 import net.corda.behave.node.configuration.*
 import net.corda.behave.process.JarCommand
+import net.corda.behave.process.JarCommandWithMain
 import net.corda.behave.service.Service
 import net.corda.behave.service.ServiceSettings
+import net.corda.behave.service.proxy.CordaRPCProxyClient
 import net.corda.behave.ssh.MonitoringSSHClient
 import net.corda.behave.ssh.SSHClient
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.minutes
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import org.apache.commons.io.FileUtils
@@ -42,7 +46,9 @@ import java.util.concurrent.CountDownLatch
 class Node(
         val config: Configuration,
         private val rootDirectory: Path = currentDirectory,
-        private val settings: ServiceSettings = ServiceSettings()
+        private val settings: ServiceSettings = ServiceSettings(),
+        val rpcProxy: Boolean = false,
+        val networkType: Distribution.Type
 ) {
 
     private val log = loggerFor<Node>()
@@ -89,8 +95,26 @@ class Node(
         log.info("Configuring {} ...", this)
         serviceDependencies.addAll(config.database.type.dependencies(config))
         config.distribution.ensureAvailable()
-        config.writeToFile(rootDirectory / "${config.name}_node.conf")
+        if (networkType == Distribution.Type.CORDA) {
+            config.writeToFile(rootDirectory / "${config.name}_node.conf")
+        }
+        else {
+            val nodeDirectory = (rootDirectory / config.name).createDirectories()
+            config.writeToFile(nodeDirectory / "node.conf")
+        }
         installApps()
+    }
+
+    private fun initialiseDatabase(database: DatabaseConfiguration) {
+        val driversDir = runtimeDirectory / "drivers"
+        log.info("Creating directory for drivers: $driversDir")
+        driversDir.toFile().mkdirs()
+        log.info("Initialising database for R3 Corda node: $database")
+        val command = JarCommandWithMain(listOf(config.distribution.dbMigrationJar, rootDirectory / "libs" / database.type.driverJar!!),
+                "com.r3.corda.dbmigration.DBMigration",
+                arrayOf("--base-directory", "$runtimeDirectory", "--execute-migration"),
+                runtimeDirectory, 2.minutes)
+        command.run()
     }
 
     fun start(): Boolean {
@@ -99,6 +123,12 @@ class Node(
         }
         log.info("Starting {} ...", this)
         return try {
+            // initialise database via DB migration tool
+            if (config.distribution.type == Distribution.Type.R3_CORDA &&
+                    config.database.type != DatabaseType.H2) {
+                initialiseDatabase(config.database)
+            }
+            // launch node itself
             command.start()
             isStarted = true
             true
@@ -182,6 +212,20 @@ class Node(
         return result ?: error("Failed to run RPC action")
     }
 
+    fun <T> http(action: (CordaRPCOps) -> T): T {
+        val address = config.nodeInterface
+        val targetHost = NetworkHostAndPort(address.host, address.rpcProxy)
+        log.info("Establishing HTTP connection to ${targetHost.host} on port ${targetHost.port} ...")
+        try {
+            return action(CordaRPCProxyClient(targetHost))
+        }
+        catch (e: Exception) {
+            log.warn("Failed to invoke http endpoint: ", e)
+            e.printStackTrace()
+            error("Failed to run http action")
+        }
+    }
+
     override fun toString(): String {
         return "Node(name = ${config.name}, version = ${config.distribution.version})"
     }
@@ -248,6 +292,8 @@ class Node(
 
         private var notaryType = NotaryType.NONE
 
+        private var compatibilityZoneURL: String? = null
+
         private val issuableCurrencies = mutableListOf<String>()
 
         private var location: String = "London"
@@ -262,6 +308,10 @@ class Node(
 
         private var timeout = Duration.ofSeconds(60)
 
+        private var rpcProxy = false
+
+        var networkType = distribution.type
+
         fun withName(newName: String): Builder {
             name = newName
             return this
@@ -269,6 +319,7 @@ class Node(
 
         fun withDistribution(newDistribution: Distribution): Builder {
             distribution = newDistribution
+            networkType = distribution.type
             return this
         }
 
@@ -279,6 +330,16 @@ class Node(
 
         fun withNotaryType(newNotaryType: NotaryType): Builder {
             notaryType = newNotaryType
+            return this
+        }
+
+        fun withNetworkMap(newCompatibilityZoneURL: String?): Builder {
+            compatibilityZoneURL = newCompatibilityZoneURL
+            return this
+        }
+
+        fun withNetworkType(newNetworkType: Distribution.Type): Builder {
+            networkType = newNetworkType
             return this
         }
 
@@ -318,9 +379,18 @@ class Node(
             return this
         }
 
+        fun withRPCProxy(withRPCProxy: Boolean): Builder {
+            rpcProxy = withRPCProxy
+            return this
+        }
+
         fun build(): Node {
             val name = name ?: error("Node name not set")
             val directory = directory ?: error("Runtime directory not set")
+            val compatibilityZoneURL =
+                    if (networkType == Distribution.Type.R3_CORDA)
+                        compatibilityZoneURL ?: "http://localhost:1300"
+                    else null
             return Node(
                     Configuration(
                             name,
@@ -335,11 +405,14 @@ class Node(
                             ),
                             configElements = *arrayOf(
                                     NotaryConfiguration(notaryType),
+                                    NetworkMapConfiguration(compatibilityZoneURL),
                                     CurrencyConfiguration(issuableCurrencies)
                             )
                     ),
                     directory,
-                    ServiceSettings(timeout)
+                    ServiceSettings(timeout),
+                    rpcProxy = rpcProxy,
+                    networkType = networkType
             )
         }
 

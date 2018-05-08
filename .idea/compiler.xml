@@ -10,9 +10,13 @@
       <module name="bank-of-corda-demo_integrationTest" target="1.8" />
       <module name="bank-of-corda-demo_main" target="1.8" />
       <module name="bank-of-corda-demo_test" target="1.8" />
+      <module name="behave-tools_main" target="1.8" />
+      <module name="behave-tools_test" target="1.8" />
+      <module name="behave_api" target="1.8" />
       <module name="behave_behave" target="1.8" />
       <module name="behave_main" target="1.8" />
       <module name="behave_scenario" target="1.8" />
+      <module name="behave_smokeTest" target="1.8" />
       <module name="behave_test" target="1.8" />
       <module name="bootstrapper_main" target="1.8" />
       <module name="bootstrapper_test" target="1.8" />
@@ -41,6 +45,8 @@
       <module name="client_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
+      <module name="corda-project-tools_main" target="1.8" />
+      <module name="corda-project-tools_test" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
       <module name="cordapp-configuration_main" target="1.8" />
@@ -64,6 +70,11 @@
       <module name="example-code_integrationTest" target="1.8" />
       <module name="example-code_main" target="1.8" />
       <module name="example-code_test" target="1.8" />
+      <module name="experimental-behave_behave" target="1.8" />
+      <module name="experimental-behave_main" target="1.8" />
+      <module name="experimental-behave_scenario" target="1.8" />
+      <module name="experimental-behave_smokeTest" target="1.8" />
+      <module name="experimental-behave_test" target="1.8" />
       <module name="experimental-kryo-hook_main" target="1.8" />
       <module name="experimental-kryo-hook_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
@@ -125,6 +136,10 @@
       <module name="perftestcordapp_integrationTest" target="1.8" />
       <module name="perftestcordapp_main" target="1.8" />
       <module name="perftestcordapp_test" target="1.8" />
+      <module name="qa-behave_main" target="1.8" />
+      <module name="qa-behave_test" target="1.8" />
+      <module name="qa_main" target="1.8" />
+      <module name="qa_test" target="1.8" />
       <module name="quasar-hook_main" target="1.8" />
       <module name="quasar-hook_test" target="1.8" />
       <module name="quasar-utils_main" target="1.8" />
@@ -132,6 +147,10 @@
       <module name="registration-tool_integrationTest" target="1.8" />
       <module name="registration-tool_main" target="1.8" />
       <module name="registration-tool_test" target="1.8" />
+      <module name="rpc-proxy_main" target="1.8" />
+      <module name="rpc-proxy_rpcProxy" target="1.8" />
+      <module name="rpc-proxy_smokeTest" target="1.8" />
+      <module name="rpc-proxy_test" target="1.8" />
       <module name="rpc_integrationTest" target="1.8" />
       <module name="rpc_main" target="1.8" />
       <module name="rpc_smokeTest" target="1.8" />
@@ -151,6 +170,8 @@
       <module name="shell_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
+      <module name="simm-valuation-demo_scenario" target="1.8" />
+      <module name="simm-valuation-demo_scenarioTest" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
       <module name="smoke-test-utils_main" target="1.8" />
       <module name="smoke-test-utils_test" target="1.8" />
