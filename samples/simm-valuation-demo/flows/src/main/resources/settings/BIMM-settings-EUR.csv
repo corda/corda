@@ -1,0 +1,4 @@
+Curve Name,Value Type,Day Count,Interpolator,Left Extrapolator,Right Extrapolator
+EUR-DSCON-BIMM,Zero,Act/365F,Linear,Flat,Flat
+EUR-EURIBOR3M-BIMM,Zero,Act/365F,Linear,Flat,Flat
+EUR-EURIBOR6M-BIMM,Zero,Act/365F,Linear,Flat,Flat
