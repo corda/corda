@@ -17,10 +17,7 @@ import javafx.scene.text.Font
 import javafx.scene.text.TextAlignment
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
-import net.corda.client.jfx.model.NetworkIdentityModel
-import net.corda.client.jfx.model.objectProperty
-import net.corda.client.jfx.model.observableList
-import net.corda.client.jfx.model.observableValue
+import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.ChosenList
 import net.corda.client.jfx.utils.map
 import net.corda.explorer.formatters.PartyNameFormatter
@@ -38,11 +35,13 @@ class MainView : View(WINDOW_TITLE) {
     private val exit by fxid<MenuItem>()
     private val sidebar by fxid<VBox>()
     private val selectionBorderPane by fxid<BorderPane>()
+    private val mainBorderPane by fxid<BorderPane>()
 
     // Inject data.
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
     private val selectedView by objectProperty(CordaViewModel::selectedView)
     private val registeredViews by observableList(CordaViewModel::registeredViews)
+    private val proxy by observableValue(NodeMonitorModel::proxyObservable)
 
     private val menuItemCSS = "sidebar-menu-item"
     private val menuItemArrowCSS = "sidebar-menu-item-arrow"
@@ -93,5 +92,6 @@ class MainView : View(WINDOW_TITLE) {
         Bindings.bindContent(sidebar.children, menuItems)
         // Main view
         selectionBorderPane.centerProperty().bind(selectedView.map { it?.root })
+        mainBorderPane.disableProperty().bind(proxy.map { it == null })
     }
 }

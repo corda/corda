@@ -6,7 +6,7 @@
 <?import javafx.scene.layout.*?>
 <StackPane styleClass="mainView" stylesheets="@../css/corda.css" prefHeight="650" prefWidth="900"
            xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
-    <BorderPane maxHeight="Infinity">
+    <BorderPane fx:id="mainBorderPane" maxHeight="Infinity">
         <top>
             <GridPane styleClass="header" vgap="5">
                 <!-- Corda logo -->
