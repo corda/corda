@@ -158,7 +158,9 @@ open class PersistentNetworkMapCache(
         return when (nodeInfos.size) {
             0 -> null
             1 -> nodeInfos[0]
-            else -> throw IllegalArgumentException("More than one node found with legal name $name")
+            else -> throw IllegalArgumentException("More than one node found with legal name $name. " +
+                    "The network CA has probably issued several certificates with the same legal name. " +
+                    "All but one must be revoked.")
         }
     }
 
