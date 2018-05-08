@@ -94,7 +94,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     override fun call() {
         val newTxns = ArrayList<SignedTransaction>(txHashes.size)
         // Start fetching data.
-        for (pageNumber in 0 until txHashes.size / RESOLUTION_PAGE_SIZE) {
+        for (pageNumber in 0..(txHashes.size - 1) / RESOLUTION_PAGE_SIZE) {
             val page = page(pageNumber, RESOLUTION_PAGE_SIZE)
 
             newTxns += downloadDependencies(page)
