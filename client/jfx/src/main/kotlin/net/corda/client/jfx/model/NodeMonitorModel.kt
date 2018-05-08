@@ -1,5 +1,6 @@
 package net.corda.client.jfx.model
 
+import com.sun.javafx.application.PlatformImpl
 import javafx.application.Platform
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.CordaRPCClient
@@ -8,6 +9,7 @@ import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.internal.staticField
 import net.corda.core.messaging.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.Vault
@@ -19,9 +21,11 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
+import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String) {
@@ -59,6 +63,19 @@ class NodeMonitorModel {
 
     companion object {
         val logger = contextLogger()
+
+        private fun runLaterIfInitialized(op: () -> Unit) {
+
+            val initialized = PlatformImpl::class.java.staticField<AtomicBoolean>("initialized")
+
+            // Only execute using "runLater()" if JavaFX been initialized.
+            // It may not be initialized in the unit test.
+            if(initialized.value.get()) {
+                Platform.runLater(op)
+            } else {
+                op()
+            }
+        }
     }
 
     /**
@@ -148,7 +165,7 @@ class NodeMonitorModel {
                     // Terminate subscription such that nothing gets past this point to downstream Observables.
                     retryableStateMachineUpdatesSubscription.get()?.unsubscribe()
                     // Flag to everyone that proxy is no longer available.
-                    Platform.runLater { proxyObservable.set(null) }
+                    runLaterIfInitialized { proxyObservable.set(null) }
                     // It is good idea to close connection to properly mark the end of it. During re-connect we will create a new
                     // client and a new connection, so no going back to this one. Also the server might be down, so we are
                     // force closing the connection to avoid propagation of notification to the server side.
@@ -159,7 +176,7 @@ class NodeMonitorModel {
                 .subscribe(retryableStateMachineUpdatesSubject)
 
         retryableStateMachineUpdatesSubscription.set(subscription)
-        Platform.runLater { proxyObservable.set(CordaRPCOpsWrapper(proxy)) }
+        runLaterIfInitialized { proxyObservable.set(CordaRPCOpsWrapper(proxy)) }
         notaryIdentities = proxy.notaryIdentities()
 
         return stateMachineInfos
@@ -183,7 +200,11 @@ class NodeMonitorModel {
                 val nodeInfo = _connection.proxy.nodeInfo()
                 require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
                 _connection
-            } catch (th: Throwable) {
+            } catch( secEx: ActiveMQSecurityException) {
+                // Happens when incorrect credentials provided - no point to retry connecting.
+                throw secEx
+            }
+            catch (th: Throwable) {
                 // Deliberately not logging full stack trace as it will be full of internal stacktraces.
                 logger.info("Exception upon establishing connection: " + th.message)
                 null
