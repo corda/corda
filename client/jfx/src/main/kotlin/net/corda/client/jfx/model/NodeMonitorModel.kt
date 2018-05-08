@@ -1,5 +1,6 @@
 package net.corda.client.jfx.model
 
+import javafx.application.Platform
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
@@ -147,7 +148,7 @@ class NodeMonitorModel {
                     // Terminate subscription such that nothing gets past this point to downstream Observables.
                     retryableStateMachineUpdatesSubscription.get()?.unsubscribe()
                     // Flag to everyone that proxy is no longer available.
-                    //proxyObservable.set(null)
+                    Platform.runLater { proxyObservable.set(null) }
                     // It is good idea to close connection to properly mark the end of it. During re-connect we will create a new
                     // client and a new connection, so no going back to this one. Also the server might be down, so we are
                     // force closing the connection to avoid propagation of notification to the server side.
@@ -158,7 +159,7 @@ class NodeMonitorModel {
                 .subscribe(retryableStateMachineUpdatesSubject)
 
         retryableStateMachineUpdatesSubscription.set(subscription)
-        proxyObservable.set(CordaRPCOpsWrapper(proxy))
+        Platform.runLater { proxyObservable.set(CordaRPCOpsWrapper(proxy)) }
         notaryIdentities = proxy.notaryIdentities()
 
         return stateMachineInfos

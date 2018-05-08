@@ -273,7 +273,7 @@ fun <A : Any, B : Any, K : Any> ObservableList<A>.leftOuterJoin(
     val rightTableMap = rightTable.associateByAggregation(rightToJoinKey)
     val joinedMap: ObservableMap<K, Pair<ObservableList<A>, ObservableList<B>>> =
             LeftOuterJoinedMap(leftTableMap, rightTableMap) { _, left, rightValue ->
-                Pair(left, ChosenList(rightValue.map { it ?: FXCollections.emptyObservableList() }))
+                Pair(left, ChosenList(rightValue.map { it ?: FXCollections.emptyObservableList() }, "ChosenList from leftOuterJoin"))
             }
     return joinedMap
 }

@@ -59,7 +59,7 @@ class MainView : View(WINDOW_TITLE) {
             // This needed to be declared val or else it will get GCed and listener unregistered.
             val buttonStyle = ChosenList(selectedView.map { selected ->
                 if (selected == it) listOf(menuItemCSS, menuItemSelectedCSS).observable() else listOf(menuItemCSS).observable()
-            })
+            }, "buttonStyle")
             stackpane {
                 button(it.title) {
                     graphic = FontAwesomeIconView(it.icon).apply {

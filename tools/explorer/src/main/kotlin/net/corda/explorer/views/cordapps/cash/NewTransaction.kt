@@ -84,7 +84,7 @@ class NewTransaction : Fragment() {
             CashTransaction.Exit -> currencyTypes
             else -> FXCollections.emptyObservableList()
         }
-    })
+    }, "NewTransactionCurrencyItems")
 
     fun show(window: Window) {
         newTransactionDialog(window).showAndWait().ifPresent { request ->
