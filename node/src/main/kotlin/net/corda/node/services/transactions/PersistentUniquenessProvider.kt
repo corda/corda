@@ -47,19 +47,20 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
     class Request(
             @Id
             @GeneratedValue
+            @Column(nullable = true)
             val id: Int? = null,
 
-            @Column(name = "consuming_transaction_id")
+            @Column(name = "consuming_transaction_id", nullable = false)
             val consumingTxHash: String,
 
-            @Column(name = "requesting_party_name")
+            @Column(name = "requesting_party_name", nullable = false)
             var partyName: String,
 
             @Lob
-            @Column(name = "request_signature")
+            @Column(name = "request_signature", nullable = false)
             val requestSignature: ByteArray,
 
-            @Column(name = "request_timestamp")
+            @Column(name = "request_timestamp", nullable = false)
             var requestDate: Instant
     ) : Serializable
 

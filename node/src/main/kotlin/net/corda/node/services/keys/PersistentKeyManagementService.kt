@@ -34,14 +34,14 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     class PersistentKey(
 
             @Id
-            @Column(name = "public_key_hash", length = MAX_HASH_HEX_SIZE)
+            @Column(name = "public_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String,
 
             @Lob
-            @Column(name = "public_key")
+            @Column(name = "public_key", nullable = false)
             var publicKey: ByteArray = EMPTY_BYTE_ARRAY,
             @Lob
-            @Column(name = "private_key")
+            @Column(name = "private_key", nullable = false)
             var privateKey: ByteArray = EMPTY_BYTE_ARRAY
     ) : Serializable {
         constructor(publicKey: PublicKey, privateKey: PrivateKey)
