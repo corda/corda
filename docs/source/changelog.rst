@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* ``SignedTransaction`` can now be serialized to JSON and deserialized back into an object.
+
 * Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.
 
 * Refactor AMQP Serializer to pass context object down the serialization call hierarchy. Will allow per thread
