@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Added smart detect logic for devMode and option to overwrite from the command line
+
 * Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
 
 * Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.

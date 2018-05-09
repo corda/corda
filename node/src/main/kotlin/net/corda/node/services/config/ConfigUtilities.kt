@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.crypto.save
+import org.apache.commons.lang3.SystemUtils
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
@@ -28,11 +29,17 @@ object ConfigHelper {
         val parseOptions = ConfigParseOptions.defaults()
         val defaultConfig = ConfigFactory.parseResources("reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
+
+        // detect the underlying OS. If mac or windows non-server then we assume we're running in devMode. Unless specified otherwise
+        val smartDevMode = SystemUtils.IS_OS_MAC || (SystemUtils.IS_OS_WINDOWS && !SystemUtils.OS_NAME.toLowerCase().contains("server"))
+        val devModeConfig = ConfigFactory.parseMap(mapOf("devMode" to smartDevMode))
+
         val finalConfig = configOf(
                 // Add substitution values here
                 "baseDirectory" to baseDirectory.toString())
                 .withFallback(configOverrides)
                 .withFallback(appConfig)
+                .withFallback(devModeConfig) // this needs to be after the appConfig, so it doesn't overwrite the configured devMode
                 .withFallback(defaultConfig)
                 .resolve()
 
