@@ -73,7 +73,7 @@ class DeliverSessionMessageTransition(
                 // Send messages that were buffered pending confirmation of session.
                 val sendActions = sessionState.bufferedMessages.map { (deduplicationId, bufferedMessage) ->
                     val existingMessage = ExistingSessionMessage(message.initiatedSessionId, bufferedMessage)
-                    Action.SendExisting(initiatedSession.peerParty, existingMessage, deduplicationId)
+                    Action.SendExisting(initiatedSession.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID))
                 }
                 actions.addAll(sendActions)
                 currentState = currentState.copy(checkpoint = newCheckpoint)

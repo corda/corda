@@ -41,4 +41,5 @@ interface FlowStateMachine<FLOWRETURN> {
     val resultFuture: CordaFuture<FLOWRETURN>
     val context: InvocationContext
     val ourIdentity: Party
+    val ourSenderUUID: String?
 }

@@ -8,11 +8,18 @@ package net.corda.node.services.statemachine
 interface FlowHospital {
     /**
      * The flow running in [flowFiber] has errored.
+     *
+     * @return true if the flow should be errored, otherwise the flow will continue.
      */
-    fun flowErrored(flowFiber: FlowFiber)
+    fun flowErrored(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable): Boolean
 
     /**
      * The flow running in [flowFiber] has cleaned, possibly as a result of a flow hospital resume.
      */
     fun flowCleaned(flowFiber: FlowFiber)
+
+    /**
+     * The flow has been removed from the state machine.
+     */
+    fun flowRemoved(flowFiber: FlowFiber)
 }

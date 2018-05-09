@@ -918,8 +918,37 @@ internal fun logVendorString(database: CordaPersistence, log: Logger) {
 }
 
 internal class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
-    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext, deduplicationHandler: DeduplicationHandler?): CordaFuture<FlowStateMachine<T>> {
-        return smm.startFlow(logic, context, ourIdentity = null, deduplicationHandler = deduplicationHandler)
+    override fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<FlowStateMachine<T>> {
+        smm.deliverExternalEvent(event)
+        return event.future
+    }
+
+    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
+        val startFlowEvent = object : ExternalEvent.ExternalStartFlowEvent<T>, DeduplicationHandler {
+            override fun insideDatabaseTransaction() {}
+
+            override fun afterDatabaseTransaction() {}
+
+            override val externalCause: ExternalEvent
+                get() = this
+            override val deduplicationHandler: DeduplicationHandler
+                get() = this
+
+            override val flowLogic: FlowLogic<T>
+                get() = logic
+            override val context: InvocationContext
+                get() = context
+
+            override fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<T>>) {
+                _future.captureLater(flowFuture)
+            }
+
+            private val _future = openFuture<FlowStateMachine<T>>()
+            override val future: CordaFuture<FlowStateMachine<T>>
+                get() = _future
+
+        }
+        return startFlow(startFlowEvent)
     }
 
     override fun <T> invokeFlowAsync(

@@ -20,6 +20,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.trace
 import net.corda.node.services.messaging.*
 import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.node.internal.InMemoryMessage
@@ -338,6 +340,7 @@ class InMemoryMessagingNetwork private constructor(
         private val processedMessages: MutableSet<DeduplicationId> = Collections.synchronizedSet(HashSet<DeduplicationId>())
 
         override val myAddress: PeerHandle get() = peerHandle
+        override val ourSenderUUID: String = UUID.randomUUID().toString()
 
         private val backgroundThread = if (manuallyPumped) null else
             thread(isDaemon = true, name = "In-memory message dispatcher") {
@@ -405,8 +408,8 @@ class InMemoryMessagingNetwork private constructor(
         override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
-        override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId, additionalHeaders: Map<String, String>): Message {
-            return InMemoryMessage(topic, OpaqueBytes(data), deduplicationId)
+        override fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId, additionalHeaders: Map<String, String>): Message {
+            return InMemoryMessage(topic, OpaqueBytes(data), deduplicationId.deduplicationId, senderUUID = deduplicationId.senderUUID)
         }
 
         /**
@@ -470,7 +473,8 @@ class InMemoryMessagingNetwork private constructor(
                     database.transaction {
                         for (handler in deliverTo) {
                             try {
-                                handler.callback(transfer.toReceivedMessage(), handler, DummyDeduplicationHandler())
+                                val receivedMessage = transfer.toReceivedMessage()
+                                handler.callback(receivedMessage, handler, DummyDeduplicationHandler(receivedMessage))
                             } catch (e: Exception) {
                                 log.error("Caught exception in handler for $this/${handler.topicSession}", e)
                             }
@@ -495,7 +499,11 @@ class InMemoryMessagingNetwork private constructor(
                 sender.name)
     }
 
-    private class DummyDeduplicationHandler : DeduplicationHandler {
+    private class DummyDeduplicationHandler(override val receivedMessage: ReceivedMessage) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
+        override val externalCause: ExternalEvent
+            get() = this
+        override val deduplicationHandler: DeduplicationHandler
+            get() = this
         override fun afterDatabaseTransaction() {
         }
         override fun insideDatabaseTransaction() {
