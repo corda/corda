@@ -497,7 +497,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         copy[valueIndex] = 0x00
         assertThatExceptionOfType(NotSerializableException::class.java).isThrownBy {
             des.deserialize(OpaqueBytes(copy), NonZeroByte::class.java, testSerializationContext)
-        }.withMessageContaining("Zero not allowed")
+        }.withStackTraceContaining("Zero not allowed")
     }
 
     @Test

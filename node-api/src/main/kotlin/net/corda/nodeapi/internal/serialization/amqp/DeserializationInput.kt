@@ -12,7 +12,6 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.esotericsoftware.kryo.io.ByteBufferInputStream
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
@@ -105,7 +104,7 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
 
 
     @Throws(NotSerializableException::class)
-    fun getEnvelope(byteSequence: ByteSequence) = Companion.getEnvelope(byteSequence, encodingWhitelist)
+    fun getEnvelope(byteSequence: ByteSequence) = getEnvelope(byteSequence, encodingWhitelist)
 
     @Throws(NotSerializableException::class)
     inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>, context: SerializationContext): T =
@@ -119,7 +118,7 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
         } catch (nse: NotSerializableException) {
             throw nse
         } catch (t: Throwable) {
-            throw NotSerializableException("Unexpected throwable: ${t.message} ${t.getStackTraceAsString()}")
+            throw NotSerializableException("Unexpected throwable: ${t.message}").apply { initCause(t) }
         } finally {
             objectHistory.clear()
         }
@@ -173,7 +172,7 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
                 if (!objectRetrieved::class.java.isSubClassOf(type.asClass()!!)) {
                     throw NotSerializableException(
                             "Existing reference type mismatch. Expected: '$type', found: '${objectRetrieved::class.java}' " +
-                                    "@ ${objectIndex}")
+                                    "@ $objectIndex")
                 }
                 objectRetrieved
             } else {
