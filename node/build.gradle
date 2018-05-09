@@ -96,7 +96,6 @@ dependencies {
 
     // Jackson support: serialisation to/from JSON, YAML, etc
     compile project(':client:jackson')
-    compile group: 'org.json', name: 'json', version: json_version
 
     // Coda Hale's Metrics: for monitoring of key statistics
     compile "io.dropwizard.metrics:metrics-core:3.1.2"

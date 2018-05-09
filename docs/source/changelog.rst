@@ -7,6 +7,17 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
+
+  * ``Instant`` and ``Date`` objects are serialised as ISO-8601 formatted strings rather than timestamps
+  * ``PublicKey`` objects are serialised and looked up according to their Base58 encoded string
+  * ``Party`` objects can be deserialised by looking up their public key, in addition to their name
+  * ``NodeInfo`` objects are serialised as an object and can be looked up using the same mechanism as ``Party``
+  * ``NetworkHostAndPort`` serialised according to its ``toString()``
+  * ``PartyAndCertificate`` is serialised as an object containing the name and owning key
+
+* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used
+
 * ``ServiceHub`` and ``CordaRPCOps`` can now safely be used from multiple threads without incurring in database transaction problems.
 
 * Fixed an issue preventing out of process nodes started by the ``Driver`` from logging to file.
