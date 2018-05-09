@@ -1,0 +1,24 @@
+buildscript {
+    ext.strata_version = '1.1.2'
+}
+
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.cordformation'
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
+    // The SIMM demo CorDapp depends upon Cash CorDapp features
+    cordapp project(':finance')
+
+    // Corda integration dependencies
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+
+
+    // Cordapp dependencies
+    // Specify your cordapp's dependencies below, including dependent cordapps
+    compile "com.opengamma.strata:strata-product:${strata_version}"
+    compile "com.opengamma.strata:strata-market:${strata_version}"
+
+}

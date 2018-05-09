@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.
+
 * Refactor AMQP Serializer to pass context object down the serialization call hierarchy. Will allow per thread
   extensions to be set and used by the RPC work (Observable Context Key)
 
