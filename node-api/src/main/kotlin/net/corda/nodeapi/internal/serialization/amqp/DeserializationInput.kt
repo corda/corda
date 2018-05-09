@@ -37,7 +37,7 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
     private val objectHistory: MutableList<Any> = mutableListOf()
 
     companion object {
-        private val BYTES_NEEDED_TO_PEEK: Int = 23
+        private const val BYTES_NEEDED_TO_PEEK: Int = 23
 
         fun peekSize(bytes: ByteArray): Int {
             // There's an 8 byte header, and then a 0 byte plus descriptor followed by constructor
