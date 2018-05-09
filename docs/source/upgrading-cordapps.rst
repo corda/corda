@@ -475,47 +475,48 @@ existing object relational mapper. For example, we can update:
     .. sourcecode:: java
 
         public class ObligationSchemaV1 extends MappedSchema {
-            public IOUSchemaV1() {
+            public ObligationSchemaV1() {
                 super(Obligation.class, 1, ImmutableList.of(ObligationEntity.class));
             }
+        }
 
-            @Entity
-            @Table(name = "obligations")
-            public static class ObligationEntity extends PersistentState {
-                @Column(name = "currency") private final String currency;
-                @Column(name = "amount") private final Long amount;
-                @Column(name = "lender") @Lob private final Byte[] lender;
-                @Column(name = "borrower") @Lob private final Byte[] borrower;
-                @Column(name = "linear_id") private final UUID linearId;
+        @Entity
+        @Table(name = "obligations")
+        public class ObligationEntity extends PersistentState {
+            @Column(name = "currency") private String currency;
+            @Column(name = "amount") private Long amount;
+            @Column(name = "lender") @Lob private byte[] lender;
+            @Column(name = "borrower") @Lob private byte[] borrower;
+            @Column(name = "linear_id") private UUID linearId;
 
+            protected ObligationEntity(){}
 
-                public ObligationEntity(String currency, Long amount, Byte[] lender, Byte[] borrower, UUID linearId) {
-                    this.currency = currency;
-                    this.amount = amount;
-                    this.lender = lender;
-                    this.borrower = borrower;
-                    this.linearId = linearId;
-                }
+            public ObligationEntity(String currency, Long amount, byte[] lender, byte[] borrower, UUID linearId) {
+                this.currency = currency;
+                this.amount = amount;
+                this.lender = lender;
+                this.borrower = borrower;
+                this.linearId = linearId;
+            }
 
-                public String getCurrency() {
-                    return currency;
-                }
+            public String getCurrency() {
+                return currency;
+            }
 
-                public Long getAmount() {
-                    return amount;
-                }
+            public Long getAmount() {
+                return amount;
+            }
 
-                public ByteArray getLender() {
-                    return lender;
-                }
+            public byte[] getLender() {
+                return lender;
+            }
 
-                public ByteArray getBorrower() {
-                    return borrower;
-                }
+            public byte[] getBorrower() {
+                return borrower;
+            }
 
-                public UUID getId() {
-                    return linearId;
-                }
+            public UUID getLinearId() {
+                return linearId;
             }
         }
 
@@ -540,53 +541,54 @@ To:
     .. sourcecode:: java
 
         public class ObligationSchemaV1 extends MappedSchema {
-            public IOUSchemaV1() {
+            public ObligationSchemaV1() {
                 super(Obligation.class, 1, ImmutableList.of(ObligationEntity.class));
             }
+        }
 
-            @Entity
-            @Table(name = "obligations")
-            public static class ObligationEntity extends PersistentState {
-                @Column(name = "currency") private final String currency;
-                @Column(name = "amount") private final Long amount;
-                @Column(name = "lender") @Lob private final Byte[] lender;
-                @Column(name = "borrower") @Lob private final Byte[] borrower;
-                @Column(name = "linear_id") private final UUID linearId;
-                @Column(name = "defaulted") private final Boolean defaulted;            // NEW COLUMN!
+        @Entity
+        @Table(name = "obligations")
+        public class ObligationEntity extends PersistentState {
+            @Column(name = "currency") private String currency;
+            @Column(name = "amount") private Long amount;
+            @Column(name = "lender") @Lob private byte[] lender;
+            @Column(name = "borrower") @Lob private byte[] borrower;
+            @Column(name = "linear_id") private UUID linearId;
+            @Column(name = "defaulted") private Boolean defaulted;            // NEW COLUMN!
 
+            protected ObligationEntity(){}
 
-                public ObligationEntity(String currency, Long amount, Byte[] lender, Byte[] borrower, UUID linearId, Boolean defaulted) {
-                    this.currency = currency;
-                    this.amount = amount;
-                    this.lender = lender;
-                    this.borrower = borrower;
-                    this.linearId = linearId;
-                    this.defaulted = defaulted;
-                }
+            public ObligationEntity(String currency, Long amount, byte[] lender, byte[] borrower, UUID linearId, Boolean defaulted) {
+                this.currency = currency;
+                this.amount = amount;
+                this.lender = lender;
+                this.borrower = borrower;
+                this.linearId = linearId;
+                this.defaulted = defaulted;
+            }
 
-                public String getCurrency() {
-                    return currency;
-                }
+            public String getCurrency() {
+                return currency;
+            }
 
-                public Long getAmount() {
-                    return amount;
-                }
+            public Long getAmount() {
+                return amount;
+            }
 
-                public ByteArray getLender() {
-                    return lender;
-                }
+            public byte[] getLender() {
+                return lender;
+            }
 
-                public ByteArray getBorrower() {
-                    return borrower;
-                }
+            public byte[] getBorrower() {
+                return borrower;
+            }
 
-                public UUID getId() {
-                    return linearId;
-                }
+            public UUID getLinearId() {
+                return linearId;
+            }
 
-                public Boolean isDefaulted() {
-                    return defaulted;
-                }
+            public Boolean isDefaulted() {
+                return defaulted;
             }
         }
 

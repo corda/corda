@@ -6,6 +6,7 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
 
 * ``SignedTransaction`` can now be serialized to JSON and deserialized back into an object.
 

@@ -20,14 +20,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.vega.flows.toCordaCompatible
 import java.time.LocalDate
 
-/**
- *
- */
-data class InitialMarginTriple(val first: Double, val second: Double, val third: Double) {
-    companion object {
-        fun zero() = InitialMarginTriple(0.0, 0.0, 0.0)
-    }
-}
 
 /**
  * Base class of analytics engine for running analytics on a portfolio.

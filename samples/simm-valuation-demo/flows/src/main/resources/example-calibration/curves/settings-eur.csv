@@ -1,0 +1,4 @@
+Curve Name,Value Type,Day Count,Interpolator,Left Extrapolator,Right Extrapolator
+EUR-DSCON-OIS,df,Act/365F,LogNaturalSplineDiscountFactor,Interpolator,LogLinear
+EUR-EURIBOR3M-BS,df,Act/365F,LogNaturalSplineDiscountFactor,Interpolator,LogLinear
+EUR-EURIBOR6M-IRS,df,Act/365F,LogNaturalSplineDiscountFactor,Interpolator,LogLinear
