@@ -6,6 +6,7 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
 
 * Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.
 

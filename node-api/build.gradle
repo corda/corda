@@ -42,9 +42,10 @@ dependencies {
     // Kryo: object graph serialization.
     compile "com.esotericsoftware:kryo:4.0.0"
     compile "de.javakaffee:kryo-serializers:0.41"
+    compile "org.ow2.asm:asm:$asm_version"
 
     // For AMQP serialisation.
-    compile "org.apache.qpid:proton-j:${protonj_version}"
+    compile "org.apache.qpid:proton-j:$protonj_version"
 
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:$hikari_version"
@@ -58,11 +59,11 @@ dependencies {
     shadow "org.apache.curator:curator-recipes:${curator_version}"
     testCompile "org.apache.curator:curator-test:${curator_version}"
 
-    // FastClasspathScanner: classpath scanning - needed for the NetworkBootstraper
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.12.3'
+    // FastClasspathScanner: classpath scanning - needed for the NetworkBootstrapper and AMQP.
+    compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
 
     // Pure-Java Snappy compression
-    compile 'org.iq80.snappy:snappy:0.4'
+    compile "org.iq80.snappy:snappy:$snappy_version"
 
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
 
