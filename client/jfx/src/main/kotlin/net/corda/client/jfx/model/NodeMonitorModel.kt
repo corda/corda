@@ -200,11 +200,11 @@ class NodeMonitorModel {
                 val nodeInfo = _connection.proxy.nodeInfo()
                 require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
                 _connection
-            } catch( secEx: ActiveMQSecurityException) {
+            } catch(secEx: ActiveMQSecurityException) {
                 // Happens when incorrect credentials provided - no point to retry connecting.
                 throw secEx
             }
-            catch (th: Throwable) {
+            catch(th: Throwable) {
                 // Deliberately not logging full stack trace as it will be full of internal stacktraces.
                 logger.info("Exception upon establishing connection: " + th.message)
                 null

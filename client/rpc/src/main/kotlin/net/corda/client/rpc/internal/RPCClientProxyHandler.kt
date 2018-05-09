@@ -361,7 +361,7 @@ class RPCClientProxyHandler(
             join(1000)
         }
 
-        if(notify) {
+        if (notify) {
             // This is going to send remote message, see `org.apache.activemq.artemis.core.client.impl.ClientConsumerImpl.doCleanUp()`.
             sessionFactory?.close()
         } else {
