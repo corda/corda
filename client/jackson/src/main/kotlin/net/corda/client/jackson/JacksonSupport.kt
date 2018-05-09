@@ -2,17 +2,38 @@ package net.corda.client.jackson
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.core.*
-import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.core.JsonToken
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.Module
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.AddressFormatException
+import net.corda.core.crypto.Base58
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.MerkleTree
+import net.corda.core.crypto.PartialMerkleTree
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -24,12 +45,13 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.*
+import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.base58ToByteArray
 import net.corda.core.utilities.base64ToByteArray
 import net.corda.core.utilities.toBase64
-import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
@@ -99,12 +121,13 @@ object JacksonSupport {
             addDeserializer(OpaqueBytes::class.java, OpaqueBytesDeserializer)
             addSerializer(OpaqueBytes::class.java, OpaqueBytesSerializer)
 
+            listOf(TransactionSignatureSerde, SignedTransactionSerde).forEach { serde -> serde.applyTo(this) }
+
             // For X.500 distinguished names
             addDeserializer(CordaX500Name::class.java, CordaX500NameDeserializer)
             addSerializer(CordaX500Name::class.java, CordaX500NameSerializer)
 
             // Mixins for transaction types to prevent some properties from being serialized
-            setMixInAnnotation(SignedTransaction::class.java, SignedTransactionMixin::class.java)
             setMixInAnnotation(WireTransaction::class.java, WireTransactionMixin::class.java)
         }
     }
@@ -146,6 +169,90 @@ object JacksonSupport {
         registerModule(JavaTimeModule())
         registerModule(cordaModule)
         registerModule(KotlinModule())
+    }
+
+    private interface JsonSerde<TYPE> {
+        val type: Class<TYPE>
+        val serializer: JsonSerializer<TYPE>
+        val deserializer: JsonDeserializer<TYPE>
+
+        fun applyTo(module: SimpleModule) {
+            with(module) {
+                addSerializer(type, serializer)
+                addDeserializer(type, deserializer)
+            }
+        }
+    }
+
+    private inline fun <reified RESULT> JsonNode.get(fieldName: String, condition: (JsonNode) -> Boolean, mapper: ObjectMapper, parser: JsonParser): RESULT {
+
+        if (get(fieldName)?.let(condition) != true) {
+            JsonParseException(parser, "Missing required object field \"$fieldName\".")
+        }
+        return mapper.treeToValue(get(fieldName), RESULT::class.java)
+    }
+
+    private object TransactionSignatureSerde : JsonSerde<TransactionSignature> {
+        override val type: Class<TransactionSignature> = TransactionSignature::class.java
+
+        override val serializer = object : StdSerializer<TransactionSignature>(type) {
+            override fun serialize(value: TransactionSignature, json: JsonGenerator, serializers: SerializerProvider) {
+                with(json) {
+                    writeStartObject()
+                    writeObjectField("by", value.by)
+                    writeObjectField("signatureMetadata", value.signatureMetadata)
+                    writeObjectField("bytes", value.bytes)
+                    writeObjectField("partialMerkleTree", value.partialMerkleTree)
+                    writeEndObject()
+                }
+            }
+        }
+
+        override val deserializer = object : StdDeserializer<TransactionSignature>(type) {
+            override fun deserialize(parser: JsonParser, context: DeserializationContext): TransactionSignature {
+                val mapper = parser.codec as ObjectMapper
+                val json = mapper.readTree<JsonNode>(parser)
+
+                if (json.get("by")?.isTextual != true) {
+                    JsonParseException(parser, "Missing required text field \"by\".")
+                }
+                val by = PublicKeyDeserializer.deserializeValue(json.get("by").textValue())
+                val signatureMetadata = json.get<SignatureMetadata>("signatureMetadata", JsonNode::isObject, mapper, parser)
+                val bytes = json.get<ByteArray>("bytes", JsonNode::isObject, mapper, parser)
+                val partialMerkleTree = json.get<PartialMerkleTree>("partialMerkleTree", JsonNode::isObject, mapper, parser)
+
+                return TransactionSignature(bytes, by, signatureMetadata, partialMerkleTree)
+            }
+        }
+    }
+
+    private object SignedTransactionSerde : JsonSerde<SignedTransaction> {
+        override val type: Class<SignedTransaction> = SignedTransaction::class.java
+
+        override val serializer = object : StdSerializer<SignedTransaction>(type) {
+            override fun serialize(value: SignedTransaction, json: JsonGenerator, serializers: SerializerProvider) {
+                with(json) {
+                    writeStartObject()
+                    writeObjectField("txBits", value.txBits.bytes)
+                    writeObjectField("signatures", value.sigs)
+                    writeEndObject()
+                }
+            }
+        }
+
+        override val deserializer = object : StdDeserializer<SignedTransaction>(type) {
+            override fun deserialize(parser: JsonParser, context: DeserializationContext): SignedTransaction {
+                val mapper = parser.codec as ObjectMapper
+                val json = mapper.readTree<JsonNode>(parser)
+
+                val txBits = json.get<ByteArray>("txBits", JsonNode::isTextual, mapper, parser)
+                val signatures = json.get<TransactionSignatures>("signatures", JsonNode::isArray, mapper, parser)
+
+                return SignedTransaction(SerializedBytes(txBits), signatures)
+            }
+        }
+
+        private class TransactionSignatures : ArrayList<TransactionSignature>()
     }
 
     object ToStringSerializer : JsonSerializer<Any>() {
@@ -282,11 +389,15 @@ object JacksonSupport {
 
     object PublicKeyDeserializer : JsonDeserializer<PublicKey>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): PublicKey {
+            return deserializeValue(parser.text, parser)
+        }
+
+        internal fun deserializeValue(value: String, parser: JsonParser? = null): PublicKey {
             return try {
-                val derBytes = parser.text.base64ToByteArray()
+                val derBytes = value.base64ToByteArray()
                 Crypto.decodePublicKey(derBytes)
             } catch (e: Exception) {
-                throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
+                throw JsonParseException(parser, "Invalid public key $value: ${e.message}")
             }
         }
     }

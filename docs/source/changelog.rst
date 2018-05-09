@@ -8,6 +8,8 @@ Unreleased
 ==========
 * Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
 
+* ``SignedTransaction`` can now be serialized to JSON and deserialized back into an object.
+
 * Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.
 
 * Refactor AMQP Serializer to pass context object down the serialization call hierarchy. Will allow per thread
