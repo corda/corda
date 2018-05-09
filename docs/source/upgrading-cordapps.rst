@@ -489,7 +489,7 @@ existing object relational mapper. For example, we can update:
             @Column(name = "borrower") @Lob private byte[] borrower;
             @Column(name = "linear_id") private UUID linearId;
 
-            public ObligationEntity(){}
+            protected ObligationEntity(){}
 
             public ObligationEntity(String currency, Long amount, byte[] lender, byte[] borrower, UUID linearId) {
                 this.currency = currency;
@@ -515,7 +515,7 @@ existing object relational mapper. For example, we can update:
                 return borrower;
             }
 
-            public UUID getId() {
+            public UUID getLinearId() {
                 return linearId;
             }
         }
@@ -556,7 +556,7 @@ To:
             @Column(name = "linear_id") private UUID linearId;
             @Column(name = "defaulted") private Boolean defaulted;            // NEW COLUMN!
 
-            public ObligationEntity(){}
+            protected ObligationEntity(){}
 
             public ObligationEntity(String currency, Long amount, byte[] lender, byte[] borrower, UUID linearId, Boolean defaulted) {
                 this.currency = currency;
@@ -583,7 +583,7 @@ To:
                 return borrower;
             }
 
-            public UUID getId() {
+            public UUID getLinearId() {
                 return linearId;
             }
 
