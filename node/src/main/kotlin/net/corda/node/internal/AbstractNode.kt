@@ -204,10 +204,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(started == null) { "Node has already been started" }
         if (configuration.devMode) {
             Emoji.renderIfSupported {
-                println("""---------------- Attention! -------------------------------
-                    |${Emoji.skullAndCrossbones} Node is running in developer mode! ${Emoji.developer}
-                    |${Emoji.skullAndCrossbones} This is NOT safe for a production deployment.
-                    |-----------------------------------------------------------
+                println("""
+                    |
+                    |+---------------- Attention! -------------------------+
+                    ||${Emoji.skullAndCrossbones} Node is running in developer mode! ${Emoji.developer}          |
+                    ||${Emoji.skullAndCrossbones} This is NOT safe for a production deployment.    |
+                    |+-----------------------------------------------------+
+                    |
                 """.trimMargin())
             }
         }
