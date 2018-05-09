@@ -124,7 +124,7 @@ If the flow worked, it should have recorded a new IOU in the vaults of both Part
 
 We can check the contents of each node's vault by running:
 
-.. code-block:: base
+.. code-block:: bash
 
         run vaultQuery contractStateType: com.template.IOUState
 

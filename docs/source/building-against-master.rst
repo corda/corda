@@ -7,7 +7,7 @@ against the unstable Master branch if you are using a very recent feature, or ar
 To work against the Master branch, proceed as follows:
 
 1. Open a terminal window in the folder where you cloned the Corda repository
-  (available `here <https://github.com/corda/corda>`_)
+   (available `here <https://github.com/corda/corda>`_)
 
 2. Use the following command to check out the latest master branch:
 

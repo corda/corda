@@ -101,6 +101,7 @@ Corda Plugins
   For example:
 
     .. sourcecode:: groovy
+
         dependencies {
             classpath "net.corda.plugins:cordapp:$corda_gradle_plugins_version"
         }
@@ -169,9 +170,7 @@ Configuration
 ^^^^^^^^^^^^^
 
 Nodes that do not require SSL to be enabled for RPC clients now need an additional port to be specified as part of their configuration.
-To do this, add a block as follows to the nodes configuraiton:
-
-  .. sourcecode:: script
+To do this, add a block as follows to the nodes configuration::
 
     rpcSettings {
         adminAddress "localhost:10007"
@@ -179,16 +178,14 @@ To do this, add a block as follows to the nodes configuraiton:
 
 to `node.conf` files.
 
-Also, the property `rpcPort` is now deprecated, so it would be preferable to substitute properties specified that way e.g., `rpcPort=10006` with a block as follows:
-
-  .. sourcecode:: script
+Also, the property `rpcPort` is now deprecated, so it would be preferable to substitute properties specified that way e.g., `rpcPort=10006` with a block as follows::
 
     rpcSettings {
         address "localhost:10006"
         adminAddress "localhost:10007"
     }
 
-Equivalent changes should be performed on classes extending `CordformDefinition`.
+Equivalent changes should be performed on classes extending ``CordformDefinition``.
 
 Testing
 ^^^^^^^
@@ -257,7 +254,6 @@ Public Beta (M12) to V1.0
 -------------------------
 
 :ref:`From Milestone 14 <changelog_m14>`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Build
 ^^^^^
