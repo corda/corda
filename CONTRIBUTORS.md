@@ -37,6 +37,7 @@ see changes to this list.
 * Benoit Lafontaine (OCTO)
 * Berit Bourgonje (ING)
 * BitcoinErrorLog
+* BMO
 * Bob Crozier (AIA)
 * Bogdan Paunescu (R3)
 * C-Otto
@@ -49,15 +50,16 @@ see changes to this list.
 * Chris Akers (R3)
 * Chris Burlinchon (R3)
 * Chris Rankin (R3)
-* Christian Kaufmann (Credit Suisse)
+* Christian Kaufmann
 * Christian Sailer (R3)
-* Christopher Saunders (Credit Suisse)
+* Christopher Saunders
 * Christopher Swanson (US Bank)
 * Clark Thompson (R3)
 * Clay Ratliff (Thoughtworks)
 * Clemens Wan (R3)
 * Clinton Alexander (R3)
 * cncorda
+* Credit Suisse
 * cyrsis
 * Daniel Roig (SEB)
 * Dave Hudson (R3)
@@ -79,7 +81,7 @@ see changes to this list.
 * Ian Cusden (UBS)
 * Ian Grigg (R3)
 * Igor Nitto (R3)
-* Igor Panov (CIBC)
+* Igor Panov
 * Ivan Schasny (R3)
 * James Brown (R3)
 * James Carlyle (R3)
@@ -94,7 +96,7 @@ see changes to this list.
 * Jose Luu (Natixis)
 * Josh Lindl (BCS)
 * Justin Chapman (Northern Trust)
-* Kai-Michael Schramm (Credit Suisse)
+* Kai-Michael Schramm
 * Karel Hajek (Barclays Capital)
 * karnauskas
 * Kasia Streich (R3)
@@ -114,7 +116,7 @@ see changes to this list.
 * Mark Raynes (Thomson Reuters)
 * Mark Simpson (RBS)
 * Mark Tiggas (Wells Fargo)
-* Massimo Morini (Banca IMI)
+* Massimo Morini
 * Mat Rizzo (R3)
 * Matt Britton (BCS)
 * Matthew Nesbit (R3)
@@ -130,7 +132,7 @@ see changes to this list.
 * Nuam Athaweth (MUFG)
 * Oscar Zibordi de Paiva (Bradesco)
 * Patrick Kuo (R3)
-* Pekka Kaipio (OP Financial)
+* Pekka Kaipio
 * Phillip Griffin
 * Piotr Piskorski (Nordea)
 * Przemyslaw Bak (R3)
@@ -156,12 +158,11 @@ see changes to this list.
 * Sajindra Jayasena (Deutsche Bank)
 * Saket Sharma (BNY Mellon)
 * Sam Chadwick (Thomson Reuters)
-* Sasmit Sahu (Credit Suisse)
-* Scott James (Credit Suisse)
+* Sasmit Sahu
+* Scott James
 * Shams Asari (R3)
 * Simon Taylor (Barclays)
 * Sofus Mortensen (Digital Asset Holdings)
-* Stephen Lane-Smith (BMO)
 * stevenroose
 * Szymon Sztuka (R3)
 * tb-pq
@@ -169,7 +170,7 @@ see changes to this list.
 * Thomas O'Donnell (Macquarie)
 * Thomas Schroeter (R3)
 * Tim Swanson (R3)
-* Timothy Smith (Credit Suisse)
+* Timothy Smith
 * Tom Menner (R3)
 * tomconte
 * Tommy Lillehagen (R3)

@@ -21,7 +21,7 @@ buildscript {
     // TODO: Upgrade gradle-capsule-plugin to a version with capsule:1.0.3
     ext.capsule_version = '1.0.1'
 
-    ext.asm_version = '0.5.3'
+    ext.asm_version = '5.0.4'
 
     /*
      * TODO Upgrade to version 2.4 for large message streaming support
@@ -76,6 +76,10 @@ buildscript {
     ext.ghostdriver_version = '2.1.0'
     ext.eaagentloader_version = '1.0.3'
     ext.jsch_version = '0.1.54'
+    ext.commons_cli_version = '1.4'
+    ext.protonj_version = '0.27.1'
+    ext.snappy_version = '0.4'
+    ext.fast_classpath_scanner_version = '2.12.3'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'
@@ -209,6 +213,14 @@ allprojects {
     }
 
     configurations {
+        all {
+            resolutionStrategy {
+                // Force dependencies to use the same version of Kotlin as Corda.
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+            }
+        }
         compile {
             // We want to use SLF4J's version of these bindings: jcl-over-slf4j
             // Remove any transitive dependency on Apache's version.

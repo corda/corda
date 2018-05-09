@@ -14,6 +14,8 @@
       <module name="behave_main" target="1.8" />
       <module name="behave_scenario" target="1.8" />
       <module name="behave_test" target="1.8" />
+      <module name="blobinspector_main" target="1.8" />
+      <module name="blobinspector_test" target="1.8" />
       <module name="bootstrapper_main" target="1.8" />
       <module name="bootstrapper_test" target="1.8" />
       <module name="buildSrc_main" target="1.8" />
@@ -24,6 +26,9 @@
       <module name="client_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
+      <module name="contracts-states_integrationTest" target="1.8" />
+      <module name="contracts-states_main" target="1.8" />
+      <module name="contracts-states_test" target="1.8" />
       <module name="corda-core_integrationTest" target="1.8" />
       <module name="corda-core_smokeTest" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />
@@ -68,6 +73,9 @@
       <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />
+      <module name="flows_integrationTest" target="1.8" />
+      <module name="flows_main" target="1.8" />
+      <module name="flows_test" target="1.8" />
       <module name="gradle-plugins-cordapp_main" target="1.8" />
       <module name="gradle-plugins-cordapp_test" target="1.8" />
       <module name="graphs_main" target="1.8" />

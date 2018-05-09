@@ -188,9 +188,18 @@ class NodeVaultService(
     }
 
     private fun loadStates(refs: Collection<StateRef>): Collection<StateAndRef<ContractState>> {
-        return if (refs.isNotEmpty())
-            queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refs.toList())).states
-        else emptySet()
+        val states = mutableListOf<StateAndRef<ContractState>>()
+        if (refs.isNotEmpty()) {
+            val refsList = refs.toList()
+            val pageSize = PageSpecification().pageSize
+            (0..(refsList.size - 1) / pageSize).forEach {
+                val offset = it * pageSize
+                val limit = minOf(offset + pageSize, refsList.size)
+                val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refsList.subList(offset, limit))).states
+                states.addAll(page)
+            }
+        }
+        return states
     }
 
     private fun processAndNotify(updates: List<Vault.Update<ContractState>>) {
@@ -395,7 +404,7 @@ class NodeVaultService(
             val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
             val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
             val results = queryBy(contractStateType, criteria.and(countCriteria))
-            totalStates = results.otherResults[0] as Long
+            totalStates = results.otherResults.last() as Long
         }
 
         val session = getSession()

@@ -10,7 +10,6 @@ import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
-import java.net.ConnectException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
@@ -29,8 +28,8 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
     private fun retrieveNetworkParameters(): NetworkParameters {
         val advertisedParametersHash = try {
             networkMapClient?.getNetworkMap()?.payload?.networkParameterHash
-        } catch (e: ConnectException) {
-            logger.info("Couldn't connect to NetworkMap", e)
+        } catch (e: Exception) {
+            logger.info("Unable to download network map", e)
             // If NetworkMap is down while restarting the node, we should be still able to continue with parameters from file
             null
         }

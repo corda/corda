@@ -6,8 +6,16 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
+
+* Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.
+
+* Refactor AMQP Serializer to pass context object down the serialization call hierarchy. Will allow per thread
+  extensions to be set and used by the RPC work (Observable Context Key)
 
 * Refactor RPC Server Kryo observable serializer into it's own sub module
+
+* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work - the new methods avoid bugs that can occur when JPA schemas inherit from each other.
 
 * Refactor RPC Client Kryo observable serializer into it's own sub module
 
@@ -38,6 +46,9 @@ Unreleased
 * java.security.cert.CRLReason added to the default Whitelist.
 
 * java.security.cert.X509CRL serialization support added.
+
+* Replaced the ``PersistentMap`` in ``NodeSchedulerService`` with an implementation that only loads the next scheduled
+  state from the database into memory, rather than them all.
 
 * Upgraded H2 to v1.4.197.
 

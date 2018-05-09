@@ -1,8 +1,9 @@
+@file:JvmName("AMQPStreams")
 package net.corda.nodeapi.internal.serialization.amqp
 
-import com.esotericsoftware.kryo.io.ByteBufferInputStream
-import net.corda.nodeapi.internal.serialization.kryo.ByteBufferOutputStream
-import net.corda.nodeapi.internal.serialization.kryo.serializeOutputStreamPool
+import net.corda.nodeapi.internal.serialization.ByteBufferInputStream
+import net.corda.nodeapi.internal.serialization.ByteBufferOutputStream
+import net.corda.nodeapi.internal.serialization.serializeOutputStreamPool
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer

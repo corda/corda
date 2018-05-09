@@ -3,6 +3,7 @@ package net.corda.bank
 import joptsimple.OptionParser
 import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
+import net.corda.cordform.CordappDependency
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import net.corda.core.contracts.Amount
@@ -25,7 +26,7 @@ private const val BOC_RPC_ADMIN_PORT = 10015
 private const val BOC_WEB_PORT = 10007
 
 class BankOfCordaCordform : CordformDefinition() {
-    // TODO: Readd finance dependency - will fail without it
+
     init {
         node {
             name(NOTARY_NAME)
@@ -60,6 +61,10 @@ class BankOfCordaCordform : CordformDefinition() {
     }
 
     override fun setup(context: CordformContext) = Unit
+
+    override fun getCordappDependencies(): List<CordappDependency> {
+        return listOf(CordappDependency(":finance"))
+    }
 }
 
 object DeployNodes {
