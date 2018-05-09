@@ -12,7 +12,7 @@ package net.corda.nodeapi.internal.serialization.amqp.custom
 
 import net.corda.nodeapi.internal.serialization.amqp.CustomSerializer
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
-import java.time.*
+import java.time.Year
 
 /**
  * A serializer for [Year] that uses a proxy object to write out the integer form.

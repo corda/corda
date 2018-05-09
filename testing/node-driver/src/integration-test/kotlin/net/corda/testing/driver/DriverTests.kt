@@ -13,6 +13,8 @@ package net.corda.testing.driver
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.div
 import net.corda.core.internal.list
@@ -38,9 +40,13 @@ import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
 import org.junit.ClassRule
 import org.junit.Test
+import java.util.*
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.ScheduledExecutorService
 import kotlin.streams.toList
+import kotlin.test.assertEquals
 
 class DriverTests : IntegrationTest() {
     companion object {
@@ -184,6 +190,32 @@ class DriverTests : IntegrationTest() {
             nodeA.stop()
             assertThatCode { newNode(DUMMY_BANK_A_NAME)().getOrThrow() }.doesNotThrowAnyException()
         }
+    }
+
+
+    @Test
+    fun `driver waits for in-process nodes to finish`() {
+        fun NodeHandle.stopQuietly() = try {
+            stop()
+        } catch (t: Throwable) {
+            t.printStackTrace()
+        }
+
+        val handlesFuture = openFuture<List<NodeHandle>>()
+        val driverExit = CountDownLatch(1)
+        val testFuture = ForkJoinPool.commonPool().fork {
+            val handles = LinkedList(handlesFuture.getOrThrow())
+            val last = handles.removeLast()
+            handles.forEach { it.stopQuietly() }
+            assertEquals(1, driverExit.count)
+            last.stopQuietly()
+        }
+        driver(DriverParameters(startNodesInProcess = true, waitForAllNodesToFinish = true)) {
+            val nodeA = newNode(DUMMY_BANK_A_NAME)().getOrThrow()
+            handlesFuture.set(listOf(nodeA) + notaryHandles.map { it.nodeHandles.getOrThrow() }.flatten())
+        }
+        driverExit.countDown()
+        testFuture.getOrThrow()
     }
 
     private fun DriverDSL.newNode(name: CordaX500Name) = { startNode(NodeParameters(providedName = name)) }

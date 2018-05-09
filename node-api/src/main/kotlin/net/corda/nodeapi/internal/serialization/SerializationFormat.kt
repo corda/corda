@@ -17,8 +17,8 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.serialization.OrdinalBits.OrdinalWriter
 import org.iq80.snappy.SnappyFramedInputStream
 import org.iq80.snappy.SnappyFramedOutputStream
-import java.io.OutputStream
 import java.io.InputStream
+import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterInputStream

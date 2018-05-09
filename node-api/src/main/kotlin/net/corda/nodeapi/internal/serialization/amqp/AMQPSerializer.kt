@@ -10,6 +10,7 @@
 
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -40,10 +41,11 @@ interface AMQPSerializer<out T> {
     /**
      * Write the given object, with declared type, to the output.
      */
-    fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, debugIndent: Int = 0)
+    fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
+                    context: SerializationContext, debugIndent: Int = 0)
 
     /**
      * Read the given object from the input. The envelope is provided in case the schema is required.
      */
-    fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput): T
+    fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): T
 }

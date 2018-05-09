@@ -16,10 +16,8 @@ apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
-apply plugin: 'maven-publish'
 
 sourceSets {
     integrationTest {
@@ -57,6 +55,8 @@ dependencies {
 
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance')
+    cordapp project(':samples:simm-valuation-demo:contracts-states')
+    cordapp project(':samples:simm-valuation-demo:flows')
 
     // Corda integration dependencies
     cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
@@ -96,6 +96,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         notary = [validating : true]
         p2pPort 10002
         cordapp project(':finance')
+        cordapp project(':samples:simm-valuation-demo:contracts-states')
+        cordapp project(':samples:simm-valuation-demo:flows')
         rpcSettings {
             address "localhost:10014"
             adminAddress "localhost:10015"
@@ -115,6 +117,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             adminAddress("localhost:10017")
         }
         cordapp project(':finance')
+        cordapp project(':samples:simm-valuation-demo:contracts-states')
+        cordapp project(':samples:simm-valuation-demo:flows')
         rpcUsers = ext.rpcUsers
         extraConfig = [
                 custom: [
@@ -131,6 +135,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             adminAddress("localhost:10027")
         }
         cordapp project(':finance')
+        cordapp project(':samples:simm-valuation-demo:contracts-states')
+        cordapp project(':samples:simm-valuation-demo:flows')
         rpcUsers = ext.rpcUsers
         extraConfig = [
                 custom: [
@@ -147,6 +153,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             adminAddress("localhost:10037")
         }
         cordapp project(':finance')
+        cordapp project(':samples:simm-valuation-demo:contracts-states')
+        cordapp project(':samples:simm-valuation-demo:flows')
         rpcUsers = ext.rpcUsers
         extraConfig = [
                 custom: [
@@ -159,35 +167,4 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
-task scenarioTest(type: Test, dependsOn: []) {
-    testClassesDirs = sourceSets.scenarioTest.output.classesDirs
-    classpath = sourceSets.scenarioTest.runtimeClasspath
-}
-
-task scenarioJar(type: Jar, dependsOn: classes) {
-    classifier "behave-test"
-    from sourceSets.scenarioTest.output
-}
-
-publishing {
-    publications {
-        simmvaluationdemo(MavenPublication) {
-            from components.java
-            artifactId 'simmvaluationdemo'
-
-            artifact sourceJar
-            artifact javadocJar
-            artifact scenarioJar
-        }
-    }
-}
-
-jar {
-    manifest {
-        attributes(
-                'Automatic-Module-Name': 'net.corda.samples.demos.simmvaluation'
-        )
-    }
 }

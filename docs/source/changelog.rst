@@ -7,7 +7,14 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.
+
+* Refactor AMQP Serializer to pass context object down the serialization call hierarchy. Will allow per thread
+  extensions to be set and used by the RPC work (Observable Context Key)
+
 * Refactor RPC Server Kryo observable serializer into it's own sub module
+
+* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work - the new methods avoid bugs that can occur when JPA schemas inherit from each other.
 
 * Refactor RPC Client Kryo observable serializer into it's own sub module
 

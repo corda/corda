@@ -12,11 +12,11 @@
 
 package net.corda.nodeapi.internal.serialization.carpenter
 
+import net.corda.core.serialization.SerializationContext
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
 import net.corda.nodeapi.internal.serialization.amqp.RestrictedType
 import net.corda.nodeapi.internal.serialization.amqp.Field as AMQPField
 import net.corda.nodeapi.internal.serialization.amqp.Schema as AMQPSchema
-import net.corda.core.serialization.SerializationContext
 
 fun AMQPSchema.carpenterSchema(classloader: ClassLoader): CarpenterMetaSchema {
     val rtn = CarpenterMetaSchema.newInstance()
@@ -130,7 +130,7 @@ val typeStrToType: Map<Pair<String, Boolean>, Class<out Any?>> = mapOf(
         Pair("byte", false) to Byte::class.javaObjectType
 )
 
-fun String.stripGenerics() : String = if(this.endsWith('>')) {
+fun String.stripGenerics(): String = if (this.endsWith('>')) {
     this.substring(0, this.indexOf('<'))
 } else this
 

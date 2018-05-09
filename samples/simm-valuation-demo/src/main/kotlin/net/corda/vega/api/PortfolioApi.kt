@@ -236,13 +236,13 @@ class PortfolioApi(val rpc: CordaRPCOps) {
             withPortfolio(party) { state ->
                 if (state.valuation != null) {
                     val isValuer = state.valuer == ownParty
-                    val rawMtm = state.valuation.presentValues.map {
+                    val rawMtm = state.valuation!!.presentValues.map {
                         it.value.amounts.first().amount
                     }.reduce { a, b -> a + b }
-                    val notional = if (isValuer) state.valuation.notional else -state.valuation.notional
+                    val notional = if (isValuer) state.valuation!!.notional else -state.valuation!!.notional
                     val mtm = if (isValuer) rawMtm else -rawMtm
                     // TODO: Stop using localdate.now
-                    val history = AggregatedHistoryView(state.valuation.trades, notional.toDouble(), LocalDate.now(), state.valuation.margin.first, mtm)
+                    val history = AggregatedHistoryView(state.valuation!!.trades, notional.toDouble(), LocalDate.now(), state.valuation!!.margin.first, mtm)
                     Response.ok().entity(history).build()
                 } else {
                     Response.status(Response.Status.NOT_FOUND).entity("Portfolio not yet valued").build()

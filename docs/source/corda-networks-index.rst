@@ -8,3 +8,4 @@ Corda networks
    permissioning
    network-map
    versioning
+   cipher-suites

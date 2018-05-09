@@ -1,0 +1,16 @@
+Valuation Date,Symbology,Ticker,Field Name,Value
+"",,,,,
+2014-01-22,OG-Future,Eurex-FGBL-Mar14,MarketValue,150.41
+2014-01-22,OG-Future,Eurex-FGBL-Mar14,SettlementPrice,150.43
+2014-01-22,OG-FutOpt,Eurex-OGBL-Mar14-C150,MarketValue,1.51
+2014-01-22,OG-FutOpt,Eurex-OGBL-Mar14-C150,SettlementPrice,1.5
+2014-01-22,OG-Future,CME-ED-Mar14,MarketValue,99.635
+2014-01-22,OG-Future,CME-ED-Mar14,SettlementPrice,99.620
+2014-01-22,OG-Future,Ibor-USD-LIBOR-3M-Mar15,MarketValue,99.985
+2014-01-22,OG-Future,Ibor-USD-LIBOR-3M-Mar15,SettlementPrice,99.982
+2014-01-22,OG-Future,Ibor-USD-LIBOR-3M-Jun15,MarketValue,99.957
+2014-01-22,OG-Future,Ibor-USD-LIBOR-3M-Jun15,SettlementPrice,99.959
+2014-01-22,OG-Future,CME-F1U-Mar15,MarketValue,1.0071
+2014-01-22,OG-Future,CME-F1U-Mar15,SettlementPrice,1.0072
+2014-01-22,OG-Future,CME-F1U-Jun15,MarketValue,1.0088
+2014-01-22,OG-Future,CME-F1U-Jun15,SettlementPrice,1.0087

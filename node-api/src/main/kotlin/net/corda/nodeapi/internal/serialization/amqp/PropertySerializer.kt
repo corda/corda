@@ -10,6 +10,7 @@
 
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -19,8 +20,8 @@ import java.lang.reflect.Type
  */
 sealed class PropertySerializer(val name: String, val propertyReader: PropertyReader, val resolvedType: Type) {
     abstract fun writeClassInfo(output: SerializationOutput)
-    abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, debugIndent: Int = 0)
-    abstract fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any?
+    abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, context: SerializationContext, debugIndent: Int = 0)
+    abstract fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any?
 
     val type: String = generateType()
     val requires: List<String> = generateRequires()
@@ -86,12 +87,15 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
         override fun readProperty(
                 obj: Any?,
                 schemas: SerializationSchemas,
-                input: DeserializationInput): Any? = ifThrowsAppend({ nameForDebug }) {
-            input.readObjectOrNull(obj, schemas, resolvedType)
+                input: DeserializationInput,
+                context: SerializationContext): Any? = ifThrowsAppend({ nameForDebug }) {
+            input.readObjectOrNull(obj, schemas, resolvedType, context)
         }
 
-        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, debugIndent: Int) = ifThrowsAppend({ nameForDebug }) {
-            output.writeObjectOrNull(propertyReader.read(obj), data, resolvedType, debugIndent)
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput,
+                                   context: SerializationContext, debugIndent: Int) = ifThrowsAppend({ nameForDebug }
+        ) {
+            output.writeObjectOrNull(propertyReader.read(obj), data, resolvedType, context, debugIndent)
         }
 
         private val nameForDebug = "$name(${resolvedType.typeName})"
@@ -106,11 +110,15 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
             resolvedType: Type) : PropertySerializer(name, readMethod, resolvedType) {
         override fun writeClassInfo(output: SerializationOutput) {}
 
-        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any? {
+        override fun readProperty(obj: Any?, schemas: SerializationSchemas,
+                                  input: DeserializationInput, context: SerializationContext
+        ): Any? {
             return if (obj is Binary) obj.array else obj
         }
 
-        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, debugIndent: Int) {
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput,
+                                   context: SerializationContext, debugIndent: Int
+        ) {
             val value = propertyReader.read(obj)
             if (value is ByteArray) {
                 data.putObject(Binary(value))
@@ -122,18 +130,22 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
 
     /**
      * A property serializer for the AMQP char type, needed as a specialisation as the underlying
-     * value of the character is stored in numeric UTF-16 form and on deserialisation requires explicit
+     * value of the character is stored in numeric UTF-16 form and on deserialization requires explicit
      * casting back to a char otherwise it's treated as an Integer and a TypeMismatch occurs
      */
     class AMQPCharPropertySerializer(name: String, readMethod: PropertyReader) :
             PropertySerializer(name, readMethod, Character::class.java) {
         override fun writeClassInfo(output: SerializationOutput) {}
 
-        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput): Any? {
+        override fun readProperty(obj: Any?, schemas: SerializationSchemas,
+                                  input: DeserializationInput, context: SerializationContext
+        ): Any? {
             return if (obj == null) null else (obj as Short).toChar()
         }
 
-        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, debugIndent: Int) {
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput,
+                                   context: SerializationContext, debugIndent: Int
+        ) {
             val input = propertyReader.read(obj)
             if (input != null) data.putShort((input as Char).toShort()) else data.putNull()
         }

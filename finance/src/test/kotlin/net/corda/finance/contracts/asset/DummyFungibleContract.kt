@@ -18,9 +18,9 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.finance.sampleschemas.SampleCashSchemaV1
-import net.corda.finance.sampleschemas.SampleCashSchemaV2
-import net.corda.finance.sampleschemas.SampleCashSchemaV3
+import net.corda.finance.schemas.SampleCashSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV2
+import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
@@ -60,12 +60,12 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
                         issuerRef = this.amount.token.issuer.reference.bytes
                 )
                 is SampleCashSchemaV2 -> SampleCashSchemaV2.PersistentCashState(
-                        _participants = this.participants.toMutableSet(),
-                        _owner = this.owner,
-                        _quantity = this.amount.quantity,
+                        participants = this.participants.toMutableSet(),
+                        owner = this.owner,
+                        quantity = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
-                        _issuerParty = this.amount.token.issuer.party,
-                        _issuerRef = this.amount.token.issuer.reference
+                        issuerParty = this.amount.token.issuer.party,
+                        issuerRef = this.amount.token.issuer.reference
                 )
                 is SampleCashSchemaV3 -> SampleCashSchemaV3.PersistentCashState(
                         participants = this.participants.toMutableSet(),
