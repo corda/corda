@@ -2219,7 +2219,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test
-    fun `unconsumedCashStatesForSpending_single_issuer_reference_not_matching`() {
+    fun `unconsumedCashStatesForSpending single issuer reference not matching`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(1000.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
 
