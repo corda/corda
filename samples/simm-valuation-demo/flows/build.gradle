@@ -7,7 +7,6 @@ apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // The SIMM demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance')

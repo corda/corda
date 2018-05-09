@@ -61,22 +61,22 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
+    ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': ['ALL']]]
 
     directory "./build/nodes"
     node {
         name "O=Notary Service,L=Zurich,C=CH"
-        notary = [validating : true]
+        notary = [validating: true]
         p2pPort 10002
-        cordapp project(':finance')
-        cordapp project(':samples:simm-valuation-demo:contracts-states')
-        cordapp project(':samples:simm-valuation-demo:flows')
+        cordapps = [project(':finance'),
+                    project(':samples:simm-valuation-demo:contracts-states'),
+                    project(':samples:simm-valuation-demo:flows')].collect { "${it.group}:${it.name}:${it.version}" }
         rpcSettings {
             address "localhost:10014"
             adminAddress "localhost:10015"
         }
         extraConfig = [
-            jvmArgs : [ "-Xmx1g"]
+                jvmArgs: ["-Xmx1g"]
         ]
     }
     node {
@@ -87,12 +87,12 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address("localhost:10016")
             adminAddress("localhost:10017")
         }
-        cordapp project(':finance')
-        cordapp project(':samples:simm-valuation-demo:contracts-states')
-        cordapp project(':samples:simm-valuation-demo:flows')
+        cordapps = [project(':finance'),
+                    project(':samples:simm-valuation-demo:contracts-states'),
+                    project(':samples:simm-valuation-demo:flows')].collect { "${it.group}:${it.name}:${it.version}" }
         rpcUsers = ext.rpcUsers
         extraConfig = [
-                jvmArgs : [ "-Xmx1g"]
+                jvmArgs: ["-Xmx1g"]
         ]
     }
     node {
@@ -103,12 +103,12 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address("localhost:10026")
             adminAddress("localhost:10027")
         }
-        cordapp project(':finance')
-        cordapp project(':samples:simm-valuation-demo:contracts-states')
-        cordapp project(':samples:simm-valuation-demo:flows')
+        cordapps = [project(':finance'),
+                    project(':samples:simm-valuation-demo:contracts-states'),
+                    project(':samples:simm-valuation-demo:flows')].collect { "${it.group}:${it.name}:${it.version}" }
         rpcUsers = ext.rpcUsers
         extraConfig = [
-                jvmArgs : [ "-Xmx1g"]
+                jvmArgs: ["-Xmx1g"]
         ]
     }
     node {
@@ -119,12 +119,12 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
             address("localhost:10036")
             adminAddress("localhost:10037")
         }
-        cordapp project(':finance')
-        cordapp project(':samples:simm-valuation-demo:contracts-states')
-        cordapp project(':samples:simm-valuation-demo:flows')
+        cordapps = [project(':finance'),
+                    project(':samples:simm-valuation-demo:contracts-states'),
+                    project(':samples:simm-valuation-demo:flows')].collect { "${it.group}:${it.name}:${it.version}" }
         rpcUsers = ext.rpcUsers
         extraConfig = [
-                jvmArgs : [ "-Xmx1g"]
+                jvmArgs: ["-Xmx1g"]
         ]
     }
 }
