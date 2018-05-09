@@ -48,7 +48,9 @@ class ParametersUpdateHandler(val csrStorage: CertificateSigningRequestStorage, 
 
     private fun handleSetNetworkParameters(setNetParams: NetworkParametersCmd.Set) {
         logger.info("maxMessageSize is not currently wired in the nodes")
-        val activeNetParams = networkMapStorage.getNetworkMaps().publicNetworkMap?.networkParameters?.networkParameters
+        val activeMap = networkMapStorage.getNetworkMaps().publicNetworkMap
+        val activeNetParams = activeMap?.networkParameters?.networkParameters
+        // Setting initial parameters case.
         if (activeNetParams == null) {
             require(setNetParams.parametersUpdate == null) {
                 "'parametersUpdate' specified in network parameters file but there are no network parameters to update"
@@ -57,27 +59,26 @@ class ParametersUpdateHandler(val csrStorage: CertificateSigningRequestStorage, 
             logger.info("Saving initial network parameters to be signed:\n$initialNetParams")
             networkMapStorage.saveNetworkParameters(initialNetParams, null)
             println("Saved initial network parameters to be signed:\n$initialNetParams")
-        } else {
+        } else { // An update.
             val parametersUpdate = requireNotNull(setNetParams.parametersUpdate) {
                 "'parametersUpdate' not specified in network parameters file but there is already an active set of network parameters"
             }
-
             setNetParams.checkCompatibility(activeNetParams)
-
             val latestNetParams = checkNotNull(networkMapStorage.getLatestNetworkParameters()?.networkParameters) {
                 "Something has gone wrong! We have an active set of network parameters ($activeNetParams) but apparently no latest network parameters!"
             }
-
             // It's not necessary that latestNetParams is the current active network parameters. It can be the network
-            // parameters from a previous update attempt which has't activated yet. We still take the epoch value for this
+            // parameters from a previous update attempt which hasn't activated yet. We still take the epoch value for this
             // new set from latestNetParams to make sure the advertised update attempts have incrementing epochs.
             // This has the implication that *active* network parameters may have gaps in their epochs.
             val newNetParams = setNetParams.toNetworkParameters(modifiedTime = Instant.now(), epoch = latestNetParams.epoch + 1)
-
+            val activeUpdate = activeMap.networkMap.parametersUpdate
+            if (sameNetworkParameters(latestNetParams, newNetParams) && activeUpdate != null) {
+                // TODO We don't have cancel event propagation on client side.
+                throw IllegalArgumentException("New network parameters are the same as the latest ones and there is an update scheduled: $activeUpdate\n" +
+                        "If you want to just change updateDeadline or update description - cancel old update first.")
+            }
             logger.info("Enabling update to network parameters:\n$newNetParams\n$parametersUpdate")
-
-            require(!sameNetworkParameters(latestNetParams, newNetParams)) { "New network parameters are the same as the latest ones" }
-
             networkMapStorage.saveNewParametersUpdate(newNetParams, parametersUpdate.description, parametersUpdate.updateDeadline)
 
             logger.info("Update enabled")

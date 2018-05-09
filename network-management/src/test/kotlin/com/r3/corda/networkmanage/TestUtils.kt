@@ -3,6 +3,8 @@ package com.r3.corda.networkmanage
 import com.r3.corda.networkmanage.common.persistence.NetworkMaps
 import com.r3.corda.networkmanage.common.persistence.entity.NetworkMapEntity
 import com.r3.corda.networkmanage.common.persistence.entity.NetworkParametersEntity
+import com.r3.corda.networkmanage.doorman.NetworkParametersCmd
+import com.r3.corda.networkmanage.doorman.ParametersUpdateConfig
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
@@ -70,4 +72,14 @@ fun createNetworkMaps(signingCertAndKeyPair: CertificateAndKeyPair = createDevNe
                      timestamp: Instant = Instant.now()): NetworkMaps {
     val netParamsEntity = createNetworkParametersEntity(signingCertAndKeyPair, networkParameters)
     return createNetworkMaps(signingCertAndKeyPair, netParamsEntity, nodeInfoHashes, privateNodeInfoHashes, timestamp = timestamp)
+}
+
+fun NetworkParameters.toCmd(parametersUpdate: ParametersUpdateConfig? = null): NetworkParametersCmd.Set {
+    return NetworkParametersCmd.Set(
+            minimumPlatformVersion = minimumPlatformVersion,
+            notaries = notaries,
+            maxMessageSize = maxMessageSize,
+            maxTransactionSize = maxTransactionSize,
+            parametersUpdate = parametersUpdate
+    )
 }

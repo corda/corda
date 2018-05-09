@@ -1,8 +1,8 @@
 package com.r3.corda.networkmanage.doorman
 
+import com.r3.corda.networkmanage.toCmd
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
@@ -54,16 +54,6 @@ class NetworkParametersCmdTest {
         assertThatExceptionOfType(IllegalArgumentException::class.java)
                 .isThrownBy { notaryNameChanged.checkCompatibility(netParams) }
                 .withMessageContaining("notaries")
-    }
-
-    private fun NetworkParameters.toCmd(): NetworkParametersCmd.Set {
-        return NetworkParametersCmd.Set(
-                minimumPlatformVersion = minimumPlatformVersion,
-                notaries = notaries,
-                maxMessageSize = maxMessageSize,
-                maxTransactionSize = maxTransactionSize,
-                parametersUpdate = null
-        )
     }
 
     private fun freshParty(name: CordaX500Name) = TestIdentity(name).party
