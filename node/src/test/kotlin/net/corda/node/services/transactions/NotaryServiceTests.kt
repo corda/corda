@@ -73,7 +73,8 @@ class NotaryServiceTests {
         }
 
         private fun generateTransaction(node: StartedNode<InternalMockNetwork.MockNode>, party: Party, notary: Party): SignedTransaction {
-            val inputs = (1..10_005).map { StateRef(SecureHash.randomSHA256(), 0) }
+            val txHash = SecureHash.randomSHA256()
+            val inputs = (1..10_005).map { StateRef(txHash, it) }
             val tx = NotaryChangeTransactionBuilder(inputs, notary, party).build()
 
             return node.services.run {

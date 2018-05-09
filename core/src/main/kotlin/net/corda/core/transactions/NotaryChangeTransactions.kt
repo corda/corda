@@ -55,6 +55,7 @@ data class NotaryChangeWireTransaction(
     init {
         check(inputs.isNotEmpty()) { "A notary change transaction must have inputs" }
         check(notary != newNotary) { "The old and new notaries must be different – $newNotary" }
+        checkBaseInvariants()
     }
 
     /**

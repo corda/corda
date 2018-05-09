@@ -11,6 +11,7 @@
 package net.corda.nodeapi.internal.serialization.kryo
 
 import net.corda.core.internal.declaredField
+import net.corda.nodeapi.internal.serialization.ByteBufferOutputStream
 import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test

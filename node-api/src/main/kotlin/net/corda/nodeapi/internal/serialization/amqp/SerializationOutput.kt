@@ -15,7 +15,7 @@ import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding
 import net.corda.nodeapi.internal.serialization.SectionId
-import net.corda.nodeapi.internal.serialization.kryo.byteArrayOutput
+import net.corda.nodeapi.internal.serialization.byteArrayOutput
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.io.OutputStream
