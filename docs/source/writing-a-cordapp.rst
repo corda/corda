@@ -135,14 +135,12 @@ These are for testing purposes and would be removed in a production CorDapp.
 
 Resources
 ---------
-In writing a CorDapp, you should consult the following resources:
+In writing a CorDapp, these pages may be particularly helpful:
 
-* :doc:`Getting Set Up </getting-set-up>` to set up your development environment
-* The :doc:`Hello, World! tutorial </hello-world-index>` to write your first CorDapp
-* :doc:`Building a CorDapp </cordapp-build-systems>` to build and run your CorDapp
-* The :doc:`API docs </api-index>` to read about the API available in developing CorDapps
-
-  * There is also a :doc:`cheatsheet </cheat-sheet>` recapping the key types
-
-* The :doc:`Flow cookbook </flow-cookbook>` to see code examples of how to perform common flow tasks
-* `Sample CorDapps <https://www.corda.net/samples/>`_ showing various parts of Corda's functionality
+* :doc:`getting-set-up`, to set up your development environment.
+* The :doc:`hello-world-introduction` tutorial to write your first CorDapp.
+* :doc:`cordapp-build-systems` to build and run your CorDapp.
+* The `API docs </api/javadoc/index.html>`_ to read about the API available in developing CorDapps.
+* There is also a :doc:`cheat-sheet` recapping the key types.
+* The :doc:`flow-cookbook` to see code examples of how to perform common flow tasks.
+* `Sample CorDapps <https://www.corda.net/samples/>`_ showing various parts of Corda's functionality.
