@@ -357,6 +357,9 @@ class MySQLUniquenessProvider(
         }
 
         private fun findAlreadyCommitted(connection: Connection, states: List<StateRef>): Map<StateRef, StateConsumptionDetails> {
+            if (states.isEmpty()) {
+                return emptyMap()
+            }
             val queryString = buildQueryString(states.size)
             val preparedStatement = connection.prepareStatement(queryString).apply {
                 var parameterIndex = 0

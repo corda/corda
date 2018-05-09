@@ -139,6 +139,16 @@ class MySQLNotaryServiceTests : IntegrationTest() {
     }
 
     @Test
+    fun `notarise issue tx with time-window`() {
+        val txBuilder = DummyContract.generateInitial(Random().nextInt(), notaryParty, node.info.singleIdentity().ref(0))
+                .setTimeWindow(node.services.clock.instant(), 30.seconds)
+
+        val issueTx = node.services.signInitialTransaction(txBuilder)
+        val signature = node.services.startFlow(NotaryFlow.Client(issueTx)).resultFuture.getOrThrow(5.seconds)
+        signature.first().verify(issueTx.id)
+    }
+
+    @Test
     fun `should re-sign a transaction with an expired time-window`() {
         val stx = run {
             val inputState = issueState(node, notaryParty)
