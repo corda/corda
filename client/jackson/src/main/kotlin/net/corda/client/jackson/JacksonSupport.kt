@@ -192,7 +192,7 @@ object JacksonSupport {
         return mapper.treeToValue(get(fieldName), RESULT::class.java)
     }
 
-    object TransactionSignatureSerde : JsonSerde<TransactionSignature> {
+    private object TransactionSignatureSerde : JsonSerde<TransactionSignature> {
         override val type: Class<TransactionSignature> = TransactionSignature::class.java
 
         override val serializer = object : StdSerializer<TransactionSignature>(type) {
@@ -226,7 +226,7 @@ object JacksonSupport {
         }
     }
 
-    object SignedTransactionSerde : JsonSerde<SignedTransaction> {
+    private object SignedTransactionSerde : JsonSerde<SignedTransaction> {
         override val type: Class<SignedTransaction> = SignedTransaction::class.java
 
         override val serializer = object : StdSerializer<SignedTransaction>(type) {
@@ -441,7 +441,7 @@ object JacksonSupport {
     }
 
     abstract class SignedTransactionMixin {
-        @JsonProperty("txBits") protected abstract fun getTxBits(): SerializedBytes<CoreTransaction>
+        @JsonIgnore abstract fun getTxBits(): SerializedBytes<CoreTransaction>
         @JsonProperty("signatures") protected abstract fun getSigs(): List<TransactionSignature>
         @JsonProperty protected abstract fun getTransaction(): CoreTransaction
         @JsonIgnore abstract fun getTx(): WireTransaction

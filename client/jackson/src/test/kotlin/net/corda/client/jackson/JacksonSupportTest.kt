@@ -106,17 +106,6 @@ class JacksonSupportTest {
     }
 
     @Test
-    fun writeTransaction() {
-        val attachmentRef = SecureHash.randomSHA256()
-        doReturn(attachmentRef).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
-        doReturn(testNetworkParameters()).whenever(services).networkParameters
-
-        val writer = mapper.writer()
-        // We don't particularly care about the serialized format, just need to make sure it completes successfully.
-        writer.writeValueAsString(makeDummyTx())
-    }
-
-    @Test
     fun `wire transaction can be serialized and de-serialized`() {
         val attachmentRef = SecureHash.randomSHA256()
         doReturn(attachmentRef).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
