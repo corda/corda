@@ -1,0 +1,32 @@
+buildscript {
+    ext.strata_version = '1.1.2'
+}
+
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.cordformation'
+
+dependencies {
+
+    // The SIMM demo CorDapp depends upon Cash CorDapp features
+    cordapp project(':finance')
+    cordapp project(':samples:simm-valuation-demo:contracts-states')
+
+    // Corda integration dependencies
+    cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    cordaCompile project(':core')
+
+    // Cordapp dependencies
+    // Specify your cordapp's dependencies below, including dependent cordapps
+    compile "com.opengamma.strata:strata-basics:${strata_version}"
+    compile "com.opengamma.strata:strata-product:${strata_version}"
+    compile "com.opengamma.strata:strata-data:${strata_version}"
+    compile "com.opengamma.strata:strata-calc:${strata_version}"
+    compile "com.opengamma.strata:strata-pricer:${strata_version}"
+    compile "com.opengamma.strata:strata-report:${strata_version}"
+    compile "com.opengamma.strata:strata-market:${strata_version}"
+    compile "com.opengamma.strata:strata-collect:${strata_version}"
+    compile "com.opengamma.strata:strata-loader:${strata_version}"
+    compile "com.opengamma.strata:strata-math:${strata_version}"
+
+}
