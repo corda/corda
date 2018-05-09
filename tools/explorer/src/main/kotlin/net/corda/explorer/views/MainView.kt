@@ -6,9 +6,7 @@ import javafx.beans.binding.Bindings
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.Parent
-import javafx.scene.control.ContentDisplay
-import javafx.scene.control.MenuButton
-import javafx.scene.control.MenuItem
+import javafx.scene.control.*
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.StackPane
@@ -35,7 +33,8 @@ class MainView : View(WINDOW_TITLE) {
     private val exit by fxid<MenuItem>()
     private val sidebar by fxid<VBox>()
     private val selectionBorderPane by fxid<BorderPane>()
-    private val mainBorderPane by fxid<BorderPane>()
+    private val mainSplitPane by fxid<SplitPane>()
+    private val rpcWarnLabel by fxid<Label>()
 
     // Inject data.
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
@@ -92,6 +91,9 @@ class MainView : View(WINDOW_TITLE) {
         Bindings.bindContent(sidebar.children, menuItems)
         // Main view
         selectionBorderPane.centerProperty().bind(selectedView.map { it?.root })
-        mainBorderPane.disableProperty().bind(proxy.map { it == null })
+        // Trigger depending on RPC connectivity status.
+        val proxyNotAvailable = proxy.map { it == null }
+        mainSplitPane.disableProperty().bind(proxyNotAvailable)
+        rpcWarnLabel.visibleProperty().bind(proxyNotAvailable)
     }
 }
