@@ -7,6 +7,10 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialised in
+  a factory without a serialiser as the subtype check for the class instance failed. Fix is to compare the raw
+  type.
+
 * Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
   as the raw type, List for example.
 
