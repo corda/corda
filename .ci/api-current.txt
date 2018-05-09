@@ -3618,9 +3618,9 @@ public final class net.corda.client.jackson.JacksonSupport extends java.lang.Obj
   @org.jetbrains.annotations.NotNull public static final com.fasterxml.jackson.databind.ObjectMapper createDefaultMapper(net.corda.core.messaging.CordaRPCOps)
   @org.jetbrains.annotations.NotNull public static final com.fasterxml.jackson.databind.ObjectMapper createDefaultMapper(net.corda.core.messaging.CordaRPCOps, com.fasterxml.jackson.core.JsonFactory)
   @org.jetbrains.annotations.NotNull public static final com.fasterxml.jackson.databind.ObjectMapper createDefaultMapper(net.corda.core.messaging.CordaRPCOps, com.fasterxml.jackson.core.JsonFactory, boolean)
-  @org.jetbrains.annotations.NotNull public static final com.fasterxml.jackson.databind.ObjectMapper createInMemoryMapper(net.corda.core.node.services.IdentityService)
-  @org.jetbrains.annotations.NotNull public static final com.fasterxml.jackson.databind.ObjectMapper createInMemoryMapper(net.corda.core.node.services.IdentityService, com.fasterxml.jackson.core.JsonFactory)
-  @org.jetbrains.annotations.NotNull public static final com.fasterxml.jackson.databind.ObjectMapper createInMemoryMapper(net.corda.core.node.services.IdentityService, com.fasterxml.jackson.core.JsonFactory, boolean)
+  @kotlin.Deprecated @org.jetbrains.annotations.NotNull public static final com.fasterxml.jackson.databind.ObjectMapper createInMemoryMapper(net.corda.core.node.services.IdentityService)
+  @kotlin.Deprecated @org.jetbrains.annotations.NotNull public static final com.fasterxml.jackson.databind.ObjectMapper createInMemoryMapper(net.corda.core.node.services.IdentityService, com.fasterxml.jackson.core.JsonFactory)
+  @kotlin.Deprecated @org.jetbrains.annotations.NotNull public static final com.fasterxml.jackson.databind.ObjectMapper createInMemoryMapper(net.corda.core.node.services.IdentityService, com.fasterxml.jackson.core.JsonFactory, boolean)
   @org.jetbrains.annotations.NotNull public static final com.fasterxml.jackson.databind.ObjectMapper createNonRpcMapper()
   @org.jetbrains.annotations.NotNull public static final com.fasterxml.jackson.databind.ObjectMapper createNonRpcMapper(com.fasterxml.jackson.core.JsonFactory)
   @org.jetbrains.annotations.NotNull public final com.fasterxml.jackson.databind.Module getCordaModule()
@@ -3650,7 +3650,7 @@ public static final class net.corda.client.jackson.JacksonSupport$CordaX500NameS
   public void serialize(net.corda.core.identity.CordaX500Name, com.fasterxml.jackson.core.JsonGenerator, com.fasterxml.jackson.databind.SerializerProvider)
   public static final net.corda.client.jackson.JacksonSupport$CordaX500NameSerializer INSTANCE
 ##
-public static final class net.corda.client.jackson.JacksonSupport$IdentityObjectMapper extends com.fasterxml.jackson.databind.ObjectMapper implements net.corda.client.jackson.JacksonSupport$PartyObjectMapper
+@net.corda.core.DoNotImplement public static final class net.corda.client.jackson.JacksonSupport$IdentityObjectMapper extends com.fasterxml.jackson.databind.ObjectMapper implements net.corda.client.jackson.JacksonSupport$PartyObjectMapper
   public <init>(net.corda.core.node.services.IdentityService, com.fasterxml.jackson.core.JsonFactory, boolean)
   public final boolean getFuzzyIdentityMatch()
   @org.jetbrains.annotations.NotNull public final net.corda.core.node.services.IdentityService getIdentityService()
@@ -3658,9 +3658,9 @@ public static final class net.corda.client.jackson.JacksonSupport$IdentityObject
   @org.jetbrains.annotations.Nullable public net.corda.core.identity.Party partyFromKey(java.security.PublicKey)
   @org.jetbrains.annotations.Nullable public net.corda.core.identity.Party wellKnownPartyFromX500Name(net.corda.core.identity.CordaX500Name)
 ##
-public static final class net.corda.client.jackson.JacksonSupport$NoPartyObjectMapper extends com.fasterxml.jackson.databind.ObjectMapper implements net.corda.client.jackson.JacksonSupport$PartyObjectMapper
+@net.corda.core.DoNotImplement public static final class net.corda.client.jackson.JacksonSupport$NoPartyObjectMapper extends com.fasterxml.jackson.databind.ObjectMapper implements net.corda.client.jackson.JacksonSupport$PartyObjectMapper
   public <init>(com.fasterxml.jackson.core.JsonFactory)
-  @org.jetbrains.annotations.NotNull public Void partiesFromName(String)
+  @org.jetbrains.annotations.NotNull public Set partiesFromName(String)
   @org.jetbrains.annotations.Nullable public net.corda.core.identity.Party partyFromKey(java.security.PublicKey)
   @org.jetbrains.annotations.Nullable public net.corda.core.identity.Party wellKnownPartyFromX500Name(net.corda.core.identity.CordaX500Name)
 ##
@@ -3684,7 +3684,7 @@ public static final class net.corda.client.jackson.JacksonSupport$PartyDeseriali
   @org.jetbrains.annotations.NotNull public net.corda.core.identity.Party deserialize(com.fasterxml.jackson.core.JsonParser, com.fasterxml.jackson.databind.DeserializationContext)
   public static final net.corda.client.jackson.JacksonSupport$PartyDeserializer INSTANCE
 ##
-public static interface net.corda.client.jackson.JacksonSupport$PartyObjectMapper
+@net.corda.core.DoNotImplement public static interface net.corda.client.jackson.JacksonSupport$PartyObjectMapper
   @org.jetbrains.annotations.NotNull public abstract Set partiesFromName(String)
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party partyFromKey(java.security.PublicKey)
   @org.jetbrains.annotations.Nullable public abstract net.corda.core.identity.Party wellKnownPartyFromX500Name(net.corda.core.identity.CordaX500Name)
@@ -3701,7 +3701,7 @@ public static final class net.corda.client.jackson.JacksonSupport$PublicKeySeria
   public void serialize(java.security.PublicKey, com.fasterxml.jackson.core.JsonGenerator, com.fasterxml.jackson.databind.SerializerProvider)
   public static final net.corda.client.jackson.JacksonSupport$PublicKeySerializer INSTANCE
 ##
-public static final class net.corda.client.jackson.JacksonSupport$RpcObjectMapper extends com.fasterxml.jackson.databind.ObjectMapper implements net.corda.client.jackson.JacksonSupport$PartyObjectMapper
+@net.corda.core.DoNotImplement public static final class net.corda.client.jackson.JacksonSupport$RpcObjectMapper extends com.fasterxml.jackson.databind.ObjectMapper implements net.corda.client.jackson.JacksonSupport$PartyObjectMapper
   public <init>(net.corda.core.messaging.CordaRPCOps, com.fasterxml.jackson.core.JsonFactory, boolean)
   public final boolean getFuzzyIdentityMatch()
   @org.jetbrains.annotations.NotNull public final net.corda.core.messaging.CordaRPCOps getRpc()

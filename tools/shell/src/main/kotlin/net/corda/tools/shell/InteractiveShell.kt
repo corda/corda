@@ -1,10 +1,7 @@
 package net.corda.tools.shell
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import net.corda.client.jackson.JacksonSupport
@@ -17,13 +14,10 @@ import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
-import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -45,7 +39,6 @@ import org.crsh.util.Utils
 import org.crsh.vfs.FS
 import org.crsh.vfs.spi.file.FileMountFactory
 import org.crsh.vfs.spi.url.ClassPathMountFactory
-import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.Subscriber
@@ -187,43 +180,22 @@ object InteractiveShell {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
         return JacksonSupport.createDefaultMapper(rpcOps, YAMLFactory(), true).apply {
-            val rpcModule = SimpleModule()
-            rpcModule.addDeserializer(InputStream::class.java, InputStreamDeserializer)
-            rpcModule.addDeserializer(UniqueIdentifier::class.java, UniqueIdentifierDeserializer)
-            rpcModule.addDeserializer(UUID::class.java, UUIDDeserializer)
+            val rpcModule = SimpleModule().apply {
+                addDeserializer(InputStream::class.java, InputStreamDeserializer)
+                addDeserializer(UniqueIdentifier::class.java, UniqueIdentifierDeserializer)
+            }
             registerModule(rpcModule)
         }
     }
 
-    private object NodeInfoSerializer : JsonSerializer<NodeInfo>() {
-
-        override fun serialize(nodeInfo: NodeInfo, gen: JsonGenerator, serializers: SerializerProvider) {
-
-            val json = JSONObject()
-            json["addresses"] = nodeInfo.addresses.map { address -> address.serialise() }
-            json["legalIdentities"] = nodeInfo.legalIdentities.map { address -> address.serialise() }
-            json["platformVersion"] = nodeInfo.platformVersion
-            json["serial"] = nodeInfo.serial
-            gen.writeRaw(json.toString())
-        }
-
-        private fun NetworkHostAndPort.serialise() = this.toString()
-        private fun Party.serialise() = JSONObject().put("name", this.name)
-
-        private operator fun JSONObject.set(key: String, value: Any?): JSONObject {
-            return put(key, value)
-        }
-    }
-
     private fun createOutputMapper(): ObjectMapper {
-
         return JacksonSupport.createNonRpcMapper().apply {
             // Register serializers for stateful objects from libraries that are special to the RPC system and don't
             // make sense to print out to the screen. For classes we own, annotations can be used instead.
-            val rpcModule = SimpleModule()
-            rpcModule.addSerializer(Observable::class.java, ObservableSerializer)
-            rpcModule.addSerializer(InputStream::class.java, InputStreamSerializer)
-            rpcModule.addSerializer(NodeInfo::class.java, NodeInfoSerializer)
+            val rpcModule = SimpleModule().apply {
+                addSerializer(Observable::class.java, ObservableSerializer)
+                addSerializer(InputStream::class.java, InputStreamSerializer)
+            }
             registerModule(rpcModule)
 
             disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
@@ -240,7 +212,12 @@ object InteractiveShell {
      * the [runFlowFromString] method and starts the requested flow. Ctrl-C can be used to cancel.
      */
     @JvmStatic
-    fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter, rpcOps: CordaRPCOps, ansiProgressRenderer: ANSIProgressRenderer, om: ObjectMapper) {
+    fun runFlowByNameFragment(nameFragment: String,
+                              inputData: String,
+                              output: RenderPrintWriter,
+                              rpcOps: CordaRPCOps,
+                              ansiProgressRenderer: ANSIProgressRenderer,
+                              om: ObjectMapper) {
         val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
         } catch (e: PermissionException) {

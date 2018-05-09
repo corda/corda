@@ -91,13 +91,13 @@ Windows
 Windows does not provide a built-in SSH tool. An alternative such as PuTTY should be used.
 
 The standalone shell
-------------------------------
+--------------------
 The standalone shell is a standalone application interacting with a Corda node via RPC calls.
 RPC node permissions are necessary for authentication and authorisation.
 Certain operations, such as starting flows, require access to CordApps jars.
 
 Starting the standalone shell
-*************************
+*****************************
 
 Run the following command from the terminal:
 
@@ -177,7 +177,7 @@ The format of ``config-file``:
 
 
 Standalone Shell via SSH
-------------------------------------------
+------------------------
 The standalone shell can embed an SSH server which redirects interactions via RPC calls to the Corda node.
 To run SSH server use ``--sshd-port`` option when starting standalone shell or ``extensions.sshd`` entry in the configuration file.
 For connection to SSH refer to `Connecting to the shell`_.
@@ -253,8 +253,8 @@ Where ``newCampaign`` is a parameter of type ``Campaign``.
 
 Mappings from strings to types
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Several parameter types can automatically be mapped from strings. See the `defined parsers`_ for more information. We
-cover the most common types here.
+In addition to the types already supported by Jackson, several parameter types can automatically be mapped from strings.
+We cover the most common types here.
 
 Amount
 ~~~~~~
@@ -263,23 +263,44 @@ A parameter of type ``Amount<Currency>`` can be written as either:
 * A dollar ($), pound (£) or euro (€) symbol followed by the amount as a decimal
 * The amount as a decimal followed by the ISO currency code (e.g. "100.12 CHF")
 
+SecureHash
+~~~~~~~~~~
+A parameter of type ``SecureHash`` can be written as a hexadecimal string: ``F69A7626ACC27042FEEAE187E6BFF4CE666E6F318DC2B32BE9FAF87DF687930C``
+
 OpaqueBytes
 ~~~~~~~~~~~
-A parameter of type ``OpaqueBytes`` can be provided as a string, which will be automatically converted to
-``OpaqueBytes``.
+A parameter of type ``OpaqueBytes`` can be provided as a string in Base64.
+
+PublicKey and CompositeKey
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+A parameter of type ``PublicKey`` can be written as a Base58 string of its encoded format: ``GfHq2tTVk9z4eXgyQXzegw6wNsZfHcDhfw8oTt6fCHySFGp3g7XHPAyc2o6D``.
+``net.corda.core.utilities.EncodingUtils.toBase58String`` will convert a ``PublicKey`` to this string format.
 
 Party
 ~~~~~
 A parameter of type ``Party`` can be written in several ways:
 
-* By using the node's full name: ``"O=Monogram Bank,L=Sao Paulo,C=GB"``
+* By using the full name: ``"O=Monogram Bank,L=Sao Paulo,C=GB"``
 * By specifying the organisation name only: ``"Monogram Bank"``
 * By specifying any other non-ambiguous part of the name: ``"Sao Paulo"`` (if only one network node is located in Sao
   Paulo)
+* By specifying the public key (see above)
 
-Instant
-~~~~~~~
-A parameter of type ``Instant`` can be written as follows: ``"2017-12-22T00:00:00Z"``.
+NodeInfo
+~~~~~~~~
+A parameter of type ``NodeInfo`` can be written in terms of one of its identities (see ``Party`` above)
+
+AnonymousParty
+~~~~~~~~~~~~~~
+A parameter of type ``AnonymousParty`` can be written in terms of its ``PublicKey`` (see above)
+
+NetworkHostAndPort
+~~~~~~~~~~~~~~~~~~
+A parameter of type ``NetworkHostAndPort`` can be written as a "host:port" string: ``"localhost:1010"``
+
+Instant and Date
+~~~~~~~~~~~~~~~~
+A parameter of ``Instant`` and ``Date`` can be written as an ISO-8601 string: ``"2017-12-22T00:00:00Z"``
 
 Examples
 ^^^^^^^^
@@ -365,6 +386,5 @@ The shell will be enhanced over time. The currently known limitations include:
 * The ``jul`` command advertises access to logs, but it doesn't work with the logging framework we're using
 
 .. _Yaml: http://www.yaml.org/spec/1.2/spec.html
-.. _defined parsers: api/kotlin/corda/net.corda.client.jackson/-jackson-support/index.html
 .. _Groovy: http://groovy-lang.org/
 .. _CRaSH: http://www.crashub.org/
