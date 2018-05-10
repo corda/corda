@@ -12,6 +12,12 @@ else
 fi
 
 # TODO: The PDF rendering is pretty ugly and can be improved a lot.
+echo "Generating PDF document ..."
 make pdf
-mv build/pdf/corda-developer-site.pdf build/html/_static/corda-developer-site.pdf
+
+echo "Generating HTML pages ..."
 make html
+
+echo "Moving PDF file into place ..."
+mv $PWD/build/pdf/corda-developer-site.pdf $PWD/build/html/_static/corda-developer-site.pdf
+

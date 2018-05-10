@@ -16,9 +16,7 @@ import javafx.beans.binding.Bindings
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.Parent
-import javafx.scene.control.ContentDisplay
-import javafx.scene.control.MenuButton
-import javafx.scene.control.MenuItem
+import javafx.scene.control.*
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.StackPane
@@ -27,10 +25,7 @@ import javafx.scene.text.Font
 import javafx.scene.text.TextAlignment
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
-import net.corda.client.jfx.model.NetworkIdentityModel
-import net.corda.client.jfx.model.objectProperty
-import net.corda.client.jfx.model.observableList
-import net.corda.client.jfx.model.observableValue
+import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.ChosenList
 import net.corda.client.jfx.utils.map
 import net.corda.explorer.formatters.PartyNameFormatter
@@ -48,11 +43,14 @@ class MainView : View(WINDOW_TITLE) {
     private val exit by fxid<MenuItem>()
     private val sidebar by fxid<VBox>()
     private val selectionBorderPane by fxid<BorderPane>()
+    private val mainSplitPane by fxid<SplitPane>()
+    private val rpcWarnLabel by fxid<Label>()
 
     // Inject data.
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
     private val selectedView by objectProperty(CordaViewModel::selectedView)
     private val registeredViews by observableList(CordaViewModel::registeredViews)
+    private val proxy by observableValue(NodeMonitorModel::proxyObservable)
 
     private val menuItemCSS = "sidebar-menu-item"
     private val menuItemArrowCSS = "sidebar-menu-item-arrow"
@@ -69,7 +67,7 @@ class MainView : View(WINDOW_TITLE) {
             // This needed to be declared val or else it will get GCed and listener unregistered.
             val buttonStyle = ChosenList(selectedView.map { selected ->
                 if (selected == it) listOf(menuItemCSS, menuItemSelectedCSS).observable() else listOf(menuItemCSS).observable()
-            })
+            }, "buttonStyle")
             stackpane {
                 button(it.title) {
                     graphic = FontAwesomeIconView(it.icon).apply {
@@ -103,5 +101,9 @@ class MainView : View(WINDOW_TITLE) {
         Bindings.bindContent(sidebar.children, menuItems)
         // Main view
         selectionBorderPane.centerProperty().bind(selectedView.map { it?.root })
+        // Trigger depending on RPC connectivity status.
+        val proxyNotAvailable = proxy.map { it == null }
+        mainSplitPane.disableProperty().bind(proxyNotAvailable)
+        rpcWarnLabel.visibleProperty().bind(proxyNotAvailable)
     }
 }

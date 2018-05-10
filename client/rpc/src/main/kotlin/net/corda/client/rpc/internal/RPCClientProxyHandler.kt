@@ -371,7 +371,15 @@ class RPCClientProxyHandler(
             interrupt()
             join(1000)
         }
-        sessionFactory?.close()
+
+        if (notify) {
+            // This is going to send remote message, see `org.apache.activemq.artemis.core.client.impl.ClientConsumerImpl.doCleanUp()`.
+            sessionFactory?.close()
+        } else {
+            // This performs a cheaper and faster version of local cleanup.
+            sessionFactory?.cleanup()
+        }
+
         reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
         reapObservables(notify)
@@ -528,7 +536,11 @@ class RPCClientProxyHandler(
         val m = observableContext.observableMap.asMap()
         m.keys.forEach { k ->
             observationExecutorPool.run(k) {
-                m[k]?.onError(RPCException("Connection failure detected."))
+                try {
+                    m[k]?.onError(RPCException("Connection failure detected."))
+                } catch (th: Throwable) {
+                    log.error("Unexpected exception when RPC connection failure handling", th)
+                }
             }
         }
         observableContext.observableMap.invalidateAll()
