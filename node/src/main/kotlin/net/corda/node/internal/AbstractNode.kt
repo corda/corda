@@ -203,7 +203,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     open fun start(): StartedNode<AbstractNode> {
         check(started == null) { "Node has already been started" }
         if (configuration.devMode) {
-            Node.printWarning("This node is running in developer mode! ${Emoji.developer} This is not safe for production deployment.")
+            Emoji.renderIfSupported { Node.printWarning("This node is running in developer mode! ${Emoji.developer} This is not safe for production deployment.") }
         }
         log.info("Node starting up ...")
         initCertificate()
