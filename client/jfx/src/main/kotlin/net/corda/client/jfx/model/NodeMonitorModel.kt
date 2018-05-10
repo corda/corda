@@ -153,7 +153,7 @@ class NodeMonitorModel {
         val retryableStateMachineUpdatesSubscription: AtomicReference<Subscription?> = AtomicReference(null)
         val subscription: Subscription = stateMachineUpdatesRaw
                 .startWith(stateMachineInfos.map { StateMachineUpdate.Added(it) })
-                .doOnError {
+                .subscribe({ retryableStateMachineUpdatesSubject.onNext(it) }, {
                     // Terminate subscription such that nothing gets past this point to downstream Observables.
                     retryableStateMachineUpdatesSubscription.get()?.unsubscribe()
                     // Flag to everyone that proxy is no longer available.
@@ -164,8 +164,7 @@ class NodeMonitorModel {
                     connection.forceClose()
                     // Perform re-connect.
                     performRpcReconnect(nodeHostAndPort, username, password)
-                }
-                .subscribe(retryableStateMachineUpdatesSubject)
+                })
 
         retryableStateMachineUpdatesSubscription.set(subscription)
         runLaterIfInitialized { proxyObservable.set(CordaRPCOpsWrapper(proxy)) }
