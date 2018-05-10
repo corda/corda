@@ -42,23 +42,25 @@ class RpcSslTest {
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-            startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
-                CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password).use { connection ->
+            val node = startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
+            val client = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions)
+            val connection = client.start(user.username, user.password)
+
+            connection.proxy.apply {
+                val nodeInfo = nodeInfo()
+                assertThat(nodeInfo.legalIdentities).isNotEmpty
+                successfulLogin = true
+            }
+
+            Assertions.assertThatThrownBy {
+                CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, "wrong").use { connection ->
                     connection.proxy.apply {
-                        val nodeInfo = nodeInfo()
-                        assertThat(nodeInfo.legalIdentities).isNotEmpty
-                        successfulLogin = true
+                        nodeInfo()
+                        failedLogin = true
                     }
                 }
-                Assertions.assertThatThrownBy {
-                    CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, "wrong").use { connection ->
-                        connection.proxy.apply {
-                            nodeInfo()
-                            failedLogin = true
-                        }
-                    }
-                }.isInstanceOf(ActiveMQSecurityException::class.java)
-            }
+            }.isInstanceOf(ActiveMQSecurityException::class.java)
+            connection.close()
         }
         assertThat(successfulLogin).isTrue()
         assertThat(failedLogin).isFalse()
@@ -78,16 +80,16 @@ class RpcSslTest {
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-            startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
-                Assertions.assertThatThrownBy {
-                    CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password).use { connection ->
-                        connection.proxy.apply {
-                            nodeInfo()
-                            successful = true
-                        }
-                    }
-                }.isInstanceOf(ActiveMQNotConnectedException::class.java)
-            }
+            val node = startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
+            Assertions.assertThatThrownBy {
+                val connection = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password)
+                connection.proxy.apply {
+                    nodeInfo()
+                    successful = true
+                }
+                connection.close()
+            }.isInstanceOf(ActiveMQNotConnectedException::class.java)
+
         }
 
         assertThat(successful).isFalse()
@@ -98,14 +100,13 @@ class RpcSslTest {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-            startNode(rpcUsers = listOf(user)).getOrThrow().use { node ->
-                CordaRPCClient(node.rpcAddress).start(user.username, user.password).use { connection ->
-                    connection.proxy.apply {
-                        nodeInfo()
-                        successful = true
-                    }
-                }
+            val node = startNode(rpcUsers = listOf(user)).getOrThrow()
+            val connection = CordaRPCClient(node.rpcAddress).start(user.username, user.password)
+            connection.proxy.apply {
+                nodeInfo()
+                successful = true
             }
+            connection.close()
         }
         assertThat(successful).isTrue()
     }

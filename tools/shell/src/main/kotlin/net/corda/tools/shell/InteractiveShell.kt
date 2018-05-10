@@ -19,9 +19,6 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.*
-import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
