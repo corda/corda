@@ -41,9 +41,7 @@ repositories {
 
 sourceSets {
     behave {
-        java {
-            compileClasspath += main.output
-            runtimeClasspath += main.output
+        kotlin {
             srcDirs = ['src/main/kotlin', 'src/scenario/kotlin']
         }
         resources.srcDir file('src/scenario/resources')
@@ -56,6 +54,12 @@ sourceSets {
         }
         resources {
             srcDirs = ['src/scenario/resources']
+        }
+    }
+    main {
+        kotlin {
+            compileClasspath += sourceSets.behave.output
+            runtimeClasspath += sourceSets.behave.output
         }
     }
 }

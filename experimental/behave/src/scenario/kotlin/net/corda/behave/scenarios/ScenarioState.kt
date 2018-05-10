@@ -15,10 +15,15 @@ import net.corda.behave.network.Network
 import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.utilities.contextLogger
 import org.assertj.core.api.Assertions.assertThat
 import java.time.Duration
 
 class ScenarioState {
+
+    companion object {
+        val log = contextLogger()
+    }
 
     private val nodes = mutableListOf<Node.Builder>()
 
