@@ -26,11 +26,26 @@ abstract class ArgsParser<out T : Any> {
             }
             throw e
         }
+
         if (optionSet.has(helpOption)) {
             printHelpOn?.let(optionParser::printHelpOn)
             exitProcess(0)
         }
-        return parse(optionSet)
+
+        return try {
+            parse(optionSet)
+        } catch (e: RuntimeException) {
+            // we handle errors' from the parsing of the command line arguments as a runtime
+            // exception because the joptsimple library is overly helpful and doesn't expose
+            // error exceptions in a way that makes reporting the message out to the user
+            // possible. Thus, that library is re-throwing those exceptions as simple
+            // runtime exceptions with a modified cause to preserve the error location
+            printHelpOn?.let {
+                it.println("ERROR: ${e.message ?: "Unable to parse arguments."}")
+                exitProcess(-1)
+            }
+            throw e
+        }
     }
 
     protected abstract fun parse(optionSet: OptionSet): T
