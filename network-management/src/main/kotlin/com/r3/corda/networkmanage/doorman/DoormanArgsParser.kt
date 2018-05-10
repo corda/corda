@@ -1,6 +1,5 @@
 package com.r3.corda.networkmanage.doorman
 
-//import joptsimple.OptionArgumentConversionException
 import com.google.common.primitives.Booleans
 import com.r3.corda.networkmanage.common.utils.ArgsParser
 import joptsimple.OptionException
