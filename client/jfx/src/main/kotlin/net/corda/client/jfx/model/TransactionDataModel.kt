@@ -83,7 +83,7 @@ data class PartiallyResolvedTransaction(
  */
 class TransactionDataModel {
     private val transactions by observable(NodeMonitorModel::transactions)
-    private val collectedTransactions = transactions.recordInSequence()
+    private val collectedTransactions = transactions.recordInSequence().distinctBy { it.id }
     private val vaultUpdates by observable(NodeMonitorModel::vaultUpdates)
     private val stateMap = vaultUpdates.fold(FXCollections.observableHashMap<StateRef, StateAndRef<ContractState>>()) { map, update ->
         val states = update.consumed + update.produced

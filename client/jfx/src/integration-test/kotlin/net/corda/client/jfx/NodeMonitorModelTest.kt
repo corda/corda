@@ -78,7 +78,7 @@ class NodeMonitorModelTest {
             networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
             monitor.register(aliceNodeHandle.rpcAddress, cashUser.username, cashUser.password)
-            rpc = monitor.proxyObservable.value!!
+            rpc = monitor.proxyObservable.value!!.cordaRPCOps
             notaryParty = defaultNotaryIdentity
 
             val bobNodeHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(cashUser)).getOrThrow()
@@ -86,7 +86,7 @@ class NodeMonitorModelTest {
             val monitorBob = NodeMonitorModel()
             stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
             monitorBob.register(bobNodeHandle.rpcAddress, cashUser.username, cashUser.password)
-            rpcBob = monitorBob.proxyObservable.value!!
+            rpcBob = monitorBob.proxyObservable.value!!.cordaRPCOps
             runTest()
         }
     }

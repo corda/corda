@@ -58,7 +58,6 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
 val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
-fun Throwable.getStackTraceAsString() = StringWriter().also { printStackTrace(PrintWriter(it)) }.toString()
 
 infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)
 
@@ -170,14 +169,21 @@ fun <T> Logger.logElapsedTime(label: String, body: () -> T): T = logElapsedTime(
 fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
     // Use nanoTime as it's monotonic.
     val now = System.nanoTime()
+    var failed = false
     try {
         return body()
-    } finally {
+    }
+    catch (th: Throwable) {
+        failed = true
+        throw th
+    }
+    finally {
         val elapsed = Duration.ofNanos(System.nanoTime() - now).toMillis()
+        val msg = (if(failed) "Failed " else "") + "$label took $elapsed msec"
         if (logger != null)
-            logger.info("$label took $elapsed msec")
+            logger.info(msg)
         else
-            println("$label took $elapsed msec")
+            println(msg)
     }
 }
 

@@ -39,7 +39,6 @@ dependencies {
 
     // Jackson support: serialisation to/from JSON, YAML, etc
     compile project(':client:jackson')
-    compile group: 'org.json', name: 'json', version: json_version
 
 
     // JOpt: for command line flags.
