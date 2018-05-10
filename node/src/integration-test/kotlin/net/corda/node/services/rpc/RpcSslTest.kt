@@ -59,14 +59,15 @@ class RpcSslTest : IntegrationTest() {
             withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
                 var successful = false
                 driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-                    startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
-                        createCordaRPCClientWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password).use { connection ->
-                            connection.proxy.apply {
-                                nodeInfo()
-                                successful = true
-                            }
-                        }
+                    val node = startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow()
+                    val client = createCordaRPCClientWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions)
+                    val connection = client.start(user.username, user.password)
+                    connection.proxy.apply {
+                        nodeInfo()
+                        successful = true
                     }
+
+                    connection.close()
                 }
                 assertThat(successful).isTrue()
             }
@@ -78,14 +79,15 @@ class RpcSslTest : IntegrationTest() {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-            startNode(rpcUsers = listOf(user)).getOrThrow().use { node ->
-                CordaRPCClient(node.rpcAddress).start(user.username, user.password).use { connection ->
-                    connection.proxy.apply {
-                        nodeInfo()
-                        successful = true
-                    }
-                }
+            val node = startNode(rpcUsers = listOf(user)).getOrThrow()
+            val client = CordaRPCClient(node.rpcAddress)
+            val connection = client.start(user.username, user.password)
+            connection.proxy.apply {
+                nodeInfo()
+                successful = true
             }
+
+            connection.close()
         }
         assertThat(successful).isTrue()
     }
