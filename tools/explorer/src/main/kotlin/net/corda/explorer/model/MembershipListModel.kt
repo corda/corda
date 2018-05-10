@@ -24,7 +24,7 @@ import net.corda.sample.businessnetwork.membership.flow.ObtainMembershipListCont
 
 class MembershipListModel {
     private val proxy by observableValue(NodeMonitorModel::proxyObservable)
-    private val members = proxy.map { it?.startFlow(::ObtainMembershipListContentFlow, IOUFlow.allowedMembershipName)?.returnValue?.getOrThrow() }
+    private val members = proxy.map { it?.cordaRPCOps?.startFlow(::ObtainMembershipListContentFlow, IOUFlow.allowedMembershipName)?.returnValue?.getOrThrow() }
     private val observableValueOfParties = members.map {
         FXCollections.observableList(it?.toList() ?: emptyList<AbstractParty>())
     }

@@ -81,7 +81,7 @@ class NewTransaction : Fragment() {
                 initOwner(window)
                 show()
             }
-            val handle: FlowHandle<SignedTransaction> = rpcProxy.value!!.startFlow(::IOUFlow, request.first, request.second)
+            val handle: FlowHandle<SignedTransaction> = rpcProxy.value!!.cordaRPCOps.startFlow(::IOUFlow, request.first, request.second)
             runAsync {
                 try {
                     handle.returnValue.getOrThrow()

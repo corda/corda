@@ -71,7 +71,7 @@ class TransactionViewer : CordaView("Transactions") {
 
     private var scrollPosition: Int = 0
     private lateinit var expander: ExpanderColumn<TransactionViewer.Transaction>
-    private var txIdToScroll: SecureHash? = null // Passed as param.
+    var txIdToScroll: SecureHash? = null // Passed as param.
 
     /**
      * This is what holds data for a single transaction node. Note how a lot of these are nullable as we often simply don't
