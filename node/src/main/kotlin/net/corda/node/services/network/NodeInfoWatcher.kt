@@ -26,13 +26,18 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
 
+sealed class NodeInfoUpdate{
+    class Add(val nodeInfo: NodeInfo): NodeInfoUpdate()
+    class Remove(val hash: SecureHash): NodeInfoUpdate()
+}
+
 /**
  * Class containing the logic to
  * - Serialize and de-serialize a [NodeInfo] to disk and reading it back.
  * - Poll a directory for new serialized [NodeInfo]
  *
  * @param nodePath the base path of a node.
- * @param pollInterval how often to poll the filesystem in milliseconds. Must be longer then 5 seconds.
+ * @param pollInterval how often to poll the filesystem in milliseconds. Must be longer than 5 seconds.
  * @param scheduler a [Scheduler] for the rx [Observable] returned by [nodeInfoUpdates], this is mainly useful for
  *        testing. It defaults to the io scheduler which is the appropriate value for production uses.
  */
@@ -60,8 +65,8 @@ class NodeInfoWatcher(private val nodePath: Path,
 
     private val nodeInfosDir = nodePath / CordformNode.NODE_INFO_DIRECTORY
     private val nodeInfoFiles = HashMap<Path, FileTime>()
-    private val _processedNodeInfoHashes = HashSet<SecureHash>()
-    val processedNodeInfoHashes: Set<SecureHash> get() = _processedNodeInfoHashes
+    private val processedPathHashMap = HashMap<Path, SecureHash>()
+    val processedNodeInfoHashes: Set<SecureHash> get() = processedPathHashMap.values.toSet()
 
     init {
         require(pollInterval >= 5.seconds) { "Poll interval must be 5 seconds or longer." }
@@ -75,9 +80,9 @@ class NodeInfoWatcher(private val nodePath: Path,
      * We simply list the directory content every 5 seconds, the Java implementation of WatchService has been proven to
      * be unreliable on MacOs and given the fairly simple use case we have, this simple implementation should do.
      *
-     * @return an [Observable] returning [NodeInfo]s, at most one [NodeInfo] is returned for each processed file.
+     * @return an [Observable] returning [NodeInfoUpdate]s, at most one [NodeInfo] is returned for each processed file.
      */
-    fun nodeInfoUpdates(): Observable<NodeInfo> {
+    fun nodeInfoUpdates(): Observable<NodeInfoUpdate> {
         return Observable.interval(pollInterval.toMillis(), TimeUnit.MILLISECONDS, scheduler)
                 .flatMapIterable { loadFromDirectory() }
     }
@@ -87,7 +92,8 @@ class NodeInfoWatcher(private val nodePath: Path,
         return Companion.saveToFile(nodePath, nodeInfoAndSigned)
     }
 
-    private fun loadFromDirectory(): List<NodeInfo> {
+    private fun loadFromDirectory(): List<NodeInfoUpdate> {
+        val processedPaths = HashSet<Path>()
         val result = nodeInfosDir.list { paths ->
             paths
                     .filter { it.isRegularFile() }
@@ -96,12 +102,15 @@ class NodeInfoWatcher(private val nodePath: Path,
                         val previousLastModifiedTime = nodeInfoFiles[file]
                         val newOrChangedFile = previousLastModifiedTime == null || lastModifiedTime > previousLastModifiedTime
                         nodeInfoFiles[file] = lastModifiedTime
+                        processedPaths.add(file)
                         newOrChangedFile
                     }
                     .mapNotNull { file ->
                         logger.debug { "Reading SignedNodeInfo from $file" }
                         try {
-                            NodeInfoAndSigned(file.readObject())
+                            val nodeInfoSigned = NodeInfoAndSigned(file.readObject())
+                            processedPathHashMap[file] = nodeInfoSigned.signed.raw.hash
+                            nodeInfoSigned
                         } catch (e: Exception) {
                             logger.warn("Unable to read SignedNodeInfo from $file", e)
                             null
@@ -109,10 +118,16 @@ class NodeInfoWatcher(private val nodePath: Path,
                     }
                     .toList()
         }
-
+        val removedFiles = processedPathHashMap.keys - processedPaths
+        val removedHashes = removedFiles.mapNotNull { file ->
+            processedPathHashMap[file]?.let {
+                processedPathHashMap.remove(file)
+                NodeInfoUpdate.Remove(it)
+            }
+        }
         logger.debug { "Read ${result.size} NodeInfo files from $nodeInfosDir" }
-        _processedNodeInfoHashes += result.map { it.signed.raw.hash }
-        return result.map { it.nodeInfo }
+        logger.debug { "Number of removed files: ${removedHashes.size}" }
+        return result.map { NodeInfoUpdate.Add(it.nodeInfo) } + removedHashes
     }
 }
 

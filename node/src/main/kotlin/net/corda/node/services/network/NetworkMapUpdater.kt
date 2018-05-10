@@ -63,7 +63,17 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     fun subscribeToNetworkMap() {
         require(fileWatcherSubscription == null) { "Should not call this method twice." }
         // Subscribe to file based networkMap
-        fileWatcherSubscription = fileWatcher.nodeInfoUpdates().subscribe(networkMapCache::addNode)
+        fileWatcherSubscription = fileWatcher.nodeInfoUpdates().subscribe {
+            when (it) {
+                is NodeInfoUpdate.Add -> {
+                    networkMapCache.addNode(it.nodeInfo)
+                }
+                is NodeInfoUpdate.Remove -> {
+                    val nodeInfo = networkMapCache.getNodeByHash(it.hash)
+                    nodeInfo?.let { networkMapCache.removeNode(it) }
+                }
+            }
+        }
 
         if (networkMapClient == null) return
 
