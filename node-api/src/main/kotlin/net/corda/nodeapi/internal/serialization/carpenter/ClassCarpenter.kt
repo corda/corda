@@ -89,8 +89,9 @@ private val toStringHelper: String = Type.getInternalName(MoreObjects.ToStringHe
  *
  * Equals/hashCode methods are not yet supported.
  */
-class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader,
-                     val whitelist: ClassWhitelist) {
+class ClassCarpenter(cl: ClassLoader, val whitelist: ClassWhitelist) {
+    constructor(whitelist: ClassWhitelist) : this(Thread.currentThread().contextClassLoader, whitelist)
+
     // TODO: Generics.
     // TODO: Sandbox the generated code when a security manager is in use.
     // TODO: Generate equals/hashCode.

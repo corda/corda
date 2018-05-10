@@ -95,11 +95,11 @@ abstract class AbstractAMQPSerializationScheme(
             register(net.corda.nodeapi.internal.serialization.amqp.custom.X509CRLSerializer)
             register(net.corda.nodeapi.internal.serialization.amqp.custom.CertPathSerializer(this))
             register(net.corda.nodeapi.internal.serialization.amqp.custom.StringBufferSerializer)
-            register(net.corda.nodeapi.internal.serialization.amqp.custom.SimpleStringSerializer)
             register(net.corda.nodeapi.internal.serialization.amqp.custom.InputStreamSerializer)
             register(net.corda.nodeapi.internal.serialization.amqp.custom.BitSetSerializer(this))
             register(net.corda.nodeapi.internal.serialization.amqp.custom.EnumSetSerializer(this))
             register(net.corda.nodeapi.internal.serialization.amqp.custom.ContractAttachmentSerializer(this))
+            registerNonDeterministicSerializers(factory)
         }
         for (whitelistProvider in serializationWhitelists) {
             factory.addToWhitelist(*whitelistProvider.whitelist.toTypedArray())
@@ -116,7 +116,15 @@ abstract class AbstractAMQPSerializationScheme(
                 factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
             }
         }
+    }
 
+    /*
+     * Register the serializers which will be excluded from the DJVM.
+     */
+    private fun registerNonDeterministicSerializers(factory: SerializerFactory) {
+        with(factory) {
+            register(net.corda.nodeapi.internal.serialization.amqp.custom.SimpleStringSerializer)
+        }
     }
 
     private val serializerFactoriesForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>()
