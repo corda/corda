@@ -161,9 +161,6 @@ dependencies {
     compile 'io.atomix.copycat:copycat-server:1.2.8'
     compile 'io.atomix.catalyst:catalyst-netty:1.2.1'
 
-    // Netty: All of it.
-    compile "io.netty:netty-all:$netty_version"
-
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 
