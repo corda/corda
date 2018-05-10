@@ -82,15 +82,7 @@ class NodeMonitorModel {
      * This is needed as JavaFX listener framework attempts to call `equals()` before dispatching notification change.
      * And calling `CordaRPCOps.equals()` results in (unhandled) remote call.
      */
-    class CordaRPCOpsWrapper(val cordaRPCOps: CordaRPCOps) {
-        override fun equals(other: Any?): Boolean {
-            return this === other
-        }
-
-        override fun hashCode(): Int {
-            throw IllegalArgumentException()
-        }
-    }
+    class CordaRPCOpsWrapper(val cordaRPCOps: CordaRPCOps)
 
     /**
      * Register for updates to/from a given vault.
