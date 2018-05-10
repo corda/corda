@@ -20,6 +20,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.BFTSMaRtConfiguration
 import net.corda.node.services.config.NotaryConfig
@@ -31,7 +32,6 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
@@ -43,7 +43,6 @@ import org.junit.Assert.assertThat
 import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
-import java.util.*
 import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -165,6 +164,21 @@ class BFTNotaryServiceTests {
             assertThat(exception.cause, instanceOf(NotaryException::class.java))
             val error = (exception.cause as NotaryException).error
             assertThat(error, instanceOf(NotaryError.TimeWindowInvalid::class.java))
+        }
+    }
+
+     @Test
+    fun `notarise issue tx with time-window`() {
+        node.run {
+            val issueTx = signInitialTransaction(notary) {
+                setTimeWindow(services.clock.instant(), 30.seconds)
+                addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
+            }
+            val resultFuture = services.startFlow(NotaryFlow.Client(issueTx)).resultFuture
+
+            mockNet.runNetwork()
+            val signatures = resultFuture.get()
+            verifySignatures(signatures, issueTx.id)
         }
     }
 
