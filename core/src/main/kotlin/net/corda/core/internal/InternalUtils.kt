@@ -58,7 +58,6 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
 val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
-fun Throwable.getStackTraceAsString() = StringWriter().also { printStackTrace(PrintWriter(it)) }.toString()
 
 infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)
 

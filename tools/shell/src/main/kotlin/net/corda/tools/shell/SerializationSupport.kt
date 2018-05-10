@@ -50,16 +50,6 @@ object UniqueIdentifierDeserializer : JsonDeserializer<UniqueIdentifier>() {
     }
 }
 
-/**
- * String value deserialized to [UUID].
- * */
-object UUIDDeserializer : JsonDeserializer<UUID>() {
-    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): UUID {
-        //Create UUID object from string.
-        return UUID.fromString(p.text)
-    }
-}
-
 // An InputStream found in a response triggers a request to the user to provide somewhere to save it.
 object InputStreamSerializer : JsonSerializer<InputStream>() {
     var invokeContext: InvocationContext<*>? = null

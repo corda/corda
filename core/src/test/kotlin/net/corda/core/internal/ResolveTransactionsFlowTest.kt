@@ -58,8 +58,7 @@ class ResolveTransactionsFlowTest {
         val p = TestFlow(setOf(stx2.id), megaCorp)
         val future = miniCorpNode.startFlow(p)
         mockNet.runNetwork()
-        val results = future.getOrThrow()
-        assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
+        future.getOrThrow()
         miniCorpNode.transaction {
             assertEquals(stx1, miniCorpNode.services.validatedTransactions.getTransaction(stx1.id))
             assertEquals(stx2, miniCorpNode.services.validatedTransactions.getTransaction(stx2.id))
@@ -189,16 +188,16 @@ class ResolveTransactionsFlowTest {
     // DOCEND 2
 
     @InitiatingFlow
-    private class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<List<SignedTransaction>>() {
+    private class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<Unit>() {
         constructor(txHashes: Set<SecureHash>, otherSide: Party, txCountLimit: Int? = null) : this(otherSide, { ResolveTransactionsFlow(txHashes, it) }, txCountLimit = txCountLimit)
         constructor(stx: SignedTransaction, otherSide: Party) : this(otherSide, { ResolveTransactionsFlow(stx, it) })
 
         @Suspendable
-        override fun call(): List<SignedTransaction> {
+        override fun call() {
             val session = initiateFlow(otherSide)
             val resolveTransactionsFlow = resolveTransactionsFlowFactory(session)
             txCountLimit?.let { resolveTransactionsFlow.transactionCountLimit = it }
-            return subFlow(resolveTransactionsFlow)
+            subFlow(resolveTransactionsFlow)
         }
     }
 

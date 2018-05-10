@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
-import net.corda.core.internal.getStackTraceAsString
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.loggerFor
@@ -247,7 +246,7 @@ open class SerializerFactory(
                 // preserve the actual message locally
                 loggerFor<SerializerFactory>().apply {
                     error("${e.message} [hint: enable trace debugging for the stack trace]")
-                    trace(e.getStackTraceAsString())
+                    trace("", e)
                 }
 
                 // prevent carpenter exceptions escaping into the world, convert things into a nice
