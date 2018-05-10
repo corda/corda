@@ -2,7 +2,6 @@ package net.corda.demobench
 
 import javafx.scene.image.Image
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.demobench.views.DemoBenchView
@@ -59,7 +58,6 @@ class DemoBench : App(DemoBenchView::class) {
     private fun initialiseSerialization() {
         nodeSerializationEnv = SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
-                    registerScheme(KryoClientSerializationScheme())
                     registerScheme(AMQPClientSerializationScheme(emptyList()))
                 },
                 AMQP_P2P_CONTEXT)

@@ -6,6 +6,11 @@ import net.corda.nodeapi.RPCApi
 import org.apache.activemq.artemis.api.core.SimpleString
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * An observable context is constructed on each RPC request. If subsequently a nested Observable is encountered this
+ * same context is propagated by the serialization context. This way all observations rooted in a single RPC will be
+ * muxed correctly. Note that the context construction itself is quite cheap.
+ */
 interface ObservableContextInterface {
     fun sendMessage(serverToClient: RPCApi.ServerToClient)
 

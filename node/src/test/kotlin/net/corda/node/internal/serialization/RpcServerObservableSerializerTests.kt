@@ -35,7 +35,7 @@ class RpcServerObservableSerializerTests {
 
     @Test
     fun canSerializerBeRegistered() {
-        val sf = SerializerFactory(cl = javaClass.classLoader, whitelist = AllWhitelist)
+        val sf = SerializerFactory(AllWhitelist, javaClass.classLoader)
 
         try {
             sf.register(RpcServerObservableSerializer())
@@ -68,10 +68,7 @@ class RpcServerObservableSerializerTests {
                 deduplicationIdentity = "thisIsATest",
                 clientAddress = SimpleString(testClientAddress))
 
-        val sf = SerializerFactory(
-                cl = javaClass.classLoader,
-                whitelist = AllWhitelist
-        ).apply {
+        val sf = SerializerFactory(AllWhitelist, javaClass.classLoader).apply {
             register(RpcServerObservableSerializer())
         }
 

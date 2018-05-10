@@ -22,6 +22,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.util.io.Streams
 import org.junit.Ignore
 import org.junit.Test
+import java.lang.Thread.sleep
 import java.net.ConnectException
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -55,7 +56,7 @@ class SSHServerTest {
         // The driver will automatically pick up the annotated flows below
         driver {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
-                    customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
+                    customOverrides = mapOf("sshd" to mapOf("port" to 2222)) /*, startInSameProcess = true */)
             node.getOrThrow()
 
             val session = JSch().getSession("u", "localhost", 2222)

@@ -114,7 +114,8 @@ open class SerializationFactoryImpl(
         val lookupKey = magic to target
         return schemes.computeIfAbsent(lookupKey) {
             registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
-            logger.warn("Cannot find serialization scheme for: $lookupKey, registeredSchemes are: $registeredSchemes")
+            logger.warn("Cannot find serialization scheme for: [$lookupKey, " +
+                    "${if (magic == amqpMagic) "AMQP" else if (magic == kryoMagic) "Kryo" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")
             throw UnsupportedOperationException("Serialization scheme $lookupKey not supported.")
         } to magic
     }

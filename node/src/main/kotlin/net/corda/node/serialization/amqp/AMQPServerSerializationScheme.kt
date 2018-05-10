@@ -39,8 +39,8 @@ class AMQPServerSerializationScheme(
 
     override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
         return canDeserializeVersion(magic) &&
-                (  target == SerializationContext.UseCase.P2P
-                        || target == SerializationContext.UseCase.Storage
-                        || target == SerializationContext.UseCase.RPCServer)
+                (   target == SerializationContext.UseCase.P2P
+                 || target == SerializationContext.UseCase.Storage
+                 || target == SerializationContext.UseCase.RPCServer)
     }
 }

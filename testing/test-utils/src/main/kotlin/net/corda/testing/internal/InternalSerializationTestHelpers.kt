@@ -4,10 +4,9 @@ import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
 import net.corda.core.serialization.internal.*
-import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.testing.core.SerializationEnvironmentRule
 import java.util.concurrent.ConcurrentHashMap
@@ -31,10 +30,10 @@ fun <T> withoutTestSerialization(callable: () -> T): T { // TODO: Delete this, s
 
 internal fun createTestSerializationEnv(label: String): SerializationEnvironmentImpl {
     val factory = SerializationFactoryImpl().apply {
-        registerScheme(KryoClientSerializationScheme())
-        registerScheme(KryoServerSerializationScheme())
         registerScheme(AMQPClientSerializationScheme(emptyList()))
         registerScheme(AMQPServerSerializationScheme(emptyList()))
+        // needed for checkpointing
+        registerScheme(KryoServerSerializationScheme())
     }
     return object : SerializationEnvironmentImpl(
             factory,

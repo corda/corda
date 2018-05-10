@@ -1,7 +1,7 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
-import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.openFuture
@@ -384,9 +384,9 @@ open class Node(configuration: NodeConfiguration,
         val classloader = cordappLoader.appClassLoader
         nodeSerializationEnv = SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
-                    registerScheme(KryoServerSerializationScheme())
                     registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps))
-                    registerScheme(KryoClientSerializationScheme())
+                    registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps))
+                    registerScheme(KryoServerSerializationScheme() )
                 },
                 p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader),

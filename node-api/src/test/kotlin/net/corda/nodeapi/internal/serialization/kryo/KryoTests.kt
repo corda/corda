@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.primitives.Ints
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
@@ -15,7 +16,6 @@ import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.sequence
-import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.testing.core.ALICE_NAME
@@ -35,6 +35,17 @@ import java.time.Instant
 import java.util.*
 import kotlin.test.*
 
+class TestScheme : AbstractKryoSerializationScheme() {
+    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+        return magic == kryoMagic && target != SerializationContext.UseCase.RPCClient
+    }
+
+    override fun rpcClientKryoPool(context: SerializationContext): KryoPool = throw UnsupportedOperationException()
+
+    override fun rpcServerKryoPool(context: SerializationContext): KryoPool = throw UnsupportedOperationException()
+
+}
+
 @RunWith(Parameterized::class)
 class KryoTests(private val compression: CordaSerializationEncoding?) {
     companion object {
@@ -49,7 +60,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
 
     @Before
     fun setup() {
-        factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
+        factory = SerializationFactoryImpl().apply { registerScheme(TestScheme()) }
         context = SerializationContextImpl(kryoMagic,
                 javaClass.classLoader,
                 AllWhitelist,
@@ -270,7 +281,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
             }
         }
         Tmp()
-        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
+        val factory = SerializationFactoryImpl().apply { registerScheme(TestScheme()) }
         val context = SerializationContextImpl(kryoMagic,
                 javaClass.classLoader,
                 AllWhitelist,

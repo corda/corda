@@ -60,7 +60,8 @@ class RoundTripObservableSerializerTests {
 
     @Test
     fun roundTripTest1() {
-        val serializationScheme = AMQPRoundTripRPCSerializationScheme(serializationContext)
+        val serializationScheme = AMQPRoundTripRPCSerializationScheme(
+                serializationContext, emptySet(), ConcurrentHashMap())
 
         // Fake up a message ID, needs to be used on both "sides". The server setting it in the subscriptionMap,
         // the client as a property of the deserializer which, in the actual RPC client, is pulled off of
