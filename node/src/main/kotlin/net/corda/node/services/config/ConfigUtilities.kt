@@ -13,7 +13,6 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.crypto.save
-import org.apache.commons.lang3.SystemUtils
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
@@ -31,7 +30,7 @@ object ConfigHelper {
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
 
         // detect the underlying OS. If mac or windows non-server then we assume we're running in devMode. Unless specified otherwise
-        val smartDevMode = SystemUtils.IS_OS_MAC || (SystemUtils.IS_OS_WINDOWS && !SystemUtils.OS_NAME.toLowerCase().contains("server"))
+        val smartDevMode = CordaSystemUtils.isOsMac() || (CordaSystemUtils.isOsWindows() && !CordaSystemUtils.getOsName().toLowerCase().contains("server"))
         val devModeConfig = ConfigFactory.parseMap(mapOf("devMode" to smartDevMode))
 
         val finalConfig = configOf(
@@ -87,4 +86,16 @@ fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name) {
             }
         }
     }
+}
+
+/**This is generally covered by commons-lang. */
+object CordaSystemUtils {
+    const val OS_NAME = "os.name"
+
+    const val MAC_PREFIX = "Mac"
+    const val WIN_PREFIX = "Windows"
+
+    fun isOsMac() = getOsName().startsWith(MAC_PREFIX)
+    fun isOsWindows() = getOsName().startsWith(WIN_PREFIX)
+    fun getOsName() = System.getProperty(OS_NAME)
 }

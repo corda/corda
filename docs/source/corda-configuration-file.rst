@@ -161,10 +161,10 @@ absolute path to the node's base directory.
     and the keystore does not exist. ``devMode`` also turns on background checking of flow checkpoints to shake out any
     bugs in the checkpointing process.
     Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda
-    or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate an existing schema
-    failing on node start if this schema is either not present or not compatible.
+    or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate the existing schema,
+    failing on node start if the schema is either not present or not compatible.
     If no value is specified in the node config file, the node will attempt to detect if it's running on a developer machine and set ``devMode=true`` in that case.
-    This value can be overwritten from the command line using the ``--dev-mode`` option.
+    This value can be overridden from the command line using the ``--dev-mode`` option.
 
 :detectPublicIp: This flag toggles the auto IP detection behaviour, it is enabled by default. On startup the node will
     attempt to discover its externally visible IP address first by looking for any public addresses on its network

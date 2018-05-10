@@ -9,11 +9,8 @@ import net.corda.core.utilities.seconds
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
-import org.apache.commons.lang3.SystemUtils
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
-import java.lang.reflect.Field
-import java.lang.reflect.Modifier
 import java.nio.file.Paths
 import java.util.*
 import kotlin.test.assertFalse
@@ -69,17 +66,6 @@ class NodeConfigurationImplTest {
     }
 
     private fun setSystemOs(os: String) {
-        val fieldOsName = SystemUtils::class.java.getDeclaredField("OS_NAME")
-        val fieldOsMac = SystemUtils::class.java.getDeclaredField("IS_OS_MAC")
-        val fieldOsWin = SystemUtils::class.java.getDeclaredField("IS_OS_WINDOWS")
-        val modifiersField = Field::class.java.getDeclaredField("modifiers")
-        modifiersField.isAccessible = true
-        modifiersField.setInt(fieldOsName, fieldOsName.getModifiers() and Modifier.FINAL.inv())
-        modifiersField.setInt(fieldOsMac, fieldOsMac.getModifiers() and Modifier.FINAL.inv())
-        modifiersField.setInt(fieldOsWin, fieldOsWin.getModifiers() and Modifier.FINAL.inv())
-        fieldOsName.set(null, os)
-        fieldOsMac.set(null, os.contains("Mac"))
-        fieldOsWin.set(null, os.contains("Windows"))
         System.setProperty("os.name", os)
     }
 

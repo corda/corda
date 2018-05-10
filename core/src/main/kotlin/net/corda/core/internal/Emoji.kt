@@ -47,6 +47,8 @@ object Emoji {
     val CODE_SOON: String = codePointsString(0x1F51C)
     @JvmStatic
     val CODE_DEVELOPER: String = codePointsString(0x1F469, 0x200D, 0x1F4BB)
+    @JvmStatic
+    val CODE_WARNING_SIGN: String = codePointsString(0x26A0, 0xFE0F)
 
 
     /**
@@ -68,6 +70,7 @@ object Emoji {
     val free: String get() = if (emojiMode.get() != null) "$CODE_FREE  " else ""
     val soon: String get() = if (emojiMode.get() != null) "$CODE_SOON  " else ""
     val developer: String get() = if (emojiMode.get() != null) "$CODE_DEVELOPER  " else ""
+    val warningSign: String get() = if (emojiMode.get() != null) "$CODE_WARNING_SIGN  " else "!"
 
     // These have old/non-emoji symbols with better platform support.
     val greenTick: String get() = if (emojiMode.get() != null) "$CODE_GREEN_TICK  " else "✓"

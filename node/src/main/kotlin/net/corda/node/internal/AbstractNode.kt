@@ -174,10 +174,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     private fun initCertificate() {
         if (configuration.devMode) {
-            log.warn("Corda node is running in developer mode. This is not suitable for production.")
+            log.warn("The Corda node is running in developer mode. This is not suitable for production usage.")
             configuration.configureWithDevSSLCertificate()
         } else {
-            log.info("Corda node is running in production mode. If this is a developer environment you can set 'devMode=true' in the node.conf file.")
+            log.info("The Corda node is running in production mode. If this is a developer environment you can set 'devMode=true' in the node.conf file.")
         }
         validateKeystore()
     }
@@ -203,16 +203,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     open fun start(): StartedNode<AbstractNode> {
         check(started == null) { "Node has already been started" }
         if (configuration.devMode) {
-            Emoji.renderIfSupported {
-                println("""
-                    |
-                    |+---------------- Attention! -------------------------+
-                    ||${Emoji.skullAndCrossbones} Node is running in developer mode! ${Emoji.developer}          |
-                    ||${Emoji.skullAndCrossbones} This is NOT safe for a production deployment.    |
-                    |+-----------------------------------------------------+
-                    |
-                """.trimMargin())
-            }
+            Node.printWarning("This node is running in developer mode! ${Emoji.developer} This is not safe for production deployment.")
         }
         log.info("Node starting up ...")
         initCertificate()
