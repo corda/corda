@@ -20,7 +20,6 @@ import org.assertj.core.api.Assertions.assertThat
 import java.time.Duration
 
 class ScenarioState {
-
     companion object {
         val log = contextLogger()
     }

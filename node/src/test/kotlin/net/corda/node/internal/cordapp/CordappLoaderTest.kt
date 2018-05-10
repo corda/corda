@@ -51,7 +51,7 @@ class CordappLoaderTest {
     fun `test that classes that aren't in cordapps aren't loaded`() {
         // Basedir will not be a corda node directory so the dummy flow shouldn't be recognised as a part of a cordapp
         val loader = CordappLoader.createDefault(Paths.get("."))
-        assertThat(loader.cordapps).containsOnly(CordappLoader.coreCordapp)
+        assertThat(loader.cordapps).containsOnly(loader.coreCordapp)
     }
 
     @Test
@@ -62,7 +62,7 @@ class CordappLoaderTest {
         val actual = loader.cordapps.toTypedArray()
         assertThat(actual).hasSize(2)
 
-        val actualCordapp = actual.single { it != CordappLoader.coreCordapp }
+        val actualCordapp = actual.single { it != loader.coreCordapp }
         assertThat(actualCordapp.contractClassNames).isEqualTo(listOf(isolatedContractId))
         assertThat(actualCordapp.initiatedFlows.single().name).isEqualTo("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Acceptor")
         assertThat(actualCordapp.rpcFlows).isEmpty()

@@ -81,6 +81,19 @@ jar {
     exclude "META-INF/*.MF"
     exclude "META-INF/LICENSE"
     exclude "META-INF/NOTICE"
+
+    manifest {
+        attributes(
+                "Manifest-Version": "1.0",
+                "Name": "net/corda/finance",
+                "Specification-Title": description,
+                "Specification-Version": version,
+                "Specification-Vendor": "R3",
+                "Implementation-Title": "$group.$baseName",
+                "Implementation-Version": version,
+                "Implementation-Vendor": "R3"
+        )
+    }
 }
 
 publish {

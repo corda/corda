@@ -14,15 +14,32 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.flows.*
-import net.corda.core.internal.*
+import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.SchedulableFlow
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.StartableByService
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.copyTo
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.isRegularFile
+import net.corda.core.internal.list
+import net.corda.core.internal.objectOrNewInstance
+import net.corda.core.internal.outputStream
+import net.corda.core.internal.toPath
+import net.corda.core.internal.toTypedArray
+import net.corda.core.internal.walk
 import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
+import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.coreContractClasses
@@ -38,6 +55,7 @@ import java.nio.file.attribute.FileTime
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.jar.JarInputStream
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.reflect.KClass
@@ -48,7 +66,7 @@ import kotlin.streams.toList
  *
  * @property cordappJarPaths The classpath of cordapp JARs
  */
-class CordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>) {
+class CordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>, versionInfo: VersionInfo) {
     val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
     val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
 
@@ -61,6 +79,22 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     }
 
     val cordappSchemas: Set<MappedSchema> get() = cordapps.flatMap { it.customSchemas }.toSet()
+
+    /** A Cordapp representing the core package which is not scanned automatically. */
+    @VisibleForTesting
+    internal val coreCordapp = CordappImpl(
+            contractClassNames = listOf(),
+            initiatedFlows = listOf(),
+            rpcFlows = coreRPCFlows,
+            serviceFlows = listOf(),
+            schedulableFlows = listOf(),
+            services = listOf(),
+            serializationWhitelists = listOf(),
+            serializationCustomSerializers = listOf(),
+            customSchemas = setOf(),
+            jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location, // Core JAR location
+            info = CordappImpl.Info("corda-core", versionInfo.vendor, versionInfo.releaseVersion)
+    )
 
     companion object {
         private val logger = contextLogger()
@@ -75,7 +109,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * @param baseDir The directory that this node is running in. Will use this to resolve the cordapps directory
          *                  for classpath scanning.
          */
-        fun createDefault(baseDir: Path) = CordappLoader(getNodeCordappURLs(baseDir))
+        fun createDefault(baseDir: Path, versionInfo: VersionInfo = VersionInfo.UNKNOWN) = CordappLoader(getNodeCordappURLs(baseDir), versionInfo)
 
         // Cache for CordappLoaders to avoid costly classpath scanning
         private val cordappLoadersCache = Caffeine.newBuilder().softValues().build<List<RestrictedURL>, CordappLoader>()
@@ -98,12 +132,12 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * @param testPackages See [createWithTestPackages]
          */
         @VisibleForTesting
-        fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>): CordappLoader {
+        fun createDefaultWithTestPackages(configuration: NodeConfiguration, testPackages: List<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
             if (!configuration.devMode) {
                 logger.warn("Package scanning should only occur in dev mode!")
             }
             val urls = getNodeCordappURLs(configuration.baseDirectory) + simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
-            return cordappLoadersCache.asMap().computeIfAbsent(urls, ::CordappLoader)
+            return cordappLoadersCache.asMap().computeIfAbsent(urls) { values -> CordappLoader(values, versionInfo) }
         }
 
         /**
@@ -114,9 +148,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * CorDapps.
          */
         @VisibleForTesting
-        fun createWithTestPackages(testPackages: List<String>): CordappLoader {
+        fun createWithTestPackages(testPackages: List<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
             val urls = simplifyScanPackages(testPackages).flatMap(this::getPackageURLs)
-            return cordappLoadersCache.asMap().computeIfAbsent(urls, ::CordappLoader)
+            return cordappLoadersCache.asMap().computeIfAbsent(urls) { values -> CordappLoader(values, versionInfo) }
         }
 
         /**
@@ -125,7 +159,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
          * @param scanJars Uses the JAR URLs provided for classpath scanning and Cordapp detection
          */
         @VisibleForTesting
-        fun createDevMode(scanJars: List<URL>) = CordappLoader(scanJars.map { RestrictedURL(it, null) })
+        fun createDevMode(scanJars: List<URL>, versionInfo: VersionInfo = VersionInfo.UNKNOWN) = CordappLoader(scanJars.map { RestrictedURL(it, null) }, versionInfo)
 
         private fun getPackageURLs(scanPackage: String): List<RestrictedURL> {
             val resource = scanPackage.replace('.', '/')
@@ -148,20 +182,24 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             return generatedCordapps.computeIfAbsent(url) {
                 // TODO Using the driver in out-of-process mode causes each node to have their own copy of the same dev CorDapps
                 val cordappDir = (Paths.get("build") / "tmp" / "generated-test-cordapps").createDirectories()
-                val cordappJar = cordappDir / "$scanPackage-${UUID.randomUUID()}.jar"
+                val uuid = UUID.randomUUID()
+                val cordappJar = cordappDir / "$scanPackage-$uuid.jar"
                 logger.info("Generating a test-only CorDapp of classes discovered for package $scanPackage in $url: $cordappJar")
-                JarOutputStream(cordappJar.outputStream()).use { jos ->
-                    val scanDir = url.toPath()
-                    scanDir.walk { it.forEach {
-                        val entryPath = "$resource/${scanDir.relativize(it).toString().replace('\\', '/')}"
-                        val time = FileTime.from(Instant.EPOCH)
-                        val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-                        jos.putNextEntry(entry)
-                        if (it.isRegularFile()) {
-                            it.copyTo(jos)
+                val manifest = createTestManifest(resource, scanPackage, uuid)
+                val scanDir = url.toPath()
+                JarOutputStream(cordappJar.outputStream(), manifest).use { jos ->
+                    scanDir.walk {
+                        it.forEach {
+                            val entryPath = "$resource/${scanDir.relativize(it).toString().replace('\\', '/')}"
+                            val time = FileTime.from(Instant.EPOCH)
+                            val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
+                            jos.putNextEntry(entry)
+                            if (it.isRegularFile()) {
+                                it.copyTo(jos)
+                            }
+                            jos.closeEntry()
                         }
-                        jos.closeEntry()
-                    } }
+                    }
                 }
                 cordappJar
             }
@@ -183,25 +221,13 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                 ContractUpgradeFlow.Initiate::class.java,
                 ContractUpgradeFlow.Authorise::class.java,
                 ContractUpgradeFlow.Deauthorise::class.java)
-
-        /** A Cordapp representing the core package which is not scanned automatically. */
-        @VisibleForTesting
-        internal val coreCordapp = CordappImpl(
-                contractClassNames = listOf(),
-                initiatedFlows = listOf(),
-                rpcFlows = coreRPCFlows,
-                serviceFlows = listOf(),
-                schedulableFlows = listOf(),
-                services = listOf(),
-                serializationWhitelists = listOf(),
-                serializationCustomSerializers = listOf(),
-                customSchemas = setOf(),
-                jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location // Core JAR location
-        )
     }
 
     private fun loadCordapps(): List<Cordapp> {
         return cordappJarPaths.map {
+            val url = it.url
+            val name = url.toPath().fileName.toString().removeSuffix(".jar")
+            val info = url.openStream().let(::JarInputStream).use { it.manifest }.toCordappInfo(name)
             val scanResult = scanCordapp(it)
             CordappImpl(findContractClassNames(scanResult),
                     findInitiatedFlows(scanResult),
@@ -212,7 +238,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     findPlugins(it),
                     findSerializers(scanResult),
                     findCustomSchemas(scanResult),
-                    it.url)
+                    url,
+                    info,
+                    name)
         }
     }
 
@@ -303,7 +331,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
     /** @property rootPackageName only this package and subpackages may be extracted from [url], or null to allow all packages. */
     private data class RestrictedURL(val url: URL, val rootPackageName: String?) {
-        val qualifiedNamePrefix: String get() = rootPackageName?.let { it + '.' } ?: ""
+        val qualifiedNamePrefix: String get() = rootPackageName?.let { "$it." } ?: ""
     }
 
     private inner class RestrictedScanResult(private val scanResult: ScanResult, private val qualifiedNamePrefix: String) {

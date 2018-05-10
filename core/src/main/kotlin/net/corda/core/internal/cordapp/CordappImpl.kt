@@ -29,8 +29,9 @@ data class CordappImpl(
         override val serializationWhitelists: List<SerializationWhitelist>,
         override val serializationCustomSerializers: List<SerializationCustomSerializer<*, *>>,
         override val customSchemas: Set<MappedSchema>,
-        override val jarPath: URL) : Cordapp {
-    override val name: String = jarPath.toPath().fileName.toString().removeSuffix(".jar")
+        override val jarPath: URL,
+        override val info: Cordapp.Info = CordappImpl.Info.UNKNOWN,
+        override val name: String = jarPath.toPath().fileName.toString().removeSuffix(".jar")) : Cordapp {
 
     /**
      * An exhaustive list of all classes relevant to the node within this CorDapp
@@ -38,4 +39,16 @@ data class CordappImpl(
      * TODO: Also add [SchedulableFlow] as a Cordapp class
      */
     override val cordappClasses = ((rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass }).map { it.name } + contractClassNames)
+
+    data class Info(override val shortName: String, override val vendor: String, override val version: String): Cordapp.Info {
+        companion object {
+            private const val UNKNOWN_VALUE = "Unknown"
+
+            val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE)
+        }
+
+        override fun hasUnknownFields(): Boolean {
+            return setOf(shortName, vendor, version).any { it == UNKNOWN_VALUE }
+        }
+    }
 }

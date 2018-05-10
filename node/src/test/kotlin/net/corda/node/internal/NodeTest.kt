@@ -64,7 +64,7 @@ class NodeTest {
     fun `generateAndSaveNodeInfo works`() {
         val nodeAddress = NetworkHostAndPort("0.1.2.3", 456)
         val nodeName = CordaX500Name("Manx Blockchain Corp", "Douglas", "IM")
-        val platformVersion = 789
+        val info = VersionInfo(789, "3.0", "SNAPSHOT", "R3")
         val dataSourceProperties = makeTestDataSourceProperties()
         val databaseConfig = DatabaseConfig()
         val configuration = rigorousMock<AbstractNodeConfiguration>().also {
@@ -79,10 +79,8 @@ class NodeTest {
             doReturn("tsp").whenever(it).trustStorePassword
             doReturn("ksp").whenever(it).keyStorePassword
         }
-        configureDatabase(dataSourceProperties, databaseConfig, rigorousMock()).use { database ->
-            val node = Node(configuration, rigorousMock<VersionInfo>().also {
-                doReturn(platformVersion).whenever(it).platformVersion
-            }, initialiseSerialization = false)
+        configureDatabase(dataSourceProperties, databaseConfig, rigorousMock()).use { _ ->
+            val node = Node(configuration, info, initialiseSerialization = false)
             assertEquals(node.generateNodeInfo(), node.generateNodeInfo())  // Node info doesn't change (including the serial)
         }
     }

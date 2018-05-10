@@ -72,7 +72,7 @@ import kotlin.system.exitProcess
 open class Node(configuration: NodeConfiguration,
                 versionInfo: VersionInfo,
                 private val initialiseSerialization: Boolean = true,
-                cordappLoader: CordappLoader = makeCordappLoader(configuration)
+                cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
 ) : AbstractNode(configuration, createClock(configuration), versionInfo, cordappLoader) {
     companion object {
         private val staticLog = contextLogger()
@@ -100,10 +100,10 @@ open class Node(configuration: NodeConfiguration,
         const val scanPackagesSeparator = ","
 
         @JvmStatic
-        protected fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
+        protected fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
             return System.getProperty(scanPackagesSystemProperty)?.let { scanPackages ->
-                CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
-            } ?: CordappLoader.createDefault(configuration.baseDirectory)
+                CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator), versionInfo)
+            } ?: CordappLoader.createDefault(configuration.baseDirectory, versionInfo)
         }
 
         // TODO Wire up maxMessageSize

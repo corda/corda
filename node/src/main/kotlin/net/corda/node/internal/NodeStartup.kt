@@ -12,13 +12,19 @@ package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
 import net.corda.core.crypto.Crypto
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.loggerFor
-import net.corda.node.*
+import net.corda.node.CmdLineOptions
+import net.corda.node.NodeArgsParser
+import net.corda.node.NodeRegistrationOption
+import net.corda.node.SerialFilter
+import net.corda.node.VersionInfo
+import net.corda.node.defaultSerialFilter
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
@@ -28,8 +34,8 @@ import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
-import net.corda.tools.shell.InteractiveShell
 import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
+import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
@@ -153,7 +159,7 @@ open class NodeStartup(val args: Array<String>) {
             return
         }
         val startedNode = node.start()
-        Node.printBasicNodeInfo("Loaded CorDapps", startedNode.services.cordappProvider.cordapps.joinToString { it.name })
+        logLoadedCorDapps(startedNode.services.cordappProvider.cordapps)
         startedNode.internals.nodeReadyFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             val name = startedNode.info.legalIdentitiesAndCerts.first().name.organisation
@@ -240,6 +246,17 @@ open class NodeStartup(val args: Array<String>) {
                 manifestValue("Corda-Revision") ?: "Unknown",
                 manifestValue("Corda-Vendor") ?: "Unknown"
         )
+    }
+
+    open protected fun logLoadedCorDapps(corDapps: List<Cordapp>) {
+        fun Cordapp.Info.description() = "$shortName version $version by $vendor"
+
+        Node.printBasicNodeInfo("Loaded ${corDapps.size} CorDapp(s)", corDapps.map { it.info }.joinToString(", ", transform = Cordapp.Info::description))
+        corDapps.map { it.info }.filter { it.hasUnknownFields() }.let { malformed ->
+            if (malformed.isNotEmpty()) {
+                logger.warn("Found ${malformed.size} CorDapp(s) with unknown information. They will be unable to run on Corda in the future.")
+            }
+        }
     }
 
     private fun enforceSingleNodeIsRunning(baseDirectory: Path) {

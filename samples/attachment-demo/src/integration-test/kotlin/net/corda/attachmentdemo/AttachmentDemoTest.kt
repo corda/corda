@@ -41,7 +41,7 @@ class AttachmentDemoTest : IntegrationTest() {
     @Test
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
-        driver(DriverParameters(isDebug = true, portAllocation = PortAllocation.Incremental(20000))) {
+        driver(DriverParameters(isDebug = true, portAllocation = PortAllocation.Incremental(20000), startNodesInProcess = true)) {
             val demoUser = listOf(User("demo", "demo", setOf(
                     startFlow<AttachmentDemoFlow>(),
                     invokeRpc(CordaRPCOps::attachmentExists),

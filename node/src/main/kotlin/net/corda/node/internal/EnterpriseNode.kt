@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit
 open class EnterpriseNode(configuration: NodeConfiguration,
                      versionInfo: VersionInfo,
                      initialiseSerialization: Boolean = true,
-                     cordappLoader: CordappLoader = makeCordappLoader(configuration)
+                     cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
 ) : Node(configuration, versionInfo, initialiseSerialization, cordappLoader) {
     companion object {
         private val logger by lazy { loggerFor<EnterpriseNode>() }
