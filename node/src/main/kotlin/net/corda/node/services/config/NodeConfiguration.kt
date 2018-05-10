@@ -180,6 +180,7 @@ data class NodeConfigurationImpl(
 
     override fun validate(): List<String> {
         val errors = mutableListOf<String>()
+        errors += validateDevModeOptions()
         errors += validateRpcOptions(rpcOptions)
         return errors
     }
@@ -189,6 +190,16 @@ data class NodeConfigurationImpl(
         if (options.address != null) {
             if (!options.useSsl && options.adminAddress == null) {
                 errors += "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
+            }
+        }
+        return errors
+    }
+
+    private fun validateDevModeOptions(): List<String> {
+        val errors = mutableListOf<String>()
+        if (devMode) {
+            compatibilityZoneURL?.let {
+                errors += "'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true."
             }
         }
         return errors
