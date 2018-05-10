@@ -93,15 +93,25 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
     }
 
     override fun login(): Boolean {
-        val (username, password, certificates) = getUsernamePasswordAndCerts()
-        log.debug { "Processing login for $username" }
+        try {
+            val (username, password, certificates) = getUsernamePasswordAndCerts()
+            log.debug("Processing login for $username")
 
-        val userAndRoles = authenticateAndAuthorise(username, certificates, password)
-        principals += UserPrincipal(userAndRoles.first)
-        principals += userAndRoles.second
+            val userAndRoles = authenticateAndAuthorise(username, certificates, password)
+            principals += UserPrincipal(userAndRoles.first)
+            principals += userAndRoles.second
 
-        loginSucceeded = true
-        return true
+            log.debug("Login for $username succeeded")
+            loginSucceeded = true
+            return true
+        } catch (e: Exception) {
+            log.error("Login failed: ${e.message}", e)
+            if (e is LoginException) {
+                throw e
+            } else {
+                throw FailedLoginException(e.message)
+            }
+        }
     }
 
     // The Main authentication logic, responsible for running all the configured checks for each user type
@@ -142,7 +152,7 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
 
 }
 
-//Configs used for setting up the broker custom security module.
+// Configs used for setting up the broker custom security module.
 data class RPCJaasConfig(
         val securityManager: RPCSecurityManager, //used to authenticate users - implemented with Shiro
         val loginListener: LoginListener, //callback that dynamically assigns security roles to RPC users on their authentication

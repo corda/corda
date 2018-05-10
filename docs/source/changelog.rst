@@ -32,9 +32,9 @@ Unreleased
 * Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
 
 * Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
-  a certificate to be added to a truststore.
+  a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
 
-* RPC requires 2 mandatory endpoints: ``address`` and ``adminAddress``. RPC Clients would connect to the address, while the node will connect
+* The node configuration requires 2 RPC endpoints: ``address`` and ``adminAddress``. RPC Clients would connect to the address, while the node will connect
   to the adminAddress.
 
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.

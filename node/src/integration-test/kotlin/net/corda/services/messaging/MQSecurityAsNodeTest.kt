@@ -43,7 +43,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
     }
 
     @Test
-    fun `only the node running the broker can login using the special node user`() {
+    fun `only the node running the broker can login using the special P2P node user`() {
         val attacker = clientTo(alice.internals.configuration.p2pAddress)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(NODE_P2P_USER, NODE_P2P_USER)

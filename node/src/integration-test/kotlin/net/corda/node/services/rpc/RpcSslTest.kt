@@ -29,7 +29,7 @@ class RpcSslTest {
     val tempFolder = TemporaryFolder()
 
     @Test
-    fun rpc_client_using_ssl() {
+    fun `RPC client using ssl is able to run a command`() {
         val user = User("mark", "dadada", setOf(all()))
         var successfulLogin = false
         var failedLogin = false
@@ -65,7 +65,7 @@ class RpcSslTest {
     }
 
     @Test
-    fun rpc_client_using_ssl_with_incorrect_truststore() {
+    fun `RPC client using ssl will fail if connecting to a node that cannot present a matching certificate`() {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
 
@@ -94,7 +94,7 @@ class RpcSslTest {
     }
 
     @Test
-    fun rpc_client_not_using_ssl() {
+    fun `RPC client not using ssl can run commands`() {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
         driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {

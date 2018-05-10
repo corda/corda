@@ -24,6 +24,7 @@ internal class RolesAdderOnLogin(val systemUsers: List<String> = emptyList(), va
 
     override fun setSecurityRepository(repository: RolesRepository) {
         this.repository = repository
+        // This dynamically adds roles to the specified system users as soon as the repository is initialized.
         systemUsers.forEach(::onLogin)
     }
 
