@@ -12,6 +12,18 @@ Unreleased
 
 * Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.
 
+* Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
+
+  * ``Instant`` and ``Date`` objects are serialised as ISO-8601 formatted strings rather than timestamps
+  * ``PublicKey`` objects are serialised and looked up according to their Base58 encoded string
+  * ``Party`` objects can be deserialised by looking up their public key, in addition to their name
+  * ``NodeInfo`` objects are serialised as an object and can be looked up using the same mechanism as ``Party``
+  * ``NetworkHostAndPort`` serialised according to its ``toString()``
+  * ``PartyAndCertificate`` is serialised as an object containing the name and owning key
+  * ``SignedTransaction`` can now be serialized to JSON and deserialized back into an object.
+
+* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used
+
 * Refactor AMQP Serializer to pass context object down the serialization call hierarchy. Will allow per thread
   extensions to be set and used by the RPC work (Observable Context Key)
 

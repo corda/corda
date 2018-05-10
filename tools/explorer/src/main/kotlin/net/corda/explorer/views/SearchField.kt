@@ -40,7 +40,7 @@ class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria:
                 filterCriteria.toMap()[category]?.invoke(data, text) == true
             }
         }
-    }, arrayOf<Observable>(textField.textProperty(), searchCategory.valueProperty())))
+    }, arrayOf<Observable>(textField.textProperty(), searchCategory.valueProperty())), "filteredData")
 
     init {
         clearButton.setOnMouseClicked { event: MouseEvent ->

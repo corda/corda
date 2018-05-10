@@ -5,7 +5,6 @@ import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
-import com.esotericsoftware.kryo.io.ByteBufferInputStream
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
@@ -39,8 +38,8 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
     protected abstract fun rpcClientKryoPool(context: SerializationContext): KryoPool
     protected abstract fun rpcServerKryoPool(context: SerializationContext): KryoPool
 
-    // this can be overriden in derived serialization schemes
-    open protected val publicKeySerializer: Serializer<PublicKey> = PublicKeySerializer
+    // this can be overridden in derived serialization schemes
+    protected open val publicKeySerializer: Serializer<PublicKey> = PublicKeySerializer
 
     private fun getPool(context: SerializationContext): KryoPool {
         return kryoPoolsForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {

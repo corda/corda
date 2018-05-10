@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
+import com.google.common.base.MoreObjects
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import org.objectweb.asm.ClassWriter
@@ -23,7 +24,7 @@ interface SimpleFieldAccess {
 
 class CarpenterClassLoader(parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
         ClassLoader(parentClassLoader) {
-    fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
+    fun load(name: String, bytes: ByteArray): Class<*> = defineClass(name, bytes, 0, bytes.size)
 }
 
 class InterfaceMismatchNonGetterException(val clazz: Class<*>, val method: Method) : InterfaceMismatchException(
@@ -37,10 +38,12 @@ class InterfaceMismatchMissingAMQPFieldException(val clazz: Class<*>, val field:
  */
 private const val TARGET_VERSION = V1_8
 
-private val jlEnum get() = Type.getInternalName(Enum::class.java)
-private val jlString get() = Type.getInternalName(String::class.java)
-private val jlObject get() = Type.getInternalName(Object::class.java)
-private val jlClass get() = Type.getInternalName(Class::class.java)
+private val jlEnum: String = Type.getInternalName(Enum::class.java)
+private val jlString: String = Type.getInternalName(String::class.java)
+private val jlObject: String = Type.getInternalName(Object::class.java)
+private val jlClass: String = Type.getInternalName(Class::class.java)
+private val moreObjects: String = Type.getInternalName(MoreObjects::class.java)
+private val toStringHelper: String = Type.getInternalName(MoreObjects.ToStringHelper::class.java)
 
 /**
  * A class carpenter generates JVM bytecodes for a class given a schema and then loads it into a sub-classloader.
@@ -86,8 +89,9 @@ private val jlClass get() = Type.getInternalName(Class::class.java)
  *
  * Equals/hashCode methods are not yet supported.
  */
-class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader,
-                     val whitelist: ClassWhitelist) {
+class ClassCarpenter(cl: ClassLoader, val whitelist: ClassWhitelist) {
+    constructor(whitelist: ClassWhitelist) : this(Thread.currentThread().contextClassLoader, whitelist)
+
     // TODO: Generics.
     // TODO: Sandbox the generated code when a security manager is in use.
     // TODO: Generate equals/hashCode.
@@ -97,7 +101,6 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     val classloader = CarpenterClassLoader(cl)
 
     private val _loaded = HashMap<String, Class<*>>()
-    private val String.jvm: String get() = replace(".", "/")
 
     /** Returns a snapshot of the currently loaded classes as a map of full class name (package names+dots) -> class object */
     val loaded: Map<String, Class<*>> = HashMap(_loaded)
@@ -155,7 +158,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
 
     private fun generateInterface(interfaceSchema: Schema): Class<*> {
         return generate(interfaceSchema) { cw, schema ->
-            val interfaces = schema.interfaces.map { it.name.jvm }.toTypedArray()
+            val interfaces = schema.interfaces.map { Type.getInternalName(it) }.toTypedArray()
 
             cw.apply {
                 visit(TARGET_VERSION, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE, schema.jvmName, null,
@@ -172,12 +175,12 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     private fun generateClass(classSchema: Schema): Class<*> {
         return generate(classSchema) { cw, schema ->
             val superName = schema.superclass?.jvmName ?: jlObject
-            val interfaces = schema.interfaces.map { it.name.jvm }.toMutableList()
+            val interfaces = schema.interfaces.map { Type.getInternalName(it) }.toMutableList()
 
             if (SimpleFieldAccess::class.java !in schema.interfaces
                     && schema.flags.cordaSerializable()
                     && schema.flags.simpleFieldAccess()) {
-                interfaces.add(SimpleFieldAccess::class.java.name.jvm)
+                interfaces.add(Type.getInternalName(SimpleFieldAccess::class.java))
             }
 
             cw.apply {
@@ -214,12 +217,11 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     }
 
     private fun ClassWriter.generateToString(schema: Schema) {
-        val toStringHelper = "com/google/common/base/MoreObjects\$ToStringHelper"
         with(visitMethod(ACC_PUBLIC, "toString", "()L$jlString;", null, null)) {
             visitCode()
             // com.google.common.base.MoreObjects.toStringHelper("TypeName")
             visitLdcInsn(schema.name.split('.').last())
-            visitMethodInsn(INVOKESTATIC, "com/google/common/base/MoreObjects", "toStringHelper",
+            visitMethodInsn(INVOKESTATIC, moreObjects, "toStringHelper",
                     "(L$jlString;)L$toStringHelper;", false)
             // Call the add() methods.
             for ((name, field) in schema.fieldsIncludingSuperclasses().entries) {
@@ -237,7 +239,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
     }
 
     private fun ClassWriter.generateGetMethod() {
-        val ourJvmName = ClassCarpenter::class.java.name.jvm
+        val ourJvmName = Type.getInternalName(ClassCarpenter::class.java)
         with(visitMethod(ACC_PUBLIC, "get", "(L$jlString;)L$jlObject;", null, null)) {
             visitCode()
             visitVarInsn(ALOAD, 0)  // Load 'this'
@@ -372,7 +374,7 @@ class ClassCarpenter(cl: ClassLoader = Thread.currentThread().contextClassLoader
                 var slot = 1
                 superclassFields.values.forEach { slot += load(slot, it) }
                 val superDesc = sc.descriptorsIncludingSuperclasses().values.joinToString("")
-                visitMethodInsn(INVOKESPECIAL, sc.name.jvm, "<init>", "($superDesc)V", false)
+                visitMethodInsn(INVOKESPECIAL, sc.jvmName, "<init>", "($superDesc)V", false)
             }
 
             // Assign the fields from parameters.

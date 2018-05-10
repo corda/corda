@@ -2,15 +2,10 @@
 
 package net.corda.nodeapi.internal.serialization
 
-import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
-
-object QuasarWhitelist : ClassWhitelist {
-    override fun hasListed(type: Class<*>): Boolean = true
-}
 
 /*
  * Serialisation contexts for the server.
