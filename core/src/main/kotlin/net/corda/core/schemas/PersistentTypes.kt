@@ -77,10 +77,10 @@ open class MappedSchema(schemaFamily: Class<*>,
  */
 @Embeddable
 data class PersistentStateRef(
-        @Column(name = "transaction_id", length = 64)
+        @Column(name = "transaction_id", length = 64, nullable = true)
         var txId: String? = null,
 
-        @Column(name = "output_index")
+        @Column(name = "output_index", nullable = true)
         var index: Int? = null
 ) : Serializable {
     constructor(stateRef: StateRef) : this(stateRef.txhash.bytes.toHexString(), stateRef.index)

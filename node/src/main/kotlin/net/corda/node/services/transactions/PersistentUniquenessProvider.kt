@@ -37,7 +37,7 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
             @EmbeddedId
             val id: PersistentStateRef,
 
-            @Column(name = "consuming_transaction_id")
+            @Column(name = "consuming_transaction_id", nullable = false)
             val consumingTxHash: String
     ) : Serializable
 
