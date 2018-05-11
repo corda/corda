@@ -9,7 +9,7 @@ omissions, and create a pull request, or email <james@r3.com>, if you wish to
 see changes to this list.
 
 * acetheultimate
-* Adrian Flethcehr (TD)
+* Adrian Fletcher (TD)
 * agoldvarg
 * Alberto Arri (R3)
 * amiracam
@@ -108,7 +108,7 @@ see changes to this list.
 * Lars Stage Thomsen (Danske Bank)
 * Lee Braine (Barclays)
 * Lucas Salmen (Itau)
-* Maksymillian Pawlak (R3)
+* Maksymilian Pawlak (R3)
 * Marek Scocovsky (ABSA)
 * marekdapps
 * Mark Lauer (Westpac)
