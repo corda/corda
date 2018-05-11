@@ -38,7 +38,7 @@ object ConfigHelper {
                 "baseDirectory" to baseDirectory.toString())
                 .withFallback(configOverrides)
                 .withFallback(appConfig)
-                .withFallback(devModeConfig) // this needs to be after the appConfig, so it doesn't overwrite the configured devMode
+                .withFallback(devModeConfig) // this needs to be after the appConfig, so it doesn't override the configured devMode
                 .withFallback(defaultConfig)
                 .resolve()
 
