@@ -9,8 +9,10 @@ import net.corda.core.utilities.seconds
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.net.URI
 import java.nio.file.Paths
 import java.util.*
 import kotlin.test.assertFalse
@@ -97,6 +99,15 @@ class NodeConfigurationImplTest {
                 configOverrides = overrides
         )
         return cfg
+    }
+
+    @Test
+    fun `validation has error when compatibilityZoneURL is present and devMode is true`() {
+        val configuration = testConfiguration.copy(devMode = true, compatibilityZoneURL = URI.create("https://r3.com").toURL())
+
+        val errors = configuration.validate()
+
+        assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("compatibilityZoneURL") && error.contains("devMode") }
     }
 
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfiguration {
