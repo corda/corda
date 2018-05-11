@@ -18,8 +18,8 @@ class PersistentScheduledFlowRepository(val database: CordaPersistence): Schedul
     }
 
     private fun toPersistentEntity(key: StateRef, value: ScheduledStateRef): NodeSchedulerService.PersistentScheduledState {
-        val output = PersistentStateRef(key.txhash.toString(), key.index)
-        return NodeSchedulerService.PersistentScheduledState(output).apply {
+        return NodeSchedulerService.PersistentScheduledState().apply {
+            output = PersistentStateRef(key.txhash.toString(), key.index)
             scheduledAt = value.scheduledAt
         }
     }
