@@ -39,7 +39,7 @@ written in Kotlin):
 Please checkout the branch of the template that corresponds to the version of Corda you are using. For example, someone
 building a CorDapp on Corda 3 should use the ``release-V3`` branch of the template.
 
-The required dependencies are defined by the template's ``./build.gradle`` file.
+The required dependencies are defined by the ``build.gradle`` file in the root directory of the template.
 
 The project should be split into two modules:
 
