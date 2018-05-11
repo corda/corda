@@ -10,6 +10,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.crypto.save
@@ -20,6 +21,9 @@ fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
 
 object ConfigHelper {
+
+    private const val CORDA_PROPERTY_PREFIX = "corda."
+
     private val log = LoggerFactory.getLogger(javaClass)
     fun loadConfig(baseDirectory: Path,
                    configFile: Path = baseDirectory / "node.conf",
@@ -34,8 +38,12 @@ object ConfigHelper {
         val devModeConfig = ConfigFactory.parseMap(mapOf("devMode" to smartDevMode))
 
         val finalConfig = configOf(
+
+        val systemOverrides = ConfigFactory.systemProperties().cordaEntriesOnly()
+        val finalConfig = systemOverrides
+                .withFallback(configOf(
                 // Add substitution values here
-                "baseDirectory" to baseDirectory.toString())
+                "baseDirectory" to baseDirectory.toString()))
                 .withFallback(configOverrides)
                 .withFallback(appConfig)
                 .withFallback(devModeConfig) // this needs to be after the appConfig, so it doesn't override the configured devMode
@@ -51,6 +59,11 @@ object ConfigHelper {
         }
 
         return finalConfig
+    }
+
+    private fun Config.cordaEntriesOnly(): Config {
+
+        return ConfigFactory.parseMap(toProperties().filterKeys { (it as String).startsWith(CORDA_PROPERTY_PREFIX) }.mapKeys { (it.key as String).removePrefix(CORDA_PROPERTY_PREFIX) })
     }
 }
 
