@@ -34,3 +34,11 @@
 .corda-text-logo {
     -fx-image: url("../images/Logo-04.png");
 }
+
+.warning-label {
+    -fx-text-fill: red;
+    -fx-font-size: 14;
+    -fx-font-family: 'sans-serif';
+    -fx-font-weight: bold;
+    -fx-label-padding: 5;
+}

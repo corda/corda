@@ -35,7 +35,7 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
      * @param offset The offset within this sequence to start the new sequence.  Note: not the offset within the backing array.
      * @param size The size of the intended sub sequence.
      */
-    @Suppress("MemberVisibilityCanPrivate")
+    @Suppress("MemberVisibilityCanBePrivate")
     fun subSequence(offset: Int, size: Int): ByteSequence {
         require(offset >= 0)
         require(offset + size <= this.size)
@@ -164,7 +164,7 @@ open class OpaqueBytes(bytes: ByteArray) : ByteSequence(bytes, 0, bytes.size) {
      * compiler is ever able to optimise away the clone. In which case we may need to revisit
      * this later.
      */
-    override final val bytes: ByteArray = bytes
+    final override val bytes: ByteArray = bytes
         get() = field.clone()
 }
 

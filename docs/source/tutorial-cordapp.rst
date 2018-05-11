@@ -156,11 +156,13 @@ The key files and directories are as follows:
   about which version is required
 * **lib** contains the Quasar jar which rewrites our CorDapp's flows to be checkpointable
 * **kotlin-source** contains the source code for the example CorDapp written in Kotlin
- * **kotlin-source/src/main/kotlin** contains the source code for the example CorDapp
- * **kotlin-source/src/main/resources** contains the certificate store, some static web content to be served by the
-   nodes and the WebServerPluginRegistry file
- * **kotlin-source/src/test/kotlin** contains unit tests for the contracts and flows, and the driver to run the nodes
-   via IntelliJ
+
+  * **kotlin-source/src/main/kotlin** contains the source code for the example CorDapp
+  * **kotlin-source/src/main/resources** contains the certificate store, some static web content to be served by the
+    nodes and the WebServerPluginRegistry file
+  * **kotlin-source/src/test/kotlin** contains unit tests for the contracts and flows, and the driver to run the nodes
+    via IntelliJ
+
 * **java-source** contains the same source code, but written in Java. CorDapps can be developed in any language
   targeting the JVM
 
