@@ -1,9 +1,8 @@
-
-# Overview
+# Design review process
 
 The Corda Design Review process defines a means of editing, storing, collaborating, reviewing and approving Corda documentation in a consistent, structured, easily accessible and open manner.   
 
-# Background
+## Background
 
 Historically, Corda design documentation has been produced in an ad hoc fashion to include:
 * Multiple sources and formats of storage
@@ -20,7 +19,7 @@ Historically, Corda design documentation has been produced in an ad hoc fashion 
 * Lack of proposed implementation plan (time, resources, effort).
 * Often missing stakeholder collaboration and review in the feedback cycle. 
 
-# Process
+## Process
 
 This process specifies:
 
@@ -53,7 +52,8 @@ The following diagram illustrates the process flow:
 
 ![Design Review Process](./designReviewProcess.png)
 
-# Review Groups
+## Review Groups
+
 Design documents should include all relevant stakeholders in their distribution (mostly as PR reviewers in github).  This will often vary and depend on the origin of the Feature Request, particularly for high level business requirements. Technical Design Documents will tend to include a small set of stakeholders (Design Approval Board, Platform Development, DevOps). Final approval authority lays with at least one member of the Design Approval Board (DAB) or nominated delegate(s).
 
 Design Approval Board (DAB)	
@@ -91,7 +91,7 @@ Other review groups inlcude:
   * Customers
   * Key collaborators
 
-# Applicability and Timing
+## Applicability and Timing
 
 This process should be applied to any major feature request gathered by the product management team or lead technologists that has been entered in the product backlog as a requirement, and has been prioritized for imminent execution.
 
