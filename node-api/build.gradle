@@ -123,6 +123,7 @@ task testJar(type: Jar) {
 
 artifacts {
     testArtifacts testJar
+    compile shadowJar
 }
 
 publish {
