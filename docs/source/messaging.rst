@@ -54,7 +54,7 @@ for maintenance and other minor purposes.
 :``internal.peers.$identity``:
    These are a set of private queues only available to the node which it uses to route messages destined to other peers.
    The queue name ends in the base 58 encoding of the peer's identity key. There is at most one queue per peer. The broker
-           creates a bridge from this queue to the peer's ``p2p.inbound.$identity`` queue, using the network map service to lookup the
+   creates a bridge from this queue to the peer's ``p2p.inbound.$identity`` queue, using the network map service to lookup the
    peer's network address.
 
 :``internal.services.$identity``:

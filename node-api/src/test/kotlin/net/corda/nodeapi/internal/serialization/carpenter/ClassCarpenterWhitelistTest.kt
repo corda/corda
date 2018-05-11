@@ -16,14 +16,14 @@ class ClassCarpenterWhitelistTest {
         data class A(val a: Int)
 
         class WL : ClassWhitelist {
-            private val allowedClasses = hashSetOf<String>(
+            private val allowedClasses = setOf<String>(
                     A::class.java.name
             )
 
             override fun hasListed(type: Class<*>): Boolean = type.name in allowedClasses
         }
 
-        val cc = ClassCarpenter(whitelist = WL())
+        val cc = ClassCarpenterImpl(whitelist = WL())
 
         // if this works, the test works, if it throws then we're in a world of pain, we could
         // go further but there are a lot of other tests that test weather we can build
@@ -41,7 +41,7 @@ class ClassCarpenterWhitelistTest {
             override fun hasListed(type: Class<*>) = false
         }
 
-        val cc = ClassCarpenter(whitelist = WL())
+        val cc = ClassCarpenterImpl(whitelist = WL())
 
         // Class A isn't on the whitelist, so we should fail to carpent it
         Assertions.assertThatThrownBy {
@@ -59,7 +59,7 @@ class ClassCarpenterWhitelistTest {
             override fun hasListed(type: Class<*>) = false
         }
 
-        val cc = ClassCarpenter(whitelist = WL())
+        val cc = ClassCarpenterImpl(whitelist = WL())
 
         // again, simply not throwing here is enough to show the test worked and the carpenter
         // didn't reject the type even though it wasn't on the whitelist because it was
@@ -76,7 +76,7 @@ class ClassCarpenterWhitelistTest {
             override fun hasListed(type: Class<*>) = type.name == "int"
         }
 
-        val cc = ClassCarpenter(whitelist = WL())
+        val cc = ClassCarpenterImpl(whitelist = WL())
 
         val schema1a = ClassSchema("thing1a", mapOf("a" to NonNullableField(Int::class.java)))
 

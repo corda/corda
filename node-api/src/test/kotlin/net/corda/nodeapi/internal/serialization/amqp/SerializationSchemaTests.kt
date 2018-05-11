@@ -35,7 +35,7 @@ val testFactory = TestSerializerFactory(TESTING_CONTEXT.whitelist, TESTING_CONTE
 // Serializer factory factory, plugs into the SerializationScheme and controls which factory type
 // we make for each use case. For our tests we need to make sure if its the Testing use case we return
 // the global factory object created above that counts registrations.
-class TestSerializerFactoryFactory : SerializerFactoryFactory() {
+class TestSerializerFactoryFactory : SerializerFactoryFactoryImpl() {
     override fun make(context: SerializationContext) =
             when (context.useCase) {
                 SerializationContext.UseCase.Testing -> testFactory

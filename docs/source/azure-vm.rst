@@ -8,7 +8,7 @@ This Corda network offering builds a pre-configured network of Corda nodes as Ub
 Pre-requisites
 --------------
 * Ensure you have a registered Microsoft Azure account which can create virtual machines under your subscription(s) and you are logged on to the Azure portal (portal.azure.com)
-* It is recommended you generate a private-public SSH key pair (see `here <https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2/>`_)
+* It is recommended you generate a private-public SSH key pair (see `here <https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2/>`__)
 
 
 Deploying the Corda Network

@@ -1,15 +1,13 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.nodeapi.internal.serialization.AllWhitelist
+import net.corda.nodeapi.internal.serialization.carpenter.*
 import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
 import org.junit.Test
 import kotlin.test.*
-import net.corda.nodeapi.internal.serialization.carpenter.*
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 // These tests work by having the class carpenter build the classes we serialise and then deserialise. Because
 // those classes don't exist within the system's Class Loader the deserialiser will be forced to carpent
@@ -28,7 +26,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleInt() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "int" to NonNullableField(Integer::class.javaPrimitiveType!!)
         )))
 
@@ -48,7 +46,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleIntNullable() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "int" to NullableField(Integer::class.java)
         )))
 
@@ -64,7 +62,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleIntNullableNull() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "int" to NullableField(Integer::class.java)
         )))
 
@@ -80,7 +78,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleChar() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "char" to NonNullableField(Character::class.javaPrimitiveType!!)
         )))
 
@@ -93,7 +91,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleCharNullable() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "char" to NullableField(Character::class.javaObjectType)
         )))
 
@@ -106,7 +104,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleCharNullableNull() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "char" to NullableField(java.lang.Character::class.java)
         )))
 
@@ -119,7 +117,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleLong() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "long" to NonNullableField(Long::class.javaPrimitiveType!!)
         )))
 
@@ -133,7 +131,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleLongNullable() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "long" to NullableField(Long::class.javaObjectType)
         )))
 
@@ -147,7 +145,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleLongNullableNull() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "long" to NullableField(Long::class.javaObjectType)
         )))
 
@@ -160,7 +158,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleBoolean() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "boolean" to NonNullableField(Boolean::class.javaPrimitiveType!!)
         )))
 
@@ -173,7 +171,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleBooleanNullable() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "boolean" to NullableField(Boolean::class.javaObjectType)
         )))
 
@@ -186,7 +184,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleBooleanNullableNull() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "boolean" to NullableField(Boolean::class.javaObjectType)
         )))
 
@@ -199,7 +197,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleDouble() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "double" to NonNullableField(Double::class.javaPrimitiveType!!)
         )))
 
@@ -212,7 +210,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleDoubleNullable() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "double" to NullableField(Double::class.javaObjectType)
         )))
 
@@ -225,7 +223,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleDoubleNullableNull() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "double" to NullableField(Double::class.javaObjectType)
         )))
 
@@ -238,7 +236,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleShort() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "short" to NonNullableField(Short::class.javaPrimitiveType!!)
         )))
 
@@ -251,7 +249,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleShortNullable() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "short" to NullableField(Short::class.javaObjectType)
         )))
 
@@ -264,7 +262,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleShortNullableNull() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "short" to NullableField(Short::class.javaObjectType)
         )))
 
@@ -277,7 +275,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleFloat() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "float" to NonNullableField(Float::class.javaPrimitiveType!!)
         )))
 
@@ -290,7 +288,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleFloatNullable() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "float" to NullableField(Float::class.javaObjectType)
         )))
 
@@ -303,7 +301,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleFloatNullableNull() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "float" to NullableField(Float::class.javaObjectType)
         )))
 
@@ -316,7 +314,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleByte() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "byte" to NonNullableField(Byte::class.javaPrimitiveType!!)
         )))
 
@@ -331,7 +329,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleByteNullable() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "byte" to NullableField(Byte::class.javaObjectType)
         )))
 
@@ -346,7 +344,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun singleByteNullableNull() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "byte" to NullableField(Byte::class.javaObjectType)
         )))
 
@@ -359,7 +357,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun simpleTypeKnownInterface() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(
                 testName(), mapOf("name" to NonNullableField(String::class.java)),
                 interfaces = listOf(I::class.java)))
         val testVal = "Some Person"
@@ -374,7 +372,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
 
     @Test
     fun manyTypes() {
-        val manyClass = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val manyClass = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "intA" to NonNullableField(Int::class.java),
                 "intB" to NullableField(Integer::class.java),
                 "intC" to NullableField(Integer::class.java),

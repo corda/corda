@@ -1,8 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.CordaSerializable
-import org.junit.Test
-import kotlin.test.*
 import net.corda.nodeapi.internal.serialization.carpenter.*
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
@@ -10,6 +8,8 @@ import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactor
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryWithWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
 import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
+import org.junit.Test
+import kotlin.test.*
 
 @CordaSerializable
 interface I {
@@ -40,7 +40,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
     @Test
     fun verySimpleType() {
         val testVal = 10
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(),
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(),
                 mapOf("a" to NonNullableField(Int::class.java))))
         val classInstance = clazz.constructors[0].newInstance(testVal)
         val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(classInstance)
@@ -74,7 +74,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         val testValA = 10
         val testValB = 20
         val testValC = 20
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema("${testName()}_clazz",
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema("${testName()}_clazz",
                 mapOf("a" to NonNullableField(Int::class.java))))
 
         val concreteA = clazz.constructors[0].newInstance(testValA)
@@ -107,7 +107,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test
     fun simpleTypeKnownInterface() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(
                 testName(), mapOf("name" to NonNullableField(String::class.java)),
                 interfaces = listOf(I::class.java)))
         val testVal = "Some Person"
@@ -122,7 +122,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test
     fun arrayOfTypes() {
-        val clazz = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(),
+        val clazz = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(),
                 mapOf("a" to NonNullableField(Int::class.java))))
 
         @CordaSerializable
@@ -156,7 +156,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test
     fun reusedClasses() {
-        val cc = ClassCarpenter(whitelist = AllWhitelist)
+        val cc = ClassCarpenterImpl(whitelist = AllWhitelist)
 
         val innerType = cc.build(ClassSchema("${testName()}.inner", mapOf("a" to NonNullableField(Int::class.java))))
         val outerType = cc.build(ClassSchema("${testName()}.outer", mapOf("a" to NonNullableField(innerType))))
@@ -175,7 +175,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test
     fun nestedTypes() {
-        val cc = ClassCarpenter(whitelist = AllWhitelist)
+        val cc = ClassCarpenterImpl(whitelist = AllWhitelist)
         val nestedClass = cc.build(ClassSchema("nestedType",
                 mapOf("name" to NonNullableField(String::class.java))))
 
@@ -192,7 +192,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test
     fun repeatedNestedTypes() {
-        val cc = ClassCarpenter(whitelist = AllWhitelist)
+        val cc = ClassCarpenterImpl(whitelist = AllWhitelist)
         val nestedClass = cc.build(ClassSchema("nestedType",
                 mapOf("name" to NonNullableField(String::class.java))))
 
@@ -212,7 +212,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test
     fun listOfType() {
-        val unknownClass = ClassCarpenter(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+        val unknownClass = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
                 "v1" to NonNullableField(Int::class.java),
                 "v2" to NonNullableField(Int::class.java))))
 
@@ -236,7 +236,7 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test
     fun unknownInterface() {
-        val cc = ClassCarpenter(whitelist = AllWhitelist)
+        val cc = ClassCarpenterImpl(whitelist = AllWhitelist)
 
         val interfaceClass = cc.build(InterfaceSchema(
                 "gen.Interface",
