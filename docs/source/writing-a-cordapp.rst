@@ -28,12 +28,18 @@ project so that they do not bloat the CorDapp at build time.
 
 .. _cordapp-structure:
 
-Structure
----------
-You should base the structure of your project on the Java or Kotlin templates:
+Structure and dependencies
+--------------------------
+You should base your project on the Java template (for CorDapps written in Java) or the Kotlin template (for CorDapps
+written in Kotlin):
 
 * `Java Template CorDapp <https://github.com/corda/cordapp-template-java>`_
 * `Kotlin Template CorDapp <https://github.com/corda/cordapp-template-kotlin>`_
+
+Please checkout the branch of the template that corresponds to the version of Corda you are using. For example, someone
+building a CorDapp on Corda 3 should use the ``release-V3`` branch of the template.
+
+The required dependencies are defined by the ``build.gradle`` file in the root directory of the template.
 
 The project should be split into two modules:
 
