@@ -7,6 +7,10 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Node will now gracefully fail to start if one of the required ports is already in use.
+
+* Node will now gracefully fail to start if ``devMode`` is true and ``compatibilityZoneURL`` is specified.
+
 * Fixed incorrect exception handling in ``NodeVaultService._query()``.
 
 * Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
