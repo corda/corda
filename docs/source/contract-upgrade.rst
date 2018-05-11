@@ -44,7 +44,7 @@ Here's the workflow for contract upgrades:
 9. The ``Initiator`` node sends the proposed transaction, along with details of the new contract upgrade path that it
    is proposing, to all participants of the state object
 
-10. Each counterparty (the ``Acceptor``s) verifies the proposal, signs or rejects the state reissuance accordingly, and
+10. Each counterparty (the ``Acceptor`` s) verifies the proposal, signs or rejects the state reissuance accordingly, and
     sends a signature or rejection notification back to the initiating node
 
 11. If signatures are received from all parties, the ``Initiator`` assembles the complete signed transaction and sends

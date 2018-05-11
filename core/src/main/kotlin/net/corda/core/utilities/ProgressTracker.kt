@@ -128,7 +128,7 @@ class ProgressTracker(vararg steps: Step) {
             if (currentStep == value) return
 
             val index = steps.indexOf(value)
-            require(index != -1)
+            require(index != -1, { "Step ${value.label} not found in progress tracker." })
 
             if (index < stepIndex) {
                 // We are going backwards: unlink and unsubscribe from any child nodes that we're rolling back

@@ -265,10 +265,11 @@ In order to create a communication session between your initiator flow and the r
     * Sends the ``payload`` object and receives an object of type ``receiveType`` back
 
 In addition ``FlowLogic`` provides functions that batch receives:
+
 * ``receiveAllMap(sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>>``
-    * Receives from all ``FlowSession``s specified in the passed in map. The received types may differ.
+  Receives from all ``FlowSession`` objects specified in the passed in map. The received types may differ.
 * ``receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>>``
-    * Receives from all ``FlowSession``s specified in the passed in list. The received types must be the same.
+  Receives from all ``FlowSession`` objects specified in the passed in list. The received types must be the same.
 
 The batched functions are implemented more efficiently by the flow framework.
 

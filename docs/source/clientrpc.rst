@@ -197,7 +197,7 @@ of ``INMEMORY`` type:
    an exception at node startup.
 
 Authentication/authorisation data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``dataSource`` structure defines the data provider supplying credentials and permissions for users. There exist two
 supported types of such data source, identified by the ``dataSource.type`` field:
@@ -218,7 +218,7 @@ supported types of such data source, identified by the ``dataSource.type`` field
     in each table alongside the expected ones.
 
 Password encryption
-^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 Storing passwords in plain text is discouraged in applications where security is critical. Passwords are assumed
 to be in plain format by default, unless a different format is specified by the ``passwordEncryption`` field, like:
@@ -235,7 +235,7 @@ it is currently the only non-plain password hash-encryption format supported. Ha
 format can be produced by using the `Apache Shiro Hasher command line tool <https://shiro.apache.org/command-line-hasher.html>`_.
 
 Caching user accounts data
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A cache layer on top of the external data source of users credentials and permissions can significantly improve
 performances in some cases, with the disadvantage of causing a (controllable) delay in picking up updates to the underlying data.

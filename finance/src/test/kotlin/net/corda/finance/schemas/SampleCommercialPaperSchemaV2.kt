@@ -30,8 +30,7 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
     override val migrationResource = "sample-cp-v2.changelog-init"
 
     @Entity
-    @Table(name = "cp_states_v2",
-            indexes = [Index(name = "ccy_code_index2", columnList = "ccy_code"), Index(name = "maturity_index2", columnList = "maturity_instant")])
+    @Table(name = "cp_states_v2", indexes = [Index(name = "ccy_code_index2", columnList = "ccy_code"), Index(name = "maturity_index2", columnList = "maturity_instant")])
     class PersistentCommercialPaperState(
             @Column(name = "maturity_instant")
             var maturity: Instant,

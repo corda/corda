@@ -33,9 +33,7 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
     override val migrationResource = "dummy-linear-v1.changelog-init"
 
     @Entity
-    @Table(name = "dummy_linear_states",
-            indexes = arrayOf(Index(name = "external_id_idx", columnList = "external_id"),
-                    Index(name = "uuid_idx", columnList = "uuid")))
+    @Table(name = "dummy_linear_states", indexes = [Index(name = "external_id_idx", columnList = "external_id"), Index(name = "uuid_idx", columnList = "uuid")])
     class PersistentDummyLinearState(
             /** [ContractState] attributes */
 

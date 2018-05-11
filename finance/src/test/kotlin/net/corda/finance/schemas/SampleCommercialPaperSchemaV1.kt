@@ -35,10 +35,7 @@ object SampleCommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPap
     override val migrationResource = "sample-cp-v1.changelog-init"
 
     @Entity
-    @Table(name = "cp_states_v1",
-            indexes = arrayOf(Index(name = "ccy_code_index", columnList = "ccy_code"),
-                    Index(name = "maturity_index", columnList = "maturity_instant"),
-                    Index(name = "face_value_index", columnList = "face_value")))
+    @Table(name = "cp_states_v1", indexes = [Index(name = "ccy_code_index", columnList = "ccy_code"), Index(name = "maturity_index", columnList = "maturity_instant"), Index(name = "face_value_index", columnList = "face_value")])
     class PersistentCommercialPaperState(
             @Column(name = "issuance_key_hash", length = MAX_HASH_HEX_SIZE)
             var issuancePartyHash: String,

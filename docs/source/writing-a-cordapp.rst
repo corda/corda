@@ -28,12 +28,18 @@ project so that they do not bloat the CorDapp at build time.
 
 .. _cordapp-structure:
 
-Structure
----------
-You should base the structure of your project on the Java or Kotlin templates:
+Structure and dependencies
+--------------------------
+You should base your project on the Java template (for CorDapps written in Java) or the Kotlin template (for CorDapps
+written in Kotlin):
 
 * `Java Template CorDapp <https://github.com/corda/cordapp-template-java>`_
 * `Kotlin Template CorDapp <https://github.com/corda/cordapp-template-kotlin>`_
+
+Please checkout the branch of the template that corresponds to the version of Corda you are using. For example, someone
+building a CorDapp on Corda 3 should use the ``release-V3`` branch of the template.
+
+The required dependencies are defined by the ``build.gradle`` file in the root directory of the template.
 
 The project should be split into two modules:
 
@@ -135,14 +141,12 @@ These are for testing purposes and would be removed in a production CorDapp.
 
 Resources
 ---------
-In writing a CorDapp, you should consult the following resources:
+In writing a CorDapp, these pages may be particularly helpful:
 
-* :doc:`Getting Set Up </getting-set-up>` to set up your development environment
-* The :doc:`Hello, World! tutorial </hello-world-index>` to write your first CorDapp
-* :doc:`Building a CorDapp </cordapp-build-systems>` to build and run your CorDapp
-* The :doc:`API docs </api-index>` to read about the API available in developing CorDapps
-
-  * There is also a :doc:`cheatsheet </cheat-sheet>` recapping the key types
-
-* The :doc:`Flow cookbook </flow-cookbook>` to see code examples of how to perform common flow tasks
-* `Sample CorDapps <https://www.corda.net/samples/>`_ showing various parts of Corda's functionality
+* :doc:`getting-set-up`, to set up your development environment.
+* The :doc:`hello-world-introduction` tutorial to write your first CorDapp.
+* :doc:`cordapp-build-systems` to build and run your CorDapp.
+* The `API docs </api/javadoc/index.html>`_ to read about the API available in developing CorDapps.
+* There is also a :doc:`cheat-sheet` recapping the key types.
+* The :doc:`flow-cookbook` to see code examples of how to perform common flow tasks.
+* `Sample CorDapps <https://www.corda.net/samples/>`_ showing various parts of Corda's functionality.

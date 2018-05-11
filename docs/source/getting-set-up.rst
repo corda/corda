@@ -39,9 +39,9 @@ any issues, please consult the :doc:`troubleshooting` page, or reach out on `Sla
 
 The set-up instructions are available for the following platforms:
 
-* :ref:`windows-label` (or `in video form <https://vimeo.com/217462250>`_)
+* :ref:`windows-label` (or `in video form <https://vimeo.com/217462250>`__)
 
-* :ref:`mac-label` (or `in video form <https://vimeo.com/217462230>`_)
+* :ref:`mac-label` (or `in video form <https://vimeo.com/217462230>`__)
 
 .. _windows-label:
 
@@ -171,8 +171,8 @@ The best way to check that everything is working fine is by taking a deeper look
 Next, you should read through :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
 
 By then, you'll be ready to start writing your own CorDapps. Learn how to do this in the
-:doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the :doc:`API docs <api-index>`, the
+:doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the API documentation, the
 :doc:`flow cookbook <flow-cookbook>` and the `samples <https://www.corda.net/samples/>`_ along the way.
 
-If you encounter any issues, please see the :doc:`troubleshooting` page, or get in touch with us on the
-`forums <https://discourse.corda.net/>`_ or via `slack <http://slack.corda.net/>`_.
+If you encounter any issues, please see the :doc:`troubleshooting` page, or ask on
+`Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or via `our Slack channels <http://slack.corda.net/>`_.
