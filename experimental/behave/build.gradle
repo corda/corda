@@ -42,6 +42,8 @@ repositories {
 sourceSets {
     behave {
         kotlin {
+            compileClasspath += main.output
+            runtimeClasspath += main.output
             srcDirs = ['src/main/kotlin', 'src/scenario/kotlin']
         }
         resources.srcDir file('src/scenario/resources')
@@ -54,12 +56,6 @@ sourceSets {
         }
         resources {
             srcDirs = ['src/scenario/resources']
-        }
-    }
-    main {
-        kotlin {
-            compileClasspath += sourceSets.behave.output
-            runtimeClasspath += sourceSets.behave.output
         }
     }
 }
@@ -182,3 +178,5 @@ task apiJar(type: Jar, dependsOn: classes) {
 artifacts {
     testArtifacts apiJar
 }
+
+jar.finalizedBy (apiJar, behaveJar)

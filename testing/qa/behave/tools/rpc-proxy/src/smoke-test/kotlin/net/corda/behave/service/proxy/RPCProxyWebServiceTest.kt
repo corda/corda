@@ -22,6 +22,7 @@ import org.junit.Ignore
 import org.junit.Test
 import java.net.URL
 
+@Ignore
 class RPCProxyWebServiceTest {
 
     /**
@@ -175,7 +176,6 @@ class RPCProxyWebServiceTest {
         assertVaultHoldsCash(responseA, responseB)
     }
 
-    @Ignore
     @Test
     fun startMultiABCPartyCashFlows() {
         val notary = rpcProxyClient.notaryIdentities()[0]
@@ -238,7 +238,6 @@ class RPCProxyWebServiceTest {
     }
 
     // enable Flow Draining on Node B
-    @Ignore
     @Test
     fun startMultiACPartyCashFlows() {
         val notary = rpcProxyClient.notaryIdentities()[0]
