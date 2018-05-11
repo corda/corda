@@ -1,6 +1,3 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
 Design Decision: Certificate hierarchy levels
 ============================================
 
@@ -12,7 +9,8 @@ The decision of how many levels to include is a key feature of the [proposed cer
 
 ### Option 1: 2-level hierarchy
 
-Under this option, intermediate CA certificates for key signing services (Doorman, Network Map, CRL) are generated as direct children of the root certificate.
+Under this option, intermediate CA certificates for key signing services (Doorman, Network Map, CRL) are generated as
+direct children of the root certificate.
 
 ![Current](../images/option1.png)
 
@@ -23,11 +21,13 @@ Under this option, intermediate CA certificates for key signing services (Doorma
 
 #### Disadvantages
 
-- The Root CA certificate is used to sign both intermediate certificates and CRL. This may be considered as a drawback as the Root CA should be used only to issue other certificates.
+- The Root CA certificate is used to sign both intermediate certificates and CRL. This may be considered as a drawback
+  as the Root CA should be used only to issue other certificates.
 
 ### Option 2: 3-level hierarchy
 
-Under this option, an additional 'Company CA' cert is generated from the root CA cert, which is then used to generate intermediate certificates.
+Under this option, an additional 'Company CA' cert is generated from the root CA cert, which is then used to generate
+intermediate certificates.
 
 ![Current](../images/option2.png)
 
@@ -44,4 +44,7 @@ Under this option, an additional 'Company CA' cert is generated from the root CA
 
 Proceed with option 1: 2-level hierarchy.
 
-No authoritative argument from a security standpoint has been made which would justify the added complexity of option 2. Given the business impact of revoking the Company CA certificate, this must be considered an extremely unlikely event with comparable implications to the revocation of the root certificate itself; hence no practical justification for the addition of the third level is observed.
+No authoritative argument from a security standpoint has been made which would justify the added complexity of option 2.
+Given the business impact of revoking the Company CA certificate, this must be considered an extremely unlikely event
+with comparable implications to the revocation of the root certificate itself; hence no practical justification for the
+addition of the third level is observed.
