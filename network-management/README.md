@@ -244,6 +244,7 @@ networkMap {
       minimumPlatformVersion = 1
       maxMessageSize = 10485760
       maxTransactionSize = 10485760
+      eventHorizonDays = 30 # Duration in days
       
    Save the parameters to `network-parameters.conf`
 

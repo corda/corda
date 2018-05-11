@@ -69,7 +69,9 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
 
     override fun getNodeInfoHashes(): NodeInfoHashes {
         return database.transaction {
+            val currentParameters = getNetworkMaps().publicNetworkMap?.networkParameters?.networkParameters
             val builder = session.criteriaBuilder
+            // TODO Convert this query to JPQL so it's more readable.
             val query = builder.createTupleQuery().run {
                 from(NodeInfoEntity::class.java).run {
                     val certStatusExpression = get<CertificateSigningRequestEntity>(NodeInfoEntity::certificateSigningRequest.name)
@@ -79,12 +81,19 @@ class PersistentNetworkMapStorage(private val database: CordaPersistence) : Netw
                     // isn't needed.
                     val certStatusEq = builder.equal(certStatusExpression, CertificateStatus.VALID)
                     val isCurrentNodeInfo = builder.isTrue(get<Boolean>(NodeInfoEntity::isCurrent.name))
-
+                    // We enable eventHorizon only if minimum platform version is greater than 3, nodes on previous versions
+                    // don't republish their node infos on regular intervals so they shouldn't be evicted from network after eventHorizon.
+                    val eventHorizonAgo = if (currentParameters != null && currentParameters.minimumPlatformVersion >= 4) {
+                        builder.greaterThanOrEqualTo(get<Instant>(NodeInfoEntity::publishedAt.name),
+                                Instant.now().minus(currentParameters.eventHorizon))
+                    } else {
+                        builder.and() // This expression is always true. It's needed when eventHorizon isn't enabled.
+                    }
                     val networkIdSelector = get<CertificateSigningRequestEntity>(NodeInfoEntity::certificateSigningRequest.name)
                             .get<PrivateNetworkEntity>(CertificateSigningRequestEntity::privateNetwork.name)
                             .get<String>(PrivateNetworkEntity::networkId.name)
-
-                    multiselect(networkIdSelector, get<String>(NodeInfoEntity::nodeInfoHash.name)).where(builder.and(certStatusEq, isCurrentNodeInfo))
+                        multiselect(networkIdSelector, get<String>(NodeInfoEntity::nodeInfoHash.name))
+                                .where(builder.and(certStatusEq, isCurrentNodeInfo, eventHorizonAgo))
                 }
             }
             val allNodeInfos = session.createQuery(query).resultList.groupBy { it[0]?.toString() ?: PUBLIC_NETWORK_ID }.mapValues { it.value.map { SecureHash.parse(it.get(1, String::class.java)) } }

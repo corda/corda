@@ -37,7 +37,8 @@ interface NetworkMapStorage {
     fun saveNewNetworkMap(networkId: String? = null, networkMapAndSigned: NetworkMapAndSigned)
 
     /**
-     * Retrieves node info hashes for both public and private networks where [NodeInfoEntity.isCurrent] is true and the certificate status is [CertificateStatus.VALID]
+     * Retrieves node info hashes for both public and private networks where [NodeInfoEntity.isCurrent] is true and the certificate status is [CertificateStatus.VALID],
+     * and that were published less than eventHorizon ago.
      * Nodes should have declared that they are using correct set of parameters.
      */
     fun getNodeInfoHashes(): NodeInfoHashes

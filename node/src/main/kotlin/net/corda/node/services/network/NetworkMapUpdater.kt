@@ -28,7 +28,6 @@ import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
 import net.corda.nodeapi.internal.network.*
 import rx.Subscription
 import rx.subjects.PublishSubject
-import java.net.URL
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Duration

@@ -157,7 +157,8 @@ class ParametersUpdateHandlerTest {
                 mapOf("minimumPlatformVersion" to 1,
                         "maxMessageSize" to 10485760,
                         "maxTransactionSize" to 10485760,
-                        "notaries" to notaryFiles.map { mapOf("notaryNodeInfoFile" to it.toString(), "validating" to true) }
+                        "notaries" to notaryFiles.map { mapOf("notaryNodeInfoFile" to it.toString(), "validating" to true) },
+                        "eventHorizonDays" to 7
                 )
 
         ).toConfig()

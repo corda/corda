@@ -80,6 +80,7 @@ fun NetworkParameters.toCmd(parametersUpdate: ParametersUpdateConfig? = null): N
             notaries = notaries,
             maxMessageSize = maxMessageSize,
             maxTransactionSize = maxTransactionSize,
-            parametersUpdate = parametersUpdate
+            parametersUpdate = parametersUpdate,
+            eventHorizonDays = eventHorizon.toDays().toInt()
     )
 }

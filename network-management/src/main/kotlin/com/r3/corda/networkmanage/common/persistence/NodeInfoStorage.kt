@@ -42,6 +42,10 @@ interface NodeInfoStorage {
 
     /**
      * The [nodeInfoAndSigned] is keyed by the public key, old node info with the same public key will be replaced by the new node info.
+     * If republishing of the same nodeInfo happens, then we will record the time it was republished in the database.
+     * Based on that information we can remove unresponsive nodes from network (event horizon is the parameter that tells how
+     * long node can be down before it gets removed). If the nodes becomes active again, it will enter back to the network map
+     * after republishing its [NodeInfo].
      * @param nodeInfoAndSigned signed node info data to be stored
      * @return hash for the newly created node info entry
      */

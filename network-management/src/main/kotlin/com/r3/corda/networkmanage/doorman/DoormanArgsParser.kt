@@ -8,6 +8,7 @@ import joptsimple.util.PathConverter
 import joptsimple.util.PathProperties
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
+import net.corda.core.utilities.days
 import java.nio.file.Path
 import java.time.Instant
 
@@ -70,6 +71,7 @@ sealed class NetworkParametersCmd {
                    val notaries: List<NotaryInfo>,
                    val maxMessageSize: Int,
                    val maxTransactionSize: Int,
+                   val eventHorizonDays: Int,
                    val parametersUpdate: ParametersUpdateConfig?
     ) : NetworkParametersCmd() {
         companion object {
@@ -79,6 +81,7 @@ sealed class NetworkParametersCmd {
                         config.notaries.map { it.toNotaryInfo() },
                         config.maxMessageSize,
                         config.maxTransactionSize,
+                        config.eventHorizonDays,
                         config.parametersUpdate
                 )
             }
@@ -103,7 +106,8 @@ sealed class NetworkParametersCmd {
                     modifiedTime,
                     epoch,
                     // TODO: Tudor, Michal - pass the actual network parameters where we figure out how
-                    emptyMap()
+                    emptyMap(),
+                    eventHorizonDays.days
             )
         }
     }

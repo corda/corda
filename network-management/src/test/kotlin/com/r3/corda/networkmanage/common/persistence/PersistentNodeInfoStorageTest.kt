@@ -11,7 +11,6 @@
 package com.r3.corda.networkmanage.common.persistence
 
 import com.r3.corda.networkmanage.TestBase
-import com.r3.corda.networkmanage.common.persistence.entity.NetworkMapEntity
 import com.r3.corda.networkmanage.common.persistence.entity.NodeInfoEntity
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
@@ -160,8 +159,9 @@ class PersistentNodeInfoStorageTest : TestBase() {
         val (nodeInfoAndSigned) = createValidSignedNodeInfo("Test", requestStorage)
         nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
         val nodeInfo = singleNodeInfo()
+        Thread.sleep(500)
         nodeInfoStorage.putNodeInfo(nodeInfoAndSigned)
-        assertThat(nodeInfo.publishedAt).isEqualTo(singleNodeInfo().publishedAt)  // Check publishAt hasn't changed
+        assertThat(nodeInfo.publishedAt).isBefore(singleNodeInfo().publishedAt)  // Check publishAt has changed
         assertThat(singleNodeInfo().isCurrent).isTrue()
     }
 

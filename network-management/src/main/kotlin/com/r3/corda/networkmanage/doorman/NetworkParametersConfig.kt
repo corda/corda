@@ -18,6 +18,7 @@ import net.corda.core.node.NotaryInfo
 import net.corda.nodeapi.internal.SignedNodeInfo
 import java.nio.file.Path
 import java.time.Instant
+import java.time.Duration
 
 /**
  * Data class representing a [NotaryInfo] which can be easily parsed by a typesafe [ConfigFactory].
@@ -53,4 +54,5 @@ data class NetworkParametersConfig(val minimumPlatformVersion: Int,
                                    val notaries: List<NotaryConfig>,
                                    val maxMessageSize: Int,
                                    val maxTransactionSize: Int,
+                                   val eventHorizonDays: Int,
                                    val parametersUpdate: ParametersUpdateConfig?)

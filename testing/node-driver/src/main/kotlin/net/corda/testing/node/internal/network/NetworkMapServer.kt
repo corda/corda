@@ -18,11 +18,14 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.testing.common.internal.testNetworkParameters
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -50,7 +53,7 @@ class NetworkMapServer(private val pollInterval: Duration,
                        private val myHostNameValue: String = "test.host.name",
                        vararg additionalServices: Any) : Closeable {
     companion object {
-        private val stubNetworkParameters = NetworkParameters(1, emptyList(), 10485760, Int.MAX_VALUE, Instant.now(), 10, emptyMap())
+        private val stubNetworkParameters = testNetworkParameters(epoch = 10)
     }
 
     private val server: Server
@@ -88,6 +91,8 @@ class NetworkMapServer(private val pollInterval: Duration,
                 .let { NetworkHostAndPort(it.host, it.localPort) }
     }
 
+    fun networkMapHashes(): List<SecureHash> = service.nodeInfoMap.keys.toList()
+
     fun removeNodeInfo(nodeInfo: NodeInfo) {
         service.removeNodeInfo(nodeInfo)
     }
@@ -118,7 +123,7 @@ class NetworkMapServer(private val pollInterval: Duration,
     @Path("network-map")
     inner class InMemoryNetworkMapService {
         private val nodeNamesUUID = mutableMapOf<CordaX500Name, UUID>()
-        private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
+        val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
         // Mapping from the UUID of the network (null for global one) to hashes of the nodes in network
         private val networkMaps = mutableMapOf<UUID?, MutableSet<SecureHash>>()
         val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()

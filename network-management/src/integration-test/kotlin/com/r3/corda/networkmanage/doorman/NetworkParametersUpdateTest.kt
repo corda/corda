@@ -79,7 +79,8 @@ class NetworkParametersUpdateTest : IntegrationTest() {
                 minimumPlatformVersion = 1,
                 maxMessageSize = 1_000_000,
                 maxTransactionSize = 1_000_000,
-                parametersUpdate = null
+                parametersUpdate = null,
+                eventHorizonDays = 30
         )
         applyNetworkParametersAndStart(initialNetParams)
 

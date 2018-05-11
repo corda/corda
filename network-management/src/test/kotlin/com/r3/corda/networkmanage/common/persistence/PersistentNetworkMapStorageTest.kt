@@ -18,6 +18,7 @@ import com.r3.corda.networkmanage.common.persistence.entity.UpdateStatus
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.days
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.network.NetworkMap
@@ -207,5 +208,35 @@ class PersistentNetworkMapStorageTest : TestBase() {
         val validNodeInfoHashes = networkMapStorage.getNodeInfoHashes().publicNodeInfoHashes
         // then
         assertThat(validNodeInfoHashes).containsOnly(nodeInfoHashB)
+    }
+
+    @Test
+    fun `remove nodes older than eventHorizon from network map`() {
+        val networkParameters = testNetworkParameters(eventHorizon = 1.seconds, minimumPlatformVersion = 4)
+        val (signedNodeInfoA) = createValidSignedNodeInfo("TestA", requestStorage)
+        val networkParametersEntity = networkMapStorage.saveNetworkParameters(networkParameters, networkMapCertAndKeyPair.sign(networkParameters).sig)
+        val networkMap = NetworkMap(emptyList(), SecureHash.parse(networkParametersEntity.hash), null)
+        val networkMapAndSigned = NetworkMapAndSigned(networkMap) { networkMapCertAndKeyPair.sign(networkMap).sig }
+        networkMapStorage.saveNewNetworkMap(networkMapAndSigned = networkMapAndSigned)
+        nodeInfoStorage.putNodeInfo(signedNodeInfoA)
+        assertThat(networkMapStorage.getNodeInfoHashes().publicNodeInfoHashes).containsExactly(signedNodeInfoA.signed.raw.hash)
+        Thread.sleep(2000) // Wait for node to be older than eventHorizon
+        assertThat(networkMapStorage.getNodeInfoHashes().publicNodeInfoHashes).doesNotContain(signedNodeInfoA.signed.raw.hash)
+        nodeInfoStorage.putNodeInfo(signedNodeInfoA) // Republish
+        assertThat(networkMapStorage.getNodeInfoHashes().publicNodeInfoHashes).containsExactly(signedNodeInfoA.signed.raw.hash)
+    }
+
+    @Test
+    fun `don't enable eventHorizon for platform version less than 4`() {
+        val networkParameters = testNetworkParameters(eventHorizon = 1.seconds, minimumPlatformVersion = 3)
+        val (signedNodeInfoA) = createValidSignedNodeInfo("TestA", requestStorage)
+        val networkParametersEntity = networkMapStorage.saveNetworkParameters(networkParameters, networkMapCertAndKeyPair.sign(networkParameters).sig)
+        val networkMap = NetworkMap(emptyList(), SecureHash.parse(networkParametersEntity.hash), null)
+        val networkMapAndSigned = NetworkMapAndSigned(networkMap) { networkMapCertAndKeyPair.sign(networkMap).sig }
+        networkMapStorage.saveNewNetworkMap(networkMapAndSigned = networkMapAndSigned)
+        nodeInfoStorage.putNodeInfo(signedNodeInfoA)
+        assertThat(networkMapStorage.getNodeInfoHashes().publicNodeInfoHashes).containsExactly(signedNodeInfoA.signed.raw.hash)
+        Thread.sleep(2000) // Wait for eventHorizon to pass
+        assertThat(networkMapStorage.getNodeInfoHashes().publicNodeInfoHashes).containsExactly(signedNodeInfoA.signed.raw.hash)
     }
 }

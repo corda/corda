@@ -16,10 +16,10 @@ import com.r3.corda.networkmanage.common.persistence.entity.ParametersUpdateEnti
 import com.r3.corda.networkmanage.common.persistence.entity.UpdateStatus
 import com.r3.corda.networkmanage.common.utils.logger
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.CertRole.NODE_CA
 import net.corda.core.internal.hash
+import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -27,6 +27,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import java.security.PublicKey
 import java.security.cert.CertPath
+import java.time.Instant
 
 /**
  * Database implementation of the [NetworkMapStorage] interface
@@ -40,16 +41,16 @@ class PersistentNodeInfoStorage(private val database: CordaPersistence) : NodeIn
         val registeredIdentities = nodeInfo.legalIdentitiesAndCerts.map { it.certPath.x509Certificates.single { CertRole.extract(it) in setOf(CertRole.SERVICE_IDENTITY, NODE_CA) } }
 
         database.transaction {
-            val count = session.createQuery(
-                    "select count(*) from ${NodeInfoEntity::class.java.name} where nodeInfoHash = :nodeInfoHash and isCurrent = true", java.lang.Long::class.java)
+            // Record fact of republishing of the node info, it's treated as a heartbeat from the node.
+            val rowsUpdated = session.createQuery("update ${NodeInfoEntity::class.java.name} n set publishedAt = :now " +
+                    "where n.nodeInfoHash = :nodeInfoHash and n.isCurrent = true")
+                    .setParameter("now", Instant.now())
                     .setParameter("nodeInfoHash", nodeInfoHash.toString())
-                    .singleResult
-                    .toLong()
-            if (count != 0L) {
-                logger.debug("Ignoring duplicate publish: $nodeInfo")
+                    .executeUpdate()
+            if (rowsUpdated != 0) {
+                logger.debug { "Republish of $nodeInfo" }
                 return@transaction nodeInfoHash
             }
-
             // TODO Move these checks out of data access layer
             // For each identity known by the doorman, validate against it's CSR.
             val requests = registeredIdentities.map {

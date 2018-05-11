@@ -117,7 +117,8 @@ class NodeRegistrationTest : IntegrationTest() {
                             minimumPlatformVersion = 1,
                             maxMessageSize = 10485760,
                             maxTransactionSize = 10485760,
-                            parametersUpdate = null
+                            parametersUpdate = null,
+                            eventHorizonDays = 30
                     )
                     // Restart the server once we're able to generate the network parameters
                     applyNetworkParametersAndStart(setNetParams)

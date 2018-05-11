@@ -12,6 +12,7 @@ package com.r3.corda.networkmanage.common.persistence.entity
 
 import net.corda.core.crypto.SecureHash
 import net.corda.nodeapi.internal.SignedNodeInfo
+import org.hibernate.annotations.UpdateTimestamp
 import java.io.Serializable
 import java.time.Instant
 import javax.persistence.*
@@ -42,6 +43,7 @@ data class NodeInfoEntity(
         val isCurrent: Boolean,
 
         @Column(name = "published_at", nullable = false)
+        @UpdateTimestamp
         val publishedAt: Instant = Instant.now(),
 
         @ManyToOne(fetch = FetchType.EAGER)
