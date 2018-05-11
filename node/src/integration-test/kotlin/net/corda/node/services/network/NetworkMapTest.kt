@@ -207,7 +207,7 @@ class NetworkMapTest {
                 initialiseSerialization = false,
                 systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString())
         ) {
-            val aliceNode = startNode(providedName = ALICE_NAME).getOrThrow()
+            val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
             assertThat(networkMapServer.networkMapHashes()).contains(aliceNode.nodeInfo.serialize().hash)
             networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
             assertThat(networkMapServer.networkMapHashes()).doesNotContain(aliceNode.nodeInfo.serialize().hash)
