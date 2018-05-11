@@ -121,6 +121,9 @@ The current set of network parameters:
         For each contract class there is a list of hashes of the approved CorDapp jar versions containing that contract.
         Read more about *Zone constraints* here :doc:`api-contract-constraints`
 
+:eventHorizon: Time after which nodes are considered to be unresponsive and removed from network map. Nodes republish their
+        ``NodeInfo`` on a regular interval. Network map treats that as a heartbeat from the node.
+
 More parameters will be added in future releases to regulate things like allowed port numbers, how long a node can be
 offline before it is evicted from the zone, whether or not IPv6 connectivity is required for zone members, required
 cryptographic algorithms and rollout schedules (e.g. for moving to post quantum cryptography), parameters related to
