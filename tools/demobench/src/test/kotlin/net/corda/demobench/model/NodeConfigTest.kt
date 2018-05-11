@@ -37,6 +37,7 @@ class NodeConfigTest {
         val nodeConfig = config.nodeConf()
                 .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
                 .withFallback(ConfigFactory.parseResources("reference.conf"))
+                .withFallback(ConfigFactory.parseMap(mapOf("devMode" to true)))
                 .resolve()
         val fullConfig = nodeConfig.parseAsNodeConfiguration()
 
