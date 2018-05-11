@@ -24,6 +24,7 @@ import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
 import net.corda.nodeapi.internal.serialization.amqp.testutils.*
+import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenterImpl
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule

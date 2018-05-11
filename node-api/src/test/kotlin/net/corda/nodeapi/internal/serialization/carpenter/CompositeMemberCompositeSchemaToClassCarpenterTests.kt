@@ -4,11 +4,11 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.CompositeType
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
 
 @CordaSerializable
 interface I_ {
@@ -118,7 +118,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         assertEquals(1, carpenterSchema.size)
 
-        val metaCarpenter = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
+        val metaCarpenter = MetaCarpenter(carpenterSchema, ClassCarpenterImpl(whitelist = AllWhitelist))
 
         metaCarpenter.build()
 
@@ -153,7 +153,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(1, carpenterSchema.dependsOn.size)
         assert(mangleName(classTestName("A")) in carpenterSchema.dependsOn)
 
-        val metaCarpenter = TestMetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
+        val metaCarpenter = TestMetaCarpenter(carpenterSchema, ClassCarpenterImpl(whitelist = AllWhitelist))
 
         assertEquals(0, metaCarpenter.objects.size)
 
@@ -254,7 +254,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         val carpenterSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
         TestMetaCarpenter(carpenterSchema.carpenterSchema(
-                ClassLoader.getSystemClassLoader()), ClassCarpenter(whitelist = AllWhitelist))
+                ClassLoader.getSystemClassLoader()), ClassCarpenterImpl(whitelist = AllWhitelist))
     }
 
     /*
