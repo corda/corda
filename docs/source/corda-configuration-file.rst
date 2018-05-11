@@ -99,7 +99,7 @@ absolute path to the node's base directory.
 
         :messageRedeliveryDelay: The initial retry delay, e.g. `30 seconds`.
         :maxRetryCount: How many retries to attempt.
-        :backoffBase: The base of the exponential backoff, :math:`t_{wait} = messageRedeliveryDelay * backoffBase^{retryCount}`.
+        :backoffBase: The base of the exponential backoff, `t_{wait} = messageRedeliveryDelay * backoffBase^{retryCount}`.
 
 :rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of the ``rpcSettings`` block.
 
