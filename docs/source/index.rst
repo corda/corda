@@ -30,7 +30,7 @@ We look forward to seeing what you can do with Corda!
 .. _`download the PDF`: _static/corda-developer-site.pdf
 
 .. toctree::
-   :caption: App development
+   :caption: Development
    :maxdepth: 1
 
    quickstart-index.rst
@@ -48,10 +48,21 @@ We look forward to seeing what you can do with Corda!
 
    corda-nodes-index.rst
    corda-networks-index.rst
+   azure-vm.rst
+   aws-vm.rst
+   loadtesting.rst
+
+.. toctree::
+   :caption: Design docs
+   :maxdepth: 2
+
+   design/design-review-process.md
 
 .. toctree::
    :caption: Participate
    :maxdepth: 2
 
    release-process-index.rst
-   other-index.rst
+   corda-repo-layout.rst
+   building-the-docs.rst
+   json.rst

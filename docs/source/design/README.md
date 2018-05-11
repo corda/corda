@@ -10,7 +10,7 @@ These should be written in [Markdown](https://github.com/adam-p/markdown-here/wi
 
 ## Design Review Process
 
-Please see the [design review process](./designReviewProcess.md).
+Please see the [design review process](design-review-process.md).
 
 * Feature request submission
 * High level design
