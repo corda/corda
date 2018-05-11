@@ -28,10 +28,7 @@ import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.curator.test.TestingServer
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import org.junit.rules.TemporaryFolder
 import java.net.Socket
 import java.nio.file.Path
@@ -42,6 +39,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
 
+@Ignore
 class BridgeSmokeTest {
     companion object {
         val log = contextLogger()
