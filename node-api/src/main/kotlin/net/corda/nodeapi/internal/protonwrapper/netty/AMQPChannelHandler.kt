@@ -95,11 +95,14 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                     ctx.close()
                     return
                 }
-                log.info("handshake completed with subject: $remoteX500Name")
+                log.info("Handshake completed with subject: $remoteX500Name")
                 createAMQPEngine(ctx)
                 onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true)))
             } else {
                 log.error("Handshake failure ${evt.cause().message}")
+                if (log.isTraceEnabled) {
+                    log.trace("Handshake failure", evt.cause())
+                }
                 ctx.close()
             }
         }
@@ -108,6 +111,9 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     @Suppress("OverridingDeprecatedMember")
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
         log.warn("Closing channel due to nonrecoverable exception ${cause.message}")
+        if (log.isTraceEnabled) {
+            log.trace("Pipeline uncaught exception", cause)
+        }
         ctx.close()
     }
 
