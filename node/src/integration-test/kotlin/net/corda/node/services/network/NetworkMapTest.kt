@@ -11,19 +11,32 @@
 package net.corda.node.services.network
 
 import net.corda.cordform.CordformNode
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.internal.*
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.list
+import net.corda.core.internal.readObject
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.services.config.configureDevKeyAndTrustStores
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.expect
+import net.corda.testing.core.expectEvents
+import net.corda.testing.core.sequence
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.RandomFree
@@ -31,6 +44,7 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.internal.CompatibilityZoneParams
+import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
@@ -82,7 +96,7 @@ class NetworkMapTest : IntegrationTest() {
                 initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow() as NodeHandleInternal
+            val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
             val nextParams = networkMapServer.networkParameters.copy(epoch = 3, modifiedTime = Instant.ofEpochMilli(random63BitValue()))
             val nextHash = nextParams.serialize().hash
             val snapshot = alice.rpc.networkParametersFeed().snapshot
@@ -129,7 +143,7 @@ class NetworkMapTest : IntegrationTest() {
                 initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
-            val alice = startNode(providedName = ALICE_NAME).getOrThrow()
+            val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
             val networkParameters = (alice.baseDirectory / NETWORK_PARAMS_FILE_NAME)
                     .readObject<SignedNetworkParameters>()
                     .verified()
@@ -144,17 +158,16 @@ class NetworkMapTest : IntegrationTest() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false
+                initialiseSerialization = false,
+                notarySpecs = emptyList()
         ) {
-            val (aliceNode, bobNode, notaryNode) = listOf(
-                    startNode(providedName = ALICE_NAME),
-                    startNode(providedName = BOB_NAME),
-                    defaultNotaryNode
+            val (aliceNode, bobNode) = listOf(
+                    startNode(providedName = ALICE_NAME, devMode = false),
+                    startNode(providedName = BOB_NAME, devMode = false)
             ).transpose().getOrThrow()
 
-            notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            bobNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+            aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
+            bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
         }
     }
 
@@ -163,24 +176,20 @@ class NetworkMapTest : IntegrationTest() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false
+                initialiseSerialization = false,
+                notarySpecs = emptyList()
         ) {
-            val (aliceNode, notaryNode) = listOf(
-                    startNode(providedName = ALICE_NAME),
-                    defaultNotaryNode
-            ).transpose().getOrThrow()
+            val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
 
-            notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo)
-            aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo)
+            aliceNode.onlySees(aliceNode.nodeInfo)
 
-            val bobNode = startNode(providedName = BOB_NAME).getOrThrow()
+            val bobNode = startNode(providedName = BOB_NAME, devMode = false).getOrThrow()
 
             // Wait for network map client to poll for the next update.
             Thread.sleep(cacheTimeout.toMillis() * 2)
 
-            bobNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+            bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
+            aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
         }
     }
 
@@ -189,25 +198,23 @@ class NetworkMapTest : IntegrationTest() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false
+                initialiseSerialization = false,
+                notarySpecs = emptyList()
         ) {
-            val (aliceNode, bobNode, notaryNode) = listOf(
-                    startNode(providedName = ALICE_NAME),
-                    startNode(providedName = BOB_NAME),
-                    defaultNotaryNode
+            val (aliceNode, bobNode) = listOf(
+                    startNode(providedName = ALICE_NAME, devMode = false),
+                    startNode(providedName = BOB_NAME, devMode = false)
             ).transpose().getOrThrow()
 
-            notaryNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            aliceNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
-            bobNode.onlySees(notaryNode.nodeInfo, aliceNode.nodeInfo, bobNode.nodeInfo)
+            aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
+            bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
 
             networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
 
             // Wait for network map client to poll for the next update.
             Thread.sleep(cacheTimeout.toMillis() * 2)
 
-            notaryNode.onlySees(notaryNode.nodeInfo, bobNode.nodeInfo)
-            bobNode.onlySees(notaryNode.nodeInfo, bobNode.nodeInfo)
+            bobNode.onlySees(bobNode.nodeInfo)
         }
     }
 
@@ -219,4 +226,20 @@ class NetworkMapTest : IntegrationTest() {
         }
         assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
     }
+}
+
+private fun DriverDSLImpl.startNode(providedName: CordaX500Name, devMode: Boolean): CordaFuture<NodeHandle> {
+    var customOverrides = emptyMap<String, String>()
+    if (!devMode) {
+        val nodeDir = baseDirectory(providedName)
+        val nodeSslConfig = object : NodeSSLConfiguration {
+            override val baseDirectory = nodeDir
+            override val keyStorePassword = "cordacadevpass"
+            override val trustStorePassword = "trustpass"
+            override val crlCheckSoftFail = true
+        }
+        nodeSslConfig.configureDevKeyAndTrustStores(providedName)
+        customOverrides = mapOf("devMode" to "false")
+    }
+    return startNode(providedName = providedName, customOverrides = customOverrides)
 }

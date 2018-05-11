@@ -1,4 +1,4 @@
- Network permissioning
+Network permissioning
 =====================
 
 .. contents::

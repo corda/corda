@@ -112,7 +112,7 @@ absolute path to the node's base directory.
 
         :messageRedeliveryDelay: The initial retry delay, e.g. `30 seconds`.
         :maxRetryCount: How many retries to attempt.
-        :backoffBase: The base of the exponential backoff, :math:`t_{wait} = messageRedeliveryDelay * backoffBase^{retryCount}`.
+        :backoffBase: The base of the exponential backoff, `t_{wait} = messageRedeliveryDelay * backoffBase^{retryCount}`.
 
 :rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of the ``rpcSettings`` block.
 
@@ -241,9 +241,8 @@ Examples
 General node configuration file for hosting the IRSDemo services:
 
 .. literalinclude:: example-code/src/main/resources/example-node.conf
-:language: javascript
 
-    Simple notary configuration file:
+Simple notary configuration file:
 
 .. parsed-literal::
 
@@ -292,7 +291,7 @@ path to the node's base directory.
     node certificate and private key.
 
     .. note:: This is the non-secret value for the development certificates automatically generated during the first node run.
-Longer term these keys will be managed in secure hardware devices.
+       Longer term these keys will be managed in secure hardware devices.
 
 :trustStorePassword: The password to unlock the Trust store file (``<workspace>/certificates/truststore.jks``) containing
     the Corda network root certificate. This is the non-secret value for the development certificates automatically
@@ -324,5 +323,5 @@ Longer term these keys will be managed in secure hardware devices.
         :password: The password
         :permissions: A list of permissions for starting flows via RPC. To give the user the permission to start the flow
             ``foo.bar.FlowClass``, add the string ``StartFlow.foo.bar.FlowClass`` to the list. If the list
-        contains the string ``ALL``, the user can start any flow via RPC. This value is intended for administrator
-        users and for development.
+            contains the string ``ALL``, the user can start any flow via RPC. This value is intended for administrator
+            users and for development.

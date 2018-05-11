@@ -11,6 +11,7 @@
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
+import io.netty.channel.unix.Errors
 import net.corda.core.crypto.Crypto
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.Emoji
@@ -134,6 +135,10 @@ open class NodeStartup(val args: Array<String>) {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
         } catch (e: Exception) {
+            if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
+                logger.error("One of the ports required by the Corda node is already in use.")
+                return false
+            }
             if (e.message?.startsWith("Unknown named curve:") == true) {
                 logger.error("Exception during node startup - ${e.message}. " +
                         "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
@@ -169,7 +174,7 @@ open class NodeStartup(val args: Array<String>) {
             if (conf.shouldStartLocalShell()) {
                 startedNode.internals.startupComplete.then {
                     try {
-                        InteractiveShell.runLocalShell( {startedNode.dispose()} )
+                        InteractiveShell.runLocalShell({ startedNode.dispose() })
                     } catch (e: Throwable) {
                         logger.error("Shell failed to start", e)
                     }
@@ -266,7 +271,6 @@ open class NodeStartup(val args: Array<String>) {
         // twice with the same directory: that's a user error and we should bail out.
         val pidFile = (baseDirectory / "process-id").toFile()
         pidFile.createNewFile()
-        pidFile.deleteOnExit()
         val pidFileRw = RandomAccessFile(pidFile, "rw")
         val pidFileLock = pidFileRw.channel.tryLock()
         if (pidFileLock == null) {
@@ -274,6 +278,7 @@ open class NodeStartup(val args: Array<String>) {
             println("Shut that other node down and try again. It may have process ID ${pidFile.readText()}")
             System.exit(1)
         }
+        pidFile.deleteOnExit()
         // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
         // when our process shuts down, but we try in stop() anyway just to be nice.
         addShutdownHook {
@@ -369,11 +374,7 @@ open class NodeStartup(val args: Array<String>) {
                     """  / ____/     _________/ /___ _""").newline().a(
                     """ / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
                     """/ /___  /_/ / /  / /_/ / /_/ /          """).fgBrightBlue().a(msg2).newline().fgBrightRed().a(
-                    """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
-                    a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").
-                    newline().
-                    newline().
-                    reset())
+                    """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").newline().newline().reset())
         }
     }
 }

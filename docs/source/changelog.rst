@@ -6,9 +6,9 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
-* Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
+* Node will now gracefully fail to start if one of the required ports is already in use.
 
-* Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.
+* Node will now gracefully fail to start if ``devMode`` is true and ``compatibilityZoneURL`` is specified.
 
 * Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
 
@@ -20,48 +20,33 @@ Unreleased
   * ``PartyAndCertificate`` is serialised as an object containing the name and owning key
   * ``SignedTransaction`` can now be serialized to JSON and deserialized back into an object.
 
-* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used
+* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used.
 
-* Refactor AMQP Serializer to pass context object down the serialization call hierarchy. Will allow per thread
-  extensions to be set and used by the RPC work (Observable Context Key)
+* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This
+  primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work -
+  the new methods avoid bugs that can occur when JPA schemas inherit from each other.
 
-* Refactor RPC Server Kryo observable serializer into it's own sub module
-
-* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work - the new methods avoid bugs that can occur when JPA schemas inherit from each other.
-
-* Refactor RPC Client Kryo observable serializer into it's own sub module
-
-* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialized in
-  a factory without a serializer as the subtype check for the class instance failed. Fix is to compare the raw
-  type.
-  
 * Due to ongoing work the experimental interfaces for defining custom notary services have been moved to the internal package.
   CorDapps implementing custom notary services will need to be updated, see ``samples/notary-demo`` for an example.
   Further changes may be required in the future.
-  
-* Fixed incorrect exception handling in ``NodeVaultService._query()``.
 
-* Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
+* Configuration file changes:
 
-* Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
-  Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
+  * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
+    Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
+  * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
+  * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
+  * Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
 
-* Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
-  as the raw type, List for example.
+* More types can be serialized now: java.security.cert.CRLReason, java.security.cert.X509CRL, java.math.BigInteger
 
-* java.security.cert.CRLReason added to the default Whitelist.
-
-* java.security.cert.X509CRL serialization support added.
-
-* Replaced the ``PersistentMap`` in ``NodeSchedulerService`` with an implementation that only loads the next scheduled
-  state from the database into memory, rather than them all.
-
-* Upgraded H2 to v1.4.197.
+* Upgraded H2 to v1.4.197
 
 * Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
   To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
 
 * Changes to the network bootstrapper:
+
   * The whitelist.txt file is no longer needed. The existing network parameters file is used to update the current contracts
     whitelist.
   * The CorDapp jars are also copied to each nodes' `cordapps` directory.
@@ -72,19 +57,9 @@ Unreleased
   framework. Prior to this change it didn't work, but the error thrown was opaque (complaining about too few arguments
   to a constructor). Whilst this was possible in the older Kryo implementation (Kryo passing null as the synthesised
   reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
-  we are disallowing this as the paradigm in general makes little sense for Contract States
-
-* Fix CORDA-1258. Custom serializers were spuriously registered every time a serialization factory was fetched from the cache rather than
-  only once when it was created. Whilst registering serializers that already exist is essentially a no-op, it's a performance overhead for
-  a very frequent operation that hits a synchronisation point (and is thus flagged as contended by our perfomance suite)
+  we are disallowing this as the paradigm in general makes little sense for contract states.
 
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
-
-  .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
-than 2.12.3 (including 2.12.4) exhibit a different issue.
-
-* Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
-  all the needed network data, waiting in the background for network map to become available.
 
 * Added `database.hibernateDialect` node configuration option
 
@@ -94,11 +69,6 @@ R3 Corda 3.0 Developer Preview
 ------------------------------
 
 * Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored as the raw type, List for example.
-
-* Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
-
-  .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
-than 2.12.3 (including 2.12.4) exhibit a different issue.
 
 * Fixed security vulnerability when using the ``HashAttachmentConstraint``. Added strict check that the contract JARs
   referenced in a transaction were deployed on the node.
@@ -188,7 +158,7 @@ than 2.12.3 (including 2.12.4) exhibit a different issue.
 
    * To support local and test deployments, the node polls the ``additional-node-infos`` directory for these signed ``NodeInfo``
      objects which are stored in its local cache. On startup the node generates its own signed file with the filename format
-     "nodeInfo-*". This can be copied to every node's ``additional-node-infos`` directory that is part of the network.
+     "nodeInfo-\*". This can be copied to every node's ``additional-node-infos`` directory that is part of the network.
 
    * Cordform (which is the ``deployNodes`` gradle task) does this copying automatically for the demos. The ``NetworkMap``
      parameter is no longer needed.
@@ -300,13 +270,13 @@ than 2.12.3 (including 2.12.4) exhibit a different issue.
 * The ``ReceiveTransactionFlow`` can now be told to record the transaction at the same time as receiving it. Using this
   feature, better support for observer/regulator nodes has been added. See :doc:`tutorial-observer-nodes`.
 
-* Added an overload of ``TransactionWithSignatures.verifySignaturesExcept`` which takes in a collection of ``PublicKey``s.
+* Added an overload of ``TransactionWithSignatures.verifySignaturesExcept`` which takes in a collection of ``PublicKey`` s.
 
 * ``DriverDSLExposedInterface`` has been renamed to ``DriverDSL`` and the ``waitForAllNodesToFinish()`` method has instead
   become a parameter on driver creation.
 
 * Values for the ``database.transactionIsolationLevel`` config now follow the ``java.sql.Connection`` int constants but
-  without the "TRANSACTION_" prefix, i.e. "NONE", "READ_UNCOMMITTED", etc.
+  without the "TRANSACTION" prefix, i.e. "NONE", "READ_UNCOMMITTED", etc.
 
 * Peer-to-peer communications is now via AMQP 1.0 as default.
   Although the legacy Artemis CORE bridging can still be used by setting the ``useAMQPBridges`` configuration property to false.
@@ -477,7 +447,7 @@ Corda 1.0
 
 * Vault query soft locking enhancements and deprecations
 
-  * removed original ``VaultService`` ``softLockedStates` query mechanism.
+  * removed original ``VaultService`` ``softLockedStates`` query mechanism.
   * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified by set of lock ids)
 
 * Trader demo now issues cash and commercial paper directly from the bank node, rather than the seller node self-issuing

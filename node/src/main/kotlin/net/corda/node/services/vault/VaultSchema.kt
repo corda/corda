@@ -41,9 +41,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     override val migrationResource = "vault-schema.changelog-master"
 
     @Entity
-    @Table(name = "vault_states",
-            indexes = arrayOf(Index(name = "state_status_idx", columnList = "state_status"),
-                    Index(name = "lock_id_idx", columnList = "lock_id, state_status")))
+    @Table(name = "vault_states", indexes = [Index(name = "state_status_idx", columnList = "state_status"), Index(name = "lock_id_idx", columnList = "lock_id, state_status")])
     class VaultStates(
             /** NOTE: serialized transaction state (including contract state) is now resolved from transaction store */
             // TODO: create a distinct table to hold serialized state data (once DBTransactionStore is encrypted)
@@ -79,9 +77,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     ) : PersistentState()
 
     @Entity
-    @Table(name = "vault_linear_states",
-            indexes = arrayOf(Index(name = "external_id_index", columnList = "external_id"),
-                    Index(name = "uuid_index", columnList = "uuid")))
+    @Table(name = "vault_linear_states", indexes = [Index(name = "external_id_index", columnList = "external_id"), Index(name = "uuid_index", columnList = "uuid")])
     class VaultLinearStates(
             /** [ContractState] attributes */
 
@@ -163,9 +159,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     }
 
     @Entity
-    @Table(name = "vault_transaction_notes",
-            indexes = arrayOf(Index(name = "seq_no_index", columnList = "seq_no"),
-                    Index(name = "transaction_id_index", columnList = "transaction_id")))
+    @Table(name = "vault_transaction_notes", indexes = [Index(name = "seq_no_index", columnList = "seq_no"), Index(name = "transaction_id_index", columnList = "transaction_id")])
     class VaultTxnNote(
             @Id
             @GeneratedValue
