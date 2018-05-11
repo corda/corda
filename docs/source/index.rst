@@ -30,17 +30,28 @@ We look forward to seeing what you can do with Corda!
 .. _`download the PDF`: _static/corda-developer-site.pdf
 
 .. toctree::
+   :caption: App development
    :maxdepth: 1
 
    quickstart-index.rst
    key-concepts.rst
    building-a-cordapp-index.rst
-   corda-nodes-index.rst
-   corda-networks-index.rst
    tutorials-index.rst
    tools-index.rst
    node-internals-index.rst
    component-library-index.rst
-   release-process-index.rst
    troubleshooting.rst
+
+.. toctree::
+   :caption: Operations
+   :maxdepth: 2
+
+   corda-nodes-index.rst
+   corda-networks-index.rst
+
+.. toctree::
+   :caption: Participate
+   :maxdepth: 2
+
+   release-process-index.rst
    other-index.rst
