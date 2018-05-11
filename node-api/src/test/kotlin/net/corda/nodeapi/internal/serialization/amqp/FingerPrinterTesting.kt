@@ -27,7 +27,7 @@ class FingerPrinterTesting  : FingerPrinter {
 
 class FingerPrinterTestingTests {
     companion object {
-        val VERBOSE = true
+        const val VERBOSE = true
     }
     @Test
     fun testingTest() {
