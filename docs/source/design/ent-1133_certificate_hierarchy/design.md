@@ -1,5 +1,9 @@
 # Certificate hierarchies
 
+```eval_rst
+.. important:: This design doc applies to the main Corda network. Other networks may use different certificate hierarchies.
+```
+
 ## Overview
 
 A certificate hierarchy is proposed to enable effective key management in the context of managing Corda networks. 
