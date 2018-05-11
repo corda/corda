@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
+import io.netty.channel.unix.Errors
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
@@ -8,7 +9,12 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.loggerFor
-import net.corda.node.*
+import net.corda.node.CmdLineOptions
+import net.corda.node.NodeArgsParser
+import net.corda.node.NodeRegistrationOption
+import net.corda.node.SerialFilter
+import net.corda.node.VersionInfo
+import net.corda.node.defaultSerialFilter
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
@@ -117,6 +123,10 @@ open class NodeStartup(val args: Array<String>) {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
         } catch (e: Exception) {
+            if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
+                logger.error("One of the ports required by the Corda node is already in use.")
+                return false
+            }
             if (e.message?.startsWith("Unknown named curve:") == true) {
                 logger.error("Exception during node startup - ${e.message}. " +
                         "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
@@ -152,7 +162,7 @@ open class NodeStartup(val args: Array<String>) {
             if (conf.shouldStartLocalShell()) {
                 startedNode.internals.startupComplete.then {
                     try {
-                        InteractiveShell.runLocalShell( {startedNode.dispose()} )
+                        InteractiveShell.runLocalShell({ startedNode.dispose() })
                     } catch (e: Throwable) {
                         logger.error("Shell failed to start", e)
                     }
@@ -329,11 +339,7 @@ open class NodeStartup(val args: Array<String>) {
                     """  / ____/     _________/ /___ _""").newline().a(
                     """ / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
                     """/ /___  /_/ / /  / /_/ / /_/ /          """).fgBrightBlue().a(msg2).newline().fgBrightRed().a(
-                    """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
-                    a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").
-                    newline().
-                    newline().
-                    reset())
+                    """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").newline().newline().reset())
         }
     }
 }

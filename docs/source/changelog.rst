@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Node will now gracefully fail to start if one of the required ports is already in use.
+
 * Node will now gracefully fail to start if ``devMode`` is true and ``compatibilityZoneURL`` is specified.
 
 * Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
