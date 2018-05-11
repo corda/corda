@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Node will now gracefully fail to start if ``devMode`` is true and ``compatibilityZoneURL`` is specified.
+
 * Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
 
 * Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.
