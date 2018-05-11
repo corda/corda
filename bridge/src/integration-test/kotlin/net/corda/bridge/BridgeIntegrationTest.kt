@@ -274,6 +274,8 @@ class BridgeIntegrationTest {
         val (artemisServer, artemisClient) = createArtemis()
         val (artemisServer2, artemisClient2) = createArtemis2()
         try {
+            artemisServer2.start()
+            artemisClient2.start()
             installBridgeControlResponder(artemisClient)
             installBridgeControlResponder(artemisClient2)
             val bridge = BridgeInstance(config, BridgeVersionInfo(1, "1.1", "Dummy", "Test"))
@@ -323,7 +325,6 @@ class BridgeIntegrationTest {
         val (artemisServer2, artemisClient2) = createArtemis2()
         try {
             installBridgeControlResponder(artemisClient)
-            installBridgeControlResponder(artemisClient2)
             val bridge = BridgeInstance(bridgeConfig, BridgeVersionInfo(1, "1.1", "Dummy", "Test"))
             val bridgeStateFollower = bridge.activeChange.toBlocking().iterator
             val float = BridgeInstance(floatConfig, BridgeVersionInfo(1, "1.1", "Dummy", "Test"))
@@ -344,7 +345,17 @@ class BridgeIntegrationTest {
             assertEquals(false, bridgeStateFollower.next())
             assertEquals(false, bridge.active)
             assertEquals(true, float.active)
-            assertEquals(false, serverListening("localhost", 10005)) // now activated
+            var timeout = 0
+            var listeningState = serverListening("localhost", 10005)
+            while (listeningState && timeout < 10) { // Allow a short while for close down to propagate
+                ++timeout
+                Thread.sleep(1000L)
+                listeningState = serverListening("localhost", 10005)
+            }
+            assertEquals(false, listeningState) // now not activated
+            artemisServer2.start() // Now enable second artemis to failover to
+            artemisClient2.start()
+            installBridgeControlResponder(artemisClient2)
             assertEquals(true, bridgeStateFollower.next())
             assertEquals(true, bridge.active)
             assertEquals(true, float.active)
@@ -403,8 +414,6 @@ class BridgeIntegrationTest {
         }
         val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 12005), MAX_MESSAGE_SIZE)
         val artemisClient = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", 12005), MAX_MESSAGE_SIZE)
-        artemisServer.start()
-        artemisClient.start()
         return Pair(artemisServer, artemisClient)
     }
 
