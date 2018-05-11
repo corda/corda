@@ -95,8 +95,10 @@ Each required signers should only sign the transaction if the following two cond
 
    * **Transaction validity**: For both the proposed transaction, and every transaction in the chain of transactions
      that created the current proposed transaction's inputs:
+
        * The transaction is digitally signed by all the required parties
        * The transaction is *contractually valid* (see :doc:`key-concepts-contracts`)
+
    * **Transaction uniqueness**: There exists no other committed transaction that has consumed any of the inputs to
      our proposed transaction (see :doc:`key-concepts-consensus`)
 

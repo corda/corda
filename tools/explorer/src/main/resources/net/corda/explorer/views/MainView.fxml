@@ -13,6 +13,9 @@
                 <ImageView styleClass="corda-text-logo" fitHeight="35" preserveRatio="true" GridPane.hgrow="ALWAYS"
                            fx:id="cordaLogo"/>
 
+                <!-- Normally hidden warning label -->
+                <Label fx:id="rpcWarnLabel" styleClass="warning-label" text="Status: RPC connection not available" GridPane.columnIndex="1" visible="true"/>
+
                 <!-- User account menu -->
                 <MenuButton fx:id="userButton" mnemonicParsing="false" GridPane.columnIndex="3">
                     <items>
@@ -25,7 +28,7 @@
             </GridPane>
         </top>
         <center>
-            <SplitPane id="mainSplitPane" dividerPositions="0.0">
+            <SplitPane fx:id="mainSplitPane" dividerPositions="0.0">
                 <VBox styleClass="sidebar" fx:id="sidebar" SplitPane.resizableWithParent="false">
                     <StackPane>
                         <Button fx:id="template" text="Template" styleClass="sidebar-menu-item"/>

@@ -2,6 +2,7 @@ package net.corda.client.jfx.model
 
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
+import net.corda.client.jfx.utils.distinctBy
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
 import net.corda.core.contracts.ContractState
@@ -31,7 +32,7 @@ class ContractStateModel {
     val cashStates: ObservableList<StateAndRef<Cash.State>> = cashStatesDiff.fold(FXCollections.observableArrayList()) { list: MutableList<StateAndRef<Cash.State>>, statesDiff ->
         list.removeIf { it in statesDiff.removed }
         list.addAll(statesDiff.added)
-    }
+    }.distinctBy { it.ref }
 
     val cash = cashStates.map { it.state.data.amount }
 

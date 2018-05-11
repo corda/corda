@@ -77,19 +77,19 @@ As such we'd like to extend special thanks to
   * Ben Wyeth for providing a mechanism for registering a callback on app shutdown
 
     Ben's contribution can be found on GitHub
-    `here <https://github.com/corda/corda/commit/d17670c747d16b7f6e06e19bbbd25eb06e45cb93>`_
+    `here <https://github.com/corda/corda/commit/d17670c747d16b7f6e06e19bbbd25eb06e45cb93>`__
 
   * Tomas Tauber for adding support for running Corda atop PostgresSQL in place of the in-memory H2 service
 
     Tomas's contribution can be found on GitHub
-    `here <https://github.com/corda/corda/commit/342090db62ae40cef2be30b2ec4aa451b099d0b7>`_
+    `here <https://github.com/corda/corda/commit/342090db62ae40cef2be30b2ec4aa451b099d0b7>`__
 
     .. warning:: This is an experimental feature that has not been tested as part of our standard release testing.
 
   * Rose Molina Atienza for correcting our careless spelling slip
 
     Rose's change can be found on GitHub
-    `here <https://github.com/corda/corda/commit/128d5cad0af7fc5595cac3287650663c9c9ac0a3>`_
+    `here <https://github.com/corda/corda/commit/128d5cad0af7fc5595cac3287650663c9c9ac0a3>`__
 
 Significant Changes in 3.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -178,7 +178,7 @@ Significant Changes in 3.0
     which it should be performed.
 
   Hash constraints provide for maximum decentralisation and minimum trust, at the cost of flexibility. In Corda 3.0 we add a
-  new constraint, a _network parameters_ constraint, that allows the list of acceptable contract JARs to be maintained by the
+  new constraint, a *network parameters* constraint, that allows the list of acceptable contract JARs to be maintained by the
   operator of the compatibility zone rather than being hard-coded. This allows for simple upgrades at the cost of the introduction
   of an element of centralisation.
 
@@ -197,8 +197,10 @@ Significant Changes in 3.0
 
     Prior to running the verification code of a contract the JAR within which the verification code of the contract resides
     is tested for compliance to the contract constraints:
+
         - For the ``HashConstraint``: the hash of the deployed CorDapp jar must be the same as the hash found in the Transaction.
         - For the ``ZoneConstraint``: the Transaction must come with a whitelisted attachment for each Contract State.
+
     If this step fails the normal transaction verification failure path is followed.
 
     Corda 3.0 lays the groundwork for future releases, when contract verification will be done against the attached contract JARs

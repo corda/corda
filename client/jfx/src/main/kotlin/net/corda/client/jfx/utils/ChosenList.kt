@@ -21,7 +21,8 @@ import javafx.collections.ObservableListBase
  * The above will create a list that chooses and delegates to the appropriate filtered list based on the type of filter.
  */
 class ChosenList<E>(
-        private val chosenListObservable: ObservableValue<out ObservableList<out E>>
+        private val chosenListObservable: ObservableValue<out ObservableList<out E>>,
+        private val logicalName: String? = null
 ) : ObservableListBase<E>() {
 
     private var currentList = chosenListObservable.value
@@ -58,4 +59,7 @@ class ChosenList<E>(
         endChange()
     }
 
+    override fun toString(): String {
+        return "ChosenList: $logicalName"
+    }
 }
