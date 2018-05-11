@@ -6,6 +6,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.ClientRpcSslOptions
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
@@ -14,6 +15,7 @@ import net.corda.testing.internal.saveToKeyStore
 import net.corda.testing.internal.saveToTrustStore
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
+import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions
@@ -51,16 +53,16 @@ class RpcSslTest {
                 assertThat(nodeInfo.legalIdentities).isNotEmpty
                 successfulLogin = true
             }
+            connection.close()
 
             Assertions.assertThatThrownBy {
-                CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, "wrong").use { connection ->
-                    connection.proxy.apply {
-                        nodeInfo()
-                        failedLogin = true
-                    }
+                val connection2 = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, "wrong")
+                connection2.proxy.apply {
+                    nodeInfo()
+                    failedLogin = true
                 }
+                connection2.close()
             }.isInstanceOf(ActiveMQSecurityException::class.java)
-            connection.close()
         }
         assertThat(successfulLogin).isTrue()
         assertThat(failedLogin).isFalse()
@@ -110,4 +112,33 @@ class RpcSslTest {
         }
         assertThat(successful).isTrue()
     }
+
+    @Test
+    fun `The system RPC user can not connect to the rpc broker without the node's key`() {
+        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
+        val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
+        val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
+        val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
+
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+            val node = startNode(customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
+            val client = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions)
+
+            Assertions.assertThatThrownBy {
+                client.start(NODE_RPC_USER, NODE_RPC_USER).use { connection ->
+                    connection.proxy.nodeInfo()
+                }
+            }.isInstanceOf(ActiveMQException::class.java)
+
+            val clientAdmin = CordaRPCClient.createWithSsl(node.rpcAdminAddress, sslConfiguration = clientSslOptions)
+
+            Assertions.assertThatThrownBy {
+                clientAdmin.start(NODE_RPC_USER, NODE_RPC_USER).use { connection ->
+                    connection.proxy.nodeInfo()
+                }
+            }.isInstanceOf(ActiveMQException::class.java)
+        }
+    }
+
 }

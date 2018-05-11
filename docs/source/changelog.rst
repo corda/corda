@@ -48,8 +48,8 @@ Unreleased
 * Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
   a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
 
-* The node configuration requires 2 RPC endpoints: ``address`` and ``adminAddress``. RPC Clients would connect to the address, while the node will connect
-  to the adminAddress.
+* The node RPC broker opens 2 endpoints that are configured with ``address`` and ``adminAddress``. RPC Clients would connect to the address, while the node will connect
+  to the adminAddress. Previously if ssl was enabled for RPC the ``adminAddress`` was equal to ``address``.
 
 * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
   Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.

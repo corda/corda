@@ -40,8 +40,7 @@ import javax.security.cert.X509Certificate
  *
  * * If someone connects with [PEER_USER] then we confirm they belong on our P2P network by checking their root CA is
  * the same as our root CA. If that's the case, the only access they're given is the ability to send to our P2P address.
- * The messages these authenticated nodes send to us are tagged with their subject DN and we assume
- * the CN within that is their legal name.
+ * The messages these authenticated nodes send to us are tagged with their subject DN.
  *
  * * If someone connects with [NODE_P2P_USER] or [NODE_RPC_USER] then we confirm it's the current node by checking their TLS certificate
  * is the same as our one in our key store. Then they're given full access to all valid queues.
