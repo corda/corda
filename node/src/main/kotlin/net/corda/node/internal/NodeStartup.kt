@@ -226,7 +226,6 @@ open class NodeStartup(val args: Array<String>) {
         // twice with the same directory: that's a user error and we should bail out.
         val pidFile = (baseDirectory / "process-id").toFile()
         pidFile.createNewFile()
-        pidFile.deleteOnExit()
         val pidFileRw = RandomAccessFile(pidFile, "rw")
         val pidFileLock = pidFileRw.channel.tryLock()
         if (pidFileLock == null) {
@@ -234,6 +233,7 @@ open class NodeStartup(val args: Array<String>) {
             println("Shut that other node down and try again. It may have process ID ${pidFile.readText()}")
             System.exit(1)
         }
+        pidFile.deleteOnExit()
         // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
         // when our process shuts down, but we try in stop() anyway just to be nice.
         addShutdownHook {
