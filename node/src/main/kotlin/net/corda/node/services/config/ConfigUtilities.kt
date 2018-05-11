@@ -28,11 +28,17 @@ object ConfigHelper {
         val parseOptions = ConfigParseOptions.defaults()
         val defaultConfig = ConfigFactory.parseResources("reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
+
+        // Detect the underlying OS. If mac or windows non-server then we assume we're running in devMode. Unless specified otherwise.
+        val smartDevMode = CordaSystemUtils.isOsMac() || (CordaSystemUtils.isOsWindows() && !CordaSystemUtils.getOsName().toLowerCase().contains("server"))
+        val devModeConfig = ConfigFactory.parseMap(mapOf("devMode" to smartDevMode))
+
         val finalConfig = configOf(
                 // Add substitution values here
                 "baseDirectory" to baseDirectory.toString())
                 .withFallback(configOverrides)
                 .withFallback(appConfig)
+                .withFallback(devModeConfig) // this needs to be after the appConfig, so it doesn't override the configured devMode
                 .withFallback(defaultConfig)
                 .resolve()
 
@@ -80,4 +86,16 @@ fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name) {
             }
         }
     }
+}
+
+/** This is generally covered by commons-lang. */
+object CordaSystemUtils {
+    const val OS_NAME = "os.name"
+
+    const val MAC_PREFIX = "Mac"
+    const val WIN_PREFIX = "Windows"
+
+    fun isOsMac() = getOsName().startsWith(MAC_PREFIX)
+    fun isOsWindows() = getOsName().startsWith(WIN_PREFIX)
+    fun getOsName() = System.getProperty(OS_NAME)
 }
