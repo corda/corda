@@ -164,7 +164,7 @@ data class NodeParameters(
  */
 data class JmxPolicy(val startJmxHttpServer: Boolean = false,
                      val jmxHttpServerPortAllocation: PortAllocation? =
-                     if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
+                             if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
 
 /**
  * [driver] allows one to start up nodes like this:
@@ -250,18 +250,21 @@ data class DriverParameters(
         val networkParameters: NetworkParameters = testNetworkParameters(),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap()
 ) {
-    constructor(isDebug: Boolean,
-                driverDirectory: Path,
-                portAllocation: PortAllocation,
-                debugPortAllocation: PortAllocation,
-                systemProperties: Map<String, String>,
-                useTestClock: Boolean,
-                startNodesInProcess: Boolean,
-                waitForAllNodesToFinish: Boolean,
-                notarySpecs: List<NotarySpec>,
-                extraCordappPackagesToScan: List<String>,
-                jmxPolicy: JmxPolicy,
-                networkParameters: NetworkParameters) : this(isDebug,
+    constructor(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters
+    ) : this(
+            isDebug,
             driverDirectory,
             portAllocation,
             debugPortAllocation,
@@ -272,7 +275,8 @@ data class DriverParameters(
             notarySpecs,
             extraCordappPackagesToScan,
             jmxPolicy,
-            networkParameters, emptyMap())
+            networkParameters, emptyMap()
+    )
 
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
     fun withDriverDirectory(driverDirectory: Path): DriverParameters = copy(driverDirectory = driverDirectory)
@@ -288,18 +292,21 @@ data class DriverParameters(
     fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
     fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)
 
-    fun copy(isDebug: Boolean,
-             driverDirectory: Path,
-             portAllocation: PortAllocation,
-             debugPortAllocation: PortAllocation,
-             systemProperties: Map<String, String>,
-             useTestClock: Boolean,
-             startNodesInProcess: Boolean,
-             waitForAllNodesToFinish: Boolean,
-             notarySpecs: List<NotarySpec>,
-             extraCordappPackagesToScan: List<String>,
-             jmxPolicy: JmxPolicy,
-             networkParameters: NetworkParameters) = this.copy(isDebug,
+    fun copy(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters
+    ) = this.copy(
+            isDebug,
             driverDirectory,
             portAllocation,
             debugPortAllocation,
@@ -310,5 +317,6 @@ data class DriverParameters(
             notarySpecs,
             extraCordappPackagesToScan,
             jmxPolicy,
-            networkParameters, emptyMap())
+            networkParameters, emptyMap()
+    )
 }
