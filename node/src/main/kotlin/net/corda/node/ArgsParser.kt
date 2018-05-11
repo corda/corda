@@ -1,5 +1,6 @@
 package net.corda.node
 
+import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import joptsimple.util.PathConverter
