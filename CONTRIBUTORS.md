@@ -79,7 +79,7 @@ changes to this list.
 * Lars Stage Thomsen (Danske Bank)
 * Lee Braine (Barclays)
 * Lucas Salmen (Itau)
-* Maksymillian Pawlak (R3)
+* Maksymilian Pawlak (R3)
 * Marek Scocovsky (ABSA)
 * Mark Lauer (Westpac)
 * Mark Oldfield (R3)
