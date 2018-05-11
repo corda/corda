@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Node will now gracefully fail to start if one of the required ports is already in use.
+
 * Node will now gracefully fail to start if ``devMode`` is true and ``compatibilityZoneURL`` is specified.
 
 * Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
