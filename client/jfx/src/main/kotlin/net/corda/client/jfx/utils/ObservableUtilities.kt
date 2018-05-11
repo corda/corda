@@ -283,7 +283,7 @@ fun <A : Any, B : Any, K : Any> ObservableList<A>.leftOuterJoin(
     val rightTableMap = rightTable.associateByAggregation(rightToJoinKey)
     val joinedMap: ObservableMap<K, Pair<ObservableList<A>, ObservableList<B>>> =
             LeftOuterJoinedMap(leftTableMap, rightTableMap) { _, left, rightValue ->
-                Pair(left, ChosenList(rightValue.map { it ?: FXCollections.emptyObservableList() }))
+                Pair(left, ChosenList(rightValue.map { it ?: FXCollections.emptyObservableList() }, "ChosenList from leftOuterJoin"))
             }
     return joinedMap
 }
@@ -308,6 +308,10 @@ fun <A> ObservableList<A>.last(): ObservableValue<A?> {
 
 fun <T : Any> ObservableList<T>.unique(): ObservableList<T> {
     return AggregatedList(this, { it }, { key, _ -> key })
+}
+
+fun <T : Any, K : Any> ObservableList<T>.distinctBy(toKey: (T) -> K): ObservableList<T> {
+    return AggregatedList(this, toKey, { _, entryList -> entryList[0] })
 }
 
 fun ObservableValue<*>.isNotNull(): BooleanBinding {

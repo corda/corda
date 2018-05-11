@@ -12,10 +12,7 @@
 
 package net.corda.nodeapi.internal.serialization
 
-import net.corda.core.serialization.EncodingWhitelist
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializationEncoding
+import net.corda.core.serialization.*
 import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding.SNAPPY
 import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
@@ -46,4 +43,8 @@ val AMQP_P2P_CONTEXT = SerializationContextImpl(amqpMagic,
 
 internal object AlwaysAcceptEncodingWhitelist : EncodingWhitelist {
     override fun acceptEncoding(encoding: SerializationEncoding) = true
+}
+
+object QuasarWhitelist : ClassWhitelist {
+    override fun hasListed(type: Class<*>): Boolean = true
 }

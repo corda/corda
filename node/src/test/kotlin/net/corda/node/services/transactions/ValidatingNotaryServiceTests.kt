@@ -180,6 +180,18 @@ class ValidatingNotaryServiceTests {
     }
 
     @Test
+    fun `notarise issue tx with time-window`() {
+        val stx = run {
+            val tx = DummyContract.generateInitial(Random().nextInt(), notary, alice.ref(0))
+                        .setTimeWindow(Instant.now(), 30.seconds)
+            aliceNode.services.signInitialTransaction(tx)
+        }
+
+        val sig = runNotaryClient(stx).getOrThrow().single()
+        assertEquals(sig.by, notary.owningKey)
+    }
+
+    @Test
     fun `should sign identical transaction multiple times (notarisation is idempotent)`() {
         val stx = run {
             val inputState = issueState(aliceNode.services, alice)

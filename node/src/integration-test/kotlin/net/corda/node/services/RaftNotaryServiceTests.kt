@@ -20,10 +20,11 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.testing.contracts.DummyContract
+import net.corda.core.utilities.seconds
 import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.core.dummyCommand
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.InProcessImpl
@@ -78,6 +79,23 @@ class RaftNotaryServiceTests : IntegrationTest() {
             val error = ex.error as NotaryError.Conflict
             assertEquals(error.txId, secondSpendTx.id)
         }
+    }
+
+    @Test
+    fun `notarise issue tx with time-window`() {
+        driver(DriverParameters(
+                startNodesInProcess = true,
+                extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
+                notarySpecs = listOf(NotarySpec(notaryName, cluster = ClusterSpec.Raft(clusterSize = 3)))
+        )) {
+            val bankA = startNode(providedName = DUMMY_BANK_A_NAME).map { (it as InProcessImpl) }.getOrThrow()
+            val issueTx = bankA.database.transaction {
+               val builder = DummyContract.generateInitial(Random().nextInt(), defaultNotaryIdentity, bankA.services.myInfo.singleIdentity().ref(0))
+                       .setTimeWindow(bankA.services.clock.instant(), 30.seconds)
+                bankA.services.signInitialTransaction(builder)
+            }
+            bankA.startFlow(NotaryFlow.Client(issueTx)).getOrThrow()
+            }
     }
 
     private fun issueState(nodeHandle: InProcessImpl, notary: Party): StateAndRef<*> {
