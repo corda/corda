@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Node will now gracefully fail to start if one of the required ports is already in use.
+
 * Node will now gracefully fail to start if ``devMode`` is true and ``compatibilityZoneURL`` is specified.
 
 * Added smart detection logic for the development mode setting and an option to override it from the command line.
@@ -24,48 +26,33 @@ Unreleased
   * ``PartyAndCertificate`` is serialised as an object containing the name and owning key
   * ``SignedTransaction`` can now be serialized to JSON and deserialized back into an object.
 
-* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used
+* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used.
 
-* Refactor AMQP Serializer to pass context object down the serialization call hierarchy. Will allow per thread
-  extensions to be set and used by the RPC work (Observable Context Key)
+* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This
+  primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work -
+  the new methods avoid bugs that can occur when JPA schemas inherit from each other.
 
-* Refactor RPC Server Kryo observable serializer into it's own sub module
-
-* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work - the new methods avoid bugs that can occur when JPA schemas inherit from each other.
-
-* Refactor RPC Client Kryo observable serializer into it's own sub module
-
-* Fix CORDA-1403 where a property of a class that implemented a generic interface could not be deserialized in
-  a factory without a serializer as the subtype check for the class instance failed. Fix is to compare the raw
-  type.
-  
 * Due to ongoing work the experimental interfaces for defining custom notary services have been moved to the internal package.
   CorDapps implementing custom notary services will need to be updated, see ``samples/notary-demo`` for an example.
   Further changes may be required in the future.
-  
-* Fixed incorrect exception handling in ``NodeVaultService._query()``.
 
-* Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
+* Configuration file changes:
 
-* Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
-  Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
+  * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
+    Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
+  * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
+  * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
+  * Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
 
-* Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
-  as the raw type, List for example.
+* More types can be serialized now: java.security.cert.CRLReason, java.security.cert.X509CRL, java.math.BigInteger
 
-* java.security.cert.CRLReason added to the default Whitelist.
-
-* java.security.cert.X509CRL serialization support added.
-
-* Replaced the ``PersistentMap`` in ``NodeSchedulerService`` with an implementation that only loads the next scheduled
-  state from the database into memory, rather than them all.
-
-* Upgraded H2 to v1.4.197.
+* Upgraded H2 to v1.4.197
 
 * Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
   To enable RPC connectivity ensure node’s ``rpcSettings.address`` and ``rpcSettings.adminAddress`` settings are present.
 
 * Changes to the network bootstrapper:
+
   * The whitelist.txt file is no longer needed. The existing network parameters file is used to update the current contracts
     whitelist.
   * The CorDapp jars are also copied to each nodes' `cordapps` directory.
@@ -76,30 +63,9 @@ Unreleased
   framework. Prior to this change it didn't work, but the error thrown was opaque (complaining about too few arguments
   to a constructor). Whilst this was possible in the older Kryo implementation (Kryo passing null as the synthesised
   reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
-  we are disallowing this as the paradigm in general makes little sense for Contract States
-
-* Fix CORDA-1258. Custom serializers were spuriously registered every time a serialization factory was fetched from the cache rather than
-  only once when it was created. Whilst registering serializers that already exist is essentially a no-op, it's a performance overhead for
-  a very frequent operation that hits a synchronisation point (and is thus flagged as contended by our perfomance suite)
+  we are disallowing this as the paradigm in general makes little sense for contract states.
 
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
-
-* Carpenter Exceptions will be caught internally by the Serializer and rethrown as a ``NotSerializableException``
-
-  * Specific details of the error encountered are logged to the node's log file. More information can be enabled by setting the debug level to
-    ``trace`` ; this will cause the full stack trace of the error to be dumped into the log.
-
-* Parsing of ``NodeConfiguration`` will now fail if unknown configuration keys are found.
-
-* The web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
-
-* Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
-
-* Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
-
-* java.math.BigInteger serialization support added.
-
-* Fix CORDA-1355: Reduce amount of classpath scanning during integration tests execution.
 
 .. _changelog_v3.1:
 
@@ -108,8 +74,8 @@ Version 3.1
 
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
-  .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions later
-  than 2.12.3 (including 2.12.4) exhibit a different issue.
+  .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions
+     later than 2.12.3 (including 2.12.4) exhibit a different issue.
 
 * Updated the api scanner gradle plugin to work the same way as the version in master. These changes make the api scanner more
   accurate and fix a couple of bugs, and change the format of the api-current.txt file slightly. Backporting these changes
@@ -180,7 +146,7 @@ Version 3.0
 
    * To support local and test deployments, the node polls the ``additional-node-infos`` directory for these signed ``NodeInfo``
      objects which are stored in its local cache. On startup the node generates its own signed file with the filename format
-     "nodeInfo-*". This can be copied to every node's ``additional-node-infos`` directory that is part of the network.
+     "nodeInfo-\*". This can be copied to every node's ``additional-node-infos`` directory that is part of the network.
 
    * Cordform (which is the ``deployNodes`` gradle task) does this copying automatically for the demos. The ``NetworkMap``
      parameter is no longer needed.
@@ -283,13 +249,13 @@ Version 3.0
 * The ``ReceiveTransactionFlow`` can now be told to record the transaction at the same time as receiving it. Using this
   feature, better support for observer/regulator nodes has been added. See :doc:`tutorial-observer-nodes`.
 
-* Added an overload of ``TransactionWithSignatures.verifySignaturesExcept`` which takes in a collection of ``PublicKey``s.
+* Added an overload of ``TransactionWithSignatures.verifySignaturesExcept`` which takes in a collection of ``PublicKey`` s.
 
 * ``DriverDSLExposedInterface`` has been renamed to ``DriverDSL`` and the ``waitForAllNodesToFinish()`` method has instead
   become a parameter on driver creation.
 
 * Values for the ``database.transactionIsolationLevel`` config now follow the ``java.sql.Connection`` int constants but
-  without the "TRANSACTION_" prefix, i.e. "NONE", "READ_UNCOMMITTED", etc.
+  without the "TRANSACTION" prefix, i.e. "NONE", "READ_UNCOMMITTED", etc.
 
 * Peer-to-peer communications is now via AMQP 1.0 as default.
   Although the legacy Artemis CORE bridging can still be used by setting the ``useAMQPBridges`` configuration property to false.
@@ -438,7 +404,7 @@ Release 1.0
 
 * Vault query soft locking enhancements and deprecations
 
-  * removed original ``VaultService`` ``softLockedStates` query mechanism.
+  * removed original ``VaultService`` ``softLockedStates`` query mechanism.
   * introduced improved ``SoftLockingCondition`` filterable attribute in ``VaultQueryCriteria`` to enable specification of different soft locking retrieval behaviours (exclusive of soft locked states, soft locked states only, specified by set of lock ids)
 
 * Trader demo now issues cash and commercial paper directly from the bank node, rather than the seller node self-issuing
@@ -588,7 +554,7 @@ Milestone 14
 
    * ``PhysicalLocation`` was renamed to ``WorldMapLocation`` to emphasise that it doesn't need to map to a truly physical
      location of the node server.
-   * Slots for multiple IP addresses and ``legalIdentitiesAndCert``s were introduced. Addresses are no longer of type
+   * Slots for multiple IP addresses and ``legalIdentitiesAndCert`` entries were introduced. Addresses are no longer of type
      ``SingleMessageRecipient``, but of ``NetworkHostAndPort``.
 
 * ``ServiceHub.storageService`` has been removed. ``attachments`` and ``validatedTransactions`` are now direct members of
@@ -648,10 +614,10 @@ Milestone 14
     * FIX serialization error: Vault Query over RPC when using custom attributes using VaultCustomQueryCriteria.
 
     * Aggregate function support: extended VaultCustomQueryCriteria and associated DSL to enable specification of
-    Aggregate Functions (sum, max, min, avg, count) with, optional, group by clauses and sorting (on calculated aggregate)
+      aggregate functions (sum, max, min, avg, count) with, optional, group by clauses and sorting (on calculated aggregate).
 
-    * Pagination simplification
-    Pagination continues to be optional, but with following changes:
+    * Pagination simplification. Pagination continues to be optional, with following changes:
+
       - If no PageSpecification provided then a maximum of MAX_PAGE_SIZE (200) results will be returned, otherwise we fail-fast with a ``VaultQueryException`` to alert the API user to the need to specify a PageSpecification.
         Internally, we no longer need to calculate a results count (thus eliminating an expensive SQL query) unless a PageSpecification is supplied (note: that a value of -1 is returned for total_results in this scenario).
         Internally, we now use the AggregateFunction capability to perform the count.
@@ -688,10 +654,12 @@ support for more currencies to the DemoBench and Explorer tools.
      criteria specification sets for both vault attributes and custom contract specific attributes. In addition, new
      queries provide sorting and pagination capabilities.
      The new API provides two function variants which are exposed for usage within Flows and by RPC clients:
+
      - ``queryBy()`` for point-in-time snapshot queries
        (replaces several existing VaultService functions and a number of Kotlin-only extension functions)
      - ``trackBy()`` for snapshot and streaming updates
        (replaces the VaultService ``track()`` function and the RPC ``vaultAndUpdates()`` function)
+
      Existing VaultService API methods will be maintained as deprecated until the following milestone release.
 
    * The NodeSchema service has been enhanced to automatically generate mapped objects for any ContractState objects
@@ -706,7 +674,7 @@ support for more currencies to the DemoBench and Explorer tools.
      register custom contract state schemas they wish to query using the new Vault Query service API (using the
      ``VaultCustomQueryCriteria``).
 
-   * See :doc:`vault-query` for full details and code samples of using the new Vault Query service.
+   * See :doc:`api-vault-query` for full details and code samples of using the new Vault Query service.
 
 * Identity and cryptography related changes:
 
@@ -762,7 +730,7 @@ Milestone 12 (First Public Beta)
 
 * Quite a few changes have been made to the flow API which should make things simpler when writing CorDapps:
 
-    * ``CordaPluginRegistry.requiredFlows`` is no longer needed. Instead annotate any flows you wish to start via RPC with
+   * ``CordaPluginRegistry.requiredFlows`` is no longer needed. Instead annotate any flows you wish to start via RPC with
      ``@StartableByRPC`` and any scheduled flows with ``@SchedulableFlow``.
 
    * ``CordaPluginRegistry.servicePlugins`` is also no longer used, along with ``PluginServiceHub.registerFlowInitiator``.
@@ -812,12 +780,11 @@ Milestone 12 (First Public Beta)
 * There are major changes to transaction signing in flows:
 
      * You should use the new ``CollectSignaturesFlow`` and corresponding ``SignTransactionFlow`` which handle most
-           of the details of this for you. They may get more complex in future as signing becomes a more featureful
-           operation.
-         * ``ServiceHub.legalIdentityKey`` no longer returns a ``KeyPair``, it instead returns just the ``PublicKey`` portion of this pair.
-       The ``ServiceHub.notaryIdentityKey`` has changed similarly. The goal of this change is to keep private keys
-           encapsulated and away from most flow code/Java code, so that the private key material can be stored in HSMs
-           and other key management devices.
+       of the details of this for you. They may get more complex in future as signing becomes a more featureful
+       operation. ``ServiceHub.legalIdentityKey`` no longer returns a ``KeyPair``, it instead returns just the
+       ``PublicKey`` portion of this pair. The ``ServiceHub.notaryIdentityKey`` has changed similarly. The goal of this
+       change is to keep private keys encapsulated and away from most flow code/Java code, so that the private key
+       material can be stored in HSMs and other key management devices.
      * The ``KeyManagementService`` no longer provides any mechanism to request the node's ``PrivateKey`` objects directly.
        Instead signature creation occurs in the ``KeyManagementService.sign``, with the ``PublicKey`` used to indicate
        which of the node's keypairs to use. This lookup also works for ``CompositeKey`` scenarios
@@ -949,7 +916,7 @@ to Corda in M10.
         * Another button launches a database viewer in the system browser.
         * The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
 
-    * You can download Corda DemoBench from `here <https://www.corda.net/downloads/>`_
+    * Download `Corda DemoBench <https://www.corda.net/downloads/>`_.
 
 * Vault:
     * Soft Locking is a new feature implemented in the vault which prevent a node constructing transactions that attempt
@@ -1175,7 +1142,7 @@ Milestone 6
 
 * Decentralised consensus: A prototype RAFT based notary composed of multiple nodes has been added. This implementation
   is optimised for high performance over robustness against malicious cluster members, which may be appropriate for
-  some financial situations. See :ref:`notary-demo` to try it out. A BFT notary will be added later.
+  some financial situations.
 
 * Node explorer app:
 
@@ -1253,7 +1220,7 @@ New features in this release:
     * States can now be written into a relational database and queried using JDBC. The schemas are defined by the
       smart contracts and schema versioning is supported. It is reasonable to write an app that stores data in a mix
       of global ledger transactions and local database tables which are joined on demand, using join key slots that
-      are present in many state definitions. Read more about :doc:`persistence`.
+      are present in many state definitions. Read more about :doc:`api-persistence`.
     * The embedded H2 SQL database is now exposed by default to any tool that can speak JDBC. The database URL is
       printed during node startup and can be used to explore the database, which contains both node internal data
       and tables generated from ledger states.
@@ -1460,7 +1427,7 @@ Highlights of this release:
 We have new documentation on:
 
 * :doc:`event-scheduling`
-* :doc:`core-types`
+* :doc:`api-core-types`
 * :doc:`key-concepts-consensus`
 
 Summary of API changes (not exhaustive):

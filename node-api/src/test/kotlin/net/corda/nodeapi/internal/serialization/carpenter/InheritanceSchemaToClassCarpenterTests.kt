@@ -63,7 +63,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(1, aSchema.interfaces.size)
         assertEquals(J::class.java, aSchema.interfaces[0])
 
-        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
+        val aBuilder = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema)
         val objJ = aBuilder.constructors[0].newInstance(testJ)
         val j = objJ as J
 
@@ -108,7 +108,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(1, aSchema.interfaces.size)
         assertEquals(J::class.java, aSchema.interfaces[0])
 
-        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
+        val aBuilder = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema)
         val objJ = aBuilder.constructors[0].newInstance(testJ, testJJ)
         val j = objJ as J
 
@@ -156,7 +156,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertTrue(I::class.java in aSchema.interfaces)
         assertTrue(II::class.java in aSchema.interfaces)
 
-        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
+        val aBuilder = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema)
         val objA = aBuilder.constructors[0].newInstance(testI, testII)
         val i = objA as I
         val ii = objA as II
@@ -202,7 +202,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertTrue(I::class.java in aSchema.interfaces)
         assertTrue(III::class.java in aSchema.interfaces)
 
-        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
+        val aBuilder = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema)
         val objA = aBuilder.constructors[0].newInstance(testI, testIII)
         val i = objA as I
         val iii = objA as III
@@ -249,8 +249,8 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertNotEquals(null, aCarpenterSchema)
         assertNotEquals(null, bCarpenterSchema)
 
-        val cc = ClassCarpenter(whitelist = AllWhitelist)
-        val cc2 = ClassCarpenter(whitelist = AllWhitelist)
+        val cc = ClassCarpenterImpl(whitelist = AllWhitelist)
+        val cc2 = ClassCarpenterImpl(whitelist = AllWhitelist)
         val bBuilder = cc.build(bCarpenterSchema!!)
         bBuilder.constructors[0].newInstance(a, testIIII)
 
@@ -334,7 +334,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(1, carpenterSchema.dependsOn[iName]!!.size)
         assertEquals(aName, carpenterSchema.dependsOn[iName]!![0])
 
-        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
+        val mc = MetaCarpenter(carpenterSchema, ClassCarpenterImpl(whitelist = AllWhitelist))
         mc.build()
 
         assertEquals(0, mc.schemas.carpenterSchemas.size)
@@ -387,7 +387,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iName })
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iiName })
 
-        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
+        val mc = MetaCarpenter(carpenterSchema, ClassCarpenterImpl(whitelist = AllWhitelist))
         mc.build()
 
         assertEquals(0, mc.schemas.carpenterSchemas.size)
@@ -447,7 +447,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iiiName })
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iName })
 
-        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
+        val mc = MetaCarpenter(carpenterSchema, ClassCarpenterImpl(whitelist = AllWhitelist))
         mc.build()
 
         assertEquals(0, mc.schemas.carpenterSchemas.size)

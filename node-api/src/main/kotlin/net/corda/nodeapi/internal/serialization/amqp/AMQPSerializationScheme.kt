@@ -29,14 +29,14 @@ fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
     }
 }
 
-open class SerializerFactoryFactory {
-    open fun make(context: SerializationContext) =
-            SerializerFactory(context.whitelist, context.deserializationClassLoader)
+// Allow us to create a SerializerFactory with a different ClassCarpenter implementation.
+interface SerializerFactoryFactory {
+    fun make(context: SerializationContext): SerializerFactory
 }
 
 abstract class AbstractAMQPSerializationScheme(
         private val cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>>,
-        val sff: SerializerFactoryFactory = SerializerFactoryFactory()
+        val sff: SerializerFactoryFactory = createSerializerFactoryFactory()
 ) : SerializationScheme {
     constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers)
 

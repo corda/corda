@@ -5,10 +5,7 @@ import com.google.common.reflect.TypeResolver
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.internal.serialization.carpenter.CarpenterMetaSchema
-import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
-import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenter
-import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenterException
+import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -41,9 +38,14 @@ data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typ
 @ThreadSafe
 open class SerializerFactory(
         val whitelist: ClassWhitelist,
-        cl: ClassLoader,
+        val classCarpenter: ClassCarpenter,
         private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
         val fingerPrinter: FingerPrinter = SerializerFingerPrinter()) {
+    constructor(whitelist: ClassWhitelist,
+                classLoader: ClassLoader,
+                evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
+                fingerPrinter: FingerPrinter = SerializerFingerPrinter()
+    ) : this(whitelist, ClassCarpenterImpl(classLoader, whitelist), evolutionSerializerGetter, fingerPrinter)
 
     init {
         fingerPrinter.setOwner(this)
@@ -53,8 +55,6 @@ open class SerializerFactory(
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<SerializerFor>()
     private val transformsCache = ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>()
-
-    open val classCarpenter = ClassCarpenter(cl, whitelist)
 
     val classloader: ClassLoader
         get() = classCarpenter.classloader

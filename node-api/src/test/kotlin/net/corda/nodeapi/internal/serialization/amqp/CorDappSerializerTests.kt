@@ -3,14 +3,14 @@ package net.corda.nodeapi.internal.serialization.amqp
 import org.junit.Test
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationCustomSerializer
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
 import org.assertj.core.api.Assertions
 import java.io.NotSerializableException
 import kotlin.test.assertEquals
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 
 class CorDappSerializerTests {
@@ -108,7 +108,7 @@ class CorDappSerializerTests {
         data class A (val a: Int, val b: NeedsProxy)
 
         class WL : ClassWhitelist {
-            private val allowedClasses = hashSetOf(
+            private val allowedClasses = setOf<String>(
                     A::class.java.name,
                     NeedsProxy::class.java.name)
 
@@ -135,7 +135,7 @@ class CorDappSerializerTests {
 
         class WL : ClassWhitelist {
             // explicitly don't add NeedsProxy
-            private val allowedClasses = hashSetOf(A::class.java.name)
+            private val allowedClasses = setOf<String>(A::class.java.name)
 
             override fun hasListed(type: Class<*>): Boolean = type.name in allowedClasses
         }

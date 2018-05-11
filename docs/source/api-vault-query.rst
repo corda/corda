@@ -377,7 +377,7 @@ Track unconsumed cash states:
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample15
     :end-before: DOCEND VaultQueryExample15
-    :dedent: 20
+    :dedent: 12
 
 Track unconsumed linear states:
 
@@ -385,7 +385,7 @@ Track unconsumed linear states:
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample16
     :end-before: DOCEND VaultQueryExample16
-    :dedent: 20
+    :dedent: 12
 
 .. note:: This will return both ``DealState`` and ``LinearState`` states.
 
@@ -395,7 +395,7 @@ Track unconsumed deal states:
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample17
     :end-before: DOCEND VaultQueryExample17
-    :dedent: 20
+    :dedent: 12
 
 .. note:: This will return only ``DealState`` states.
 
