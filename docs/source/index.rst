@@ -57,6 +57,7 @@ We look forward to seeing what you can do with Corda!
    :maxdepth: 2
 
    design/design-review-process.md
+   design/ent-1133_certificate_hierarchy/design.md
 
 .. toctree::
    :caption: Participate
