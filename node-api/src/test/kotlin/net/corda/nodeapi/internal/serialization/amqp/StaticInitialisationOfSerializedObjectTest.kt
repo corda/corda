@@ -13,17 +13,14 @@ package net.corda.nodeapi.internal.serialization.amqp
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.serialization.AllWhitelist
-import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
+import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenterImpl
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.io.NotSerializableException
 import java.lang.reflect.Type
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 class InStatic : Exception("Help!, help!, I'm being repressed")
 
@@ -112,8 +109,7 @@ class StaticInitialisationOfSerializedObjectTest {
     // Version of a serializer factory that will allow the class carpenter living on the
     // factory to have a different whitelist applied to it than the factory
     class TestSerializerFactory(wl1: ClassWhitelist, wl2: ClassWhitelist) :
-            SerializerFactory(wl1, ClassLoader.getSystemClassLoader()) {
-        override val classCarpenter = ClassCarpenter(ClassLoader.getSystemClassLoader(), wl2)
+            SerializerFactory(wl1, ClassCarpenterImpl(ClassLoader.getSystemClassLoader(), wl2)) {
     }
 
     // This time have the serialization factory and the carpenter use different whitelists

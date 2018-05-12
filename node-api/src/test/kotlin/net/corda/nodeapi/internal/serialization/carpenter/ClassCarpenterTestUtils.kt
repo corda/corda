@@ -49,11 +49,11 @@ fun Schema.mangleNames(names: List<String>): Schema {
  * Custom implementation of a [SerializerFactory] where we need to give it a class carpenter
  * rather than have it create its own
  */
-class SerializerFactoryExternalCarpenter(override val classCarpenter: ClassCarpenter)
-    : SerializerFactory (classCarpenter.whitelist, classCarpenter.classloader)
+class SerializerFactoryExternalCarpenter(classCarpenter: ClassCarpenter)
+    : SerializerFactory (classCarpenter.whitelist, classCarpenter)
 
 open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
-    var cc = ClassCarpenter(whitelist = whitelist)
+    var cc = ClassCarpenterImpl(whitelist = whitelist)
     var factory = SerializerFactoryExternalCarpenter(cc)
 
     fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)

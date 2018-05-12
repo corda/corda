@@ -11,11 +11,11 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
 import org.junit.Test
 import kotlin.test.assertEquals
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 // Prior to certain fixes being made within the [PropertySerializaer] classes these simple
 // deserialization operations would've blown up with type mismatch errors where the deserlized

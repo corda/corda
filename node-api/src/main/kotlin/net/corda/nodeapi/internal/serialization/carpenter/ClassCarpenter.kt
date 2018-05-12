@@ -55,6 +55,13 @@ private val jlClass: String = Type.getInternalName(Class::class.java)
 private val moreObjects: String = Type.getInternalName(MoreObjects::class.java)
 private val toStringHelper: String = Type.getInternalName(MoreObjects.ToStringHelper::class.java)
 
+// Allow us to create alternative ClassCarpenters.
+interface ClassCarpenter {
+    val whitelist: ClassWhitelist
+    val classloader: CarpenterClassLoader
+    fun build(schema: Schema): Class<*>
+}
+
 /**
  * A class carpenter generates JVM bytecodes for a class given a schema and then loads it into a sub-classloader.
  * The generated classes have getters, a toString method and implement a simple property access interface. The
@@ -99,7 +106,7 @@ private val toStringHelper: String = Type.getInternalName(MoreObjects.ToStringHe
  *
  * Equals/hashCode methods are not yet supported.
  */
-class ClassCarpenter(cl: ClassLoader, val whitelist: ClassWhitelist) {
+class ClassCarpenterImpl(cl: ClassLoader, override val whitelist: ClassWhitelist) : ClassCarpenter {
     constructor(whitelist: ClassWhitelist) : this(Thread.currentThread().contextClassLoader, whitelist)
 
     // TODO: Generics.
@@ -108,7 +115,7 @@ class ClassCarpenter(cl: ClassLoader, val whitelist: ClassWhitelist) {
     // TODO: Support annotations.
     // TODO: isFoo getter patterns for booleans (this is what Kotlin generates)
 
-    val classloader = CarpenterClassLoader(cl)
+    override val classloader = CarpenterClassLoader(cl)
 
     private val _loaded = HashMap<String, Class<*>>()
 
@@ -122,7 +129,7 @@ class ClassCarpenter(cl: ClassLoader, val whitelist: ClassWhitelist) {
      * @throws DuplicateNameException if the schema's name is already taken in this namespace (you can create a
      * new ClassCarpenter if you're OK with ambiguous names)
      */
-    fun build(schema: Schema): Class<*> {
+    override fun build(schema: Schema): Class<*> {
         validateSchema(schema)
         // Walk up the inheritance hierarchy and then start walking back down once we either hit the top, or
         // find a class we haven't generated yet.
@@ -249,7 +256,7 @@ class ClassCarpenter(cl: ClassLoader, val whitelist: ClassWhitelist) {
     }
 
     private fun ClassWriter.generateGetMethod() {
-        val ourJvmName = Type.getInternalName(ClassCarpenter::class.java)
+        val ourJvmName = Type.getInternalName(ClassCarpenterImpl::class.java)
         with(visitMethod(ACC_PUBLIC, "get", "(L$jlString;)L$jlObject;", null, null)) {
             visitCode()
             visitVarInsn(ALOAD, 0)  // Load 'this'

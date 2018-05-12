@@ -11,16 +11,10 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.nodeapi.internal.serialization.AllWhitelist
-import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
-import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
-import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryWithWhitelist
+import net.corda.nodeapi.internal.serialization.amqp.testutils.*
+import net.corda.nodeapi.internal.serialization.carpenter.*
 import org.junit.Test
 import kotlin.test.*
-import net.corda.nodeapi.internal.serialization.carpenter.*
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 class DeserializeNeedingCarpentryOfEnumsTest : AmqpCarpenterBase(AllWhitelist) {
     companion object {

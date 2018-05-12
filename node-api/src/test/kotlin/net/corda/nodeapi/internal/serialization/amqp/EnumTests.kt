@@ -14,6 +14,10 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testName
 import org.assertj.core.api.Assertions
@@ -22,10 +26,6 @@ import java.io.NotSerializableException
 import java.time.DayOfWeek
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 class EnumTests {
     enum class Bras {
@@ -79,7 +79,7 @@ class EnumTests {
     }
 
     @Suppress("NOTHING_TO_INLINE")
-    inline private fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
+    private inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 
     private val sf1 = testDefaultFactoryNoEvolution()
 

@@ -48,7 +48,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
+        val aBuilder = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -79,7 +79,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
+        val aBuilder = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -114,7 +114,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
+        val aBuilder = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -149,7 +149,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
+        val aBuilder = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -184,7 +184,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
+        val aBuilder = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -219,7 +219,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWh
                 force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val aBuilder = ClassCarpenter(whitelist = AllWhitelist).build(aSchema)
+        val aBuilder = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema)
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)

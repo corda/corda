@@ -11,6 +11,8 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryWithWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testName
@@ -18,15 +20,11 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 class DeserializeAndReturnEnvelopeTests {
     // the 'this' reference means we can't just move this to the common test utils
     @Suppress("NOTHING_TO_INLINE")
-    inline private fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
+    private inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 
     val factory = testDefaultFactoryNoEvolution()
 

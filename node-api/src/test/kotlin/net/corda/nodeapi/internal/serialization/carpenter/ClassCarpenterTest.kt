@@ -27,7 +27,7 @@ class ClassCarpenterTest {
         val b: Int
     }
 
-    private val cc = ClassCarpenter(whitelist = AllWhitelist)
+    private val cc = ClassCarpenterImpl(whitelist = AllWhitelist)
 
     // We have to ignore synthetic fields even though ClassCarpenter doesn't create any because the JaCoCo
     // coverage framework auto-magically injects one method and one field into every class loaded into the JVM.

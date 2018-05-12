@@ -33,7 +33,7 @@ class TestAttachmentConstraint : AttachmentConstraint {
 
 class GenericsTests {
     companion object {
-        val VERBOSE = true
+        const val VERBOSE = true
 
         @Suppress("UNUSED")
         var localPath = projectRootDir.toUri().resolve(
