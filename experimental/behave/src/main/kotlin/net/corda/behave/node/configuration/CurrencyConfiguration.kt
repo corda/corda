@@ -16,5 +16,4 @@ class CurrencyConfiguration(private val issuableCurrencies: List<String>) : Conf
                 """
             }
         }
-
 }

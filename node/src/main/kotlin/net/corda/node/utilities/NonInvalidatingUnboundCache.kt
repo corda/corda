@@ -10,7 +10,7 @@ class NonInvalidatingUnboundCache<K, V> private constructor(
         val cache: LoadingCache<K, V>
 ) : LoadingCache<K, V> by cache {
 
-    constructor(loadFunction: (K) -> V, removalListener: RemovalListener<K, V> = RemovalListener { key, value, cause -> },
+    constructor(loadFunction: (K) -> V, removalListener: RemovalListener<K, V> = RemovalListener { _, _, _ -> },
                 keysToPreload: () -> Iterable<K> = { emptyList() }) :
             this(buildCache(loadFunction, removalListener, keysToPreload))
 

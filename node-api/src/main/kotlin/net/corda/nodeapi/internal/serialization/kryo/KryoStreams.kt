@@ -1,4 +1,5 @@
 @file:JvmName("KryoStreams")
+
 package net.corda.nodeapi.internal.serialization.kryo
 
 import com.esotericsoftware.kryo.io.Input

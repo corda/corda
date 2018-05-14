@@ -1,6 +1,5 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.serialization.CordaSerializable
@@ -20,7 +19,6 @@ import java.security.SecureRandom
  */
 @CordaSerializable
 sealed class SessionMessage
-
 
 @CordaSerializable
 data class SessionId(val toLong: Long) {

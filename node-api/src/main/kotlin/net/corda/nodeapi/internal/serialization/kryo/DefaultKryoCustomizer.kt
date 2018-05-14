@@ -216,6 +216,7 @@ object DefaultKryoCustomizer {
             if (kryo.serializationContext() != null) {
                 val attachmentHash = SecureHash.SHA256(input.readBytes(32))
                 val contract = input.readString()
+                @Suppress("UNCHECKED_CAST")
                 val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
                 val uploader = input.readString()
                 val context = kryo.serializationContext()!!
@@ -233,6 +234,7 @@ object DefaultKryoCustomizer {
             } else {
                 val attachment = GeneratedAttachment(input.readBytesWithLength())
                 val contract = input.readString()
+                @Suppress("UNCHECKED_CAST")
                 val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
                 val uploader = input.readString()
                 return ContractAttachment(attachment, contract, additionalContracts, uploader)

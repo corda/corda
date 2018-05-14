@@ -41,11 +41,10 @@ class PostgreSQLService(
     }
 
     companion object {
-        val host = "localhost"
-        val database = "postgres"
-        val schema = "public"
-        val username = "postgres"
-        val driver = "postgresql-42.1.4.jar"
+        const val host = "localhost"
+        const val database = "postgres"
+        const val schema = "public"
+        const val username = "postgres"
+        const val driver = "postgresql-42.1.4.jar"
     }
-
 }

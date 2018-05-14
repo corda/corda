@@ -57,7 +57,7 @@ object RpcClientObservableSerializer : Serializer<Observable<*>>() {
         }.dematerialize()
     }
 
-    private fun Input.readInvocationId() : Trace.InvocationId? {
+    private fun Input.readInvocationId(): Trace.InvocationId? {
 
         val value = readString() ?: return null
         val timestamp = readLong()

@@ -137,7 +137,7 @@ class RPCServer(
 
     private fun createObservableSubscriptionMap(): ObservableSubscriptionMap {
         val onObservableRemove = RemovalListener<InvocationId, ObservableSubscription> { key, value, cause ->
-            log.debug { "Unsubscribing from Observable with id ${key} because of ${cause}" }
+            log.debug { "Unsubscribing from Observable with id $key because of $cause" }
             value!!.subscription.unsubscribe()
         }
         return Caffeine.newBuilder().removalListener(onObservableRemove).executor(SameThreadExecutor.getExecutor()).build()
@@ -374,7 +374,7 @@ class RPCServer(
     private fun bufferIfQueueNotBound(clientAddress: SimpleString, message: RPCApi.ServerToClient.RpcReply, context: ObservableContext): Boolean {
         val clientBuffer = responseMessageBuffer.compute(clientAddress, { _, value ->
             when (value) {
-                null -> BufferOrNone.Buffer(ArrayList<MessageAndContext>()).apply {
+                null -> BufferOrNone.Buffer(ArrayList()).apply {
                     container.add(MessageAndContext(message, context))
                 }
                 is BufferOrNone.Buffer -> value.apply {

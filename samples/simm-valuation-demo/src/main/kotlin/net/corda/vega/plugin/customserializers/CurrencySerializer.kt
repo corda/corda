@@ -7,6 +7,6 @@ import net.corda.core.serialization.SerializationCustomSerializer
 class CurrencySerializer : SerializationCustomSerializer<Currency, CurrencySerializer.Proxy> {
     data class Proxy(val currency: String)
 
-    override fun fromProxy(proxy: Proxy) = Currency.parse(proxy.currency)
+    override fun fromProxy(proxy: Proxy): Currency = Currency.parse(proxy.currency)
     override fun toProxy(obj: Currency) = Proxy(obj.toString())
 }

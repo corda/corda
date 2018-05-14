@@ -8,8 +8,8 @@ class SimplifyClassTests {
     fun test1() {
         data class A(val a: Int)
 
-        println (A::class.java.name)
-        println (A::class.java.name.simplifyClass())
+        println(A::class.java.name)
+        println(A::class.java.name.simplifyClass())
     }
 
     @Test

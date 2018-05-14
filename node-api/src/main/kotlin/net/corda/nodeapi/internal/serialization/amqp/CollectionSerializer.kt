@@ -14,10 +14,10 @@ import kotlin.collections.LinkedHashSet
 /**
  * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
  */
-class CollectionSerializer(val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
+class CollectionSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType
             ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))
-    override val typeDescriptor by lazy {
+    override val typeDescriptor: Symbol by lazy {
         Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
     }
 
@@ -53,10 +53,8 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
                 (declaredType as? ParameterizedType)
                         ?: DeserializedParameterizedType(collectionClass, arrayOf(SerializerFactory.AnyType))
 
-
         private fun findMostSuitableCollectionType(actualClass: Class<*>): Class<out Collection<*>> =
                 supportedTypes.keys.findLast { it.isAssignableFrom(actualClass) }!!
-
     }
 
     private val concreteBuilder: (List<*>) -> Collection<*> = findConcreteType(declaredType.rawType as Class<*>)

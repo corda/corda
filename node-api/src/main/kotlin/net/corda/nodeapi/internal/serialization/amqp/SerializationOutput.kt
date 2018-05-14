@@ -124,18 +124,18 @@ open class SerializationOutput @JvmOverloads constructor(
             // assigned to them first as they will be first read from the stream on receiving end.
             // Skip for primitive types as they are too small and overhead of referencing them will be much higher than their content
             if (suitableForObjectReference(obj.javaClass)) {
-                objectHistory.put(obj, objectHistory.size)
+                objectHistory[obj] = objectHistory.size
             }
         } else {
             data.writeReferencedObject(ReferencedObject(retrievedRefCount))
         }
     }
 
-    open internal fun writeTypeNotations(vararg typeNotation: TypeNotation): Boolean {
+    internal open fun writeTypeNotations(vararg typeNotation: TypeNotation): Boolean {
         return schemaHistory.addAll(typeNotation)
     }
 
-    open internal fun requireSerializer(type: Type) {
+    internal open fun requireSerializer(type: Type) {
         if (type != SerializerFactory.AnyType && type != Object::class.java) {
             val serializer = serializerFactory.get(null, type)
             if (serializer !in serializerHistory) {

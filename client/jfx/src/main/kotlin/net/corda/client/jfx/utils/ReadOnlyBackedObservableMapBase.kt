@@ -46,7 +46,7 @@ open class ReadOnlyBackedObservableMapBase<K, A, B> : ObservableMap<K, A> {
 
     override fun containsValue(value: A) = backingMap.any { it.value.first == value }
 
-    override fun get(key: K) = backingMap.get(key)?.first
+    override fun get(key: K) = backingMap[key]?.first
 
     override fun isEmpty() = backingMap.isEmpty()
 

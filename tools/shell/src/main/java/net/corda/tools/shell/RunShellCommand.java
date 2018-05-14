@@ -11,7 +11,10 @@ import org.crsh.cli.Usage;
 import org.crsh.command.InvocationContext;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static java.util.Comparator.comparing;
 
@@ -44,7 +47,7 @@ public class RunShellCommand extends InteractiveShellCommand {
         // Sends data down the pipeline about what commands are available. CRaSH will render it nicely.
         // Each element we emit is a map of column -> content.
         Set<Map.Entry<String, String>> entries = parser.getAvailableCommands().entrySet();
-        ArrayList<Map.Entry<String, String>> entryList = new ArrayList<>(entries);
+        List<Map.Entry<String, String>> entryList = new ArrayList<>(entries);
         entryList.sort(comparing(Map.Entry::getKey));
         for (Map.Entry<String, String> entry : entryList) {
             // Skip these entries as they aren't really interesting for the user.

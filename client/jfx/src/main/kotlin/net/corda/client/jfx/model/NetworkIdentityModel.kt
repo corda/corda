@@ -22,7 +22,7 @@ class NetworkIdentityModel {
                         else -> false
                     }
                 }
-                if(update is MapChange.Modified || update is MapChange.Added){
+                if (update is MapChange.Modified || update is MapChange.Added) {
                     list.addAll(update.node)
                 }
             }

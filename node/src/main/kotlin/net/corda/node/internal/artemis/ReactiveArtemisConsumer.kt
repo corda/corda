@@ -48,7 +48,7 @@ private class MultiplexingReactiveArtemisConsumer(private val queueNames: Set<St
     override fun stop() {
 
         synchronized(this) {
-            if(startedFlag) {
+            if (startedFlag) {
                 disconnect()
                 startedFlag = false
             }
@@ -79,7 +79,7 @@ private class MultiplexingReactiveArtemisConsumer(private val queueNames: Set<St
     override fun disconnect() {
 
         synchronized(this) {
-            if(connected) {
+            if (connected) {
                 consumers.forEach(ClientConsumer::close)
                 sessions.forEach(ClientSession::close)
                 consumers.clear()

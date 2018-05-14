@@ -8,6 +8,7 @@ import net.corda.node.services.statemachine.Checkpoint
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.stream.Stream
@@ -21,7 +22,7 @@ import javax.persistence.Lob
  * Simple checkpoint key value storage in DB.
  */
 class DBCheckpointStorage : CheckpointStorage {
-    val log = LoggerFactory.getLogger(this::class.java)
+    val log: Logger = LoggerFactory.getLogger(this::class.java)
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")

@@ -90,7 +90,7 @@ class AMQPServer(val hostName: String,
                     parent.password,
                     parent.trace,
                     {
-                        parent.clientChannels.put(it.first.remoteAddress(), it.first)
+                        parent.clientChannels[it.first.remoteAddress()] = it.first
                         parent._onConnection.onNext(it.second)
                     },
                     {
@@ -194,5 +194,4 @@ class AMQPServer(val hostName: String,
     private val _onConnection = PublishSubject.create<ConnectionChange>().toSerialized()
     val onConnection: Observable<ConnectionChange>
         get() = _onConnection
-
 }

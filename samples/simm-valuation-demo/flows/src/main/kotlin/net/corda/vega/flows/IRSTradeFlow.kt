@@ -38,7 +38,6 @@ object IRSTradeFlow {
                     session,
                     TwoPartyDealFlow.AutoOffer(notary, offer)))
         }
-
     }
 
     @InitiatedBy(Requester::class)

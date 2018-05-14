@@ -158,7 +158,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
      * 4. Verifiers. These are given read access to the verification request queue and write access to the response queue.
      */
     private fun ConfigurationImpl.configureAddressSecurity(): Configuration {
-        val nodeInternalRole = Role(NODE_ROLE, true, true, true, true, true, true, true, true)
+        val nodeInternalRole = Role(NODE_ROLE, true, true, true, true, true, true, true, true, true, true)
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles["$P2P_PREFIX#"] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
         securityRoles[VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, consume = true))
@@ -170,7 +170,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                                deleteDurableQueue: Boolean = false, createNonDurableQueue: Boolean = false,
                                deleteNonDurableQueue: Boolean = false, manage: Boolean = false, browse: Boolean = false): Role {
         return Role(name, send, consume, createDurableQueue, deleteDurableQueue, createNonDurableQueue,
-                deleteNonDurableQueue, manage, browse)
+                deleteNonDurableQueue, manage, browse, createDurableQueue || createNonDurableQueue, deleteDurableQueue || deleteNonDurableQueue)
     }
 
     @Throws(IOException::class, KeyStoreException::class)

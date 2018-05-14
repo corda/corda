@@ -10,7 +10,12 @@ import net.corda.core.internal.declaredField
 import net.corda.core.internal.toWireTransaction
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.internal.cordapp.CordappLoader
@@ -28,10 +33,12 @@ import net.corda.testing.internal.kryoSpecific
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
-import org.junit.Assert.*
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.URL
 import java.net.URLClassLoader
@@ -125,6 +132,7 @@ class AttachmentsClassLoaderTests {
     }
 
     @Test
+    @Suppress("DEPRECATION")
     fun `test overlapping file exception`() {
         val storage = attachments
         val att0 = attachmentId
@@ -137,7 +145,8 @@ class AttachmentsClassLoaderTests {
     }
 
     @Test
-    fun `basic`() {
+    @Suppress("DEPRECATION")
+    fun basic() {
         val storage = attachments
         val att0 = attachmentId
         val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream())
@@ -149,6 +158,7 @@ class AttachmentsClassLoaderTests {
     }
 
     @Test
+    @Suppress("DEPRECATION")
     fun `Check platform independent path handling in attachment jars`() {
         val storage = MockAttachmentStorage()
 
@@ -169,6 +179,7 @@ class AttachmentsClassLoaderTests {
     }
 
     @Test
+    @Suppress("DEPRECATION")
     fun `loading class AnotherDummyContract`() {
         val storage = attachments
         val att0 = attachmentId
@@ -190,6 +201,7 @@ class AttachmentsClassLoaderTests {
     }
 
     @Test
+    @Suppress("DEPRECATION")
     fun `testing Kryo with ClassLoader (with top level class name)`() {
         val contract = createContract2Cash()
 
@@ -212,6 +224,7 @@ class AttachmentsClassLoaderTests {
     class Data(val contract: Contract)
 
     @Test
+    @Suppress("DEPRECATION")
     fun `testing Kryo with ClassLoader (without top level class name)`() {
         val data = Data(createContract2Cash())
 

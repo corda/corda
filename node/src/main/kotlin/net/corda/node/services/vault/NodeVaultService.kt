@@ -466,7 +466,7 @@ class NodeVaultService(
                     }
                 }
         if (stateRefs.isNotEmpty())
-            statesAndRefs.addAll(servicesForResolution.loadStates(stateRefs) as Collection<StateAndRef<T>>)
+            statesAndRefs.addAll(uncheckedCast(servicesForResolution.loadStates(stateRefs)))
 
         return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
     }

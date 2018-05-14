@@ -69,10 +69,10 @@ class Main : App(MainView::class) {
     }
 
     private fun asInteger(s: String?): Int? {
-        try {
-            return s?.toInt()
+        return try {
+            s?.toInt()
         } catch (e: NumberFormatException) {
-            return null
+            null
         }
     }
 

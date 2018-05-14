@@ -9,7 +9,6 @@ import javafx.util.Callback
 import net.corda.explorer.formatters.Formatter
 import org.fxmisc.easybind.EasyBind
 
-
 fun <S> TreeTableView<S>.setColumnPrefWidthPolicy(
         getColumnWidth: (tableWidthWithoutPaddingAndBorder: Number, column: TreeTableColumn<S, *>) -> Number
 ) {

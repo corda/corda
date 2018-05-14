@@ -212,17 +212,17 @@ data class ContractUpgradeLedgerTransaction(
      * Outputs are computed by running the contract upgrade logic on input states. This is done eagerly so that the
      * transaction is verified during construction.
      */
-    override val outputs: List<TransactionState<ContractState>> = inputs.map { input ->
+    override val outputs: List<TransactionState<ContractState>> = inputs.map { (state) ->
         // TODO: if there are encumbrance states in the inputs, just copy them across without modifying
-        val upgradedState = upgradedContract.upgrade(input.state.data)
-        val inputConstraint = input.state.constraint
+        val upgradedState = upgradedContract.upgrade(state.data)
+        val inputConstraint = state.constraint
         val outputConstraint = when (inputConstraint) {
             is HashAttachmentConstraint -> HashAttachmentConstraint(upgradedContractAttachment.id)
             WhitelistedByZoneAttachmentConstraint -> WhitelistedByZoneAttachmentConstraint
             else -> throw IllegalArgumentException("Unsupported input contract constraint $inputConstraint")
         }
         // TODO: re-map encumbrance pointers
-        input.state.copy(
+        state.copy(
                 data = upgradedState,
                 contract = upgradedContractClassName,
                 constraint = outputConstraint

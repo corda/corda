@@ -41,7 +41,6 @@ class AttachmentTest {
         }
         assertEquals(1, closeCalls)
     }
-
 }
 
 class UniqueIdentifierTests {
@@ -73,5 +72,4 @@ class UniqueIdentifierTests {
         assertEquals(ids[1], ids[2])
         assertEquals(ids[1].hashCode(), ids[2].hashCode())
     }
-
 }

@@ -47,5 +47,4 @@ class DumpHistoryOnErrorInterceptor(val delegate: TransitionExecutor) : Transiti
 
         return Pair(continuation, nextState)
     }
-
 }

@@ -58,7 +58,7 @@ class RPCFailureTests {
     }
 
     @Test
-    fun `unserializable`() = rpc {
+    fun unserializable() = rpc {
         assertThatThrownBy { it.getUnserializable() }.isInstanceOf(KryoException::class.java)
     }
 

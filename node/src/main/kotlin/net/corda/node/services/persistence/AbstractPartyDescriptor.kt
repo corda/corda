@@ -2,6 +2,7 @@ package net.corda.node.services.persistence
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.contextLogger
 import org.hibernate.type.descriptor.WrapperOptions
@@ -53,10 +54,10 @@ class AbstractPartyDescriptor(private val identityService: IdentityService) : Ab
     override fun <X : Any> unwrap(value: AbstractParty?, type: Class<X>, options: WrapperOptions): X? {
         return if (value != null) {
             if (AbstractParty::class.java.isAssignableFrom(type)) {
-                return value as X
+                return uncheckedCast(value)
             }
             if (String::class.java.isAssignableFrom(type)) {
-                return toString(value) as X
+                return uncheckedCast(toString(value))
             }
             throw unknownUnwrap(type)
         } else {

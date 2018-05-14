@@ -2201,7 +2201,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test
-    fun `unconsumedCashStatesForSpending_single_issuer_reference`() {
+    fun unconsumedCashStatesForSpending_single_issuer_reference() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(1000.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
             this.session.flush()

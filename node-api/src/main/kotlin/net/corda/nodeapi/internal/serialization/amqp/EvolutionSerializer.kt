@@ -91,7 +91,7 @@ abstract class EvolutionSerializer(
             val constructorArgs = arrayOfNulls<Any?>(constructor.parameters.size)
 
             constructor.parameters.withIndex().forEach {
-                readersAsSerialized.get(it.value.name!!)?.apply {
+                readersAsSerialized[it.value.name!!]?.apply {
                     this.resultsIndex = it.index
                 } ?: if (!it.value.type.isMarkedNullable) {
                     throw NotSerializableException(

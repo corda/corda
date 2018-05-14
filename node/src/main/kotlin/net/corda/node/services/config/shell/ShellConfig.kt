@@ -12,7 +12,6 @@ import net.corda.tools.shell.ShellConfiguration.Companion.SSHD_HOSTKEY_DIR
 import net.corda.tools.shell.ShellConfiguration.Companion.SSH_PORT
 import net.corda.tools.shell.ShellSslOptions
 
-
 //re-packs data to Shell specific classes
 fun NodeConfiguration.toShellConfig(): ShellConfiguration {
 

@@ -40,7 +40,6 @@ class PrivateKeySerializationTest(private val privateKey: PrivateKey, private va
     fun `failed with wrong UseCase`() {
         assertThatThrownBy { privateKey.serialize(context = SerializationDefaults.P2P_CONTEXT) }
                 .isInstanceOf(IllegalStateException::class.java)
-                .hasMessageContaining("UseCase '${P2P}' is not within")
-
+                .hasMessageContaining("UseCase '$P2P' is not within")
     }
 }

@@ -47,8 +47,7 @@ class OutOfProcessTransactionVerifierService(
         metrics.register(metric("VerificationsInFlight"), Gauge { verificationHandles.size })
         responseConsumer.setMessageHandler { message ->
             val response = VerifierApi.VerificationResponse.fromClientMessage(message)
-            val handle = verificationHandles.remove(response.verificationId) ?:
-                    throw VerificationResultForUnknownTransaction(response.verificationId)
+            val handle = verificationHandles.remove(response.verificationId) ?: throw VerificationResultForUnknownTransaction(response.verificationId)
             handle.durationTimerContext.stop()
             val exception = response.exception
             if (exception == null) {

@@ -75,7 +75,7 @@ inline fun <reified I : RPCOps> RPCDriverDSL.startRpcClient(
         configuration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default
 ) = startRpcClient(I::class.java, rpcAddress, username, password, configuration)
 
-inline fun<reified I : RPCOps> RPCDriverDSL.startRpcClient(
+inline fun <reified I : RPCOps> RPCDriverDSL.startRpcClient(
         haAddressPool: List<NetworkHostAndPort>,
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password,

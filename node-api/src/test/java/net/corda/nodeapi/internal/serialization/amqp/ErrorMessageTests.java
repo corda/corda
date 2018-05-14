@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.serialization.amqp;
 
 import net.corda.nodeapi.internal.serialization.AllWhitelist;
 import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationContext;
-import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationContextKt;
 import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;

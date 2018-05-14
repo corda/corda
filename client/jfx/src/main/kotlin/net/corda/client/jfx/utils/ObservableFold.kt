@@ -30,7 +30,7 @@ private fun onError(th: Throwable) {
  */
 fun <A, B> Observable<A>.foldToObservableValue(initial: B, folderFun: (A, B) -> B): ObservableValue<B> {
     val result = SimpleObjectProperty<B>(initial)
-    subscribe ({
+    subscribe({
         Platform.runLater {
             result.set(folderFun(it, result.get()))
         }

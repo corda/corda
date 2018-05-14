@@ -15,5 +15,4 @@ class PostreSQLServiceTests {
         service.stop()
         assertThat(didStart).isTrue()
     }
-
 }

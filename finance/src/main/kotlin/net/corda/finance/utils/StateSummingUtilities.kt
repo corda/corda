@@ -62,13 +62,10 @@ fun Iterable<ContractState>.sumCommoditiesOrZero(currency: Issued<Commodity>) = 
  * Sums the obligation states in the list, throwing an exception if there are none. All state objects in the
  * list are presumed to be nettable.
  */
-fun <P : Any> Iterable<ContractState>.sumObligations(): Amount<Issued<Obligation.Terms<P>>>
-        = filterIsInstance<Obligation.State<P>>().map { it.amount }.sumOrThrow()
+fun <P : Any> Iterable<ContractState>.sumObligations(): Amount<Issued<Obligation.Terms<P>>> = filterIsInstance<Obligation.State<P>>().map { it.amount }.sumOrThrow()
 
 /** Sums the obligation states in the list, returning null if there are none. */
-fun <P : Any> Iterable<ContractState>.sumObligationsOrNull(): Amount<Issued<Obligation.Terms<P>>>?
-        = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrNull()
+fun <P : Any> Iterable<ContractState>.sumObligationsOrNull(): Amount<Issued<Obligation.Terms<P>>>? = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrNull()
 
 /** Sums the obligation states in the list, returning zero of the given product if there are none. */
-fun <P : Any> Iterable<ContractState>.sumObligationsOrZero(issuanceDef: Issued<Obligation.Terms<P>>): Amount<Issued<Obligation.Terms<P>>>
-        = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(issuanceDef)
+fun <P : Any> Iterable<ContractState>.sumObligationsOrZero(issuanceDef: Issued<Obligation.Terms<P>>): Amount<Issued<Obligation.Terms<P>>> = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(issuanceDef)

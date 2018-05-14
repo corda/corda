@@ -466,7 +466,7 @@ public class FlowCookbookJava {
             subFlow(new SendStateAndRefFlow(counterpartySession, dummyStates));
 
             // On the receive side ...
-            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<DummyState>(counterpartySession));
+            List<StateAndRef<DummyState>> resolvedStateAndRef = subFlow(new ReceiveStateAndRefFlow<>(counterpartySession));
             // DOCEND 14
 
             try {

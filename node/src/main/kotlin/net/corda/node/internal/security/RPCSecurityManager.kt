@@ -1,7 +1,6 @@
 package net.corda.node.internal.security
 
 import net.corda.core.context.AuthServiceId
-import org.apache.shiro.authc.AuthenticationException
 import javax.security.auth.login.FailedLoginException
 
 /**

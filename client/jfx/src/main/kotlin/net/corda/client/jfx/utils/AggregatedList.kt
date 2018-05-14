@@ -70,21 +70,25 @@ class AggregatedList<A, E : Any, K : Any>(
     override fun sourceChanged(c: ListChangeListener.Change<out E>) {
         beginChange()
         while (c.next()) {
-            if (c.wasPermutated()) {
-                // Permutation should not change aggregation
-            } else if (c.wasUpdated()) {
-                // Update should not change aggregation
-            } else {
-                for (removedSourceItem in c.removed) {
-                    val removedPair = removeItem(removedSourceItem)
-                    if (removedPair != null) {
-                        nextRemove(removedPair.first, removedPair.second.value)
-                    }
+            when {
+                c.wasPermutated() -> {
+                    // Permutation should not change aggregation
                 }
-                for (addedItem in c.addedSubList) {
-                    val insertIndex = addItem(addedItem)
-                    if (insertIndex != null) {
-                        nextAdd(insertIndex, insertIndex + 1)
+                c.wasUpdated() -> {
+                    // Update should not change aggregation
+                }
+                else -> {
+                    for (removedSourceItem in c.removed) {
+                        val removedPair = removeItem(removedSourceItem)
+                        if (removedPair != null) {
+                            nextRemove(removedPair.first, removedPair.second.value)
+                        }
+                    }
+                    for (addedItem in c.addedSubList) {
+                        val insertIndex = addItem(addedItem)
+                        if (insertIndex != null) {
+                            nextAdd(insertIndex, insertIndex + 1)
+                        }
                     }
                 }
             }

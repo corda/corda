@@ -23,7 +23,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         private val log = contextLogger()
     }
 
-    abstract protected val cache: LoadingCache<K, Optional<V>>
+    protected abstract val cache: LoadingCache<K, Optional<V>>
 
     /**
      * Returns the value associated with the key, first loading that value from the storage if necessary.
@@ -163,13 +163,9 @@ class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
         fromPersistentEntity,
         toPersistentEntity,
         persistentEntityClass) {
-    override val cache = NonInvalidatingWeightBasedCache<K, Optional<V>>(
+    override val cache = NonInvalidatingWeightBasedCache(
             maxWeight = maxWeight,
-            weigher = object : Weigher<K, Optional<V>> {
-                override fun weigh(key: K, value: Optional<V>): Int {
-                    return weighingFunc(key, value)
-                }
-            },
+            weigher = Weigher<K, Optional<V>> { key, value -> weighingFunc(key, value) },
             loadFunction = { key -> Optional.ofNullable(loadValue(key)) }
     )
 }

@@ -72,7 +72,7 @@ abstract class Transform : DescribedType {
  */
 class UnknownTransform : Transform() {
     companion object : DescribedTypeConstructor<UnknownTransform> {
-        val typeName = "UnknownTransform"
+        const val typeName = "UnknownTransform"
 
         override fun newInstance(obj: Any?) = UnknownTransform()
 
@@ -90,7 +90,7 @@ class UnknownTransform : Transform() {
  */
 class UnknownTestTransform(val a: Int, val b: Int, val c: Int) : Transform() {
     companion object : DescribedTypeConstructor<UnknownTestTransform> {
-        val typeName = "UnknownTest"
+        const val typeName = "UnknownTest"
 
         override fun newInstance(obj: Any?): UnknownTestTransform {
             val described = obj as List<*>
@@ -117,7 +117,7 @@ class EnumDefaultSchemaTransform(val old: String, val new: String) : Transform()
         /**
          * Value encoded into the schema that identifies a transform as this type
          */
-        val typeName = "EnumDefault"
+        const val typeName = "EnumDefault"
 
         override fun newInstance(obj: Any?): EnumDefaultSchemaTransform {
             val described = obj as List<*>
@@ -154,7 +154,7 @@ class RenameSchemaTransform(val from: String, val to: String) : Transform() {
         /**
          * Value encoded into the schema that identifies a transform as this type
          */
-        val typeName = "Rename"
+        const val typeName = "Rename"
 
         override fun newInstance(obj: Any?): RenameSchemaTransform {
             val described = obj as List<*>
@@ -213,9 +213,7 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
                             // we're explicitly rejecting repeated annotations, whilst it's fine and we'd just
                             // ignore them it feels like a good thing to alert the user to since this is
                             // more than likely a typo in their code so best make it an actual error
-                            if (transforms.computeIfAbsent(transform.enum) { mutableListOf() }
-                                            .filter { t == it }
-                                            .isNotEmpty()) {
+                            if (transforms.computeIfAbsent(transform.enum) { mutableListOf() }.any { t == it }) {
                                 throw NotSerializableException(
                                         "Repeated unique transformation annotation of type ${t.name}")
                             }
