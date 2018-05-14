@@ -15,6 +15,7 @@ import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelPromise
 import io.netty.channel.socket.SocketChannel
+import io.netty.handler.proxy.ProxyConnectException
 import io.netty.handler.proxy.ProxyConnectionEvent
 import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeCompletionEvent
@@ -130,6 +131,10 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         log.warn("Closing channel due to nonrecoverable exception ${cause.message}")
         if (log.isTraceEnabled) {
             log.trace("Pipeline uncaught exception", cause)
+        }
+        if (cause is ProxyConnectException) {
+            log.warn("Proxy connection failed ${cause.message}")
+            suppressClose = true // The pipeline gets marked as active on connection to the proxy rather than to the target, which causes excess close events
         }
         ctx.close()
     }
