@@ -138,7 +138,7 @@ see changes to this list.
 * Przemyslaw Bak (R3)
 * quiark
 * RangerOfFire
-* renlulu
+* renlulu (s-labs)
 * Rex Maudsley (Société Générale)
 * Rhett Brewer (Goldman Sachs)
 * Richard Crook (RBS)
