@@ -46,13 +46,12 @@ object ConfigHelper {
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
         val databaseConfig = ConfigFactory.parseResources(System.getProperty("custom.databaseProvider")+".conf", parseOptions.setAllowMissing(true))
 
-        val systemOverrides = systemProperties().cordaEntriesOnly()
-        val environmentOverrides = systemEnvironment().cordaEntriesOnly()
-
         // Detect the underlying OS. If mac or windows non-server then we assume we're running in devMode. Unless specified otherwise.
         val smartDevMode = CordaSystemUtils.isOsMac() || (CordaSystemUtils.isOsWindows() && !CordaSystemUtils.getOsName().toLowerCase().contains("server"))
         val devModeConfig = ConfigFactory.parseMap(mapOf("devMode" to smartDevMode))
 
+        val systemOverrides = systemProperties().cordaEntriesOnly()
+        val environmentOverrides = systemEnvironment().cordaEntriesOnly()
         val finalConfig = configOverrides
                 // Add substitution values here
                 .withFallback(configOf("custom.nodeOrganizationName" to parseToDbSchemaFriendlyName(baseDirectory.fileName.toString()))) //for database integration tests
