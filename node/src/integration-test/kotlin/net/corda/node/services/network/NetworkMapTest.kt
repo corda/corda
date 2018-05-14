@@ -14,12 +14,8 @@ import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.internal.list
-import net.corda.core.internal.readObject
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
@@ -219,6 +215,7 @@ class NetworkMapTest : IntegrationTest() {
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
                 initialiseSerialization = false,
+                notarySpecs = emptyList(),
                 systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString())
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
