@@ -36,7 +36,7 @@ open class SignedData<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSign
      * @throws IllegalArgumentException if the data is invalid.
      */
     @Throws(IllegalArgumentException::class)
-    open protected fun verifyData(data: T) {
+    protected open fun verifyData(data: T) {
         // By default we accept anything
     }
 }

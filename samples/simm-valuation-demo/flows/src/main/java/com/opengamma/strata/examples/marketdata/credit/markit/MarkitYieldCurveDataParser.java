@@ -61,26 +61,22 @@ public class MarkitYieldCurveDataParser {
                     Double.parseDouble(rateText));
             IsdaYieldCurveConvention convention = IsdaYieldCurveConvention.of(conventionText);
 
-            List<Point> points = curveData.get(convention);
-            if (points == null) {
-                points = Lists.newArrayList();
-                curveData.put(convention, points);
-            }
+            List<Point> points = curveData.computeIfAbsent(convention, k -> Lists.newArrayList());
             points.add(point);
         }
 
         // convert the curve data into the result map
         Map<IsdaYieldCurveInputsId, IsdaYieldCurveInputs> result = Maps.newHashMap();
-        for (IsdaYieldCurveConvention convention : curveData.keySet()) {
-            List<Point> points = curveData.get(convention);
-            result.put(IsdaYieldCurveInputsId.of(convention.getCurrency()),
+        for (Map.Entry<IsdaYieldCurveConvention, List<Point>> isdaYieldCurveConventionListEntry : curveData.entrySet()) {
+            List<Point> points = isdaYieldCurveConventionListEntry.getValue();
+            result.put(IsdaYieldCurveInputsId.of((isdaYieldCurveConventionListEntry.getKey()).getCurrency()),
                     IsdaYieldCurveInputs.of(
-                            CurveName.of(convention.getName()),
+                            CurveName.of((isdaYieldCurveConventionListEntry.getKey()).getName()),
                             points.stream().map(s -> s.getTenor().getPeriod()).toArray(Period[]::new),
                             points.stream().map(s -> s.getDate()).toArray(LocalDate[]::new),
                             points.stream().map(s -> s.getInstrumentType()).toArray(IsdaYieldCurveUnderlyingType[]::new),
                             points.stream().mapToDouble(s -> s.getRate()).toArray(),
-                            convention));
+                            isdaYieldCurveConventionListEntry.getKey()));
         }
         return result;
     }

@@ -10,11 +10,11 @@ import net.corda.core.serialization.CordaSerializable
  * @property additionalContracts Additional contract names contained within the JAR.
  */
 @CordaSerializable
-class ContractAttachment @JvmOverloads constructor (val attachment: Attachment, val contract: ContractClassName, val additionalContracts: Set<ContractClassName> = emptySet(), val uploader: String? = null) : Attachment by attachment {
+class ContractAttachment @JvmOverloads constructor(val attachment: Attachment, val contract: ContractClassName, val additionalContracts: Set<ContractClassName> = emptySet(), val uploader: String? = null) : Attachment by attachment {
 
     val allContracts: Set<ContractClassName> get() = additionalContracts + contract
 
     override fun toString(): String {
-        return "ContractAttachment(attachment=${attachment.id}, contracts='${allContracts}', uploader='${uploader}')"
+        return "ContractAttachment(attachment=${attachment.id}, contracts='$allContracts', uploader='$uploader')"
     }
 }

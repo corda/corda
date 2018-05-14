@@ -43,11 +43,12 @@ class CordappController : Controller() {
     @Throws(IOException::class)
     fun useCordappsFor(config: HasCordapps): List<Path> {
         if (!config.cordappsDir.isDirectory()) return emptyList()
-        return config.cordappsDir.walk(1) { paths -> paths
-                .filter(Path::isCordapp)
-                .filter { !bankOfCorda.endsWith(it.fileName) }
-                .filter { !finance.endsWith(it.fileName) }
-                .toList()
+        return config.cordappsDir.walk(1) { paths ->
+            paths
+                    .filter(Path::isCordapp)
+                    .filter { !bankOfCorda.endsWith(it.fileName) }
+                    .filter { !finance.endsWith(it.fileName) }
+                    .toList()
         }
     }
 }

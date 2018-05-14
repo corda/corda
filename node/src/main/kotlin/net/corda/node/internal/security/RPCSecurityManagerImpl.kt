@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.primitives.Ints
 import net.corda.core.context.AuthServiceId
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.DataSourceFactory
 import net.corda.node.services.config.PasswordEncryption
@@ -144,10 +145,10 @@ private class RPCPermission : DomainPermission {
  */
 private object RPCPermissionResolver : PermissionResolver {
 
-    private val SEPARATOR = '.'
-    private val ACTION_START_FLOW = "startflow"
-    private val ACTION_INVOKE_RPC = "invokerpc"
-    private val ACTION_ALL = "all"
+    private const val SEPARATOR = '.'
+    private const val ACTION_START_FLOW = "startflow"
+    private const val ACTION_INVOKE_RPC = "invokerpc"
+    private const val ACTION_ALL = "all"
     private val FLOW_RPC_CALLS = setOf(
             "startFlowDynamic",
             "startTrackedFlowDynamic",
@@ -259,9 +260,8 @@ private typealias ShiroCache<K, V> = org.apache.shiro.cache.Cache<K, V>
 /*
  * Adapts a [com.github.benmanes.caffeine.cache.Cache] to a [org.apache.shiro.cache.Cache] implementation.
  */
-private fun <K : Any, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<K, V> {
+private fun <K : Any, V> Cache<K, V>.toShiroCache() = object : ShiroCache<K, V> {
 
-    val name = name
     private val impl = this@toShiroCache
 
     override operator fun get(key: K) = impl.getIfPresent(key)
@@ -300,7 +300,7 @@ private class CaffeineCacheManager(val maxSize: Long,
     override fun <K : Any, V> getCache(name: String): ShiroCache<K, V> {
         val result = instances[name] ?: buildCache<K, V>(name)
         instances.putIfAbsent(name, result)
-        return result as ShiroCache<K, V>
+        return uncheckedCast(result)
     }
 
     private fun <K : Any, V> buildCache(name: String): ShiroCache<K, V> {
@@ -309,7 +309,7 @@ private class CaffeineCacheManager(val maxSize: Long,
                 .expireAfterWrite(timeToLiveSeconds, TimeUnit.SECONDS)
                 .maximumSize(maxSize)
                 .build<K, V>()
-                .toShiroCache(name)
+                .toShiroCache()
     }
 
     companion object {

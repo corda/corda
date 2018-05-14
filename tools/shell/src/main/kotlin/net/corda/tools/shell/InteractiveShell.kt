@@ -142,7 +142,7 @@ object InteractiveShell {
             val extraCommandsPath = shellCommands.toAbsolutePath().createDirectories()
             val commandsFS = FS.Builder()
                     .register("file", fileDriver)
-                    .mount("file:" + extraCommandsPath)
+                    .mount("file:$extraCommandsPath")
                     .register("classpath", classpathDriver)
                     .mount("classpath:/net/corda/tools/shell/")
                     .mount("classpath:/crash/commands/")
@@ -302,7 +302,7 @@ object InteractiveShell {
             try {
                 // Attempt construction with the given arguments.
                 paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
-                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor!!.zip(ctor.parameterTypes), inputData)
+                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.parameterTypes), inputData)
                 if (args.size != ctor.parameterTypes.size) {
                     errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.parameterTypes.size} needed)")
                     continue
@@ -375,7 +375,7 @@ object InteractiveShell {
             val parser = StringToMethodCallParser(CordaRPCOps::class.java, om)
             val call = parser.parse(cordaRPCOps, cmd)
             result = call.call()
-            if (result != null && result !is kotlin.Unit && result !is Void) {
+            if (result != null && result !== kotlin.Unit && result !is Void) {
                 result = printAndFollowRPCResponse(result, out)
             }
             if (result is Future<*>) {
@@ -429,9 +429,9 @@ object InteractiveShell {
                         log.error(error.message)
                         throw error
                     }
-                    .doOnNext { remaining ->
+                    .doOnNext { (first, second) ->
                         display {
-                            println("...remaining: ${remaining.first}/${remaining.second}")
+                            println("...remaining: ${first}/${second}")
                         }
                     }
                     .doOnCompleted {

@@ -47,7 +47,7 @@ object ProcessUtilities {
         }
         return ProcessBuilder(command).apply {
             inheritIO()
-            environment().put("CLASSPATH", classpath)
+            environment()["CLASSPATH"] = classpath
             if (workingDirectory != null) {
                 redirectError((workingDirectory / "$className.stderr.log").toFile())
                 redirectOutput((workingDirectory / "$className.stdout.log").toFile())

@@ -17,8 +17,8 @@ class DatabaseConnection(
     fun open(): Connection {
         try {
             val connectionProps = Properties()
-            connectionProps.put("user", config.username)
-            connectionProps.put("password", config.password)
+            connectionProps["user"] = config.username
+            connectionProps["password"] = config.password
             retry (5) {
                 conn = DriverManager.getConnection(connectionString, connectionProps)
             }

@@ -1,23 +1,16 @@
 package net.corda.node.services.messaging
 
-import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.strands.SettableFuture
-import com.codahale.metrics.MetricRegistry
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.services.statemachine.FlowMessagingImpl
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
-import org.apache.activemq.artemis.api.core.ActiveMQDuplicateIdException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientProducer
 import org.apache.activemq.artemis.api.core.client.ClientSession
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.concurrent.thread
 
 interface AddressToArtemisQueueResolver {
     /**
@@ -60,7 +53,7 @@ class MessagingExecutor(
 
     fun acknowledge(message: ClientMessage) {
         message.individualAcknowledge()
-     }
+    }
 
     internal fun cordaToArtemisMessage(message: Message): ClientMessage? {
         return session.createMessage(true).apply {

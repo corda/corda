@@ -103,7 +103,7 @@ class ArtemisTcpTransport {
                 direction: ConnectionDirection,
                 hostAndPortList: List<NetworkHostAndPort>,
                 config: SSLConfiguration?,
-                enableSSL: Boolean = true): List<TransportConfiguration>{
+                enableSSL: Boolean = true): List<TransportConfiguration> {
             val tcpTransports = ArrayList<TransportConfiguration>(hostAndPortList.size)
             hostAndPortList.forEach {
                 tcpTransports.add(tcpTransport(direction, it, config, enableSSL))

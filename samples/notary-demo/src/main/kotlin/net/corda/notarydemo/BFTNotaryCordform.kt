@@ -16,7 +16,7 @@ import java.nio.file.Paths
 
 fun main(args: Array<String>) = BFTNotaryCordform().nodeRunner().deployAndRunNodes()
 
-private val clusterSize = 4 // Minimum size that tolerates a faulty replica.
+private const val clusterSize = 4 // Minimum size that tolerates a faulty replica.
 private val notaryNames = createNotaryNames(clusterSize)
 
 // This is not the intended final design for how to use CordformDefinition, please treat this as experimental and DO

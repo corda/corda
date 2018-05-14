@@ -71,10 +71,10 @@ class StandaloneShell(private val configuration: ShellConfiguration) {
         val cordappJarPaths = getCordappsInDirectory(configuration.cordappsDirectory)
         val classLoader: ClassLoader = URLClassLoader(cordappJarPaths.toTypedArray(), javaClass.classLoader)
         with(configuration) {
-            if (user.isNullOrEmpty()) {
+            if (user.isEmpty()) {
                 user = readLine("User:")
             }
-            if (password.isNullOrEmpty()) {
+            if (password.isEmpty()) {
                 password = String(readPassword("Password:"))
             }
         }

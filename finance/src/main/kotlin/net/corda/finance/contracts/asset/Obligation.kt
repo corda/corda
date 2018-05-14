@@ -1,10 +1,22 @@
 package net.corda.finance.contracts.asset
 
-import net.corda.core.contracts.*
-import net.corda.finance.contracts.NetCommand
-import net.corda.finance.contracts.NetType
-import net.corda.finance.contracts.NettableState
-import net.corda.finance.contracts.asset.Obligation.Lifecycle.NORMAL
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.CommandAndState
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.CommandWithParties
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.InsufficientBalanceException
+import net.corda.core.contracts.Issued
+import net.corda.core.contracts.MoveCommand
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.contracts.requireThat
+import net.corda.core.contracts.select
+import net.corda.core.contracts.verifyMoveCommand
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -16,6 +28,10 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.seconds
+import net.corda.finance.contracts.NetCommand
+import net.corda.finance.contracts.NetType
+import net.corda.finance.contracts.NettableState
+import net.corda.finance.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.finance.utils.sumFungibleOrNull
 import net.corda.finance.utils.sumObligations
 import net.corda.finance.utils.sumObligationsOrNull
@@ -159,12 +175,12 @@ class Obligation<P : Any> : Contract {
             val netB = other.bilateralNetState
             require(netA == netB) { "net substates of the two state objects must be identical" }
 
-            if (obligor.owningKey == other.obligor.owningKey) {
+            return if (obligor.owningKey == other.obligor.owningKey) {
                 // Both sides are from the same obligor to beneficiary
-                return copy(quantity = quantity + other.quantity)
+                copy(quantity = quantity + other.quantity)
             } else {
                 // Issuer and beneficiary are backwards
-                return copy(quantity = quantity - other.quantity)
+                copy(quantity = quantity - other.quantity)
             }
         }
 
@@ -265,7 +281,7 @@ class Obligation<P : Any> : Contract {
         // If we want to remove obligations from the ledger, that must be signed for by the issuer.
         // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
         val exitKeys: Set<PublicKey> = inputs.flatMap { it.exitKeys }.toSet()
-        val exitCommand = tx.commands.select<Commands.Exit<P>>(parties = null, signers = exitKeys).filter { it.value.amount.token == key }.singleOrNull()
+        val exitCommand = tx.commands.select<Commands.Exit<P>>(parties = null, signers = exitKeys).singleOrNull { it.value.amount.token == key }
         val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, Issued(issuer, terms))
 
         requireThat {
@@ -312,7 +328,7 @@ class Obligation<P : Any> : Contract {
                                     groupingKey: Issued<Terms<P>>) {
         val obligor = groupingKey.issuer.party
         val template = groupingKey.product
-        val inputAmount: Amount<Issued<Terms<P>>> = inputs.sumObligationsOrNull<P>() ?: throw IllegalArgumentException("there is at least one obligation input for this group")
+        val inputAmount: Amount<Issued<Terms<P>>> = inputs.sumObligationsOrNull() ?: throw IllegalArgumentException("there is at least one obligation input for this group")
         val outputAmount: Amount<Issued<Terms<P>>> = outputs.sumObligationsOrZero(groupingKey)
 
         // Sum up all asset state objects that are moving and fulfil our requirements
@@ -502,12 +518,14 @@ class Obligation<P : Any> : Contract {
      */
     @Suppress("unused")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
-                     assetStates: List<StateAndRef<Obligation.State<P>>>): Set<PublicKey>
-            = OnLedgerAsset.generateExit(tx, amountIssued, assetStates,
-            deriveState = { state, amount, owner -> state.copy(data = state.data.withNewOwnerAndAmount(amount, owner)) },
-            generateMoveCommand = { -> Commands.Move() },
-            generateExitCommand = { amount -> Commands.Exit(amount) }
-    )
+                     assetStates: List<StateAndRef<Obligation.State<P>>>): Set<PublicKey> {
+        val changeOwner = assetStates.map { it.state.data.owner }.toSet().firstOrNull() ?: throw InsufficientBalanceException(amountIssued)
+        return OnLedgerAsset.generateExit(tx, amountIssued, assetStates, changeOwner,
+                deriveState = { state, amount, owner -> state.copy(data = state.data.withNewOwnerAndAmount(amount, owner)) },
+                generateMoveCommand = { Commands.Move() },
+                generateExitCommand = { amount -> Commands.Exit(amount) }
+        )
+    }
 
     /**
      * Puts together an issuance transaction for the specified currency obligation amount that starts out being owned by
@@ -568,7 +586,7 @@ class Obligation<P : Any> : Contract {
         val signers = states.map { it.beneficiary }.union(states.map { it.obligor }).toSet()
 
         // Create a lookup table of the party that each public key represents.
-        states.map { it.obligor }.forEach { partyLookup.put(it.owningKey, it) }
+        states.map { it.obligor }.forEach { partyLookup[it.owningKey] = it }
 
         // Suppress compiler warning as 'groupStates' is an unused variable when destructuring 'groups'.
         @Suppress("UNUSED_VARIABLE")
@@ -666,15 +684,15 @@ class Obligation<P : Any> : Contract {
 
                 val assetState = ref.state.data
                 val amount = Amount(assetState.amount.quantity, assetState.amount.token.product)
-                if (obligationRemaining >= amount) {
+                obligationRemaining -= if (obligationRemaining >= amount) {
                     tx.addOutputState(assetState.withNewOwnerAndAmount(assetState.amount, obligationOwner), PROGRAM_ID, notary)
-                    obligationRemaining -= amount
+                    amount
                 } else {
                     val change = Amount(obligationRemaining.quantity, assetState.amount.token)
                     // Split the state in two, sending the change back to the previous beneficiary
                     tx.addOutputState(assetState.withNewOwnerAndAmount(change, obligationOwner), PROGRAM_ID, notary)
                     tx.addOutputState(assetState.withNewOwnerAndAmount(assetState.amount - change, assetState.owner), PROGRAM_ID, notary)
-                    obligationRemaining -= Amount(0L, obligationRemaining.token)
+                    Amount(0L, obligationRemaining.token)
                 }
                 assetSigners.add(assetState.owner)
             }

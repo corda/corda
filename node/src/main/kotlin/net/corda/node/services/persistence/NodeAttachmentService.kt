@@ -96,8 +96,7 @@ class NodeAttachmentService(
 
             @ElementCollection
             @Column(name = "contract_class_name")
-            @CollectionTable(name = "node_attchments_contracts", joinColumns = arrayOf(
-                    JoinColumn(name = "att_id", referencedColumnName = "att_id")),
+            @CollectionTable(name = "node_attchments_contracts", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
                     foreignKey = ForeignKey(name = "FK__ctr_class__attachments"))
             var contractClassNames: List<ContractClassName>? = null
     ) : Serializable
@@ -210,13 +209,9 @@ class NodeAttachmentService(
     // If repeatedly looking for non-existing attachments becomes a performance issue, this is either indicating a
     // a problem somewhere else or this needs to be revisited.
 
-    private val attachmentContentCache = NonInvalidatingWeightBasedCache<SecureHash, Optional<Pair<Attachment, ByteArray>>>(
+    private val attachmentContentCache = NonInvalidatingWeightBasedCache(
             maxWeight = attachmentContentCacheSize,
-            weigher = object : Weigher<SecureHash, Optional<Pair<Attachment, ByteArray>>> {
-                override fun weigh(key: SecureHash, value: Optional<Pair<Attachment, ByteArray>>): Int {
-                    return key.size + if (value.isPresent) value.get().second.size else 0
-                }
-            },
+            weigher = Weigher<SecureHash, Optional<Pair<Attachment, ByteArray>>> { key, value -> key.size + if (value.isPresent) value.get().second.size else 0 },
             loadFunction = { Optional.ofNullable(loadAttachmentContent(it)) }
     )
 
@@ -258,6 +253,7 @@ class NodeAttachmentService(
         return null
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun importAttachment(jar: InputStream): AttachmentId {
         return import(jar, UNKNOWN_UPLOADER, null)
     }
@@ -296,8 +292,9 @@ class NodeAttachmentService(
         }
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId = try {
-        importAttachment(jar)
+        import(jar, UNKNOWN_UPLOADER, null)
     } catch (faee: java.nio.file.FileAlreadyExistsException) {
         AttachmentId.parse(faee.message!!)
     }

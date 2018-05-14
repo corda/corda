@@ -61,39 +61,35 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     private var targetIndex = 0
     private var currentTarget: NetworkHostAndPort = targets.first()
 
-    private val connectListener = object : ChannelFutureListener {
-        override fun operationComplete(future: ChannelFuture) {
-            if (!future.isSuccess) {
-                log.info("Failed to connect to $currentTarget")
+    private val connectListener = ChannelFutureListener { future ->
+        if (!future.isSuccess) {
+            log.info("Failed to connect to $currentTarget")
 
-                if (!stopping) {
-                    workerGroup?.schedule({
-                        log.info("Retry connect to $currentTarget")
-                        targetIndex = (targetIndex + 1).rem(targets.size)
-                        restart()
-                    }, RETRY_INTERVAL, TimeUnit.MILLISECONDS)
-                }
-            } else {
-                log.info("Connected to $currentTarget")
-                // Connection established successfully
-                clientChannel = future.channel()
-                clientChannel?.closeFuture()?.addListener(closeListener)
-            }
-        }
-    }
-
-    private val closeListener = object : ChannelFutureListener {
-        override fun operationComplete(future: ChannelFuture) {
-            log.info("Disconnected from $currentTarget")
-            future.channel()?.disconnect()
-            clientChannel = null
             if (!stopping) {
                 workerGroup?.schedule({
-                    log.info("Retry connect")
+                    log.info("Retry connect to $currentTarget")
                     targetIndex = (targetIndex + 1).rem(targets.size)
                     restart()
                 }, RETRY_INTERVAL, TimeUnit.MILLISECONDS)
             }
+        } else {
+            log.info("Connected to $currentTarget")
+            // Connection established successfully
+            clientChannel = future.channel()
+            clientChannel?.closeFuture()?.addListener(closeListener)
+        }
+    }
+
+    private val closeListener = ChannelFutureListener { future ->
+        log.info("Disconnected from $currentTarget")
+        future.channel()?.disconnect()
+        clientChannel = null
+        if (!stopping) {
+            workerGroup?.schedule({
+                log.info("Retry connect")
+                targetIndex = (targetIndex + 1).rem(targets.size)
+                restart()
+            }, RETRY_INTERVAL, TimeUnit.MILLISECONDS)
         }
     }
 

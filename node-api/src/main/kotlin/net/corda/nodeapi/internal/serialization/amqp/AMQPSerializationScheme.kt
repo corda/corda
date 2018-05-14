@@ -68,7 +68,7 @@ abstract class AbstractAMQPSerializationScheme(
         val List<Cordapp>.customSerializers get() = flatMap { it.serializationCustomSerializers }.toSet()
     }
 
-    private fun registerCustomSerializers(context: SerializationContext, factory: SerializerFactory) {
+    private fun registerCustomSerializers(factory: SerializerFactory) {
         with(factory) {
             register(publicKeySerializer)
             register(net.corda.nodeapi.internal.serialization.amqp.custom.PrivateKeySerializer)
@@ -144,7 +144,7 @@ abstract class AbstractAMQPSerializationScheme(
                     rpcServerSerializerFactory(context)
                 else -> sff.make(context)
             }.also {
-                registerCustomSerializers(context, it)
+                registerCustomSerializers(it)
             }
         }
     }

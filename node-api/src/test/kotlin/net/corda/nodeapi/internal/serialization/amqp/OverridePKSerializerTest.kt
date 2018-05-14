@@ -21,7 +21,7 @@ class OverridePKSerializerTest {
 
         override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                                 context: SerializationContext
-        ) : PublicKey {
+        ): PublicKey {
             throw SerializerTestException("Custom read call")
         }
 

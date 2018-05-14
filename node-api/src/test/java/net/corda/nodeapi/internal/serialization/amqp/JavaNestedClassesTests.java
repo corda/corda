@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp;
 
 import com.google.common.collect.ImmutableList;
-import kotlin.Suppress;
 import net.corda.core.contracts.ContractState;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.serialization.SerializedBytes;

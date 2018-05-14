@@ -11,7 +11,7 @@ import tornadofx.*
  * This class will create paths that it needs to poll and to where it needs to copy files in case those
  * don't exist yet.
  */
-class DemoBenchNodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Controller() {
+class DemoBenchNodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()) : Controller() {
 
     private val nodeInfoFilesCopier = NodeInfoFilesCopier(scheduler)
 
@@ -21,7 +21,7 @@ class DemoBenchNodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Cont
      * Its nodeInfo file will be copied to other nodes' additional-node-infos directory, and conversely,
      * other nodes' nodeInfo files will be copied to this node additional-node-infos directory.
      */
-    fun addConfig(nodeConfig: NodeConfigWrapper) : Unit = nodeInfoFilesCopier.addConfig(nodeConfig.nodeDir)
+    fun addConfig(nodeConfig: NodeConfigWrapper): Unit = nodeInfoFilesCopier.addConfig(nodeConfig.nodeDir)
 
     /**
      * @param nodeConfig the configuration to be removed.
@@ -29,7 +29,7 @@ class DemoBenchNodeInfoFilesCopier(scheduler: Scheduler = Schedulers.io()): Cont
      * No files written by that node will be copied to other nodes, nor files from other nodes will be copied to this
      * one.
      */
-    fun removeConfig(nodeConfig: NodeConfigWrapper) : Unit = nodeInfoFilesCopier.removeConfig(nodeConfig.nodeDir)
+    fun removeConfig(nodeConfig: NodeConfigWrapper): Unit = nodeInfoFilesCopier.removeConfig(nodeConfig.nodeDir)
 
-    fun reset() : Unit = nodeInfoFilesCopier.reset()
+    fun reset(): Unit = nodeInfoFilesCopier.reset()
 }

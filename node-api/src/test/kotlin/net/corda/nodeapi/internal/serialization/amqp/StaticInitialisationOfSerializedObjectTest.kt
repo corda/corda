@@ -68,7 +68,6 @@ class StaticInitialisationOfSerializedObjectTest {
         assertEquals(1, serialisersByType.size)
     }
 
-
     @Test
     fun deserializeTest() {
         data class D(val c: C2)
@@ -99,8 +98,7 @@ class StaticInitialisationOfSerializedObjectTest {
     // Version of a serializer factory that will allow the class carpenter living on the
     // factory to have a different whitelist applied to it than the factory
     class TestSerializerFactory(wl1: ClassWhitelist, wl2: ClassWhitelist) :
-            SerializerFactory(wl1, ClassCarpenterImpl(ClassLoader.getSystemClassLoader(), wl2)) {
-    }
+            SerializerFactory(wl1, ClassCarpenterImpl(ClassLoader.getSystemClassLoader(), wl2))
 
     // This time have the serialization factory and the carpenter use different whitelists
     @Test

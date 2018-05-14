@@ -1,20 +1,23 @@
 package net.corda.sandbox;
 
-import net.corda.sandbox.costing.*;
-import org.junit.*;
+import net.corda.sandbox.costing.RuntimeCostAccounter;
+import org.junit.Assert;
 
-import javax.xml.bind.*;
-import java.io.*;
-import java.nio.file.FileSystem;
+import javax.xml.bind.DatatypeConverter;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.*;
-import java.nio.file.attribute.*;
-import java.util.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class TestUtils {
 
-    private static ArrayList<FileSystem> tmpFileSystems = new ArrayList<>();
+    private static List<FileSystem> tmpFileSystems = new ArrayList<>();
     private static Path jarFSDir = null;
     private static Path tmpdir;
 

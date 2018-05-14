@@ -53,7 +53,8 @@ class ClassCarpenterWhitelistTest {
     // it's marked as CordaSerializable
     @Test
     fun notWhitelistedButAnnotated() {
-        @CordaSerializable data class A(val a: Int)
+        @CordaSerializable
+        data class A(val a: Int)
 
         class WL : ClassWhitelist {
             override fun hasListed(type: Class<*>) = false

@@ -7,7 +7,13 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.rpc.RPCException
 import net.corda.core.CordaException
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.PrivacySalt
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.secureRandomBytes
@@ -16,25 +22,47 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.x500Name
-import net.corda.core.serialization.*
+import net.corda.core.serialization.ConstructorForDeserialization
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.EncodingWhitelist
+import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
-import net.corda.nodeapi.internal.serialization.*
+import net.corda.nodeapi.internal.serialization.AllWhitelist
+import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding
+import net.corda.nodeapi.internal.serialization.EmptyWhitelist
+import net.corda.nodeapi.internal.serialization.GeneratedAttachment
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory.Companion.isPrimitive
-import net.corda.nodeapi.internal.serialization.amqp.testutils.*
-import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenterImpl
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testSerializationContext
+import net.corda.nodeapi.internal.serialization.encodingNotPermittedFormat
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.qpid.proton.amqp.*
+import org.apache.qpid.proton.amqp.Decimal128
+import org.apache.qpid.proton.amqp.Decimal32
+import org.apache.qpid.proton.amqp.Decimal64
+import org.apache.qpid.proton.amqp.Symbol
+import org.apache.qpid.proton.amqp.UnsignedByte
+import org.apache.qpid.proton.amqp.UnsignedInteger
+import org.apache.qpid.proton.amqp.UnsignedLong
+import org.apache.qpid.proton.amqp.UnsignedShort
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.catchThrowable
 import org.bouncycastle.cert.X509v2CRLBuilder
 import org.bouncycastle.cert.jcajce.JcaX509CRLConverter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -50,7 +78,20 @@ import java.io.NotSerializableException
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.security.cert.X509CRL
-import java.time.*
+import java.time.DayOfWeek
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.Month
+import java.time.MonthDay
+import java.time.OffsetDateTime
+import java.time.OffsetTime
+import java.time.Period
+import java.time.Year
+import java.time.YearMonth
+import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.reflect.full.superclasses
@@ -233,7 +274,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         }
         EncoderImpl(decoder)
         DeserializationInput.withDataBytes(bytes, encodingWhitelist) {
-            decoder.setByteBuffer(it)
+            decoder.byteBuffer = it
             // Check that a vanilla AMQP decoder can deserialize without schema.
             val result = decoder.readObject() as Envelope
             assertNotNull(result)
@@ -889,7 +930,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun `test generic in constructor serialize`() {
-        val obj = GenericSubclass(OtherGeneric<String>())
+        val obj = GenericSubclass(OtherGeneric())
         serdes(obj)
     }
 
@@ -1186,7 +1227,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.BigDecimalSerializer)
         factory.register(net.corda.nodeapi.internal.serialization.amqp.custom.CurrencySerializer)
 
-        val c = C(Amount<Currency>(100, BigDecimal("1.5"), Currency.getInstance("USD")))
+        val c = C(Amount(100, BigDecimal("1.5"), Currency.getInstance("USD")))
 
         // were the issue not fixed we'd blow up here
         SerializationOutput(factory, compression).serialize(c)

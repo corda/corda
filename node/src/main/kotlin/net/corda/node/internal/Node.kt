@@ -174,7 +174,7 @@ open class Node(configuration: NodeConfiguration,
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
             BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress)
         } else {
-            startLocalRpcBroker(networkParameters)
+            startLocalRpcBroker()
         }
         val advertisedAddress = info.addresses[0]
         bridgeControlListener = BridgeControlListener(configuration, serverAddress, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
@@ -206,7 +206,7 @@ open class Node(configuration: NodeConfiguration,
                 drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values)
     }
 
-    private fun startLocalRpcBroker(networkParameters: NetworkParameters): BrokerAddresses? {
+    private fun startLocalRpcBroker(): BrokerAddresses? {
         with(configuration) {
             return rpcOptions.address?.let {
                 require(rpcOptions.address != null) { "RPC address needs to be specified for local RPC broker." }

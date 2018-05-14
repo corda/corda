@@ -55,7 +55,7 @@ public class CandidacyStatus {
      * @return true if the input was absent from the underlying map
      */
     public boolean putIfAbsent(final String methodSignature) {
-        return null == candidateMethods.putIfAbsent(methodSignature, CandidateMethod.of(methodSignature));
+        return candidateMethods.putIfAbsent(methodSignature, CandidateMethod.of(methodSignature)) == null;
     }
 
     /**
@@ -166,10 +166,10 @@ public class CandidacyStatus {
 
     public Set<String> getDisallowedMethods() {
         final Set<String> out = new HashSet<>();
-        for (final String candidateName : candidateMethods.keySet()) {
-            final CandidateMethod candidate = candidateMethods.get(candidateName);
+        for (final Map.Entry<String, CandidateMethod> stringCandidateMethodEntry : candidateMethods.entrySet()) {
+            final CandidateMethod candidate = stringCandidateMethodEntry.getValue();
             if (candidate.getCurrentState() == CandidateMethod.State.DISALLOWED) {
-                out.add(candidateName);
+                out.add(stringCandidateMethodEntry.getKey());
             }
         }
 

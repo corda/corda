@@ -51,5 +51,4 @@ class Dashboard : CordaView() {
             }
         }
     }
-
 }

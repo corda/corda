@@ -27,7 +27,7 @@ class TestClassLoader(private var exclude: List<String>) : ClassLoader() {
 }
 
 interface TestInterface {
-    fun runThing() : Int
+    fun runThing(): Int
 }
 
 // Create a custom serialization factory where we need to be able to both specify a carpenter
@@ -63,10 +63,10 @@ class CarpenterExceptionTests {
         val a1 = CLA().loadClass(A::class.java.name)
         val a2 = CLB().loadClass(A::class.java.name)
 
-        assertTrue (TypeToken.of(a1).isSubtypeOf(a2))
-        assertTrue (a1 is Type)
-        assertTrue (a2 is Type)
-        assertTrue (a3 is Type)
+        assertTrue(TypeToken.of(a1).isSubtypeOf(a2))
+        assertTrue(a1 is Type)
+        assertTrue(a2 is Type)
+        assertTrue(a3 is Type)
         assertEquals(a1, a2)
         assertEquals(a1, a3)
         assertEquals(a2, a3)
@@ -74,11 +74,11 @@ class CarpenterExceptionTests {
 
     @Test
     fun carpenterExceptionRethrownAsNotSerializableException() {
-        data class C2 (val i: Int) : TestInterface {
+        data class C2(val i: Int) : TestInterface {
             override fun runThing() = 1
         }
 
-        data class C1 (val i: Int, val c: C2)
+        data class C1(val i: Int, val c: C2)
 
         // We need two factories to ensure when we deserialize the blob we don't just use the serializer
         // we built to serialise things

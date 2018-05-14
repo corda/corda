@@ -63,7 +63,7 @@ object JacksonSupport {
     @Deprecated("This is an internal class, do not use", replaceWith = ReplaceWith("JacksonSupport.createDefaultMapper"))
     class RpcObjectMapper(val rpc: CordaRPCOps,
                           factory: JsonFactory,
-                          val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
+                          private val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
         override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = rpc.wellKnownPartyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = rpc.partyFromKey(owningKey)
         override fun partiesFromName(query: String) = rpc.partiesFromName(query, fuzzyIdentityMatch)
@@ -73,7 +73,7 @@ object JacksonSupport {
     @Deprecated("This is an internal class, do not use")
     class IdentityObjectMapper(val identityService: IdentityService,
                                factory: JsonFactory,
-                               val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
+                               private val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
         override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = identityService.wellKnownPartyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = identityService.partyFromKey(owningKey)
         override fun partiesFromName(query: String) = identityService.partiesFromName(query, fuzzyIdentityMatch)
@@ -88,7 +88,7 @@ object JacksonSupport {
         override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? = null
     }
 
-    val cordaModule: Module by lazy {
+    private val cordaModule: Module by lazy {
         SimpleModule("core").apply {
             addSerAndDeser(AnonymousPartySerializer, AnonymousPartyDeserializer)
             addSerAndDeser(PartySerializer, PartyDeserializer)
@@ -330,14 +330,14 @@ object JacksonSupport {
                 mapper.wellKnownPartyFromX500Name(principal) ?: throw JsonParseException(parser, "Could not find a Party with name $principal")
             } else {
                 val nameMatches = mapper.partiesFromName(parser.text)
-                if (nameMatches.isEmpty()) {
-                    val publicKey = parser.readValueAs<PublicKey>()
-                    mapper.partyFromKey(publicKey)
-                            ?: throw JsonParseException(parser, "Could not find a Party with key ${publicKey.toStringShort()}")
-                } else if (nameMatches.size == 1) {
-                    nameMatches.first()
-                } else {
-                    throw JsonParseException(parser, "Ambiguous name match '${parser.text}': could be any of " +
+                when {
+                    nameMatches.isEmpty() -> {
+                        val publicKey = parser.readValueAs<PublicKey>()
+                        mapper.partyFromKey(publicKey)
+                                ?: throw JsonParseException(parser, "Could not find a Party with key ${publicKey.toStringShort()}")
+                    }
+                    nameMatches.size == 1 -> nameMatches.first()
+                    else -> throw JsonParseException(parser, "Ambiguous name match '${parser.text}': could be any of " +
                             nameMatches.map { it.name }.joinToString(" ... or ... "))
                 }
             }

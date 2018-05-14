@@ -27,11 +27,12 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     /** A map of the currently stored files by their [SecureHash] */
     val files: Map<SecureHash, Pair<Attachment, ByteArray>> get() = _files
 
+    @Suppress("OverridingDeprecatedMember")
     override fun importAttachment(jar: InputStream): AttachmentId = importAttachment(jar, UNKNOWN_UPLOADER, null)
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
         return withContractsInJar(jar) { contractClassNames, inputStream ->
-            importAttachmentInternal(inputStream, uploader, filename, contractClassNames)
+            importAttachmentInternal(inputStream, uploader, contractClassNames)
         }
     }
 
@@ -43,21 +44,20 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     override fun hasAttachment(attachmentId: AttachmentId) = files.containsKey(attachmentId)
 
+    @Suppress("OverridingDeprecatedMember")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {
-        try {
-            return importAttachment(jar)
-        } catch (faee: java.nio.file.FileAlreadyExistsException) {
-            return AttachmentId.parse(faee.message!!)
+        return try {
+            importAttachment(jar, UNKNOWN_UPLOADER, null)
+        } catch (e: java.nio.file.FileAlreadyExistsException) {
+            AttachmentId.parse(e.message!!)
         }
     }
 
-    fun importContractAttachment(contractClassNames: List<ContractClassName>, uploader: String, jar: InputStream): AttachmentId = importAttachmentInternal(jar, uploader, null, contractClassNames)
-
-    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> = jar.readFully().let { bytes -> Pair(bytes.sha256(), bytes) }
+    fun importContractAttachment(contractClassNames: List<ContractClassName>, uploader: String, jar: InputStream): AttachmentId = importAttachmentInternal(jar, uploader, contractClassNames)
 
     private class MockAttachment(dataLoader: () -> ByteArray, override val id: SecureHash) : AbstractAttachment(dataLoader)
 
-    private fun importAttachmentInternal(jar: InputStream, uploader: String, filename: String?, contractClassNames: List<ContractClassName>? = null): AttachmentId {
+    private fun importAttachmentInternal(jar: InputStream, uploader: String, contractClassNames: List<ContractClassName>? = null): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
         require(jar !is JarInputStream)
 

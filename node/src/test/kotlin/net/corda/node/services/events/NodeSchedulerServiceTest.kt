@@ -108,7 +108,7 @@ class MockScheduledFlowRepository : ScheduledFlowRepository {
         if (map.containsKey(value.ref)) {
             result = true
         }
-        map.put(value.ref, value)
+        map[value.ref] = value
         return result
     }
 

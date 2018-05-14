@@ -18,7 +18,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Rule
 import org.junit.Test
 import java.security.KeyPair
-import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.SignatureException
 

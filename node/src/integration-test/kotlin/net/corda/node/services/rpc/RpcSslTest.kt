@@ -8,7 +8,6 @@ import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.common.internal.withCertificates
 import net.corda.testing.common.internal.withKeyStores
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.useSslRpcOverrides

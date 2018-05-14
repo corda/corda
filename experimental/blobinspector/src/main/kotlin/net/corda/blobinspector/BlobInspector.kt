@@ -49,7 +49,7 @@ fun String.simplifyClass(): String {
     return if (this.endsWith('>')) {
         val templateStart = this.indexOf('<')
         val clazz = (this.substring(0, templateStart))
-        val params = this.substring(templateStart+1, this.length-1).split(',').map { it.simplifyClass() }.joinToString()
+        val params = this.substring(templateStart+1, this.length-1).split(',').joinToString { it.simplifyClass() }
 
         "${clazz.simplifyClass()} <$params>"
     }
@@ -108,20 +108,22 @@ class ListProperty(
         private val values: MutableList<Any> = mutableListOf()) : Property(name, type) {
     override fun stringify(sb: IndentingStringBuilder) {
         sb.apply {
-            if (values.isEmpty()) {
-                appendln("$name : $type : [ << EMPTY LIST >> ]")
-            } else if (values.first() is Stringify) {
-                appendln("$name : $type : [")
-                values.forEach {
-                    (it as Stringify).stringify(this)
+            when {
+                values.isEmpty() -> appendln("$name : $type : [ << EMPTY LIST >> ]")
+                values.first() is Stringify -> {
+                    appendln("$name : $type : [")
+                    values.forEach {
+                        (it as Stringify).stringify(this)
+                    }
+                    appendln("]")
                 }
-                appendln("]")
-            } else {
-                appendln("$name : $type : [")
-                values.forEach {
-                    appendln(it.toString())
+                else -> {
+                    appendln("$name : $type : [")
+                    values.forEach {
+                        appendln(it.toString())
+                    }
+                    appendln("]")
                 }
-                appendln("]")
             }
         }
     }

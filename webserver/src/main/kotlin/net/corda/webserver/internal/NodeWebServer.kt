@@ -8,16 +8,25 @@ import net.corda.core.utilities.contextLogger
 import net.corda.webserver.WebServerConfig
 import net.corda.webserver.converters.CordaConverterProvider
 import net.corda.webserver.services.WebServerPluginRegistry
-import net.corda.webserver.servlets.*
+import net.corda.webserver.servlets.AttachmentDownloadServlet
+import net.corda.webserver.servlets.CorDappInfoServlet
+import net.corda.webserver.servlets.DataUploadServlet
+import net.corda.webserver.servlets.ObjectMapperConfig
+import net.corda.webserver.servlets.ResponseFilter
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
-import org.eclipse.jetty.server.*
+import org.eclipse.jetty.server.Connector
+import org.eclipse.jetty.server.HttpConfiguration
+import org.eclipse.jetty.server.HttpConnectionFactory
+import org.eclipse.jetty.server.SecureRequestCustomizer
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.ServerConnector
+import org.eclipse.jetty.server.SslConnectionFactory
 import org.eclipse.jetty.server.handler.ErrorHandler
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.ssl.SslContextFactory
-import org.eclipse.jetty.webapp.WebAppContext
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
@@ -28,7 +37,6 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.file.NoSuchFileException
 import java.util.*
 import javax.servlet.http.HttpServletRequest
-import javax.ws.rs.core.MediaType
 
 class NodeWebServer(val config: WebServerConfig) {
     private companion object {

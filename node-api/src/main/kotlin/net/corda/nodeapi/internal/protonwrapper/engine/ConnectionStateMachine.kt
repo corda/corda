@@ -62,7 +62,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
         transport = Engine.transport()
         transport.idleTimeout = IDLE_TIMEOUT
         transport.context = connection
-        transport.setEmitFlowEventOnSend(true)
+        transport.isEmitFlowEventOnSend = true
         connection.collect(collector)
         val sasl = transport.sasl()
         if (userName != null) {

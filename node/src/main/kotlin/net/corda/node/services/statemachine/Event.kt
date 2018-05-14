@@ -19,7 +19,9 @@ sealed class Event {
      * should be idempotent in the [DoRemainingWork] event, meaning a second subsequent event shouldn't modify the state
      * or produce [Action]s.
      */
-    object DoRemainingWork : Event() { override fun toString() = "DoRemainingWork" }
+    object DoRemainingWork : Event() {
+        override fun toString() = "DoRemainingWork"
+    }
 
     /**
      * Deliver a session message.
@@ -50,12 +52,16 @@ sealed class Event {
      * Trigger a soft shutdown, removing the flow as soon as possible. This causes the flow to be removed as soon as
      * this event is processed. Note that on restart the flow will resume as normal.
      */
-    object SoftShutdown : Event() { override fun toString() = "SoftShutdown" }
+    object SoftShutdown : Event() {
+        override fun toString() = "SoftShutdown"
+    }
 
     /**
      * Start error propagation on a errored flow. This may be triggered by e.g. a [FlowHospital].
      */
-    object StartErrorPropagation : Event() { override fun toString() = "StartErrorPropagation" }
+    object StartErrorPropagation : Event() {
+        override fun toString() = "StartErrorPropagation"
+    }
 
     /**
      *
@@ -82,7 +88,9 @@ sealed class Event {
      * Scheduled by the flow.
      *
      */
-    object LeaveSubFlow : Event() { override fun toString() = "LeaveSubFlow" }
+    object LeaveSubFlow : Event() {
+        override fun toString() = "LeaveSubFlow"
+    }
 
     /**
      * Signal a flow suspension. This causes the flow's stack and the state machine's state together with the suspending

@@ -46,7 +46,7 @@ class SerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: Ser
         if (className !in classNameToSingleton) {
             // Only allowable if we are in SerializeAsTokenContext init (readOnly == false)
             if (readOnly) {
-                throw UnsupportedOperationException("Attempt to write token for lazy registered ${className}. All tokens should be registered during context construction.")
+                throw UnsupportedOperationException("Attempt to write token for lazy registered $className. All tokens should be registered during context construction.")
             }
             classNameToSingleton[className] = toBeTokenized
         }

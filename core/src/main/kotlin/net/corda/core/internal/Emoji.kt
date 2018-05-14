@@ -46,7 +46,6 @@ object Emoji {
     @JvmStatic
     val CODE_SOON: String = codePointsString(0x1F51C)
 
-
     /**
      * When non-null, toString() methods are allowed to use emoji in the output as we're going to render them to a
      * sufficiently capable text surface.

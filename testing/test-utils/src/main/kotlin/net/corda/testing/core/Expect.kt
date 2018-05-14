@@ -212,7 +212,7 @@ private sealed class ExpectComposeState<E : Any> {
     abstract fun getExpectedEvents(): List<Class<out E>>
 
     class Finished<E : Any> : ExpectComposeState<E>() {
-        override fun nextState(event: E) = null
+        override fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>? = null
         override fun getExpectedEvents(): List<Class<E>> = listOf()
     }
 
@@ -243,7 +243,7 @@ private sealed class ExpectComposeState<E : Any> {
                 null
             } else if (next.second is Finished) {
                 if (index == sequential.sequence.size - 1) {
-                    Pair(next.first, Finished<E>())
+                    Pair(next.first, Finished())
                 } else {
                     val nextState = fromExpectCompose(sequential.sequence[index + 1])
                     if (nextState is Finished) {
@@ -271,10 +271,10 @@ private sealed class ExpectComposeState<E : Any> {
                     val nextStates = states.mapIndexed { i, expectComposeState ->
                         if (i == stateIndex) next.second else expectComposeState
                     }
-                    if (nextStates.all { it is Finished }) {
-                        return Pair(next.first, Finished())
+                    return if (nextStates.all { it is Finished }) {
+                        Pair(next.first, Finished())
                     } else {
-                        return Pair(next.first, Parallel(parallel, nextStates))
+                        Pair(next.first, Parallel(parallel, nextStates))
                     }
                 }
             }
@@ -293,14 +293,14 @@ private sealed class ExpectComposeState<E : Any> {
                     Single(uncheckedCast(expectCompose))
                 }
                 is ExpectCompose.Sequential -> {
-                    if (expectCompose.sequence.size > 0) {
+                    if (expectCompose.sequence.isNotEmpty()) {
                         Sequential(expectCompose, 0, fromExpectCompose(expectCompose.sequence[0]))
                     } else {
                         Finished()
                     }
                 }
                 is ExpectCompose.Parallel -> {
-                    if (expectCompose.parallel.size > 0) {
+                    if (expectCompose.parallel.isNotEmpty()) {
                         Parallel(expectCompose, expectCompose.parallel.map { fromExpectCompose(it) })
                     } else {
                         Finished()

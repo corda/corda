@@ -13,7 +13,11 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.messaging.*
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultQueryBy
+import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
@@ -37,7 +41,6 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
 import net.corda.testing.core.sequence
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
@@ -66,7 +69,7 @@ private fun buildSubject(principal: String, permissionStrings: Set<String>) =
 
 class CordaRPCOpsImplTest {
     private companion object {
-        val testJar = "net/corda/node/testing/test.jar"
+        const val testJar = "net/corda/node/testing/test.jar"
     }
 
     private lateinit var mockNet: InternalMockNetwork
@@ -126,8 +129,8 @@ class CordaRPCOpsImplTest {
                         expect { add: StateMachineUpdate.Added ->
                             issueSmId = add.id
                         },
-                        expect { remove: StateMachineUpdate.Removed ->
-                            require(remove.id == issueSmId)
+                        expect { (id) ->
+                            require(id == issueSmId)
                         }
                 )
             }
@@ -184,15 +187,15 @@ class CordaRPCOpsImplTest {
                         expect { add: StateMachineUpdate.Added ->
                             issueSmId = add.id
                         },
-                        expect { remove: StateMachineUpdate.Removed ->
-                            require(remove.id == issueSmId)
+                        expect { (id) ->
+                            require(id == issueSmId)
                         },
                         // MOVE
                         expect { add: StateMachineUpdate.Added ->
                             moveSmId = add.id
                         },
-                        expect { remove: StateMachineUpdate.Removed ->
-                            require(remove.id == moveSmId)
+                        expect { (id) ->
+                            require(id == moveSmId)
                         }
                 )
             }

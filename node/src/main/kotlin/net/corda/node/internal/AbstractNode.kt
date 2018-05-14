@@ -263,7 +263,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 }
             }
 
-            makeVaultObservers(schedulerService, database.hibernateConfig, smm, schemaService, flowLogicRefFactory)
+            makeVaultObservers(schedulerService, database.hibernateConfig, schemaService, flowLogicRefFactory)
             val rpcOps = makeRPCOps(flowStarter, database, smm)
             startMessagingService(rpcOps)
             installCoreFlows()
@@ -631,16 +631,15 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 networkParameters,
                 servicesForResolution)
         network = makeMessagingService(database, nodeInfo, nodeProperties, networkParameters)
-        val tokenizableServices = mutableListOf(attachments, network, services.vaultService,
+        return mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock,
                 services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
                 services.transactionVerifierService, services.validatedTransactions, services.contractUpgradeService,
                 services, cordappProvider, this)
-        return tokenizableServices
     }
 
     protected open fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage = DBTransactionStorage(transactionCacheSizeBytes)
-    private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, smm: StateMachineManager, schemaService: SchemaService, flowLogicRefFactory: FlowLogicRefFactory) {
+    private fun makeVaultObservers(schedulerService: SchedulerService, hibernateConfig: HibernateConfiguration, schemaService: SchemaService, flowLogicRefFactory: FlowLogicRefFactory) {
         ScheduledActivityObserver.install(services.vaultService, schedulerService, flowLogicRefFactory)
         HibernateObserver.install(services.vaultService.rawUpdates, hibernateConfig, schemaService)
     }
@@ -682,7 +681,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     protected open fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
         val props = configuration.dataSourceProperties
-        if (props.isEmpty()) throw DatabaseConfigurationException("There must be a database configured.")
+        if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
         val database = configureDatabase(props, configuration.database, identityService, schemaService)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
@@ -702,7 +701,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    open protected fun checkNetworkMapIsInitialized() {
+    protected open fun checkNetworkMapIsInitialized() {
         if (!services.networkMapCache.loadDBSuccess) {
             // TODO: There should be a consistent approach to configuration error exceptions.
             throw NetworkMapCacheEmptyException()
@@ -716,14 +715,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {
         val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
         return notaryConfig.run {
-            if (raft != null) {
-                val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.clock, services.monitoringService.metrics, raft)
-                (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
-            } else if (bftSMaRt != null) {
-                if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")
-                BFTNonValidatingNotaryService(services, notaryKey, bftSMaRt, makeBFTCluster(notaryKey, bftSMaRt))
-            } else {
-                (if (validating) ::ValidatingNotaryService else ::SimpleNotaryService)(services, notaryKey)
+            when {
+                raft != null -> {
+                    val uniquenessProvider = RaftUniquenessProvider(configuration, database, services.clock, services.monitoringService.metrics, raft)
+                    (if (validating) ::RaftValidatingNotaryService else ::RaftNonValidatingNotaryService)(services, notaryKey, uniquenessProvider)
+                }
+                bftSMaRt != null -> {
+                    if (validating) throw IllegalArgumentException("Validating BFTSMaRt notary not supported")
+                    BFTNonValidatingNotaryService(services, notaryKey, bftSMaRt, makeBFTCluster(notaryKey, bftSMaRt))
+                }
+                else -> (if (validating) ::ValidatingNotaryService else ::SimpleNotaryService)(services, notaryKey)
             }
         }
     }
@@ -881,8 +882,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         override fun jdbcSession(): Connection = database.createSession()
 
         // allows services to register handlers to be informed when the node stop method is called
-        override fun registerUnloadHandler(handler: () -> Unit) {
-            runOnStop += handler
+        override fun registerUnloadHandler(runOnStop: () -> Unit) {
+            this@AbstractNode.runOnStop += runOnStop
         }
     }
 }

@@ -6,7 +6,7 @@ import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import java.io.Serializable
 
 object CordaClosureSerializer : ClosureSerializer() {
-    val ERROR_MESSAGE = "Unable to serialize Java Lambda expression, unless explicitly declared e.g., Runnable r = (Runnable & Serializable) () -> System.out.println(\"Hello world!\");"
+    const val ERROR_MESSAGE = "Unable to serialize Java Lambda expression, unless explicitly declared e.g., Runnable r = (Runnable & Serializable) () -> System.out.println(\"Hello world!\");"
 
     override fun write(kryo: Kryo, output: Output, target: Any) {
         if (!isSerializable(target)) {
@@ -21,7 +21,7 @@ object CordaClosureSerializer : ClosureSerializer() {
 }
 
 object CordaClosureBlacklistSerializer : ClosureSerializer() {
-    val ERROR_MESSAGE = "Java 8 Lambda expressions are not supported for serialization."
+    const val ERROR_MESSAGE = "Java 8 Lambda expressions are not supported for serialization."
 
     override fun write(kryo: Kryo, output: Output, target: Any) {
         throw IllegalArgumentException(ERROR_MESSAGE)

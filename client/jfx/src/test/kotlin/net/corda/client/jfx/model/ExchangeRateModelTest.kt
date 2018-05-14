@@ -19,9 +19,10 @@ class ExchangeRateModelTest {
 
         private fun assertEquals(one: Amount<Currency>, another: Amount<Currency>) {
             assertEquals(one.token, another.token)
-            assertTrue("$one != $another", {(one.toDecimal() - another.toDecimal()).abs() < BigDecimal(0.01) })
+            assertTrue("$one != $another", { (one.toDecimal() - another.toDecimal()).abs() < BigDecimal(0.01) })
         }
     }
+
     @Test
     fun `perform fx testing`() {
         val tenSwissies = Amount(10, BigDecimal.ONE, CHF)

@@ -13,5 +13,4 @@ data class DatabaseConfiguration(
 ) {
 
     fun config() = type.settings.config(this)
-
 }

@@ -15,7 +15,6 @@ class LocalWebServer : WebServer() {
         session.connection = conn
         session.put("url", conn.metaData.url)
         val s = session.get("sessionId") as String
-        return url + "/frame.jsp?jsessionid=" + s
+        return "$url/frame.jsp?jsessionid=$s"
     }
-
 }
