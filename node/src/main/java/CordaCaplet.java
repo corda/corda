@@ -18,11 +18,16 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class CordaCaplet extends Capsule {
 
     private Config nodeConfig = null;
     private String baseDir = null;
+
+    // Jars to exclude which are embedded in the capsule jar
+    private final List<String> excludeJars = new ArrayList<>();
+    private final static String EXCLUDE_JAR_CMD_LINE_ARG = "-DexcludeJar:";
 
     protected CordaCaplet(Capsule pred) {
         super(pred);
@@ -86,26 +91,35 @@ public class CordaCaplet extends Capsule {
         // Equality is used here because Capsule never instantiates these attributes but instead reuses the ones
         // defined as public static final fields on the Capsule class, therefore referential equality is safe.
         if (ATTR_APP_CLASS_PATH == attr) {
-            T cp = super.attribute(attr);
+            List<Path> cp = (List<Path>) super.attribute(attr);
+
+            // 2nd item contains all the embedded jars in our capsule.
+            // Can exclude jar using jvmArg -DexcludeJar.
+            if(cp.size() > 1 && cp.get(1) instanceof List) {
+                final List<Path> capsuleEmbeddedJars = (List<Path>) cp.get(1);
+                capsuleEmbeddedJars.removeAll(capsuleEmbeddedJars.stream().
+                        filter(path -> excludeJars.contains(path.toString())).
+                        collect(Collectors.toList()));
+            }
 
             File cordappsDir = new File(baseDir, "cordapps");
             // Create cordapps directory if it doesn't exist.
             requireCordappsDirExists(cordappsDir);
             // Add additional directories of JARs to the classpath (at the end), e.g., for JDBC drivers.
-            augmentClasspath((List<Path>) cp, new File(baseDir, "drivers"));
-            augmentClasspath((List<Path>) cp, cordappsDir);
+            augmentClasspath(cp, new File(baseDir, "drivers"));
+            augmentClasspath(cp, cordappsDir);
             try {
                 List<String> jarDirs = nodeConfig.getStringList("jarDirs");
                 log(LOG_VERBOSE, "Configured JAR directories = " + jarDirs);
                 for (String jarDir : jarDirs) {
-                    augmentClasspath((List<Path>) cp, new File(jarDir));
+                    augmentClasspath(cp, new File(jarDir));
                 }
             } catch (ConfigException.Missing e) {
                 // Ignore since it's ok to be Missing. Other errors would be unexpected.
             } catch (ConfigException e) {
                 log(LOG_QUIET, e);
             }
-            return cp;
+            return (T) cp;
         } else if (ATTR_JVM_ARGS == attr) {
             // Read JVM args from the config if specified, else leave alone.
             List<String> jvmArgs = new ArrayList<>((List<String>) super.attribute(attr));
@@ -114,6 +128,12 @@ public class CordaCaplet extends Capsule {
                 jvmArgs.clear();
                 jvmArgs.addAll(configJvmArgs);
                 log(LOG_VERBOSE, "Configured JVM args = " + jvmArgs);
+
+                jvmArgs.forEach(arg -> {
+                    if (arg.startsWith(EXCLUDE_JAR_CMD_LINE_ARG)) {
+                        excludeJars.add(arg.substring(EXCLUDE_JAR_CMD_LINE_ARG.length()));
+                    }
+                });
             } catch (ConfigException.Missing e) {
                 // Ignore since it's ok to be Missing. Other errors would be unexpected.
             } catch (ConfigException e) {
