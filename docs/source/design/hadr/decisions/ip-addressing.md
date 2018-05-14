@@ -1,14 +1,8 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Decision: IP addressing mechanism (near-term)
-============================================
+# Design Decision: IP addressing mechanism (near-term)
 
 ## Background / Context
 
-End-to-end encryption is a desirable potential design feature for the [float](../design.md).
-
-
+End-to-end encryption is a desirable potential design feature for the [high availability support](design).
 
 ## Options Analysis
 
@@ -45,4 +39,8 @@ Proceed with Option 1: Via Load Balancer
 
 ## Decision taken
 
-**[DRB meeting, 16/11/2017:](./drb-meeting-20171116.md)** The design can allow for optional load balancers to be implemented by clients. (RGB, JC, MH agreed)
+The design can allow for optional load balancers to be implemented by clients. (RGB, JC, MH agreed)
+
+.. toctree::
+
+   drb-meeting-20171116.md

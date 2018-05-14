@@ -55,10 +55,8 @@ Proceed with Option 2 (defer development of pluggable brokers until later)
 
 ## Decision taken
 
-```eval_rst
 .. toctree::
 
    drb-meeting-20171116.md
-```
 
 Proceed with Option 2 - Defer support for pluggable brokers until later, except in the event that a requirement to do so emerges from higher priority float / HA work. (RGB, JC, MH agreed)

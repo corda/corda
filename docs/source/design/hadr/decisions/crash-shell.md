@@ -1,14 +1,8 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Decision: Node starting & stopping
-============================================
+# Design Decision: Node starting & stopping
 
 ## Background / Context
 
-The potential use of a crash shell is relevant to [high availability](../design.md) capabilities of nodes.
-
-
+The potential use of a crash shell is relevant to high availability capabilities of nodes.
 
 ## Options Analysis
 
@@ -49,4 +43,8 @@ Proceed with Option 2: Delegate to external tools
 
 ## Decision taken
 
-**[DRB meeting, 16/11/2017:](./drb-meeting-20171116.md)** Restarts should be handled by polite shutdown, followed by a hard clear. (RGB, JC, MH agreed)
+Restarts should be handled by polite shutdown, followed by a hard clear. (RGB, JC, MH agreed)
+
+.. toctree::
+
+   drb-meeting-20171116.md

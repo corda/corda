@@ -1,12 +1,6 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Review Board Meeting Minutes
-============================================
+# Design Review Board Meeting Minutes
 
 **Date / Time:** 16/11/2017, 16:30
-
- 
 
 ## Attendees
 
@@ -24,9 +18,7 @@ Design Review Board Meeting Minutes
 - Jonathan Sartin (JS)
 - David Lee (DL)
 
-
-
-## **Minutes**
+## Minutes
 
 The meeting re-opened following prior discussion of the float design.
 
