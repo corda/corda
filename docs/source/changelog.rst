@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+* Set co.paralleluniverse.fibers.verifyInstrumentation=true in devMode.
+
 * Node will now gracefully fail to start if one of the required ports is already in use.
 
 * Node will now gracefully fail to start if ``devMode`` is true and ``compatibilityZoneURL`` is specified.
