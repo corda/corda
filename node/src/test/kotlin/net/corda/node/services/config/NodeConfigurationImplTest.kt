@@ -11,7 +11,10 @@
 package net.corda.node.services.config
 
 import com.zaxxer.hikari.HikariConfig
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 import net.corda.core.internal.div
+import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.core.utilities.seconds
@@ -84,6 +87,59 @@ class NodeConfigurationImplTest {
         assertFalse { testConfiguration.copy(noLocalShell = true).shouldInitCrashShell() }
         assertFalse { testConfiguration.copy(sshd = null).shouldInitCrashShell() }
         assertFalse { testConfiguration.copy(noLocalShell = true, sshd = null).shouldInitCrashShell() }
+    }
+
+    @Test
+    fun `Dev mode is autodetected correctly`() {
+        val os = System.getProperty("os.name")
+
+        setSystemOs("Windows 98")
+        assertTrue(getConfig("test-config-empty.conf").getBoolean("devMode"))
+
+        setSystemOs("Mac Sierra")
+        assertTrue(getConfig("test-config-empty.conf").getBoolean("devMode"))
+
+        setSystemOs("Windows server 2008")
+        assertFalse(getConfig("test-config-empty.conf").getBoolean("devMode"))
+
+        setSystemOs("Linux")
+        assertFalse(getConfig("test-config-empty.conf").getBoolean("devMode"))
+
+        setSystemOs(os)
+    }
+
+    private fun setSystemOs(os: String) {
+        System.setProperty("os.name", os)
+    }
+
+    @Test
+    fun `Dev mode is read from the config over the autodetect logic`() {
+        assertTrue(getConfig("test-config-DevMode.conf").getBoolean("devMode"))
+        assertFalse(getConfig("test-config-noDevMode.conf").getBoolean("devMode"))
+    }
+
+    @Test
+    fun `Dev mode is true if overriden`() {
+        assertTrue(getConfig("test-config-DevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBoolean("devMode"))
+        assertTrue(getConfig("test-config-noDevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBoolean("devMode"))
+        assertTrue(getConfig("test-config-empty.conf", ConfigFactory.parseMap(mapOf("devMode" to true))).getBoolean("devMode"))
+    }
+
+    @Test
+    fun `Dev mode is false if overriden`() {
+        assertFalse(getConfig("test-config-DevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to false))).getBoolean("devMode"))
+        assertFalse(getConfig("test-config-noDevMode.conf", ConfigFactory.parseMap(mapOf("devMode" to false))).getBoolean("devMode"))
+        assertFalse(getConfig("test-config-empty.conf", ConfigFactory.parseMap(mapOf("devMode" to false))).getBoolean("devMode"))
+    }
+
+    private fun getConfig(cfgName: String, overrides: Config = ConfigFactory.empty()): Config {
+        val path = this::class.java.classLoader.getResource(cfgName).toPath()
+        val cfg = ConfigHelper.loadConfig(
+                baseDirectory = path.parent,
+                configFile = path,
+                configOverrides = overrides
+        )
+        return cfg
     }
 
     @Test

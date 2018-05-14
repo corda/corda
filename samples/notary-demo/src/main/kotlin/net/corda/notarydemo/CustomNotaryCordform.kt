@@ -32,6 +32,7 @@ class CustomNotaryCordform : CordformDefinition() {
                 adminAddress("localhost:10103")
             }
             rpcUsers(notaryDemoUser)
+            devMode(true)
         }
         node {
             name(BOB_NAME)
@@ -40,6 +41,7 @@ class CustomNotaryCordform : CordformDefinition() {
                 address("localhost:10006")
                 adminAddress("localhost:10106")
             }
+            devMode(true)
         }
         node {
             name(DUMMY_NOTARY_NAME)
@@ -49,6 +51,7 @@ class CustomNotaryCordform : CordformDefinition() {
                 adminAddress("localhost:10110")
             }
             notary(NotaryConfig(validating = true, custom = true))
+            devMode(true)
         }
     }
 

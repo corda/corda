@@ -100,7 +100,8 @@ class DriverDSLImpl(
         val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>,
         val compatibilityZone: CompatibilityZoneParams?,
-        val networkParameters: NetworkParameters
+        val networkParameters: NetworkParameters,
+        val notaryCustomOverrides: Map<String, Any?>
 ) : InternalDriverDSL {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -224,18 +225,19 @@ class DriverDSLImpl(
         val webAddress = portAllocation.nextHostAndPort()
         val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
         val czUrlConfig = if (compatibilityZone != null) mapOf("compatibilityZoneURL" to compatibilityZone.url.toString()) else emptyMap()
+        val overrides = configOf(
+                "myLegalName" to name.toString(),
+                "p2pAddress" to p2pAddress.toString(),
+                "rpcSettings.address" to rpcAddress.toString(),
+                "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
+                "useTestClock" to useTestClock,
+                "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
+                "verifierType" to verifierType.name
+        ) + czUrlConfig + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
-                configOverrides = configOf(
-                        "myLegalName" to name.toString(),
-                        "p2pAddress" to p2pAddress.toString(),
-                        "rpcSettings.address" to rpcAddress.toString(),
-                        "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
-                        "useTestClock" to useTestClock,
-                        "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
-                        "verifierType" to verifierType.name
-                ) + czUrlConfig + customOverrides
+                configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
         ))
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap)
     }
@@ -432,7 +434,7 @@ class DriverDSLImpl(
         networkMapAvailability = notaryInfosFuture.map { it.second }
 
         _notaries = notaryInfosFuture.map { (notaryInfos, localNetworkMap) ->
-            val listOfFutureNodeHandles = startNotaries(localNetworkMap)
+            val listOfFutureNodeHandles = startNotaries(localNetworkMap, notaryCustomOverrides)
             notaryInfos.zip(listOfFutureNodeHandles) { (identity, validating), nodeHandlesFuture ->
                 NotaryHandle(identity, validating, nodeHandlesFuture)
             }
@@ -508,10 +510,10 @@ class DriverDSLImpl(
         return (0 until spec.cluster!!.clusterSize).map { spec.name.copy(organisation = "${spec.name.organisation}-$it") }
     }
 
-    private fun startNotaries(localNetworkMap: LocalNetworkMap?): List<CordaFuture<List<NodeHandle>>> {
+    private fun startNotaries(localNetworkMap: LocalNetworkMap?, customOverrides: Map<String, Any?>): List<CordaFuture<List<NodeHandle>>> {
         return notarySpecs.map {
             when (it.cluster) {
-                null -> startSingleNotary(it, localNetworkMap)
+                null -> startSingleNotary(it, localNetworkMap, customOverrides )
                 is ClusterSpec.Raft,
                     // DummyCluster is used for testing the notary communication path, and it does not matter
                     // which underlying consensus algorithm is used, so we just stick to Raft
@@ -525,13 +527,13 @@ class DriverDSLImpl(
     // generating the configs for the nodes, probably making use of Any.toConfig()
     private fun NotaryConfig.toConfigMap(): Map<String, Any> = mapOf("notary" to toConfig().root().unwrapped())
 
-    private fun startSingleNotary(spec: NotarySpec, localNetworkMap: LocalNetworkMap?): CordaFuture<List<NodeHandle>> {
+    private fun startSingleNotary(spec: NotarySpec, localNetworkMap: LocalNetworkMap?, customOverrides: Map<String, Any?>): CordaFuture<List<NodeHandle>> {
         return startRegisteredNode(
                 spec.name,
                 localNetworkMap,
                 spec.rpcUsers,
                 spec.verifierType,
-                customOverrides = NotaryConfig(spec.validating).toConfigMap()
+                customOverrides = NotaryConfig(spec.validating).toConfigMap() + customOverrides
         ).map { listOf(it) }
     }
 
@@ -1037,7 +1039,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     jmxPolicy = defaultParameters.jmxPolicy,
                     notarySpecs = defaultParameters.notarySpecs,
                     compatibilityZone = null,
-                    networkParameters = defaultParameters.networkParameters
+                    networkParameters = defaultParameters.networkParameters,
+                    notaryCustomOverrides = defaultParameters.notaryCustomOverrides
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1081,6 +1084,7 @@ fun <A> internalDriver(
         jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
         networkParameters: NetworkParameters = DriverParameters().networkParameters,
         compatibilityZone: CompatibilityZoneParams? = null,
+        notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1097,7 +1101,8 @@ fun <A> internalDriver(
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
                     compatibilityZone = compatibilityZone,
-                    networkParameters = networkParameters
+                    networkParameters = networkParameters,
+                    notaryCustomOverrides = notaryCustomOverrides
             ),
             coerce = { it },
             dsl = dsl,
