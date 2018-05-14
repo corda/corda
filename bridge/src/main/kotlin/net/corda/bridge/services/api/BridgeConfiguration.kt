@@ -26,14 +26,14 @@ enum class BridgeMode {
      * Runs only the trusted bridge side of the system, which has direct TLS access to Artemis.
      * The components handles all outgoing aspects of AMQP bridges directly.
      * The inbound messages are initially received onto a different [FloatOuter] process and a
-     * separate AMQP tunnel is used to ship back the inbound data to this [FloatInner] process.
+     * separate AMQP tunnel is used to ship back the inbound data to this [BridgeInner] process.
      */
-    FloatInner,
+    BridgeInner,
     /**
      * A minimal process designed to be run inside a DMZ, which acts an AMQP receiver of inbound peer messages.
-     * The component carries out basic validation of the TLS sources and AMQP packets, before forwarding to the [FloatInner].
-     * No keys are stored on disk for the component, but must instead be provisioned from the [FloatInner] using a
-     * separate AMQP link initiated from the [FloatInner] to the [FloatOuter].
+     * The component carries out basic validation of the TLS sources and AMQP packets, before forwarding to the [BridgeInner].
+     * No keys are stored on disk for the component, but must instead be provisioned from the [BridgeInner] using a
+     * separate AMQP link initiated from the [BridgeInner] to the [FloatOuter].
      */
     FloatOuter
 }
@@ -48,7 +48,7 @@ interface BridgeSSLConfiguration : SSLConfiguration {
 
 /**
  * Details of the local Artemis broker.
- * Required in SenderReceiver and FloatInner modes.
+ * Required in SenderReceiver and BridgeInner modes.
  */
 interface BridgeOutboundConfiguration {
     val artemisBrokerAddress: NetworkHostAndPort
@@ -71,10 +71,10 @@ interface BridgeInboundConfiguration {
 }
 
 /**
- * Details of the target control ports of available [BridgeMode.FloatOuter] processes from the perspective of the [BridgeMode.FloatInner] process.
- * Required for [BridgeMode.FloatInner] mode.
+ * Details of the target control ports of available [BridgeMode.FloatOuter] processes from the perspective of the [BridgeMode.BridgeInner] process.
+ * Required for [BridgeMode.BridgeInner] mode.
  */
-interface FloatInnerConfiguration {
+interface BridgeInnerConfiguration {
     val floatAddresses: List<NetworkHostAndPort>
     val expectedCertificateSubject: CordaX500Name
     // Allows override of [KeyStore] details for the control port, otherwise the general top level details are used.
@@ -90,7 +90,7 @@ interface BridgeHAConfig {
 }
 
 /**
- * Details of the listening port for a [BridgeMode.FloatOuter] process and of the certificate that the [BridgeMode.FloatInner] should present.
+ * Details of the listening port for a [BridgeMode.FloatOuter] process and of the certificate that the [BridgeMode.BridgeInner] should present.
  * Required for [BridgeMode.FloatOuter] mode.
  */
 interface FloatOuterConfiguration {
@@ -104,7 +104,7 @@ interface BridgeConfiguration : NodeSSLConfiguration {
     val bridgeMode: BridgeMode
     val outboundConfig: BridgeOutboundConfiguration?
     val inboundConfig: BridgeInboundConfiguration?
-    val floatInnerConfig: FloatInnerConfiguration?
+    val bridgeInnerConfig: BridgeInnerConfiguration?
     val floatOuterConfig: FloatOuterConfiguration?
     val haConfig: BridgeHAConfig?
     val networkParametersPath: Path

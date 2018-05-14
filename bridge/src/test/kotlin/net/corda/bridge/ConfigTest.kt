@@ -40,7 +40,7 @@ class ConfigTest {
         assertEquals(BridgeMode.SenderReceiver, config.bridgeMode)
         assertEquals(NetworkHostAndPort("localhost", 11005), config.outboundConfig!!.artemisBrokerAddress)
         assertEquals(NetworkHostAndPort("0.0.0.0", 10005), config.inboundConfig!!.listeningAddress)
-        assertNull(config.floatInnerConfig)
+        assertNull(config.bridgeInnerConfig)
         assertNull(config.floatOuterConfig)
     }
 
@@ -48,11 +48,11 @@ class ConfigTest {
     fun `Load simple bridge config`() {
         val configResource = "/net/corda/bridge/withfloat/bridge/bridge.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(BridgeMode.FloatInner, config.bridgeMode)
+        assertEquals(BridgeMode.BridgeInner, config.bridgeMode)
         assertEquals(NetworkHostAndPort("localhost", 11005), config.outboundConfig!!.artemisBrokerAddress)
         assertNull(config.inboundConfig)
-        assertEquals(listOf(NetworkHostAndPort("localhost", 12005)), config.floatInnerConfig!!.floatAddresses)
-        assertEquals(CordaX500Name.parse("O=Bank A, L=London, C=GB"), config.floatInnerConfig!!.expectedCertificateSubject)
+        assertEquals(listOf(NetworkHostAndPort("localhost", 12005)), config.bridgeInnerConfig!!.floatAddresses)
+        assertEquals(CordaX500Name.parse("O=Bank A, L=London, C=GB"), config.bridgeInnerConfig!!.expectedCertificateSubject)
         assertNull(config.floatOuterConfig)
     }
 
@@ -63,7 +63,7 @@ class ConfigTest {
         assertEquals(BridgeMode.FloatOuter, config.bridgeMode)
         assertNull(config.outboundConfig)
         assertEquals(NetworkHostAndPort("0.0.0.0", 10005), config.inboundConfig!!.listeningAddress)
-        assertNull(config.floatInnerConfig)
+        assertNull(config.bridgeInnerConfig)
         assertEquals(NetworkHostAndPort("localhost", 12005), config.floatOuterConfig!!.floatAddress)
         assertEquals(CordaX500Name.parse("O=Bank A, L=London, C=GB"), config.floatOuterConfig!!.expectedCertificateSubject)
     }
@@ -85,10 +85,10 @@ class ConfigTest {
         assertEquals("outboundkeypassword", config.outboundConfig!!.customSSLConfiguration!!.keyStorePassword)
         assertEquals("outboundtrustpassword", config.outboundConfig!!.customSSLConfiguration!!.trustStorePassword)
         assertNull(config.inboundConfig)
-        assertEquals(Paths.get("tunnelcerts/tunnelkeys.jks"), config.floatInnerConfig!!.customSSLConfiguration!!.sslKeystore)
-        assertEquals(Paths.get("tunnelcerts/tunneltrust.jks"), config.floatInnerConfig!!.customSSLConfiguration!!.trustStoreFile)
-        assertEquals("tunnelkeypassword", config.floatInnerConfig!!.customSSLConfiguration!!.keyStorePassword)
-        assertEquals("tunneltrustpassword", config.floatInnerConfig!!.customSSLConfiguration!!.trustStorePassword)
+        assertEquals(Paths.get("tunnelcerts/tunnelkeys.jks"), config.bridgeInnerConfig!!.customSSLConfiguration!!.sslKeystore)
+        assertEquals(Paths.get("tunnelcerts/tunneltrust.jks"), config.bridgeInnerConfig!!.customSSLConfiguration!!.trustStoreFile)
+        assertEquals("tunnelkeypassword", config.bridgeInnerConfig!!.customSSLConfiguration!!.keyStorePassword)
+        assertEquals("tunneltrustpassword", config.bridgeInnerConfig!!.customSSLConfiguration!!.trustStorePassword)
         assertNull(config.floatOuterConfig)
     }
 
@@ -105,7 +105,7 @@ class ConfigTest {
         assertEquals(Paths.get("tunnelcerts/tunneltrust.jks"), config.floatOuterConfig!!.customSSLConfiguration!!.trustStoreFile)
         assertEquals("tunnelkeypassword", config.floatOuterConfig!!.customSSLConfiguration!!.keyStorePassword)
         assertEquals("tunneltrustpassword", config.floatOuterConfig!!.customSSLConfiguration!!.trustStorePassword)
-        assertNull(config.floatInnerConfig)
+        assertNull(config.bridgeInnerConfig)
     }
 
     @Test

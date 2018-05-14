@@ -42,10 +42,10 @@ data class BridgeOutboundConfigurationImpl(override val artemisBrokerAddress: Ne
 data class BridgeInboundConfigurationImpl(override val listeningAddress: NetworkHostAndPort,
                                           override val customSSLConfiguration: BridgeSSLConfigurationImpl?) : BridgeInboundConfiguration
 
-data class FloatInnerConfigurationImpl(override val floatAddresses: List<NetworkHostAndPort>,
-                                       override val expectedCertificateSubject: CordaX500Name,
-                                       override val customSSLConfiguration: BridgeSSLConfigurationImpl?,
-                                       override val customFloatOuterSSLConfiguration: BridgeSSLConfigurationImpl?) : FloatInnerConfiguration
+data class BridgeInnerConfigurationImpl(override val floatAddresses: List<NetworkHostAndPort>,
+                                        override val expectedCertificateSubject: CordaX500Name,
+                                        override val customSSLConfiguration: BridgeSSLConfigurationImpl?,
+                                        override val customFloatOuterSSLConfiguration: BridgeSSLConfigurationImpl?) : BridgeInnerConfiguration
 
 data class FloatOuterConfigurationImpl(override val floatAddress: NetworkHostAndPort,
                                        override val expectedCertificateSubject: CordaX500Name,
@@ -65,7 +65,7 @@ data class BridgeConfigurationImpl(
         override val networkParametersPath: Path,
         override val outboundConfig: BridgeOutboundConfigurationImpl?,
         override val inboundConfig: BridgeInboundConfigurationImpl?,
-        override val floatInnerConfig: FloatInnerConfigurationImpl?,
+        override val bridgeInnerConfig: BridgeInnerConfigurationImpl?,
         override val floatOuterConfig: FloatOuterConfigurationImpl?,
         override val haConfig: BridgeHAConfigImpl?,
         override val enableAMQPPacketTrace: Boolean,
@@ -76,8 +76,8 @@ data class BridgeConfigurationImpl(
     init {
         if (bridgeMode == BridgeMode.SenderReceiver) {
             require(inboundConfig != null && outboundConfig != null) { "Missing required configuration" }
-        } else if (bridgeMode == BridgeMode.FloatInner) {
-            require(floatInnerConfig != null && outboundConfig != null) { "Missing required configuration" }
+        } else if (bridgeMode == BridgeMode.BridgeInner) {
+            require(bridgeInnerConfig != null && outboundConfig != null) { "Missing required configuration" }
         } else if (bridgeMode == BridgeMode.FloatOuter) {
             require(inboundConfig != null && floatOuterConfig != null) { "Missing required configuration" }
         }

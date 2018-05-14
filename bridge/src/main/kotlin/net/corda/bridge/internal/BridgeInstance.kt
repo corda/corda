@@ -130,13 +130,13 @@ class BridgeInstance(val conf: BridgeConfiguration,
                 floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, bridgeAuditService)
                 bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, bridgeAuditService, floatSupervisorService!!.amqpListenerService)
             }
-        // In the FloatInner mode the process runs the full outbound message path as in the SenderReceiver mode, but the inbound path is split.
-        // This 'Float Inner/Bridge Controller' process runs the more trusted portion of the inbound path.
-        // In particular the 'Float Inner/Bridge Controller' has access to the persisted TLS KeyStore, which it provisions dynamically into the 'Float Outer'.
-        // Also the the 'Float Inner' does more complete validation of inbound messages and ensures that they correspond to legitimate
+        // In the BridgeInner mode the process runs the full outbound message path as in the SenderReceiver mode, but the inbound path is split.
+        // This 'Bridge Inner/Bridge Controller' process runs the more trusted portion of the inbound path.
+        // In particular the 'Bridge Inner/Bridge Controller' has access to the persisted TLS KeyStore, which it provisions dynamically into the 'Float Outer'.
+        // Also the the 'Bridge Inner' does more complete validation of inbound messages and ensures that they correspond to legitimate
         // node inboxes, before transferring the message to Artemis. Potentially it might carry out deeper checks of received packets.
-        // However, the 'Float Inner' is not directly exposed to the internet, or peers and does not host the TLS/AMQP 1.0 server socket.
-            BridgeMode.FloatInner -> {
+        // However, the 'Bridge Inner' is not directly exposed to the internet, or peers and does not host the TLS/AMQP 1.0 server socket.
+            BridgeMode.BridgeInner -> {
                 bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, bridgeAuditService, null)
             }
         // In the FloatOuter mode this process runs a minimal AMQP proxy that is designed to run in a DMZ zone.
@@ -144,12 +144,12 @@ class BridgeInstance(val conf: BridgeConfiguration,
         // to minimise any state. It specifically does not persist the Node TLS keys anywhere, nor does it hold network map information on peers.
         // The 'Float Outer' does not initiate socket connection anywhere, so that attackers can be easily blocked by firewalls
         // if they try to invade the system from a compromised 'Float Outer' machine. The 'Float Outer' hosts a control TLS/AMQP 1.0 server socket,
-        // which receives a connection from the 'Float Inner/Bridge controller' in the trusted zone of the organisation.
+        // which receives a connection from the 'Bridge Inner/Bridge controller' in the trusted zone of the organisation.
         // The control channel is ideally authenticated using server/client certificates that are not related to the Corda PKI hierarchy.
         // Once the control channel is formed it is used to RPC the methods of the BridgeAMQPListenerService to start the publicly visible
         // TLS/AMQP 1.0 server socket of the Corda node. Thus peer connections will directly terminate onto the activate listener socket and
         // be validated against the keys/certificates sent across the control tunnel. Inbound messages are given basic checks that do not require
-        // holding potentially sensitive information and are then forwarded across the control tunnel to the 'Float Inner' process for more
+        // holding potentially sensitive information and are then forwarded across the control tunnel to the 'Bridge Inner' process for more
         // complete validation checks.
             BridgeMode.FloatOuter -> {
                 floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, bridgeAuditService)
