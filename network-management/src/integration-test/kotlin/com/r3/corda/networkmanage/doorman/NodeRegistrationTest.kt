@@ -130,17 +130,18 @@ class NodeRegistrationTest : IntegrationTest() {
                 compatibilityZone = compatibilityZone,
                 initialiseSerialization = false,
                 notarySpecs = listOf(NotarySpec(notaryName)),
-                extraCordappPackagesToScan = listOf("net.corda.finance")
+                extraCordappPackagesToScan = listOf("net.corda.finance"),
+                notaryCustomOverrides = mapOf("devMode" to false)
         ) {
             val (alice, notary) = listOf(
-                    startNode(providedName = aliceName),
+                    startNode(providedName = aliceName, customOverrides = mapOf("devMode" to false)),
                     defaultNotaryNode
             ).map { it.getOrThrow() as NodeHandleInternal }
 
             alice.onlySeesFromNetworkMap(alice, notary)
             notary.onlySeesFromNetworkMap(alice, notary)
 
-            val genevieve = startNode(providedName = genevieveName).getOrThrow() as NodeHandleInternal
+            val genevieve = startNode(providedName = genevieveName, customOverrides = mapOf("devMode" to false)).getOrThrow() as NodeHandleInternal
 
             // Wait for the nodes to poll again
             Thread.sleep(timeoutMillis * 2)
