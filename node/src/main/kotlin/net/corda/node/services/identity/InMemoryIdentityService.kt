@@ -4,9 +4,7 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.CertRole
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.UnknownAnonymousPartyException
-import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -25,7 +23,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO There is duplicated logic between this and PersistentIdentityService
 @ThreadSafe
 class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
-                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
+                              override val trustRoot: X509Certificate) : AbstractIdentityService() {
     companion object {
         private val log = contextLogger()
     }
@@ -33,8 +31,8 @@ class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
     /**
      * Certificate store for certificate authority and intermediary certificates.
      */
-    override val caCertStore: CertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(setOf(trustRoot)))
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
+    override val caCertStore: CertStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(setOf(trustRoot)))
     private val keyToParties = ConcurrentHashMap<PublicKey, PartyAndCertificate>()
     private val principalToParties = ConcurrentHashMap<CordaX500Name, PartyAndCertificate>()
 
@@ -97,36 +95,22 @@ class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
 
     override fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
     override fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party {
-        return wellKnownPartyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
+        return wellKnownPartyFromAnonymous(party)
+                ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         val results = LinkedHashSet<Party>()
         for ((x500name, partyAndCertificate) in principalToParties) {
-            val party = partyAndCertificate.party
-            val components = listOfNotNull(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country)
-            components.forEach { component ->
-                if (exactMatch && component == query) {
-                    results += party
-                } else if (!exactMatch) {
-                    // We can imagine this being a query over a lucene index in future.
-                    //
-                    // Kostas says: We can easily use the Jaro-Winkler distance metric as it is best suited for short
-                    // strings such as entity/company names, and to detect small typos. We can also apply it for city
-                    // or any keyword related search in lists of records (not raw text - for raw text we need indexing)
-                    // and we can return results in hierarchical order (based on normalised String similarity 0.0-1.0).
-                    if (component.contains(query, ignoreCase = true))
-                        results += party
-                }
-            }
+            partiesFromName(query, exactMatch, x500name, results, partyAndCertificate.party)
         }
         return results
     }
 
     @Throws(UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
-        val anonymousIdentity = keyToParties[anonymousParty.owningKey] ?:
-                throw UnknownAnonymousPartyException("Unknown $anonymousParty")
+        val anonymousIdentity = keyToParties[anonymousParty.owningKey]
+                ?: throw UnknownAnonymousPartyException("Unknown $anonymousParty")
         val issuingCert = anonymousIdentity.certPath.certificates[1]
         require(issuingCert.publicKey == party.owningKey) {
             "Issuing certificate's public key must match the party key ${party.owningKey.toStringShort()}."
