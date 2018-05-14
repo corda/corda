@@ -26,9 +26,9 @@ import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
 
-sealed class NodeInfoUpdate{
-    class Add(val nodeInfo: NodeInfo): NodeInfoUpdate()
-    class Remove(val hash: SecureHash): NodeInfoUpdate()
+sealed class NodeInfoUpdate {
+    data class Add(val nodeInfo: NodeInfo) : NodeInfoUpdate()
+    data class Remove(val hash: SecureHash) : NodeInfoUpdate()
 }
 
 /**
@@ -63,10 +63,10 @@ class NodeInfoWatcher(private val nodePath: Path,
         }
     }
 
+    internal data class NodeInfoFromFile(val nodeInfohash: SecureHash, val lastModified: FileTime)
     private val nodeInfosDir = nodePath / CordformNode.NODE_INFO_DIRECTORY
-    private val nodeInfoFiles = HashMap<Path, FileTime>()
-    private val processedPathHashMap = HashMap<Path, SecureHash>()
-    val processedNodeInfoHashes: Set<SecureHash> get() = processedPathHashMap.values.toSet()
+    private val nodeInfoFilesMap = HashMap<Path, NodeInfoFromFile>()
+    val processedNodeInfoHashes: Set<SecureHash> get() = nodeInfoFilesMap.values.map { it.nodeInfohash }.toSet()
 
     init {
         require(pollInterval >= 5.seconds) { "Poll interval must be 5 seconds or longer." }
@@ -99,9 +99,8 @@ class NodeInfoWatcher(private val nodePath: Path,
                     .filter { it.isRegularFile() }
                     .filter { file ->
                         val lastModifiedTime = file.lastModifiedTime()
-                        val previousLastModifiedTime = nodeInfoFiles[file]
+                        val previousLastModifiedTime = nodeInfoFilesMap[file]?.lastModified
                         val newOrChangedFile = previousLastModifiedTime == null || lastModifiedTime > previousLastModifiedTime
-                        nodeInfoFiles[file] = lastModifiedTime
                         processedPaths.add(file)
                         newOrChangedFile
                     }
@@ -109,7 +108,7 @@ class NodeInfoWatcher(private val nodePath: Path,
                         logger.debug { "Reading SignedNodeInfo from $file" }
                         try {
                             val nodeInfoSigned = NodeInfoAndSigned(file.readObject())
-                            processedPathHashMap[file] = nodeInfoSigned.signed.raw.hash
+                            nodeInfoFilesMap[file] = NodeInfoFromFile(nodeInfoSigned.signed.raw.hash, file.lastModifiedTime())
                             nodeInfoSigned
                         } catch (e: Exception) {
                             logger.warn("Unable to read SignedNodeInfo from $file", e)
@@ -118,11 +117,11 @@ class NodeInfoWatcher(private val nodePath: Path,
                     }
                     .toList()
         }
-        val removedFiles = processedPathHashMap.keys - processedPaths
+        val removedFiles = nodeInfoFilesMap.keys - processedPaths
         val removedHashes = removedFiles.mapNotNull { file ->
-            processedPathHashMap[file]?.let {
-                processedPathHashMap.remove(file)
-                NodeInfoUpdate.Remove(it)
+            nodeInfoFilesMap[file]?.let {
+                nodeInfoFilesMap.remove(file)
+                NodeInfoUpdate.Remove(it.nodeInfohash)
             }
         }
         logger.debug { "Read ${result.size} NodeInfo files from $nodeInfosDir" }

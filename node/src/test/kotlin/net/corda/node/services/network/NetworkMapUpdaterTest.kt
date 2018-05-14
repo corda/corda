@@ -244,30 +244,30 @@ class NetworkMapUpdaterTest {
     fun `remove node info file, but node in network map server`() {
         val nodeInfoBuilder = TestNodeInfoBuilder()
         val (_, key) = nodeInfoBuilder.addLegalIdentity(CordaX500Name("Info", "London", "GB"))
-        val (nodeInfo, signedInfo) = nodeInfoBuilder.buildWithSigned(1, 1)
+        val (serverNodeInfo, serverSignedNodeInfo) = nodeInfoBuilder.buildWithSigned(1, 1)
         // Construct node for exactly same identity, but different serial. This one will go to additional-node-infos only.
-        val copiedNodeInfo = nodeInfo.copy(serial = 17)
-        val signedCopiedNodeInfo = NodeInfoAndSigned(copiedNodeInfo) { _, serialised ->
+        val localNodeInfo = serverNodeInfo.copy(serial = 17)
+        val localSignedNodeInfo = NodeInfoAndSigned(localNodeInfo) { _, serialised ->
             key.sign(serialised.bytes)
         }
         // The one with higher serial goes to additional-node-infos.
-        NodeInfoWatcher.saveToFile(nodeInfoDir, signedCopiedNodeInfo)
+        NodeInfoWatcher.saveToFile(nodeInfoDir, localSignedNodeInfo)
         // Publish to network map the one with lower serial.
-        networkMapClient.publish(signedInfo)
+        networkMapClient.publish(serverSignedNodeInfo)
         updater.subscribeToNetworkMap()
         scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
-        verify(networkMapCache, times(1)).addNode(copiedNodeInfo)
+        verify(networkMapCache, times(1)).addNode(localNodeInfo)
         Thread.sleep(2L * cacheExpiryMs)
         // Node from file has higher serial than the one from NetworkMapServer
-        assertThat(networkMapCache.allNodeHashes).containsOnly(signedCopiedNodeInfo.signed.raw.hash)
-        val fileName = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${copiedNodeInfo.legalIdentities[0].name.serialize().hash}"
+        assertThat(networkMapCache.allNodeHashes).containsOnly(localSignedNodeInfo.signed.raw.hash)
+        val fileName = "${NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX}${localNodeInfo.legalIdentities[0].name.serialize().hash}"
         (nodeInfoDir / fileName).delete()
         scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
         verify(networkMapCache, times(1)).removeNode(any())
-        verify(networkMapCache).removeNode(copiedNodeInfo)
+        verify(networkMapCache).removeNode(localNodeInfo)
         Thread.sleep(2L * cacheExpiryMs)
         // Instead of node from file we should have now the one from NetworkMapServer
-        assertThat(networkMapCache.allNodeHashes).containsOnly(signedInfo.raw.hash)
+        assertThat(networkMapCache.allNodeHashes).containsOnly(serverSignedNodeInfo.raw.hash)
     }
 
     private fun createMockNetworkMapCache(): NetworkMapCacheInternal {
@@ -277,11 +277,7 @@ class NetworkMapUpdaterTest {
                 val nodeInfo = it.arguments[0] as NodeInfo
                 val party = nodeInfo.legalIdentities[0]
                 val previousInfo = data[party]
-                if (previousInfo != null) {
-                    if (previousInfo.serial < nodeInfo.serial) {
-                        data.put(party, nodeInfo)
-                    } else null
-                } else {
+                if (previousInfo == null || previousInfo.serial < nodeInfo.serial) {
                     data.put(party, nodeInfo)
                 }
             }
