@@ -226,6 +226,10 @@ allprojects {
             // We want to use SLF4J's version of these bindings: jcl-over-slf4j
             // Remove any transitive dependency on Apache's version.
             exclude group: 'commons-logging', module: 'commons-logging'
+
+            // Netty-All is an uber-jar which contains every Netty module.
+            // Exclude it to force us to use the individual Netty modules instead.
+            exclude group: 'io.netty', module: 'netty-all'
         }
         runtime {
             // We never want isolated.jar on classPath, since we want to test jar being dynamically loaded as an attachment
