@@ -58,13 +58,13 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      * subclass in the schema, so that we can distinguish between subclasses.
      */
     // TODO: should this be a custom serializer at all, or should it just be a plain AMQPSerializer?
-    class SubClass<T : Any>(protected val clazz: Class<*>, protected val superClassSerializer: CustomSerializer<T>) : CustomSerializer<T>() {
+    class SubClass<T : Any>(private val clazz: Class<*>, private val superClassSerializer: CustomSerializer<T>) : CustomSerializer<T>() {
         // TODO: should this be empty or contain the schema of the super?
         override val schemaForDocumentation = Schema(emptyList())
 
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == this.clazz
         override val type: Type get() = clazz
-        override val typeDescriptor by lazy {
+        override val typeDescriptor: Symbol by lazy {
             Symbol.valueOf("$DESCRIPTOR_DOMAIN:${SerializerFingerPrinter().fingerprintForDescriptors(superClassSerializer.typeDescriptor.toString(), nameForType(clazz))}")
         }
         private val typeNotation: TypeNotation = RestrictedType(

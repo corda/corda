@@ -40,31 +40,39 @@ open class SerializerFactory(
         val whitelist: ClassWhitelist,
         val classCarpenter: ClassCarpenter,
         private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
-        val fingerPrinter: FingerPrinter = SerializerFingerPrinter()) {
+        val fingerPrinter: FingerPrinter = SerializerFingerPrinter(),
+        private val serializersByType: MutableMap<Type, AMQPSerializer<Any>>,
+        val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>>,
+        private val customSerializers: MutableList<SerializerFor>,
+        val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>) {
+    constructor(whitelist: ClassWhitelist,
+                classCarpenter: ClassCarpenter,
+                evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
+                fingerPrinter: FingerPrinter = SerializerFingerPrinter()
+    ) : this(whitelist, classCarpenter, evolutionSerializerGetter, fingerPrinter,
+             serializersByType = ConcurrentHashMap(),
+             serializersByDescriptor = ConcurrentHashMap(),
+             customSerializers = CopyOnWriteArrayList(),
+             transformsCache = ConcurrentHashMap())
     constructor(whitelist: ClassWhitelist,
                 classLoader: ClassLoader,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
                 fingerPrinter: FingerPrinter = SerializerFingerPrinter()
-    ) : this(whitelist, ClassCarpenterImpl(classLoader, whitelist), evolutionSerializerGetter, fingerPrinter)
+    ) : this(whitelist, ClassCarpenterImpl(classLoader, whitelist), evolutionSerializerGetter, fingerPrinter,
+             serializersByType = ConcurrentHashMap(),
+             serializersByDescriptor = ConcurrentHashMap(),
+             customSerializers = CopyOnWriteArrayList(),
+             transformsCache = ConcurrentHashMap())
 
     init {
         fingerPrinter.setOwner(this)
     }
-
-    private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
-    private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
-    private val customSerializers = CopyOnWriteArrayList<SerializerFor>()
-    private val transformsCache = ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>()
 
     val classloader: ClassLoader
         get() = classCarpenter.classloader
 
     private fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: AMQPSerializer<Any>,
                                        schemas: SerializationSchemas) = evolutionSerializerGetter.getEvolutionSerializer(this, typeNotation, newSerializer, schemas)
-
-    fun getSerializersByDescriptor() = serializersByDescriptor
-
-    fun getTransformsCache() = transformsCache
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -144,7 +152,7 @@ open class SerializerFactory(
             return if (actualClass.typeParameters.isNotEmpty()) {
                 // The actual class can never have type variables resolved, due to the JVM's use of type erasure, so let's try and resolve them
                 // Search for declared type in the inheritance hierarchy and then see if that fills in all the variables
-                val implementationChain: List<Type>? = findPathToDeclared(actualClass, declaredType, mutableListOf<Type>())
+                val implementationChain: List<Type>? = findPathToDeclared(actualClass, declaredType, mutableListOf())
                 if (implementationChain != null) {
                     val start = implementationChain.last()
                     val rest = implementationChain.dropLast(1).drop(1)
@@ -219,7 +227,7 @@ open class SerializerFactory(
 
     /**
      * Iterate over an AMQP schema, for each type ascertain whether it's on ClassPath of [classloader] and,
-     * if not, use the [ClassCarpenter] to generate a class to use in it's place.
+     * if not, use the [ClassCarpenter] to generate a class to use in its place.
      */
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
         val metaSchema = CarpenterMetaSchema.newInstance()
@@ -239,22 +247,26 @@ open class SerializerFactory(
         }
 
         if (metaSchema.isNotEmpty()) {
-            val mc = MetaCarpenter(metaSchema, classCarpenter)
-            try {
-                mc.build()
-            } catch (e: MetaCarpenterException) {
-                // preserve the actual message locally
-                loggerFor<SerializerFactory>().apply {
-                    error("${e.message} [hint: enable trace debugging for the stack trace]")
-                    trace("", e)
-                }
-
-                // prevent carpenter exceptions escaping into the world, convert things into a nice
-                // NotSerializableException for when this escapes over the wire
-                throw NotSerializableException(e.name)
-            }
-            processSchema(schemaAndDescriptor, true)
+            runCarpentry(schemaAndDescriptor, metaSchema)
         }
+    }
+
+    private fun runCarpentry(schemaAndDescriptor: FactorySchemaAndDescriptor, metaSchema: CarpenterMetaSchema) {
+        val mc = MetaCarpenter(metaSchema, classCarpenter)
+        try {
+            mc.build()
+        } catch (e: MetaCarpenterException) {
+            // preserve the actual message locally
+            loggerFor<SerializerFactory>().apply {
+                error("${e.message} [hint: enable trace debugging for the stack trace]")
+                trace("", e)
+            }
+
+            // prevent carpenter exceptions escaping into the world, convert things into a nice
+            // NotSerializableException for when this escapes over the wire
+            throw NotSerializableException(e.name)
+        }
+        processSchema(schemaAndDescriptor, true)
     }
 
     private fun processSchemaEntry(typeNotation: TypeNotation) = when (typeNotation) {
