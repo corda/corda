@@ -106,16 +106,16 @@ with the advertised X.500 legal name from the network map service.
 Implementation details
 ----------------------
 
-These components of the system that need to communicate and authenticate each other are:
+The components of the system that need to communicate and authenticate each other are:
    - The Artemis P2P broker (Currently runs inside the Nodes JVM process, but in the future it will be able to run as a separate server)
-      * opens acceptor configured with the doorman's certificate in the truststore and the node's ssl certificate in the keystore
+      * opens Acceptor configured with the doorman's certificate in the truststore and the node's ssl certificate in the keystore
    - The Artemis RPC broker (Currently runs inside the Nodes JVM process, but in the future it will be able to run as a separate server)
-      * opens "Admin" acceptor configured with the doorman's certificate in the truststore and the node's ssl certificate in the keystore
-      * opens "RPC" acceptor with the ssl settings configurable. This acceptor does not require ssl client-auth.
+      * opens "Admin" Acceptor configured with the doorman's certificate in the truststore and the node's ssl certificate in the keystore
+      * opens "Client" Acceptor with the ssl settings configurable. This acceptor does not require ssl client-auth.
    - The current node hosting the brokers
       * connects to the P2P broker using the ``SystemUsers/Node`` user and the node's keystore and trustore
-      * connects to the RPC broker - admin acceptor - using the ``SystemUsers/NodeRPC`` user and the node's keystore and trustore
+      * connects to the "Admin" Acceptor of the RPC broker using the ``SystemUsers/NodeRPC`` user and the node's keystore and trustore
    - RPC clients ( Third party applications that need to communicate with the Node. )
-      * connect to the RPC broker - the RPC acceptor - using the username/password provided by the node's admin. It verifies the node's certificate using a truststore provided by the node's admin.
+      * connect to the "Client" Acceptor of the RPC broker using the username/password provided by the node's admin. The client verifies the node's certificate using a truststore provided by the node's admin.
    - Peer nodes (Other nodes on the network)
-      * connects to the P2P broker using the ``SystemUsers/Peer`` user and a doorman signed certificate
+      * connect to the P2P broker using the ``SystemUsers/Peer`` user and a doorman signed certificate. The authentication is performed based on the root CA.
