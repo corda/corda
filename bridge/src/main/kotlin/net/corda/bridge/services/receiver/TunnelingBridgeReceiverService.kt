@@ -59,19 +59,19 @@ class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
 
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService, haService, filterService))
-        controlLinkSSLConfiguration = conf.floatInnerConfig?.customSSLConfiguration ?: conf
-        floatListenerSSLConfiguration = conf.floatInnerConfig?.customFloatOuterSSLConfiguration ?: conf
+        controlLinkSSLConfiguration = conf.bridgeInnerConfig?.customSSLConfiguration ?: conf
+        floatListenerSSLConfiguration = conf.bridgeInnerConfig?.customFloatOuterSSLConfiguration ?: conf
         controlLinkKeyStore = controlLinkSSLConfiguration.loadSslKeyStore().internal
         controLinkKeyStorePrivateKeyPassword = controlLinkSSLConfiguration.keyStorePassword
         controlLinkTrustStore = controlLinkSSLConfiguration.loadTrustStore().internal
-        expectedCertificateSubject = conf.floatInnerConfig!!.expectedCertificateSubject
+        expectedCertificateSubject = conf.bridgeInnerConfig!!.expectedCertificateSubject
     }
 
 
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe {
             if (it) {
-                val floatAddresses = conf.floatInnerConfig!!.floatAddresses
+                val floatAddresses = conf.bridgeInnerConfig!!.floatAddresses
                 val controlClient = AMQPClient(floatAddresses, setOf(expectedCertificateSubject), null, null, controlLinkKeyStore, controLinkKeyStorePrivateKeyPassword, controlLinkTrustStore, conf.crlCheckSoftFail, conf.enableAMQPPacketTrace)
                 connectSubscriber = controlClient.onConnection.subscribe { onConnectToControl(it) }
                 receiveSubscriber = controlClient.onReceive.subscribe { onFloatMessage(it) }
