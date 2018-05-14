@@ -175,7 +175,8 @@ see changes to this list.
 * tomconte
 * Tommy Lillehagen (R3)
 * tomtau
-* Tudor Malene (R3)
+* Tudor Malene (R3) 
+* Tushar Singh Bora
 * varunkm
 * verymahler
 * Viktor Kolomeyko (R3)
