@@ -1,5 +1,7 @@
 # High availability support
 
+.. important:: This design document describes a feature of Corda Enterprise.
+
 ## Overview
 ### Background
 
