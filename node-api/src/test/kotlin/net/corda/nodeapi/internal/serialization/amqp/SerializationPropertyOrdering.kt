@@ -12,6 +12,8 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
 import org.junit.Test
 import java.util.concurrent.ConcurrentHashMap
@@ -20,10 +22,6 @@ import org.apache.qpid.proton.amqp.Symbol
 import java.lang.reflect.Method
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 class SerializationPropertyOrdering {
     companion object {

@@ -95,7 +95,7 @@ class EnumClassTests : AmqpCarpenterBase(AllWhitelist) {
     // exception, hence the lack of asserts
     @Test
     fun assignAndTest() {
-        val cc2 = ClassCarpenter(whitelist = AllWhitelist)
+        val cc2 = ClassCarpenterImpl(whitelist = AllWhitelist)
 
         val schema1 = EnumSchema("gen.enum",
                 listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF").associateBy({ it }, { EnumField() }))

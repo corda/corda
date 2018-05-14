@@ -11,14 +11,12 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactoryNoEvolution
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.util.*
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserialize
 
 class DeserializeMapTests {
     companion object {
@@ -84,8 +82,8 @@ class DeserializeMapTests {
         data class C(val c: Dictionary<String, Int>)
 
         val v: Hashtable<String, Int> = Hashtable()
-        v.put("a", 1)
-        v.put("b", 2)
+        v["a"] = 1
+        v["b"] = 2
         val c = C(v)
 
         // expected to throw
@@ -98,8 +96,8 @@ class DeserializeMapTests {
         data class C(val c: Hashtable<String, Int>)
 
         val v: Hashtable<String, Int> = Hashtable()
-        v.put("a", 1)
-        v.put("b", 2)
+        v["a"] = 1
+        v["b"] = 2
         val c = C(v)
 
         // expected to throw
