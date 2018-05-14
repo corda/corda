@@ -1,14 +1,9 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Decision: Broker separation
-============================================
+# Design Decision: Broker separation
 
 ## Background / Context
 
-A decision of whether to extract the Artemis message broker as a separate component has implications for the design of [high availability](../design.md) for nodes.
-
-
+A decision of whether to extract the Artemis message broker as a separate component has implications for the design of
+[high availability](../design.md) for nodes.
 
 ## Options Analysis
 
@@ -16,15 +11,15 @@ A decision of whether to extract the Artemis message broker as a separate compon
 
 #### Advantages
 
-1.    Least change
+1. Least change
 
 #### Disadvantages
 
-1.    Means that starting/stopping Corda is tightly coupled to starting/stopping Artemis instances.
-2.    Risks resource leaks from one system component affecting other components.
-3.    Not pluggable if we wish to have an alternative broker.
+1. Means that starting/stopping Corda is tightly coupled to starting/stopping Artemis instances.
+2. Risks resource leaks from one system component affecting other components.
+3. Not pluggable if we wish to have an alternative broker.
 
-## 2. External broker
+### 2. External broker
 
 #### Advantages
 
@@ -46,4 +41,8 @@ Proceed with Option 2: External broker
 
 ## Decision taken
 
-**[DRB meeting, 16/11/2017:](./drb-meeting-20171116.md)** The broker should only be separated if required by other features (e.g. the float), otherwise not. (RGB, JC, MH agreed).
+The broker should only be separated if required by other features (e.g. the float), otherwise not. (RGB, JC, MH agreed).
+
+.. toctree::
+
+   drb-meeting-20171116.md

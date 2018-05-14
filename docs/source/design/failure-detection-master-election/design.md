@@ -1,8 +1,6 @@
 # Failure detection and master election
 
-```eval_rst
 .. important:: This design document describes a feature of Corda Enterprise.
-```
 
 ## Background
 
@@ -38,13 +36,10 @@ It would also be helpful for the chosen solution to not add deployment complexit
 
 ## Design decisions
 
-```eval_rst
 .. toctree::
    :maxdepth: 2
    
    drb-meeting-20180131.md
-
-```
 
 ## Proposed solutions
 
