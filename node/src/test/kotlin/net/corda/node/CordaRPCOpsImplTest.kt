@@ -129,8 +129,8 @@ class CordaRPCOpsImplTest {
                         expect { add: StateMachineUpdate.Added ->
                             issueSmId = add.id
                         },
-                        expect { (id) ->
-                            require(id == issueSmId)
+                        expect { remove: StateMachineUpdate.Removed ->
+                            require(remove.id == issueSmId)
                         }
                 )
             }
@@ -187,15 +187,15 @@ class CordaRPCOpsImplTest {
                         expect { add: StateMachineUpdate.Added ->
                             issueSmId = add.id
                         },
-                        expect { (id) ->
-                            require(id == issueSmId)
+                        expect { remove: StateMachineUpdate.Removed ->
+                            require(remove.id == issueSmId)
                         },
                         // MOVE
                         expect { add: StateMachineUpdate.Added ->
                             moveSmId = add.id
                         },
-                        expect { (id) ->
-                            require(id == moveSmId)
+                        expect { remove: StateMachineUpdate.Removed ->
+                            require(remove.id == moveSmId)
                         }
                 )
             }
