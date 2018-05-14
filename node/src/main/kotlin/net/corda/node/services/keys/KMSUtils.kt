@@ -30,7 +30,8 @@ import java.time.Duration
 fun freshCertificate(identityService: IdentityService,
                      subjectPublicKey: PublicKey,
                      issuer: PartyAndCertificate,
-                     issuerSigner: ContentSigner): PartyAndCertificate {
+                     issuerSigner: ContentSigner,
+                     revocationEnabled: Boolean = false): PartyAndCertificate {
     val issuerRole = CertRole.extract(issuer.certificate)
     require(issuerRole == CertRole.LEGAL_IDENTITY) { "Confidential identities can only be issued from well known identities, provided issuer ${issuer.name} has role $issuerRole" }
     val issuerCert = issuer.certificate

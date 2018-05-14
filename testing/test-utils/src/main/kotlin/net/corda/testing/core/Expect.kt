@@ -212,7 +212,7 @@ private sealed class ExpectComposeState<E : Any> {
     abstract fun getExpectedEvents(): List<Class<out E>>
 
     class Finished<E : Any> : ExpectComposeState<E>() {
-        override fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>? = null
+        override fun nextState(event: E) = null
         override fun getExpectedEvents(): List<Class<E>> = listOf()
     }
 

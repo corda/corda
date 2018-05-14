@@ -63,7 +63,7 @@ object JacksonSupport {
     @Deprecated("This is an internal class, do not use", replaceWith = ReplaceWith("JacksonSupport.createDefaultMapper"))
     class RpcObjectMapper(val rpc: CordaRPCOps,
                           factory: JsonFactory,
-                          private val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
+                          val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
         override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = rpc.wellKnownPartyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = rpc.partyFromKey(owningKey)
         override fun partiesFromName(query: String) = rpc.partiesFromName(query, fuzzyIdentityMatch)
@@ -73,7 +73,7 @@ object JacksonSupport {
     @Deprecated("This is an internal class, do not use")
     class IdentityObjectMapper(val identityService: IdentityService,
                                factory: JsonFactory,
-                               private val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
+                               val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
         override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = identityService.wellKnownPartyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = identityService.partyFromKey(owningKey)
         override fun partiesFromName(query: String) = identityService.partiesFromName(query, fuzzyIdentityMatch)
@@ -88,7 +88,7 @@ object JacksonSupport {
         override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? = null
     }
 
-    private val cordaModule: Module by lazy {
+    val cordaModule: Module by lazy {
         SimpleModule("core").apply {
             addSerAndDeser(AnonymousPartySerializer, AnonymousPartyDeserializer)
             addSerAndDeser(PartySerializer, PartyDeserializer)

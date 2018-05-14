@@ -53,7 +53,7 @@ class E2ETestKeyManagementService(val identityService: IdentityService,
     }
 
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
-        return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey))
+        return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
     }
 
     private fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))

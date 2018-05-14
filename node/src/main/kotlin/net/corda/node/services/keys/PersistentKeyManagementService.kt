@@ -80,7 +80,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     }
 
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate =
-            freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey))
+            freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
 
     private fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))
 
