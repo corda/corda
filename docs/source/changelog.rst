@@ -12,10 +12,6 @@ Unreleased
 
 * Added smart detection logic for the development mode setting and an option to override it from the command line.
 
-* Fixed an error thrown by NodeVaultService upon recording a transaction with a number of inputs greater than the default page size.
-
-* Fixed incorrect computation of ``totalStates`` from ``otherResults`` in ``NodeVaultService``.
-
 * Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
 
   * ``Instant`` and ``Date`` objects are serialised as ISO-8601 formatted strings rather than timestamps
