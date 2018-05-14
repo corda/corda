@@ -87,7 +87,6 @@ data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdenti
      */
     @CordaSerializable
     data class Id(val value: String)
-
 }
 
 /**

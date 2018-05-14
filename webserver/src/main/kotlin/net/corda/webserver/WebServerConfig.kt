@@ -47,6 +47,6 @@ class WebServerConfig(override val baseDirectory: Path, val config: Config) : No
         } else {
             config.getConfigList("security.authService.dataSource.users")
         }
-        runAs = users.first().parseAs<User>()
+        runAs = users.first().parseAs()
     }
 }

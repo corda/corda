@@ -37,9 +37,7 @@ class ChosenList<E>(
 
     private var currentList = chosenListObservable.value
 
-    private val listener = object : ListChangeListener<E> {
-        override fun onChanged(change: ListChangeListener.Change<out E>) = fireChange(change)
-    }
+    private val listener = ListChangeListener<E> { change -> fireChange(change) }
 
     init {
         chosenListObservable.addListener { _: Observable -> rechoose() }
@@ -49,7 +47,7 @@ class ChosenList<E>(
         endChange()
     }
 
-    override fun get(index: Int) = currentList.get(index)
+    override fun get(index: Int): E = currentList[index]
     override val size: Int get() = currentList.size
 
     private fun rechoose() {

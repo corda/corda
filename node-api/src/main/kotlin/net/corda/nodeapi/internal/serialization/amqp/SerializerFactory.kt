@@ -154,7 +154,7 @@ open class SerializerFactory(
             return if (actualClass.typeParameters.isNotEmpty()) {
                 // The actual class can never have type variables resolved, due to the JVM's use of type erasure, so let's try and resolve them
                 // Search for declared type in the inheritance hierarchy and then see if that fills in all the variables
-                val implementationChain: List<Type>? = findPathToDeclared(actualClass, declaredType, mutableListOf<Type>())
+                val implementationChain: List<Type>? = findPathToDeclared(actualClass, declaredType, mutableListOf())
                 if (implementationChain != null) {
                     val start = implementationChain.last()
                     val rest = implementationChain.dropLast(1).drop(1)
@@ -315,6 +315,7 @@ open class SerializerFactory(
                 return if (declaredSuperClass == null
                         || !customSerializer.isSerializerFor(declaredSuperClass)
                         || !customSerializer.revealSubclassesInSchema) {
+                    @Suppress("UNCHECKED_CAST")
                     customSerializer as? AMQPSerializer<Any>
                 } else {
                     // Make a subclass serializer for the subclass and return that...

@@ -102,12 +102,14 @@ internal class CordaRPCOpsImpl(
         }
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsSnapshot(): List<SignedTransaction> {
-        val (snapshot, updates) = internalVerifiedTransactionsFeed()
+        val (snapshot, updates) = @Suppress("DEPRECATION") internalVerifiedTransactionsFeed()
         updates.notUsed()
         return snapshot
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return database.transaction {
             services.validatedTransactions.track()

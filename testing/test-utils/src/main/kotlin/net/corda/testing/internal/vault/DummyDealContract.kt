@@ -21,7 +21,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.contracts.DealState
 
-val DUMMY_DEAL_PROGRAM_ID = "net.corda.testing.internal.vault.DummyDealContract"
+const val DUMMY_DEAL_PROGRAM_ID = "net.corda.testing.internal.vault.DummyDealContract"
 
 class DummyDealContract : Contract {
     override fun verify(tx: LedgerTransaction) {}

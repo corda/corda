@@ -128,9 +128,10 @@ data class CordaX500Name(val commonName: String?,
     private var _x500Principal: X500Principal? = null
 
     /** Return the [X500Principal] equivalent of this name. */
-    val x500Principal: X500Principal get() {
-        return _x500Principal ?: X500Principal(this.x500Name.encoded).also { _x500Principal = it }
-    }
+    val x500Principal: X500Principal
+        get() {
+            return _x500Principal ?: X500Principal(this.x500Name.encoded).also { _x500Principal = it }
+        }
 
     override fun toString(): String = x500Principal.toString()
 }

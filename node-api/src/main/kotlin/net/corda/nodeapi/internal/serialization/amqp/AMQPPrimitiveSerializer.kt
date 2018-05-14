@@ -22,7 +22,7 @@ import java.lang.reflect.Type
  * [ByteArray] is automatically marshalled to/from the Proton-J wrapper, [Binary].
  */
 class AMQPPrimitiveSerializer(clazz: Class<*>) : AMQPSerializer<Any> {
-    override val typeDescriptor = Symbol.valueOf(SerializerFactory.primitiveTypeName(clazz)!!)
+    override val typeDescriptor = Symbol.valueOf(SerializerFactory.primitiveTypeName(clazz)!!)!!
     override val type: Type = clazz
 
     // NOOP since this is a primitive type.

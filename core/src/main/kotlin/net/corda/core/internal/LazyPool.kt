@@ -49,10 +49,10 @@ class LazyPool<A>(
         lifeCycle.requireState(State.STARTED)
         poolSemaphore.acquire()
         val pooled = poolQueue.poll()
-        if (pooled == null) {
-            return newInstance()
+        return if (pooled == null) {
+            newInstance()
         } else {
-            return clearIfNeeded(pooled)
+            clearIfNeeded(pooled)
         }
     }
 

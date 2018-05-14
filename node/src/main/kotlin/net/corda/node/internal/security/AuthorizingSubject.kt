@@ -25,14 +25,13 @@ interface AuthorizingSubject {
      * (e.g. an RPC invocation) represented by an [action] string followed by an
      * optional list of arguments.
      */
-    fun isPermitted(action : String, vararg arguments : String) : Boolean
+    fun isPermitted(action: String, vararg arguments: String): Boolean
 }
 
 /**
  * An implementation of [AuthorizingSubject] permitting all actions
  */
-class AdminSubject(override val principal : String) : AuthorizingSubject {
+class AdminSubject(override val principal: String) : AuthorizingSubject {
 
     override fun isPermitted(action: String, vararg arguments: String) = true
-
 }

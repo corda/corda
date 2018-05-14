@@ -36,7 +36,6 @@ class RollOutTests {
         }
     }
 
-
     val contract2 = arrange {
         rollOut("2016-09-01".ld, "2017-09-01".ld, Frequency.Monthly) {
             actions {
@@ -167,7 +166,7 @@ class RollOutTests {
     }
 
     @Test
-    fun `execute`() {
+    fun execute() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, stateStart)
             output(UNIVERSAL_PROGRAM_ID, stateStep1a)
@@ -182,5 +181,4 @@ class RollOutTests {
             this.verifies()
         }
     }
-
 }

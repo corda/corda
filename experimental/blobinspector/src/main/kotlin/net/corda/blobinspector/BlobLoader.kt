@@ -25,9 +25,9 @@ class InMemoryBlobHandler(config_: Config) : BlobHandler(config_) {
 /**
  *
  */
-abstract class BlobHandler (val config: Config) {
+abstract class BlobHandler(val config: Config) {
     companion object {
-        fun make(config: Config) : BlobHandler {
+        fun make(config: Config): BlobHandler {
             return when (config.mode) {
                 Mode.file -> FileBlobHandler(config)
                 Mode.inMem -> InMemoryBlobHandler(config)
@@ -35,6 +35,6 @@ abstract class BlobHandler (val config: Config) {
         }
     }
 
-    abstract fun getBytes() : ByteArray
+    abstract fun getBytes(): ByteArray
 }
 

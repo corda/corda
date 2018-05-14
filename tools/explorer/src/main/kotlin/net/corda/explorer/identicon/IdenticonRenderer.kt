@@ -76,17 +76,17 @@ object IdenticonRenderer {
             byteArrayOf(0, 2, 10, 0),
             byteArrayOf(0, 4, 24, 20, 0)).map(::Patch)
 
-    private val PATCH_CELLS = 4
+    private const val PATCH_CELLS = 4
     private val PATCH_GRIDS = PATCH_CELLS + 1
-    private val PATCH_SYMMETRIC: Byte = 1
-    private val PATCH_INVERTED: Byte = 2
+    private const val PATCH_SYMMETRIC: Byte = 1
+    private const val PATCH_INVERTED: Byte = 2
 
     private val patchFlags = byteArrayOf(PATCH_SYMMETRIC, 0, 0, 0, PATCH_SYMMETRIC, 0, 0, 0, PATCH_SYMMETRIC, 0, 0, 0, 0, 0, 0, (PATCH_SYMMETRIC + PATCH_INVERTED).toByte())
 
-    private val renderingSize = 30.0
+    private const val renderingSize = 30.0
 
     private val cache = Caffeine.newBuilder().build(CacheLoader<SecureHash, Image> { key ->
-        key?.let { render(key.hashCode(), renderingSize) }
+        key.let { render(key.hashCode(), renderingSize) }
     })
 
     private class Patch(private val byteArray: ByteArray) {

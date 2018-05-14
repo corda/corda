@@ -15,7 +15,6 @@ enum class NotaryType {
     NONE,
     VALIDATING,
     NON_VALIDATING
-
 }
 
 fun String.toNotaryType(): NotaryType? {

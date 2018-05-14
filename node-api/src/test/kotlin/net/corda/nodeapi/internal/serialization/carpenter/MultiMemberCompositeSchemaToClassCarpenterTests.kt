@@ -108,6 +108,5 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
         assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
         assertEquals(pinochio.getMethod("getB").invoke(p), amqpObj.b)
     }
-
 }
 

@@ -44,7 +44,6 @@ class MappedListTest {
         assertEquals(replayedList[0], 7)
         assertEquals(replayedList[1], 5)
         assertEquals(replayedList[2], 3)
-
     }
 
     @Test

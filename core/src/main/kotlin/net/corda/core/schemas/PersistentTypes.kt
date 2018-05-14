@@ -89,7 +89,8 @@ open class MappedSchema(schemaFamily: Class<*>,
  * [StateRef] will be set to the correct value by the framework (there's no need to set during mapping generation by the state itself).
  */
 @MappedSuperclass
-@CordaSerializable open class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : StatePersistable
+@CordaSerializable
+class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : StatePersistable
 
 /**
  * Embedded [StateRef] representation used in state mapping.

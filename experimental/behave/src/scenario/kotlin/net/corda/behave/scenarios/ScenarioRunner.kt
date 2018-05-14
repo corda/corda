@@ -1,4 +1,5 @@
 @file:JvmName("ScenarioRunner")
+
 package net.corda.behave.scenarios
 
 import joptsimple.OptionParser
@@ -7,15 +8,15 @@ import kotlin.system.exitProcess
 fun main(args: Array<out String>) {
     val parser = OptionParser()
     val featurePath = parser.accepts("path").withRequiredArg().required().ofType(String::class.java)
-                            .describedAs("Path location of .feature specifications")
+            .describedAs("Path location of .feature specifications")
     val glue = parser.accepts("glue").withOptionalArg().ofType(String::class.java)
-                            .describedAs("location of additional step definitions, hooks and plugins")
-                            .defaultsTo("net.corda.behave.scenarios")
+            .describedAs("location of additional step definitions, hooks and plugins")
+            .defaultsTo("net.corda.behave.scenarios")
     val plugin = parser.accepts("plugin").withOptionalArg().ofType(String::class.java)
-                            .describedAs("register additional plugins (see https://cucumber.io/docs/reference/jvm)")
-                            .defaultsTo("pretty")
+            .describedAs("register additional plugins (see https://cucumber.io/docs/reference/jvm)")
+            .defaultsTo("pretty")
     val tags = parser.accepts("tags").withOptionalArg().ofType(String::class.java)
-                            .describedAs("only run scenarios marked as @<tag-name>")
+            .describedAs("only run scenarios marked as @<tag-name>")
     val dryRun = parser.accepts("d")
 
     val options = try {
@@ -27,14 +28,14 @@ fun main(args: Array<out String>) {
     }
 
     val cliArgs = listOf("--glue",
-                        options.valueOf(glue),
-                        "--plugin",
-                        options.valueOf(plugin),
-                        options.valueOf(featurePath)) +
-                        (if (options.hasArgument("tags"))
-                            listOf("--tags", options.valueOf(tags))
-                        else emptyList()) +
-                        if (options.has(dryRun)) listOf("-d") else emptyList()
+            options.valueOf(glue),
+            "--plugin",
+            options.valueOf(plugin),
+            options.valueOf(featurePath)) +
+            (if (options.hasArgument("tags"))
+                listOf("--tags", options.valueOf(tags))
+            else emptyList()) +
+            if (options.has(dryRun)) listOf("-d") else emptyList()
 
     println("Cucumber CLI scenario runner args: $cliArgs")
     cucumber.api.cli.Main.main(cliArgs.toTypedArray())

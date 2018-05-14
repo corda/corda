@@ -12,7 +12,6 @@
 
 package net.corda.testing.driver
 
-import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
@@ -27,6 +26,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.PortAllocation.Incremental
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
@@ -35,8 +35,6 @@ import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
 import net.corda.testing.node.internal.newContext
 import rx.Observable
-import java.net.InetSocketAddress
-import java.net.ServerSocket
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
@@ -176,7 +174,7 @@ data class NodeParameters(
  */
 data class JmxPolicy(val startJmxHttpServer: Boolean = false,
                      val jmxHttpServerPortAllocation: PortAllocation? =
-                     if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
+                             if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
 
 /**
  * [driver] allows one to start up nodes like this:
@@ -211,7 +209,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
                     jmxPolicy = defaultParameters.jmxPolicy,
                     compatibilityZone = null,
-                    networkParameters = defaultParameters.networkParameters
+                    networkParameters = defaultParameters.networkParameters,
+                    notaryCustomOverrides = defaultParameters.notaryCustomOverrides
             ),
             coerce = { it },
             dsl = dsl,
@@ -243,6 +242,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  * @property jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON.
  * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
  *     empty as notaries are defined by [notarySpecs].
+ * @property notaryCustomOverrides Extra settings that need to be passed to the notary.
  */
 @Suppress("unused")
 data class DriverParameters(
@@ -258,8 +258,38 @@ data class DriverParameters(
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
         val jmxPolicy: JmxPolicy = JmxPolicy(),
-        val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList())
+        val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
+        val notaryCustomOverrides: Map<String, Any?> = emptyMap()
 ) {
+    constructor(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            true,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters, emptyMap()
+    )
+
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
     fun withDriverDirectory(driverDirectory: Path): DriverParameters = copy(driverDirectory = driverDirectory)
     fun withPortAllocation(portAllocation: PortAllocation): DriverParameters = copy(portAllocation = portAllocation)
@@ -273,4 +303,34 @@ data class DriverParameters(
     fun withExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>): DriverParameters = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
     fun withJmxPolicy(jmxPolicy: JmxPolicy): DriverParameters = copy(jmxPolicy = jmxPolicy)
     fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
+    fun withNotaryCustomOverrides(notaryCustomOverrides: Map<String, Any?>): DriverParameters = copy(notaryCustomOverrides = notaryCustomOverrides)
+
+    fun copy(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters
+    ) = this.copy(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            true,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters, emptyMap()
+    )
 }

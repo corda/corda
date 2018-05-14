@@ -17,6 +17,7 @@ import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.toConfig
 
 class NodeConfig(
         val legalName: CordaX500Name,
@@ -47,7 +48,7 @@ class NodeConfig(
                         .withValue("address", addressValueFor(rpcPort))
                         .withValue("adminAddress", addressValueFor(rpcAdminPort))
                         .root())
-                .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
+                .withValue("rpcUsers", valueFor(users.map { it.toConfig().root().unwrapped() }.toList()))
                 .withValue("database", valueFor(mapOf("runMigration" to runMigration)))
                 .withValue("useTestClock", valueFor(true))
                 .withValue("jarDirs", valueFor(jarDirs))

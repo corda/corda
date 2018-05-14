@@ -24,7 +24,7 @@ import kotlin.test.assertFailsWith
 
 class VaultUpdateTests {
     private companion object {
-        val DUMMY_PROGRAM_ID = "net.corda.core.node.VaultUpdateTests.DummyContract"
+        const val DUMMY_PROGRAM_ID = "net.corda.core.node.VaultUpdateTests.DummyContract"
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
         val emptyUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL)
     }
@@ -68,7 +68,7 @@ class VaultUpdateTests {
     @Test
     fun `nothing plus something is something`() {
         val before = emptyUpdate
-        val after = before + Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
+        val after = before + Vault.Update(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
         val expected = Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef2, stateAndRef3))
         assertEquals(expected, after)
     }
@@ -76,7 +76,7 @@ class VaultUpdateTests {
     @Test
     fun `something plus consume state 0 is something without state 0 output`() {
         val before = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
-        val after = before + Vault.Update<ContractState>(setOf(stateAndRef0), setOf())
+        val after = before + Vault.Update(setOf(stateAndRef0), setOf())
         val expected = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef1))
         assertEquals(expected, after)
     }
@@ -84,7 +84,7 @@ class VaultUpdateTests {
     @Test
     fun `something plus produce state 4 is something with additional state 4 output`() {
         val before = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
-        val after = before + Vault.Update<ContractState>(setOf(), setOf(stateAndRef4))
+        val after = before + Vault.Update(setOf(), setOf(stateAndRef4))
         val expected = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1, stateAndRef4))
         assertEquals(expected, after)
     }
@@ -92,7 +92,7 @@ class VaultUpdateTests {
     @Test
     fun `something plus consume states 0 and 1, and produce state 4, is something without state 0 and 1 outputs and only state 4 output`() {
         val before = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef0, stateAndRef1))
-        val after = before + Vault.Update<ContractState>(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef4))
+        val after = before + Vault.Update(setOf(stateAndRef0, stateAndRef1), setOf(stateAndRef4))
         val expected = Vault.Update<ContractState>(setOf(stateAndRef2, stateAndRef3), setOf(stateAndRef4))
         assertEquals(expected, after)
     }

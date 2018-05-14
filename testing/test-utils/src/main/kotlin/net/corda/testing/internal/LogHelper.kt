@@ -72,5 +72,4 @@ object LogHelper {
             Configurator.setLevel(logName, oldLevel)
         }
     }
-
 }

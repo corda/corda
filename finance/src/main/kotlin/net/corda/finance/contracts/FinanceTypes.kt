@@ -97,9 +97,8 @@ data class Tenor(val name: String) {
         }
         // Move date to the closest business day when it falls on a weekend/holiday
         val adjustedMaturityDate = calendar.applyRollConvention(maturityDate, DateRollConvention.ModifiedFollowing)
-        val daysToMaturity = BusinessCalendar.calculateDaysBetween(startDate, adjustedMaturityDate, DayCountBasisYear.Y360, DayCountBasisDay.DActual)
 
-        return daysToMaturity
+        return BusinessCalendar.calculateDaysBetween(startDate, adjustedMaturityDate, DayCountBasisYear.Y360, DayCountBasisDay.DActual)
     }
 
     override fun toString(): String = name

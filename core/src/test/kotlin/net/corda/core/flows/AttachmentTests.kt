@@ -13,7 +13,6 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
@@ -92,7 +91,7 @@ class AttachmentTests {
     }
 
     @Test
-    fun `missing`() {
+    fun missing() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)

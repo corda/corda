@@ -65,7 +65,7 @@ class MapsSerializationTest {
         val wrongPayloadType = WrongPayloadType(payload)
         assertThatThrownBy { wrongPayloadType.serialize() }
                 .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining(
-                "Map type class java.util.HashMap is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
+                        "Map type class java.util.HashMap is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
     }
 
     @CordaSerializable

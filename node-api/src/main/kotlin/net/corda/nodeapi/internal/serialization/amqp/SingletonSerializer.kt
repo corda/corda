@@ -22,7 +22,7 @@ import java.lang.reflect.Type
  */
 class SingletonSerializer(override val type: Class<*>, val singleton: Any, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val typeDescriptor = Symbol.valueOf(
-            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
+            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")!!
 
     private val interfaces = interfacesForSerialization(type, factory)
 

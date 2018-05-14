@@ -49,5 +49,4 @@ class Ssh(state: ScenarioState) : Substeps(state) {
             state.fail("Unable to find SSH start-up message for node $nodeName")
         }
     }
-
 }

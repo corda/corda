@@ -52,7 +52,7 @@ class AuthDBTests : NodeBasedTest() {
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
 
-        private val cacheExpireAfterSecs: Long = 1
+        private const val cacheExpireAfterSecs: Long = 1
 
         @JvmStatic
         @Parameterized.Parameters(name = "password encryption format = {0}")
@@ -248,7 +248,7 @@ private class UsersDB : AutoCloseable {
     val jdbcUrl: String
 
     companion object {
-        val DB_CREATE_SCHEMA = """
+        const val DB_CREATE_SCHEMA = """
             CREATE TABLE users (username VARCHAR(256), password TEXT);
             CREATE TABLE user_roles (username VARCHAR(256), role_name VARCHAR(256));
             CREATE TABLE roles_permissions (role_name VARCHAR(256), permission TEXT);
@@ -259,7 +259,7 @@ private class UsersDB : AutoCloseable {
         session {
             it.execute("INSERT INTO users VALUES ('${user.username}', '${user.password}')")
             for (role in user.roles) {
-                it.execute("INSERT INTO user_roles VALUES ('${user.username}', '${role}')")
+                it.execute("INSERT INTO user_roles VALUES ('${user.username}', '$role')")
             }
         }
     }
@@ -287,7 +287,7 @@ private class UsersDB : AutoCloseable {
     }
 
     private val dataSource: DataSource
-    inline private fun session(statement: (Statement) -> Unit) {
+    private inline fun session(statement: (Statement) -> Unit) {
         dataSource.connection.use {
             it.autoCommit = false
             it.createStatement().use(statement)
@@ -299,7 +299,7 @@ private class UsersDB : AutoCloseable {
                 users: List<UserAndRoles> = emptyList(),
                 roleAndPermissions: List<RoleAndPermissions> = emptyList()) {
 
-        jdbcUrl = "jdbc:h2:mem:${name};DB_CLOSE_DELAY=-1"
+        jdbcUrl = "jdbc:h2:mem:$name;DB_CLOSE_DELAY=-1"
         dataSource = DataSourceFactory.createDataSource(Properties().apply {
             put("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
             put("dataSource.url", jdbcUrl)
@@ -338,7 +338,6 @@ private val hashedPasswords = mapOf(
  * A functional object for producing password encoded according to the given scheme.
  */
 private fun encodePassword(s: String, format: PasswordEncryption) = when (format) {
-        PasswordEncryption.NONE -> s
-        PasswordEncryption.SHIRO_1_CRYPT -> hashedPasswords[format]!![s] ?:
-            DefaultPasswordService().encryptPassword(s.toCharArray())
-    }
+    PasswordEncryption.NONE -> s
+    PasswordEncryption.SHIRO_1_CRYPT -> hashedPasswords[format]!![s] ?: DefaultPasswordService().encryptPassword(s.toCharArray())
+}

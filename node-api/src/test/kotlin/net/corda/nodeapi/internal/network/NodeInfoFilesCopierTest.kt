@@ -24,7 +24,6 @@ import rx.schedulers.TestScheduler
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.TimeUnit
-import kotlin.streams.toList
 
 class NodeInfoFilesCopierTest {
     companion object {
@@ -123,7 +122,7 @@ class NodeInfoFilesCopierTest {
     }
 
     @Test
-    fun `clear`() {
+    fun clear() {
         // Configure 2 nodes.
         nodeInfoFilesCopier.addConfig(node1RootPath)
         nodeInfoFilesCopier.addConfig(node2RootPath)

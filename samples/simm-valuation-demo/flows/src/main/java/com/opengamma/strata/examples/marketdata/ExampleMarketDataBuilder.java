@@ -135,7 +135,7 @@ public abstract class ExampleMarketDataBuilder {
         }
         if (url.getProtocol() != null && "jar".equals(url.getProtocol().toLowerCase(Locale.ENGLISH))) {
             // Inside a JAR
-            int classSeparatorIdx = url.getFile().indexOf("!");
+            int classSeparatorIdx = url.getFile().indexOf('!');
             if (classSeparatorIdx == -1) {
                 throw new IllegalArgumentException(Messages.format("Unexpected JAR file URL: {}", url));
             }
@@ -344,9 +344,9 @@ public abstract class ExampleMarketDataBuilder {
         CharSource inputSource = cdsYieldCurvesResource.getCharSource();
         Map<IsdaYieldCurveInputsId, IsdaYieldCurveInputs> yieldCuves = MarkitYieldCurveDataParser.parse(inputSource);
 
-        for (IsdaYieldCurveInputsId id : yieldCuves.keySet()) {
-            IsdaYieldCurveInputs curveInputs = yieldCuves.get(id);
-            builder.addValue(id, curveInputs);
+        for (Map.Entry<IsdaYieldCurveInputsId, IsdaYieldCurveInputs> isdaYieldCurveInputsIdIsdaYieldCurveInputsEntry : yieldCuves.entrySet()) {
+            IsdaYieldCurveInputs curveInputs = isdaYieldCurveInputsIdIsdaYieldCurveInputsEntry.getValue();
+            builder.addValue(isdaYieldCurveInputsIdIsdaYieldCurveInputsEntry.getKey(), curveInputs);
         }
     }
 

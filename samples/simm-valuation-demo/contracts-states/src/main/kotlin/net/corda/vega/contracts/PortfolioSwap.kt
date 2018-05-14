@@ -39,7 +39,6 @@ data class PortfolioSwap(private val blank: Void? = null) : Contract {
                         "the valuer hasn't changed" using (inputs[0].valuer == outputs[0].valuer)
                         "the linear id hasn't changed" using (inputs[0].linearId == outputs[0].linearId)
                     }
-
                 }
             }
         }

@@ -35,7 +35,7 @@ public class FlowsInJavaTest {
     private Party bob;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         aliceNode = mockNet.createPartyNode(TestConstants.ALICE_NAME);
         bobNode = mockNet.createPartyNode(TestConstants.BOB_NAME);
         bob = singleIdentity(bobNode.getInfo());
@@ -134,7 +134,7 @@ public class FlowsInJavaTest {
 
         @Suspendable
         @Override
-        public Void call() throws FlowException {
+        public Void call() {
             FlowSession session = initiateFlow(otherParty);
             session.receive(Primitives.unwrap(receiveType));
             return null;

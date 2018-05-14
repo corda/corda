@@ -51,7 +51,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
 
         initialiseSettings(maxMessageSize)
 
-        val nodeInternalRole = Role(NodeLoginModule.NODE_ROLE, true, true, true, true, true, true, true, true)
+        val nodeInternalRole = Role(NodeLoginModule.NODE_ROLE, true, true, true, true, true, true, true, true, true, true)
 
         val rolesAdderOnLogin = RolesAdderOnLogin { username ->
             "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#" to setOf(nodeInternalRole, restrictedRole(
@@ -136,6 +136,6 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
     private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,
                                deleteDurableQueue: Boolean = false, createNonDurableQueue: Boolean = false,
                                deleteNonDurableQueue: Boolean = false, manage: Boolean = false, browse: Boolean = false): Role {
-        return Role(name, send, consume, createDurableQueue, deleteDurableQueue, createNonDurableQueue, deleteNonDurableQueue, manage, browse)
+        return Role(name, send, consume, createDurableQueue, deleteDurableQueue, createNonDurableQueue, deleteNonDurableQueue, manage, browse, createDurableQueue || createNonDurableQueue, deleteDurableQueue || deleteNonDurableQueue)
     }
 }

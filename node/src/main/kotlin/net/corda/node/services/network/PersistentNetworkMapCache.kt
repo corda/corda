@@ -317,7 +317,7 @@ open class PersistentNetworkMapCache(
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         query.setParameter("host", hostAndPort.host)
         query.setParameter("port", hostAndPort.port)
-        query.setMaxResults(1)
+        query.maxResults = 1
         val result = query.resultList
         return result.map { it.toNodeInfo() }.singleOrNull()
     }

@@ -53,7 +53,8 @@ class NodeArgsParserTest {
                 sshdServer = false,
                 justGenerateNodeInfo = false,
                 bootstrapRaftCluster = false,
-                unknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL))
+                unknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL,
+                devMode = false))
     }
 
     @Test

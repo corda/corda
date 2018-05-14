@@ -78,7 +78,5 @@ class TransitionBuilder(val context: TransitionContext, initialState: StateMachi
     }
 }
 
-
-
 class CannotFindSessionException(sessionId: SessionId) : IllegalStateException("Couldn't find session with id $sessionId")
 class UnexpectedEventInState : IllegalStateException("Unexpected event")

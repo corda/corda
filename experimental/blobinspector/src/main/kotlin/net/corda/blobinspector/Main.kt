@@ -21,7 +21,7 @@ private fun modeOption() = Option("m", "mode", true, "mode, file is the default"
  * @return An instantiated but unpopulated [Config] object instance suitable for the mode into
  * which we've been placed. This Config object should be populated via [loadModeSpecificOptions]
  */
-fun getMode(args: Array<String>) : Config {
+fun getMode(args: Array<String>): Config {
     // For now we only care what mode we're being put in, we can build the rest of the args and parse them
     // later
     val options = Options().apply {
@@ -31,7 +31,7 @@ fun getMode(args: Array<String>) : Config {
     val cmd = try {
         DefaultParser().parse(options, args, true)
     } catch (e: org.apache.commons.cli.ParseException) {
-        println (e)
+        println(e)
         HelpFormatter().printHelp("blobinspector", options)
         throw IllegalArgumentException("OH NO!!!")
     }
@@ -56,10 +56,10 @@ fun loadModeSpecificOptions(config: Config, args: Array<String>) {
             addOption(modeOption())
         }
 
-        populate (try {
+        populate(try {
             DefaultParser().parse(modeSpecificOptions, args, false)
         } catch (e: org.apache.commons.cli.ParseException) {
-            println ("Error: ${e.message}")
+            println("Error: ${e.message}")
             HelpFormatter().printHelp("blobinspector", modeSpecificOptions)
             System.exit(1)
             return
@@ -71,7 +71,7 @@ fun loadModeSpecificOptions(config: Config, args: Array<String>) {
  * Executable entry point
  */
 fun main(args: Array<String>) {
-    println ("<<< WARNING: this tool is experimental and under active development >>>")
+    println("<<< WARNING: this tool is experimental and under active development >>>")
     getMode(args).let { mode ->
         loadModeSpecificOptions(mode, args)
         BlobHandler.make(mode)

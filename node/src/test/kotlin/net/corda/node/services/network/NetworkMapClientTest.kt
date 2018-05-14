@@ -12,13 +12,13 @@ package net.corda.node.services.network
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.*
+import net.corda.core.internal.sign
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.seconds
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestNodeInfoBuilder
@@ -35,7 +35,6 @@ import java.io.IOException
 import java.net.URL
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.*
 import kotlin.test.assertEquals
 
 class NetworkMapClientTest {

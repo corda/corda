@@ -43,7 +43,7 @@ class ConfigHolder(services: AppServiceHub) : SingletonSerializeAsToken() {
         // Warning!! You are about to see a major hack!
         val baseDirectory = services.declaredField<Any>("serviceHub").value
                 .let { it.javaClass.getMethod("getConfiguration").apply { isAccessible = true }.invoke(it) }
-                .let { it.javaClass.getMethod("getBaseDirectory").apply { isAccessible = true }.invoke(it)}
+                .let { it.javaClass.getMethod("getBaseDirectory").apply { isAccessible = true }.invoke(it) }
                 .let { it.javaClass.getMethod("toString").apply { isAccessible = true }.invoke(it) as String }
 
         var issuableCurrenciesValue: List<Currency>
@@ -61,7 +61,6 @@ class ConfigHolder(services: AppServiceHub) : SingletonSerializeAsToken() {
         issuableCurrencies = issuableCurrenciesValue
     }
 }
-
 
 /**
  * Flow to obtain cash cordapp app configuration.

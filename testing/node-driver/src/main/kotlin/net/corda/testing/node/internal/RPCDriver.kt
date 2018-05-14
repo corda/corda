@@ -85,7 +85,7 @@ inline fun <reified I : RPCOps> RPCDriverDSL.startRpcClient(
         configuration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default
 ) = startRpcClient(I::class.java, rpcAddress, username, password, configuration)
 
-inline fun<reified I : RPCOps> RPCDriverDSL.startRpcClient(
+inline fun <reified I : RPCOps> RPCDriverDSL.startRpcClient(
         haAddressPool: List<NetworkHostAndPort>,
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password,
@@ -126,6 +126,7 @@ fun <A> rpcDriver(
         externalTrace: Trace? = null,
         jmxPolicy: JmxPolicy = JmxPolicy(),
         networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
+        notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -143,7 +144,8 @@ fun <A> rpcDriver(
                             notarySpecs = notarySpecs,
                             jmxPolicy = jmxPolicy,
                             compatibilityZone = null,
-                            networkParameters = networkParameters
+                            networkParameters = networkParameters,
+                            notaryCustomOverrides = notaryCustomOverrides
                     ), externalTrace
             ),
             coerce = { it },

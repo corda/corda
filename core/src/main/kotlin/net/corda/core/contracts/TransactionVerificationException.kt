@@ -52,7 +52,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
      * @property contractClass The fully qualified class name of the failing contract.
      */
     class ContractRejection(txId: SecureHash, val contractClass: String, cause: Throwable) : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, contract: $contractClass", cause) {
-        constructor(txId: SecureHash, contract: Contract, cause: Throwable) :  this(txId, contract.javaClass.name, cause)
+        constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause)
     }
 
     /**
@@ -118,8 +118,10 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable
     enum class Direction {
-        /** Issue in the inputs list */ INPUT,
-        /** Issue in the outputs list */ OUTPUT
+        /** Issue in the inputs list */
+        INPUT,
+        /** Issue in the outputs list */
+        OUTPUT
     }
 
     // We could revisit and throw this more appropriate type in a future release that uses targetVersion to

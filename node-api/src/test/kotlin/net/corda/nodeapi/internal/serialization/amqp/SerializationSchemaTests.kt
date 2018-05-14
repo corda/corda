@@ -17,8 +17,8 @@ val TESTING_CONTEXT = SerializationContextImpl(amqpMagic,
 
 // Test factory that lets us count the number of serializer registration attempts
 class TestSerializerFactory(
-        wl : ClassWhitelist,
-        cl : ClassLoader
+        wl: ClassWhitelist,
+        cl: ClassLoader
 ) : SerializerFactory(wl, cl) {
     var registerCount = 0
 
@@ -83,16 +83,17 @@ class TestSerializationFactory : SerializationFactory() {
 class SerializationSchemaTests {
     @Test
     fun onlyRegisterCustomSerializersOnce() {
-        @CordaSerializable data class C(val a: Int)
+        @CordaSerializable
+        data class C(val a: Int)
 
         val c = C(1)
         val testSerializationFactory = TestSerializationFactory()
         val expectedCustomSerializerCount = 40
 
-        assertEquals (0, testFactory.registerCount)
-        c.serialize (testSerializationFactory, TESTING_CONTEXT)
-        assertEquals (expectedCustomSerializerCount, testFactory.registerCount)
-        c.serialize (testSerializationFactory, TESTING_CONTEXT)
-        assertEquals (expectedCustomSerializerCount, testFactory.registerCount)
+        assertEquals(0, testFactory.registerCount)
+        c.serialize(testSerializationFactory, TESTING_CONTEXT)
+        assertEquals(expectedCustomSerializerCount, testFactory.registerCount)
+        c.serialize(testSerializationFactory, TESTING_CONTEXT)
+        assertEquals(expectedCustomSerializerCount, testFactory.registerCount)
     }
 }

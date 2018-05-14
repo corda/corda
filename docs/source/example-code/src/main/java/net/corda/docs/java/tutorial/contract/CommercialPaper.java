@@ -60,7 +60,7 @@ public class CommercialPaper implements Contract {
                 requireThat(require -> {
                     require.using("the paper must have matured", time.isAfter(input.getMaturityDate()));
                     require.using("the received amount equals the face value", received == input.getFaceValue());
-                    require.using("the paper must be destroyed", outputs.size() == 0);
+                    require.using("the paper must be destroyed", outputs.isEmpty());
                     require.using("the transaction is signed by the owner of the CP", cmd.getSigners().contains(input.getOwner().getOwningKey()));
                     return null;
                 });

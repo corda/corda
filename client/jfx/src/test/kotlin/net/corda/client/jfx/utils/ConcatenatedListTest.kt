@@ -34,14 +34,13 @@ class ConcatenatedListTest {
     fun <A> ConcatenatedList<A>.checkInvariants() {
         assertEquals(nestedIndexOffsets.size, source.size)
         var currentOffset = 0
-        for (i in 0..source.size - 1) {
+        for (i in 0 until source.size) {
             currentOffset += source[i].size
             assertEquals(nestedIndexOffsets[i], currentOffset)
         }
 
         assertEquals(indexMap.size, source.size)
-        for (entry in indexMap) {
-            val (wrapped, pair) = entry
+        for ((wrapped, pair) in indexMap) {
             val index = pair.first
             val foundListIndices = ArrayList<Int>()
             source.forEachIndexed { i, list ->
@@ -134,11 +133,7 @@ class ConcatenatedListTest {
         assertEquals(replayedList[2], "b")
         assertEquals(replayedList[3], "c")
 
-        sourceList.sortWith(object : Comparator<ObservableList<String>> {
-            override fun compare(p0: ObservableList<String>, p1: ObservableList<String>): Int {
-                return p0.size - p1.size
-            }
-        })
+        sourceList.sortWith(Comparator<ObservableList<String>> { p0, p1 -> p0.size - p1.size })
         concatenatedList.checkInvariants()
         assertEquals(replayedList.size, 4)
         assertEquals(replayedList[0], "hello")
@@ -147,11 +142,7 @@ class ConcatenatedListTest {
         assertEquals(replayedList[3], "b")
 
         sourceList.add(0, FXCollections.observableArrayList("d", "e", "f"))
-        sourceList.sortWith(object : Comparator<ObservableList<String>> {
-            override fun compare(p0: ObservableList<String>, p1: ObservableList<String>): Int {
-                return p0.size - p1.size
-            }
-        })
+        sourceList.sortWith(Comparator<ObservableList<String>> { p0, p1 -> p0.size - p1.size })
         concatenatedList.checkInvariants()
         assertEquals(replayedList.size, 7)
         assertEquals(replayedList[0], "hello")

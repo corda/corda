@@ -148,22 +148,18 @@ open class Command(
     fun run() = use { _ -> }
 
     fun use(action: (Command) -> Unit): Int {
-        try {
+        use {
             start()
             action(this)
-        } finally {
-            close()
         }
         return exitCode
     }
 
     fun use(subscriber: Subscriber<String>, action: (Command, Observable<String>) -> Unit = { _, _ -> }): Int {
-        try {
+        use {
             output.subscribe(subscriber)
             start()
             action(this, output)
-        } finally {
-            close()
         }
         return exitCode
     }

@@ -62,10 +62,10 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
     }
 
     private fun startingOffsetOf(listIndex: Int): Int {
-        if (listIndex == 0) {
-            return 0
+        return if (listIndex == 0) {
+            0
         } else {
-            return nestedIndexOffsets[listIndex - 1]
+            nestedIndexOffsets[listIndex - 1]
         }
     }
 
@@ -84,11 +84,11 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                     // firstTouched is the result list index of the beginning of the permutation.
                     val firstTouched = startingOffset + change.from
                     // We first set the non-permuted indices.
-                    for (i in 0..firstTouched - 1) {
+                    for (i in 0 until firstTouched) {
                         permutation[i] = i
                     }
                     // Then the permuted ones.
-                    for (i in firstTouched..startingOffset + change.to - 1) {
+                    for (i in firstTouched until startingOffset + change.to) {
                         permutation[startingOffset + i] = change.getPermutation(i)
                     }
                     nextPermutation(firstTouched, startingOffset + change.to, permutation)
@@ -97,7 +97,7 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                     // by the startingOffsetOf the nested list.
                     val listIndex = indexMap[wrapped]!!.first
                     val startingOffset = startingOffsetOf(listIndex)
-                    for (i in change.from..change.to - 1) {
+                    for (i in change.from until change.to) {
                         nextUpdate(startingOffset + i)
                     }
                 } else {
@@ -154,7 +154,7 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                 val newSubNestedIndexOffsets = IntArray(change.to - change.from)
                 val firstTouched = if (change.from == 0) 0 else nestedIndexOffsets[change.from - 1]
                 var currentOffset = firstTouched
-                for (i in 0..change.to - change.from - 1) {
+                for (i in 0 until change.to - change.from) {
                     currentOffset += source[change.from + i].size
                     newSubNestedIndexOffsets[i] = currentOffset
                 }
@@ -162,24 +162,24 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                 val concatenatedPermutation = IntArray(newSubNestedIndexOffsets.last())
                 // Set the non-permuted part
                 var offset = 0
-                for (i in 0..change.from - 1) {
+                for (i in 0 until change.from) {
                     val nestedList = source[i]
-                    for (j in offset..offset + nestedList.size - 1) {
+                    for (j in offset until offset + nestedList.size) {
                         concatenatedPermutation[j] = j
                     }
                     offset += nestedList.size
                 }
                 // Now the permuted part
-                for (i in 0..newSubNestedIndexOffsets.size - 1) {
+                for (i in 0 until newSubNestedIndexOffsets.size) {
                     val startingOffset = startingOffsetOf(change.from + i)
                     val permutedListIndex = change.getPermutation(change.from + i)
                     val permutedOffset = (if (permutedListIndex == 0) 0 else newSubNestedIndexOffsets[permutedListIndex - 1])
-                    for (j in 0..source[permutedListIndex].size - 1) {
+                    for (j in 0 until source[permutedListIndex].size) {
                         concatenatedPermutation[startingOffset + j] = permutedOffset + j
                     }
                 }
                 // Record permuted offsets
-                for (i in 0..newSubNestedIndexOffsets.size - 1) {
+                for (i in 0 until newSubNestedIndexOffsets.size) {
                     nestedIndexOffsets[change.from + i] = newSubNestedIndexOffsets[i]
                 }
                 nextPermutation(firstTouched, newSubNestedIndexOffsets.last(), concatenatedPermutation)
@@ -248,7 +248,7 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
         if (firstInvalidatedPosition < source.size) {
             val firstInvalid = firstInvalidatedPosition
             var offset = if (firstInvalid == 0) 0 else nestedIndexOffsets[firstInvalid - 1]
-            for (i in firstInvalid..source.size - 1) {
+            for (i in firstInvalid until source.size) {
                 offset += source[i].size
                 if (i < nestedIndexOffsets.size) {
                     nestedIndexOffsets[i] = offset
@@ -266,10 +266,10 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
     override val size: Int
         get() {
             recalculateOffsets()
-            if (nestedIndexOffsets.size > 0) {
-                return nestedIndexOffsets.last()
+            return if (nestedIndexOffsets.size > 0) {
+                nestedIndexOffsets.last()
             } else {
-                return 0
+                0
             }
         }
 
@@ -283,17 +283,17 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                 comparison = { offset -> compareValues(offset, index) }
         )
 
-        if (listIndex >= 0) {
+        return if (listIndex >= 0) {
             var nonEmptyListIndex = listIndex + 1
             while (source[nonEmptyListIndex].isEmpty()) {
                 nonEmptyListIndex++
             }
-            return source[nonEmptyListIndex][0]
+            source[nonEmptyListIndex][0]
         } else {
             // The element is in the range of this list
             val rangeListIndex = -listIndex - 1
             val subListOffset = index - startingOffsetOf(rangeListIndex)
-            return source[rangeListIndex][subListOffset]
+            source[rangeListIndex][subListOffset]
         }
     }
 

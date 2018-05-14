@@ -43,7 +43,7 @@ class Cash(state: ScenarioState) : Substeps(state) {
         }
     }
 
-    fun issueCash(issueToNode: String, amount: Long, currency: String):  SignedTransaction {
+    fun issueCash(issueToNode: String, amount: Long, currency: String): SignedTransaction {
         return withClient(issueToNode) {
             try {
                 val notaryList = it.notaryIdentities()
@@ -58,10 +58,10 @@ class Cash(state: ScenarioState) : Substeps(state) {
         }
     }
 
-    fun transferCash(senderNode: String, sendToNode: String, amount: Long, currency: String):  SignedTransaction {
+    fun transferCash(senderNode: String, sendToNode: String, amount: Long, currency: String): SignedTransaction {
         return withClient(senderNode) {
             try {
-                val sendToX500Name =  node(sendToNode).config.cordaX500Name
+                val sendToX500Name = node(sendToNode).config.cordaX500Name
                 val sendToParty = node(senderNode).rpc {
                     it.wellKnownPartyFromX500Name(sendToX500Name) ?: throw IllegalStateException("Unable to locate $sendToX500Name in Network Map Service")
                 }
@@ -72,5 +72,4 @@ class Cash(state: ScenarioState) : Substeps(state) {
             }
         }
     }
-
 }

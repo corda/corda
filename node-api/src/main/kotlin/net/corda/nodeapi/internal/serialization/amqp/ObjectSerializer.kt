@@ -33,7 +33,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
         private val logger = contextLogger()
     }
 
-    open internal val propertySerializers: PropertySerializers by lazy {
+    internal open val propertySerializers: PropertySerializers by lazy {
         propertiesForSerialization(kotlinConstructor, clazz, factory)
     }
 
@@ -42,12 +42,12 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
     private val typeName = nameForType(clazz)
 
     override val typeDescriptor = Symbol.valueOf(
-            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
+            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")!!
 
     // We restrict to only those annotated or whitelisted
     private val interfaces = interfacesForSerialization(clazz, factory)
 
-    open internal val typeNotation: TypeNotation by lazy {
+    internal open val typeNotation: TypeNotation by lazy {
         CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor), generateFields())
     }
 

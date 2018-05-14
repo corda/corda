@@ -99,9 +99,9 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
 
     // Because schema is always one supported by the state, just delegate.
     override fun generateMappedObject(state: ContractState, schema: MappedSchema): PersistentState {
-        if ((schema is VaultSchemaV1) && (state is LinearState))
+        if ((schema === VaultSchemaV1) && (state is LinearState))
             return VaultSchemaV1.VaultLinearStates(state.linearId, state.participants)
-        if ((schema is VaultSchemaV1) && (state is FungibleAsset<*>))
+        if ((schema === VaultSchemaV1) && (state is FungibleAsset<*>))
             return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference, state.participants)
         return (state as QueryableState).generateMappedObject(schema)
     }

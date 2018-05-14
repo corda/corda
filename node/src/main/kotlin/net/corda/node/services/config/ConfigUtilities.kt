@@ -48,6 +48,11 @@ object ConfigHelper {
 
         val systemOverrides = systemProperties().cordaEntriesOnly()
         val environmentOverrides = systemEnvironment().cordaEntriesOnly()
+
+        // Detect the underlying OS. If mac or windows non-server then we assume we're running in devMode. Unless specified otherwise.
+        val smartDevMode = CordaSystemUtils.isOsMac() || (CordaSystemUtils.isOsWindows() && !CordaSystemUtils.getOsName().toLowerCase().contains("server"))
+        val devModeConfig = ConfigFactory.parseMap(mapOf("devMode" to smartDevMode))
+
         val finalConfig = configOverrides
                 // Add substitution values here
                 .withFallback(configOf("custom.nodeOrganizationName" to parseToDbSchemaFriendlyName(baseDirectory.fileName.toString()))) //for database integration tests
@@ -56,16 +61,15 @@ object ConfigHelper {
                 .withFallback(configOf("baseDirectory" to baseDirectory.toString()))
                 .withFallback(databaseConfig) //for database integration tests
                 .withFallback(appConfig)
+                .withFallback(devModeConfig) // this needs to be after the appConfig, so it doesn't override the configured devMode
                 .withFallback(defaultConfig)
                 .resolve()
-
 
         log.info("Config:\n${finalConfig.root().render(ConfigRenderOptions.defaults())}")
 
         val entrySet = finalConfig.entrySet().filter { entry -> entry.key.contains("\"") }
-        for (mutableEntry in entrySet) {
-            val key = mutableEntry.key
-            log.error("Config files should not contain \" in property names. Please fix: ${key}")
+        for ((key) in entrySet) {
+            log.error("Config files should not contain \" in property names. Please fix: $key")
         }
 
         return finalConfig
@@ -112,3 +116,15 @@ fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name) {
 /** Parse a value to be database schema name friendly and removes the last part if it matches a port ("_" followed by at least 5 digits) */
 fun parseToDbSchemaFriendlyName(value: String) =
         value.replace(" ", "").replace("-", "_").replace(Regex("_\\d{5,}$"),"")
+
+/** This is generally covered by commons-lang. */
+object CordaSystemUtils {
+    const val OS_NAME = "os.name"
+
+    const val MAC_PREFIX = "Mac"
+    const val WIN_PREFIX = "Windows"
+
+    fun isOsMac() = getOsName().startsWith(MAC_PREFIX)
+    fun isOsWindows() = getOsName().startsWith(WIN_PREFIX)
+    fun getOsName() = System.getProperty(OS_NAME)
+}

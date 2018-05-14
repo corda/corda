@@ -41,13 +41,11 @@ class InterpolatorsTest {
     @Test
     fun `linear interpolator interpolates missing values correctly`() {
         val xs = doubleArrayOf(1.0, 2.0, 3.0, 4.0, 5.0)
-        val ys = xs
         val toInterpolate = doubleArrayOf(1.5, 2.5, 2.8, 3.3, 3.7, 4.3, 4.7)
-        val expected = toInterpolate
 
-        val interpolator = LinearInterpolator(xs, ys)
+        val interpolator = LinearInterpolator(xs, xs)
         val actual = toInterpolate.map { interpolator.interpolate(it) }.toDoubleArray()
-        Assert.assertArrayEquals(expected, actual, 0.01)
+        Assert.assertArrayEquals(toInterpolate, actual, 0.01)
     }
 
     @Test

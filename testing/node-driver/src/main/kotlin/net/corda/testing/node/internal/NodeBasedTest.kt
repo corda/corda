@@ -105,6 +105,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                         "database" to mapOf("runMigration" to "true"),
                         "myLegalName" to legalName.toString(),
                         "p2pAddress" to p2pAddress,
+                        "devMode" to true,
                         "rpcSettings.address" to localPort[1].toString(),
                         "rpcSettings.adminAddress" to localPort[2].toString(),
                         "rpcUsers" to rpcUsers.map { it.toConfig().root().unwrapped() }

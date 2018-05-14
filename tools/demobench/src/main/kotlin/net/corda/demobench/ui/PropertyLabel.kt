@@ -37,5 +37,4 @@ class PropertyLabel : HBox() {
         children.addAll(nameLabel, valueLabel)
         styleClass.add("property-label")
     }
-
 }

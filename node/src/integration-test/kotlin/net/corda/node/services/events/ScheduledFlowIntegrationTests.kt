@@ -25,7 +25,6 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.seconds
 import net.corda.testMessage.ScheduledState
 import net.corda.testMessage.SpentState
 import net.corda.testing.contracts.DummyContract

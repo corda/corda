@@ -13,6 +13,7 @@ package net.corda.node.internal
 import com.codahale.metrics.JmxReporter
 import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
@@ -83,6 +84,13 @@ open class Node(configuration: NodeConfiguration,
             val msg = if (info == null) description else "${description.padEnd(40)}: $info"
             val loggerName = if (renderBasicInfoToConsole) "BasicInfo" else "Main"
             LoggerFactory.getLogger(loggerName).info(msg)
+        }
+
+        fun printWarning(message: String) {
+            Emoji.renderIfSupported {
+                println("${Emoji.warningSign} ATTENTION: ${message}")
+            }
+            staticLog.warn(message)
         }
 
         internal fun failStartUp(message: String): Nothing {
@@ -184,7 +192,7 @@ open class Node(configuration: NodeConfiguration,
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
             BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress)
         } else {
-            startLocalRpcBroker(networkParameters)
+            startLocalRpcBroker()
         }
         val advertisedAddress = info.addresses.single()
         val externalBridge = configuration.enterpriseConfiguration.externalBridge
@@ -224,7 +232,7 @@ open class Node(configuration: NodeConfiguration,
                 nodeProperties.flowsDrainingMode.values)
     }
 
-    private fun startLocalRpcBroker(networkParameters: NetworkParameters): BrokerAddresses? {
+    private fun startLocalRpcBroker(): BrokerAddresses? {
         with(configuration) {
             return rpcOptions.address?.let {
                 require(rpcOptions.address != null) { "RPC address needs to be specified for local RPC broker." }

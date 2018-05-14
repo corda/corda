@@ -40,10 +40,10 @@ fun setupJSchWithSshAgent(): JSch {
     return JSch().apply {
         identityRepository = object : IdentityRepository {
             override fun getStatus(): Int {
-                if (connector.isAvailable) {
-                    return IdentityRepository.RUNNING
+                return if (connector.isAvailable) {
+                    IdentityRepository.RUNNING
                 } else {
-                    return IdentityRepository.UNAVAILABLE
+                    IdentityRepository.UNAVAILABLE
                 }
             }
 

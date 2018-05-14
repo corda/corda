@@ -52,7 +52,7 @@ import java.util.*
  *    to do this in the Apache BVal project).
  */
 
-val CP_PROGRAM_ID = "net.corda.finance.contracts.CommercialPaper"
+const val CP_PROGRAM_ID = "net.corda.finance.contracts.CommercialPaper"
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 class CommercialPaper : Contract {

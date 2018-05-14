@@ -23,6 +23,7 @@ interface Watch {
     operator fun times(other: Watch): Watch {
         return ConjunctiveWatch(this, other)
     }
+
     operator fun div(other: Watch): Watch {
         return DisjunctiveWatch(this, other)
     }

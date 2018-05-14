@@ -15,5 +15,4 @@ interface OutputListener {
     fun onNewLine(line: String)
 
     fun onEndOfStream()
-
 }

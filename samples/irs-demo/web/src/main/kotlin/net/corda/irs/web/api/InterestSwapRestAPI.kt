@@ -58,15 +58,13 @@ class InterestRateSwapAPI {
         }
     }
 
-
     @Autowired
     lateinit var rpc: CordaRPCOps
 
     private fun getAllDeals(): Array<InterestRateSwap.State> {
         val vault = rpc.vaultQueryBy<InterestRateSwap.State>().states
         val states = vault.filterStatesOfType<InterestRateSwap.State>()
-        val swaps = states.map { it.state.data }.toTypedArray()
-        return swaps
+        return states.map { it.state.data }.toTypedArray()
     }
 
     @GetMapping("/deals")

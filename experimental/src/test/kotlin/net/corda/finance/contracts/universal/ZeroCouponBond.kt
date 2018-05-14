@@ -56,7 +56,6 @@ class ZeroCouponBond {
         assertEquals(Zero(), Zero())
     }
 
-
     @Test
     fun `issue - signature`() {
         transaction {
@@ -71,7 +70,7 @@ class ZeroCouponBond {
     }
 
     @Test
-    fun `execute`() {
+    fun execute() {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, inState)
             output(UNIVERSAL_PROGRAM_ID, outState)
@@ -115,21 +114,20 @@ class ZeroCouponBond {
             tweak {
                 output(UNIVERSAL_PROGRAM_ID, outStateMove)
                 command(acmeCorp.owningKey,
-                    UniversalContract.Commands.Move(acmeCorp, momAndPop))
+                        UniversalContract.Commands.Move(acmeCorp, momAndPop))
                 this `fails with` "the transaction is signed by all liable parties"
             }
 
             tweak {
                 output(UNIVERSAL_PROGRAM_ID, inState)
                 command(listOf(acmeCorp.owningKey, momAndPop.owningKey, highStreetBank.owningKey),
-                    UniversalContract.Commands.Move(acmeCorp, momAndPop))
+                        UniversalContract.Commands.Move(acmeCorp, momAndPop))
                 this `fails with` "output state does not reflect move command"
             }
             output(UNIVERSAL_PROGRAM_ID, outStateMove)
             command(listOf(acmeCorp.owningKey, momAndPop.owningKey, highStreetBank.owningKey),
-                UniversalContract.Commands.Move(acmeCorp, momAndPop))
+                    UniversalContract.Commands.Move(acmeCorp, momAndPop))
             this.verifies()
         }
     }
-
 }

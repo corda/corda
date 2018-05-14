@@ -66,7 +66,5 @@ enum class DatabaseType(val settings: DatabaseSettings) {
             "postgresql" -> POSTGRES
             else -> null
         }
-
     }
-
 }

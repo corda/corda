@@ -120,7 +120,9 @@ buildscript {
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
         classpath "net.corda.plugins:cordapp:$gradle_plugins_version"
-        classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
+        //TODO Anthony- this should be changed back to $gradle_plugins_version when the api-scaner is fixed
+//        classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
+        classpath "net.corda.plugins:api-scanner:4.0.15"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"

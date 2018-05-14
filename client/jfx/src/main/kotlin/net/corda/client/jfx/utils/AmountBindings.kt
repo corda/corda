@@ -16,6 +16,7 @@ import javafx.collections.ObservableList
 import net.corda.client.jfx.model.ExchangeRate
 import net.corda.core.contracts.Amount
 import org.fxmisc.easybind.EasyBind
+import org.fxmisc.easybind.monadic.MonadicBinding
 import java.util.*
 import java.util.stream.Collectors
 
@@ -23,7 +24,7 @@ import java.util.stream.Collectors
  * Utility bindings for the [Amount] type, similar in spirit to [Bindings]
  */
 object AmountBindings {
-    fun <T : Any> sum(amounts: ObservableList<Amount<T>>, token: T) = EasyBind.map(
+    fun <T : Any> sum(amounts: ObservableList<Amount<T>>, token: T): MonadicBinding<Amount<T>> = EasyBind.map(
             Bindings.createLongBinding({
                 amounts.stream().collect(Collectors.summingLong {
                     require(it.token == token)

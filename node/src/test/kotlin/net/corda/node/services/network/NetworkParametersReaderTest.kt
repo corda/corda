@@ -30,6 +30,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.net.URL
+import java.nio.file.FileSystem
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
@@ -38,7 +39,7 @@ class NetworkParametersReaderTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
-    val fs = Jimfs.newFileSystem(Configuration.unix())
+    val fs: FileSystem = Jimfs.newFileSystem(Configuration.unix())
     private val cacheTimeout = 100000.seconds
 
     private lateinit var server: NetworkMapServer

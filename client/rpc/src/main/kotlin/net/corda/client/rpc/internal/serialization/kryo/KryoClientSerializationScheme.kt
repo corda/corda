@@ -55,7 +55,6 @@ class KryoClientSerializationScheme : AbstractKryoSerializationScheme() {
                     },
                     if (classLoader != null) AMQP_P2P_CONTEXT.withClassLoader(classLoader) else AMQP_P2P_CONTEXT,
                     rpcClientContext = if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT)
-
         }
     }
 }

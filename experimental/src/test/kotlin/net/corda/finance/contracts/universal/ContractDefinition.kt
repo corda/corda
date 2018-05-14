@@ -24,16 +24,13 @@ val highStreetBank = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).par
 val momAndPop = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).party
 val acmeCorporationHasDefaulted = TerminalEvent(acmeCorp, generateKeyPair().public)
 
-
 // Currencies
 val USD: Currency = Currency.getInstance("USD")
 val GBP: Currency = Currency.getInstance("GBP")
 val EUR: Currency = Currency.getInstance("EUR")
 val KRW: Currency = Currency.getInstance("KRW")
 
-
 class ContractDefinition {
-
 
     val cds_contract = arrange {
         actions {
@@ -50,7 +47,6 @@ class ContractDefinition {
         }
     }
 
-
     val american_fx_option = arrange {
         actions {
             acmeCorp may {
@@ -66,7 +62,6 @@ class ContractDefinition {
             }
         }
     }
-
 
     val european_fx_option = arrange {
         actions {
@@ -89,7 +84,6 @@ class ContractDefinition {
             }
         }
     }
-
 
     /*   @Test
        fun `builder problem - should not compile`() {
@@ -138,5 +132,4 @@ class ContractDefinition {
             assertEquals(1, arr.actions.size)
         }
     }
-
 }

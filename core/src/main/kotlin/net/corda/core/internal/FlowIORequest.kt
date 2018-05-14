@@ -61,7 +61,8 @@ sealed class FlowIORequest<out R : Any> {
             val shouldRetrySend: Boolean
     ) : FlowIORequest<Map<FlowSession, SerializedBytes<Any>>>() {
         override fun toString() = "SendAndReceive(${sessionToMessage.mapValues { (key, value) ->
-            "$key=${value.hash}" }}, shouldRetrySend=$shouldRetrySend)"
+            "$key=${value.hash}"
+        }}, shouldRetrySend=$shouldRetrySend)"
     }
 
     /**

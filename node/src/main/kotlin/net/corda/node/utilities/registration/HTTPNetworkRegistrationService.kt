@@ -64,6 +64,7 @@ class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistr
     }
 }
 
-val HttpURLConnection.cacheControl: CacheControl get() {
-    return CacheControl.parse(Headers.of(headerFields.filterKeys { it != null }.mapValues { it.value[0] }))
-}
+val HttpURLConnection.cacheControl: CacheControl
+    get() {
+        return CacheControl.parse(Headers.of(headerFields.filterKeys { it != null }.mapValues { it.value[0] }))
+    }

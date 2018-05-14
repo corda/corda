@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class TestSerializationContext {
 
-    static private Map<Object, Object> serializationProperties = new HashMap<Object, Object>();
+    private static Map<Object, Object> serializationProperties = new HashMap<>();
 
     public static SerializationContext testSerializationContext = new SerializationContextImpl(
         ByteSequence.of(new byte[] { 'c', 'o', 'r', 'd', 'a', (byte)0, (byte)0, (byte)1}),

@@ -174,7 +174,7 @@ fun arrange(init: ContractBuilder.() -> Unit): Arrangement {
 
 data class Parameter<T>(val initialValue: T) : Perceivable<T>
 
-fun <T> variable(v: T) = Parameter<T>(v)
+fun <T> variable(v: T) = Parameter(v)
 
 class RollOutBuilder<T>(val startDate: LocalDate, val endDate: LocalDate, val frequency: Frequency, val vars: T) : ContractBuilder() {
     override fun final() =

@@ -15,7 +15,6 @@ import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelPromise
 import io.netty.channel.socket.SocketChannel
-import io.netty.handler.proxy.ProxyConnectException
 import io.netty.handler.proxy.ProxyConnectionEvent
 import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeCompletionEvent
@@ -101,31 +100,38 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 val sslHandler = ctx.pipeline().get(SslHandler::class.java)
                 localCert = sslHandler.engine().session.localCertificates[0].x509
                 remoteCert = sslHandler.engine().session.peerCertificates[0].x509
-                try {
-                    val remoteX500Name = CordaX500Name.build(remoteCert!!.subjectX500Principal)
-                    require(allowedRemoteLegalNames == null || remoteX500Name in allowedRemoteLegalNames)
-                    log.info("handshake completed subject: $remoteX500Name")
+                val remoteX500Name = try {
+                    CordaX500Name.build(remoteCert!!.subjectX500Principal)
                 } catch (ex: IllegalArgumentException) {
-                    log.error("Invalid certificate subject", ex)
+                    log.error("Certificate subject not a valid CordaX500Name", ex)
                     ctx.close()
                     return
                 }
+                if (allowedRemoteLegalNames != null && remoteX500Name !in allowedRemoteLegalNames) {
+                    log.error("Provided certificate subject $remoteX500Name not in expected set $allowedRemoteLegalNames")
+                    ctx.close()
+                    return
+                }
+                log.info("Handshake completed with subject: $remoteX500Name")
                 createAMQPEngine(ctx)
                 onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true)))
             } else {
-                log.error("Handshake failure $evt")
+                log.error("Handshake failure ${evt.cause().message}")
+                if (log.isTraceEnabled) {
+                    log.trace("Handshake failure", evt.cause())
+                }
                 ctx.close()
             }
         }
     }
 
-
     @Suppress("OverridingDeprecatedMember")
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-        if (cause is ProxyConnectException) {
-            log.warn("Proxy connection failed ${cause.message}")
-            suppressClose = true // The pipeline gets marked as active on connection to the proxy rather than to the target, which causes excess close events
+        log.warn("Closing channel due to nonrecoverable exception ${cause.message}")
+        if (log.isTraceEnabled) {
+            log.trace("Pipeline uncaught exception", cause)
         }
+        ctx.close()
     }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {

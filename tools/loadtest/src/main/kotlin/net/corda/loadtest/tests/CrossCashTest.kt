@@ -158,13 +158,13 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
             }
         },
 
-        interpret = { state, command ->
-            when (command.request) {
+        interpret = { state, (request, node) ->
+            when (request) {
                 is IssueAndPaymentRequest -> {
                     val newDiffQueues = state.copyQueues()
-                    val originators = newDiffQueues.getOrPut(command.request.recipient, { HashMap() })
-                    val issuer = command.node.mainIdentity
-                    val quantity = command.request.amount.quantity
+                    val originators = newDiffQueues.getOrPut(request.recipient, { HashMap() })
+                    val issuer = node.mainIdentity
+                    val quantity = request.amount.quantity
                     val queue = originators.getOrPut(issuer, { ArrayList() })
                     queue.add(Pair(issuer, quantity))
                     CrossCashState(state.nodeVaults, newDiffQueues)
@@ -172,25 +172,25 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                 is PaymentRequest -> {
                     val newNodeVaults = state.copyVaults()
                     val newDiffQueues = state.copyQueues()
-                    val recipientOriginators = newDiffQueues.getOrPut(command.request.recipient, { HashMap() })
-                    val senderQuantities = newNodeVaults[command.node.mainIdentity]!!
-                    val amount = command.request.amount
-                    val issuer = command.request.issuerConstraint.single()
-                    val originator = command.node.mainIdentity
+                    val recipientOriginators = newDiffQueues.getOrPut(request.recipient, { HashMap() })
+                    val senderQuantities = newNodeVaults[node.mainIdentity]!!
+                    val amount = request.amount
+                    val issuer = request.issuerConstraint.single()
+                    val originator = node.mainIdentity
                     val senderQuantity = senderQuantities[issuer] ?: throw Exception(
-                            "Generated payment of ${command.request.amount} from ${command.node.mainIdentity}, " +
+                            "Generated payment of ${request.amount} from ${node.mainIdentity}, " +
                                     "however there is no cash from $issuer!"
                     )
                     if (senderQuantity < amount.quantity) {
                         throw Exception(
-                                "Generated payment of ${command.request.amount} from ${command.node.mainIdentity}, " +
+                                "Generated payment of ${request.amount} from ${node.mainIdentity}, " +
                                         "however they only have $senderQuantity!"
                         )
                     }
                     if (senderQuantity == amount.quantity) {
                         senderQuantities.remove(issuer)
                     } else {
-                        senderQuantities.put(issuer, senderQuantity - amount.quantity)
+                        senderQuantities[issuer] = senderQuantity - amount.quantity
                     }
                     val recipientQueue = recipientOriginators.getOrPut(originator, { ArrayList() })
                     recipientQueue.add(Pair(issuer, amount.quantity))
@@ -198,26 +198,26 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                 }
                 is ExitRequest -> {
                     val newNodeVaults = state.copyVaults()
-                    val issuer = command.node.mainIdentity
-                    val quantity = command.request.amount.quantity
+                    val issuer = node.mainIdentity
+                    val quantity = request.amount.quantity
                     val issuerQuantities = newNodeVaults[issuer]!!
                     val issuerQuantity = issuerQuantities[issuer] ?: throw Exception(
-                            "Generated exit of ${command.request.amount} from $issuer, however there is no cash to exit!"
+                            "Generated exit of ${request.amount} from $issuer, however there is no cash to exit!"
                     )
                     if (issuerQuantity < quantity) {
                         throw Exception(
-                                "Generated payment of ${command.request.amount} from $issuer, " +
+                                "Generated payment of ${request.amount} from $issuer, " +
                                         "however they only have $issuerQuantity!"
                         )
                     }
                     if (issuerQuantity == quantity) {
                         issuerQuantities.remove(issuer)
                     } else {
-                        issuerQuantities.put(issuer, issuerQuantity - quantity)
+                        issuerQuantities[issuer] = issuerQuantity - quantity
                     }
                     CrossCashState(newNodeVaults, state.diffQueues)
                 }
-                else -> throw IllegalArgumentException("Unexpected request type: ${command.request}")
+                else -> throw IllegalArgumentException("Unexpected request type: ${request}")
             }
         },
 
@@ -245,9 +245,9 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                 vault.forEach {
                     val state = it.state.data
                     val issuer = state.amount.token.issuer.party
-                    quantities.put(issuer, (quantities[issuer] ?: 0L) + state.amount.quantity)
+                    quantities[issuer] = (quantities[issuer] ?: 0L) + state.amount.quantity
                 }
-                currentNodeVaults.put(it.mainIdentity, quantities)
+                currentNodeVaults[it.mainIdentity] = quantities
             }
             val (consistentVaults, diffQueues) = if (previousState == null) {
                 Pair(currentNodeVaults, mapOf<AbstractParty, Map<AbstractParty, List<Pair<AbstractParty, Long>>>>())
@@ -268,7 +268,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                                             "\nActual gathered state:\n${CrossCashState(currentNodeVaults, mapOf())}"
                             )
                             // TODO We should terminate here with an exception, we cannot carry on as we have an inconsistent model. We carry on currently because we always diverge due to notarisation failures
-                            return@LoadTest CrossCashState(currentNodeVaults, mapOf<AbstractParty, Map<AbstractParty, List<Pair<AbstractParty, Long>>>>())
+                            return@LoadTest CrossCashState(currentNodeVaults, mapOf())
                         }
                         if (matches.size > 1) {
                             log.warn("Multiple predicted states match the remote state")
@@ -289,7 +289,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
                                 newNodeDiffQueues!!
                                 for (i in 0 until consumedTxs) {
                                     val (issuer, quantity) = newNodeDiffQueues[originator]!!.removeAt(0)
-                                    newNodeVault.put(issuer, (newNodeVault[issuer] ?: 0L) + quantity)
+                                    newNodeVault[issuer] = (newNodeVault[issuer] ?: 0L) + quantity
                                 }
                             }
                         }
@@ -357,6 +357,6 @@ private fun <A> applyDiff(
     if (searchedQuantity == null || newQuantity > searchedQuantity) {
         return null
     }
-    newState.put(issuer, newQuantity)
+    newState[issuer] = newQuantity
     return newState
 }

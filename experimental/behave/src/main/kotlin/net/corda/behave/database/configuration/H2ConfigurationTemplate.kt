@@ -24,5 +24,4 @@ class H2ConfigurationTemplate : DatabaseConfigurationTemplate() {
             |h2port=${it.port}
             """
         }
-
 }

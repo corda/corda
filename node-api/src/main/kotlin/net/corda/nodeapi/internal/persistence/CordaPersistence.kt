@@ -290,10 +290,8 @@ fun isH2Database(jdbcUrl: String) = jdbcUrl.startsWith("jdbc:h2:")
 
 /** Check if any nested cause is of [SQLException] type. */
 private fun Throwable.hasSQLExceptionCause(): Boolean =
-        if (cause == null)
-            false
-        else if (cause is SQLException)
-            true
-        else
-            cause?.hasSQLExceptionCause() ?: false
-
+        when (cause) {
+            null -> false
+            is SQLException -> true
+            else -> cause?.hasSQLExceptionCause() ?: false
+        }

@@ -43,7 +43,7 @@ interface Cordapp {
     val contractClassNames: List<String>
     val initiatedFlows: List<Class<out FlowLogic<*>>>
     val rpcFlows: List<Class<out FlowLogic<*>>>
-    val serviceFlows:  List<Class<out FlowLogic<*>>>
+    val serviceFlows: List<Class<out FlowLogic<*>>>
     val schedulableFlows: List<Class<out FlowLogic<*>>>
     val services: List<Class<out SerializeAsToken>>
     val serializationWhitelists: List<SerializationWhitelist>

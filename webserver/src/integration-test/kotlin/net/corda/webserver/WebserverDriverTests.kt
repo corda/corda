@@ -8,6 +8,8 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
+@file:Suppress("DEPRECATION")
+
 package net.corda.webserver
 
 import net.corda.core.utilities.NetworkHostAndPort
@@ -28,7 +30,7 @@ import java.util.concurrent.ScheduledExecutorService
 
 class WebserverDriverTests : IntegrationTest() {
     companion object {
-        val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
+        private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
         fun webserverMustBeUp(webserverHandle: WebserverHandle) {
             addressMustBeBound(executorService, webserverHandle.listenAddress, webserverHandle.process)

@@ -47,11 +47,12 @@ class InteractiveShellTest {
     }
 
     private val ids = InMemoryIdentityService(arrayOf(megaCorp.identity), DEV_ROOT_CA.certificate)
+    @Suppress("DEPRECATION")
     private val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
 
     private fun check(input: String, expected: String) {
         var output: String? = null
-        InteractiveShell.runFlowFromString( { clazz, args ->
+        InteractiveShell.runFlowFromString({ clazz, args ->
 
             val instance = clazz.getConstructor(*args.map { it!!::class.java }.toTypedArray()).newInstance(*args) as FlowA
             output = instance.a

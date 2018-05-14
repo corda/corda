@@ -48,7 +48,7 @@ class DeliverSessionMessageTransition(
             } else {
                 val payload = event.sessionMessage.payload
                 // Dispatch based on what kind of message it is.
-                val _exhaustive = when (payload) {
+                when (payload) {
                     is ConfirmSessionMessage -> confirmMessageTransition(existingSession, payload)
                     is DataSessionMessage -> dataMessageTransition(existingSession, payload)
                     is ErrorSessionMessage -> errorMessageTransition(existingSession, payload)

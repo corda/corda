@@ -228,7 +228,7 @@ class StandaloneCordaRPClientTest {
         flowHandle.returnValue.get()
 
         val balance = rpcProxy.getCashBalance(USD)
-        println("Balance: " + balance)
+        println("Balance: $balance")
         assertEquals(629.DOLLARS, balance)
     }
 

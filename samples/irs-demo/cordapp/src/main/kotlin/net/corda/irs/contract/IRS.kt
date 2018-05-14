@@ -11,15 +11,40 @@
 package net.corda.irs.contract
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.CommandWithParties
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.SchedulableState
+import net.corda.core.contracts.ScheduledActivity
+import net.corda.core.contracts.StateAndContract
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.contracts.requireThat
+import net.corda.core.contracts.select
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.finance.contracts.*
-import net.corda.irs.flows.FixingFlow
+import net.corda.finance.contracts.AccrualAdjustment
+import net.corda.finance.contracts.BusinessCalendar
+import net.corda.finance.contracts.DateRollConvention
+import net.corda.finance.contracts.DateRollDirection
+import net.corda.finance.contracts.DayCountBasisDay
+import net.corda.finance.contracts.DayCountBasisYear
+import net.corda.finance.contracts.Expression
+import net.corda.finance.contracts.Fix
+import net.corda.finance.contracts.FixOf
+import net.corda.finance.contracts.FixableDealState
+import net.corda.finance.contracts.Frequency
+import net.corda.finance.contracts.PaymentRule
+import net.corda.finance.contracts.Tenor
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
 import org.apache.commons.jexl3.JexlBuilder
 import org.apache.commons.jexl3.MapContext
@@ -75,7 +100,7 @@ abstract class RatePaymentEvent(date: LocalDate,
                                 val notional: Amount<Currency>,
                                 val rate: Rate) : PaymentEvent(date) {
     companion object {
-        val CSVHeader = "AccrualStartDate,AccrualEndDate,DayCountFactor,Days,Date,Ccy,Notional,Rate,Flow"
+        const val CSVHeader = "AccrualStartDate,AccrualEndDate,DayCountFactor,Days,Date,Ccy,Notional,Rate,Flow"
     }
 
     override fun calculate(): Amount<Currency> = flow
@@ -499,7 +524,7 @@ class InterestRateSwap : Contract {
     }
 
     private fun verifyAgreeCommand(inputs: List<State>, outputs: List<State>) {
-        val irs = outputs.filterIsInstance<State>().single()
+        val irs = outputs.single()
         requireThat {
             "There are no in states for an agreement" using inputs.isEmpty()
             "There are events in the fix schedule" using (irs.calculation.fixedLegPaymentSchedule.isNotEmpty())
@@ -521,8 +546,8 @@ class InterestRateSwap : Contract {
     }
 
     private fun verifyFixCommand(inputs: List<State>, outputs: List<State>, command: CommandWithParties<Commands.Refix>) {
-        val irs = outputs.filterIsInstance<State>().single()
-        val prevIrs = inputs.filterIsInstance<State>().single()
+        val irs = outputs.single()
+        val prevIrs = inputs.single()
         val paymentDifferences = getFloatingLegPaymentsDifferences(prevIrs.calculation.floatingLegPaymentSchedule, irs.calculation.floatingLegPaymentSchedule)
 
         // Having both of these tests are "redundant" as far as verify() goes, however, by performing both
@@ -560,7 +585,7 @@ class InterestRateSwap : Contract {
     }
 
     private fun verifyMatureCommand(inputs: List<State>, outputs: List<State>) {
-        val irs = inputs.filterIsInstance<State>().single()
+        val irs = inputs.single()
         requireThat {
             "No more fixings to be applied" using (irs.calculation.nextFixingDate() == null)
             "The irs is fully consumed and there is no id matched output state" using outputs.isEmpty()
