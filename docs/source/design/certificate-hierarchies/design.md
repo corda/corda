@@ -53,8 +53,13 @@ context.
 
 ## Design Decisions
 
-* [Hierarchy levels](./decisions/levels.html). Option 1 - 2-level hierarchy.
-* [TLS trust root](./decisions/tls-trust-root.html). Option 1 - Single trust root.
+```eval_rst
+.. toctree::
+   :maxdepth: 2
+   
+   decisions/levels.md
+   decisions/tls-trust-root.md
+```
 
 ## **Target** Solution
 

@@ -1,16 +1,10 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Decision: P2P Messaging Protocol
-============================================
+# Design Decision: P2P Messaging Protocol
 
 ## Background / Context
 
 Corda requires messages to be exchanged between nodes via a well-defined protocol. 
 
 Determining this protocol is a critical upstream dependency for the design of key messaging components including the [float](../design.md).
-
-
 
 ## Options Analysis
 
@@ -54,15 +48,9 @@ Point to point links would be standard TLS and the network certificates would be
 2. Effort implications - starting from scratch
 3. Technical complexity in developing a P2P protocols which is attack tolerant.
 
-
-
-
-
 ## Recommendation and justification
 
 Proceed with Option 1
-
-
 
 ## Decision taken
 

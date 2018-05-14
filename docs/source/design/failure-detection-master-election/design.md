@@ -36,6 +36,16 @@ as possible.
 
 It would also be helpful for the chosen solution to not add deployment complexity.
 
+## Design decisions
+
+```eval_rst
+.. toctree::
+   :maxdepth: 2
+   
+   drb-meeting-20180131.md
+
+```
+
 ## Proposed solutions
 
 Based on what is needed for Hot-Warm, 1 active node and at least one passive node (started but in stand-by mode), and

@@ -1,8 +1,4 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Review Board Meeting Minutes
-============================================
+# Design Review Board Meeting Minutes
 
 **Date / Time:** Jan 31 2018, 11.00
 
@@ -45,33 +41,54 @@ MN presented a high level summary of the options:
 Wrapper library choice for Zookeeper requires some analysis
 
 
-MH: predictable source of API for RAFT implementations and Zookeeper compared to Atomix. Be better to have master selector implemented as an abstraction
+MH: predictable source of API for RAFT implementations and Zookeeper compared to Atomix. Be better to have master
+selector implemented as an abstraction
 
-MH: hybrid approach possible - 3rd node for oversight, i.e. 2 embedded in the node, 3rd is an observer. Zookeeper can have one node in primary data centre, one in secondary data centre and 3rd as tie-breaker
+MH: hybrid approach possible - 3rd node for oversight, i.e. 2 embedded in the node, 3rd is an observer. Zookeeper can
+have one node in primary data centre, one in secondary data centre and 3rd as tie-breaker
 
-WN: why are we concerned about cost of 3 machines? MN: we're seeing / hearing clients wanting to run many nodes on one VM. Zookeeper is good for this since 1 Zookepper cluster can serve 100+ nodes
+WN: why are we concerned about cost of 3 machines? MN: we're seeing / hearing clients wanting to run many nodes on one
+VM. Zookeeper is good for this since 1 Zookepper cluster can serve 100+ nodes
 
-MH: terminology clarification required: what holds the master lock? Ideally would be good to see design thinking around split node and which bits need HA. MB: as a long term vision, ideally have 1 database for many IDs and the flows for those IDs are load balanced. Regarding services internally to node being suspended, this is being investigated.
+MH: terminology clarification required: what holds the master lock? Ideally would be good to see design thinking around
+split node and which bits need HA. MB: as a long term vision, ideally have 1 database for many IDs and the flows for
+those IDs are load balanced. Regarding services internally to node being suspended, this is being investigated.
 
-MH: regarding auto failover, in the event a database has its own perception of master and slave, how is this handled? Failure detector will need to grow or have local only schedule to confirm it is processing everything including connectivity between database and bus, i.e. implement a 'healthiness' concept
+MH: regarding auto failover, in the event a database has its own perception of master and slave, how is this handled?
+Failure detector will need to grow or have local only schedule to confirm it is processing everything including
+connectivity between database and bus, i.e. implement a 'healthiness' concept
 
-MH: can you get into a situation where the node fails over but the database does not, but database traffic continues to be sent to down node? MB: database will go offline leading to an all-stop event.
+MH: can you get into a situation where the node fails over but the database does not, but database traffic continues to
+be sent to down node? MB: database will go offline leading to an all-stop event.
 
-MH: can you have master affinity between node and database? MH: need watchdog / heartbeat solutions to confirm state of all components
+MH: can you have master affinity between node and database? MH: need watchdog / heartbeat solutions to confirm state of
+all components
 
-JC: how long will this solution live? MB: will work for hot / hot flow sharding, multiple flow workers and soft locks, then this is long term solution. Service abstraction will be used so we are not wedded to Zookeeper however the abstraction work can be done later
+JC: how long will this solution live? MB: will work for hot / hot flow sharding, multiple flow workers and soft locks,
+then this is long term solution. Service abstraction will be used so we are not wedded to Zookeeper however the
+abstraction work can be done later
 
-JC: does the implementation with Zookeeper have an impact on whether cloud or physical deployments are used? MB: its an internal component, not part of the larger Corda network therefore can be either. For the customer they will have to deploy a separate Zookeeper solution, but this is the same for Atomix.
+JC: does the implementation with Zookeeper have an impact on whether cloud or physical deployments are used? MB: its an
+internal component, not part of the larger Corda network therefore can be either. For the customer they will have to
+deploy a separate Zookeeper solution, but this is the same for Atomix.
 
-WN: where Corda as a service is being deployed with many nodes in the cloud. Zookeeper will be better suited to big providers.
+WN: where Corda as a service is being deployed with many nodes in the cloud. Zookeeper will be better suited to big
+providers.
 
-WN: concern is the customer expects to get everything on a plate, therefore will need to be educated on how to implement Zookeeper, but this is the same for other master selection solutions.
+WN: concern is the customer expects to get everything on a plate, therefore will need to be educated on how to implement
+Zookeeper, but this is the same for other master selection solutions.
 
-JC: is it possible to launch R3 Corda with a button on Azure marketplace to commission a Zookeeper? Yes, if we can resource it. But expectation is Zookeeper will be used by well-informed clients / implementers so one-click option is less relevant.
+JC: is it possible to launch R3 Corda with a button on Azure marketplace to commission a Zookeeper? Yes, if we can
+resource it. But expectation is Zookeeper will be used by well-informed clients / implementers so one-click option is
+less relevant.
 
-MH: how does failover work with HSMs? MB: can replicate realm so failover is trivial
+MH: how does failover work with HSMs? 
 
-JC: how do we document Enterprise features? Publish design docs? Enterprise fact sheets? R3 Corda marketing material? Clear seperation of documentation is required. GT: this is already achieved by havind docs.corda.net for open source Corda and docs.corda.r3.com for enterprise R3 Corda
+MN: can replicate realm so failover is trivial
+
+JC: how do we document Enterprise features? Publish design docs? Enterprise fact sheets? R3 Corda marketing material?
+Clear seperation of documentation is required. GT: this is already achieved by having docs.corda.net for open source
+Corda and docs.corda.r3.com for enterprise R3 Corda
 
 
 ### Next Steps
