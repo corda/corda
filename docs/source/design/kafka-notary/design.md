@@ -1,46 +1,18 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
 # High Performance CFT Notary Service
 
-DOCUMENT MANAGEMENT
----
-
-## Document Control
-
-| Title                | High Performance CFT Notary Service                          |
-| -------------------- | ------------------------------------------------------------ |
-| Date                 | 27 March 2018                                                |
-| Author               | Andrius Dagys, Thomas Schroeter                                                |
-| Distribution         | Design Review Board, Product Management, Services - Technical (Consulting), Platform Delivery |
-| Corda target version | Enterprise                                                   |
-| JIRA reference       | https://r3-cev.atlassian.net/browse/CID-294                  |
-
-## Approvals
-
-#### Document Sign-off
-
-| Author            | Andrius Dagys                                      |
-| ----------------- | -------------------------------------------------- |
-| Reviewer(s)       | (GitHub PR reviewers)                              |
-| Final approver(s) | (GitHub PR approver(s) from Design Approval Board) |
-
-#### Design Decisions
-
-| Description                              | Recommendation  | Approval              |
-| ---------------------------------------- | --------------- | ----------------------- |
-| [Replication framework](decisions/replicated-storage.md) | Option C | (Design Approval Board) |
-| [Index storage engine](decisions/index-storage.md) | Option A       |(Design Approval Board) |
-
-HIGH LEVEL DESIGN
----
+.. important:: This design document describes a feature of Corda Enterprise.
 
 ## Overview
 
-This proposal describes the architecture and an implementation for a high performance crash fault-tolerant notary service, operated by a single party.
+This proposal describes the architecture and an implementation for a high performance crash fault-tolerant notary
+service, operated by a single party.
 
 ## Background
 
-For initial deployments, we expect to operate a single non-validating CFT notary service. The current Raft and Galera implementations cannot handle more than 100-200 TPS, which is likely to be a serious bottleneck in the near future. To support our clients and compete with other platforms we need a notary service that can handle TPS in the order of 1,000s.
+For initial deployments, we expect to operate a single non-validating CFT notary service. The current Raft and Galera
+implementations cannot handle more than 100-200 TPS, which is likely to be a serious bottleneck in the near future. To
+support our clients and compete with other platforms we need a notary service that can handle TPS in the order of
+1,000s.
 
 ## Scope
 
@@ -69,28 +41,59 @@ The notary service should be able to:
 - Tolerate single datacenter failure.
 - Tolerate single disk failure/corruption.
 
-## Target Solution
-
-Having explored different solutions for implementing notaries we propose the following architecture for a CFT notary, consisting of two components:
-
-1. A central replicated request log, which orders and stores all notarisation requests. Efficient append-only log storage can be used along with batched replication, making performance mainly dependent on network throughput.
-2. Worker nodes that service clients and maintain a consumed state index. The state index is a simple key-value store containing committed state references and pointers to the corresponding request positions in the log. If lost, it can be reconstructed by replaying and applying request log entries. There is a range of fast key-value stores that can be used for implementation.
-
-![High level architecture](./images/high-level.svg)
-
-At high level, client notarisation requests first get forwarded to a central replicated request log. The requests are then applied in order to the consumed state index in each worker to verify input state uniqueness. Each individual request outcome (success/conflict) is then sent back to the initiating client by the worker responsible for it. To emphasise, each worker will process _all_ notarisation requests, but only respond to the ones it received directly.
-
-Messages (requests) in the request log are persisted and retained forever. The state index has a relatively low footprint and can in theory be kept entirely in memory. However, when a worker crashes, replaying the log to recover the index may take too long depending on the SLAs. Additionally, we expect applying the requests to the index to be much faster than consuming request batches even with persistence enabled.
-
-_Technically_, the request log can also be kept entirely in memory, and the cluster will still be able to tolerate up to $f < n/2$ node failures. However, if for some reason the entire cluster is shut down (e.g. administrator error), all requests will be forever lost! Therefore, we should avoid it.
-
-The request log does not need to be a separate cluster, and the worker nodes _could_ maintain the request log replicas locally. This would allow workers to consume ordered requests from the local copy rather than from a leader node across the network. It is hard to say, however, if this would have a significant performance impact without performing tests in the specific network environment (e.g. the bottleneck could be the replication step).
-
-One advantage of hosting the request log in a separate cluster is that it makes it easier to independently scale the number of worker nodes. If, for example, if transaction validation and resolution is required when receiving a notarisation request, we might find that a significant number of receivers is required to generate enough incoming traffic to the request log. On the flipside, increasing the number of workers adds additional consumers and load on the request log, so a balance needs to be found.
 
 ## Design Decisions
 
-As the design decision documents below discuss, the most suitable platform for managing the request log was chosen to be [Apache Kafka](https://kafka.apache.org/), and [RocksDB](http://rocksdb.org/) as the storage engine for the committed state index.
+.. toctree::
+   :maxdepth: 2
+   
+   decisions/replicated-storage.md
+   decisions/index-storage.md
+
+## Target Solution
+
+Having explored different solutions for implementing notaries we propose the following architecture for a CFT notary,
+consisting of two components:
+
+1. A central replicated request log, which orders and stores all notarisation requests. Efficient append-only log
+   storage can be used along with batched replication, making performance mainly dependent on network throughput.
+2. Worker nodes that service clients and maintain a consumed state index. The state index is a simple key-value store
+   containing committed state references and pointers to the corresponding request positions in the log. If lost, it can be
+   reconstructed by replaying and applying request log entries. There is a range of fast key-value stores that can be used
+   for implementation.
+
+![High level architecture](./images/high-level.svg)
+
+At high level, client notarisation requests first get forwarded to a central replicated request log. The requests are
+then applied in order to the consumed state index in each worker to verify input state uniqueness. Each individual
+request outcome (success/conflict) is then sent back to the initiating client by the worker responsible for it. To
+emphasise, each worker will process _all_ notarisation requests, but only respond to the ones it received directly.
+
+Messages (requests) in the request log are persisted and retained forever. The state index has a relatively low
+footprint and can in theory be kept entirely in memory. However, when a worker crashes, replaying the log to recover the
+index may take too long depending on the SLAs. Additionally, we expect applying the requests to the index to be much
+faster than consuming request batches even with persistence enabled.
+
+_Technically_, the request log can also be kept entirely in memory, and the cluster will still be able to tolerate up to
+$f < n/2$ node failures. However, if for some reason the entire cluster is shut down (e.g. administrator error), all
+requests will be forever lost! Therefore, we should avoid it.
+
+The request log does not need to be a separate cluster, and the worker nodes _could_ maintain the request log replicas
+locally. This would allow workers to consume ordered requests from the local copy rather than from a leader node across
+the network. It is hard to say, however, if this would have a significant performance impact without performing tests in
+the specific network environment (e.g. the bottleneck could be the replication step).
+
+One advantage of hosting the request log in a separate cluster is that it makes it easier to independently scale the
+number of worker nodes. If, for example, if transaction validation and resolution is required when receiving a
+notarisation request, we might find that a significant number of receivers is required to generate enough incoming
+traffic to the request log. On the flipside, increasing the number of workers adds additional consumers and load on the
+request log, so a balance needs to be found.
+
+## Design Decisions
+
+As the design decision documents below discuss, the most suitable platform for managing the request log was chosen to be
+[Apache Kafka](https://kafka.apache.org/), and [RocksDB](http://rocksdb.org/) as the storage engine for the committed
+state index.
 
 | Heading | Recommendation |
 | ---------------------------------------- | -------------- |
@@ -106,13 +109,23 @@ A Kafka-based notary service does not deviate much from the high-level target so
 
 ![Kafka overview](./images/kafka-high-level.svg)
 
-For our purposes we can view Kafka as a replicated durable queue we can push messages (_records_) to and consume from. Consuming a record just increments the consumer's position pointer, and does not delete it. Old records eventually expire and get cleaned up, but the expiry time can be set to "indefinite" so all data is retained (it's a supported use-case).
+For our purposes we can view Kafka as a replicated durable queue we can push messages (_records_) to and consume from.
+Consuming a record just increments the consumer's position pointer, and does not delete it. Old records eventually
+expire and get cleaned up, but the expiry time can be set to "indefinite" so all data is retained (it's a supported
+use-case).
 
-The main caveat is that Kafka does not allow consuming records from replicas directly – all communication has to be routed via a single leader node.
+The main caveat is that Kafka does not allow consuming records from replicas directly – all communication has to be
+routed via a single leader node.
 
-In Kafka, logical queues are called _topics_. Each topic can be split into multiple partitions. Topics are assigned a _replication factor_, which specifies how many replicas Kafka should create for each partition. Each replicated partition has an assigned leader node which producers and consumers can connect to. Partitioning topics and evenly distributing partition leadership allows Kafka to scale well horizontally. 
+In Kafka, logical queues are called _topics_. Each topic can be split into multiple partitions. Topics are assigned a
+_replication factor_, which specifies how many replicas Kafka should create for each partition. Each replicated
+partition has an assigned leader node which producers and consumers can connect to. Partitioning topics and evenly
+distributing partition leadership allows Kafka to scale well horizontally.
 
-In our use-case, however, we can only use a single-partition topic for notarisation requests, which limits the total capacity and throughput to a single machine. Partitioning requests would break global transaction ordering guarantees for consumers. There is a [proposal](#kafka-throughput-scaling-via-partitioning) from Rick Parker on how we _could_ use partitioning to potentially avoid traffic contention on the single leader node.
+In our use-case, however, we can only use a single-partition topic for notarisation requests, which limits the total
+capacity and throughput to a single machine. Partitioning requests would break global transaction ordering guarantees
+for consumers. There is a [proposal](#kafka-throughput-scaling-via-partitioning) from Rick Parker on how we _could_ use
+partitioning to potentially avoid traffic contention on the single leader node.
 
 ### Data model
 
