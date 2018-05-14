@@ -52,7 +52,7 @@ In the original CorDapp, we automated the process of notarising a transaction an
 by invoking a built-in flow called ``FinalityFlow`` as a subflow. We're going to use another pre-defined flow,
 ``CollectSignaturesFlow``, to gather the borrower's signature.
 
-First, we need to update the command. We are now using ``IOUContract.Commands.Create``, rather than
+First, we need to update the command. We are now using ``IOUContract.Create``, rather than
 ``TemplateContract.Commands.Action``. We also want to make the borrower a required signer, as per the contract
 constraints. This is as simple as adding the borrower's public key to the transaction's command.
 
