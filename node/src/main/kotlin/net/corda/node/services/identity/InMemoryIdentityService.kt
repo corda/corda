@@ -110,11 +110,6 @@ class InMemoryIdentityService(identities: Array<out PartyAndCertificate>,
 
     @Throws(UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
-        val anonymousIdentity = keyToParties[anonymousParty.owningKey] ?:
-                throw UnknownAnonymousPartyException("Unknown $anonymousParty")
-        val issuingCert = anonymousIdentity.certPath.certificates[1]
-        require(issuingCert.publicKey == party.owningKey) {
-            "Issuing certificate's public key must match the party key ${party.owningKey.toStringShort()}."
-        }
+        assertOwnershipUtil(party,anonymousParty,keyToParties[anonymousParty.owningKey])
     }
 }

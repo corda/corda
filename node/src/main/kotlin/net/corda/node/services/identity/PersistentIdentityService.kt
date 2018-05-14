@@ -187,11 +187,6 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
 
     @Throws(UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
-        val anonymousIdentity = certificateFromKey(anonymousParty.owningKey) ?:
-                throw UnknownAnonymousPartyException("Unknown $anonymousParty")
-        val issuingCert = anonymousIdentity.certPath.certificates[1]
-        require(issuingCert.publicKey == party.owningKey) {
-            "Issuing certificate's public key must match the party key ${party.owningKey.toStringShort()}."
-        }
+        assertOwnershipUtil(party,anonymousParty,certificateFromKey(anonymousParty.owningKey))
     }
 }
