@@ -80,15 +80,14 @@ dependencies {
 }
 
 configurations {
-        compile.extendsFrom shadow
-        testArtifacts.extendsFrom testRuntime
+    testArtifacts.extendsFrom testRuntime
+    testCompile.extendsFrom shadow
 }
 
 jar {
+    enabled = false
     baseName 'corda-node-api'
 }
-// ensure that immediately after jar step we update to the shaded version of the jar, so that everyone use it.
-jar.finalizedBy shadowJar
 
 shadowJar {
     baseName jar.baseName
@@ -124,6 +123,7 @@ task testJar(type: Jar) {
 
 artifacts {
     testArtifacts testJar
+    compile shadowJar
 }
 
 publish {
