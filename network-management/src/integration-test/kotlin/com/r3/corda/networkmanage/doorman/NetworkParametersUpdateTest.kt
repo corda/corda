@@ -95,11 +95,12 @@ class NetworkParametersUpdateTest : IntegrationTest() {
                 compatibilityZone = compatibilityZone,
                 notarySpecs = emptyList(),
                 initialiseSerialization = false,
-                extraCordappPackagesToScan = listOf("net.corda.finance")
+                extraCordappPackagesToScan = listOf("net.corda.finance"),
+                notaryCustomOverrides = mapOf("devMode" to false)
         ) {
             var (alice, bob) = listOf(
-                    startNode(providedName = ALICE_NAME),
-                    startNode(providedName = BOB_NAME)
+                    startNode(providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false)),
+                    startNode(providedName = BOB_NAME, customOverrides = mapOf("devMode" to false))
             ).map { it.getOrThrow() as NodeHandleInternal }
 
             // Make sure that stopping Bob doesn't remove him from the network map
@@ -139,7 +140,7 @@ class NetworkParametersUpdateTest : IntegrationTest() {
             applyNetworkParametersAndStart(NetworkParametersCmd.FlagDay)
 
             alice.stop()
-            alice = startNode(providedName = ALICE_NAME).getOrThrow() as NodeHandleInternal
+            alice = startNode(providedName = ALICE_NAME, customOverrides = mapOf("devMode" to false)).getOrThrow() as NodeHandleInternal
 
             // TODO It is also possible to check what version of parameters node runs by writing flow that reads that value from ServiceHub
             val networkParameters = (alice.configuration.baseDirectory / NETWORK_PARAMS_FILE_NAME)
