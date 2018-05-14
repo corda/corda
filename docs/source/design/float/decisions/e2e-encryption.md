@@ -1,14 +1,8 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Decision: End-to-end encryption
-============================================
+# Design Decision: End-to-end encryption
 
 ## Background / Context
 
 End-to-end encryption is a desirable potential design feature for the [float](../design.md).
-
-
 
 ## Options Analysis
 

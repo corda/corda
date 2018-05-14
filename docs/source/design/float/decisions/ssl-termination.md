@@ -1,20 +1,13 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Decision: TLS termination point
-============================================
+# Design Decision: TLS termination point
 
 ## Background / Context
 
-Design of the [float](../design.md) is critically influenced by the decision of where TLS connections to the node should be terminated.
-
-
+Design of the [float](../design.md) is critically influenced by the decision of where TLS connections to the node should
+be terminated.
 
 ## Options Analysis
 
 ### 1. Terminate TLS on Firewall
-
-
 
 #### Advantages
 
@@ -39,10 +32,7 @@ Design of the [float](../design.md) is critically influenced by the decision of 
 ##### Disadvantages
 
 1. More work than the do-nothing approach
-
 2. More protocol to design for sending across the inner firewall.
-
-   ​
 
 ### 2. Direct TLS Termination onto Float
 
@@ -95,8 +85,6 @@ Design of the [float](../design.md) is critically influenced by the decision of 
 ## Recommendation and justification
 
 Proceed with Variant option 1a: Terminate on firewall; include SASL connection checking.
-
-
 
 ## Decision taken
 
