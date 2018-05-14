@@ -12,20 +12,30 @@ import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.CIPHER_SUITES
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
+import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.createDevKeyStores
+import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.testing.core.*
+import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.*
+import kotlin.concurrent.thread
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ProtonWrapperTests {
     @Rule
@@ -85,6 +95,91 @@ class ProtonWrapperTests {
             }
         }
     }
+
+    private fun SSLConfiguration.createTrustStore(rootCert: X509Certificate) {
+        val trustStore = loadOrCreateKeyStore(trustStoreFile, trustStorePassword)
+        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCert)
+        trustStore.save(trustStoreFile, trustStorePassword)
+    }
+
+
+    @Test
+    fun `Test AMQP Client with invalid root certificate`() {
+        val sslConfig = object : SSLConfiguration {
+            override val certificatesDirectory = temporaryFolder.root.toPath()
+            override val keyStorePassword = "serverstorepass"
+            override val trustStorePassword = "trustpass"
+            override val crlCheckSoftFail: Boolean = true
+        }
+
+        val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
+
+        // Generate server cert and private key and populate another keystore suitable for SSL
+        sslConfig.createDevKeyStores(ALICE_NAME, rootCa.certificate, intermediateCa)
+        sslConfig.createTrustStore(rootCa.certificate)
+
+        val keyStore = loadKeyStore(sslConfig.sslKeystore, sslConfig.keyStorePassword)
+        val trustStore = loadKeyStore(sslConfig.trustStoreFile, sslConfig.trustStorePassword)
+
+        val context = SSLContext.getInstance("TLS")
+        val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
+        keyManagerFactory.init(keyStore, sslConfig.keyStorePassword.toCharArray())
+        val keyManagers = keyManagerFactory.keyManagers
+        val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        trustMgrFactory.init(trustStore)
+        val trustManagers = trustMgrFactory.trustManagers
+        context.init(keyManagers, trustManagers, SecureRandom())
+
+        val serverSocketFactory = context.serverSocketFactory
+
+        val serverSocket = serverSocketFactory.createServerSocket(serverPort) as SSLServerSocket
+        val serverParams = SSLParameters(CIPHER_SUITES.toTypedArray(),
+                arrayOf("TLSv1.2"))
+        serverParams.wantClientAuth = true
+        serverParams.needClientAuth = true
+        serverParams.endpointIdentificationAlgorithm = null // Reconfirm default no server name indication, use our own validator.
+        serverSocket.sslParameters = serverParams
+        serverSocket.useClientMode = false
+
+        val lock = Object()
+        var done = false
+        var handshakeError = false
+
+        val serverThread = thread {
+            try {
+                val sslServerSocket = serverSocket.accept() as SSLSocket
+                sslServerSocket.addHandshakeCompletedListener {
+                    done = true
+                }
+                sslServerSocket.startHandshake()
+                synchronized(lock) {
+                    while (!done) {
+                        lock.wait(1000)
+                    }
+                }
+                sslServerSocket.close()
+            } catch (ex: SSLHandshakeException) {
+                handshakeError = true
+            }
+        }
+
+        val amqpClient = createClient()
+        amqpClient.use {
+            val clientConnected = amqpClient.onConnection.toFuture()
+            amqpClient.start()
+            val clientConnect = clientConnected.get()
+            assertEquals(false, clientConnect.connected)
+            synchronized(lock) {
+                done = true
+                lock.notifyAll()
+            }
+        }
+        serverThread.join(1000)
+        assertTrue(handshakeError)
+        serverSocket.close()
+        assertTrue(done)
+    }
+
 
     @Test
     fun `Client Failover for multiple IP`() {

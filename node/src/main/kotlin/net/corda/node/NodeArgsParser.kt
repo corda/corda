@@ -47,6 +47,7 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
             .withRequiredArg()
             .withValuesConvertedBy(object : EnumConverter<UnknownConfigKeysPolicy>(UnknownConfigKeysPolicy::class.java) {})
             .defaultsTo(UnknownConfigKeysPolicy.FAIL)
+    private val devModeArg = optionParser.accepts("dev-mode", "Run the node in developer mode. Unsafe for production.")
 
     private val isVersionArg = optionParser.accepts("version", "Print the version and exit")
     private val justGenerateNodeInfoArg = optionParser.accepts("just-generate-node-info",
@@ -70,6 +71,7 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
         val networkRootTrustStorePath = optionSet.valueOf(networkRootTrustStorePathArg)
         val networkRootTrustStorePassword = optionSet.valueOf(networkRootTrustStorePasswordArg)
         val unknownConfigKeysPolicy = optionSet.valueOf(unknownConfigKeysPolicy)
+        val devMode = optionSet.has(devModeArg)
 
         val registrationConfig = if (isRegistration) {
             requireNotNull(networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
@@ -89,7 +91,8 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
                 sshdServer,
                 justGenerateNodeInfo,
                 bootstrapRaftCluster,
-                unknownConfigKeysPolicy)
+                unknownConfigKeysPolicy,
+                devMode)
     }
 }
 
@@ -105,12 +108,14 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean,
                           val bootstrapRaftCluster: Boolean,
-                          val unknownConfigKeysPolicy: UnknownConfigKeysPolicy) {
+                          val unknownConfigKeysPolicy: UnknownConfigKeysPolicy,
+                          val devMode: Boolean) {
     fun loadConfig(): NodeConfiguration {
         val config = ConfigHelper.loadConfig(
                 baseDirectory,
                 configFile,
-                configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell))
+                configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
+                        if (devMode) mapOf("devMode" to this.devMode) else emptyMap<String, Any>())
         ).parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
         if (nodeRegistrationOption != null) {
             require(!config.devMode) { "registration cannot occur in devMode" }
