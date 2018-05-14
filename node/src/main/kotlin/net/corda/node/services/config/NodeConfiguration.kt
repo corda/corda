@@ -52,6 +52,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
     // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
     val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
     val extraNetworkMapKeys: List<UUID>
+    val tlsCertCrlDistPoint: URL?
+    val tlsCertCrlIssuer: String?
 
     fun validate(): List<String>
 
@@ -133,6 +135,8 @@ data class NodeConfigurationImpl(
         override val crlCheckSoftFail: Boolean,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
+        override val tlsCertCrlDistPoint: URL? = null,
+        override val tlsCertCrlIssuer: String? = null,
         override val rpcUsers: List<User>,
         override val security: SecurityConfiguration? = null,
         override val verifierType: VerifierType,

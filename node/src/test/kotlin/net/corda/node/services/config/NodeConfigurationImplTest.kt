@@ -147,7 +147,8 @@ class NodeConfigurationImplTest {
                 devMode = true,
                 noLocalShell = false,
                 rpcSettings = rpcSettings,
-                crlCheckSoftFail = true
+                crlCheckSoftFail = true,
+                tlsCertCrlDistPoint = null
         )
     }
 }
