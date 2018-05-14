@@ -1,7 +1,11 @@
 package net.corda.node.services.identity
 
+import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.node.services.UnknownAnonymousPartyException
 
 
 fun partiesFromName(query: String, exactMatch: Boolean, x500name: CordaX500Name, results: LinkedHashSet<Party>, party: Party) {
@@ -20,5 +24,15 @@ fun partiesFromName(query: String, exactMatch: Boolean, x500name: CordaX500Name,
             if (component.contains(query, ignoreCase = true))
                 results += party
         }
+    }
+}
+
+@Throws(UnknownAnonymousPartyException::class)
+fun assertOwnershipUtil(party: Party, anonymousParty: AnonymousParty, partyAndCertificate: PartyAndCertificate?) {
+    val anonymousIdentity = partyAndCertificate ?:
+    throw UnknownAnonymousPartyException("Unknown $anonymousParty")
+    val issuingCert = anonymousIdentity.certPath.certificates[1]
+    require(issuingCert.publicKey == party.owningKey) {
+        "Issuing certificate's public key must match the party key ${party.owningKey.toStringShort()}."
     }
 }
