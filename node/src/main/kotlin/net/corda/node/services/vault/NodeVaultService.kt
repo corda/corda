@@ -401,7 +401,7 @@ class NodeVaultService(
     }
 
     @Throws(VaultQueryException::class)
-    fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean = false): Vault.Page<T> {
+    private fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean): Vault.Page<T> {
         log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
         // calculate total results where a page specification has been defined
         var totalStates = -1L
