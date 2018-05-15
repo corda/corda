@@ -6339,7 +6339,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public net.corda.core.node.services.NetworkMapCache getNetworkMapCache()
   @NotNull
-  public net.corda.core.node.NetworkParameters getNetworkParameters()
+  public final net.corda.core.node.NetworkParameters getNetworkParameters()
   @NotNull
   protected final net.corda.core.node.ServicesForResolution getServicesForResolution()
   @NotNull
