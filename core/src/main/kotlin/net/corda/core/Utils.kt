@@ -8,6 +8,7 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.messaging.DataFeed
 import rx.Observable
 import rx.Observer
+import java.lang.reflect.Field
 
 // TODO Delete this file once the Future stuff is out of here
 
@@ -70,4 +71,51 @@ fun <ELEMENT> Observable<ELEMENT>.mapErrors(transform: (Throwable) -> Throwable)
     return onErrorResumeNext { error ->
         Observable.error(transform(error))
     }
+}
+
+/**
+ * Find a field withing a class hierarchy.
+ */
+@Throws(NoSuchFieldException::class)
+fun findField(fieldName: String, clazz: Class<*>?): Field {
+    if (clazz == null) {
+        throw NoSuchFieldException(fieldName)
+    }
+    return try {
+        return clazz.getDeclaredField(fieldName)
+    } catch (e: NoSuchFieldException) {
+        findField(fieldName, clazz.superclass)
+    }
+}
+
+/**
+ * Sets a value for the specified field.
+ */
+@Throws(NoSuchFieldException::class)
+fun setFieldValue(fieldName: String, value: Any?, target: Any) {
+
+    val field = findField(fieldName, target::class.java)
+    val accessible = field.isAccessible
+    field.isAccessible = true
+    try {
+        field.set(target, value)
+    } finally {
+        field.isAccessible = accessible
+    }
+}
+
+/**
+ * Sets a value for the specified field.
+ */
+@Throws(NoSuchFieldException::class)
+fun <TYPE : Any> TYPE.setFieldValue(fieldName: String, value: Any?) {
+    setFieldValue(fieldName, value, this)
+}
+
+/**
+ * Sets the specified field value to null.
+ */
+@Throws(NoSuchFieldException::class)
+fun <TYPE : Any> TYPE.setFieldToNull(fieldName: String) {
+    setFieldValue(fieldName, null, this)
 }

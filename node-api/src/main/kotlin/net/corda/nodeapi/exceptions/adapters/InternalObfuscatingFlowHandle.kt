@@ -11,5 +11,5 @@ import net.corda.nodeapi.exceptions.InternalNodeException
 @CordaSerializable
 data class InternalObfuscatingFlowHandle<RESULT>(val wrapped: FlowHandle<RESULT>) : FlowHandle<RESULT> by wrapped {
 
-    override val returnValue = wrapped.returnValue.mapError(InternalNodeException.Companion::obfuscateIfInternal)
+    override val returnValue = wrapped.returnValue.mapError(InternalNodeException.Companion::obfuscate)
 }

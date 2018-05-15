@@ -12,11 +12,11 @@ import net.corda.nodeapi.exceptions.InternalNodeException
 @CordaSerializable
 class InternalObfuscatingFlowProgressHandle<RESULT>(val wrapped: FlowProgressHandle<RESULT>) : FlowProgressHandle<RESULT> by wrapped {
 
-    override val returnValue = wrapped.returnValue.mapError(InternalNodeException.Companion::obfuscateIfInternal)
+    override val returnValue = wrapped.returnValue.mapError(InternalNodeException.Companion::obfuscate)
 
-    override val progress = wrapped.progress.mapErrors(InternalNodeException.Companion::obfuscateIfInternal)
+    override val progress = wrapped.progress.mapErrors(InternalNodeException.Companion::obfuscate)
 
-    override val stepsTreeIndexFeed = wrapped.stepsTreeIndexFeed?.mapErrors(InternalNodeException.Companion::obfuscateIfInternal)
+    override val stepsTreeIndexFeed = wrapped.stepsTreeIndexFeed?.mapErrors(InternalNodeException.Companion::obfuscate)
 
-    override val stepsTreeFeed = wrapped.stepsTreeFeed?.mapErrors(InternalNodeException.Companion::obfuscateIfInternal)
+    override val stepsTreeFeed = wrapped.stepsTreeFeed?.mapErrors(InternalNodeException.Companion::obfuscate)
 }

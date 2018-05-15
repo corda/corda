@@ -138,14 +138,14 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
             call.invoke()
         } catch (error: Throwable) {
             logger.error(error.message, error)
-            throw InternalNodeException.obfuscateIfInternal(error)
+            throw InternalNodeException.obfuscate(error)
         }
     }
 
     private fun <SNAPSHOT, ELEMENT> wrapFeed(call: () -> DataFeed<SNAPSHOT, ELEMENT>) = wrap {
 
-        call.invoke().doOnError { error -> logger.error(error.message, error) }.mapErrors(InternalNodeException.Companion::obfuscateIfInternal)
+        call.invoke().doOnError { error -> logger.error(error.message, error) }.mapErrors(InternalNodeException.Companion::obfuscate)
     }
 
-    private fun <RESULT> wrapFuture(call: () -> CordaFuture<RESULT>): CordaFuture<RESULT> = wrap { call.invoke().mapError(InternalNodeException.Companion::obfuscateIfInternal).doOnError { error -> logger.error(error.message, error) } }
+    private fun <RESULT> wrapFuture(call: () -> CordaFuture<RESULT>): CordaFuture<RESULT> = wrap { call.invoke().mapError(InternalNodeException.Companion::obfuscate).doOnError { error -> logger.error(error.message, error) } }
 }
