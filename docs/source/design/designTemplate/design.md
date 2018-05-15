@@ -2,7 +2,7 @@
 
 # Design Template
 
-Please read the [Design Review Process](../designReviewProcess.md) before completing a design.
+Please read the [Design Review Process](../design-review-process.md) before completing a design.
 
 This design template should be used for capturing new Corda feature requests that have been raised as JIRA requirements stories by the product management team. The design may be completed in two stages depending on the complexity and scope of the new feature.
 

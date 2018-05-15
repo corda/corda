@@ -26,6 +26,7 @@ class NodeConfig(
         val rpcAdminPort: Int,
         val isNotary: Boolean,
         val users: List<User>,
+        val devMode: Boolean = true,
         val runMigration: Boolean = true,
         val jarDirs: List<String> = emptyList()
 ) {
@@ -52,6 +53,7 @@ class NodeConfig(
                 .withValue("database", valueFor(mapOf("runMigration" to runMigration)))
                 .withValue("useTestClock", valueFor(true))
                 .withValue("jarDirs", valueFor(jarDirs))
+                .withValue("devMode", valueFor(devMode))
         return if (isNotary) {
             config.withValue("notary", ConfigValueFactory.fromMap(mapOf("validating" to true)))
         } else {

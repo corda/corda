@@ -60,6 +60,7 @@ public class StandaloneCordaRPCJavaClientTest {
             true,
             Collections.singletonList(rpcUser),
             true,
+            true,
             Collections.emptyList()
     );
 
