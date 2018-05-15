@@ -4,6 +4,7 @@ import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.*
 import org.junit.Test
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 
 // Make sure all serialization calls in this test don't get stomped on by anything else
@@ -43,7 +44,7 @@ class TestSerializerFactoryFactory : SerializerFactoryFactoryImpl() {
             }
 }
 
-class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme(emptySet(), TestSerializerFactoryFactory()) {
+class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme(emptySet(), ConcurrentHashMap(), TestSerializerFactoryFactory()) {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         throw UnsupportedOperationException()
     }
