@@ -6170,6 +6170,8 @@ public class net.corda.testing.node.MockNetwork extends java.lang.Object
   @NotNull
   public final net.corda.testing.node.StartedMockNode createNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>)
   @NotNull
+  public final net.corda.testing.node.StartedMockNode createNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.List<String>)
+  @NotNull
   public final net.corda.testing.node.StartedMockNode createNode(net.corda.testing.node.MockNodeParameters)
   @NotNull
   public final net.corda.testing.node.StartedMockNode createPartyNode(net.corda.core.identity.CordaX500Name)
@@ -6183,6 +6185,8 @@ public class net.corda.testing.node.MockNetwork extends java.lang.Object
   public final net.corda.testing.node.UnstartedMockNode createUnstartedNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger)
   @NotNull
   public final net.corda.testing.node.UnstartedMockNode createUnstartedNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>)
+  @NotNull
+  public final net.corda.testing.node.UnstartedMockNode createUnstartedNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.List<String>)
   @NotNull
   public final net.corda.testing.node.UnstartedMockNode createUnstartedNode(net.corda.testing.node.MockNodeParameters)
   @NotNull
@@ -6263,6 +6267,7 @@ public final class net.corda.testing.node.MockNetworkParameters extends java.lan
 public final class net.corda.testing.node.MockNodeParameters extends java.lang.Object
   public <init>()
   public <init>(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>)
+  public <init>(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.List<String>)
   @Nullable
   public final Integer component1()
   @Nullable
@@ -6273,6 +6278,8 @@ public final class net.corda.testing.node.MockNodeParameters extends java.lang.O
   public final kotlin.jvm.functions.Function1<net.corda.node.services.config.NodeConfiguration, Object> component4()
   @NotNull
   public final net.corda.testing.node.MockNodeParameters copy(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>)
+  @NotNull
+  public final net.corda.testing.node.MockNodeParameters copy(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>, java.util.List<String>)
   public boolean equals(Object)
   @NotNull
   public final kotlin.jvm.functions.Function1<net.corda.node.services.config.NodeConfiguration, Object> getConfigOverrides()
