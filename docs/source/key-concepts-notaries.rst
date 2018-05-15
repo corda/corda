@@ -66,6 +66,31 @@ created the "denial of state" transaction, allowing the attack to be resolved of
 In the case of the validating model, the use of anonymous, freshly-generated public keys instead of legal identities to
 identify parties in a transaction limit the information the notary cluster sees.
 
+Data visibility
+^^^^^^^^^^^^^^^
+
+Below is a summary of what specific transaction components have to be revealed to each type of notary:
+
++-----------------------------------+---------------------------------------+-------------------------------------------+
+| Transaction components            | Validating                            | Non-validating                            |
++===================================+=======================================+===========================================+
+| Inputs                            | Fully visible – input states resolved | References only - no resolution performed |
++-----------------------------------+---------------------------------------+-------------------------------------------+
+| Outputs                           | Fully visible                         | Hidden                                    |
++-----------------------------------+---------------------------------------+-------------------------------------------+
+| Commands (with signer identities) | Fully visible                         | Hidden                                    |
++-----------------------------------+---------------------------------------+-------------------------------------------+
+| Attachments                       | Fully visible                         | Hidden                                    |
++-----------------------------------+---------------------------------------+-------------------------------------------+
+| Time window                       | Fully visible                         | Fully visible                             |
++-----------------------------------+---------------------------------------+-------------------------------------------+
+| Notary identity                   | Fully visible                         | Fully visible                             |
++-----------------------------------+---------------------------------------+-------------------------------------------+
+| Signatures                        | Fully visible                         | Hidden                                    |
++-----------------------------------+---------------------------------------+-------------------------------------------+
+
+Both types of notaries record the calling party's identity: the public key and the X.500 Distinguished Name.
+
 Multiple notaries
 -----------------
 Each Corda network can have multiple notary clusters, each potentially running a different consensus algorithm. This
