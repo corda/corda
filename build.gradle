@@ -276,12 +276,23 @@ allprojects {
                 force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
                 force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
                 force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+                // Demand that everything uses our given version of Netty.
+                eachDependency { details ->
+                    if (details.requested.group == 'io.netty' && details.requested.name.startsWith('netty-')) {
+                        details.useVersion netty_version
+                    }
+                }
             }
         }
         compile {
             // We want to use SLF4J's version of these bindings: jcl-over-slf4j
             // Remove any transitive dependency on Apache's version.
             exclude group: 'commons-logging', module: 'commons-logging'
+
+            // Netty-All is an uber-jar which contains every Netty module.
+            // Exclude it to force us to use the individual Netty modules instead.
+            exclude group: 'io.netty', module: 'netty-all'
         }
         runtime {
             // We never want isolated.jar on classPath, since we want to test jar being dynamically loaded as an attachment

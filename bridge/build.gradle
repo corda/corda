@@ -54,8 +54,7 @@ dependencies {
     compile "io.reactivex:rxjava:$rxjava_version"
     compile("org.apache.activemq:artemis-core-client:${artemis_version}")
     compile "org.apache.activemq:artemis-commons:${artemis_version}"
-    // Netty: All of it! Dn't depend upon ActiveMQ to pull it in correctly
-    compile "io.netty:netty-all:$netty_version"
+    compile "io.netty:netty-handler-proxy:$netty_version"
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
 

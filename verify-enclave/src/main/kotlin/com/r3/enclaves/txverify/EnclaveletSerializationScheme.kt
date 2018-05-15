@@ -32,7 +32,7 @@ private class EnclaveletSerializationScheme {
     private companion object {
         init {
             nodeSerializationEnv = SerializationEnvironmentImpl(
-                SerializationFactoryImpl().apply {
+                SerializationFactoryImpl(HashMap()).apply {
                     registerScheme(KryoVerifierSerializationScheme)
                     registerScheme(AMQPVerifierSerializationScheme)
                 },
@@ -59,7 +59,7 @@ private object KryoVerifierSerializationScheme : AbstractKryoSerializationScheme
     override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
 }
 
-private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
+private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme(emptySet(), HashMap()) {
     override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
         return magic == amqpMagic && target == SerializationContext.UseCase.P2P
     }

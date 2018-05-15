@@ -102,7 +102,12 @@ internal class AttachmentsClassLoaderBuilder(private val properties: Map<Any, An
     }
 }
 
-open class SerializationFactoryImpl : SerializationFactory() {
+open class SerializationFactoryImpl(
+    // TODO: This is read-mostly. Probably a faster implementation to be found.
+    private val schemes: MutableMap<Pair<CordaSerializationMagic, SerializationContext.UseCase>, SerializationScheme>
+) : SerializationFactory() {
+    constructor() : this(ConcurrentHashMap())
+
     companion object {
         val magicSize = sequenceOf(kryoMagic, amqpMagic).map { it.size }.distinct().single()
     }
@@ -112,9 +117,6 @@ open class SerializationFactoryImpl : SerializationFactory() {
     private val registeredSchemes: MutableCollection<SerializationScheme> = Collections.synchronizedCollection(mutableListOf())
 
     private val logger = LoggerFactory.getLogger(javaClass)
-
-    // TODO: This is read-mostly. Probably a faster implementation to be found.
-    private val schemes: ConcurrentHashMap<Pair<CordaSerializationMagic, SerializationContext.UseCase>, SerializationScheme> = ConcurrentHashMap()
 
     private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): Pair<SerializationScheme, CordaSerializationMagic> {
         // truncate sequence to at most magicSize, and make sure it's a copy to avoid holding onto large ByteArrays

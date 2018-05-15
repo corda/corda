@@ -68,7 +68,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      * subclass in the schema, so that we can distinguish between subclasses.
      */
     // TODO: should this be a custom serializer at all, or should it just be a plain AMQPSerializer?
-    class SubClass<T : Any>(protected val clazz: Class<*>, protected val superClassSerializer: CustomSerializer<T>) : CustomSerializer<T>() {
+    class SubClass<T : Any>(private val clazz: Class<*>, private val superClassSerializer: CustomSerializer<T>) : CustomSerializer<T>() {
         // TODO: should this be empty or contain the schema of the super?
         override val schemaForDocumentation = Schema(emptyList())
 

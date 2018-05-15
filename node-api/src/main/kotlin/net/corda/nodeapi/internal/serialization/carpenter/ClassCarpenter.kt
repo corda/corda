@@ -58,7 +58,7 @@ private val toStringHelper: String = Type.getInternalName(MoreObjects.ToStringHe
 // Allow us to create alternative ClassCarpenters.
 interface ClassCarpenter {
     val whitelist: ClassWhitelist
-    val classloader: CarpenterClassLoader
+    val classloader: ClassLoader
     fun build(schema: Schema): Class<*>
 }
 
