@@ -142,7 +142,8 @@ data class NodeParameters(
         val verifierType: VerifierType = VerifierType.InMemory,
         val customOverrides: Map<String, Any?> = emptyMap(),
         val startInSameProcess: Boolean? = null,
-        val maximumHeapSize: String = "512m"
+        val maximumHeapSize: String = "512m",
+        val logLevel: String? = null
 ) {
     fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
     fun withRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
@@ -150,6 +151,7 @@ data class NodeParameters(
     fun withCustomOverrides(customOverrides: Map<String, Any?>): NodeParameters = copy(customOverrides = customOverrides)
     fun withStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
     fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
+    fun withLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
 }
 
 /**
@@ -202,7 +204,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
             ),
             coerce = { it },
             dsl = dsl,
-            initialiseSerialization = true
+            initialiseSerialization = defaultParameters.initialiseSerialization
     )
 }
 
@@ -240,12 +242,13 @@ data class DriverParameters(
         val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
+        val initialiseSerialization: Boolean = true,
         val startNodesInProcess: Boolean = false,
         val waitForAllNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
         val jmxPolicy: JmxPolicy = JmxPolicy(),
-        val networkParameters: NetworkParameters = testNetworkParameters(),
+        val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap()
 ) {
     constructor(
@@ -268,12 +271,45 @@ data class DriverParameters(
             debugPortAllocation,
             systemProperties,
             useTestClock,
+            true,
             startNodesInProcess,
             waitForAllNodesToFinish,
             notarySpecs,
             extraCordappPackagesToScan,
             jmxPolicy,
-            networkParameters, emptyMap()
+            networkParameters,
+            emptyMap()
+    )
+
+    constructor(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            initialiseSerialization: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters
+    ) : this(
+            isDebug,
+            driverDirectory,
+            portAllocation,
+            debugPortAllocation,
+            systemProperties,
+            useTestClock,
+            initialiseSerialization,
+            startNodesInProcess,
+            waitForAllNodesToFinish,
+            notarySpecs,
+            extraCordappPackagesToScan,
+            jmxPolicy,
+            networkParameters,
+            emptyMap()
     )
 
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
@@ -282,6 +318,7 @@ data class DriverParameters(
     fun withDebugPortAllocation(debugPortAllocation: PortAllocation): DriverParameters = copy(debugPortAllocation = debugPortAllocation)
     fun withSystemProperties(systemProperties: Map<String, String>): DriverParameters = copy(systemProperties = systemProperties)
     fun withUseTestClock(useTestClock: Boolean): DriverParameters = copy(useTestClock = useTestClock)
+    fun withInitialiseSerialization(initialiseSerialization: Boolean): DriverParameters = copy(initialiseSerialization = initialiseSerialization)
     fun withStartNodesInProcess(startNodesInProcess: Boolean): DriverParameters = copy(startNodesInProcess = startNodesInProcess)
     fun withWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean): DriverParameters = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
     fun withNotarySpecs(notarySpecs: List<NotarySpec>): DriverParameters = copy(notarySpecs = notarySpecs)
@@ -304,17 +341,50 @@ data class DriverParameters(
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters
     ) = this.copy(
-            isDebug,
-            driverDirectory,
-            portAllocation,
-            debugPortAllocation,
-            systemProperties,
-            useTestClock,
-            startNodesInProcess,
-            waitForAllNodesToFinish,
-            notarySpecs,
-            extraCordappPackagesToScan,
-            jmxPolicy,
-            networkParameters, emptyMap()
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            initialiseSerialization = true,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = emptyMap()
+    )
+
+    fun copy(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            initialiseSerialization: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters
+    ) = this.copy(
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            initialiseSerialization = initialiseSerialization,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = emptyMap()
     )
 }

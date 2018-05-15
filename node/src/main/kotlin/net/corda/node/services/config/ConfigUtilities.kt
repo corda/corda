@@ -20,6 +20,9 @@ fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
 
 object ConfigHelper {
+
+    const val CORDA_PROPERTY_PREFIX = "corda."
+
     private val log = LoggerFactory.getLogger(javaClass)
     fun loadConfig(baseDirectory: Path,
                    configFile: Path = baseDirectory / "node.conf",
@@ -86,6 +89,10 @@ fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name) {
         }
     }
 }
+
+/** Parse a value to be database schema name friendly and removes the last part if it matches a port ("_" followed by at least 5 digits) */
+fun parseToDbSchemaFriendlyName(value: String) =
+        value.replace(" ", "").replace("-", "_").replace(Regex("_\\d{5,}$"),"")
 
 /** This is generally covered by commons-lang. */
 object CordaSystemUtils {

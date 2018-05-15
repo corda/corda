@@ -4,8 +4,8 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
-import net.corda.core.utilities.seconds
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.seconds
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -85,6 +85,11 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
      * @param stateLabel The label of the output state specified when calling [TransactionDSLInterpreter.output] and friends.
      */
     fun input(stateLabel: String) = input(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
+
+    fun input(contractClassName: ContractClassName, stateLabel: String) {
+        val stateAndRef = retrieveOutputStateAndRef(ContractState::class.java, stateLabel)
+        input(contractClassName, stateAndRef.state.data)
+    }
 
     /**
      * Creates an [LedgerDSLInterpreter._unverifiedTransaction] with a single output state and adds it's reference as an

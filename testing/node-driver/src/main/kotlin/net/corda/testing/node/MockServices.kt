@@ -1,6 +1,7 @@
 package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
+import com.typesafe.config.Config
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
@@ -28,14 +29,12 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
-import net.corda.testing.node.internal.MockKeyManagementService
-import net.corda.testing.node.internal.MockTransactionStorage
+import net.corda.testing.node.internal.*
 import net.corda.testing.services.MockAttachmentStorage
 import java.security.KeyPair
 import java.sql.Connection
@@ -67,19 +66,24 @@ open class MockServices private constructor(
     companion object {
         /**
          * Make properties appropriate for creating a DataSource for unit tests.
+         * Defaults configuration of in-memory H2 instance. If 'databaseProvider' system property is set then creates
+         * a config from the relevant config file is present in resources folder (used to parametrize test to run against a remote database).
          *
-         * @param nodeName Reflects the "instance" of the in-memory database.  Defaults to a random string.
+         * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.
+         * Defaults to a random string. Passed to [configSupplier] method.
+         * @param nodeNameExtension Provides additional name extension for [configSupplier].
+         * @param configSupplier Returns [Config] with dataSourceProperties, invoked with [nodeName] and [nodeNameExtension] parameters.
+         * Defaults to configuration created when 'databaseProvider' system property is set.
          */
         // TODO: Can we use an X509 principal generator here?
         @JvmStatic
-        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
-            val props = Properties()
-            props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-            props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
-            props.setProperty("dataSource.user", "sa")
-            props.setProperty("dataSource.password", "")
-            return props
+        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString(),
+                                         nodeNameExtension: String? = null,
+                                         configSupplier: (String, String?) -> Config = ::databaseProviderDataSourceConfig): Properties {
+            return makeTestDataSourceProperties(nodeName, nodeNameExtension, configSupplier, ::inMemoryH2DataSourceConfig)
         }
+
+
 
         /**
          * Makes database and mock services appropriate for unit tests.
@@ -98,9 +102,9 @@ open class MockServices private constructor(
                                             networkParameters: NetworkParameters = testNetworkParameters(),
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
-            val dataSourceProps = makeTestDataSourceProperties()
+            val dataSourceProps = makeTestDataSourceProperties(initialIdentity.name.organisation, SecureHash.randomSHA256().toString())
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
-            val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
+            val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(initialIdentity.name.organisation), identityService, schemaService)
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
                     override val vaultService: VaultService = makeVaultService(database.hibernateConfig, schemaService)
