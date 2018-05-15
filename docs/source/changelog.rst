@@ -15,6 +15,9 @@ Unreleased
   * ``NodeInfo`` objects are serialised as an object and can be looked up using the same mechanism as ``Party``
   * ``NetworkHostAndPort`` serialised according to its ``toString()``
   * ``PartyAndCertificate`` is serialised as an object containing the name and owning key
+  * ``SerializedBytes`` is serialised by converting the bytes into the object it represents, which is then serialised into
+    a JSON/YAML object
+  * ``CertPath`` and ``X509Certificate`` are serialised as objects and can be deserialised back
 
 * Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used
 
