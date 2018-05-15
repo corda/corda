@@ -1,8 +1,6 @@
 # Certificate hierarchies
 
-```eval_rst
 .. important:: This design doc applies to the main Corda network. Other networks may use different certificate hierarchies.
-```
 
 ## Overview
 
@@ -53,13 +51,11 @@ context.
 
 ## Design Decisions
 
-```eval_rst
 .. toctree::
    :maxdepth: 2
    
    decisions/levels.md
    decisions/tls-trust-root.md
-```
 
 ## **Target** Solution
 

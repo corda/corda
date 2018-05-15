@@ -1,18 +1,14 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
-------
-
 # Design Decision: Medium-term target for node HA
 
 ## Background / Context
 
-Designing for high availability is a complex task which can only be delivered over an operationally-significant timeline. It is therefore important to determine whether an intermediate state design (deliverable for around March 2018) is desirable as a precursor to longer term outcomes.
-
-
+Designing for high availability is a complex task which can only be delivered over an operationally-significant
+timeline. It is therefore important to determine whether an intermediate state design (deliverable for around March
+2018) is desirable as a precursor to longer term outcomes.
 
 ## Options Analysis
 
-### 1. Hot-warm as interim state (see [HA design doc](../design.md))
+### 1. Hot-warm as interim state
 
 #### Advantages
 
@@ -26,7 +22,7 @@ Designing for high availability is a complex task which can only be delivered ov
 2. May actually turn out more risky than hot-hot, because shutting down code is always prone to deadlocks and resource leakages.
 3. Some work would have to be thrown away when we create a full hot-hot solution.
 
-### 2. Progress immediately to Hot-hot (see [HA design doc](../design.md))
+### 2. Progress immediately to Hot-hot
 
 #### Advantages
 
@@ -45,5 +41,9 @@ Proceed with Option 1: Hot-warm as interim state.
 
 ## Decision taken
 
-**[DRB meeting, 16/11/2017:](./drb-meeting-20171116.md)** Adopt option 1: Medium-term target: Hot Warm (RGB, JC, MH agreed)
+Adopt option 1: Medium-term target: Hot Warm (RGB, JC, MH agreed)
+
+.. toctree::
+
+   drb-meeting-20171116.md
 

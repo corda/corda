@@ -44,13 +44,12 @@ Design documents should follow the standard GitHub version management and pull r
 
 #### Design Decisions
 
-| Description                              | Recommendation  | Approval*               |
+| Description                              | Recommendation  | Approval               |
 | ---------------------------------------- | --------------- | ----------------------- |
 | [Design Decision 1](decisions/decision.md) | Selected option | (Design Approval Board) |
 | [Design Decision 2](decisions/decision.md) | Selected option | (Design Approval Board) |
 | [Design Decision 3](decisions/decision.md) | Selected option | (Design Approval Board) |
 
-\* only required for formal Design Approval Board meetings.
 
 ## Document History 
 
@@ -116,7 +115,7 @@ List of design decisions identified in defining the target solution:
 | [Design Decision 3](decisions/decision.md) | Option B       |
 
 It is reasonable to expect decisions to be challenged prior to any formal review and approval. 
-*In certain scenarios the Design Decision itself may solicit a recommendation from reviewers.
+In certain scenarios the Design Decision itself may solicit a recommendation from reviewers.
 
 ## Target Solution
 

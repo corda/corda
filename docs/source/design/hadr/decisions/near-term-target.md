@@ -1,14 +1,10 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Decision: Near-term target for node HA
-============================================
+# Design Decision: Near-term target for node HA
 
 ## Background / Context
 
-Designing for high availability is a complex task which can only be delivered over an operationally-significant timeline. It is therefore important to determine the target state in the near term as a precursor to longer term outcomes.
-
-
+Designing for high availability is a complex task which can only be delivered over an operationally-significant
+timeline. It is therefore important to determine the target state in the near term as a precursor to longer term
+outcomes.
 
 ## Options Analysis
 
@@ -43,4 +39,8 @@ Proceed with Option 2: Hot-cold.
 
 ## Decision taken
 
-**[DRB meeting, 16/11/2017:](./drb-meeting-20171116.md)** Adopt option 2: Near-term target: Hot Cold (RGB, JC, MH agreed)
+Adopt option 2: Near-term target: Hot Cold (RGB, JC, MH agreed)
+
+.. toctree::
+
+   drb-meeting-20171116.md

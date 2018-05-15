@@ -1,8 +1,6 @@
 # Float Design
 
-```eval_rst
 .. important:: This design document describes a feature of Corda Enterprise.
-```
 
 ## Overview
 
@@ -75,7 +73,6 @@ Allow connectivity in compliance with DMZ constraints commonly imposed by modern
 
 The following design decisions fed into this design:
 
-```eval_rst
 .. toctree::
    :maxdepth: 2
 
@@ -83,8 +80,6 @@ The following design decisions fed into this design:
    decisions/ssl-termination.md
    decisions/e2e-encryption.md
    decisions/pluggable-broker.md
-   
-```
 
 ## Target Solution
 
@@ -112,10 +107,10 @@ node, is supported.
 **No state will be serialized on the float**, although suitably protected logs will be recorded of all float activities.
 
 **End-to-end encryption** of the payload is not delivered through this design (see Design Decisions, above). For current
-*purposes, a header field indicating plaintext/encrypted payload is employed as a placeholder.
+purposes, a header field indicating plaintext/encrypted payload is employed as a placeholder.
 
 **HA** is enabled (this should be easy as the bridge manager can choose which float to make active). Only fully
-*connected DMZ floats should activate their listening port.
+connected DMZ floats should activate their listening port.
 
 Implementation of the float is expected to be based on existing AMQP Bridge Manager code - see Implementation Plan,
 below, for expected work stages.

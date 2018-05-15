@@ -13,7 +13,6 @@
 # serve to show the default.
 
 import sphinx_rtd_theme
-from recommonmark.transform import AutoStructify
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -26,10 +25,8 @@ from recommonmark.transform import AutoStructify
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
 
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
-extensions = ['rst2pdf.pdfbuilder']
+# m2r is a Markdown to RST converter, as our design docs use Markdown.
+extensions = ['rst2pdf.pdfbuilder', 'm2r']
 
 # PDF configuration
 pdf_documents = [('index', u'corda-developer-site', u'Corda Developer Documentation', u'R3')]
@@ -43,9 +40,6 @@ templates_path = ['_templates']
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 source_suffix = ['.rst', '.md']
-source_parsers = {
-    '.md': 'recommonmark.parser.CommonMarkParser',
-}
 
 # The encoding of source files.
 source_encoding = 'utf-8-sig'
@@ -262,13 +256,3 @@ latex_documents = [
 
 # If false, no module index is generated.
 #latex_domain_indices = True
-
-web_doc_root = 'https://docs.corda.net/'
-def setup(app):
-    app.add_config_value('recommonmark_config', {
-            'url_resolver': lambda url: web_doc_root + url,
-            'auto_toc_tree_section': 'Contents',
-            'enable_eval_rst': True,
-            'enable_auto_doc_ref': False,
-            }, True)
-    app.add_transform(AutoStructify)

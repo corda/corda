@@ -1,14 +1,9 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Decision: Message storage
-============================================
+# Design Decision: Message storage
 
 ## Background / Context
 
-Storage of messages by the message broker has implications for replication technologies which can be used to ensure both [high availability](../design.md) and disaster recovery of Corda nodes.
-
-
+Storage of messages by the message broker has implications for replication technologies which can be used to ensure both
+[high availability](../design.md) and disaster recovery of Corda nodes.
 
 ## Options Analysis
 
@@ -44,4 +39,8 @@ Continue with Option 1: Storage in the file system
 
 ## Decision taken
 
-[DRB meeting, 16/11/2017:](./drb-meeting-20171116.md) Use storage in the file system (for now)
+Use storage in the file system (for now)
+
+.. toctree::
+
+   drb-meeting-20171116.md
