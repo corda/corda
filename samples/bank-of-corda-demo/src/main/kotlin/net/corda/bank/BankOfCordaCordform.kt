@@ -46,6 +46,7 @@ class BankOfCordaCordform : CordformDefinition() {
                 address("localhost:10003")
                 adminAddress("localhost:10004")
             }
+            devMode(true)
         }
         node {
             name(BOC_NAME)
@@ -57,6 +58,7 @@ class BankOfCordaCordform : CordformDefinition() {
             }
             webPort(BOC_WEB_PORT)
             rpcUsers(User("bankUser", "test", setOf(all())))
+            devMode(true)
         }
         node {
             name(BIGCORP_NAME)
@@ -67,6 +69,7 @@ class BankOfCordaCordform : CordformDefinition() {
             }
             webPort(10010)
             rpcUsers(User("bigCorpUser", "test", setOf(all())))
+            devMode(true)
         }
     }
 

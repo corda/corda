@@ -101,11 +101,12 @@ class NodeRegistrationTest : IntegrationTest() {
                 compatibilityZone = compatibilityZone,
                 initialiseSerialization = false,
                 notarySpecs = listOf(NotarySpec(notaryName)),
-                extraCordappPackagesToScan = listOf("net.corda.finance")
+                extraCordappPackagesToScan = listOf("net.corda.finance"),
+                notaryCustomOverrides = mapOf("devMode" to false)
         ) {
             val (alice, genevieve) = listOf(
-                    startNode(providedName = aliceName),
-                    startNode(providedName = genevieveName)
+                    startNode(providedName = aliceName, customOverrides = mapOf("devMode" to false)),
+                    startNode(providedName = genevieveName, customOverrides = mapOf("devMode" to false))
             ).transpose().getOrThrow()
 
             assertThat(registrationHandler.idsPolled).containsOnly(
