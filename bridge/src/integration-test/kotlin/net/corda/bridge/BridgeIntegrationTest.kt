@@ -65,7 +65,7 @@ class BridgeIntegrationTest {
         assertEquals(BridgeMode.SenderReceiver, config.bridgeMode)
         assertEquals(NetworkHostAndPort("localhost", 11005), config.outboundConfig!!.artemisBrokerAddress)
         assertEquals(NetworkHostAndPort("0.0.0.0", 10005), config.inboundConfig!!.listeningAddress)
-        assertNull(config.floatInnerConfig)
+        assertNull(config.bridgeInnerConfig)
         assertNull(config.floatOuterConfig)
         config.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val (artemisServer, artemisClient) = createArtemis()
@@ -90,13 +90,13 @@ class BridgeIntegrationTest {
     }
 
     @Test
-    fun `Load bridge (float inner) and float outer and stand them up`() {
+    fun `Load bridge (bridge Inner) and float outer and stand them up`() {
         val bridgeFolder = tempFolder.root.toPath()
         val bridgeConfigResource = "/net/corda/bridge/withfloat/bridge/bridge.conf"
         val bridgeConfig = createAndLoadConfigFromResource(bridgeFolder, bridgeConfigResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         createNetworkParams(bridgeFolder)
-        assertEquals(BridgeMode.FloatInner, bridgeConfig.bridgeMode)
+        assertEquals(BridgeMode.BridgeInner, bridgeConfig.bridgeMode)
         assertEquals(NetworkHostAndPort("localhost", 11005), bridgeConfig.outboundConfig!!.artemisBrokerAddress)
         val floatFolder = tempFolder.root.toPath() / "float"
         val floatConfigResource = "/net/corda/bridge/withfloat/float/bridge.conf"
@@ -268,7 +268,7 @@ class BridgeIntegrationTest {
         assertEquals(NetworkHostAndPort("localhost", 11005), config.outboundConfig!!.artemisBrokerAddress)
         assertEquals(listOf(NetworkHostAndPort("localhost", 12005)), config.outboundConfig!!.alternateArtemisBrokerAddresses)
         assertEquals(NetworkHostAndPort("0.0.0.0", 10005), config.inboundConfig!!.listeningAddress)
-        assertNull(config.floatInnerConfig)
+        assertNull(config.bridgeInnerConfig)
         assertNull(config.floatOuterConfig)
         config.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val (artemisServer, artemisClient) = createArtemis()
@@ -311,7 +311,7 @@ class BridgeIntegrationTest {
         val bridgeConfig = createAndLoadConfigFromResource(bridgeFolder, bridgeConfigResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         createNetworkParams(bridgeFolder)
-        assertEquals(BridgeMode.FloatInner, bridgeConfig.bridgeMode)
+        assertEquals(BridgeMode.BridgeInner, bridgeConfig.bridgeMode)
         assertEquals(NetworkHostAndPort("localhost", 11005), bridgeConfig.outboundConfig!!.artemisBrokerAddress)
         assertEquals(listOf(NetworkHostAndPort("localhost", 12005)), bridgeConfig.outboundConfig!!.alternateArtemisBrokerAddresses)
         val floatFolder = tempFolder.root.toPath() / "float"
