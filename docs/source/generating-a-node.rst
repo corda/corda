@@ -139,7 +139,7 @@ The Dockerform task
 
 The ``Dockerform`` is a sister task of ``Cordform``. It has nearly the same syntax and produces very
 similar results - enhanced by an extra file to enable easy spin up of nodes using ``docker-compose``.
-Below you can find the example task from the ``IRS Demo<https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>``
+Below you can find the example task from the ``IRS Demo <https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>``
 included in the samples directory of main Corda GitHub repository:
 
 .. sourcecode:: groovy
