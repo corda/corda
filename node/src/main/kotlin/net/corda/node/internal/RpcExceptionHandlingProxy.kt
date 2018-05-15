@@ -5,6 +5,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.doOnError
+import net.corda.core.flows.ClientRelevantError
 import net.corda.core.flows.FlowException
 import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.mapError
@@ -15,11 +16,9 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowHandleImpl
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.FlowProgressHandleImpl
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.setFieldToNull
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.exceptions.InternalNodeException
-import net.corda.nodeapi.exceptions.RpcSerializableError
 import rx.Observable
 import java.io.InvalidClassException
 import java.lang.reflect.InvocationHandler
@@ -33,9 +32,8 @@ class RpcExceptionHandlingProxy(private val delegate: CordaRPCOps) : CordaRPCOps
         private val logger = loggerFor<RpcExceptionHandlingProxy>()
 
         private val whitelist = setOf(
-                FlowException::class,
+                ClientRelevantError::class,
                 InvalidClassException::class,
-                RpcSerializableError::class,
                 TransactionVerificationException::class
         )
 
