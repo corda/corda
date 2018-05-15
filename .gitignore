@@ -39,7 +39,6 @@ lib/quasar.jar
 .idea/runConfigurations
 .idea/dictionaries
 .idea/codeStyles/
-/gradle-plugins/.idea/
 
 # Include the -parameters compiler option by default in IntelliJ required for serialization.
 !.idea/compiler.xml
@@ -62,7 +61,6 @@ lib/quasar.jar
 # Gradle:
 # .idea/gradle.xml
 # .idea/libraries
-/gradle-plugins/gradle*
 
 # Mongo Explorer plugin:
 # .idea/mongoSettings.xml

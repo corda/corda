@@ -91,6 +91,8 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
 
     override fun acceptNewNetworkParameters(parametersHash: SecureHash) = wrap { delegate.acceptNewNetworkParameters(parametersHash) }
 
+    override fun killFlow(id: StateMachineRunId) = wrap { delegate.killFlow(id) }
+
     override fun nodeInfo() = wrap(delegate::nodeInfo)
 
     override fun notaryIdentities() = wrap(delegate::notaryIdentities)
@@ -130,8 +132,6 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
     override fun setFlowsDrainingModeEnabled(enabled: Boolean) = wrap { delegate.setFlowsDrainingModeEnabled(enabled) }
 
     override fun isFlowsDrainingModeEnabled() = wrap(delegate::isFlowsDrainingModeEnabled)
-
-    override fun killFlow(id: StateMachineRunId) = wrap { delegate.killFlow(id) }
 
     override fun shutdown() = wrap(delegate::shutdown)
 

@@ -1,5 +1,5 @@
-Building a Corda VM from the AWS Marketplace
-============================================
+AWS Marketplace
+===============
 
 To help you design, build and test applications on Corda, called CorDapps, a Corda network AMI can be deployed from the `AWS Marketplace <https://aws.amazon.com/marketplace/pp/B077PG9SP5>`__. Instructions on running Corda nodes can be found `here <https://docs.corda.net/deploying-a-node.html>`_.
 
@@ -12,7 +12,7 @@ Pre-requisites
 
 
 Deploying a Corda Network
----------------------------
+-------------------------
 
 Browse to the `AWS Marketplace <https://aws.amazon.com/marketplace>`__ and search for Corda.
 

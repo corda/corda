@@ -1,12 +1,10 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
 Design Decision: Certificate Hierarchy
-============================================
+======================================
 
 ## Background / Context
 
-This document purpose is to make a decision on the certificate hierarchy. It is necessary to make this decision as it affects development of features (e.g. Certificate Revocation List).
+This document purpose is to make a decision on the certificate hierarchy. It is necessary to make this decision as it
+affects development of features (e.g. Certificate Revocation List).
 
 ## Options Analysis
 

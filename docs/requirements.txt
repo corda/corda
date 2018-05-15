@@ -1,13 +1,16 @@
-## The following requirements were added by pip freeze:
 alabaster==0.7.8
 Babel==2.3.4
 certifi==2018.4.16
 chardet==3.0.4
+CommonMark==0.5.5
 docutils==0.12
+future==0.16.0
 idna==2.6
 imagesize==0.7.1
 Jinja2==2.8
+m2r==0.1.14
 MarkupSafe==0.23
+mistune==0.8.3
 packaging==17.1
 pdfrw==0.4
 Pillow==5.1.0

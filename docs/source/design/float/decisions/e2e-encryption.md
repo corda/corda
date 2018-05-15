@@ -1,14 +1,8 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Decision: End-to-end encryption
-============================================
+# Design Decision: End-to-end encryption
 
 ## Background / Context
 
 End-to-end encryption is a desirable potential design feature for the [float](../design.md).
-
-
 
 ## Options Analysis
 
@@ -53,4 +47,9 @@ Proceed with Option 2: Placeholder
 
 ## Decision taken
 
-[DNB Meeting, 16/11/2017](./drb-meeting-20171116.md): Proceed with Option 2 - Add placeholder, subject to more detailed design proposal (RGB, JC, MH agreed)
+Proceed with Option 2 - Add placeholder, subject to more detailed design proposal (RGB, JC, MH agreed)
+
+.. toctree::
+
+   drb-meeting-20171116.md
+
