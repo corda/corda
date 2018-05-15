@@ -133,8 +133,6 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
 
     override fun isFlowsDrainingModeEnabled() = wrap(delegate::isFlowsDrainingModeEnabled)
 
-    override fun killFlow(id: StateMachineRunId) = wrap { delegate.killFlow(id) }
-
     override fun shutdown() = wrap(delegate::shutdown)
 
     private fun <RESULT> wrap(call: () -> RESULT): RESULT {
