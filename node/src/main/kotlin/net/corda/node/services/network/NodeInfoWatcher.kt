@@ -87,11 +87,6 @@ class NodeInfoWatcher(private val nodePath: Path,
                 .flatMapIterable { loadFromDirectory() }
     }
 
-    // TODO This method doesn't belong in this class
-    fun saveToFile(nodeInfoAndSigned: NodeInfoAndSigned) {
-        return Companion.saveToFile(nodePath, nodeInfoAndSigned)
-    }
-
     private fun loadFromDirectory(): List<NodeInfoUpdate> {
         val processedPaths = HashSet<Path>()
         val result = nodeInfosDir.list { paths ->
@@ -118,14 +113,11 @@ class NodeInfoWatcher(private val nodePath: Path,
                     .toList()
         }
         val removedFiles = nodeInfoFilesMap.keys - processedPaths
-        val removedHashes = removedFiles.mapNotNull { file ->
-            nodeInfoFilesMap[file]?.let {
-                nodeInfoFilesMap.remove(file)
-                NodeInfoUpdate.Remove(it.nodeInfohash)
-            }
+        val removedHashes = removedFiles.map { file ->
+            NodeInfoUpdate.Remove(nodeInfoFilesMap.remove(file)!!.nodeInfohash)
         }
         logger.debug { "Read ${result.size} NodeInfo files from $nodeInfosDir" }
-        logger.debug { "Number of removed files: ${removedHashes.size}" }
+        logger.debug { "Number of removed NodeInfo files ${removedHashes.size}" }
         return result.map { NodeInfoUpdate.Add(it.nodeInfo) } + removedHashes
     }
 }

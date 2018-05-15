@@ -276,9 +276,8 @@ class NetworkMapUpdaterTest {
             on { addNode(any()) }.then {
                 val nodeInfo = it.arguments[0] as NodeInfo
                 val party = nodeInfo.legalIdentities[0]
-                val previousInfo = data[party]
-                if (previousInfo == null || previousInfo.serial < nodeInfo.serial) {
-                    data.put(party, nodeInfo)
+                data.compute(party) { _, current ->
+                    if (current == null || current.serial < nodeInfo.serial) nodeInfo else current
                 }
             }
             on { removeNode(any()) }.then { data.remove((it.arguments[0] as NodeInfo).legalIdentities[0]) }
