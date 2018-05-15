@@ -117,5 +117,5 @@ fun <TYPE : Any> TYPE.setFieldValue(fieldName: String, value: Any?) {
  */
 @Throws(NoSuchFieldException::class)
 fun <TYPE : Any> TYPE.setFieldToNull(fieldName: String) {
-    setFieldValue(fieldName, null, this)
+    setFieldValue(fieldName, null)
 }

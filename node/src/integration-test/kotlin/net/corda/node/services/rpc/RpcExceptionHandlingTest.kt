@@ -37,7 +37,7 @@ class RpcExceptionHandlingTest {
                     .isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
                         assertThat(exception).hasNoCause()
                         assertThat(exception.stackTrace).isEmpty()
-                        assertThat(exception.message).isEqualTo(InternalNodeException.defaultMessage())
+                        assertThat(exception.message).isEqualTo(InternalNodeException.message)
                     }
         }
     }
@@ -83,7 +83,7 @@ class RpcExceptionHandlingTest {
                     .isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
                         assertThat(exception).hasNoCause()
                         assertThat(exception.stackTrace).isEmpty()
-                        assertThat(exception.message).isEqualTo(InternalNodeException.defaultMessage())
+                        assertThat(exception.message).isEqualTo(InternalNodeException.message)
                     }
         }
     }
