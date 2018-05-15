@@ -1,14 +1,9 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Decision: Pluggable Broker prioritisation
-============================================
+# Design Decision: Pluggable Broker prioritisation
 
 ## Background / Context
 
-A decision on when to prioritise implementation of a pluggable broker has implications for delivery of key messaging components including the [float](../design.md).
-
-
+A decision on when to prioritise implementation of a pluggable broker has implications for delivery of key messaging
+components including the [float](../design.md).
 
 ## Options Analysis
 
@@ -58,8 +53,12 @@ A decision on when to prioritise implementation of a pluggable broker has implic
 
 Proceed with Option 2 (defer development of pluggable brokers until later)
 
-
-
 ## Decision taken
 
-[DNB Meeting, 16/11/2017](./drb-meeting-20171116.md): Proceed with Option 2- Defer support for pluggable brokers until later, except in the event that a requirement to do so emerges from higher priority float / HA work. (RGB, JC, MH agreed)
+```eval_rst
+.. toctree::
+
+   drb-meeting-20171116.md
+```
+
+Proceed with Option 2 - Defer support for pluggable brokers until later, except in the event that a requirement to do so emerges from higher priority float / HA work. (RGB, JC, MH agreed)

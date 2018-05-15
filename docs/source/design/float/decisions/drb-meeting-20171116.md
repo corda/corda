@@ -1,12 +1,6 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
-
---------------------------------------------
-Design Review Board Meeting Minutes
-============================================
+# Design Review Board Meeting Minutes
 
 **Date / Time:** 16/11/2017, 14:00
-
- 
 
 ## Attendees
 
@@ -24,9 +18,7 @@ Design Review Board Meeting Minutes
 - Jonathan Sartin (JS)
 - David Lee (DL)
 
-
-
-## **Minutes**
+## Minutes
 
 MO opened the meeting, outlining the agenda and meeting review process, and clarifying that consensus on each design decision would be sought from RGB, JC and MH.
 
@@ -90,7 +82,7 @@ MN highlighted the link to AMQP serialisation work being done.
 
 **DECISION CONFIRMED:** Add placeholder, subject to more detailed design proposal (RGB, JC, MH agreed)
 
-### **[AMQP vs. custom protocol](./p2p-protocol.md) **
+### [AMQP vs. custom protocol](./p2p-protocol.md)
 
 MN described alternative options involving onion-routing etc.
 
@@ -110,7 +102,7 @@ RGB queried whether full AMQP implementation should be done in this phase. MN pr
 
 **DECISION CONFIRMED:** Continue to use AMQP (RGB, JC, MH agreed)
 
-###  [Pluggable broker prioritisation](./pluggable-broker.md)
+### [Pluggable broker prioritisation](./pluggable-broker.md)
 
 MN outlined arguments for deferring pluggable brokers, whilst describing how he’d go about implementing the functionality. MH agreed with prioritisation for later.
 
@@ -124,7 +116,7 @@ AB noted Solace have functionality with conceptual similarities to the float, an
 
 **DECISION CONFIRMED:** Defer support for pluggable brokers until later, except in the event that a requirement to do so emerges from higher priority float / HA work. (RGB, JC, MH agreed)
 
-### **Inbound only vs. inbound & outbound connections**
+### Inbound only vs. inbound & outbound connections
 
 DL sought confirmation that the group was happy with the float to act as a Listener only.MN repeated the explanation of how outbound connections would be initiated through a SOCKS 4/5 proxy. No objections were raised.
 

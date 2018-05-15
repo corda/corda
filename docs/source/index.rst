@@ -60,6 +60,7 @@ We look forward to seeing what you can do with Corda!
    design/design-review-process.md
    design/certificate-hierarchies/design.md
    design/failure-detection-master-election/design.md
+   design/float/design.md
 
 .. toctree::
    :caption: Participate
