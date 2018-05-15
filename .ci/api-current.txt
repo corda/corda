@@ -1649,6 +1649,19 @@ public final class net.corda.core.identity.IdentityUtils extends java.lang.Objec
 ##
 @net.corda.core.serialization.CordaSerializable public interface net.corda.core.messaging.AllPossibleRecipients extends net.corda.core.messaging.MessageRecipients
 ##
+public final class net.corda.core.messaging.ClientRpcSslOptions extends java.lang.Object
+  public <init>(java.nio.file.Path, String, String)
+  @org.jetbrains.annotations.NotNull public final java.nio.file.Path component1()
+  @org.jetbrains.annotations.NotNull public final String component2()
+  @org.jetbrains.annotations.NotNull public final String component3()
+  @org.jetbrains.annotations.NotNull public final net.corda.core.messaging.ClientRpcSslOptions copy(java.nio.file.Path, String, String)
+  public boolean equals(Object)
+  @org.jetbrains.annotations.NotNull public final String getTrustStorePassword()
+  @org.jetbrains.annotations.NotNull public final java.nio.file.Path getTrustStorePath()
+  @org.jetbrains.annotations.NotNull public final String getTrustStoreProvider()
+  public int hashCode()
+  public String toString()
+##
 @net.corda.core.DoNotImplement public interface net.corda.core.messaging.CordaRPCOps extends net.corda.core.messaging.RPCOps
   public abstract void acceptNewNetworkParameters(net.corda.core.crypto.SecureHash)
   public abstract void addVaultTransactionNote(net.corda.core.crypto.SecureHash, String)
@@ -4272,6 +4285,8 @@ public final class net.corda.testing.node.User extends java.lang.Object
   public String toString()
 ##
 public final class net.corda.client.rpc.CordaRPCClient extends java.lang.Object
+  public <init>(List)
+  public <init>(List, net.corda.client.rpc.CordaRPCClientConfiguration)
   public <init>(net.corda.core.utilities.NetworkHostAndPort)
   public <init>(net.corda.core.utilities.NetworkHostAndPort, net.corda.client.rpc.CordaRPCClientConfiguration)
   @org.jetbrains.annotations.NotNull public final net.corda.client.rpc.CordaRPCConnection start(String, String)
@@ -4280,6 +4295,8 @@ public final class net.corda.client.rpc.CordaRPCClient extends java.lang.Object
   public static final net.corda.client.rpc.CordaRPCClient$Companion Companion
 ##
 public static final class net.corda.client.rpc.CordaRPCClient$Companion extends java.lang.Object
+  @org.jetbrains.annotations.NotNull public final net.corda.client.rpc.CordaRPCClient createWithSsl(List, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
+  @org.jetbrains.annotations.NotNull public final net.corda.client.rpc.CordaRPCClient createWithSsl(net.corda.core.utilities.NetworkHostAndPort, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
 ##
 public interface net.corda.client.rpc.CordaRPCClientConfiguration
   public abstract int getCacheConcurrencyLevel()

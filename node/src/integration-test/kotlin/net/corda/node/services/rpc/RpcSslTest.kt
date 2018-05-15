@@ -5,7 +5,7 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.ClientRpcSslOptions
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver

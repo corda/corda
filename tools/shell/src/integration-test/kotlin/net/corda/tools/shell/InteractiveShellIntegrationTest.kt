@@ -3,8 +3,6 @@ package net.corda.tools.shell
 import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
-import net.corda.client.rpc.PermissionException
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
@@ -12,9 +10,7 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.shell.toShellConfig
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.ClientRpcSslOptions
-import net.corda.testing.common.internal.withCertificates
-import net.corda.testing.common.internal.withKeyStores
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver

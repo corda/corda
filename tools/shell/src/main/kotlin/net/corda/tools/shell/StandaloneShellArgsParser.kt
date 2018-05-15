@@ -6,7 +6,7 @@ import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.ClientRpcSslOptions
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.tools.shell.ShellConfiguration.Companion.COMMANDS_DIR
 import org.slf4j.event.Level

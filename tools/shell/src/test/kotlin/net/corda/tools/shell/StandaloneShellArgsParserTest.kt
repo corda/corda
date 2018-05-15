@@ -2,7 +2,7 @@ package net.corda.tools.shell
 
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.ClientRpcSslOptions
+import net.corda.core.messaging.ClientRpcSslOptions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.slf4j.event.Level

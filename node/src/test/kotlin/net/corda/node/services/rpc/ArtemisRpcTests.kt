@@ -13,7 +13,7 @@ import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.messaging.InternalRPCMessagingClient
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.ClientRpcSslOptions
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.SerializationEnvironmentRule

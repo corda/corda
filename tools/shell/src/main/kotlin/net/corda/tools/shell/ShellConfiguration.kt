@@ -1,7 +1,7 @@
 package net.corda.tools.shell
 
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.ClientRpcSslOptions
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import java.nio.file.Path
 

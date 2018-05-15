@@ -9,7 +9,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
-import net.corda.nodeapi.ClientRpcSslOptions
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
 import java.time.Duration

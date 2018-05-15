@@ -222,8 +222,6 @@ open class Node(configuration: NodeConfiguration,
     }
 
     private fun startLocalRpcBroker(): BrokerAddresses? {
-        require(rpcOptions.address != null) { "RPC address needs to be specified for local RPC broker." }
-        require(rpcOptions.adminAddress != null) { "RPC Admin address needs to be specified for local RPC broker." }
         return with(configuration) {
             rpcOptions.address.let {
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
