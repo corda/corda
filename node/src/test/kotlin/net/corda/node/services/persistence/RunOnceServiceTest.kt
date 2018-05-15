@@ -65,7 +65,11 @@ class RunOnceServiceTest {
 
         runOnceServiceMachine1.start()
 
-        val runOnceServiceLongWait = RunOnceService(database, "machineLongWait", "99999", 1, 20000000000000000, mockUpdateExecutor)
+        val waitInterval = 20000000000000000;
+        val shutdownWaitStub = { waitTime: Long -> assertEquals(waitInterval, waitTime) }
+
+        val runOnceServiceLongWait = RunOnceService(database, "machineLongWait", "99999", 1,
+                waitInterval, mockUpdateExecutor, shutdownWaitStub)
         // fails as didn't wait long enough, someone else could still be running
         runOnceServiceLongWait.start()
     }
