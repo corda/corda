@@ -25,15 +25,16 @@ class DoormanArgsParserTest {
     @Test
     fun `should fail when network parameters file is missing`() {
         assertThatThrownBy {
-            argsParser.parseOrExit("--config-file", validConfigPath, "--set-network-parameters", "not-here")
+            argsParser.parseOrExit("--config-file", validConfigPath, "--set-network-parameters", "not-here",
+                    printHelpOn = null)
         }.hasMessageContaining("not-here")
     }
 
     @Test
     fun `should fail when config file is missing`() {
         assertThatThrownBy {
-            argsParser.parseOrExit("--config-file", "not-existing-file")
-        }.hasMessageContaining("not-existing-file")
+            argsParser.parseOrExit("--config-file", "not-existing-file", printHelpOn = null)
+        }.hasMessageContaining("Specified config file doesn't exist")
     }
 
     @Test
@@ -41,16 +42,16 @@ class DoormanArgsParserTest {
         val parameter = argsParser.parseOrExit("--config-file", validConfigPath, "--mode", "ROOT_KEYGEN", "--trust-store-password", "testPassword")
         assertEquals("testPassword", parameter.trustStorePassword)
 
-        assertFailsWith<OptionException> {
+        assertFailsWith<RuntimeException> {
             argsParser.parseOrExit("--trust-store-password", printHelpOn = null)
         }
 
         // Should fail if password is provided in mode other then root keygen.
         assertFailsWith<IllegalArgumentException> {
-            argsParser.parseOrExit("--config-file", validConfigPath, "--trust-store-password", "testPassword")
+            argsParser.parseOrExit("--config-file", validConfigPath, "--trust-store-password", "testPassword", printHelpOn = null)
         }
 
         // trust store password is optional.
-        assertNull(argsParser.parseOrExit("--config-file", validConfigPath).trustStorePassword)
+        assertNull(argsParser.parseOrExit("--config-file", validConfigPath, printHelpOn = null).trustStorePassword)
     }
 }

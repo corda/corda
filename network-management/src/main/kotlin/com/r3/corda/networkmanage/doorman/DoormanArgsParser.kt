@@ -2,6 +2,7 @@ package com.r3.corda.networkmanage.doorman
 
 import com.google.common.primitives.Booleans
 import com.r3.corda.networkmanage.common.utils.ArgsParser
+import joptsimple.OptionException
 import joptsimple.OptionSet
 import joptsimple.util.EnumConverter
 import joptsimple.util.PathConverter
@@ -34,8 +35,24 @@ class DoormanArgsParser : ArgsParser<DoormanCmdLineOptions>() {
             .withRequiredArg()
 
     override fun parse(optionSet: OptionSet): DoormanCmdLineOptions {
-        val configFile = optionSet.valueOf(configFileArg)
-        val mode = optionSet.valueOf(modeArg)
+        val configFile = try {
+            optionSet.valueOf(configFileArg)
+        } catch (e: OptionException) {
+            throw RuntimeException("Specified config file doesn't exist").apply {
+                initCause(e.cause)
+            }
+        }
+
+        val mode = try {
+            optionSet.valueOf(modeArg)
+        } catch (e: OptionException) {
+            throw RuntimeException(
+                    "Unknown mode specified, valid options are [${Mode.values().joinToString(", ")}]"
+            ).apply {
+                initCause(e.cause)
+            }
+        }
+
         val setNetworkParametersFile = optionSet.valueOf(setNetworkParametersArg)
         val flagDay = optionSet.has(flagDayArg)
         val cancelUpdate = optionSet.has(cancelUpdateArg)

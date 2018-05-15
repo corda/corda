@@ -81,7 +81,7 @@ dependencies {
     compile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 
     // JOpt: for command line flags.
-    compile "net.sf.jopt-simple:jopt-simple:5.0.2"
+    compile "net.sf.jopt-simple:jopt-simple:5.0.4"
 
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"

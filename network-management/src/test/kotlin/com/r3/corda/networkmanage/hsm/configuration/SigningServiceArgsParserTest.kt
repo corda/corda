@@ -51,7 +51,7 @@ class SigningServiceArgsParserTest : TestBase() {
     @Test
     fun `should fail when config file is missing`() {
         assertThatThrownBy {
-            argsParser.parseOrExit("--config-file", "not-existing-file")
+            argsParser.parseOrExit("--config-file", "not-existing-file", printHelpOn = null)
         }.hasMessageContaining("not-existing-file")
     }
 }

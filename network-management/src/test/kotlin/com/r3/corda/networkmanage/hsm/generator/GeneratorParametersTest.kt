@@ -30,7 +30,7 @@ class GeneratorParametersTest {
     @Test
     fun `should fail when config file is missing`() {
         val message = assertFailsWith<OptionException> {
-            ConfigFilePathArgsParser().parseOrExit("--config-file", "not-existing-file")
+            ConfigFilePathArgsParser().parseOrExit("--config-file", "not-existing-file", printHelpOn = null)
         }.message
         Assertions.assertThat(message).contains("not-existing-file")
     }
