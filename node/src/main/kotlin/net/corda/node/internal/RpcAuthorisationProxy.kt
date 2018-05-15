@@ -4,6 +4,7 @@ import net.corda.client.rpc.PermissionException
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -73,6 +74,10 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
 
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?) = guard("startTrackedFlowDynamic", listOf(logicType)) {
         implementation.startTrackedFlowDynamic(logicType, *args)
+    }
+
+    override fun killFlow(id: StateMachineRunId): Boolean = guard("killFlow") {
+        return implementation.killFlow(id)
     }
 
     override fun nodeInfo(): NodeInfo = guard("nodeInfo", implementation::nodeInfo)
