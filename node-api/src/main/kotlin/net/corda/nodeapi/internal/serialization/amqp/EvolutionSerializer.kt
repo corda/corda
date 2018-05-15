@@ -249,7 +249,7 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,
                                         schemas: SerializationSchemas): AMQPSerializer<Any> {
-        return factory.getSerializersByDescriptor().computeIfAbsent(typeNotation.descriptor.name!!) {
+        return factory.serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
             when (typeNotation) {
                 is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
                 is RestrictedType -> {

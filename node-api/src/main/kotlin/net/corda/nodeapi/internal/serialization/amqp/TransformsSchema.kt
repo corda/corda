@@ -210,7 +210,7 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
          * @param sf the [SerializerFactory] building this transform set. Needed as each can define it's own
          * class loader and this dictates which classes we can and cannot see
          */
-        fun get(name: String, sf: SerializerFactory) = sf.getTransformsCache().computeIfAbsent(name) {
+        fun get(name: String, sf: SerializerFactory) = sf.transformsCache.computeIfAbsent(name) {
             val transforms = EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
             try {
                 val clazz = sf.classloader.loadClass(name)

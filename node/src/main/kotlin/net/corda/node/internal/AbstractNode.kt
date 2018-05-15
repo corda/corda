@@ -135,10 +135,7 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.JVMAgentRegistry
-import net.corda.node.utilities.NamedThreadFactory
-import net.corda.node.utilities.NodeBuildProperties
+import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -282,6 +279,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     open fun start(): StartedNode<AbstractNode> {
         check(started == null) { "Node has already been started" }
         if (configuration.devMode) {
+            System.setProperty("co.paralleluniverse.fibers.verifyInstrumentation", "true")
             Emoji.renderIfSupported { Node.printWarning("This node is running in developer mode! ${Emoji.developer} This is not safe for production deployment.") }
         }
         log.info("Node starting up ...")

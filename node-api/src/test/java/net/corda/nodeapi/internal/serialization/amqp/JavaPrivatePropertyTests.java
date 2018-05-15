@@ -17,7 +17,7 @@ import static org.junit.Assert.*;
 
 import java.io.NotSerializableException;
 import java.lang.reflect.Field;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 public class JavaPrivatePropertyTests {
     static class C {
@@ -126,7 +126,7 @@ public class JavaPrivatePropertyTests {
         B3 b2 = des.deserialize(ser.serialize(b, TestSerializationContext.testSerializationContext), B3.class, TestSerializationContext.testSerializationContext);
 
         // since we can't find a getter for b (isb != isB) then we won't serialize that parameter
-        assertEquals (null, b2.b);
+        assertNull (b2.b);
     }
 
     @Test
@@ -164,8 +164,7 @@ public class JavaPrivatePropertyTests {
         Field f = SerializerFactory.class.getDeclaredField("serializersByDescriptor");
         f.setAccessible(true);
 
-        ConcurrentHashMap<Object, AMQPSerializer<Object>> serializersByDescriptor =
-                (ConcurrentHashMap<Object, AMQPSerializer<Object>>) f.get(factory);
+        Map<?, AMQPSerializer<?>> serializersByDescriptor = (Map<?, AMQPSerializer<?>>) f.get(factory);
 
         assertEquals(1, serializersByDescriptor.size());
         ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);
@@ -195,8 +194,7 @@ public class JavaPrivatePropertyTests {
         //
         Field f = SerializerFactory.class.getDeclaredField("serializersByDescriptor");
         f.setAccessible(true);
-        ConcurrentHashMap<Object, AMQPSerializer<Object>> serializersByDescriptor =
-                (ConcurrentHashMap<Object, AMQPSerializer<Object>>) f.get(factory);
+        Map<?, AMQPSerializer<?>> serializersByDescriptor = (Map<?, AMQPSerializer<?>>) f.get(factory);
 
         assertEquals(1, serializersByDescriptor.size());
         ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);

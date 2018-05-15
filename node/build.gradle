@@ -29,13 +29,6 @@ buildscript {
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    compile {
-        // We don't need these because we already include netty-all.
-        exclude group: 'io.netty', module: 'netty-transport'
-        exclude group: 'io.netty', module: 'netty-handler'
-        exclude group: 'io.netty', module: 'netty-common'
-    }
-
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 }
