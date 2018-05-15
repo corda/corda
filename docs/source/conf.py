@@ -13,6 +13,7 @@
 # serve to show the default.
 
 import sphinx_rtd_theme
+from recommonmark.transform import AutoStructify
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -47,7 +48,7 @@ source_parsers = {
 }
 
 # The encoding of source files.
-#source_encoding = 'utf-8-sig'
+source_encoding = 'utf-8-sig'
 
 # The master toctree document.
 master_doc = 'index'
@@ -261,3 +262,13 @@ latex_documents = [
 
 # If false, no module index is generated.
 #latex_domain_indices = True
+
+web_doc_root = 'https://docs.corda.net/'
+def setup(app):
+    app.add_config_value('recommonmark_config', {
+            'url_resolver': lambda url: web_doc_root + url,
+            'auto_toc_tree_section': 'Contents',
+            'enable_eval_rst': True,
+            'enable_auto_doc_ref': False,
+            }, True)
+    app.add_transform(AutoStructify)
