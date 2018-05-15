@@ -2084,7 +2084,6 @@ public final class net.corda.core.flows.NotarisationRequest extends java.lang.Ob
   public final java.util.List<net.corda.core.contracts.StateRef> getStatesToConsume()
   @NotNull
   public final net.corda.core.crypto.SecureHash getTransactionId()
-  public final void verifySignature(net.corda.core.flows.NotarisationRequestSignature, net.corda.core.identity.Party)
   public static final net.corda.core.flows.NotarisationRequest$Companion Companion
 ##
 public static final class net.corda.core.flows.NotarisationRequest$Companion extends java.lang.Object
@@ -2255,27 +2254,6 @@ public static final class net.corda.core.flows.NotaryFlow$Client$Companion$REQUE
 public static final class net.corda.core.flows.NotaryFlow$Client$Companion$VALIDATING extends net.corda.core.utilities.ProgressTracker$Step
   public static final net.corda.core.flows.NotaryFlow$Client$Companion$VALIDATING INSTANCE
 ##
-public abstract static class net.corda.core.flows.NotaryFlow$Service extends net.corda.core.flows.FlowLogic
-  public <init>(net.corda.core.flows.FlowSession, net.corda.core.node.services.TrustedAuthorityNotaryService)
-  @Suspendable
-  @Nullable
-  public Void call()
-  @Suspendable
-  protected final void checkNotary(net.corda.core.identity.Party)
-  @NotNull
-  public final net.corda.core.flows.FlowSession getOtherSideSession()
-  @NotNull
-  public final net.corda.core.node.services.TrustedAuthorityNotaryService getService()
-  @Suspendable
-  @NotNull
-  public abstract net.corda.core.flows.TransactionParts receiveAndVerifyTx()
-##
-@CordaSerializable
-public final class net.corda.core.flows.NotaryInternalException extends net.corda.core.flows.FlowException
-  public <init>(net.corda.core.flows.NotaryError)
-  @NotNull
-  public final net.corda.core.flows.NotaryError getError()
-##
 public final class net.corda.core.flows.ReceiveStateAndRefFlow extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.flows.FlowSession)
   @Suspendable
@@ -2382,30 +2360,6 @@ public class net.corda.core.flows.StateReplacementException extends net.corda.co
   public <init>()
   public <init>(String)
   public <init>(String, Throwable)
-##
-public final class net.corda.core.flows.TransactionParts extends java.lang.Object
-  public <init>(net.corda.core.crypto.SecureHash, java.util.List<net.corda.core.contracts.StateRef>, net.corda.core.contracts.TimeWindow, net.corda.core.identity.Party)
-  @NotNull
-  public final net.corda.core.crypto.SecureHash component1()
-  @NotNull
-  public final java.util.List<net.corda.core.contracts.StateRef> component2()
-  @Nullable
-  public final net.corda.core.contracts.TimeWindow component3()
-  @Nullable
-  public final net.corda.core.identity.Party component4()
-  @NotNull
-  public final net.corda.core.flows.TransactionParts copy(net.corda.core.crypto.SecureHash, java.util.List<net.corda.core.contracts.StateRef>, net.corda.core.contracts.TimeWindow, net.corda.core.identity.Party)
-  public boolean equals(Object)
-  @NotNull
-  public final net.corda.core.crypto.SecureHash getId()
-  @NotNull
-  public final java.util.List<net.corda.core.contracts.StateRef> getInputs()
-  @Nullable
-  public final net.corda.core.identity.Party getNotary()
-  @Nullable
-  public final net.corda.core.contracts.TimeWindow getTimestamp()
-  public int hashCode()
-  public String toString()
 ##
 @CordaSerializable
 public final class net.corda.core.flows.UnexpectedFlowEndException extends net.corda.core.CordaRuntimeException implements net.corda.core.flows.IdentifiableException
@@ -3165,27 +3119,6 @@ public interface net.corda.core.node.services.NetworkMapCacheBase
   @NotNull
   public abstract net.corda.core.messaging.DataFeed<java.util.List<net.corda.core.node.NodeInfo>, net.corda.core.node.services.NetworkMapCache$MapChange> track()
 ##
-@CordaSerializable
-public abstract class net.corda.core.node.services.NotaryService extends net.corda.core.serialization.SingletonSerializeAsToken
-  public <init>()
-  @NotNull
-  public abstract net.corda.core.flows.FlowLogic<Void> createServiceFlow(net.corda.core.flows.FlowSession)
-  @NotNull
-  public abstract java.security.PublicKey getNotaryIdentityKey()
-  @NotNull
-  public abstract net.corda.core.node.ServiceHub getServices()
-  public abstract void start()
-  public abstract void stop()
-  public static final void validateTimeWindow(java.time.Clock, net.corda.core.contracts.TimeWindow)
-  public static final net.corda.core.node.services.NotaryService$Companion Companion
-  @NotNull
-  public static final String ID_PREFIX = "corda.notary."
-##
-public static final class net.corda.core.node.services.NotaryService$Companion extends java.lang.Object
-  @NotNull
-  public final String constructId(boolean, boolean, boolean, boolean)
-  public final void validateTimeWindow(java.time.Clock, net.corda.core.contracts.TimeWindow)
-##
 public abstract class net.corda.core.node.services.PartyInfo extends java.lang.Object
   @NotNull
   public abstract net.corda.core.identity.Party getParty()
@@ -3248,66 +3181,6 @@ public interface net.corda.core.node.services.TransactionStorage
 public interface net.corda.core.node.services.TransactionVerifierService
   @NotNull
   public abstract net.corda.core.concurrent.CordaFuture<?> verify(net.corda.core.transactions.LedgerTransaction)
-##
-@CordaSerializable
-public abstract class net.corda.core.node.services.TrustedAuthorityNotaryService extends net.corda.core.node.services.NotaryService
-  public <init>()
-  public final void commitInputStates(java.util.List<net.corda.core.contracts.StateRef>, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party)
-  @NotNull
-  protected org.slf4j.Logger getLog()
-  @NotNull
-  protected net.corda.core.node.services.TimeWindowChecker getTimeWindowChecker()
-  @NotNull
-  protected abstract net.corda.core.node.services.UniquenessProvider getUniquenessProvider()
-  @NotNull
-  public final net.corda.core.crypto.TransactionSignature sign(net.corda.core.crypto.SecureHash)
-  @NotNull
-  public final net.corda.core.crypto.DigitalSignature$WithKey sign(byte[])
-  public final void validateTimeWindow(net.corda.core.contracts.TimeWindow)
-  public static final net.corda.core.node.services.TrustedAuthorityNotaryService$Companion Companion
-##
-public static final class net.corda.core.node.services.TrustedAuthorityNotaryService$Companion extends java.lang.Object
-##
-@CordaSerializable
-public final class net.corda.core.node.services.UniquenessException extends net.corda.core.CordaException
-  public <init>(net.corda.core.node.services.UniquenessProvider$Conflict)
-  @NotNull
-  public final net.corda.core.node.services.UniquenessProvider$Conflict getError()
-##
-public interface net.corda.core.node.services.UniquenessProvider
-  public abstract void commit(java.util.List<net.corda.core.contracts.StateRef>, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party)
-##
-@CordaSerializable
-public static final class net.corda.core.node.services.UniquenessProvider$Conflict extends java.lang.Object
-  public <init>(java.util.Map<net.corda.core.contracts.StateRef, net.corda.core.node.services.UniquenessProvider$ConsumingTx>)
-  @NotNull
-  public final java.util.Map<net.corda.core.contracts.StateRef, net.corda.core.node.services.UniquenessProvider$ConsumingTx> component1()
-  @NotNull
-  public final net.corda.core.node.services.UniquenessProvider$Conflict copy(java.util.Map<net.corda.core.contracts.StateRef, net.corda.core.node.services.UniquenessProvider$ConsumingTx>)
-  public boolean equals(Object)
-  @NotNull
-  public final java.util.Map<net.corda.core.contracts.StateRef, net.corda.core.node.services.UniquenessProvider$ConsumingTx> getStateHistory()
-  public int hashCode()
-  public String toString()
-##
-@CordaSerializable
-public static final class net.corda.core.node.services.UniquenessProvider$ConsumingTx extends java.lang.Object
-  public <init>(net.corda.core.crypto.SecureHash, int, net.corda.core.identity.Party)
-  @NotNull
-  public final net.corda.core.crypto.SecureHash component1()
-  public final int component2()
-  @NotNull
-  public final net.corda.core.identity.Party component3()
-  @NotNull
-  public final net.corda.core.node.services.UniquenessProvider$ConsumingTx copy(net.corda.core.crypto.SecureHash, int, net.corda.core.identity.Party)
-  public boolean equals(Object)
-  @NotNull
-  public final net.corda.core.crypto.SecureHash getId()
-  public final int getInputIndex()
-  @NotNull
-  public final net.corda.core.identity.Party getRequestingParty()
-  public int hashCode()
-  public String toString()
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.UnknownAnonymousPartyException extends net.corda.core.CordaException
