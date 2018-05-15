@@ -5177,8 +5177,8 @@ public abstract class net.corda.core.utilities.ByteSequence extends java.lang.Ob
   public boolean equals(Object)
   @NotNull
   public abstract byte[] getBytes()
-  public abstract int getOffset()
-  public abstract int getSize()
+  public final int getOffset()
+  public final int getSize()
   public int hashCode()
   @NotNull
   public static final net.corda.core.utilities.ByteSequence of(byte[])
@@ -5363,8 +5363,6 @@ public class net.corda.core.utilities.OpaqueBytes extends net.corda.core.utiliti
   public <init>(byte[])
   @NotNull
   public final byte[] getBytes()
-  public int getOffset()
-  public int getSize()
   @NotNull
   public static final net.corda.core.utilities.OpaqueBytes of(byte...)
   public static final net.corda.core.utilities.OpaqueBytes$Companion Companion
@@ -5378,8 +5376,6 @@ public final class net.corda.core.utilities.OpaqueBytesSubSequence extends net.c
   public <init>(byte[], int, int)
   @NotNull
   public byte[] getBytes()
-  public int getOffset()
-  public int getSize()
 ##
 @CordaSerializable
 public final class net.corda.core.utilities.ProgressTracker extends java.lang.Object
