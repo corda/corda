@@ -1013,7 +1013,7 @@ public interface net.corda.core.cordapp.Cordapp
   public abstract java.util.List<Class<? extends net.corda.core.serialization.SerializeAsToken>> getServices()
 ##
 public final class net.corda.core.cordapp.CordappContext extends java.lang.Object
-  public <init>(net.corda.core.cordapp.Cordapp, net.corda.core.crypto.SecureHash, ClassLoader)
+  public <init>(net.corda.core.cordapp.Cordapp, net.corda.core.crypto.SecureHash, ClassLoader, net.corda.core.cordapp.CordappConfig)
   @Nullable
   public final net.corda.core.crypto.SecureHash getAttachmentId()
   @NotNull
