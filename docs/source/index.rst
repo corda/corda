@@ -62,6 +62,7 @@ We look forward to seeing what you can do with Corda!
    design/failure-detection-master-election/design.md
    design/float/design.md
    design/hadr/design.md
+   design/kafka-notary/design.md
 
 .. toctree::
    :caption: Participate
