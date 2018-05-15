@@ -77,6 +77,8 @@ class NetworkMapServer(private val cacheTimeout: Duration,
                 .let { NetworkHostAndPort(it.host, it.localPort) }
     }
 
+    fun networkMapHashes(): List<SecureHash> = service.nodeInfoMap.keys.toList()
+
     fun removeNodeInfo(nodeInfo: NodeInfo) {
         service.removeNodeInfo(nodeInfo)
     }
