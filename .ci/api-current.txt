@@ -1804,7 +1804,7 @@ public static final class net.corda.core.flows.FinalityFlow$Companion$NOTARISING
   public static final net.corda.core.flows.FinalityFlow$Companion$NOTARISING INSTANCE
 ##
 @CordaSerializable
-public class net.corda.core.flows.FlowException extends net.corda.core.CordaException
+public class net.corda.core.flows.FlowException extends net.corda.core.CordaException implements net.corda.core.flows.IdentifiableException
   public <init>()
   public <init>(String)
   public <init>(String, Throwable)
@@ -2408,7 +2408,7 @@ public final class net.corda.core.flows.TransactionParts extends java.lang.Objec
   public String toString()
 ##
 @CordaSerializable
-public final class net.corda.core.flows.UnexpectedFlowEndException extends net.corda.core.CordaRuntimeException
+public final class net.corda.core.flows.UnexpectedFlowEndException extends net.corda.core.CordaRuntimeException implements net.corda.core.flows.IdentifiableException
   public <init>(String)
   public <init>(String, Throwable)
 ##
