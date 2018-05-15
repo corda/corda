@@ -31,5 +31,5 @@ fun CordaRPCOps.drainAndShutdown(): Observable<Unit> {
             .doOnError { error ->
                 throw error
             }
-            .doOnCompleted { shutdown() }.map {  }
+            .doOnCompleted { shutdown() }.map { }
 }

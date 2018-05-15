@@ -28,10 +28,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.*
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
-import net.corda.testing.internal.vault.DummyLinearContract
-import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
-import net.corda.testing.internal.vault.VaultFiller
+import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
@@ -1182,6 +1179,30 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
+    // test paging with aggregate function and group by clause
+    @Test
+    fun `test paging with aggregate function and group by clause`() {
+        database.transaction {
+            (0..200).forEach {
+                vaultFiller.fillWithSomeTestLinearStates(1, linearNumber = it.toLong(), linearString = it.toString())
+            }
+            val max = builder { DummyLinearStateSchemaV1.PersistentDummyLinearState::linearTimestamp.max(
+                    groupByColumns = listOf(DummyLinearStateSchemaV1.PersistentDummyLinearState::linearNumber)
+                )
+            }
+            val maxCriteria = VaultCustomQueryCriteria(max)
+            val pageSpec = PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE)
+
+            val results = vaultService.queryBy<DummyLinearContract.State>(maxCriteria, paging = pageSpec)
+            println("Total states available: ${results.totalStatesAvailable}")
+            results.otherResults.forEachIndexed { index, any ->
+                println("$index : $any")
+            }
+            assertThat(results.otherResults.size).isEqualTo(402)
+            assertThat(results.otherResults.last()).isEqualTo(200L)
+        }
+    }
+
     // sorting
     @Test
     fun `sorting - all states sorted by contract type, state status, consumed time`() {
@@ -2201,7 +2222,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test
-    fun `unconsumedCashStatesForSpending_single_issuer_reference`() {
+    fun unconsumedCashStatesForSpending_single_issuer_reference() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(1000.DOLLARS, notaryServices, 1, DUMMY_CASH_ISSUER)
             this.session.flush()

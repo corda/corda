@@ -60,7 +60,6 @@ class ConfigurationSteps : StepsBlock {
         Given<String, String>("^node (\\w+) has app installed: (.+)$") { name, app ->
             node(name).withApp(app)
         }
-
     }
 }
 

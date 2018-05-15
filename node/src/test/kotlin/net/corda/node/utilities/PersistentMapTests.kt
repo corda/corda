@@ -35,7 +35,7 @@ class PersistentMapTests {
 
         database.transaction {
             val map = createTestMap()
-            map.put(testHash, "test")
+            map[testHash] = "test"
             assertEquals(map[testHash], "test")
         }
 
@@ -67,9 +67,9 @@ class PersistentMapTests {
 
         database.transaction {
             val map = createTestMap()
-            map.put(testHash, "test")
+            map[testHash] = "test"
 
-            map.put(testHash, "updated")
+            map[testHash] = "updated"
             assertEquals("updated", map[testHash])
         }
 
@@ -129,7 +129,7 @@ class PersistentMapTests {
 
         database.transaction {
             val map = createTestMap()
-            map.put(testHash, "test")
+            map[testHash] = "test"
             assertEquals(map[testHash], "test")
         }
 

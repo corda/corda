@@ -36,7 +36,7 @@ class AttachmentsClassLoaderStaticContractTests {
 
     class AttachmentDummyContract : Contract {
         companion object {
-            private val ATTACHMENT_PROGRAM_ID = "net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract"
+            private const val ATTACHMENT_PROGRAM_ID = "net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract"
         }
 
         data class State(val magicNumber: Int = 0) : ContractState {

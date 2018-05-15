@@ -72,10 +72,9 @@ class Swaption {
         }
     }
 
-    @Test @Ignore
+    @Test
+    @Ignore
     fun `pretty print`() {
-        println ( prettyPrint(contractInitial) )
+        println(prettyPrint(contractInitial))
     }
-
-
 }

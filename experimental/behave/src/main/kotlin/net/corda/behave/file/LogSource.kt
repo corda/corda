@@ -27,7 +27,7 @@ class LogSource(
         val logFiles = directory.list {
             it.filter {
                 (!filePatternUsedForExclusion && it.fileName.toString().matches(fileRegex)) ||
-                (filePatternUsedForExclusion && !it.fileName.toString().matches(fileRegex))
+                        (filePatternUsedForExclusion && !it.fileName.toString().matches(fileRegex))
             }.toList()
         }
         val result = mutableListOf<MatchedLogContent>()
@@ -43,5 +43,4 @@ class LogSource(
         }
         return result
     }
-
 }

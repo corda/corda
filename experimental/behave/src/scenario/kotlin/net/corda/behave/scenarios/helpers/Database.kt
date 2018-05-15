@@ -19,5 +19,4 @@ class Database(state: ScenarioState) : Substeps(state) {
             assertThat(latch.await(10.seconds)).isTrue()
         }
     }
-
 }

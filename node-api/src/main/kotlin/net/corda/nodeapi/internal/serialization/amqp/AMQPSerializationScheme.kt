@@ -68,6 +68,7 @@ abstract class AbstractAMQPSerializationScheme(
         val List<Cordapp>.customSerializers get() = flatMap { it.serializationCustomSerializers }.toSet()
     }
 
+    // Parameter "context" is unused directy but passed in by reflection. Removing it will cause failures.
     private fun registerCustomSerializers(context: SerializationContext, factory: SerializerFactory) {
         with(factory) {
             register(publicKeySerializer)

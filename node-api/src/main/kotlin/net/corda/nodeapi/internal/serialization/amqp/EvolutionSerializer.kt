@@ -91,7 +91,7 @@ abstract class EvolutionSerializer(
             val constructorArgs = arrayOfNulls<Any?>(constructor.parameters.size)
 
             constructor.parameters.withIndex().forEach {
-                readersAsSerialized.get(it.value.name!!)?.apply {
+                readersAsSerialized[it.value.name!!]?.apply {
                     this.resultsIndex = it.index
                 } ?: if (!it.value.type.isMarkedNullable) {
                     throw NotSerializableException(
@@ -239,7 +239,7 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,
                                         schemas: SerializationSchemas): AMQPSerializer<Any> {
-        return factory.getSerializersByDescriptor().computeIfAbsent(typeNotation.descriptor.name!!) {
+        return factory.serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
             when (typeNotation) {
                 is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
                 is RestrictedType -> {

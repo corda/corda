@@ -21,5 +21,4 @@ class CloseableTab(text: String, content: Node) : Tab(text, content) {
             behaviour.closeTab(this)
         }
     }
-
 }

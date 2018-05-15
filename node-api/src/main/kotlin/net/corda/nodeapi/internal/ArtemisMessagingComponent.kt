@@ -53,7 +53,6 @@ class ArtemisMessagingComponent {
              */
             val bridgedCertificateSubject = SimpleString("sender-subject-name")
 
-
             object Type {
                 const val KEY = "corda_p2p_message_type"
                 const val SESSION_INIT_VALUE = "session_init"
@@ -132,5 +131,4 @@ class ArtemisMessagingComponent {
 
         override val queueName: String = "$P2P_PREFIX${identity.toStringShort()}"
     }
-
 }

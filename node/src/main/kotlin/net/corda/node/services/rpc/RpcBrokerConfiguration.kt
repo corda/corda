@@ -43,7 +43,7 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
 
         initialiseSettings(maxMessageSize)
 
-        val nodeInternalRole = Role(BrokerJaasLoginModule.NODE_RPC_ROLE, true, true, true, true, true, true, true, true)
+        val nodeInternalRole = Role(BrokerJaasLoginModule.NODE_RPC_ROLE, true, true, true, true, true, true, true, true, true, true)
 
         val addRPCRoleToUsers = if (shouldStartLocalShell) listOf(ArtemisMessagingComponent.INTERNAL_SHELL_USER) else emptyList()
         val rolesAdderOnLogin = RolesAdderOnLogin(addRPCRoleToUsers) { username ->
@@ -124,6 +124,6 @@ internal class RpcBrokerConfiguration(baseDirectory: Path, maxMessageSize: Int, 
     private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,
                                deleteDurableQueue: Boolean = false, createNonDurableQueue: Boolean = false,
                                deleteNonDurableQueue: Boolean = false, manage: Boolean = false, browse: Boolean = false): Role {
-        return Role(name, send, consume, createDurableQueue, deleteDurableQueue, createNonDurableQueue, deleteNonDurableQueue, manage, browse)
+        return Role(name, send, consume, createDurableQueue, deleteDurableQueue, createNonDurableQueue, deleteNonDurableQueue, manage, browse, createDurableQueue || createNonDurableQueue, deleteDurableQueue || deleteNonDurableQueue)
     }
 }

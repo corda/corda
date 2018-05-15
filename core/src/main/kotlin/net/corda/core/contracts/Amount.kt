@@ -250,7 +250,7 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
         val residualTokens = quantity - (commonTokensPerPartition * partitions)
         val splitAmount = Amount(commonTokensPerPartition, displayTokenSize, token)
         val splitAmountPlusOne = Amount(commonTokensPerPartition + 1L, displayTokenSize, token)
-        return (0..partitions - 1).map { if (it < residualTokens) splitAmountPlusOne else splitAmount }.toList()
+        return (0 until partitions).map { if (it < residualTokens) splitAmountPlusOne else splitAmount }.toList()
     }
 
     /**

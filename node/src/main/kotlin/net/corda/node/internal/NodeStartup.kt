@@ -140,11 +140,11 @@ open class NodeStartup(val args: Array<String>) {
         return true
     }
 
-    open protected fun preNetworkRegistration(conf: NodeConfiguration) = Unit
+    protected open fun preNetworkRegistration(conf: NodeConfiguration) = Unit
 
-    open protected fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
+    protected open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
-    open protected fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
+    protected open fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
         val node = createNode(conf, versionInfo)
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
@@ -178,7 +178,7 @@ open class NodeStartup(val args: Array<String>) {
         startedNode.internals.run()
     }
 
-    open protected fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
+    protected open fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
         logger.info("Vendor: ${versionInfo.vendor}")
         logger.info("Release: ${versionInfo.releaseVersion}")
         logger.info("Platform Version: ${versionInfo.platformVersion}")
@@ -200,7 +200,7 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Starting as node on ${conf.p2pAddress}")
     }
 
-    open protected fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
+    protected open fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
         val compatibilityZoneURL = conf.compatibilityZoneURL!!
         println()
         println("******************************************************************")
@@ -211,13 +211,13 @@ open class NodeStartup(val args: Array<String>) {
         NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
     }
 
-    open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
+    protected open fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
 
-    open protected fun banJavaSerialisation(conf: NodeConfiguration) {
+    protected open fun banJavaSerialisation(conf: NodeConfiguration) {
         SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
     }
 
-    open protected fun getVersionInfo(): VersionInfo {
+    protected open fun getVersionInfo(): VersionInfo {
         // Manifest properties are only available if running from the corda jar
         fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
@@ -254,7 +254,7 @@ open class NodeStartup(val args: Array<String>) {
         pidFileRw.write(ourProcessID.toByteArray())
     }
 
-    open protected fun initLogging(cmdlineOptions: CmdLineOptions) {
+    protected open fun initLogging(cmdlineOptions: CmdLineOptions) {
         val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase(Locale.ENGLISH)
         System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
         if (cmdlineOptions.logToConsole) {

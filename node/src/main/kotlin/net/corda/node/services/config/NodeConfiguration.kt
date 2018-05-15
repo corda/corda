@@ -68,7 +68,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
         }
 
         val defaultAttachmentContentCacheSize: Long = 10.MB
-        val defaultAttachmentCacheBound = 1024L
+        const val defaultAttachmentCacheBound = 1024L
     }
 }
 

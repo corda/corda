@@ -31,7 +31,7 @@ public final class SandboxCreator {
     private final WhitelistClassLoader wlcl;
     private final boolean hasInputJar;
 
-    private final static OptionParser parser = new OptionParser();
+    private static final OptionParser parser = new OptionParser();
 
     private static void usage() {
         System.err.println(USAGE_STRING);

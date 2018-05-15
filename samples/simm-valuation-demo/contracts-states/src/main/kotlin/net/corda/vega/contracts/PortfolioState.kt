@@ -11,7 +11,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 
-val PORTFOLIO_SWAP_PROGRAM_ID = "net.corda.vega.contracts.PortfolioSwap"
+const val PORTFOLIO_SWAP_PROGRAM_ID = "net.corda.vega.contracts.PortfolioSwap"
 
 /**
  * Represents an aggregate set of trades agreed between two parties and a possible valuation of that portfolio at a

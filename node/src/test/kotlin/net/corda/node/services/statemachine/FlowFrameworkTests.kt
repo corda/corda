@@ -156,7 +156,7 @@ class FlowFrameworkTests {
         bobNode.registerFlowFactory(WaitForOtherSideEndBeforeSendAndReceive::class) { NoOpFlow() }
         val sessionEndReceived = Semaphore(0)
         receivedSessionMessagesObservable().filter {
-            it.message is ExistingSessionMessage && it.message.payload is EndSessionMessage
+            it.message is ExistingSessionMessage && it.message.payload === EndSessionMessage
         }.subscribe { sessionEndReceived.release() }
         val resultFuture = aliceNode.services.startFlow(
                 WaitForOtherSideEndBeforeSendAndReceive(bob, sessionEndReceived)).resultFuture

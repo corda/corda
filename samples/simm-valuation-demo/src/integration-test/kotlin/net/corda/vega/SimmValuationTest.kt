@@ -28,7 +28,7 @@ class SimmValuationTest {
         val valuationDate: LocalDate = LocalDate.parse("2016-06-06")
         val nodeALegalName = DUMMY_BANK_A_NAME
         val nodeBLegalName = DUMMY_BANK_B_NAME
-        val testTradeId = "trade1"
+        const val testTradeId = "trade1"
     }
 
     @Before

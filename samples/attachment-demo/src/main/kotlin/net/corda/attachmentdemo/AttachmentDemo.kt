@@ -183,7 +183,7 @@ private fun printHelp(parser: OptionParser) {
     parser.printHelpOn(System.out)
 }
 
-val ATTACHMENT_PROGRAM_ID = "net.corda.attachmentdemo.AttachmentContract"
+const val ATTACHMENT_PROGRAM_ID = "net.corda.attachmentdemo.AttachmentContract"
 
 class AttachmentContract : Contract {
     override fun verify(tx: LedgerTransaction) {

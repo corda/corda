@@ -61,11 +61,11 @@ class ProgressTracker(vararg steps: Step) {
 
     // Sentinel objects. Overrides equals() to survive process restarts and serialization.
     object UNSTARTED : Step("Unstarted") {
-        override fun equals(other: Any?) = other is UNSTARTED
+        override fun equals(other: Any?) = other === UNSTARTED
     }
 
     object DONE : Step("Done") {
-        override fun equals(other: Any?) = other is DONE
+        override fun equals(other: Any?) = other === DONE
     }
 
     @CordaSerializable

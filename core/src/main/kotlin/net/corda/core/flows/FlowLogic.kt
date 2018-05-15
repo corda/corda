@@ -431,7 +431,8 @@ abstract class FlowLogic<out T> {
      */
     var stateMachine: FlowStateMachine<*>
         @CordaInternal
-        get() = _stateMachine ?: throw IllegalStateException("This can only be done after the flow has been started.")
+        get() = _stateMachine ?: throw IllegalStateException(
+                "You cannot access the flow's state machine until the flow has been started.")
         @CordaInternal
         set(value) {
             _stateMachine = value

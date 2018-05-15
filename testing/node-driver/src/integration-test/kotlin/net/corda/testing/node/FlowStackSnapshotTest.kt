@@ -56,8 +56,7 @@ class SideEffectFlow : FlowLogic<List<StackSnapshotFrame>>() {
         // Expected to be on stack
         @Suppress("UNUSED_VARIABLE")
         val unusedVar = Constants.IN_CALL_VALUE
-        val numberOfFullFrames = retrieveStackSnapshot()
-        return numberOfFullFrames
+        return retrieveStackSnapshot()
     }
 
     @Suspendable
@@ -84,8 +83,7 @@ class NoSideEffectFlow : FlowLogic<List<StackSnapshotFrame>>() {
         // Using the [Constants] object here is considered by Quasar as a side effect. Thus explicit initialization
         @Suppress("UNUSED_VARIABLE")
         val unusedVar = "inCall"
-        val numberOfFullFrames = retrieveStackSnapshot()
-        return numberOfFullFrames
+        return retrieveStackSnapshot()
     }
 
     @Suspendable
@@ -99,11 +97,11 @@ class NoSideEffectFlow : FlowLogic<List<StackSnapshotFrame>>() {
 }
 
 object Constants {
-    val IN_PERSIST_VALUE = "inPersist"
-    val IN_CALL_VALUE = "inCall"
-    val IN_RETRIEVE_STACK_SNAPSHOT_VALUE = "inRetrieveStackSnapshot"
-    val USER = "User"
-    val PASSWORD = "Password"
+    const val IN_PERSIST_VALUE = "inPersist"
+    const val IN_CALL_VALUE = "inCall"
+    const val IN_RETRIEVE_STACK_SNAPSHOT_VALUE = "inRetrieveStackSnapshot"
+    const val USER = "User"
+    const val PASSWORD = "Password"
 
 }
 
@@ -186,7 +184,7 @@ class FlowStackSnapshotSerializationTestingFlow : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {
-        val flowStackSnapshot = flowStackSnapshot()
+        flowStackSnapshot()
         val mySession = initiateFlow(ourIdentity)
         mySession.sendAndReceive<String>("Ping")
     }

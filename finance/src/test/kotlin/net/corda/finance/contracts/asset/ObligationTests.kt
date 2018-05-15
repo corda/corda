@@ -608,8 +608,8 @@ class ObligationTests {
         val futureTestTime = TEST_TX_TIME + 7.days
         transaction {
             attachments(Obligation.PROGRAM_ID)
-            input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime)
-            output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
+            input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at futureTestTime)
+            output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at futureTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
             command(BOB_PUBKEY, Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED))
             timeWindow(TEST_TX_TIME)
             this `fails with` "the due date has passed"
@@ -619,8 +619,8 @@ class ObligationTests {
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
                 attachments(Obligation.PROGRAM_ID)
-                input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime)
-                output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
+                input(Obligation.PROGRAM_ID, oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at pastTestTime)
+                output(Obligation.PROGRAM_ID, "Alice's defaulted $1,000,000 obligation to Bob", (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) at pastTestTime).copy(lifecycle = Lifecycle.DEFAULTED))
                 command(BOB_PUBKEY, Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED))
                 timeWindow(TEST_TX_TIME)
                 this.verifies()

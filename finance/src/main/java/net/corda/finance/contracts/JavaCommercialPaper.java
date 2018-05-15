@@ -194,7 +194,7 @@ public class JavaCommercialPaper implements Contract {
                 if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
 
-                final Instant time = null == timeWindow
+                final Instant time = timeWindow == null
                         ? null
                         : timeWindow.getUntilTime();
                 final Amount<Issued<Currency>> received = StateSumming.sumCashBy(tx.getOutputStates(), input.getOwner());

@@ -6,7 +6,7 @@ import net.corda.node.services.statemachine.*
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
 
-class MetricInterceptor(val metrics: MetricRegistry, val delegate: TransitionExecutor): TransitionExecutor {
+class MetricInterceptor(val metrics: MetricRegistry, val delegate: TransitionExecutor) : TransitionExecutor {
     @Suspendable
     override fun executeTransition(fiber: FlowFiber, previousState: StateMachineState, event: Event, transition: TransitionResult, actionExecutor: ActionExecutor): Pair<FlowContinuation, StateMachineState> {
         val metricActionInterceptor = MetricActionInterceptor(metrics, actionExecutor)
@@ -14,7 +14,7 @@ class MetricInterceptor(val metrics: MetricRegistry, val delegate: TransitionExe
     }
 }
 
-class MetricActionInterceptor(val metrics: MetricRegistry, val delegate: ActionExecutor): ActionExecutor {
+class MetricActionInterceptor(val metrics: MetricRegistry, val delegate: ActionExecutor) : ActionExecutor {
     @Suspendable
     override fun executeAction(fiber: FlowFiber, action: Action) {
         val context = metrics.timer("Flows.Actions.${action.javaClass.simpleName}").time()

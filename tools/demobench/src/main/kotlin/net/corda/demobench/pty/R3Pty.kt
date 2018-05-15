@@ -66,5 +66,4 @@ class R3Pty(val name: CordaX500Name, settings: SettingsProvider, dimension: Dime
     @Suppress("unused")
     @Throws(InterruptedException::class)
     fun waitFor(): Int? = terminal.ttyConnector?.waitFor()
-
 }

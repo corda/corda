@@ -110,7 +110,7 @@ class DriverDSLImpl(
 
     interface Waitable {
         @Throws(InterruptedException::class)
-        fun waitFor(): Unit
+        fun waitFor()
     }
 
     class State {
@@ -292,15 +292,17 @@ class DriverDSLImpl(
             val notaryConfig = ConfigFactory.parseMap(cordform.notary).parseAs<NotaryConfig>()
             // We need to first group the nodes that form part of a cluster. We assume for simplicity that nodes of the
             // same cluster type and validating flag are part of the same cluster.
-            if (notaryConfig.raft != null) {
-                val key = if (notaryConfig.validating) VALIDATING_RAFT else NON_VALIDATING_RAFT
-                clusterNodes.put(key, name)
-            } else if (notaryConfig.bftSMaRt != null) {
-                clusterNodes.put(ClusterType.NON_VALIDATING_BFT, name)
-            } else {
-                // We have all we need here to generate the identity for single node notaries
-                val identity = DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(name), legalName = name)
-                notaryInfos += NotaryInfo(identity, notaryConfig.validating)
+            when {
+                notaryConfig.raft != null -> {
+                    val key = if (notaryConfig.validating) VALIDATING_RAFT else NON_VALIDATING_RAFT
+                    clusterNodes.put(key, name)
+                }
+                notaryConfig.bftSMaRt != null -> clusterNodes.put(ClusterType.NON_VALIDATING_BFT, name)
+                else -> {
+                    // We have all we need here to generate the identity for single node notaries
+                    val identity = DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory(name), legalName = name)
+                    notaryInfos += NotaryInfo(identity, notaryConfig.validating)
+                }
             }
         }
 
@@ -365,6 +367,7 @@ class DriverDSLImpl(
         return startNodeInternal(config, webAddress, null, "512m", localNetworkMap)
     }
 
+    @Suppress("DEPRECATION")
     private fun queryWebserver(handle: NodeHandle, process: Process): WebserverHandle {
         val protocol = if ((handle as NodeHandleInternal).useHTTPS) "https://" else "http://"
         val url = URL("$protocol${handle.webAddress}/api/status")
@@ -382,6 +385,7 @@ class DriverDSLImpl(
         throw IllegalStateException("Webserver at ${handle.webAddress} has died")
     }
 
+    @Suppress("DEPRECATION")
     override fun startWebserver(handle: NodeHandle, maximumHeapSize: String): CordaFuture<WebserverHandle> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val process = startWebserver(handle as NodeHandleInternal, debugPort, maximumHeapSize)
@@ -710,6 +714,7 @@ class DriverDSLImpl(
          * A sub-set of permissions that grant most of the essential operations used in the unit/integration tests as well as
          * in demo application like NodeExplorer.
          */
+        @Suppress("DEPRECATION")
         private val DRIVER_REQUIRED_PERMISSIONS = setOf(
                 Permissions.invokeRpc(CordaRPCOps::nodeInfo),
                 Permissions.invokeRpc(CordaRPCOps::networkMapFeed),
@@ -921,6 +926,9 @@ private class NetworkVisibilityController {
                     is NetworkMapCache.MapChange.Removed -> {
                         visibleNodeCount--
                         checkIfAllVisible()
+                    }
+                    is NetworkMapCache.MapChange.Modified -> {
+                        // Nothing to do here but better being exhaustive.
                     }
                 }
             }
