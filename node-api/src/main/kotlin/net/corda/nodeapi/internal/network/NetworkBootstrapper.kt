@@ -18,6 +18,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -181,7 +182,8 @@ class NetworkBootstrapper {
                 maxMessageSize = 10485760,
                 maxTransactionSize = Int.MAX_VALUE,
                 epoch = 1,
-                whitelistedContractImplementations = whitelist
+                whitelistedContractImplementations = whitelist,
+                eventHorizon = 30.days
         ), overwriteFile = true)
 
         nodeDirs.forEach { copier.install(it) }

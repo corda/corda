@@ -170,6 +170,23 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
+    @Test
+    fun `test node heartbeat`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                initialiseSerialization = false,
+                systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString())
+        ) {
+            val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
+            assertThat(networkMapServer.networkMapHashes()).contains(aliceNode.nodeInfo.serialize().hash)
+            networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
+            assertThat(networkMapServer.networkMapHashes()).doesNotContain(aliceNode.nodeInfo.serialize().hash)
+            Thread.sleep(2000)
+            assertThat(networkMapServer.networkMapHashes()).contains(aliceNode.nodeInfo.serialize().hash)
+        }
+    }
+
     private fun NodeHandle.onlySees(vararg nodes: NodeInfo) {
         // Make sure the nodes aren't getting the node infos from their additional directories
         val nodeInfosDir = baseDirectory / CordformNode.NODE_INFO_DIRECTORY
