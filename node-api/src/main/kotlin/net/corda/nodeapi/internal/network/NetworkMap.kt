@@ -23,7 +23,6 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import java.security.cert.X509Certificate
 import java.time.Instant
 
-
 const val NETWORK_PARAMS_FILE_NAME = "network-parameters"
 const val NETWORK_PARAMS_UPDATE_FILE_NAME = "network-parameters-update"
 
@@ -81,6 +80,7 @@ fun <T : Any> SignedDataWithCert<T>.verifiedNetworkMapCert(rootCert: X509Certifi
 class NetworkMapAndSigned private constructor(val networkMap: NetworkMap, val signed: SignedNetworkMap) {
     constructor(networkMap: NetworkMap, signer: (SerializedBytes<NetworkMap>) -> DigitalSignatureWithCert) : this(networkMap, networkMap.signWithCert(signer))
     constructor(signed: SignedNetworkMap) : this(signed.verified(), signed)
+
     operator fun component1(): NetworkMap = networkMap
     operator fun component2(): SignedNetworkMap = signed
 }

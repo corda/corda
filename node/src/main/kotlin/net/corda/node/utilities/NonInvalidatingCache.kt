@@ -15,7 +15,6 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import com.github.benmanes.caffeine.cache.Weigher
 
-
 class NonInvalidatingCache<K, V> private constructor(
         val cache: LoadingCache<K, V>
 ) : LoadingCache<K, V> by cache {
@@ -45,7 +44,6 @@ class NonInvalidatingWeightBasedCache<K, V> private constructor(
 ) : LoadingCache<K, V> by cache {
     constructor (maxWeight: Long, weigher: Weigher<K, V>, loadFunction: (K) -> V) :
             this(buildCache(maxWeight, weigher, loadFunction))
-
 
     private companion object {
         private fun <K, V> buildCache(maxWeight: Long, weigher: Weigher<K, V>, loadFunction: (K) -> V): LoadingCache<K, V> {

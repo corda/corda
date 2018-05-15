@@ -48,7 +48,6 @@ private class ZeroFilter(output: OutputStream) : FilterOutputStream(output) {
 
         super.write(filtered, 0, count)
     }
-
 }
 
 /**
@@ -73,7 +72,6 @@ private class ZeroFilteringProcess(private val process: Process) : Process() {
     override fun destroy() = process.destroy()
 
     override fun exitValue() = process.exitValue()
-
 }
 
 /**

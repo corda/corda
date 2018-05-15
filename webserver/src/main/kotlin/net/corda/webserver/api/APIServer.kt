@@ -101,5 +101,4 @@ interface APIServer {
     @Path("states")
     @Produces(MediaType.APPLICATION_JSON)
     fun states(): List<StateAndRef<ContractState>>
-
 }

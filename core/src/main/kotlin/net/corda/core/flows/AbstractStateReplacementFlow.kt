@@ -80,7 +80,7 @@ abstract class AbstractStateReplacementFlow {
             val finalTx = stx + signatures
             serviceHub.recordTransactions(finalTx)
 
-            return stx.resolveBaseTransaction(serviceHub).outRef<T>(0)
+            return stx.resolveBaseTransaction(serviceHub).outRef(0)
         }
 
         /**
@@ -88,7 +88,7 @@ abstract class AbstractStateReplacementFlow {
          *
          * @return the transaction
          */
-        abstract protected fun assembleTx(): UpgradeTx
+        protected abstract fun assembleTx(): UpgradeTx
 
         /**
          * Initiate sessions with parties we want signatures from.
@@ -186,7 +186,7 @@ abstract class AbstractStateReplacementFlow {
          * The proposal is returned if acceptable, otherwise a [StateReplacementException] is thrown.
          */
         @Throws(StateReplacementException::class)
-        abstract protected fun verifyProposal(stx: SignedTransaction, proposal: Proposal<T>)
+        protected abstract fun verifyProposal(stx: SignedTransaction, proposal: Proposal<T>)
 
         private fun checkMySignatureRequired(stx: SignedTransaction) {
             // TODO: use keys from the keyManagementService instead

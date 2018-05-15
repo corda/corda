@@ -42,7 +42,7 @@ class NodeUnloadHandlerTests : IntegrationTest() {
             startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow()
             // just want to fall off the end of this for the mo...
         }
-        Assert.assertTrue("Timed out waiting for AbstractNode to invoke the test service shutdown callback",latch.await(30, TimeUnit.SECONDS))
+        Assert.assertTrue("Timed out waiting for AbstractNode to invoke the test service shutdown callback", latch.await(30, TimeUnit.SECONDS))
     }
 
     @CordaService
@@ -60,7 +60,5 @@ class NodeUnloadHandlerTests : IntegrationTest() {
             log.info("shutting down")
             latch.countDown()
         }
-
     }
-
 }

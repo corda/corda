@@ -10,9 +10,8 @@
 
 package net.corda.loadtest
 
-import net.corda.client.mock.*
+import net.corda.client.mock.Generator
 import net.corda.core.utilities.loggerFor
-import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors

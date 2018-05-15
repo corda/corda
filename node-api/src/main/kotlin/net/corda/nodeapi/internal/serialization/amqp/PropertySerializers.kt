@@ -89,7 +89,7 @@ class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader
         // So this used to report as an error, but given we serialise exceptions all the time it
         // provides for very scary log files so move this to trace level
         loggerFor<PropertySerializer>().let { logger ->
-            logger.trace("Using kotlin introspection on internal type ${field}")
+            logger.trace("Using kotlin introspection on internal type $field")
             logger.trace("Unexpected internal Kotlin error", e)
         }
         true

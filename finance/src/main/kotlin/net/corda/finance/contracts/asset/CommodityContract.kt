@@ -156,7 +156,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
     }
 
     override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<Commands>>
-            = commands.select<CommodityContract.Commands>()
+            = commands.select()
 
     /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.

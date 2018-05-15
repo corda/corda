@@ -36,6 +36,5 @@ interface WebServerPluginRegistry {
      * Optionally register extra JSON serializers to the default ObjectMapper provider
      * @param om The [ObjectMapper] to register custom types against.
      */
-    fun customizeJSONSerialization(om: ObjectMapper): Unit {}
-
+    fun customizeJSONSerialization(om: ObjectMapper) {}
 }

@@ -56,7 +56,7 @@ private fun rowsToAmount(currency: Currency, rows: Vault.Page<FungibleAsset<*>>)
 
 private fun rowsToBalances(rows: List<Any>): Map<Currency, Amount<Currency>> {
     val balances = LinkedHashMap<Currency, Amount<Currency>>()
-    for (index in 0..rows.size - 1 step 2) {
+    for (index in 0 until rows.size step 2) {
         val ccy = Currency.getInstance(rows[index + 1] as String)
         balances[ccy] = Amount(rows[index] as Long, ccy)
     }

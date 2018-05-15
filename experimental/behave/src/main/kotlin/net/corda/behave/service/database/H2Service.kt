@@ -19,10 +19,8 @@ class H2Service(
 
     companion object {
 
-        val database = "node"
-        val schema = "dbo"
-        val username = "sa"
-
+        const val database = "node"
+        const val schema = "dbo"
+        const val username = "sa"
     }
-
 }

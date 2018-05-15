@@ -10,8 +10,13 @@
 
 package net.corda.testing.contracts
 
-import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.AttachmentConstraint
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.contracts.UpgradedContractWithLegacyConstraint
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.LedgerTransaction
 

@@ -18,7 +18,6 @@ import net.corda.finance.contracts.Tenor
 import java.math.BigDecimal
 import java.util.*
 
-
 // Things in here will move to the general utils class when we've hammered out various discussions regarding amounts, dates, oracle etc.
 
 /**

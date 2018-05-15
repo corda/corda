@@ -63,10 +63,8 @@ class MonitoringSSHClient(
     }
 
     fun use(action: (MonitoringSSHClient) -> Unit) {
-        try {
+        use {
             action(this)
-        } finally {
-            close()
         }
     }
 
@@ -75,5 +73,4 @@ class MonitoringSSHClient(
     fun write(charSequence: CharSequence) = client.write(charSequence)
 
     fun writeLine(string: String) = client.writeLine(string)
-
 }

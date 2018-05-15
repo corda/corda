@@ -41,7 +41,6 @@ fun ByteArray.toBase64(): String = Base64.getEncoder().encodeToString(this)
 /** Convert a byte array to a hex (Base16) capitalized encoded [String]. */
 fun ByteArray.toHex(): String = DatatypeConverter.printHexBinary(this)
 
-
 // [String] encoders and decoders
 
 /** Base58-String to the actual real [String], i.e. "JxF12TrwUP45BMd" -> "Hello World". */
@@ -59,7 +58,6 @@ fun String.base64ToByteArray(): ByteArray = Base64.getDecoder().decode(this)
 
 /** Hex-String to [ByteArray]. Accept any hex form (capitalized, lowercase, mixed). */
 fun String.hexToByteArray(): ByteArray = DatatypeConverter.parseHexBinary(this)
-
 
 // Encoding changers
 

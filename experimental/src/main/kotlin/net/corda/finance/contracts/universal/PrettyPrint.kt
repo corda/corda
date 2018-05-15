@@ -67,7 +67,7 @@ private class PrettyPrint(arr : Arrangement) {
             camelName += "_" + partyMap.size.toString()
         }
 
-        partyMap.put(party.owningKey, camelName)
+        partyMap[party.owningKey] = camelName
         usedPartyNames.add(camelName)
 
         return camelName

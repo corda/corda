@@ -52,7 +52,7 @@ object UpdateBusinessDayFlow {
         }
 
         @Suspendable
-        override fun call(): Unit {
+        override fun call() {
             progressTracker.currentStep = NOTIFYING
             for (recipient in getRecipients()) {
                 doNextRecipient(recipient)

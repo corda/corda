@@ -42,7 +42,7 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
                 "${type.componentType().typeName}$arrayType"
             }
 
-    override val typeDescriptor by lazy {
+    override val typeDescriptor: Symbol by lazy {
         Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
     }
     internal val elementType: Type by lazy { type.componentType() }
@@ -105,7 +105,7 @@ abstract class PrimArraySerializer(type: Type, factory: SerializerFactory) : Arr
     companion object {
         // We don't need to handle the unboxed byte type as that is coercible to a byte array, but
         // the other 7 primitive types we do
-        val primTypes: Map<Type, (SerializerFactory) -> PrimArraySerializer> = mapOf(
+        private val primTypes: Map<Type, (SerializerFactory) -> PrimArraySerializer> = mapOf(
                 IntArray::class.java to { f -> PrimIntArraySerializer(f) },
                 CharArray::class.java to { f -> PrimCharArraySerializer(f) },
                 BooleanArray::class.java to { f -> PrimBooleanArraySerializer(f) },

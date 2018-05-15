@@ -10,9 +10,9 @@
 
 package net.corda.node.services.config
 
-import com.zaxxer.hikari.HikariConfig
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import com.zaxxer.hikari.HikariConfig
 import net.corda.core.internal.div
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort

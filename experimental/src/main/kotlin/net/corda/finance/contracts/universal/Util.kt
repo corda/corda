@@ -30,7 +30,7 @@ private fun signingParties(perceivable: Perceivable<Boolean>) : ImmutableSet<Par
         is TimePerceivable -> ImmutableSet.of<Party>()
         is TerminalEvent -> ImmutableSet.of( perceivable.reference )
         is PerceivableComparison<*> -> ImmutableSet.of<Party>() // todo
-        else -> throw IllegalArgumentException("signingParties " + perceivable)
+        else -> throw IllegalArgumentException("signingParties $perceivable")
     }
 
 private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<PublicKey> =
@@ -43,7 +43,7 @@ private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<PublicK
                 arrangement.actions.fold(ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
             is RollOut -> liablePartiesVisitor(arrangement.template)
             is Continuation -> ImmutableSet.of<PublicKey>()
-            else -> throw IllegalArgumentException("liableParties " + arrangement)
+            else -> throw IllegalArgumentException("liableParties $arrangement")
         }
 
 private fun liablePartiesVisitor(action: Action): ImmutableSet<PublicKey> {
@@ -86,7 +86,7 @@ fun replaceParty(perceivable: Perceivable<Boolean>, from: Party, to: Party): Per
             is PerceivableAnd -> replaceParty(perceivable.left, from, to) and replaceParty(perceivable.right, from, to)
             is PerceivableOr -> replaceParty(perceivable.left, from, to) or replaceParty(perceivable.right, from, to)
             is TimePerceivable -> perceivable
-            else -> throw IllegalArgumentException("replaceParty " + perceivable)
+            else -> throw IllegalArgumentException("replaceParty $perceivable")
         }
 
 fun replaceParty(action: Action, from: Party, to: Party): Action =

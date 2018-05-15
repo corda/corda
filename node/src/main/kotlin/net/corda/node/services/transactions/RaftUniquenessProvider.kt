@@ -82,11 +82,11 @@ class RaftUniquenessProvider(
                                     Pair(it.index, SecureHash.parse(it.value) as SecureHash))
 
                         },
-                        toPersistentEntity = { k: StateRef, v: Pair<Long, SecureHash> ->
+                        toPersistentEntity = { k: StateRef, (first, second) ->
                             CommittedState(
                                     PersistentStateRef(k),
-                                    v.second.toString(),
-                                    v.first)
+                                    second.toString(),
+                                    first)
 
                         },
                         persistentEntityClass = CommittedState::class.java

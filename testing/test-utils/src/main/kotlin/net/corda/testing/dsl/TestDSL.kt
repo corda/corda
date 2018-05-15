@@ -17,6 +17,7 @@ import net.corda.core.crypto.*
 import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
+import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -291,7 +292,7 @@ data class TestLedgerDSLInterpreter private constructor(
             copy().dsl()
 
     override fun attachment(attachment: InputStream): SecureHash {
-        return services.attachments.importAttachment(attachment)
+        return services.attachments.importAttachment(attachment, UNKNOWN_UPLOADER, null)
     }
 
     override fun verifies(): EnforceVerifyOrFail {

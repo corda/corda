@@ -145,7 +145,6 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     }
 }
 
-
 /**
  * Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
  * attachments are saved to local storage automatically.

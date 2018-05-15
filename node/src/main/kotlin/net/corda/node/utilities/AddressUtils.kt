@@ -14,7 +14,7 @@ import java.net.InetAddress
 import java.net.NetworkInterface
 
 object AddressUtils {
-    private val REACHABLE_TIMEOUT_MS = 1000
+    private const val REACHABLE_TIMEOUT_MS = 1000
 
     /** Returns the first public IP address found on any of the network interfaces, or `null` if none found. */
     fun tryDetectPublicIP(): InetAddress? {

@@ -67,6 +67,7 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
 
     override fun networkParametersFeed() = wrapFeed(delegate::networkParametersFeed)
 
+    @Suppress("DEPRECATION", "OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsFeed() = wrapFeed(delegate::internalVerifiedTransactionsFeed)
 
     override fun stateMachinesSnapshot() = wrap(delegate::stateMachinesSnapshot)
@@ -81,6 +82,7 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
 
     override fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort) = wrap { delegate.vaultQueryByWithSorting(contractStateType, criteria, sorting) }
 
+    @Suppress("DEPRECATION", "OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsSnapshot() = wrap(delegate::internalVerifiedTransactionsSnapshot)
 
     override fun stateMachineRecordedTransactionMappingSnapshot() = wrap(delegate::stateMachineRecordedTransactionMappingSnapshot)

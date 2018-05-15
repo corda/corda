@@ -61,7 +61,8 @@ public final class SandboxAwareClassWriter extends ClassWriter {
     }
 
     public String getCommonSuperClassBorrowed(final String type1, final String type2) throws ClassNotFoundException {
-        Class<?> c, d;
+        Class<?> c;
+        Class<?> d;
         try {
             c = Class.forName(type1.replace('/', '.'), false, loader);
             d = Class.forName(type2.replace('/', '.'), false, loader);

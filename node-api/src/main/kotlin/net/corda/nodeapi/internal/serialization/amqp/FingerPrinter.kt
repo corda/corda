@@ -104,7 +104,7 @@ class SerializerFingerPrinter : FingerPrinter {
         // serialise the object in the  first place (and thus the cache lookup fails). This is also
         // true of Any, where we need  Example<A, B> and Example<?, ?> to have the same fingerprint
         return if ((type in alreadySeen)
-                && (type !is SerializerFactory.AnyType)
+                && (type !== SerializerFactory.AnyType)
                 && (type !is TypeVariable<*>)
                 && (type !is WildcardType)) {
             hasher.putUnencodedChars(ALREADY_SEEN_HASH)

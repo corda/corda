@@ -57,7 +57,7 @@ class ContractUpgradeServiceImpl : ContractUpgradeService, SingletonSerializeAsT
     override fun getAuthorisedContractUpgrade(ref: StateRef) = authorisedUpgrade[ref.toString()]
 
     override fun storeAuthorisedContractUpgrade(ref: StateRef, upgradedContractClass: Class<out UpgradedContract<*, *>>) {
-        authorisedUpgrade.put(ref.toString(), upgradedContractClass.name)
+        authorisedUpgrade[ref.toString()] = upgradedContractClass.name
     }
 
     override fun removeAuthorisedContractUpgrade(ref: StateRef) {

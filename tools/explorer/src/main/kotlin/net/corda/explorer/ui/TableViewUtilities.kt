@@ -11,6 +11,7 @@
 package net.corda.explorer.ui
 
 import javafx.beans.binding.Bindings
+import javafx.beans.binding.ObjectBinding
 import javafx.beans.value.ObservableValue
 import javafx.scene.Node
 import javafx.scene.control.TableCell
@@ -58,7 +59,7 @@ fun <S, T> Formatter<T>.toTableCellFactory() = Callback<TableColumn<S, T?>, Tabl
     }
 }
 
-fun <S> TableView<S>.singleRowSelection() = Bindings.createObjectBinding({
+fun <S> TableView<S>.singleRowSelection(): ObjectBinding<SingleRowSelection<S>> = Bindings.createObjectBinding({
     if (selectionModel.selectedItems.size == 0) {
         SingleRowSelection.None<S>()
     } else {

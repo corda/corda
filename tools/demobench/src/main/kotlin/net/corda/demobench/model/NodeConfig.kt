@@ -48,7 +48,7 @@ data class NodeConfig(
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
         val defaultUser = user("guest")
-        val cordappDirName = "cordapps"
+        const val cordappDirName = "cordapps"
     }
 
     @Suppress("unused")

@@ -260,7 +260,7 @@ class StartedFlowTransition(
             } else {
                 val sessionMessage = DataSessionMessage(message)
                 val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++)
-                val _exhaustive = when (existingSessionState) {
+                when (existingSessionState) {
                     is SessionState.Uninitiated -> {
                         val initialMessage = createInitialSessionMessage(existingSessionState.initiatingSubFlow, sourceSessionId, message)
                         actions.add(Action.SendInitial(existingSessionState.party, initialMessage, deduplicationId))
@@ -327,7 +327,7 @@ class StartedFlowTransition(
             val sessionState = checkpoint.sessions[sessionId]!!
             when (sessionState) {
                 is SessionState.Initiated -> {
-                    if (sessionState.initiatedState is InitiatedSessionState.Ended) {
+                    if (sessionState.initiatedState === InitiatedSessionState.Ended) {
                         UnexpectedFlowEndException(
                                 "Tried to access ended session $sessionId",
                                 cause = null,
@@ -347,7 +347,7 @@ class StartedFlowTransition(
             val sessionState = checkpoint.sessions[sessionId]!!
             when (sessionState) {
                 is SessionState.Initiated -> {
-                    if (sessionState.initiatedState is InitiatedSessionState.Ended &&
+                    if (sessionState.initiatedState === InitiatedSessionState.Ended &&
                             sessionState.receivedMessages.isEmpty()) {
                         UnexpectedFlowEndException(
                                 "Tried to access ended session $sessionId with empty buffer",

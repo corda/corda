@@ -17,10 +17,10 @@ import net.corda.core.serialization.*
 @Suppress("UNUSED")
 class MultiCurrencyAmountSerializer :
         SerializationCustomSerializer<MultiCurrencyAmount, MultiCurrencyAmountSerializer.Proxy> {
-    data class Proxy(val curencies : Map<Currency, Double>)
+    data class Proxy(val curencies: Map<Currency, Double>)
 
     override fun toProxy(obj: MultiCurrencyAmount) = Proxy(obj.toMap())
-    override fun fromProxy(proxy: Proxy) = MultiCurrencyAmount.of(proxy.curencies)
+    override fun fromProxy(proxy: Proxy): MultiCurrencyAmount = MultiCurrencyAmount.of(proxy.curencies)
 }
 
 

@@ -253,7 +253,7 @@ object Builder {
     fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null) = info().functionPredicate(predicate, groupByColumns, orderBy)
 
     fun <R> FieldInfo.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null)
-            = CriteriaExpression.AggregateFunctionExpression(Column<Any, R>(this), predicate, groupByColumns, orderBy)
+            = CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy)
 
     fun <O, R : Comparable<R>> KProperty1<O, R?>.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
@@ -377,7 +377,7 @@ object Builder {
     @JvmStatic
     @JvmOverloads
     fun <R> FieldInfo.sum(groupByColumns: List<FieldInfo>? = null, orderBy: Sort.Direction? = null) =
-            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.SUM), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
 
     fun <O, R> KProperty1<O, R?>.count() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.COUNT))
     @JvmStatic
@@ -397,7 +397,7 @@ object Builder {
     @JvmStatic
     @JvmOverloads
     fun <R> FieldInfo.avg(groupByColumns: List<FieldInfo>? = null, orderBy: Sort.Direction? = null) =
-            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.AVG), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.AVG), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
 
     fun <O, R> KProperty1<O, R?>.min(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
             functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MIN), groupByColumns?.map { Column(it) }, orderBy)
@@ -410,7 +410,7 @@ object Builder {
     @JvmStatic
     @JvmOverloads
     fun <R> FieldInfo.min(groupByColumns: List<FieldInfo>? = null, orderBy: Sort.Direction? = null) =
-            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MIN), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MIN), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
 
     fun <O, R> KProperty1<O, R?>.max(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
             functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MAX), groupByColumns?.map { Column(it) }, orderBy)
@@ -423,7 +423,7 @@ object Builder {
     @JvmStatic
     @JvmOverloads
     fun <R> FieldInfo.max(groupByColumns: List<FieldInfo>? = null, orderBy: Sort.Direction? = null) =
-            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MAX), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MAX), groupByColumns?.map { Column<Any, R>(it) }, orderBy)
 
     private fun Field.info(): FieldInfo = FieldInfo(name, declaringClass)
 }

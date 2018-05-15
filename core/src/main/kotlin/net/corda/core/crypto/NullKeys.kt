@@ -28,5 +28,4 @@ object NullKeys {
 
     /** A signature with a key and value of zero. Useful when you want a signature object that you know won't ever be used. */
     val NULL_SIGNATURE = TransactionSignature(ByteArray(32), NullPublicKey, SignatureMetadata(1, -1))
-
 }

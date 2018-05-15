@@ -50,7 +50,6 @@ fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): Untrustworthy
     } catch (ex: Exception) {
         throw IllegalArgumentException("Payload invalid", ex)
     }
-    return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) } ?:
-            throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a " +
-                    "${payloadData.javaClass.name} (${payloadData})")
+    return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) } ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a " +
+            "${payloadData.javaClass.name} ($payloadData)")
 }

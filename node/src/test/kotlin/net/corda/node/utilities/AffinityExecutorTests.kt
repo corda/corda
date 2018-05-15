@@ -18,8 +18,8 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.*
 
 class AffinityExecutorTests {
-    var _executor: AffinityExecutor.ServiceAffinityExecutor? = null
-    val executor: AffinityExecutor.ServiceAffinityExecutor get() = _executor!!
+    private var _executor: AffinityExecutor.ServiceAffinityExecutor? = null
+    private val executor: AffinityExecutor.ServiceAffinityExecutor get() = _executor!!
 
     @After
     fun shutdown() {

@@ -19,5 +19,4 @@ open class DatabaseConfigurationTemplate {
     protected open val config: (DatabaseConfiguration) -> String = { "" }
 
     fun generate(config: DatabaseConfiguration) = config(config).trimMargin()
-
 }

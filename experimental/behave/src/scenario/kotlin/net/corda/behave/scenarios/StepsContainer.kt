@@ -22,7 +22,7 @@ import net.corda.core.utilities.loggerFor
 class StepsContainer(val state: ScenarioState) : En {
 
     companion object {
-         val stepsProviders: List<StepsProvider> by lazy {
+        val stepsProviders: List<StepsProvider> by lazy {
             FastClasspathScanner().addClassLoader(this::class.java.classLoader).scan()
                     .getNamesOfClassesImplementing(StepsProvider::class.java)
                     .mapNotNull { this::class.java.classLoader.loadClass(it).asSubclass(StepsProvider::class.java) }

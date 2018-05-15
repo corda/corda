@@ -100,6 +100,7 @@ interface DriverDSL {
     fun startNode(parameters: NodeParameters): CordaFuture<NodeHandle> = startNode(defaultParameters = parameters)
 
     /** Call [startWebserver] with a default maximumHeapSize. */
+    @Suppress("DEPRECATION")
     fun startWebserver(handle: NodeHandle): CordaFuture<WebserverHandle> = startWebserver(handle, "200m")
 
     /**
@@ -107,6 +108,7 @@ interface DriverDSL {
      * @param handle The handle for the node that this webserver connects to via RPC.
      * @param maximumHeapSize Argument for JVM -Xmx option e.g. "200m".
      */
+    @Suppress("DEPRECATION")
     fun startWebserver(handle: NodeHandle, maximumHeapSize: String): CordaFuture<WebserverHandle>
 
     /**

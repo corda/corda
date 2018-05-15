@@ -64,7 +64,6 @@ interface FlowProgressHandle<A> : FlowHandle<A> {
     override fun close()
 }
 
-
 @CordaSerializable
 data class FlowHandleImpl<A>(
         override val id: StateMachineRunId,

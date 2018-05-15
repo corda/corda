@@ -134,8 +134,7 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executePropagateErrors(action: Action.PropagateErrors) {
-        action.errorMessages.forEach { error ->
-            val exception = error.flowException
+        action.errorMessages.forEach { (exception) ->
             log.debug("Propagating error", exception)
         }
         for (sessionState in action.sessions) {

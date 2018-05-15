@@ -11,18 +11,15 @@
 package net.corda.irs
 
 import com.palantir.docker.compose.DockerComposeRule
+import com.palantir.docker.compose.ImmutableDockerComposeRule
 import com.palantir.docker.compose.configuration.DockerComposeFiles
 import com.palantir.docker.compose.connection.waiting.HealthChecks
 import org.junit.ClassRule
 import org.junit.Test
 import org.openqa.selenium.By
-import org.openqa.selenium.OutputType
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.phantomjs.PhantomJSDriver
 import org.openqa.selenium.support.ui.WebDriverWait
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -43,26 +40,22 @@ class IRSDemoDockerTest {
 
         @ClassRule
         @JvmField
-        var docker = DockerComposeRule.builder()
+        var docker: ImmutableDockerComposeRule = DockerComposeRule.builder()
                 .files(DockerComposeFiles.from(
                         System.getProperty("CORDAPP_DOCKER_COMPOSE"),
                         System.getProperty("WEB_DOCKER_COMPOSE")))
-                .waitingForService("web-a", HealthChecks.toRespondOverHttp(8080,  { port -> port.inFormat("http://\$HOST:\$EXTERNAL_PORT") }))
+                .waitingForService("web-a", HealthChecks.toRespondOverHttp(8080, { port -> port.inFormat("http://\$HOST:\$EXTERNAL_PORT") }))
                 .build()
     }
 
     @Test
     fun `runs IRS demo selenium phantomjs`() {
 
-
         val driver = PhantomJSDriver()
 
-        val webAPort = docker.containers()
-                .container("web-a")
-                .port(8080)
+        val webAPort = docker.containers().container("web-a").port(8080)
 
-
-        driver.get("http://${webAPort.ip}:${webAPort.externalPort}");
+        driver.get("http://${webAPort.ip}:${webAPort.externalPort}")
 
         //no deals on fresh interface
         val dealRows = driver.findElementsByCssSelector("table#deal-list tbody tr")

@@ -16,7 +16,6 @@ import net.corda.core.flows.SchedulableFlow
 import org.junit.Test
 import java.time.Duration
 import kotlin.reflect.jvm.jvmName
-import kotlin.test.assertEquals
 
 class FlowLogicRefFactoryImplTest {
 

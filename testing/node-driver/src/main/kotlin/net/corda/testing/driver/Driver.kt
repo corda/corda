@@ -12,7 +12,6 @@
 
 package net.corda.testing.driver
 
-import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
@@ -27,6 +26,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.PortAllocation.Incremental
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
@@ -35,8 +35,6 @@ import net.corda.testing.node.internal.genericDriver
 import net.corda.testing.node.internal.getTimestampAsDirectoryName
 import net.corda.testing.node.internal.newContext
 import rx.Observable
-import java.net.InetSocketAddress
-import java.net.ServerSocket
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
@@ -353,20 +351,20 @@ data class DriverParameters(
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters
     ) = this.copy(
-            isDebug,
-            driverDirectory,
-            portAllocation,
-            debugPortAllocation,
-            systemProperties,
-            useTestClock,
-            true,
-            startNodesInProcess,
-            waitForAllNodesToFinish,
-            notarySpecs,
-            extraCordappPackagesToScan,
-            jmxPolicy,
-            networkParameters,
-            emptyMap()
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            initialiseSerialization = true,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = emptyMap()
     )
 
     fun copy(
@@ -384,19 +382,19 @@ data class DriverParameters(
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters
     ) = this.copy(
-            isDebug,
-            driverDirectory,
-            portAllocation,
-            debugPortAllocation,
-            systemProperties,
-            useTestClock,
-            initialiseSerialization,
-            startNodesInProcess,
-            waitForAllNodesToFinish,
-            notarySpecs,
-            extraCordappPackagesToScan,
-            jmxPolicy,
-            networkParameters,
-            emptyMap()
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            initialiseSerialization = initialiseSerialization,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = emptyMap()
     )
 }

@@ -36,6 +36,7 @@ open class FlowException(message: String?, cause: Throwable?) :
     constructor(message: String?) : this(message, null)
     constructor(cause: Throwable?) : this(cause?.toString(), cause)
     constructor() : this(null, null)
+
     var originalErrorId: Long? = null
     override fun getErrorId(): Long? = originalErrorId
 }
@@ -50,5 +51,6 @@ class UnexpectedFlowEndException(message: String, cause: Throwable?, val origina
         CordaRuntimeException(message, cause), IdentifiableException {
     constructor(message: String, cause: Throwable?) : this(message, cause, null)
     constructor(message: String) : this(message, null)
+
     override fun getErrorId(): Long? = originalErrorId
 }

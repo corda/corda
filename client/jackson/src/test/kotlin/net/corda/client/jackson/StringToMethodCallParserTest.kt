@@ -13,7 +13,6 @@ package net.corda.client.jackson
 import net.corda.core.crypto.SecureHash
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
-import kotlin.reflect.full.primaryConstructor
 import kotlin.test.assertEquals
 
 class StringToMethodCallParserTest {

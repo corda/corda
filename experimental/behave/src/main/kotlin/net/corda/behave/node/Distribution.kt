@@ -128,10 +128,10 @@ class Distribution private constructor(
          */
         fun fromArtifactory(type: Type, version: String): Distribution {
             val url =
-                when (type) {
-                    Type.CORDA -> URL("https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda/$version/corda-$version.jar")
-                    Type.R3_CORDA -> URL("https://ci-artifactory.corda.r3cev.com/artifactory/r3-corda-releases/com/r3/corda/corda/$version/corda-$version.jar")
-                }
+                    when (type) {
+                        Type.CORDA -> URL("https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda/$version/corda-$version.jar")
+                        Type.R3_CORDA -> URL("https://ci-artifactory.corda.r3cev.com/artifactory/r3-corda-releases/com/r3/corda/corda/$version/corda-$version.jar")
+                    }
             log.info("Artifactory URL: $url\n")
             val distribution = Distribution(type, version, url = url)
             distributions.add(distribution)
@@ -167,8 +167,8 @@ class Distribution private constructor(
          * @param version The version of the Corda distribution
          */
         fun fromVersionString(version: String): Distribution = when (version) {
-            "master"  -> MASTER
-            "r3-master"  -> R3_MASTER
+            "master" -> MASTER
+            "r3-master" -> R3_MASTER
             "corda-3.0" -> fromArtifactory(Type.CORDA, version)
             "corda-3.1" -> fromArtifactory(Type.CORDA, version)
             "R3.CORDA-3.0.0-DEV-PREVIEW-3" -> fromArtifactory(Type.R3_CORDA, version)

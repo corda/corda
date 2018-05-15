@@ -9,6 +9,7 @@
  */
 
 @file:JvmName("AMQPStreams")
+
 package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.nodeapi.internal.serialization.ByteBufferInputStream

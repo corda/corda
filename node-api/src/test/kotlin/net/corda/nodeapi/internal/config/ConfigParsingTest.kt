@@ -28,32 +28,32 @@ import kotlin.reflect.full.primaryConstructor
 
 class ConfigParsingTest {
     @Test
-    fun `String`() {
+    fun String() {
         testPropertyType<StringData, StringListData, String>("hello world!", "bye")
     }
 
     @Test
-    fun `Int`() {
+    fun Int() {
         testPropertyType<IntData, IntListData, Int>(1, 2)
     }
 
     @Test
-    fun `Long`() {
+    fun Long() {
         testPropertyType<LongData, LongListData, Long>(Long.MAX_VALUE, Long.MIN_VALUE)
     }
 
     @Test
-    fun `Double`() {
+    fun Double() {
         testPropertyType<DoubleData, DoubleListData, Double>(1.2, 3.4)
     }
 
     @Test
-    fun `Boolean`() {
+    fun Boolean() {
         testPropertyType<BooleanData, BooleanListData, Boolean>(true, false)
     }
 
     @Test
-    fun `Enum`() {
+    fun Enum() {
         testPropertyType<EnumData, EnumListData, TestEnum>(TestEnum.Value2, TestEnum.Value1, valuesToString = true)
     }
 
@@ -66,17 +66,17 @@ class ConfigParsingTest {
     }
 
     @Test
-    fun `LocalDate`() {
+    fun LocalDate() {
         testPropertyType<LocalDateData, LocalDateListData, LocalDate>(LocalDate.now(), LocalDate.now().plusDays(1), valuesToString = true)
     }
 
     @Test
-    fun `Instant`() {
+    fun Instant() {
         testPropertyType<InstantData, InstantListData, Instant>(Instant.now(), Instant.now().plusMillis(100), valuesToString = true)
     }
 
     @Test
-    fun `NetworkHostAndPort`() {
+    fun NetworkHostAndPort() {
         testPropertyType<NetworkHostAndPortData, NetworkHostAndPortListData, NetworkHostAndPort>(
                 NetworkHostAndPort("localhost", 2223),
                 NetworkHostAndPort("localhost", 2225),
@@ -84,18 +84,18 @@ class ConfigParsingTest {
     }
 
     @Test
-    fun `Path`() {
+    fun Path() {
         val path = "tmp" / "test"
         testPropertyType<PathData, PathListData, Path>(path, path / "file", valuesToString = true)
     }
 
     @Test
-    fun `URL`() {
+    fun URL() {
         testPropertyType<URLData, URLListData, URL>(URL("http://localhost:1234"), URL("http://localhost:1235"), valuesToString = true)
     }
 
     @Test
-    fun `UUID`() {
+    fun UUID() {
         testPropertyType<UUIDData, UUIDListData, UUID>(UUID.randomUUID(), UUID.randomUUID(), valuesToString = true)
     }
 
@@ -146,7 +146,7 @@ class ConfigParsingTest {
     }
 
     @Test
-    fun `Set`() {
+    fun Set() {
         val data = StringSetData(setOf("a", "b"))
         assertThat(config("values" to listOf("a", "a", "b")).parseAs<StringSetData>()).isEqualTo(data)
         assertThat(data.toConfig()).isEqualTo(config("values" to listOf("a", "b")))

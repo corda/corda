@@ -19,9 +19,9 @@ import kotlin.test.fail
 
 class AggregatedListTest {
 
-    lateinit var sourceList: ObservableList<Int>
-    lateinit var aggregatedList: ObservableList<Pair<Int, ObservableList<Int>>>
-    lateinit var replayedList: ObservableList<Pair<Int, ObservableList<Int>>>
+    private lateinit var sourceList: ObservableList<Int>
+    private lateinit var aggregatedList: ObservableList<Pair<Int, ObservableList<Int>>>
+    private lateinit var replayedList: ObservableList<Pair<Int, ObservableList<Int>>>
 
     @Before
     fun setup() {

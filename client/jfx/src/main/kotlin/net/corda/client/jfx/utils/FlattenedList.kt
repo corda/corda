@@ -65,7 +65,7 @@ class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>
                 val from = c.from
                 val to = c.to
                 val permutation = IntArray(to, { c.getPermutation(it) })
-                indexMap.replaceAll { _, pair -> Pair(permutation[pair.first], pair.second) }
+                indexMap.replaceAll { _, (first, second) -> Pair(permutation[first], second) }
                 nextPermutation(from, to, permutation)
             } else if (c.wasUpdated()) {
                 throw UnsupportedOperationException("FlattenedList doesn't support Update changes")
@@ -119,7 +119,7 @@ class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>
         assert(sourceList.size == indexMap.size)
     }
 
-    override fun get(index: Int) = sourceList.get(index).value
+    override fun get(index: Int): A = sourceList[index].value
 
     override fun getSourceIndex(index: Int) = index
 

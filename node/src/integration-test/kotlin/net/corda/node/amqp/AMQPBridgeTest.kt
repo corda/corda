@@ -47,14 +47,12 @@ class AMQPBridgeTest {
 
     private val log = loggerFor<AMQPBridgeTest>()
 
-    private val ALICE = TestIdentity(ALICE_NAME)
     private val BOB = TestIdentity(BOB_NAME)
 
     private val artemisPort = freePort()
     private val artemisPort2 = freePort()
     private val amqpPort = freePort()
     private val artemisAddress = NetworkHostAndPort("localhost", artemisPort)
-    private val artemisAddress2 = NetworkHostAndPort("localhost", artemisPort2)
     private val amqpAddress = NetworkHostAndPort("localhost", amqpPort)
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration

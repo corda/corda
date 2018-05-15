@@ -52,6 +52,7 @@ private fun createAttachmentData(content: String) = ByteArrayOutputStream().appl
 
 private fun Attachment.extractContent() = ByteArrayOutputStream().apply { extractFile("content", this) }.toString(UTF_8.name())
 
+@SuppressWarnings("deprecation")
 private fun StartedNode<*>.saveAttachment(content: String) = database.transaction {
     attachments.importAttachment(createAttachmentData(content).inputStream())
 }

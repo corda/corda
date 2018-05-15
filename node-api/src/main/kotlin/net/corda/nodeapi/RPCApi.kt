@@ -258,22 +258,22 @@ object RPCApi {
     }
 }
 
-private val TAG_FIELD_NAME = "tag"
-private val RPC_ID_FIELD_NAME = "rpc-id"
-private val RPC_ID_TIMESTAMP_FIELD_NAME = "rpc-id-timestamp"
-private val RPC_SESSION_ID_FIELD_NAME = "rpc-session-id"
-private val RPC_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-session-id-timestamp"
-private val RPC_EXTERNAL_ID_FIELD_NAME = "rpc-external-id"
-private val RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME = "rpc-external-id-timestamp"
-private val RPC_EXTERNAL_SESSION_ID_FIELD_NAME = "rpc-external-session-id"
-private val RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-external-session-id-timestamp"
-private val RPC_IMPERSONATED_ACTOR_ID = "rpc-impersonated-actor-id"
-private val RPC_IMPERSONATED_ACTOR_STORE_ID = "rpc-impersonated-actor-store-id"
-private val RPC_IMPERSONATED_ACTOR_OWNING_LEGAL_IDENTITY = "rpc-impersonated-actor-owningLegalIdentity"
-private val DEDUPLICATION_IDENTITY_FIELD_NAME = "deduplication-identity"
-private val OBSERVABLE_ID_FIELD_NAME = "observable-id"
-private val OBSERVABLE_ID_TIMESTAMP_FIELD_NAME = "observable-id-timestamp"
-private val METHOD_NAME_FIELD_NAME = "method-name"
+private const val TAG_FIELD_NAME = "tag"
+private const val RPC_ID_FIELD_NAME = "rpc-id"
+private const val RPC_ID_TIMESTAMP_FIELD_NAME = "rpc-id-timestamp"
+private const val RPC_SESSION_ID_FIELD_NAME = "rpc-session-id"
+private const val RPC_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-session-id-timestamp"
+private const val RPC_EXTERNAL_ID_FIELD_NAME = "rpc-external-id"
+private const val RPC_EXTERNAL_ID_TIMESTAMP_FIELD_NAME = "rpc-external-id-timestamp"
+private const val RPC_EXTERNAL_SESSION_ID_FIELD_NAME = "rpc-external-session-id"
+private const val RPC_EXTERNAL_SESSION_ID_TIMESTAMP_FIELD_NAME = "rpc-external-session-id-timestamp"
+private const val RPC_IMPERSONATED_ACTOR_ID = "rpc-impersonated-actor-id"
+private const val RPC_IMPERSONATED_ACTOR_STORE_ID = "rpc-impersonated-actor-store-id"
+private const val RPC_IMPERSONATED_ACTOR_OWNING_LEGAL_IDENTITY = "rpc-impersonated-actor-owningLegalIdentity"
+private const val DEDUPLICATION_IDENTITY_FIELD_NAME = "deduplication-identity"
+private const val OBSERVABLE_ID_FIELD_NAME = "observable-id"
+private const val OBSERVABLE_ID_TIMESTAMP_FIELD_NAME = "observable-id-timestamp"
+private const val METHOD_NAME_FIELD_NAME = "method-name"
 
 fun ClientMessage.replyId(): InvocationId {
 

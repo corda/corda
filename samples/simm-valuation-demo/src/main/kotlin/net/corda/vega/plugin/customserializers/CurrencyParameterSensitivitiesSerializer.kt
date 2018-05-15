@@ -19,6 +19,6 @@ class CurrencyParameterSensitivitiesSerializer :
         SerializationCustomSerializer<CurrencyParameterSensitivities, CurrencyParameterSensitivitiesSerializer.Proxy> {
     data class Proxy(val sensitivities: List<CurrencyParameterSensitivity>)
 
-    override fun fromProxy(proxy: Proxy) = CurrencyParameterSensitivities.of(proxy.sensitivities)
+    override fun fromProxy(proxy: Proxy): CurrencyParameterSensitivities = CurrencyParameterSensitivities.of(proxy.sensitivities)
     override fun toProxy(obj: CurrencyParameterSensitivities) = Proxy(obj.sensitivities)
 }

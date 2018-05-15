@@ -65,12 +65,9 @@ data class NetworkInterface(
                 val s = Socket("localhost", portNumber)
                 s.close()
                 true
-
             } catch (_: Exception) {
                 false
             }
         }
-
     }
-
 }

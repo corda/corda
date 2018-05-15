@@ -14,9 +14,13 @@ import net.corda.core.identity.Party
 import net.corda.core.toFuture
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.finance.*
+import net.corda.finance.DOLLARS
+import net.corda.finance.GBP
+import net.corda.finance.POUNDS
+import net.corda.finance.USD
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.issuedBy
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
@@ -80,8 +84,8 @@ class FxTransactionBuildTutorialTest {
             nodeB.services.getCashBalances()
         }
 
-        println("BalanceA\n" + balancesA)
-        println("BalanceB\n" + balancesB)
+        println("BalanceA\n$balancesA")
+        println("BalanceB\n$balancesB")
         // Verify the transfers occurred as expected
         assertEquals(POUNDS(100), balancesA[GBP])
         assertEquals(DOLLARS(1000 - 200), balancesA[USD])

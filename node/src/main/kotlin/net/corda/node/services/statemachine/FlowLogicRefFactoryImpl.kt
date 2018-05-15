@@ -154,16 +154,16 @@ class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : SingletonS
     }
 
     private fun parameterAssignableFrom(type: Type, value: Any): Boolean {
-        if (type is Class<*>) {
+        return if (type is Class<*>) {
             if (type.isPrimitive) {
-                return Primitives.unwrap(value.javaClass) == type
+                Primitives.unwrap(value.javaClass) == type
             } else {
-                return type.isAssignableFrom(value.javaClass)
+                type.isAssignableFrom(value.javaClass)
             }
         } else if (type is ParameterizedType) {
-            return parameterAssignableFrom(type.rawType, value)
+            parameterAssignableFrom(type.rawType, value)
         } else {
-            return false
+            false
         }
     }
 }

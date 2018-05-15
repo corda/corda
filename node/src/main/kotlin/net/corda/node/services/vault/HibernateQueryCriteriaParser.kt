@@ -474,7 +474,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     commonPredicates.replace(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), criteria.status))
                 }
             } else {
-                commonPredicates.put(predicateID, criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), criteria.status))
+                commonPredicates[predicateID] = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), criteria.status)
             }
         }
 
@@ -489,7 +489,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     commonPredicates.replace(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractStateTypes.plus(existingTypes))))
                 }
             } else {
-                commonPredicates.put(predicateID, criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractStateTypes)))
+                commonPredicates[predicateID] = criteriaBuilder.and(vaultStates.get<String>(VaultSchemaV1.VaultStates::contractStateClassName.name).`in`(contractStateTypes))
             }
         }
 
@@ -511,7 +511,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     rootEntities.getOrElse(entityStateClass) {
                         // scenario where sorting on attributes not parsed as criteria
                         val entityRoot = criteriaQuery.from(entityStateClass)
-                        rootEntities.put(entityStateClass, entityRoot)
+                        rootEntities[entityStateClass] = entityRoot
                         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
                         joinPredicates.add(joinPredicate)
                         entityRoot
@@ -537,22 +537,20 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
     }
 
     private fun parse(sortAttribute: Sort.Attribute): Triple<Class<out PersistentState>, String, String?> {
-        val entityClassAndColumnName: Triple<Class<out PersistentState>, String, String?> =
-                when (sortAttribute) {
-                    is Sort.CommonStateAttribute -> {
-                        Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
-                    }
-                    is Sort.VaultStateAttribute -> {
-                        Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
-                    }
-                    is Sort.LinearStateAttribute -> {
-                        Triple(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.attributeName, null)
-                    }
-                    is Sort.FungibleStateAttribute -> {
-                        Triple(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.attributeName, null)
-                    }
-                    else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
-                }
-        return entityClassAndColumnName
+        return when (sortAttribute) {
+            is Sort.CommonStateAttribute -> {
+                Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
+            }
+            is Sort.VaultStateAttribute -> {
+                Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
+            }
+            is Sort.LinearStateAttribute -> {
+                Triple(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.attributeName, null)
+            }
+            is Sort.FungibleStateAttribute -> {
+                Triple(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.attributeName, null)
+            }
+            else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
+        }
     }
 }

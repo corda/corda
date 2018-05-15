@@ -27,7 +27,8 @@ import org.junit.rules.ExpectedException
 class VaultQueryExceptionsTests : VaultQueryParties by rule {
 
     companion object {
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val rule = object : VaultQueryTestRule() {
             override val cordappPackages = listOf(
                     "net.corda.testing.contracts",

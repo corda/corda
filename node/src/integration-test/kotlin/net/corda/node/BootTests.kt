@@ -51,8 +51,7 @@ class BootTests : IntegrationTest() {
     fun `java deserialization is disabled`() {
         driver {
             val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))
-            val future = CordaRPCClient(startNode(rpcUsers = listOf(user)).getOrThrow().rpcAddress).
-                    start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
+            val future = CordaRPCClient(startNode(rpcUsers = listOf(user)).getOrThrow().rpcAddress).start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
             assertThatThrownBy { future.getOrThrow() }.isInstanceOf(InvalidClassException::class.java).hasMessage("filter status: REJECTED")
         }
     }

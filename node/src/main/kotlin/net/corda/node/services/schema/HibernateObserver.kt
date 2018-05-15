@@ -25,7 +25,6 @@ import net.corda.nodeapi.internal.persistence.contextTransaction
 import org.hibernate.FlushMode
 import rx.Observable
 
-
 /**
  * Small data class bundling together a ContractState and a StateRef (as opposed to a TransactionState and StateRef
  * in StateAndRef)
@@ -63,10 +62,7 @@ class HibernateObserver private constructor(private val config: HibernateConfigu
     @VisibleForTesting
     internal fun persistStatesWithSchema(statesAndRefs: List<ContractStateAndRef>, schema: MappedSchema) {
         val sessionFactory = config.sessionFactoryForSchemas(setOf(schema))
-        val session = sessionFactory.withOptions().
-                connection(contextTransaction.connection).
-                flushMode(FlushMode.MANUAL).
-                openSession()
+        val session = sessionFactory.withOptions().connection(contextTransaction.connection).flushMode(FlushMode.MANUAL).openSession()
         session.use { thisSession ->
             statesAndRefs.forEach {
                 val mappedObject = schemaService.generateMappedObject(it.state, schema)

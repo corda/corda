@@ -60,20 +60,21 @@ sealed class FlowInitiator : Principal {
      * class hierarchy (which is now deprecated). The returned object has less information than it could have, so
      * prefer to use fetch an invocation context directly if you can (e.g. in [net.corda.core.messaging.StateMachineInfo])
      */
-    val invocationContext: InvocationContext get() {
-        val unknownName = CordaX500Name("UNKNOWN", "UNKNOWN", "GB")
-        var actor: Actor? = null
-        val origin: InvocationOrigin
-        when (this) {
-            is FlowInitiator.RPC -> {
-                actor = Actor(Actor.Id(this.username), AuthServiceId("UNKNOWN"), unknownName)
-                origin = InvocationOrigin.RPC(actor)
+    val invocationContext: InvocationContext
+        get() {
+            val unknownName = CordaX500Name("UNKNOWN", "UNKNOWN", "GB")
+            var actor: Actor? = null
+            val origin: InvocationOrigin
+            when (this) {
+                is FlowInitiator.RPC -> {
+                    actor = Actor(Actor.Id(this.username), AuthServiceId("UNKNOWN"), unknownName)
+                    origin = InvocationOrigin.RPC(actor)
+                }
+                is FlowInitiator.Peer -> origin = InvocationOrigin.Peer(this.party.name)
+                is FlowInitiator.Service -> origin = InvocationOrigin.Service(this.serviceClassName, unknownName)
+                FlowInitiator.Shell -> origin = InvocationOrigin.Shell
+                is FlowInitiator.Scheduled -> origin = InvocationOrigin.Scheduled(this.scheduledState)
             }
-            is FlowInitiator.Peer -> origin = InvocationOrigin.Peer(this.party.name)
-            is FlowInitiator.Service -> origin = InvocationOrigin.Service(this.serviceClassName, unknownName)
-            FlowInitiator.Shell -> origin = InvocationOrigin.Shell
-            is FlowInitiator.Scheduled -> origin = InvocationOrigin.Scheduled(this.scheduledState)
+            return InvocationContext.newInstance(origin = origin, actor = actor)
         }
-        return InvocationContext.newInstance(origin = origin, actor = actor)
-    }
 }

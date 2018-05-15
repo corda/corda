@@ -110,7 +110,7 @@ class CubicSplineInterpolator(private val xs: DoubleArray, private val ys: Doubl
         val segmentMap = TreeMap<Double, Polynomial>()
         for (i in 0 until n) {
             val coefficients = doubleArrayOf(ys[i], b[i], c[i], d[i])
-            segmentMap.put(xs[i], Polynomial(coefficients))
+            segmentMap[xs[i]] = Polynomial(coefficients)
         }
         return SplineFunction(segmentMap)
     }

@@ -25,10 +25,10 @@ class CountUpDownLatch(initialValue: Int) {
         }
 
         override fun tryAcquireShared(arg: Int): Int {
-            if (arg >= 0) {
-                return if (state == arg) 1 else -1
+            return if (arg >= 0) {
+                if (state == arg) 1 else -1
             } else {
-                return if (state <= -arg) 1 else -1
+                if (state <= -arg) 1 else -1
             }
         }
 

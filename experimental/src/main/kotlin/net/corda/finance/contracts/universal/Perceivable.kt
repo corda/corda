@@ -44,7 +44,7 @@ data class Const<T>(val value: T) : Perceivable<T> {
             if (value is BigDecimal && other.value is BigDecimal) {
                 return this.value.compareTo(other.value) == 0
             }
-            return value.equals(other.value)
+            return value == other.value
         }
         return false
     }
@@ -92,7 +92,7 @@ data class ActorPerceivable(val actor: Party) : Perceivable<Boolean>
 fun signedBy(actor: Party) : Perceivable<Boolean> = ActorPerceivable(actor)
 
 fun signedByOneOf(actors: Collection<Party>): Perceivable<Boolean> =
-        if (actors.size == 0)
+        if (actors.isEmpty())
             const(true)
         else
             actors.drop(1).fold(signedBy(actors.first())) { total, next -> total or signedBy(next) }

@@ -18,6 +18,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.utilities.*
@@ -45,13 +46,13 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
 
         fun getInstance(metadata: () -> java.sql.DatabaseMetaData): AbstractCashSelection {
             return instance.get() ?: {
-                val _metadata = metadata()
+                val metadataLocal = metadata()
                 val cashSelectionAlgos = ServiceLoader.load(AbstractCashSelection::class.java, this::class.java.classLoader).toList()
-                val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(_metadata) }
+                val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(metadataLocal) }
                 cashSelectionAlgo?.let {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
-                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver name '${_metadata.driverName}'." +
+                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver name '${metadataLocal.driverName}'." +
                         "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.qualifiedName}." +
                         "\nAvailable implementations: $cashSelectionAlgos")
             }.invoke()
@@ -73,7 +74,6 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
 
     /**
      * A vendor specific query(ies) to gather Cash states that are available.
-     * @param statement The service hub to allow access to the database session
      * @param amount The amount of currency desired (ignoring issues, but specifying the currency)
      * @param lockId The FlowLogic.runId.uuid of the flow, which is used to soft reserve the states.
      * Also, previous outputs of the flow will be eligible as they are implicitly locked with this id until the flow completes.
@@ -156,7 +156,7 @@ abstract class AbstractCashSelection(private val maxRetries : Int = 8, private v
 
                     if (stateRefs.isNotEmpty()) {
                         // TODO: future implementation to retrieve contract states from a Vault BLOB store
-                        stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<StateAndRef<Cash.State>>)
+                        stateAndRefs.addAll(uncheckedCast(services.loadStates(stateRefs)))
                     }
 
                     val success = stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity

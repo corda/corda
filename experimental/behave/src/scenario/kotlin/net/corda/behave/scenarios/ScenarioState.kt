@@ -32,7 +32,7 @@ class ScenarioState {
         error<Unit>(message)
     }
 
-    fun<T> error(message: String, ex: Throwable? = null): T {
+    fun <T> error(message: String, ex: Throwable? = null): T {
         this.network?.signalFailure(message, ex)
         if (ex != null) {
             throw Exception(message, ex)
@@ -103,7 +103,7 @@ class ScenarioState {
         network.stop()
     }
 
-    private fun nodeName(name: String) = "$name"
+    private fun nodeName(name: String) = name
 
     private fun newNode(name: String): Node.Builder {
         val builder = Node.new()
@@ -111,5 +111,4 @@ class ScenarioState {
         nodes.add(builder)
         return builder
     }
-
 }

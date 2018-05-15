@@ -15,13 +15,8 @@ import net.corda.client.jfx.model.ExchangeRate
 import net.corda.client.jfx.model.ExchangeRateModel
 import net.corda.client.jfx.model.observableValue
 import net.corda.client.jfx.utils.AmountBindings
-import net.corda.core.contracts.*
-import net.corda.finance.CHF
-import net.corda.finance.EUR
-import net.corda.finance.GBP
-import net.corda.finance.USD
+import net.corda.core.contracts.Amount
 import org.fxmisc.easybind.EasyBind
-import tornadofx.*
 import java.util.*
 
 class ReportingCurrencyModel {

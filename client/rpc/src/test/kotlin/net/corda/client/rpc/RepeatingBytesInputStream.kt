@@ -16,11 +16,11 @@ class RepeatingBytesInputStream(val bytesToRepeat: ByteArray, val numberOfBytes:
     private var bytesLeft = numberOfBytes
     override fun available() = bytesLeft
     override fun read(): Int {
-        if (bytesLeft == 0) {
-            return -1
+        return if (bytesLeft == 0) {
+            -1
         } else {
             bytesLeft--
-            return bytesToRepeat[(numberOfBytes - bytesLeft) % bytesToRepeat.size].toInt()
+            bytesToRepeat[(numberOfBytes - bytesLeft) % bytesToRepeat.size].toInt()
         }
     }
 

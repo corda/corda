@@ -33,7 +33,7 @@ class PartyAndCertificateTest {
 
     @Test
     fun `reject a path with no roles`() {
-        val path =  X509Utilities.buildCertPath(DEV_ROOT_CA.certificate)
+        val path = X509Utilities.buildCertPath(DEV_ROOT_CA.certificate)
         assertFailsWith<IllegalArgumentException> { PartyAndCertificate(path) }
     }
 

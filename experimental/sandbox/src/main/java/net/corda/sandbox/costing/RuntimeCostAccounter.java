@@ -22,33 +22,13 @@ public class RuntimeCostAccounter {
 
     private static Thread primaryThread;
 
-    private static final ThreadLocal<Long> allocationCost = new ThreadLocal<Long>() {
-        @Override
-        protected Long initialValue() {
-            return 0L;
-        }
-    };
+    private static final ThreadLocal<Long> allocationCost = ThreadLocal.withInitial(() -> 0L);
 
-    private static final ThreadLocal<Long> jumpCost = new ThreadLocal<Long>() {
-        @Override
-        protected Long initialValue() {
-            return 0L;
-        }
-    };
+    private static final ThreadLocal<Long> jumpCost = ThreadLocal.withInitial(() -> 0L);
 
-    private static final ThreadLocal<Long> invokeCost = new ThreadLocal<Long>() {
-        @Override
-        protected Long initialValue() {
-            return 0L;
-        }
-    };
+    private static final ThreadLocal<Long> invokeCost = ThreadLocal.withInitial(() -> 0L);
 
-    private static final ThreadLocal<Long> throwCost = new ThreadLocal<Long>() {
-        @Override
-        protected Long initialValue() {
-            return 0L;
-        }
-    };
+    private static final ThreadLocal<Long> throwCost = ThreadLocal.withInitial(() -> 0L);
 
     private static final long BASELINE_ALLOC_KILL_THRESHOLD = 1024 * 1024;
 

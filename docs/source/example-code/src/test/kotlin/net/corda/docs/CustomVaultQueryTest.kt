@@ -34,7 +34,6 @@ import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
-import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.After
 import org.junit.Assert
@@ -115,12 +114,12 @@ class CustomVaultQueryTest {
         val balancesNodesA = nodeA.transaction {
             nodeA.services.getCashBalances()
         }
-        println("BalanceA\n" + balancesNodesA)
+        println("BalanceA\n$balancesNodesA")
 
         val balancesNodesB = nodeB.transaction {
             nodeB.services.getCashBalances()
         }
-        println("BalanceB\n" + balancesNodesB)
+        println("BalanceB\n$balancesNodesB")
 
         return Pair(balancesNodesA, balancesNodesB)
     }

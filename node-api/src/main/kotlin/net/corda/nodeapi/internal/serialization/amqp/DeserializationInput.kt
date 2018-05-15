@@ -18,7 +18,6 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.*
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
-import org.apache.qpid.proton.amqp.UnsignedByte
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.InputStream
@@ -42,28 +41,6 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
     private val objectHistory: MutableList<Any> = mutableListOf()
 
     companion object {
-        private const val BYTES_NEEDED_TO_PEEK: Int = 23
-
-        fun peekSize(bytes: ByteArray): Int {
-            // There's an 8 byte header, and then a 0 byte plus descriptor followed by constructor
-            val eighth = bytes[8].toInt()
-            check(eighth == 0x0) { "Expected to find a descriptor in the AMQP stream" }
-            // We should always have an Envelope, so the descriptor should be a 64-bit long (0x80)
-            val ninth = UnsignedByte.valueOf(bytes[9]).toInt()
-            check(ninth == 0x80) { "Expected to find a ulong in the AMQP stream" }
-            // Skip 8 bytes
-            val eighteenth = UnsignedByte.valueOf(bytes[18]).toInt()
-            check(eighteenth == 0xd0 || eighteenth == 0xc0) { "Expected to find a list8 or list32 in the AMQP stream" }
-            val size = if (eighteenth == 0xc0) {
-                // Next byte is size
-                UnsignedByte.valueOf(bytes[19]).toInt() - 3 // Minus three as PEEK_SIZE assumes 4 byte unsigned integer.
-            } else {
-                // Next 4 bytes is size
-                UnsignedByte.valueOf(bytes[19]).toInt().shl(24) + UnsignedByte.valueOf(bytes[20]).toInt().shl(16) + UnsignedByte.valueOf(bytes[21]).toInt().shl(8) + UnsignedByte.valueOf(bytes[22]).toInt()
-            }
-            return size + BYTES_NEEDED_TO_PEEK
-        }
-
         @VisibleForTesting
         @Throws(NotSerializableException::class)
         fun <T> withDataBytes(byteSequence: ByteSequence, encodingWhitelist: EncodingWhitelist, task: (ByteBuffer) -> T): T {
@@ -150,13 +127,12 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
                 envelope)
     }
 
-    internal fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type, context: SerializationContext,
-                                  offset: Int = 0
+    internal fun readObjectOrNull(obj: Any?, schema: SerializationSchemas, type: Type, context: SerializationContext
     ): Any? {
-        return if (obj == null) null else readObject(obj, schema, type, context, offset)
+        return if (obj == null) null else readObject(obj, schema, type, context)
     }
 
-    internal fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, context: SerializationContext, debugIndent: Int = 0): Any =
+    internal fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, context: SerializationContext): Any =
             if (obj is DescribedType && ReferencedObject.DESCRIPTOR == obj.descriptor) {
                 // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
                 val objectIndex = (obj.described as UnsignedInteger).toInt()

@@ -60,7 +60,6 @@ object Emoji {
     @JvmStatic
     val CODE_WARNING_SIGN: String = codePointsString(0x26A0, 0xFE0F)
 
-
     /**
      * When non-null, toString() methods are allowed to use emoji in the output as we're going to render them to a
      * sufficiently capable text surface.

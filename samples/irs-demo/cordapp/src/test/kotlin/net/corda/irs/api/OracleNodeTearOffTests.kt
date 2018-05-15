@@ -1,6 +1,5 @@
 package net.corda.irs.api
 
-import com.google.common.collect.testing.Helpers
 import com.google.common.collect.testing.Helpers.assertContains
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.TransactionState
@@ -16,7 +15,11 @@ import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.irs.flows.RatesFixFlow
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeParameters

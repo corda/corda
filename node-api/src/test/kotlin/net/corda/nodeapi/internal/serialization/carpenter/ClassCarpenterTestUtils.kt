@@ -50,7 +50,7 @@ fun Schema.mangleNames(names: List<String>): Schema {
  * rather than have it create its own
  */
 class SerializerFactoryExternalCarpenter(classCarpenter: ClassCarpenter)
-    : SerializerFactory (classCarpenter.whitelist, classCarpenter)
+    : SerializerFactory(classCarpenter.whitelist, classCarpenter)
 
 open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
     var cc = ClassCarpenterImpl(whitelist = whitelist)

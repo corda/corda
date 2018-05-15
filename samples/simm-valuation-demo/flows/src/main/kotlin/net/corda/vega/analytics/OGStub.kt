@@ -46,7 +46,7 @@ object BimmAnalysisUtils {
                       first: CurrencyParameterSensitivities, second: MultiCurrencyAmount): Triple<Double, Double, Double> {
 
         val amount = second.amounts.map { it.amount }.sum()
-        return Triple<Double, Double, Double>(amount, 0.0, amount)
+        return Triple(amount, 0.0, amount)
     }
 }
 

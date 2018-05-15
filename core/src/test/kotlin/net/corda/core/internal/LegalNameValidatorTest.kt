@@ -71,7 +71,7 @@ class LegalNameValidatorTest {
         }
         // Latin capital letter turned m
         assertFailsWith<IllegalArgumentException> {
-            LegalNameValidator.validateOrganization( "Test\u019CLtd", LegalNameValidator.Validation.FULL)
+            LegalNameValidator.validateOrganization("Test\u019CLtd", LegalNameValidator.Validation.FULL)
         }
         // Latin small letter turned e
         assertFailsWith<IllegalArgumentException> {
@@ -94,7 +94,7 @@ class LegalNameValidatorTest {
         }
         // Latin capital letter turned m
         assertFailsWith<IllegalArgumentException> {
-            LegalNameValidator.validateNameAttribute( "Test\u019CLtd", LegalNameValidator.Validation.FULL)
+            LegalNameValidator.validateNameAttribute("Test\u019CLtd", LegalNameValidator.Validation.FULL)
         }
         // Latin small letter turned e
         assertFailsWith<IllegalArgumentException> {

@@ -43,6 +43,7 @@ interface StateMachineManager {
      * Starts the state machine manager, loading and starting the state machines in storage.
      */
     fun start(tokenizableServices: List<Any>)
+
     /**
      * Stops the state machine manager gracefully, waiting until all but [allowedUnsuspendedFiberCount] flows reach the
      * next checkpoint.
@@ -69,6 +70,7 @@ interface StateMachineManager {
      */
     sealed class Change {
         abstract val logic: FlowLogic<*>
+
         data class Add(override val logic: FlowLogic<*>) : Change()
         data class Removed(override val logic: FlowLogic<*>, val result: Try<*>) : Change()
     }

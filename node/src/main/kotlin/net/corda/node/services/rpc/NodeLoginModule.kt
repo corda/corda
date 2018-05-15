@@ -52,8 +52,8 @@ internal class NodeLoginModule : LoginModule {
 
         internal const val CERT_CHAIN_CHECKS_ARG = "CertChainChecks"
         internal const val USE_SSL_ARG = "useSsl"
-        internal val SECURITY_MANAGER_ARG = "RpcSecurityManager"
-        internal val LOGIN_LISTENER_ARG = "LoginListener"
+        internal const val SECURITY_MANAGER_ARG = "RpcSecurityManager"
+        internal const val LOGIN_LISTENER_ARG = "LoginListener"
         private val log = loggerFor<NodeLoginModule>()
     }
 

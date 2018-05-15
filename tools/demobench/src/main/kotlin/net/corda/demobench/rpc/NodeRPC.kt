@@ -68,5 +68,4 @@ class NodeRPC(config: NodeConfigWrapper, start: (NodeConfigWrapper, CordaRPCOps)
             log.error("Failed to close RPC connection (Error: {})", e.message)
         }
     }
-
 }

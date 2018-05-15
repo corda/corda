@@ -9,7 +9,7 @@ package net.corda.blobinspector
  * currently being added to the string.
  * @property indent How deeply the next line should be offset from the first column
  */
-class IndentingStringBuilder(s : String = "", private val offset : Int = 4) {
+class IndentingStringBuilder(s: String = "", private val offset: Int = 4) {
     private val sb = StringBuilder(s)
     private var indenting = true
     private var indent = 0
@@ -21,17 +21,16 @@ class IndentingStringBuilder(s : String = "", private val offset : Int = 4) {
 
         appender(ln)
 
-        if (ln.endsWith("{") || ln.endsWith("[")){
+        if (ln.endsWith("{") || ln.endsWith("[")) {
             indent += offset
         }
     }
 
     fun appendln(ln: String) {
-        wrap(ln) {  s -> sb.appendln("${"".padStart(if (indenting) indent else 0, ' ')}$s") }
+        wrap(ln) { s -> sb.appendln("${"".padStart(if (indenting) indent else 0, ' ')}$s") }
 
         indenting = true
     }
-
 
     fun append(ln: String) {
         indenting = false

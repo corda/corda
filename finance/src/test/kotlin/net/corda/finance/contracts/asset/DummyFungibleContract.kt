@@ -29,7 +29,7 @@ import java.util.*
 
 class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Commands, DummyFungibleContract.State>() {
     override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<DummyFungibleContract.Commands>>
-            = commands.select<DummyFungibleContract.Commands>()
+            = commands.select()
 
     data class State(
             override val amount: Amount<Issued<Currency>>,
@@ -119,7 +119,7 @@ class DummyFungibleContract : OnLedgerAsset<Currency, DummyFungibleContract.Comm
                 val outputAmount = outputs.sumCashOrZero(Issued(issuer, currency))
 
                 val exitKeys: Set<PublicKey> = inputs.flatMap { it.exitKeys }.toSet()
-                val exitCommand = tx.commands.select<Commands.Exit>(parties = null, signers = exitKeys).filter { it.value.amount.token == key }.singleOrNull()
+                val exitCommand = tx.commands.select<Commands.Exit>(parties = null, signers = exitKeys).singleOrNull { it.value.amount.token == key }
                 val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, Issued(issuer, currency))
 
                 requireThat {

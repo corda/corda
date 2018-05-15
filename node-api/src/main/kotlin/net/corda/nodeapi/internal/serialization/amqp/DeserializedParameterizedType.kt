@@ -38,7 +38,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
     private val _typeName: String = makeTypeName()
 
     private fun makeTypeName(): String {
-        val paramsJoined = params.map { it.typeName }.joinToString(", ")
+        val paramsJoined = params.joinToString(", ") { it.typeName }
         return "${rawType.name}<$paramsJoined>"
     }
 
@@ -155,14 +155,14 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other is ParameterizedType) {
+        return if (other is ParameterizedType) {
             if (this === other) {
-                return true
+                true
             } else {
-                return this.ownerType == other.ownerType && this.rawType == other.rawType && Arrays.equals(this.actualTypeArguments, other.actualTypeArguments)
+                this.ownerType == other.ownerType && this.rawType == other.rawType && Arrays.equals(this.actualTypeArguments, other.actualTypeArguments)
             }
         } else {
-            return false
+            false
         }
     }
 }

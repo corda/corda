@@ -230,7 +230,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
                     val paramNames = methodParamNames[name]!!
                     val typeNames = args.parameters.map { it.type.simpleName }
                     val paramTypes = paramNames.zip(typeNames)
-                    paramTypes.map { "${it.first}: ${it.second}" }.joinToString(", ")
+                    paramTypes.joinToString(", ") { "${it.first}: ${it.second}" }
                 }
                 Pair(name, argStr)
             }.toMap()

@@ -55,7 +55,6 @@ fun MarketData.toCordaCompatible(): CordaMarketData {
     return CordaMarketData(valuationDate = this.valuationDate, values = values)
 }
 
-
 /**
  * A very basic modifier of InitialMarginTriple in order to ignore everything past the 2nd decimal place.
  */

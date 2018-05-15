@@ -152,7 +152,7 @@ interface OpenFuture<V> : ValueOrException<V>, CordaFuture<V>
 internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = CompletableFuture()) : Future<V> by impl, OpenFuture<V> {
     companion object {
         private val defaultLog = contextLogger()
-        internal val listenerFailedMessage = "Future listener failed:"
+        internal const val listenerFailedMessage = "Future listener failed:"
     }
 
     override fun set(value: V) = impl.complete(value)

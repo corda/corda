@@ -30,6 +30,7 @@ import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImp
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.net.InetSocketAddress
+import java.lang.Long.min
 import java.security.KeyStore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -74,7 +75,9 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         }
 
         val log = contextLogger()
-        const val RETRY_INTERVAL = 1000L
+        const val MIN_RETRY_INTERVAL = 1000L
+        const val MAX_RETRY_INTERVAL = 60000L
+        const val BACKOFF_MULTIPLIER = 2L
         const val NUM_CLIENT_THREADS = 2
     }
 
@@ -87,6 +90,13 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     // Offset into the list of targets, so that we can implement round-robin reconnect logic.
     private var targetIndex = 0
     private var currentTarget: NetworkHostAndPort = targets.first()
+    private var retryInterval = MIN_RETRY_INTERVAL
+
+    private fun nextTarget() {
+        targetIndex = (targetIndex + 1).rem(targets.size)
+        log.info("Retry connect to ${targets[targetIndex]}")
+        retryInterval = min(MAX_RETRY_INTERVAL, retryInterval * BACKOFF_MULTIPLIER)
+    }
 
     private val connectListener = object : ChannelFutureListener {
         override fun operationComplete(future: ChannelFuture) {
@@ -95,10 +105,9 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
                 if (!stopping) {
                     workerGroup?.schedule({
-                        log.info("Retry connect to $currentTarget")
-                        targetIndex = (targetIndex + 1).rem(targets.size)
+                        nextTarget()
                         restart()
-                    }, RETRY_INTERVAL, TimeUnit.MILLISECONDS)
+                    }, retryInterval, TimeUnit.MILLISECONDS)
                 }
             } else {
                 log.info("Connected to $currentTarget")
@@ -116,10 +125,9 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
             clientChannel = null
             if (!stopping) {
                 workerGroup?.schedule({
-                    log.info("Retry connect")
-                    targetIndex = (targetIndex + 1).rem(targets.size)
+                    nextTarget()
                     restart()
-                }, RETRY_INTERVAL, TimeUnit.MILLISECONDS)
+                }, retryInterval, TimeUnit.MILLISECONDS)
             }
         }
     }
@@ -162,7 +170,10 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                     parent.userName,
                     parent.password,
                     parent.trace,
-                    { parent._onConnection.onNext(it.second) },
+                    {
+                        parent.retryInterval = MIN_RETRY_INTERVAL // reset to fast reconnect if we connect properly
+                        parent._onConnection.onNext(it.second)
+                    },
                     { parent._onConnection.onNext(it.second) },
                     { rcv -> parent._onReceive.onNext(rcv) }))
         }

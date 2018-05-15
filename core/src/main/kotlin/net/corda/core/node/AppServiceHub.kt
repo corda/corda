@@ -36,5 +36,4 @@ interface AppServiceHub : ServiceHub {
      * TODO it is assumed here that the flow object has an appropriate classloader.
      */
     fun <T> startTrackedFlow(flow: FlowLogic<T>): FlowProgressHandle<T>
-
 }

@@ -47,10 +47,14 @@ sealed class FlowContinuation {
     /**
      * Keep processing pending events.
      */
-    object ProcessEvents : FlowContinuation() { override fun toString() = "ProcessEvents" }
+    object ProcessEvents : FlowContinuation() {
+        override fun toString() = "ProcessEvents"
+    }
 
     /**
      * Immediately abort the flow. Note that this does not imply an error condition.
      */
-    object Abort : FlowContinuation() { override fun toString() = "Abort" }
+    object Abort : FlowContinuation() {
+        override fun toString() = "Abort"
+    }
 }

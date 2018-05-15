@@ -340,14 +340,14 @@ object JacksonSupport {
                 mapper.wellKnownPartyFromX500Name(principal) ?: throw JsonParseException(parser, "Could not find a Party with name $principal")
             } else {
                 val nameMatches = mapper.partiesFromName(parser.text)
-                if (nameMatches.isEmpty()) {
-                    val publicKey = parser.readValueAs<PublicKey>()
-                    mapper.partyFromKey(publicKey)
-                            ?: throw JsonParseException(parser, "Could not find a Party with key ${publicKey.toStringShort()}")
-                } else if (nameMatches.size == 1) {
-                    nameMatches.first()
-                } else {
-                    throw JsonParseException(parser, "Ambiguous name match '${parser.text}': could be any of " +
+                when {
+                    nameMatches.isEmpty() -> {
+                        val publicKey = parser.readValueAs<PublicKey>()
+                        mapper.partyFromKey(publicKey)
+                                ?: throw JsonParseException(parser, "Could not find a Party with key ${publicKey.toStringShort()}")
+                    }
+                    nameMatches.size == 1 -> nameMatches.first()
+                    else -> throw JsonParseException(parser, "Ambiguous name match '${parser.text}': could be any of " +
                             nameMatches.map { it.name }.joinToString(" ... or ... "))
                 }
             }
