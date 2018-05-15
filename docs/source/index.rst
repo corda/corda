@@ -63,6 +63,7 @@ We look forward to seeing what you can do with Corda!
    design/float/design.md
    design/hadr/design.md
    design/kafka-notary/design.md
+   design/monitoring-management/design.md
 
 .. toctree::
    :caption: Participate
