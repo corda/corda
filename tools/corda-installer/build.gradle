@@ -1,0 +1,46 @@
+buildscript {
+    ext.kotlin_version = '1.2.21'
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+group 'net.corda'
+version 'corda-4.0-snapshot'
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}
+
+task copyJar(type: Copy) {
+    println("Copying corda runtime")
+    from(project(':node:capsule').tasks['buildCordaJAR']) {
+        rename 'corda-(.*)', 'corda.jar'
+    }
+    into('src/test/resources/structure/opt/corda')
+}
+
+task buildDeb(dependsOn: copyJar) {
+
+}
+
+task buildRpm(dependsOn: copyJar) {
+
+}
+
+task buildTarball(dependsOn: copyJar) {
+
+}
