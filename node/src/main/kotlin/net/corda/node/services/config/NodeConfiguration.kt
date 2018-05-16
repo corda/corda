@@ -196,6 +196,9 @@ data class NodeConfigurationImpl(
                 errors += "Error when parsing tlsCertCrlIssuer: ${e.message}"
             }
         }
+        if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {
+            errors += "tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE"
+        }
         return errors
     }
 

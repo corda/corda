@@ -44,6 +44,13 @@ class NodeConfigurationImplTest {
     }
 
     @Test
+    fun `can't have tlsCertCrlDistPoint null when crlCheckSoftFail is false`() {
+        val configValidationResult = configTlsCertCrlOptions(null, null, false).validate()
+        assertTrue { configValidationResult.isNotEmpty() }
+        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE")
+    }
+
+    @Test
     fun `check devModeOptions flag helper`() {
         assertTrue { configDebugOptions(true, null).shouldCheckCheckpoints() }
         assertTrue { configDebugOptions(true, DevModeOptions()).shouldCheckCheckpoints() }
@@ -129,8 +136,8 @@ class NodeConfigurationImplTest {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
 
-    private fun configTlsCertCrlOptions(tlsCertCrlDistPoint: URL?, tlsCertCrlIssuer: String?): NodeConfiguration {
-        return testConfiguration.copy(tlsCertCrlDistPoint = tlsCertCrlDistPoint, tlsCertCrlIssuer = tlsCertCrlIssuer)
+    private fun configTlsCertCrlOptions(tlsCertCrlDistPoint: URL?, tlsCertCrlIssuer: String?, crlCheckSoftFail: Boolean = true): NodeConfiguration {
+        return testConfiguration.copy(tlsCertCrlDistPoint = tlsCertCrlDistPoint, tlsCertCrlIssuer = tlsCertCrlIssuer, crlCheckSoftFail = crlCheckSoftFail)
     }
 
     private val testConfiguration = testNodeConfiguration()
