@@ -1,5 +1,5 @@
-Building a Corda Network on Azure Marketplace
-=============================================
+Azure Marketplace
+=================
 
 To help you design, build and test applications on Corda, called CorDapps, a Corda network can be deployed on the `Microsoft Azure Marketplace <https://azure.microsoft.com/en-gb/overview/what-is-azure>`_
 
