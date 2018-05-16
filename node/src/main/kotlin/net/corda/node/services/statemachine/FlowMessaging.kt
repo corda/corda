@@ -29,7 +29,7 @@ interface FlowMessaging {
     /**
      * Start the messaging using the [onMessage] message handler.
      */
-    fun start(onMessage: (ReceivedMessage, deduplicationHandler: DeduplicationHandler) -> Unit)
+    fun start(onMessage: (ReceivedMessage, DeduplicationHandler) -> Unit)
 }
 
 /**
@@ -42,7 +42,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
         const val sessionTopic = "platform.session"
     }
 
-    override fun start(onMessage: (ReceivedMessage, deduplicationHandler: DeduplicationHandler) -> Unit) {
+    override fun start(onMessage: (ReceivedMessage, DeduplicationHandler) -> Unit) {
         serviceHub.networkService.addMessageHandler(sessionTopic) { receivedMessage, _, deduplicationHandler ->
             onMessage(receivedMessage, deduplicationHandler)
         }
