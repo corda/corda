@@ -85,20 +85,11 @@ open class MockServices private constructor(
          * a config from the relevant config file is present in resources folder (used to parametrize test to run against a remote database).
          *
          * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.
-         * Defaults to a random string. Passed to [configSupplier] method.
-         * @param nodeNameExtension Provides additional name extension for [configSupplier].
-         * @param configSupplier Returns [Config] with dataSourceProperties, invoked with [nodeName] and [nodeNameExtension] parameters.
-         * Defaults to configuration created when 'databaseProvider' system property is set.
+         * Defaults to a random string.
          */
-        // TODO: Can we use an X509 principal generator here?
-        @JvmStatic
-        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString(),
-                                         nodeNameExtension: String? = null,
-                                         configSupplier: (String, String?) -> Config = ::databaseProviderDataSourceConfig): Properties {
-            return makeTestDataSourceProperties(nodeName, nodeNameExtension, configSupplier, ::inMemoryH2DataSourceConfig)
+        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
+            return makeTestDataSourceProperties(nodeName, null, ::databaseProviderDataSourceConfig, ::inMemoryH2DataSourceConfig)
         }
-
-
 
         /**
          * Makes database and mock services appropriate for unit tests.
