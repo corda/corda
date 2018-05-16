@@ -60,7 +60,7 @@ import static net.corda.core.node.services.vault.Builder.sum;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
 import static net.corda.core.utilities.ByteArrays.toHexString;
 import static net.corda.testing.core.TestConstants.*;
-import static net.corda.testing.internal.InternalTestUtilsKt.rigorousMock;
+import static net.corda.testing.internal.RigorousMockKt.rigorousMock;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;

@@ -108,7 +108,8 @@ data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
                         val custom: Boolean = false,
-                        val mysql: MySQLConfiguration? = null
+                        val mysql: MySQLConfiguration? = null,
+                        val serviceLegalName: CordaX500Name? = null
 ) {
     init {
         require(raft == null || bftSMaRt == null || !custom || mysql == null) {

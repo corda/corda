@@ -16,7 +16,6 @@ import net.corda.cordform.CordformNode
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.size
-import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
@@ -47,7 +46,7 @@ class NodeInfoWatcherTest {
     val tempFolder = TemporaryFolder()
 
     private val scheduler = TestScheduler()
-    private val testSubscriber = TestSubscriber<NodeInfo>()
+    private val testSubscriber = TestSubscriber<NodeInfoUpdate>()
 
     private lateinit var nodeInfoAndSigned: NodeInfoAndSigned
     private lateinit var nodeInfoPath: Path
@@ -111,7 +110,7 @@ class NodeInfoWatcherTest {
         try {
             val readNodes = testSubscriber.onNextEvents.distinct()
             assertEquals(1, readNodes.size)
-            assertEquals(nodeInfoAndSigned.nodeInfo, readNodes.first())
+            assertEquals(nodeInfoAndSigned.nodeInfo, (readNodes.first() as? NodeInfoUpdate.Add)?.nodeInfo)
         } finally {
             subscription.unsubscribe()
         }
@@ -136,7 +135,7 @@ class NodeInfoWatcherTest {
             testSubscriber.awaitValueCount(1, 5, TimeUnit.SECONDS)
             // The same folder can be reported more than once, so take unique values.
             val readNodes = testSubscriber.onNextEvents.distinct()
-            assertEquals(nodeInfoAndSigned.nodeInfo, readNodes.first())
+            assertEquals(nodeInfoAndSigned.nodeInfo, (readNodes.first() as? NodeInfoUpdate.Add)?.nodeInfo)
         } finally {
             subscription.unsubscribe()
         }
