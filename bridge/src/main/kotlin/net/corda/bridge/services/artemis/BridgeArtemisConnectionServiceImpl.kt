@@ -26,6 +26,7 @@ import org.apache.activemq.artemis.api.core.client.FailoverEventType
 import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import rx.Subscription
+import java.lang.Long.min
 import java.util.concurrent.CountDownLatch
 
 class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
@@ -121,6 +122,7 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
 
     private fun artemisReconnectionLoop() {
         var tcpIndex = 0
+        var reconnectInterval = conf.artemisReconnectionIntervalMin.toLong()
         while (state.locked { running }) {
             val locator = state.locked { locator }
             if (locator == null) {
@@ -154,6 +156,7 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
                 log.info("Session created")
                 val newProducer = newSession.createProducer()
                 state.locked {
+                    reconnectInterval = conf.artemisReconnectionIntervalMin.toLong()
                     started = ArtemisMessagingClient.Started(locator, newSessionFactory, newSession, newProducer)
                 }
                 stateHelper.active = true
@@ -174,10 +177,11 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
 
             try {
                 // Sleep for a short while before attempting reconnect
-                Thread.sleep(conf.artemisReconnectionInterval.toLong())
+                Thread.sleep(reconnectInterval)
             } catch (ex: InterruptedException) {
                 // ignore
             }
+            reconnectInterval = min(2L * reconnectInterval, conf.artemisReconnectionIntervalMax.toLong())
         }
         log.info("Ended Artemis Connector Thread")
     }
