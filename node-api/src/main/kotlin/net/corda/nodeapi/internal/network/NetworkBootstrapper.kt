@@ -1,8 +1,10 @@
 package net.corda.nodeapi.internal.network
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import net.corda.cordform.CordformNode
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
@@ -18,10 +20,7 @@ import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.ContractsJar
-import net.corda.nodeapi.internal.ContractsJarFile
-import net.corda.nodeapi.internal.DEV_ROOT_CA
-import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.CordaSerializationMagic
@@ -66,6 +65,43 @@ class NetworkBootstrapper {
         }
     }
 
+    sealed class NotaryCluster {
+        data class BFT(val name: CordaX500Name) : NotaryCluster()
+        data class CFT(val name: CordaX500Name) : NotaryCluster()
+    }
+
+    data class DirectoryAndConfig(val directory: Path, val config: Config)
+
+    private fun notaryClusters(configs: Map<Path, Config>): Map<NotaryCluster, List<Path>> {
+        val clusteredNotaries = configs.flatMap { (path, config) ->
+            if (config.hasPath("notary.serviceLegalName")) {
+                listOf(CordaX500Name.parse(config.getString("notary.serviceLegalName")) to DirectoryAndConfig(path, config))
+            } else {
+                emptyList()
+            }
+        }
+        return clusteredNotaries.groupBy { it.first }.map { (k, vs) ->
+            val cs = vs.map { it.second.config }
+            if (cs.any { it.hasPath("notary.bftSMaRt") }) {
+                require(cs.all { it.hasPath("notary.bftSMaRt") }) { "Mix of BFT and non-BFT notaries with service name $k" }
+                NotaryCluster.BFT(k) to vs.map { it.second.directory }
+            } else {
+                NotaryCluster.CFT(k) to vs.map { it.second.directory }
+            }
+        }.toMap()
+    }
+
+    private fun generateServiceIdentitiesForNotaryClusters(configs: Map<Path, Config>) {
+        notaryClusters(configs).forEach { (cluster, directories) ->
+            when (cluster) {
+                is NotaryCluster.BFT ->
+                    DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(directories, cluster.name, threshold = 1 + 2 * directories.size / 3)
+                is NotaryCluster.CFT ->
+                    DevIdentityGenerator.generateDistributedNotarySingularIdentity(directories, cluster.name)
+            }
+        }
+    }
+
     fun bootstrap(directory: Path, cordappJars: List<Path>) {
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
@@ -73,6 +109,8 @@ class NetworkBootstrapper {
         val nodeDirs = directory.list { paths -> paths.filter { (it / "corda.jar").exists() }.toList() }
         require(nodeDirs.isNotEmpty()) { "No nodes found" }
         println("Nodes found in the following sub-directories: ${nodeDirs.map { it.fileName }}")
+        val configs = nodeDirs.associateBy({ it }, { ConfigFactory.parseFile((it / "node.conf").toFile()) })
+        generateServiceIdentitiesForNotaryClusters(configs)
         val processes = startNodeInfoGeneration(nodeDirs)
         initialiseSerialization()
         try {
@@ -86,7 +124,7 @@ class NetworkBootstrapper {
             val existingNetParams = loadNetworkParameters(nodeDirs)
             println(existingNetParams ?: "none found")
             println("Gathering notary identities")
-            val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
+            val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
             val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.map(::ContractsJarFile))
             val netParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs)
@@ -182,12 +220,12 @@ class NetworkBootstrapper {
       }
     }
 
-    private fun gatherNotaryInfos(nodeInfoFiles: List<Path>): List<NotaryInfo> {
+    private fun gatherNotaryInfos(nodeInfoFiles: List<Path>, configs: Map<Path, Config>): List<NotaryInfo> {
         return nodeInfoFiles.mapNotNull { nodeInfoFile ->
             // The config contains the notary type
-            val nodeConfig = ConfigFactory.parseFile((nodeInfoFile.parent / "node.conf").toFile())
+            val nodeConfig = configs[nodeInfoFile.parent]!!
             if (nodeConfig.hasPath("notary")) {
-                val validating = nodeConfig.getConfig("notary").getBoolean("validating")
+                val validating = nodeConfig.getBoolean("notary.validating")
                 // And the node-info file contains the notary's identity
                 val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                 NotaryInfo(nodeInfo.notaryIdentity(), validating)
