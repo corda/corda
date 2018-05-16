@@ -87,6 +87,7 @@ open class MockServices private constructor(
          * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.
          * Defaults to a random string.
          */
+        @JvmStatic
         fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
             return makeTestDataSourceProperties(nodeName, null, ::databaseProviderDataSourceConfig, ::inMemoryH2DataSourceConfig)
         }
