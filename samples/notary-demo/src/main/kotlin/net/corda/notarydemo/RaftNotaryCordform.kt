@@ -79,9 +79,5 @@ class RaftNotaryCordform : CordformDefinition() {
     }
 
     override fun setup(context: CordformContext) {
-        DevIdentityGenerator.generateDistributedNotarySingularIdentity(
-                notaryNames.map { context.baseDirectory(it.toString()) },
-                clusterName
-        )
     }
 }
