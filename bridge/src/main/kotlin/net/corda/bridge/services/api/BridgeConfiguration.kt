@@ -87,6 +87,7 @@ interface BridgeInnerConfiguration {
 interface BridgeHAConfig {
     val haConnectionString: String
     val haPriority: Int
+    val haTopic: String
 }
 
 /**

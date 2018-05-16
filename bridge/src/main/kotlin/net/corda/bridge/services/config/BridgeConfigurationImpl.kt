@@ -51,7 +51,7 @@ data class FloatOuterConfigurationImpl(override val floatAddress: NetworkHostAnd
                                        override val expectedCertificateSubject: CordaX500Name,
                                        override val customSSLConfiguration: BridgeSSLConfigurationImpl?) : FloatOuterConfiguration
 
-data class BridgeHAConfigImpl(override val haConnectionString: String, override val haPriority: Int = 10) : BridgeHAConfig
+data class BridgeHAConfigImpl(override val haConnectionString: String, override val haPriority: Int = 10, override val haTopic: String = "/bridge/ha") : BridgeHAConfig
 
 data class BridgeConfigurationImpl(
         override val baseDirectory: Path,

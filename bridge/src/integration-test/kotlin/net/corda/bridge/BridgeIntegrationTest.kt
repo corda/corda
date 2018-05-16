@@ -192,7 +192,7 @@ class BridgeIntegrationTest {
         val bridgeFolder = tempFolder.root.toPath()
         val bridgeConfigResource = "/net/corda/bridge/hawithfloat/bridge/bridge.conf"
         val bridgeConfig = createAndLoadConfigFromResource(bridgeFolder, bridgeConfigResource)
-        assertEquals(BridgeHAConfigImpl("zk://localhost:11105", 10), bridgeConfig.haConfig)
+        assertEquals(BridgeHAConfigImpl("zk://localhost:11105", 20, "/custom/bridge/ha"), bridgeConfig.haConfig)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         createNetworkParams(bridgeFolder)
         val floatFolder = tempFolder.root.toPath() / "float"
@@ -226,7 +226,7 @@ class BridgeIntegrationTest {
             assertEquals(true, bridge.active)
             assertEquals(true, float.active)
             assertEquals(true, serverListening("localhost", 10005))
-            val higherPriorityClient = ZkClient("localhost:11105", "/bridge/ha", "Test", 5)
+            val higherPriorityClient = ZkClient("localhost:11105", "/custom/bridge/ha", "Test", 5)
             higherPriorityClient.start()
             higherPriorityClient.requestLeadership() // should win leadership and kick out our bridge
             assertEquals(false, bridgeStateFollower.next())

@@ -45,7 +45,7 @@ class ExternalMasterElectionService(val conf: BridgeConfiguration,
         val info = ManagementFactory.getRuntimeMXBean()
         val pid = info.name.split("@").firstOrNull()  // TODO Java 9 has better support for this
         val nodeId = "$hostName:$pid"
-        val leaderElector = ZkClient(zkConf, "/bridge/ha", nodeId, leaderPriority)
+        val leaderElector = ZkClient(zkConf, conf.haConfig!!.haTopic, nodeId, leaderPriority)
         haElector = leaderElector
         val listener = object : CordaLeaderListener {
             override fun notLeader() {
