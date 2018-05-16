@@ -74,7 +74,6 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
-    testCompile "org.mockito:mockito-core:$mockito_version"
 }
 
 jar {
