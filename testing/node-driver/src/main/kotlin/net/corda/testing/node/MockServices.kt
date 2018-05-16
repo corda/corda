@@ -83,7 +83,15 @@ open class MockServices private constructor(
             return makeTestDataSourceProperties(nodeName, nodeNameExtension, configSupplier, ::inMemoryH2DataSourceConfig)
         }
 
-
+        /**
+         * Make properties appropriate for creating a DataSource for unit tests.
+         *
+         * @param nodeName Reflects the "instance" of the in-memory database.  Defaults to a random string.
+         */
+        @JvmStatic
+        fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
+            return makeTestDataSourceProperties(nodeName, null, ::inMemoryH2DataSourceConfig)
+        }
 
         /**
          * Makes database and mock services appropriate for unit tests.
