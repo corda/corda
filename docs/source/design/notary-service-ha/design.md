@@ -1,5 +1,7 @@
 # HA Notary Service
 
+.. important:: This design document describes a legacy feature of Corda Enterprise. It is superseded by the High Performance CFT Notary Service.
+
 ## Overview
 
 The distributed notary service tracks spent contract states and prevents double spending. For high-availability (HA),
