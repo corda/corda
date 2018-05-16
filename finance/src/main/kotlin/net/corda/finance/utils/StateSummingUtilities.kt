@@ -10,9 +10,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.Issued
 import net.corda.core.identity.AbstractParty
-import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.CommodityContract
 import net.corda.finance.contracts.asset.Obligation
 import java.util.*
 
@@ -44,19 +42,6 @@ fun <T : Any> Iterable<ContractState>.sumFungibleOrNull() = filterIsInstance<Fun
 
 /** Sums the asset states in the list, returning zero of the given token if there are none. */
 fun <T : Any> Iterable<ContractState>.sumFungibleOrZero(token: Issued<T>) = filterIsInstance<FungibleAsset<T>>().map { it.amount }.sumOrZero(token)
-
-/**
- * Sums the cash states in the list, throwing an exception if there are none, or if any of the cash
- * states cannot be added together (i.e. are different currencies).
- */
-fun Iterable<ContractState>.sumCommodities() = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrThrow()
-
-/** Sums the cash states in the list, returning null if there are none. */
-@Suppress("unused")
-fun Iterable<ContractState>.sumCommoditiesOrNull() = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrNull()
-
-/** Sums the cash states in the list, returning zero of the given currency if there are none. */
-fun Iterable<ContractState>.sumCommoditiesOrZero(currency: Issued<Commodity>) = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrZero(currency)
 
 /**
  * Sums the obligation states in the list, throwing an exception if there are none. All state objects in the
