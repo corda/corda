@@ -575,7 +575,7 @@ class ObligationTests {
             unverifiedTransaction {
                 attachments(Obligation.PROGRAM_ID)
                 output(Obligation.PROGRAM_ID, "Alice's 1 FCOJ obligation to Bob", oneUnitFcojObligation between Pair(ALICE, BOB))
-                output(Obligation.PROGRAM_ID, "Alice's 1 FCOJ", CommodityState(oneUnitFcoj, ALICE
+                output(Obligation.PROGRAM_ID, "Alice's 1 FCOJ", CommodityState(oneUnitFcoj, ALICE))
             }
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)
