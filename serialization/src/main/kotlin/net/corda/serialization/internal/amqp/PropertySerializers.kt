@@ -104,16 +104,16 @@ class EvolutionPropertyReader : PropertyReader() {
  * Represents a generic interface to a serializable property of an object.
  *
  * @property initialPosition where in the constructor used for serialization the property occurs.
- * @property getter a [PropertySerializer] wrapping access to the property. This will either be a
+ * @property serializer a [PropertySerializer] wrapping access to the property. This will either be a
  * method invocation on the getter or, if not publicly accessible, reflection based by temporally
  * making the property accessible.
  */
 abstract class PropertyAccessor(
         val initialPosition: Int,
-        open val getter: PropertySerializer) {
+        open val serializer: PropertySerializer) {
     companion object : Comparator<PropertyAccessor> {
         override fun compare(p0: PropertyAccessor?, p1: PropertyAccessor?): Int {
-            return p0?.getter?.name?.compareTo(p1?.getter?.name ?: "") ?: 0
+            return p0?.serializer?.name?.compareTo(p1?.serializer?.name ?: "") ?: 0
         }
     }
 
@@ -123,7 +123,7 @@ abstract class PropertyAccessor(
     abstract fun set(instance: Any, obj: Any?)
 
     override fun toString(): String {
-        return "${getter.name}($initialPosition)"
+        return "${serializer.name}($initialPosition)"
     }
 }
 
@@ -157,7 +157,7 @@ class PropertyAccessorGetterSetter(
  */
 class PropertyAccessorConstructor(
         initialPosition: Int,
-        override val getter: PropertySerializer) : PropertyAccessor(initialPosition, getter) {
+        override val serializer: PropertySerializer) : PropertyAccessor(initialPosition, serializer) {
     /**
      * Because the property should be being set on the obejct through the constructor any
      * calls to the explicit setter should be an error.

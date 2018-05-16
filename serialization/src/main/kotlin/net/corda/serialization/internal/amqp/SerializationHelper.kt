@@ -2,6 +2,7 @@ package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
+import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
@@ -25,11 +26,11 @@ import kotlin.reflect.jvm.javaType
  *
  * If there's only one constructor, it selects that.  If there are two and one is the default, it selects the other.
  * Otherwise it starts with the primary constructor in kotlin, if there is one, and then will override this with any that is
- * annotated with [@CordaConstructor].  It will report an error if more than one constructor is annotated.
+ * annotated with [@ConstructorForDeserialization].  It will report an error if more than one constructor is annotated.
  */
-internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
+fun constructorForDeserialization(type: Type): KFunction<Any>? {
     val clazz: Class<*> = type.asClass()!!
-    if (isConcrete(clazz)) {
+    if (clazz.isConcreteClass) {
         var preferredCandidate: KFunction<Any>? = clazz.kotlin.primaryConstructor
         var annotatedCount = 0
         val kotlinConstructors = clazz.kotlin.constructors
@@ -42,7 +43,7 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
                 preferredCandidate = kotlinConstructor
             } else if (kotlinConstructor.findAnnotation<ConstructorForDeserialization>() != null) {
                 if (annotatedCount++ > 0) {
-                    throw NotSerializableException("More than one constructor for $clazz is annotated with @CordaConstructor.")
+                    throw NotSerializableException("More than one constructor for $clazz is annotated with @ConstructorForDeserialization.")
                 }
                 preferredCandidate = kotlinConstructor
             }
@@ -63,18 +64,18 @@ internal fun constructorForDeserialization(type: Type): KFunction<Any>? {
  * Note, you will need any Java classes to be compiled with the `-parameters` option to ensure constructor parameters
  * have names accessible via reflection.
  */
-internal fun <T : Any> propertiesForSerialization(
+fun <T : Any> propertiesForSerialization(
         kotlinConstructor: KFunction<T>?,
         type: Type,
-        factory: SerializerFactory) = PropertySerializers.make(
-        if (kotlinConstructor != null) {
-            propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
-        } else {
-            propertiesForSerializationFromAbstract(type.asClass()!!, type, factory)
-        }.sortedWith(PropertyAccessor))
-
-
-fun isConcrete(clazz: Class<*>): Boolean = !(clazz.isInterface || Modifier.isAbstract(clazz.modifiers))
+        factory: SerializerFactory): PropertySerializers {
+    return PropertySerializers.make(
+            if (kotlinConstructor != null) {
+                propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
+            } else {
+                propertiesForSerializationFromAbstract(type.asClass()!!, type, factory)
+            }.sortedWith(PropertyAccessor)
+    )
+}
 
 /**
  * Encapsulates the property of a class and its potential getter and setter methods.

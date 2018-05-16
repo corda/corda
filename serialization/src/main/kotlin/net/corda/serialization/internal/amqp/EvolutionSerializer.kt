@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.carpenter.getTypeAsClass
@@ -63,7 +64,7 @@ abstract class EvolutionSerializer(
         private fun getEvolverConstructor(type: Type, oldArgs: Map<String, OldParam>): KFunction<Any>? {
             val clazz: Class<*> = type.asClass()!!
 
-            if (!isConcrete(clazz)) return null
+            if (!clazz.isConcreteClass) return null
 
             val oldArgumentSet = oldArgs.map { Pair(it.key as String?, it.value.property.resolvedType) }
 
@@ -109,7 +110,7 @@ abstract class EvolutionSerializer(
                 classProperties: Map<String, PropertyDescriptor>): AMQPSerializer<Any> {
             val setters = propertiesForSerializationFromSetters(classProperties,
                     new.type,
-                    factory).associateBy({ it.getter.name }, { it })
+                    factory).associateBy({ it.serializer.name }, { it })
             return EvolutionSerializerViaSetters(new.type, factory, readersAsSerialized, constructor, setters)
         }
 
