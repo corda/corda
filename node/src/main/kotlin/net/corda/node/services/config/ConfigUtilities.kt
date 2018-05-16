@@ -37,8 +37,6 @@ object ConfigHelper {
         val smartDevMode = CordaSystemUtils.isOsMac() || (CordaSystemUtils.isOsWindows() && !CordaSystemUtils.getOsName().toLowerCase().contains("server"))
         val devModeConfig = ConfigFactory.parseMap(mapOf("devMode" to smartDevMode))
 
-        val finalConfig = configOf(
-
         val systemOverrides = ConfigFactory.systemProperties().cordaEntriesOnly()
         val environmentOverrides = ConfigFactory.systemEnvironment().cordaEntriesOnly()
         val finalConfig = configOf(
