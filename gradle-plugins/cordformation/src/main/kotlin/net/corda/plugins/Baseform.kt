@@ -91,7 +91,7 @@ open class Baseform : DefaultTask() {
         val plugin = project.convention.getPlugin(JavaPluginConvention::class.java)
         val classpath = plugin.sourceSets.getByName(MAIN_SOURCE_SET_NAME).runtimeClasspath
         val urls = classpath.files.map { it.toURI().toURL() }.toTypedArray()
-        return URLClassLoader(urls, javaClass.classLoader).loadClass("net.corda.nodeapi.internal.network.NetworkBootstrapper")
+        return URLClassLoader(urls).loadClass("net.corda.nodeapi.internal.network.NetworkBootstrapper")
     }
 
     /**
