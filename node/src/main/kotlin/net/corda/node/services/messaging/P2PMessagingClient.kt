@@ -445,7 +445,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 deliver(cordaMessage, artemisMessage)
             } else {
                 log.trace { "Discard duplicate message ${cordaMessage.uniqueMessageId} for ${cordaMessage.topic}" }
-                artemisMessage.individualAcknowledge()
+                messagingExecutor!!.acknowledge(artemisMessage)
             }
         }
     }

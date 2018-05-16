@@ -546,6 +546,7 @@ class DriverDSLImpl(
             val clusterAddresses = if (clusterAddress != null) listOf(clusterAddress) else emptyList()
             val config = NotaryConfig(
                     validating = spec.validating,
+                    serviceLegalName = spec.name,
                     raft = RaftConfig(nodeAddress = nodeAddress, clusterAddresses = clusterAddresses))
             return config.toConfigMap()
         }
@@ -1130,5 +1131,3 @@ fun writeConfig(path: Path, filename: String, config: Config) {
 private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
-
-private operator fun Config.plus(property: Pair<String, Any>) = withValue(property.first, ConfigValueFactory.fromAnyRef(property.second))

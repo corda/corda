@@ -26,7 +26,7 @@ import static java.util.Collections.emptyList;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.finance.Currencies.issuedBy;
 import static net.corda.testing.node.NodeTestUtils.transaction;
-import static net.corda.testing.internal.InternalTestUtilsKt.rigorousMock;
+import static net.corda.testing.internal.RigorousMockKt.rigorousMock;
 import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
 import static org.mockito.Mockito.doReturn;
 
