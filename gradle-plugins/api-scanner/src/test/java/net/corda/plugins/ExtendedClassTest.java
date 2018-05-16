@@ -1,51 +1,36 @@
 package net.corda.plugins;
 
-import org.gradle.testkit.runner.BuildResult;
-import org.gradle.testkit.runner.BuildTask;
-import org.gradle.testkit.runner.GradleRunner;
-import static org.gradle.testkit.runner.TaskOutcome.*;
-import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestRule;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 
-import static net.corda.plugins.CopyUtils.*;
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class ExtendedClassTest {
-    @Rule
-    public final TemporaryFolder testProjectDir = new TemporaryFolder();
+    private static final TemporaryFolder testProjectDir = new TemporaryFolder();
+    private static final GradleProject testProject = new GradleProject(testProjectDir, "extended-class");
 
-    @Before
-    public void setup() throws IOException {
-        File buildFile = testProjectDir.newFile("build.gradle");
-        copyResourceTo("extended-class/build.gradle", buildFile);
-    }
+    @ClassRule
+    public static final TestRule rules = RuleChain.outerRule(testProjectDir).around(testProject);
 
     @Test
     public void testExtendedClass() throws IOException {
-        BuildResult result = GradleRunner.create()
-            .withProjectDir(testProjectDir.getRoot())
-            .withArguments(getGradleArgsForTasks("scanApi"))
-            .withPluginClasspath()
-            .build();
-        String output = result.getOutput();
-        System.out.println(output);
+        assertThat(testProject.getApiLines()).containsSequence(
+            "public class net.corda.example.ExtendedClass extends java.io.FilterInputStream",
+            "  public <init>(java.io.InputStream)",
+            "##");
+    }
 
-        BuildTask scanApi = result.task(":scanApi");
-        assertNotNull(scanApi);
-        assertEquals(SUCCESS, scanApi.getOutcome());
-
-        Path api = pathOf(testProjectDir, "build", "api", "extended-class.txt");
-        assertThat(api).isRegularFile();
-        assertEquals(
-            "public class net.corda.example.ExtendedClass extends java.io.FilterInputStream\n" +
-            "  public <init>(java.io.InputStream)\n" +
-            "##\n", CopyUtils.toString(api));
+    @Test
+    public void testImplementingClass() throws IOException {
+        assertThat(testProject.getApiLines()).containsSequence(
+            "public class net.corda.example.ImplementingClass extends java.lang.Object implements java.io.Closeable",
+            "  public <init>()",
+            "  public void close()",
+            "##");
     }
 }

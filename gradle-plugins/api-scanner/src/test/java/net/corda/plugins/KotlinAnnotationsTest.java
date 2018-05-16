@@ -1,69 +1,98 @@
 package net.corda.plugins;
 
-import org.gradle.testkit.runner.BuildResult;
-import org.gradle.testkit.runner.BuildTask;
-import org.gradle.testkit.runner.GradleRunner;
-import static org.gradle.testkit.runner.TaskOutcome.*;
-import org.junit.Before;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestRule;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 
-import static net.corda.plugins.CopyUtils.*;
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class KotlinAnnotationsTest {
-    @Rule
-    public final TemporaryFolder testProjectDir = new TemporaryFolder();
+    private static final TemporaryFolder testProjectDir = new TemporaryFolder();
+    private static final GradleProject testProject = new GradleProject(testProjectDir, "kotlin-annotations");
 
-    @Before
-    public void setup() throws IOException {
-        File buildFile = testProjectDir.newFile("build.gradle");
-        copyResourceTo("kotlin-annotations/build.gradle", buildFile);
+    @ClassRule
+    public static final TestRule rules = RuleChain.outerRule(testProjectDir).around(testProject);
+
+    private static final String[] expectedClassWithDeprecatedFunctions = {
+        "public final class net.corda.example.HasDeprecatedFunctions extends java.lang.Object",
+        "  public <init>()",
+        "  @NotNull",
+        "  public final String doSomething()",
+        "##"
+    };
+
+    private static final String[] expectedClassWithJvmField = {
+        "public final class net.corda.example.HasJvmField extends java.lang.Object",
+        "  public <init>()",
+        "  @NotNull",
+        "  public final String stringValue = \"Hello World\"",
+        "##"
+    };
+
+    private static final String[] expectedClassWithJvmStaticFunction = {
+        "public final class net.corda.example.HasJvmStaticFunction extends java.lang.Object",
+        "  public <init>()",
+        "  public static final void doThing(String)",
+        "  public static final net.corda.example.HasJvmStaticFunction$Companion Companion",
+        "##"
+    };
+
+    private static final String[] expectedClassWithJvmStaticFunctionCompanion = {
+        "public static final class net.corda.example.HasJvmStaticFunction$Companion extends java.lang.Object",
+        "  public final void doThing(String)",
+        "##"
+    };
+
+    private static final String[] expectedClassWithOverloadedConstructor = {
+        "public final class net.corda.example.HasOverloadedConstructor extends java.lang.Object",
+        "  public <init>()",
+        "  public <init>(String)",
+        "  public <init>(String, String)",
+        "  public <init>(String, String, int)",
+        "  @NotNull",
+        "  public final String getNotNullable()",
+        "  @Nullable",
+        "  public final String getNullable()",
+        "  public final int getNumber()",
+        "##"
+    };
+
+    @Test
+    public void testDeprecatedAnnotation() throws IOException {
+        assertThat(testProject.getApiLines())
+            .containsSequence(expectedClassWithDeprecatedFunctions);
     }
 
     @Test
-    public void testKotlinAnnotations() throws IOException {
-        BuildResult result = GradleRunner.create()
-            .withProjectDir(testProjectDir.getRoot())
-            .withArguments(getGradleArgsForTasks("scanApi"))
-            .withPluginClasspath()
-            .build();
-        String output = result.getOutput();
-        System.out.println(output);
+    public void testJvmFieldAnnotation() throws IOException {
+        assertThat(testProject.getApiLines())
+            .containsSequence(expectedClassWithJvmField);
+    }
 
-        BuildTask scanApi = result.task(":scanApi");
-        assertNotNull(scanApi);
-        assertEquals(SUCCESS, scanApi.getOutcome());
+    @Test
+    public void testJvmStaticAnnotation() throws IOException {
+        assertThat(testProject.getApiLines())
+            .containsSequence(expectedClassWithJvmStaticFunction)
+            .containsSequence(expectedClassWithJvmStaticFunctionCompanion);
+    }
 
-        Path api = pathOf(testProjectDir, "build", "api", "kotlin-annotations.txt");
-        assertThat(api).isRegularFile();
-        assertEquals(
-            "public final class net.corda.example.HasJvmField extends java.lang.Object\n" +
-            "  public <init>()\n" +
-            "  @org.jetbrains.annotations.NotNull public final String stringValue = \"Hello World\"\n" +
-            "##\n" +
-            "public final class net.corda.example.HasJvmStaticFunction extends java.lang.Object\n" +
-            "  public <init>()\n" +
-            "  @kotlin.jvm.JvmStatic public static final void doThing(String)\n" +
-            "  public static final net.corda.example.HasJvmStaticFunction$Companion Companion\n" +
-            "##\n" +
-            "public static final class net.corda.example.HasJvmStaticFunction$Companion extends java.lang.Object\n" +
-            "  @kotlin.jvm.JvmStatic public final void doThing(String)\n" +
-            "##\n" +
-            "public final class net.corda.example.HasOverloadedConstructor extends java.lang.Object\n" +
-            "  public <init>()\n" +
-            "  public <init>(String)\n" +
-            "  public <init>(String, String)\n" +
-            "  public <init>(String, String, int)\n" +
-            "  @org.jetbrains.annotations.NotNull public final String getNotNullable()\n" +
-            "  @org.jetbrains.annotations.Nullable public final String getNullable()\n" +
-            "  public final int getNumber()\n" +
-            "##\n", CopyUtils.toString(api));
+    @Test
+    public void testJvmOverloadedAnnotation() throws IOException {
+        assertThat(testProject.getApiLines())
+            .containsSequence(expectedClassWithOverloadedConstructor);
+    }
+
+    @Test
+    public void testJvmDefaultAnnotation() throws IOException {
+        assertThat(testProject.getApiLines())
+            .containsSequence(
+                "public interface net.corda.example.HasDefaultMethod",
+                 "  public void doSomething(String)",
+                 "##"
+            );
     }
 }

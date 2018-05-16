@@ -1,3 +1,4 @@
+@file:Suppress("UNUSED")
 package net.corda.example
 
 class HasOverloadedConstructor @JvmOverloads constructor (

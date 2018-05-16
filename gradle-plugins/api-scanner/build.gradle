@@ -1,4 +1,5 @@
 apply plugin: 'java'
+apply plugin: 'jacoco'
 apply plugin: 'java-gradle-plugin'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
@@ -20,8 +21,13 @@ gradlePlugin {
     }
 }
 
+configurations {
+    jacocoRuntime
+}
+
 dependencies {
-    compile "io.github.lukehutch:fast-classpath-scanner:2.7.0"
+    compile "io.github.lukehutch:fast-classpath-scanner:2.18.2"
+    testCompile project(':api-scanner:annotations')
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile "junit:junit:$junit_version"
 
@@ -29,12 +35,16 @@ dependencies {
     // on the Kotlin classes in the test/resources directory.
     testCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    testCompile project(':api-scanner:annotations')
+    jacocoRuntime "org.jacoco:org.jacoco.agent:${jacoco.toolVersion}:runtime"
 }
 
 processTestResources {
     filesMatching('**/kotlin-*/build.gradle') {
         expand(['kotlin_version': kotlin_version])
+    }
+    filesMatching('gradle.properties') {
+        expand(['jacocoAgent': configurations.jacocoRuntime.asPath.replace('\\', '/'),
+                'buildDir': buildDir])
     }
 }
 

@@ -1,52 +1,38 @@
 package net.corda.plugins;
 
-import org.gradle.testkit.runner.BuildResult;
-import org.gradle.testkit.runner.BuildTask;
-import org.gradle.testkit.runner.GradleRunner;
-import static org.gradle.testkit.runner.TaskOutcome.*;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.RuleChain;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestRule;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
-import static net.corda.plugins.CopyUtils.*;
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class AnnotatedInterfaceTest {
-    @Rule
-    public final TemporaryFolder testProjectDir = new TemporaryFolder();
+    private final TemporaryFolder testProjectDir = new TemporaryFolder();
+    private final GradleProject testProject = new GradleProject(testProjectDir, "annotated-interface");
 
-    @Before
-    public void setup() throws IOException {
-        File buildFile = testProjectDir.newFile("build.gradle");
-        copyResourceTo("annotated-interface/build.gradle", buildFile);
-    }
+    @Rule
+    public TestRule rules = RuleChain.outerRule(testProjectDir).around(testProject);
 
     @Test
     public void testAnnotatedInterface() throws IOException {
-        BuildResult result = GradleRunner.create()
-            .withProjectDir(testProjectDir.getRoot())
-            .withArguments(getGradleArgsForTasks("scanApi"))
-            .withPluginClasspath()
-            .build();
-        String output = result.getOutput();
-        System.out.println(output);
-
-        BuildTask scanApi = result.task(":scanApi");
-        assertNotNull(scanApi);
-        assertEquals(SUCCESS, scanApi.getOutcome());
-
-        Path api = pathOf(testProjectDir, "build", "api", "annotated-interface.txt");
-        assertThat(api).isRegularFile();
-        assertThat(Files.readAllLines(api)).containsOnlyOnce(
-            "@net.corda.annotation.AlsoInherited @net.corda.annotation.IsInherited @net.corda.annotation.NotInherited public interface net.corda.example.HasInheritedAnnotation",
-            "@net.corda.annotation.AlsoInherited @net.corda.annotation.IsInherited public interface net.corda.example.InheritingAnnotations extends net.corda.example.HasInheritedAnnotation"
-        );
+        assertThat(testProject.getApiLines())
+            .containsSequence(
+                "@AlsoInherited",
+                "@IsInherited",
+                "@NotInherited",
+                "public interface net.corda.example.HasInheritedAnnotation")
+            .containsSequence(
+                "@AlsoInherited",
+                "@IsInherited",
+                "public interface net.corda.example.InheritingAnnotations extends net.corda.example.HasInheritedAnnotation")
+            .containsSequence(
+                "@DoNotImplement",
+                "@AnAnnotation",
+                "public interface net.corda.example.DoNotImplementAnnotation"
+            );
     }
 }

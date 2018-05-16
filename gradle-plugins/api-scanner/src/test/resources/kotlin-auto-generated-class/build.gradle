@@ -3,7 +3,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '$kotlin_version'
 }
 
-description 'Test appearance of Kotlin-specific annotations'
+description 'Test appearance of Kotlin lambdas'
 
 repositories {
     mavenLocal()
@@ -13,7 +13,7 @@ repositories {
 sourceSets {
     main {
         kotlin {
-            srcDir file("../resources/test/kotlin-annotations/kotlin")
+            srcDir file("../resources/test/kotlin-auto-generated-class/kotlin")
         }
     }
 }
@@ -23,15 +23,8 @@ dependencies {
     compile 'org.jetbrains.kotlin:kotlin-reflect:$kotlin_version'
 }
 
-compileKotlin {
-    kotlinOptions {
-        jvmTarget = "1.8"
-        freeCompilerArgs = ['-Xenable-jvm-default']
-    }
-}
-
 jar {
-    baseName = "kotlin-annotations"
+    baseName = "kotlin-auto-generated-class"
 }
 
 scanApi {
