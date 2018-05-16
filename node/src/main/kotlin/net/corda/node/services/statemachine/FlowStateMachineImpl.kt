@@ -159,7 +159,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     private fun checkDbTransaction(isPresent: Boolean) {
         if (isPresent) {
-            requireNotNull(contextTransactionOrNull != null)
+            requireNotNull(contextTransactionOrNull)
         } else {
             require(contextTransactionOrNull == null)
         }
