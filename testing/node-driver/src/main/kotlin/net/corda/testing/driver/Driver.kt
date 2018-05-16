@@ -145,6 +145,38 @@ data class NodeParameters(
         val maximumHeapSize: String = "512m",
         val logLevel: String? = null
 ) {
+    constructor(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String
+    ) : this(
+            providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            null)
+
+    fun copy(
+            providedName: CordaX500Name?,
+            rpcUsers: List<User>,
+            verifierType: VerifierType,
+            customOverrides: Map<String, Any?>,
+            startInSameProcess: Boolean?,
+            maximumHeapSize: String
+    ) = this.copy(
+            providedName,
+            rpcUsers,
+            verifierType,
+            customOverrides,
+            startInSameProcess,
+            maximumHeapSize,
+            null)
+
     fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
     fun withRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
     fun withVerifierType(verifierType: VerifierType): NodeParameters = copy(verifierType = verifierType)
