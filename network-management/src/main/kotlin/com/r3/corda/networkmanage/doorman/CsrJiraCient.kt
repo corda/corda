@@ -58,11 +58,14 @@ class CsrJiraClient(restClient: JiraRestClient, projectCode: String) : JiraClien
         }
 
         val data = mapOf("Requested Role Type" to certRole.name,
+                "Common Name" to subject.commonName,
                 "Organisation" to subject.organisation,
                 "Organisation Unit" to subject.organisationUnit,
+                "State" to subject.state,
                 "Nearest City" to subject.locality,
                 "Country" to subject.country,
-                "Email" to email)
+                "Email" to email,
+                "X500 Name" to subject.toString())
 
         val ticketDescription = data.filter { it.value != null }.map { "${it.key}: ${it.value}" }.joinToString("\n") + "\n\n{code}$request{code}"
 
