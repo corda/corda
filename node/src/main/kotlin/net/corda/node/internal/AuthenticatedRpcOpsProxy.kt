@@ -11,7 +11,7 @@ import java.lang.reflect.Proxy
 /**
  * Implementation of [CordaRPCOps] that checks authorisation.
  */
-class AuthenticatedRpcOpsProxy(private val delegate: CordaRPCOps) : CordaRPCOps by proxy(delegate, ::rpcContext) {
+internal class AuthenticatedRpcOpsProxy(private val delegate: CordaRPCOps) : CordaRPCOps by proxy(delegate, ::rpcContext) {
 
     /**
      * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed

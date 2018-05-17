@@ -26,7 +26,7 @@ import java.lang.reflect.Method
 import java.lang.reflect.Proxy.newProxyInstance
 import kotlin.reflect.KClass
 
-class ExceptionMaskingRpcOpsProxy(private val delegate: CordaRPCOps) : CordaRPCOps by proxy(delegate) {
+internal class ExceptionMaskingRpcOpsProxy(private val delegate: CordaRPCOps) : CordaRPCOps by proxy(delegate) {
 
     private companion object {
         private val logger = loggerFor<ExceptionMaskingRpcOpsProxy>()
