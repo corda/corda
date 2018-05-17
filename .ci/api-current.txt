@@ -6537,7 +6537,11 @@ public final class net.corda.client.rpc.CordaRPCConnection extends java.lang.Obj
   public int getServerProtocolVersion()
   public void notifyServerAndClose()
 ##
-@net.corda.core.DoNotImplement public interface net.corda.client.rpc.RPCConnection extends java.io.Closeable
+public final class net.corda.client.rpc.PermissionException extends net.corda.core.CordaRuntimeException implements net.corda.nodeapi.exceptions.RpcSerializableError
+  public <init>(String)
+##
+@DoNotImplement
+public interface net.corda.client.rpc.RPCConnection extends java.io.Closeable
   public abstract void forceClose()
   @NotNull
   public abstract I getProxy()
