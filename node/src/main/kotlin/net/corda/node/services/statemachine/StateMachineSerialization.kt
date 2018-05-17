@@ -19,11 +19,11 @@ import net.corda.core.serialization.deserialize as deserializeImpl
 import net.corda.core.serialization.serialize as serializeImpl
 
 inline fun <reified T : Any> StateMachineSerialization.deserialize(bytes: ByteSequence, useCase: UseCase? = null) = deserialize(bytes, T::class.java, useCase)
-inline fun <reified T : Any> StateMachineSerialization.deserialize(bytes: SerializedBytes<T>, useCase: UseCase?) = deserialize(bytes, T::class.java, useCase)
+inline fun <reified T : Any> StateMachineSerialization.deserialize(bytes: SerializedBytes<out T>, useCase: UseCase?) = deserialize(bytes, T::class.java, useCase)
 interface StateMachineSerialization {
     fun <T : Any> serialize(obj: T, useCase: UseCase? = null): SerializedBytes<T>
     fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, useCase: UseCase?): T
-    fun <T : Any> checkPayloadIs(payload: SerializedBytes<*>, type: Class<T>): UntrustworthyData<T>
+    fun <T : Any> checkPayloadIs(payload: SerializedBytes<Any>, type: Class<T>): UntrustworthyData<T>
 }
 
 class NodeStateMachineSerialization(serviceHub: ServiceHub, toBeTokenized: Any) : SingletonSerializeAsToken(), StateMachineSerialization {
@@ -41,7 +41,7 @@ class NodeStateMachineSerialization(serviceHub: ServiceHub, toBeTokenized: Any) 
         else -> throw UnsupportedOperationException(useCase.toString())
     }
 
-    override fun <T : Any> checkPayloadIs(payload: SerializedBytes<*>, type: Class<T>) = payload.checkPayloadIs(type)
+    override fun <T : Any> checkPayloadIs(payload: SerializedBytes<Any>, type: Class<T>) = payload.checkPayloadIs(type)
 }
 
 class NodeStateMachineSerializationImplementation(private val serviceHub: ServiceHub) : (Any) -> NodeStateMachineSerialization {

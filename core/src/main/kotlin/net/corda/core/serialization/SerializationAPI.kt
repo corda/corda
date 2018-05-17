@@ -251,7 +251,7 @@ fun <T : Any> T.serialize(serializationFactory: SerializationFactory = Serializa
  * to get the original object back.
  */
 @Suppress("unused")
-class SerializedBytes<out T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
+class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }
 }
