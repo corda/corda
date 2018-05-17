@@ -20,7 +20,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
-import net.corda.client.rpc.internal.serialization.kryo.RpcClientObservableSerializer
+import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableSerializer
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId

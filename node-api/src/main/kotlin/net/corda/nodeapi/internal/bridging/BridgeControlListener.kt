@@ -33,19 +33,24 @@ import rx.subjects.PublishSubject
 import java.util.*
 
 class BridgeControlListener(val config: NodeSSLConfiguration,
+
                             socksProxyConfig: SocksProxyConfig? = null,
+                            maxMessageSize: Int,
                             val artemisMessageClientFactory: () -> ArtemisSessionProvider) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
     private val bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
-    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, socksProxyConfig, artemisMessageClientFactory)
+    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, socksProxyConfig, maxMessageSize,
+            artemisMessageClientFactory)
     private val validInboundQueues = mutableSetOf<String>()
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
 
     constructor(config: NodeSSLConfiguration,
                 p2pAddress: NetworkHostAndPort,
+
                 maxMessageSize: Int,
-                socksProxy: SocksProxyConfig? = null) : this(config, socksProxy, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+                socksProxy: SocksProxyConfig? = null) : this(config, socksProxy, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+
 
     companion object {
         private val log = contextLogger()

@@ -22,3 +22,7 @@ import java.nio.file.Path
 fun Path.requireOnDefaultFileSystem() {
     require(fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
 }
+
+fun requireMessageSize(messageSize: Int, limit: Int) {
+    require(messageSize <= limit) { "Message exceeds maxMessageSize network parameter, maxMessageSize: [$limit], message size: [$messageSize]" }
+}

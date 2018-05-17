@@ -27,6 +27,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
+import net.corda.nodeapi.internal.requireMessageSize
 import org.apache.qpid.proton.engine.Delivery
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -51,7 +52,8 @@ class AMQPServer(val hostName: String,
                  private val keyStorePrivateKeyPassword: CharArray,
                  private val trustStore: KeyStore,
                  private val crlCheckSoftFail: Boolean,
-                 private val trace: Boolean = false) : AutoCloseable {
+                 private val trace: Boolean = false,
+                 private val maxMessageSize: Int) : AutoCloseable {
 
     companion object {
         init {
@@ -78,7 +80,8 @@ class AMQPServer(val hostName: String,
                 keyStorePrivateKeyPassword: String,
                 trustStore: KeyStore,
                 crlCheckSoftFail: Boolean,
-                trace: Boolean = false) : this(hostName, port, userName, password, keyStore, keyStorePrivateKeyPassword.toCharArray(), trustStore, crlCheckSoftFail, trace)
+                trace: Boolean = false,
+                maxMessageSize: Int) : this(hostName, port, userName, password, keyStore, keyStorePrivateKeyPassword.toCharArray(), trustStore, crlCheckSoftFail, trace, maxMessageSize)
 
     private class ServerChannelInitializer(val parent: AMQPServer) : ChannelInitializer<SocketChannel>() {
         private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
@@ -166,6 +169,7 @@ class AMQPServer(val hostName: String,
                       destinationLegalName: String,
                       destinationLink: NetworkHostAndPort,
                       properties: Map<String, Any?>): SendableMessage {
+        requireMessageSize(payload.size, maxMessageSize)
         val dest = InetSocketAddress(destinationLink.host, destinationLink.port)
         require(dest in clientChannels.keys) {
             "Destination not available"

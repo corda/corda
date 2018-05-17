@@ -295,7 +295,11 @@ open class SerializerFactory(
     }
 
     private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> = serializersByType.computeIfAbsent(type) {
-        if (isPrimitive(clazz)) {
+        if (clazz.isSynthetic) {
+            // Explicitly ban synthetic classes, we have no way of recreating them when deserializing. This also
+            // captures Lambda expressions and other anonymous functions
+            throw NotSerializableException(type.typeName)
+        } else if (isPrimitive(clazz)) {
             AMQPPrimitiveSerializer(clazz)
         } else {
             findCustomSerializer(clazz, declaredType) ?: run {

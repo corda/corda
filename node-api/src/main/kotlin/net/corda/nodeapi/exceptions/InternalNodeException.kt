@@ -28,7 +28,9 @@ class InternalNodeException(message: String) : CordaRuntimeException(message) {
             (wrapped as? CordaRuntimeException)?.setCause(null)
             return when {
                 whitelisted.any { it.isInstance(wrapped) } -> wrapped
-                else -> InternalNodeException(DEFAULT_MESSAGE)
+                else -> InternalNodeException(DEFAULT_MESSAGE).apply {
+                    stackTrace = emptyArray()
+                }
             }
         }
     }

@@ -40,6 +40,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.serialization.AllWhitelist
