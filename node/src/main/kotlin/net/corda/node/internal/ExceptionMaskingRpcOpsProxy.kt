@@ -6,6 +6,7 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.doOnError
 import net.corda.core.flows.ClientRelevantError
+import net.corda.core.flows.ContextAware
 import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.mapErrors
@@ -20,12 +21,11 @@ import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.exceptions.InternalNodeException
 import rx.Observable
 import java.io.InvalidClassException
-import java.lang.reflect.InvocationHandler
-import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy.newProxyInstance
 import kotlin.reflect.KClass
 
+// TODO sollecitom make this enterprise only as discussed with Mike
 internal class ExceptionMaskingRpcOpsProxy(private val delegate: CordaRPCOps) : CordaRPCOps by proxy(delegate) {
 
     private companion object {
@@ -96,7 +96,8 @@ internal class ExceptionMaskingRpcOpsProxy(private val delegate: CordaRPCOps) : 
         }
 
         private fun obfuscate(error: Throwable): Throwable {
-            val exposed = if (error.isWhitelisted()) error else InternalNodeException()
+            val additionalContext = if (error is ContextAware) error.additionalContext else emptyMap()
+            val exposed = if (error.isWhitelisted()) error else InternalNodeException(additionalContext)
             removeDetails(exposed)
             return exposed
         }

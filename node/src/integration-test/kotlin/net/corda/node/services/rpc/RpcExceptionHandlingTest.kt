@@ -2,7 +2,12 @@ package net.corda.node.services.rpc
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.ClientRelevantException
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -58,20 +63,20 @@ class RpcExceptionHandlingTest {
         }
     }
 
-    // TODO sollecitom re-evaluate
-//    @Test
-//    fun `FlowException is received by the RPC client`() {
-//        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-//            val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
-//            val exceptionMessage = "Flow error!"
-//            assertThatCode { node.rpc.startFlow(::FlowExceptionFlow, exceptionMessage).returnValue.getOrThrow() }
-//                    .isInstanceOfSatisfying(FlowException::class.java) { exception ->
-//                        assertThat(exception).hasNoCause()
-//                        assertThat(exception.stackTrace).isEmpty()
-//                        assertThat(exception.message).isEqualTo(exceptionMessage)
-//                    }
-//        }
-//    }
+    @Test
+    fun `FlowException is converted to InternalNodeException`() {
+        driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
+            val exceptionMessage = "Flow error!"
+            val expectedErrorId = 123L
+            assertThatCode { node.rpc.startFlow(::FlowExceptionFlow, exceptionMessage, expectedErrorId).returnValue.getOrThrow() }
+                    .isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+                        assertThat(exception).hasNoCause()
+                        assertThat(exception.stackTrace).isEmpty()
+                        assertThat(exception.additionalContext["errorId"]).isEqualTo(expectedErrorId)
+                    }
+        }
+    }
 
     @Test
     fun `rpc client handles exceptions thrown on counter-party side`() {
@@ -124,7 +129,15 @@ class ClientRelevantErrorFlow(private val message: String) : FlowLogic<String>()
 }
 
 @StartableByRPC
-class FlowExceptionFlow(private val message: String) : FlowLogic<String>() {
+class FlowExceptionFlow(private val message: String, private val errorId: Long? = null) : FlowLogic<String>() {
+
+    constructor(message: String) : this(message, null)
+
     @Suspendable
-    override fun call(): String = throw FlowException(message)
+    override fun call(): String {
+
+        val exception = FlowException(message)
+        errorId?.let { exception.originalErrorId = it }
+        throw exception
+    }
 }
