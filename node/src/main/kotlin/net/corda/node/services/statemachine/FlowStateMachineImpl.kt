@@ -14,7 +14,6 @@ import net.corda.core.internal.*
 import net.corda.core.serialization.SerializationContext.UseCase
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.trace
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
@@ -294,7 +293,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val persistence = TransientReference(getTransientField(TransientValues::persistence))
         val transaction = extractThreadLocalTransaction()
         parkAndSerialize { _, _ ->
-            logger.trace { "Suspended on $ioRequest" }
+            logger.trace("Suspended on {}", ioRequest)
             persistence.value.setContextTransaction(transaction.value)
             val event = try {
                 Event.Suspend(
