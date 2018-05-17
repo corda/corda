@@ -9,6 +9,7 @@ import net.corda.core.serialization.SerializationDefaults.P2P_CONTEXT
 import net.corda.core.serialization.SerializationDefaults.SERIALIZATION_FACTORY
 import net.corda.core.serialization.SerializationFactory.Companion.defaultFactory
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.checkPayloadIs
@@ -25,8 +26,8 @@ interface StateMachineSerialization {
     fun <T : Any> checkPayloadIs(payload: SerializedBytes<*>, type: Class<T>): UntrustworthyData<T>
 }
 
-class NodeStateMachineSerialization(serviceHub: ServiceHub, toBeTokenized: Any) : StateMachineSerialization {
-    private val checkpointContext = CHECKPOINT_CONTEXT.withTokenContext(SerializeAsTokenContextImpl(toBeTokenized, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub))
+class NodeStateMachineSerialization(serviceHub: ServiceHub, toBeTokenized: Any) : SingletonSerializeAsToken(), StateMachineSerialization {
+    private val checkpointContext = CHECKPOINT_CONTEXT.withTokenContext(SerializeAsTokenContextImpl(toBeTokenized to this, SERIALIZATION_FACTORY, CHECKPOINT_CONTEXT, serviceHub))
     override fun <T : Any> serialize(obj: T, useCase: UseCase?) = when (useCase) {
         null -> defaultFactory.run { serialize(obj, defaultContext) }
         Checkpoint -> defaultFactory.serialize(obj, checkpointContext)
