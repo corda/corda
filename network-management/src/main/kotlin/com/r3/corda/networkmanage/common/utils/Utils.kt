@@ -17,7 +17,6 @@ import net.corda.core.CordaOID
 import net.corda.core.internal.CertRole
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -60,7 +59,7 @@ fun initialiseSerialization() {
     val context = AMQP_P2P_CONTEXT
     nodeSerializationEnv = SerializationEnvironmentImpl(
             SerializationFactoryImpl().apply {
-                registerScheme(AMQPServerSerializationScheme())
+                registerScheme(AMQPNetworkServicesSerializationScheme())
             },
             context)
 }
