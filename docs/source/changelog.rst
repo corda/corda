@@ -6,6 +6,10 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+
+* RPC Framework moved from Kryo to the Corda AMQP implementation [Corda-847]. This completes the removal
+  of ``Kryo`` from general use within Corda, remaining only for use in flow checkpointing. 
+
 * Set co.paralleluniverse.fibers.verifyInstrumentation=true in devMode.
 
 * Node will now gracefully fail to start if one of the required ports is already in use.
