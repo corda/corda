@@ -30,6 +30,7 @@ sourceSets {
 
 // Runtime dependencies of launcher
 dependencies {
+    compile project(':node')
     launcherClasspath project(':launcher')
     launcherClasspath "org.slf4j:jul-to-slf4j:$slf4j_version"
     launcherClasspath "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
@@ -119,7 +120,7 @@ task buildLauncher(type: Exec, dependsOn: [copyLauncherLibs]) {
     }
 }
 
-task buildNode(type: Copy, dependsOn: [buildLauncher, project(':docs').tasks['makeDocs']]) {
+task buildNode(type: Copy, dependsOn: [buildLauncher, project(':docs').tasks['makeDocs'], project(':node').tasks['jar']]) {
     description 'Build stand-alone Corda Node distribution'
 
     into(outputDir)
