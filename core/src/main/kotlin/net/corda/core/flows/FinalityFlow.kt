@@ -52,7 +52,6 @@ class FinalityFlow(val transaction: SignedTransaction,
         // Lookup the resolved transactions and use them to map each signed transaction to the list of participants.
         // Then send to the notary if needed, record locally and distribute.
         val parties = getPartiesToSend(verifyTx())
-        progressTracker.currentStep = NOTARISING
         val notarised = notariseAndRecord()
 
         // Each transaction has its own set of recipients, but extra recipients get them all.
@@ -70,6 +69,7 @@ class FinalityFlow(val transaction: SignedTransaction,
     @Suspendable
     private fun notariseAndRecord(): SignedTransaction {
         val notarised = if (needsNotarySignature(transaction)) {
+            progressTracker.currentStep = NOTARISING
             val notarySignatures = subFlow(NotaryFlow.Client(transaction))
             transaction + notarySignatures
         } else {
