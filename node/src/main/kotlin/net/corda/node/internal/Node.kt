@@ -108,7 +108,7 @@ open class Node(configuration: NodeConfiguration,
         const val scanPackagesSeparator = ","
 
         @JvmStatic
-        private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
+        protected fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
 
             return System.getProperty(scanPackagesSystemProperty)?.let { scanPackages ->
                 CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator), versionInfo)
