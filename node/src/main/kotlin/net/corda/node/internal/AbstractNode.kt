@@ -170,7 +170,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager): CordaRPCOps {
 
         val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, database, flowStarter, { shutdownExecutor.submit { stop() } })
-        return listOf(::AuthenticatedRpcOpsProxy, ::ExceptionMaskingRpcOpsProxy).fold(ops) { delegate, constructor -> constructor(delegate) }
+        // Mind that order is relevant here.
+        val proxies = listOf(::AuthenticatedRpcOpsProxy, ::ExceptionMaskingRpcOpsProxy)
+        return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
     private fun initCertificate() {
