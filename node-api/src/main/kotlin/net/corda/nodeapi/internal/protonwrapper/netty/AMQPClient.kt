@@ -15,6 +15,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
+import net.corda.nodeapi.internal.requireMessageSize
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.lang.Long.min
@@ -41,7 +42,8 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                  private val trustStore: KeyStore,
                  private val crlCheckSoftFail: Boolean,
                  private val trace: Boolean = false,
-                 private val sharedThreadPool: EventLoopGroup? = null) : AutoCloseable {
+                 private val sharedThreadPool: EventLoopGroup? = null,
+                 private val maxMessageSize: Int) : AutoCloseable {
     companion object {
         init {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)
@@ -91,17 +93,15 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         }
     }
 
-    private val closeListener = object : ChannelFutureListener {
-        override fun operationComplete(future: ChannelFuture) {
-            log.info("Disconnected from $currentTarget")
-            future.channel()?.disconnect()
-            clientChannel = null
-            if (!stopping) {
-                workerGroup?.schedule({
-                    nextTarget()
-                    restart()
-                }, retryInterval, TimeUnit.MILLISECONDS)
-            }
+    private val closeListener = ChannelFutureListener { future ->
+        log.info("Disconnected from $currentTarget")
+        future.channel()?.disconnect()
+        clientChannel = null
+        if (!stopping) {
+            workerGroup?.schedule({
+                nextTarget()
+                restart()
+            }, retryInterval, TimeUnit.MILLISECONDS)
         }
     }
 
@@ -182,6 +182,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                       topic: String,
                       destinationLegalName: String,
                       properties: Map<String, Any?>): SendableMessage {
+        requireMessageSize(payload.size, maxMessageSize)
         return SendableMessageImpl(payload, topic, destinationLegalName, currentTarget, properties)
     }
 

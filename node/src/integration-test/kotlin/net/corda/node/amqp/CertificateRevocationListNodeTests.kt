@@ -19,10 +19,7 @@ import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.CHARLIE_NAME
-import net.corda.testing.core.freePort
+import net.corda.testing.core.*
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.rigorousMock
@@ -272,7 +269,8 @@ class CertificateRevocationListNodeTests {
     private fun createClient(targetPort: Int,
                              crlCheckSoftFail: Boolean,
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
-                             tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl"): Pair<AMQPClient, X509Certificate> {
+                             tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
+                             maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPClient, X509Certificate> {
         val clientConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "client").whenever(it).baseDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName
@@ -292,13 +290,15 @@ class CertificateRevocationListNodeTests {
                 clientKeystore,
                 clientConfig.keyStorePassword,
                 clientTruststore,
-                crlCheckSoftFail), nodeCert)
+                crlCheckSoftFail,
+                maxMessageSize = maxMessageSize), nodeCert)
     }
 
     private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME,
                              crlCheckSoftFail: Boolean,
                              nodeCrlDistPoint: String = "http://${server.hostAndPort}/crl/node.crl",
-                             tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl"): Pair<AMQPServer, X509Certificate> {
+                             tlsCrlDistPoint: String? = "http://${server.hostAndPort}/crl/empty.crl",
+                             maxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<AMQPServer, X509Certificate> {
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
             doReturn(name).whenever(it).myLegalName
@@ -318,7 +318,8 @@ class CertificateRevocationListNodeTests {
                 serverKeystore,
                 serverConfig.keyStorePassword,
                 serverTruststore,
-                crlCheckSoftFail), nodeCert)
+                crlCheckSoftFail,
+                maxMessageSize = maxMessageSize), nodeCert)
     }
 
     private fun SSLConfiguration.recreateNodeCaAndTlsCertificates(nodeCaCrlDistPoint: String, tlsCrlDistPoint: String?): X509Certificate {

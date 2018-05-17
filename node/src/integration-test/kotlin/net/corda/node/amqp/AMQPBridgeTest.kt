@@ -193,7 +193,7 @@ class AMQPBridgeTest {
         return Triple(artemisServer, artemisClient, bridgeManager)
     }
 
-    private fun createAMQPServer(): AMQPServer {
+    private fun createAMQPServer(maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName
@@ -210,7 +210,8 @@ class AMQPBridgeTest {
                 serverConfig.keyStorePassword,
                 serverConfig.loadTrustStore().internal,
                 crlCheckSoftFail = true,
-                trace = true
+                trace = true,
+                maxMessageSize = maxMessageSize
         )
     }
 }
