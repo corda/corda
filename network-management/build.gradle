@@ -61,6 +61,7 @@ task integrationTest(type: Test) {
 dependencies {
     compile fileTree(dir: 'libs', include: '*.jar')
 
+    compile project(':node')
     compile project(':node-api')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"

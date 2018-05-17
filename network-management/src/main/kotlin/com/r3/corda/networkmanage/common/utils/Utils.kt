@@ -17,13 +17,13 @@ import net.corda.core.CordaOID
 import net.corda.core.internal.CertRole
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
+import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -60,7 +60,7 @@ fun initialiseSerialization() {
     val context = AMQP_P2P_CONTEXT
     nodeSerializationEnv = SerializationEnvironmentImpl(
             SerializationFactoryImpl().apply {
-                registerScheme(AMQPClientSerializationScheme())
+                registerScheme(AMQPServerSerializationScheme())
             },
             context)
 }
