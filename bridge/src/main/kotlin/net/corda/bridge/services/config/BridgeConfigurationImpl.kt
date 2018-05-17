@@ -69,7 +69,8 @@ data class BridgeConfigurationImpl(
         override val floatOuterConfig: FloatOuterConfigurationImpl?,
         override val haConfig: BridgeHAConfigImpl?,
         override val enableAMQPPacketTrace: Boolean,
-        override val artemisReconnectionInterval: Int = 5000,
+        override val artemisReconnectionIntervalMin: Int = 5000,
+        override val artemisReconnectionIntervalMax: Int = 60000,
         override val politeShutdownPeriod: Int = 1000,
         override val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList()
 ) : BridgeConfiguration {

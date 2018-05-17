@@ -110,8 +110,10 @@ interface BridgeConfiguration : NodeSSLConfiguration {
     val haConfig: BridgeHAConfig?
     val networkParametersPath: Path
     val enableAMQPPacketTrace: Boolean
-    // Reconnect to artemis after [artemisReconnectionInterval] ms the default value is 5000 ms.
-    val artemisReconnectionInterval: Int
+    // Initial reconnect interval for link to artemis after [artemisReconnectionIntervalMin] ms the default value is 5000 ms.
+    val artemisReconnectionIntervalMin: Int
+    // Slowest Artemis reconnect interval after exponential backoff applied. The default value is 60000 ms.
+    val artemisReconnectionIntervalMax: Int
     // The period to wait for clean shutdown of remote components
     // e.g links to the Float Outer, or Artemis sessions, before the process continues shutting down anyway.
     // Default value is 1000 ms.
