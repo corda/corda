@@ -169,7 +169,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager): CordaRPCOps {
 
-        return SecureCordaRPCOps(services, smm, database, flowStarter, { shutdownExecutor.submit { stop() } })
+        val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, database, flowStarter, { shutdownExecutor.submit { stop() } })
+        return listOf(::AuthenticatedRpcOpsProxy, ::ExceptionMaskingRpcOpsProxy).fold(ops) { delegate, constructor -> constructor(delegate) }
     }
 
     private fun initCertificate() {

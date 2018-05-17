@@ -3,26 +3,15 @@ package net.corda.node.internal
 import net.corda.client.rpc.PermissionException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.node.services.api.FlowStarter
-import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.node.services.messaging.rpcContext
-import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import java.lang.reflect.InvocationHandler
-import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 
 /**
  * Implementation of [CordaRPCOps] that checks authorisation.
  */
-class SecureCordaRPCOps(services: ServiceHubInternal,
-                        smm: StateMachineManager,
-                        database: CordaPersistence,
-                        flowStarter: FlowStarter,
-                        shutdownNode: () -> Unit,
-                        private val delegate: CordaRPCOps = CordaRPCOpsImpl(services, smm, database, flowStarter, shutdownNode)) : CordaRPCOps by proxy(delegate, ::rpcContext) {
+class AuthenticatedRpcOpsProxy(private val delegate: CordaRPCOps) : CordaRPCOps by proxy(delegate, ::rpcContext) {
 
     /**
      * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed
@@ -45,10 +34,10 @@ class SecureCordaRPCOps(services: ServiceHubInternal,
             return Proxy.newProxyInstance(delegate::class.java.classLoader, arrayOf(CordaRPCOps::class.java), handler) as CordaRPCOps
         }
     }
-}
 
-private class PermissionsEnforcingInvocationHandler(override val delegate: CordaRPCOps, private val context: () -> RpcAuthContext) : InvocationHandlerTemplate {
-    override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?) = guard(method.name, context, { super.invoke(proxy, method, arguments) })
+    private class PermissionsEnforcingInvocationHandler(override val delegate: CordaRPCOps, private val context: () -> RpcAuthContext) : InvocationHandlerTemplate {
+        override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?) = guard(method.name, context, { super.invoke(proxy, method, arguments) })
+    }
 }
 
 private inline fun <RESULT> guard(methodName: String, context: () -> RpcAuthContext, action: () -> RESULT) = guard(methodName, emptyList(), context, action)
