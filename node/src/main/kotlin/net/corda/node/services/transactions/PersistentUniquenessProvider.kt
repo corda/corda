@@ -82,8 +82,7 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
                         fromPersistentEntity = {
                             //TODO null check will become obsolete after making DB/JPA columns not nullable
                             val txId = it.id.txId
-                                    ?: throw IllegalStateException("DB returned null SecureHash transactionId")
-                            val index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                            val index = it.id.index
                             Pair(
                                     StateRef(txhash = SecureHash.parse(txId), index = index),
                                     SecureHash.parse(it.consumingTxHash)

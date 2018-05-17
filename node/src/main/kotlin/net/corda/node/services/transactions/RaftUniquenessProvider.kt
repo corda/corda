@@ -65,8 +65,7 @@ class RaftUniquenessProvider(
                         toPersistentEntityKey = { PersistentStateRef(it) },
                         fromPersistentEntity = {
                             val txId = it.id.txId
-                                    ?: throw IllegalStateException("DB returned null SecureHash transactionId")
-                            val index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                            val index = it.id.index
                             Pair(
                                     StateRef(txhash = SecureHash.parse(txId), index = index),
                                     Pair(it.index, SecureHash.parse(it.value) as SecureHash))
