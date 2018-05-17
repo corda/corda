@@ -8,7 +8,6 @@ import java.lang.reflect.Proxy.newProxyInstance
 import kotlin.reflect.full.findAnnotation
 
 internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps) : CordaRPCOps by proxy(delegate) {
-
     private companion object {
         private fun proxy(delegate: CordaRPCOps): CordaRPCOps {
             val handler = ErrorSerialisingInvocationHandler(delegate)

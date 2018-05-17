@@ -132,7 +132,6 @@ class ClientRelevantErrorFlow(private val message: String) : FlowLogic<String>()
 class FlowExceptionFlow(private val message: String, private val errorId: Long? = null) : FlowLogic<String>() {
     @Suspendable
     override fun call(): String {
-
         val exception = FlowException(message)
         errorId?.let { exception.originalErrorId = it }
         throw exception

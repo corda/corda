@@ -170,6 +170,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
         val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, database, flowStarter, { shutdownExecutor.submit { stop() } })
         // Mind that order is relevant here.
+        // TODO sollecitom ensure ExceptionMaskingRpcOpsProxy exists exclusively in enterprise and is applied only if devMode == true, as discussed with Mike
         val proxies = listOf(::AuthenticatedRpcOpsProxy, ::ExceptionMaskingRpcOpsProxy, ::ExceptionSerialisingRpcOpsProxy)
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
