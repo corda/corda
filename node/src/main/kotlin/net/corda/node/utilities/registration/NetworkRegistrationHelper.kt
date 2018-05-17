@@ -3,6 +3,7 @@ package net.corda.node.utilities.registration
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
+import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
@@ -12,6 +13,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter
@@ -216,6 +218,10 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
                 CORDA_CLIENT_CA,
                 CertRole.NODE_CA) {
 
+    companion object {
+        val logger = contextLogger()
+    }
+
     override fun onSuccess(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>) {
         createSSLKeystore(nodeCAKeyPair, certificates)
         createTruststore(certificates.last())
@@ -230,7 +236,10 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
                     certificates.first(),
                     nodeCAKeyPair,
                     config.myLegalName.x500Principal,
-                    sslKeyPair.public)
+                    sslKeyPair.public,
+                    crlDistPoint = config.tlsCertCrlDistPoint?.toString(),
+                    crlIssuer = if (config.tlsCertCrlIssuer != null) X500Name(config.tlsCertCrlIssuer) else null)
+            logger.info("Generated TLS certificate: $sslCert")
             setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, listOf(sslCert) + certificates)
         }
         println("SSL private key and certificate stored in ${config.sslKeystore}.")
