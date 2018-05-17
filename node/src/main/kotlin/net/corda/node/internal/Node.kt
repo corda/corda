@@ -336,15 +336,19 @@ open class Node(configuration: NodeConfiguration,
                                                wellKnownPartyFromAnonymous: (AbstractParty) -> Party?): CordaPersistence {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
+
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
-            val h2Port = databaseUrl.substringAfter(";AUTO_SERVER_PORT=", "").substringBefore(';')
-            if (h2Port.isNotBlank()) {
+            val h2Settings = configuration.h2Settings
+
+            if(h2Settings != null && h2Settings.address != null) {
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val server = org.h2.tools.Server.createTcpServer(
-                        "-tcpPort", h2Port,
+                        "-tcpPort", h2Settings.address.port.toString(),
                         "-tcpAllowOthers",
                         "-tcpDaemon",
                         "-key", "node", databaseName)
+                // override interface that createTcpServer listens on (always 0.0.0.0)
+                System.setProperty("h2.bindAddress", h2Settings.address.host)
                 runOnStop += server::stop
                 val url = server.start().url
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
