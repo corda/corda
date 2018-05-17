@@ -21,8 +21,9 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import rx.Subscription
 
 class DirectBridgeSenderService(val conf: BridgeConfiguration,
+                                val maxMessageSize: Int,
                                 val auditService: BridgeAuditService,
-                                val haService: BridgeMasterService,
+                                haService: BridgeMasterService,
                                 val artemisConnectionService: BridgeArtemisConnectionService,
                                 private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeSenderService, ServiceStateSupport by stateHelper {
     companion object {
@@ -33,7 +34,7 @@ class DirectBridgeSenderService(val conf: BridgeConfiguration,
     private var statusSubscriber: Subscription? = null
     private var connectionSubscriber: Subscription? = null
     private var listenerActiveSubscriber: Subscription? = null
-    private var bridgeControlListener: BridgeControlListener = BridgeControlListener(conf, conf.outboundConfig!!.socksProxyConfig, { ForwardingArtemisMessageClient(artemisConnectionService) })
+    private var bridgeControlListener: BridgeControlListener = BridgeControlListener(conf, conf.outboundConfig!!.socksProxyConfig, maxMessageSize, { ForwardingArtemisMessageClient(artemisConnectionService) })
 
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService, artemisConnectionService, haService))

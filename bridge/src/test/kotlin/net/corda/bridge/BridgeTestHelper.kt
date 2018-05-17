@@ -33,10 +33,10 @@ import java.nio.file.Path
 import java.security.cert.X509Certificate
 import java.time.Instant
 
-fun createNetworkParams(baseDirectory: Path) {
+fun createNetworkParams(baseDirectory: Path): Int {
     val dummyNotaryParty = TestIdentity(DUMMY_NOTARY_NAME)
     val notaryInfo = NotaryInfo(dummyNotaryParty.party, false)
-    val copier = NetworkParametersCopier(NetworkParameters(
+    val networkParameters = NetworkParameters(
             minimumPlatformVersion = 1,
             notaries = listOf(notaryInfo),
             modifiedTime = Instant.now(),
@@ -44,8 +44,10 @@ fun createNetworkParams(baseDirectory: Path) {
             maxTransactionSize = 40000,
             epoch = 1,
             whitelistedContractImplementations = emptyMap<String, List<AttachmentId>>()
-    ), overwriteFile = true)
+    )
+    val copier = NetworkParametersCopier(networkParameters, overwriteFile = true)
     copier.install(baseDirectory)
+    return networkParameters.maxMessageSize
 }
 
 

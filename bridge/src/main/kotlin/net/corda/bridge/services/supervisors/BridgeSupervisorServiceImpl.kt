@@ -49,13 +49,13 @@ class BridgeSupervisorServiceImpl(val conf: BridgeConfiguration,
             haService = ExternalMasterElectionService(conf, auditService)
         }
         artemisService = BridgeArtemisConnectionServiceImpl(conf, maxMessageSize, auditService)
-        senderService = DirectBridgeSenderService(conf, auditService, haService, artemisService)
+        senderService = DirectBridgeSenderService(conf, maxMessageSize, auditService, haService, artemisService)
         filterService = SimpleMessageFilterService(conf, auditService, artemisService, senderService)
         receiverService = if (conf.bridgeMode == BridgeMode.SenderReceiver) {
             InProcessBridgeReceiverService(conf, auditService, haService, inProcessAMQPListenerService!!, filterService)
         } else {
             require(inProcessAMQPListenerService == null) { "Should not have an in process instance of the AMQPListenerService" }
-            TunnelingBridgeReceiverService(conf, auditService, haService, filterService)
+            TunnelingBridgeReceiverService(conf, maxMessageSize, auditService, haService, filterService)
         }
         statusFollower = ServiceStateCombiner(listOf(haService, senderService, receiverService, filterService))
         activeChange.subscribe {

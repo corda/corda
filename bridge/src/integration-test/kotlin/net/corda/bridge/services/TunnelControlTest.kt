@@ -71,13 +71,13 @@ class TunnelControlTest {
         val bridgeConfigResource = "/net/corda/bridge/withfloat/bridge/bridge.conf"
         val bridgePath = tempFolder.root.toPath() / "bridge"
         bridgePath.createDirectories()
-        createNetworkParams(bridgePath)
+        val maxMessageSize = createNetworkParams(bridgePath)
         val bridgeConfig = createAndLoadConfigFromResource(bridgePath, bridgeConfigResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val bridgeAuditService = TestAuditService()
         val haService = SingleInstanceMasterService(bridgeConfig, bridgeAuditService)
         val filterService = createPartialMock<TestIncomingMessageFilterService>()
-        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, bridgeAuditService, haService, filterService)
+        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, maxMessageSize, bridgeAuditService, haService, filterService)
         val bridgeStateFollower = bridgeProxiedReceiverService.activeChange.toBlocking().iterator
         bridgeProxiedReceiverService.start()
         assertEquals(false, bridgeStateFollower.next())
@@ -101,7 +101,7 @@ class TunnelControlTest {
             doReturn(Observable.never<ConnectionChange>()).whenever(it).onConnection
             doReturn(Observable.never<ReceivedMessage>()).whenever(it).onReceive
         }
-        val floatControlListener = FloatControlListenerService(floatConfig, floatAuditService, amqpListenerService)
+        val floatControlListener = FloatControlListenerService(floatConfig, maxMessageSize, floatAuditService, amqpListenerService)
         val floatStateFollower = floatControlListener.activeChange.toBlocking().iterator
         assertEquals(false, floatStateFollower.next())
         assertEquals(false, floatControlListener.active)
@@ -149,7 +149,7 @@ class TunnelControlTest {
         val bridgeConfigResource = "/net/corda/bridge/withfloat/bridge/bridge.conf"
         val bridgePath = tempFolder.root.toPath() / "bridge"
         bridgePath.createDirectories()
-        createNetworkParams(bridgePath)
+        val maxMessageSize = createNetworkParams(bridgePath)
         val bridgeConfig = createAndLoadConfigFromResource(bridgePath, bridgeConfigResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val bridgeAuditService = TestAuditService()
@@ -162,7 +162,7 @@ class TunnelControlTest {
                 Unit
             }.whenever(it).sendMessageToLocalBroker(any())
         }
-        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, bridgeAuditService, haService, filterService)
+        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, maxMessageSize, bridgeAuditService, haService, filterService)
         val bridgeStateFollower = bridgeProxiedReceiverService.activeChange.toBlocking().iterator
         bridgeProxiedReceiverService.start()
         bridgeAuditService.start()
@@ -183,7 +183,7 @@ class TunnelControlTest {
             doReturn(Observable.never<ConnectionChange>()).whenever(it).onConnection
             doReturn(receiveObserver).whenever(it).onReceive
         }
-        val floatControlListener = FloatControlListenerService(floatConfig, floatAuditService, amqpListenerService)
+        val floatControlListener = FloatControlListenerService(floatConfig, maxMessageSize, floatAuditService, amqpListenerService)
         floatControlListener.start()
         floatAuditService.start()
         amqpListenerService.start()

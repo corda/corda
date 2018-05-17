@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
+                                     val maxMessageSize: Int,
                                      val auditService: BridgeAuditService,
                                      haService: BridgeMasterService,
                                      val filterService: IncomingMessageFilterService,
@@ -72,7 +73,16 @@ class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
         statusSubscriber = statusFollower.activeChange.subscribe {
             if (it) {
                 val floatAddresses = conf.bridgeInnerConfig!!.floatAddresses
-                val controlClient = AMQPClient(floatAddresses, setOf(expectedCertificateSubject), null, null, controlLinkKeyStore, controLinkKeyStorePrivateKeyPassword, controlLinkTrustStore, conf.crlCheckSoftFail, conf.enableAMQPPacketTrace)
+                val controlClient = AMQPClient(floatAddresses,
+                        setOf(expectedCertificateSubject),
+                        null,
+                        null,
+                        controlLinkKeyStore,
+                        controLinkKeyStorePrivateKeyPassword,
+                        controlLinkTrustStore,
+                        conf.crlCheckSoftFail,
+                        conf.enableAMQPPacketTrace,
+                        maxMessageSize = maxMessageSize)
                 connectSubscriber = controlClient.onConnection.subscribe { onConnectToControl(it) }
                 receiveSubscriber = controlClient.onReceive.subscribe { onFloatMessage(it) }
                 amqpControlClient = controlClient

@@ -80,7 +80,7 @@ class SimpleMessageFilterService(val conf: BridgeConfiguration,
         require(inboundMessage.payload.size > 0) { "No valid payload" }
         val validInboxTopic = bridgeSenderService.validateReceiveTopic(inboundMessage.topic, sourceLegalName)
         require(validInboxTopic) { "Topic not a legitimate Inbox for a node on this Artemis Broker ${inboundMessage.topic}" }
-        require(inboundMessage.applicationProperties.keys.all { it!!.toString() in whiteListedAMQPHeaders }) { "Disallowed header present in ${inboundMessage.applicationProperties.keys.map { it.toString() }}" }
+        require(inboundMessage.applicationProperties.keys.all { it in whiteListedAMQPHeaders }) { "Disallowed header present in ${inboundMessage.applicationProperties.keys}" }
     }
 
     override fun sendMessageToLocalBroker(inboundMessage: ReceivedMessage) {
