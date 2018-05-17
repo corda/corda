@@ -80,6 +80,7 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
                 clientFailureCheckPeriod = -1
                 minLargeMessageSize = maxMessageSize
                 isUseGlobalPools = nodeSerializationEnv != null
+                confirmationWindowSize = conf.p2pConfirmationWindowSize
             }
             connectThread = Thread({ artemisReconnectionLoop() }, "Artemis Connector Thread").apply {
                 isDaemon = true

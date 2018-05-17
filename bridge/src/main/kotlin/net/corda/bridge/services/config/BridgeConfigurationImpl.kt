@@ -72,6 +72,7 @@ data class BridgeConfigurationImpl(
         override val artemisReconnectionIntervalMin: Int = 5000,
         override val artemisReconnectionIntervalMax: Int = 60000,
         override val politeShutdownPeriod: Int = 1000,
+        override val p2pConfirmationWindowSize: Int = 1048576,
         override val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList()
 ) : BridgeConfiguration {
     init {
