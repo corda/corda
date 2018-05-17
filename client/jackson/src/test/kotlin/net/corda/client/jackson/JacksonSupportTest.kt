@@ -117,7 +117,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
         val writer = mapper.writer()
         // We don't particularly care about the serialized format, just need to make sure it completes successfully.
-        writer.writeValueAsString(makeDummyTx())
+        println(writer.writeValueAsString(makeDummyTx()))
     }
 
     @Test
@@ -409,16 +409,6 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     @Test
     fun X500Principal() {
         testToStringSerialisation(X500Principal("CN=Common,L=London,O=Org,C=UK"))
-    }
-
-    private fun makeDummyStx(): SignedTransaction {
-        val wtx = DummyContract.generateInitial(1, DUMMY_NOTARY, MINI_CORP.ref(1))
-                .toWireTransaction(services)
-        val signatures = listOf(
-                TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID)),
-                TransactionSignature(ByteArray(1), BOB_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(BOB_PUBKEY).schemeNumberID))
-        )
-        return SignedTransaction(wtx, signatures)
     }
 
     private inline fun <reified T : Any> testToStringSerialisation(value: T) {

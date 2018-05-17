@@ -1,18 +1,17 @@
 package net.corda.client.jackson
 
-import com.fasterxml.jackson.annotation.JacksonAnnotationsInside
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.*
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
-import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import net.corda.client.jackson.internal.CordaModule
+import net.corda.client.jackson.internal.ToStringSerialize
 import net.corda.client.jackson.internal.jsonObject
 import net.corda.client.jackson.internal.readValueAs
 import net.corda.core.CordaInternal
@@ -22,23 +21,24 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
-import net.corda.core.crypto.TransactionSignature
-import net.corda.core.identity.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.CertRole
-import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.parsePublicKeyBase58
+import net.corda.core.utilities.toBase58String
 import org.bouncycastle.asn1.x509.KeyPurposeId
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
@@ -95,31 +95,9 @@ object JacksonSupport {
         override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? = null
     }
 
-    val cordaModule: Module by lazy {
-        SimpleModule("core").apply {
-            setMixInAnnotation(BigDecimal::class.java, BigDecimalMixin::class.java)
-            setMixInAnnotation(X500Principal::class.java, X500PrincipalMixin::class.java)
-            setMixInAnnotation(X509Certificate::class.java, X509CertificateMixin::class.java)
-            setMixInAnnotation(PartyAndCertificate::class.java, PartyAndCertificateSerializerMixin::class.java)
-            setMixInAnnotation(NetworkHostAndPort::class.java, NetworkHostAndPortMixin::class.java)
-            setMixInAnnotation(CordaX500Name::class.java, CordaX500NameMixin::class.java)
-            setMixInAnnotation(Amount::class.java, AmountMixin::class.java)
-            setMixInAnnotation(AbstractParty::class.java, AbstractPartyMixin::class.java)
-            setMixInAnnotation(AnonymousParty::class.java, AnonymousPartyMixin::class.java)
-            setMixInAnnotation(Party::class.java, PartyMixin::class.java)
-            setMixInAnnotation(PublicKey::class.java, PublicKeyMixin::class.java)
-            setMixInAnnotation(ByteSequence::class.java, ByteSequenceMixin::class.java)
-            setMixInAnnotation(SecureHash.SHA256::class.java, SecureHashSHA256Mixin::class.java)
-            setMixInAnnotation(SerializedBytes::class.java, SerializedBytesMixin::class.java)
-            setMixInAnnotation(DigitalSignature.WithKey::class.java, ByteSequenceWithPropertiesMixin::class.java)
-            setMixInAnnotation(DigitalSignatureWithCert::class.java, ByteSequenceWithPropertiesMixin::class.java)
-            setMixInAnnotation(TransactionSignature::class.java, ByteSequenceWithPropertiesMixin::class.java)
-            setMixInAnnotation(SignedTransaction::class.java, SignedTransactionMixin::class.java)
-            setMixInAnnotation(WireTransaction::class.java, WireTransactionMixin::class.java)
-            setMixInAnnotation(CertPath::class.java, CertPathMixin::class.java)
-            setMixInAnnotation(NodeInfo::class.java, NodeInfoMixin::class.java)
-        }
-    }
+    @Suppress("unused")
+    @Deprecated("Do not use this as it's not thread safe. Instead get a ObjectMapper instance with one of the create*Mapper methods.")
+    val cordaModule: Module by lazy(::CordaModule)
 
     /**
      * Creates a Jackson ObjectMapper that uses RPC to deserialise parties from string names.
@@ -174,14 +152,15 @@ object JacksonSupport {
             registerModule(JavaTimeModule().apply {
                 addSerializer(Date::class.java, DateSerializer)
             })
-            registerModule(cordaModule)
+            registerModule(CordaModule())
             registerModule(KotlinModule())
+
+            addMixIn(BigDecimal::class.java, BigDecimalMixin::class.java)
+            addMixIn(X500Principal::class.java, X500PrincipalMixin::class.java)
+            addMixIn(X509Certificate::class.java, X509CertificateMixin::class.java)
+            addMixIn(CertPath::class.java, CertPathMixin::class.java)
         }
     }
-
-    @JacksonAnnotationsInside
-    @JsonSerialize(using = com.fasterxml.jackson.databind.ser.std.ToStringSerializer::class)
-    private annotation class ToStringSerialize
 
     @ToStringSerialize
     @JsonDeserialize(using = NumberDeserializers.BigDecimalDeserializer::class)
@@ -190,58 +169,6 @@ object JacksonSupport {
     private object DateSerializer : JsonSerializer<Date>() {
         override fun serialize(value: Date, gen: JsonGenerator, serializers: SerializerProvider) {
             gen.writeObject(value.toInstant())
-        }
-    }
-
-    @ToStringSerialize
-    @JsonDeserialize(using = NetworkHostAndPortDeserializer::class)
-    private interface NetworkHostAndPortMixin
-
-    private class NetworkHostAndPortDeserializer : JsonDeserializer<NetworkHostAndPort>() {
-        override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): NetworkHostAndPort {
-            return NetworkHostAndPort.parse(parser.text)
-        }
-    }
-
-    @JsonSerialize(using = PartyAndCertificateSerializer::class)
-    // TODO Add deserialization which follows the same lookup logic as Party
-    private interface PartyAndCertificateSerializerMixin
-
-    private class PartyAndCertificateSerializer : JsonSerializer<PartyAndCertificate>() {
-        override fun serialize(value: PartyAndCertificate, gen: JsonGenerator, serializers: SerializerProvider) {
-            gen.jsonObject {
-                writeObjectField("name", value.name)
-                writeObjectField("owningKey", value.owningKey)
-                // TODO Add configurable option to output the certPath
-            }
-        }
-    }
-
-    @JsonSerialize(using = SerializedBytesSerializer::class)
-    @JsonDeserialize(using = SerializedBytesDeserializer::class)
-    private class SerializedBytesMixin
-
-    private class SerializedBytesSerializer : JsonSerializer<SerializedBytes<*>>() {
-        override fun serialize(value: SerializedBytes<*>, gen: JsonGenerator, serializers: SerializerProvider) {
-            val deserialized = value.deserialize<Any>()
-            gen.jsonObject {
-                writeStringField("class", deserialized.javaClass.name)
-                writeObjectField("deserialized", deserialized)
-            }
-        }
-    }
-
-    private class SerializedBytesDeserializer : JsonDeserializer<SerializedBytes<*>>() {
-        override fun deserialize(parser: JsonParser, context: DeserializationContext): SerializedBytes<Any> {
-            return if (parser.currentToken == JsonToken.START_OBJECT) {
-                val mapper = parser.codec as ObjectMapper
-                val json = parser.readValueAsTree<ObjectNode>()
-                val clazz = context.findClass(json["class"].textValue())
-                val pojo = mapper.convertValue(json["deserialized"], clazz)
-                pojo.serialize()
-            } else {
-                SerializedBytes(parser.binaryValue)
-            }
         }
     }
 
@@ -331,13 +258,6 @@ object JacksonSupport {
         }
     }
 
-    @JsonDeserialize(using = PartyDeserializer::class)
-    private interface AbstractPartyMixin
-
-    @JsonSerialize(using = AnonymousPartySerializer::class)
-    @JsonDeserialize(using = AnonymousPartyDeserializer::class)
-    private interface AnonymousPartyMixin
-
     @Deprecated("This is an internal class, do not use")
     object AnonymousPartySerializer : JsonSerializer<AnonymousParty>() {
         override fun serialize(value: AnonymousParty, generator: JsonGenerator, provider: SerializerProvider) {
@@ -351,9 +271,6 @@ object JacksonSupport {
             return AnonymousParty(parser.readValueAs(PublicKey::class.java))
         }
     }
-
-    @JsonSerialize(using = PartySerializer::class)
-    private interface PartyMixin
 
     @Deprecated("This is an internal class, do not use")
     object PartySerializer : JsonSerializer<Party>() {
@@ -389,10 +306,6 @@ object JacksonSupport {
         }
     }
 
-    @ToStringSerialize
-    @JsonDeserialize(using = CordaX500NameDeserializer::class)
-    private interface CordaX500NameMixin
-
     @Deprecated("This is an internal class, do not use")
     object CordaX500NameDeserializer : JsonDeserializer<CordaX500Name>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): CordaX500Name {
@@ -404,10 +317,6 @@ object JacksonSupport {
         }
     }
 
-    @JsonIgnoreProperties("legalIdentities")  // This is already covered by legalIdentitiesAndCerts
-    @JsonDeserialize(using = NodeInfoDeserializer::class)
-    private interface NodeInfoMixin
-
     @Deprecated("This is an internal class, do not use")
     object NodeInfoDeserializer : JsonDeserializer<NodeInfo>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): NodeInfo {
@@ -416,10 +325,6 @@ object JacksonSupport {
             return mapper.nodeInfoFromParty(party) ?: throw JsonParseException(parser, "Cannot find node with $party")
         }
     }
-
-    @ToStringSerialize
-    @JsonDeserialize(using = SecureHashDeserializer::class)
-    private interface SecureHashSHA256Mixin
 
     @Deprecated("This is an internal class, do not use")
     class SecureHashDeserializer<T : SecureHash> : JsonDeserializer<T>() {
@@ -431,10 +336,6 @@ object JacksonSupport {
             }
         }
     }
-
-    @JsonSerialize(using = PublicKeySerializer::class)
-    @JsonDeserialize(using = PublicKeyDeserializer::class)
-    private interface PublicKeyMixin
 
     @Deprecated("This is an internal class, do not use")
     object PublicKeySerializer : JsonSerializer<PublicKey>() {
@@ -454,10 +355,6 @@ object JacksonSupport {
         }
     }
 
-    @ToStringSerialize
-    @JsonDeserialize(using = AmountDeserializer::class)
-    private interface AmountMixin
-
     @Deprecated("This is an internal class, do not use")
     object AmountDeserializer : JsonDeserializer<Amount<*>>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): Amount<*> {
@@ -471,22 +368,6 @@ object JacksonSupport {
     }
 
     private data class CurrencyAmountWrapper(val quantity: Long, val token: Currency)
-
-    @JsonDeserialize(using = OpaqueBytesDeserializer::class)
-    @JsonSerialize(using = ByteSequenceSerializer::class)
-    private interface ByteSequenceMixin
-
-    private class ByteSequenceSerializer : JsonSerializer<ByteSequence>() {
-        override fun serialize(value: ByteSequence, gen: JsonGenerator, serializers: SerializerProvider) {
-            val bytes = value.bytes
-            gen.writeBinary(bytes, value.offset, value.size)
-        }
-    }
-
-    @JsonIgnoreProperties("offset", "size")
-    @JsonSerialize
-    @JsonDeserialize
-    private interface ByteSequenceWithPropertiesMixin
 
     @Deprecated("This is an internal class, do not use")
     object OpaqueBytesDeserializer : JsonDeserializer<OpaqueBytes>() {
