@@ -37,6 +37,10 @@ import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
 import kotlin.streams.toList
+import kotlin.collections.HashSet
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 
 /**
  * Class to bootstrap a local network of Corda nodes on the same filesystem.
@@ -65,6 +69,8 @@ class NetworkBootstrapper {
     fun bootstrap(directory: Path, cordappJars: List<Path>) {
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
+        println("Checking for duplicate nodes in $directory")
+        checkForDuplicateLegalNames(directory, cordappJars)
         generateDirectoriesIfNeeded(directory, cordappJars)
         val nodeDirs = directory.list { paths -> paths.filter { (it / "corda.jar").exists() }.toList() }
         require(nodeDirs.isNotEmpty()) { "No nodes found" }
@@ -90,6 +96,22 @@ class NetworkBootstrapper {
             _contextSerializationEnv.set(null)
             processes.forEach { if (it.isAlive) it.destroyForcibly() }
         }
+    }
+
+    /*the function checks for duplicate myLegalName in the all the *_node.conf files
+    All the myLegalName values are added to a HashSet - this helps detect duplicate values.
+    If a duplicate name is found the process is aborted with an error message
+    */
+    private fun checkForDuplicateLegalNames(directory: Path, cordappJars: List<Path>) {
+      val legalNames = HashSet<String>()
+      val confFiles = directory.list { it.filter { it.toString().endsWith("_node.conf") }.toList() }
+      for (confFile in confFiles) {
+        val legalName = confFile.readLines { it.findFirst().get() }
+        if(!legalNames.add(legalName)){
+          println("Duplicate Node Found - ensure every node has a unique legal name");
+          throw Error("Duplicate Node Found");
+        }
+      }
     }
 
     private fun generateDirectoriesIfNeeded(directory: Path, cordappJars: List<Path>) {
