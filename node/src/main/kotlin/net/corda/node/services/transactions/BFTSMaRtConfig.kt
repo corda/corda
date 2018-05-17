@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 class BFTSMaRtConfig(private val replicaAddresses: List<NetworkHostAndPort>, debug: Boolean, val exposeRaces: Boolean) : PathManager<BFTSMaRtConfig>(Files.createTempDirectory("bft-smart-config")) {
     companion object {
         private val log = contextLogger()
-        internal val portIsClaimedFormat = "Port %s is claimed by another replica: %s"
+        internal const val portIsClaimedFormat = "Port %s is claimed by another replica: %s"
     }
 
     val clusterSize get() = replicaAddresses.size
@@ -35,9 +35,9 @@ class BFTSMaRtConfig(private val replicaAddresses: List<NetworkHostAndPort>, deb
             }
         }
         configWriter("hosts.config") {
-            replicaAddresses.forEachIndexed { index, address ->
+            replicaAddresses.forEachIndexed { index, (host, port) ->
                 // The documentation strongly recommends IP addresses:
-                println("$index ${InetAddress.getByName(address.host).hostAddress} ${address.port}")
+                println("$index ${InetAddress.getByName(host).hostAddress} $port")
             }
         }
         val systemConfig = String.format(javaClass.getResource("system.config.printf").readText(), n, maxFaultyReplicas(n), if (debug) 1 else 0, (0 until n).joinToString(","))

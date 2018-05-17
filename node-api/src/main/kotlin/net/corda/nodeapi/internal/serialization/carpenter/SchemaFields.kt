@@ -30,8 +30,8 @@ abstract class ClassField(field: Class<out Any?>) : Field(field) {
     abstract val nullabilityAnnotation: String
     abstract fun nullTest(mv: MethodVisitor, slot: Int)
 
-    override var descriptor = Type.getDescriptor(this.field)
-    override val type: String get() = if (this.field.isPrimitive) this.descriptor else "Ljava/lang/Object;"
+    override var descriptor: String? = Type.getDescriptor(this.field)
+    override val type: String get() = if (this.field.isPrimitive) this.descriptor!! else "Ljava/lang/Object;"
 
     fun addNullabilityAnnotation(mv: MethodVisitor) {
         mv.visitAnnotation(nullabilityAnnotation, true).visitEnd()

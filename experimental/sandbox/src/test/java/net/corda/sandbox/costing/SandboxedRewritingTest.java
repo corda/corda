@@ -95,7 +95,7 @@ public class SandboxedRewritingTest {
         final Object o = clz.newInstance();
         final Method m = clz.getMethod("makeObject");
         final Object ret = m.invoke(o);
-        assertTrue(Object.class == ret.getClass());
+        assertTrue(ret.getClass() == Object.class);
         checkAllCosts(1, 0, 2, 0);
     }
 

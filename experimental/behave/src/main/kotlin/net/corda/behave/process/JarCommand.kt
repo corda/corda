@@ -23,12 +23,10 @@ class JarCommand(
     companion object {
 
         private fun extraArguments(enableRemoteDebugging: Boolean) =
-            if (enableRemoteDebugging) {
-                arrayOf("-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
-            } else {
-                arrayOf()
-            }
-
+                if (enableRemoteDebugging) {
+                    arrayOf("-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
+                } else {
+                    arrayOf()
+                }
     }
-
 }

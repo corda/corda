@@ -41,10 +41,10 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(SecureHash.parse(it.txId), StateMachineRunId(UUID.fromString(it.stateMachineRunId))) },
-                    toPersistentEntity = { key: SecureHash, value: StateMachineRunId ->
+                    toPersistentEntity = { key: SecureHash, (uuid) ->
                         DBTransactionMapping().apply {
                             txId = key.toString()
-                            stateMachineRunId = value.uuid.toString()
+                            stateMachineRunId = uuid.toString()
                         }
                     },
                     persistentEntityClass = DBTransactionMapping::class.java
@@ -63,5 +63,4 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
     override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> =
             DataFeed(stateMachineTransactionMap.allPersisted().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
                     updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
-
 }

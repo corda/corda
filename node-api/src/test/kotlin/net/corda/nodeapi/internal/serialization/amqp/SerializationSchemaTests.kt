@@ -4,6 +4,7 @@ import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.nodeapi.internal.serialization.*
 import org.junit.Test
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 
 // Make sure all serialization calls in this test don't get stomped on by anything else
@@ -17,8 +18,8 @@ val TESTING_CONTEXT = SerializationContextImpl(amqpMagic,
 
 // Test factory that lets us count the number of serializer registration attempts
 class TestSerializerFactory(
-        wl : ClassWhitelist,
-        cl : ClassLoader
+        wl: ClassWhitelist,
+        cl: ClassLoader
 ) : SerializerFactory(wl, cl) {
     var registerCount = 0
 
@@ -35,7 +36,7 @@ val testFactory = TestSerializerFactory(TESTING_CONTEXT.whitelist, TESTING_CONTE
 // Serializer factory factory, plugs into the SerializationScheme and controls which factory type
 // we make for each use case. For our tests we need to make sure if its the Testing use case we return
 // the global factory object created above that counts registrations.
-class TestSerializerFactoryFactory : SerializerFactoryFactory() {
+class TestSerializerFactoryFactory : SerializerFactoryFactoryImpl() {
     override fun make(context: SerializationContext) =
             when (context.useCase) {
                 SerializationContext.UseCase.Testing -> testFactory
@@ -43,7 +44,7 @@ class TestSerializerFactoryFactory : SerializerFactoryFactory() {
             }
 }
 
-class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme(emptySet(), TestSerializerFactoryFactory()) {
+class AMQPTestSerializationScheme : AbstractAMQPSerializationScheme(emptySet(), ConcurrentHashMap(), TestSerializerFactoryFactory()) {
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         throw UnsupportedOperationException()
     }
@@ -83,16 +84,17 @@ class TestSerializationFactory : SerializationFactory() {
 class SerializationSchemaTests {
     @Test
     fun onlyRegisterCustomSerializersOnce() {
-        @CordaSerializable data class C(val a: Int)
+        @CordaSerializable
+        data class C(val a: Int)
 
         val c = C(1)
         val testSerializationFactory = TestSerializationFactory()
         val expectedCustomSerializerCount = 40
 
-        assertEquals (0, testFactory.registerCount)
-        c.serialize (testSerializationFactory, TESTING_CONTEXT)
-        assertEquals (expectedCustomSerializerCount, testFactory.registerCount)
-        c.serialize (testSerializationFactory, TESTING_CONTEXT)
-        assertEquals (expectedCustomSerializerCount, testFactory.registerCount)
+        assertEquals(0, testFactory.registerCount)
+        c.serialize(testSerializationFactory, TESTING_CONTEXT)
+        assertEquals(expectedCustomSerializerCount, testFactory.registerCount)
+        c.serialize(testSerializationFactory, TESTING_CONTEXT)
+        assertEquals(expectedCustomSerializerCount, testFactory.registerCount)
     }
 }

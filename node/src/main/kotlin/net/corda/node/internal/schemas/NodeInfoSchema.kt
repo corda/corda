@@ -28,19 +28,19 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "node_info_id", nullable = false)
             var id: Int,
 
-            @Column(name="node_info_hash", length = 64, nullable = false)
+            @Column(name = "node_info_hash", length = 64, nullable = false)
             val hash: String,
 
             @Column(name = "addresses", nullable = false)
-            @OneToMany(cascade = arrayOf(CascadeType.ALL), orphanRemoval = true)
+            @OneToMany(cascade = [(CascadeType.ALL)], orphanRemoval = true)
             @JoinColumn(name = "node_info_id", foreignKey = ForeignKey(name = "FK__info_hosts__infos"))
             val addresses: List<DBHostAndPort>,
 
             @Column(name = "legal_identities_certs", nullable = false)
-            @ManyToMany(cascade = arrayOf(CascadeType.ALL))
+            @ManyToMany(cascade = [(CascadeType.ALL)])
             @JoinTable(name = "node_link_nodeinfo_party",
-                    joinColumns = arrayOf(JoinColumn(name = "node_info_id", foreignKey = ForeignKey(name = "FK__link_nodeinfo_party__infos"))),
-                    inverseJoinColumns = arrayOf(JoinColumn(name = "party_name", foreignKey = ForeignKey(name = "FK__link_ni_p__info_p_cert"))))
+                    joinColumns = [(JoinColumn(name = "node_info_id", foreignKey = ForeignKey(name = "FK__link_nodeinfo_party__infos")))],
+                    inverseJoinColumns = [(JoinColumn(name = "party_name", foreignKey = ForeignKey(name = "FK__link_ni_p__info_p_cert")))])
             val legalIdentitiesAndCerts: List<DBPartyAndCertificate>,
 
             @Column(name = "platform_version", nullable = false)
@@ -102,16 +102,15 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "party_cert_binary", nullable = false)
             val partyCertBinary: ByteArray,
 
-
             val isMain: Boolean,
 
-            @ManyToMany(mappedBy = "legalIdentitiesAndCerts", cascade = arrayOf(CascadeType.ALL)) // ManyToMany because of distributed services.
+            @ManyToMany(mappedBy = "legalIdentitiesAndCerts", cascade = [(CascadeType.ALL)]) // ManyToMany because of distributed services.
             private val persistentNodeInfos: Set<PersistentNodeInfo> = emptySet()
     ) : Serializable {
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
                 : this(partyAndCert.name.toString(),
-                       partyAndCert.party.owningKey.toStringShort(),
-                       partyAndCert.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes, isMain)
+                partyAndCert.party.owningKey.toStringShort(),
+                partyAndCert.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes, isMain)
 
         fun toLegalIdentityAndCert(): PartyAndCertificate {
             return partyCertBinary.deserialize()

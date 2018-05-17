@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp.custom
 
 import net.corda.nodeapi.internal.serialization.amqp.CustomSerializer
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import java.lang.reflect.Method
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -14,7 +15,7 @@ class ZonedDateTimeSerializer(factory: SerializerFactory) : CustomSerializer.Pro
     // Java deserialization of `ZonedDateTime` uses a private method.  We will resolve this somewhat statically
     // so that any change to internals of `ZonedDateTime` is detected early.
     companion object {
-        val ofLenient = ZonedDateTime::class.java.getDeclaredMethod("ofLenient", LocalDateTime::class.java, ZoneOffset::class.java, ZoneId::class.java)
+        val ofLenient: Method = ZonedDateTime::class.java.getDeclaredMethod("ofLenient", LocalDateTime::class.java, ZoneOffset::class.java, ZoneId::class.java)
 
         init {
             ofLenient.isAccessible = true

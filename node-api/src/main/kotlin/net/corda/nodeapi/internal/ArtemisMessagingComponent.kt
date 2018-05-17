@@ -30,7 +30,9 @@ class ArtemisMessagingComponent {
         const val BRIDGE_CONTROL = "${INTERNAL_PREFIX}bridge.control"
         const val BRIDGE_NOTIFY = "${INTERNAL_PREFIX}bridge.notify"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
-
+        // This is a rough guess on the extra space needed on top of maxMessageSize to store the journal.
+        // TODO: we might want to make this value configurable.
+        const val JOURNAL_HEADER_SIZE = 1024
         object P2PMessagingHeaders {
             // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
             // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
@@ -48,7 +50,6 @@ class ArtemisMessagingComponent {
              * the equivalent information from the Float.
              */
             val bridgedCertificateSubject = SimpleString("sender-subject-name")
-
 
             object Type {
                 const val KEY = "corda_p2p_message_type"
@@ -128,5 +129,4 @@ class ArtemisMessagingComponent {
 
         override val queueName: String = "$P2P_PREFIX${identity.toStringShort()}"
     }
-
 }

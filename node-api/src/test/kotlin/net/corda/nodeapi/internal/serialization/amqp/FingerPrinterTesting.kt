@@ -7,7 +7,7 @@ import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
 import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
 
-class FingerPrinterTesting  : FingerPrinter {
+class FingerPrinterTesting : FingerPrinter {
     private var index = 0
     private val cache = mutableMapOf<Type, String>()
 
@@ -27,20 +27,21 @@ class FingerPrinterTesting  : FingerPrinter {
 
 class FingerPrinterTestingTests {
     companion object {
-        val VERBOSE = true
+        const val VERBOSE = true
     }
+
     @Test
     fun testingTest() {
         val fpt = FingerPrinterTesting()
-        assertEquals ("0", fpt.fingerprint(Integer::class.java))
-        assertEquals ("1", fpt.fingerprint(String::class.java))
-        assertEquals ("0", fpt.fingerprint(Integer::class.java))
-        assertEquals ("1", fpt.fingerprint(String::class.java))
+        assertEquals("0", fpt.fingerprint(Integer::class.java))
+        assertEquals("1", fpt.fingerprint(String::class.java))
+        assertEquals("0", fpt.fingerprint(Integer::class.java))
+        assertEquals("1", fpt.fingerprint(String::class.java))
     }
 
     @Test
     fun worksAsReplacement() {
-        data class C (val a: Int, val b: Long)
+        data class C(val a: Int, val b: Long)
 
         val factory = SerializerFactory(
                 AllWhitelist,
@@ -50,8 +51,7 @@ class FingerPrinterTestingTests {
 
         val blob = TestSerializationOutput(VERBOSE, factory).serializeAndReturnSchema(C(1, 2L))
 
-        assertEquals (1, blob.schema.types.size)
-        assertEquals ("<descriptor name=\"net.corda:0\"/>", blob.schema.types[0].descriptor.toString())
+        assertEquals(1, blob.schema.types.size)
+        assertEquals("<descriptor name=\"net.corda:0\"/>", blob.schema.types[0].descriptor.toString())
     }
-
 }

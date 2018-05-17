@@ -29,16 +29,17 @@ fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
     }
 }
 
-open class SerializerFactoryFactory {
-    open fun make(context: SerializationContext) =
-            SerializerFactory(context.whitelist, context.deserializationClassLoader)
+// Allow us to create a SerializerFactory with a different ClassCarpenter implementation.
+interface SerializerFactoryFactory {
+    fun make(context: SerializationContext): SerializerFactory
 }
 
 abstract class AbstractAMQPSerializationScheme(
-        private val cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>>,
-        val sff: SerializerFactoryFactory = SerializerFactoryFactory()
+    private val cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>>,
+    private val serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>,
+    val sff: SerializerFactoryFactory = createSerializerFactoryFactory()
 ) : SerializationScheme {
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers)
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, ConcurrentHashMap())
 
     // TODO: This method of initialisation for the Whitelist and plugin serializers will have to change
     // when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest way
@@ -68,6 +69,7 @@ abstract class AbstractAMQPSerializationScheme(
         val List<Cordapp>.customSerializers get() = flatMap { it.serializationCustomSerializers }.toSet()
     }
 
+    // Parameter "context" is unused directy but passed in by reflection. Removing it will cause failures.
     private fun registerCustomSerializers(context: SerializationContext, factory: SerializerFactory) {
         with(factory) {
             register(publicKeySerializer)
@@ -127,8 +129,6 @@ abstract class AbstractAMQPSerializationScheme(
         }
     }
 
-    private val serializerFactoriesForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>()
-
     protected abstract fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory
     protected abstract fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory
     protected open val publicKeySerializer: CustomSerializer.Implements<PublicKey> = net.corda.nodeapi.internal.serialization.amqp.custom.PublicKeySerializer
@@ -164,9 +164,13 @@ abstract class AbstractAMQPSerializationScheme(
 }
 
 // TODO: This will eventually cover server RPC as well and move to node module, but for now this is not implemented
-class AMQPServerSerializationScheme(cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>> = emptySet())
-    : AbstractAMQPSerializationScheme(cordappCustomSerializers) {
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers)
+class AMQPServerSerializationScheme(
+    cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
+    serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
+) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, ConcurrentHashMap())
+
+    constructor() : this(emptySet(), ConcurrentHashMap())
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         throw UnsupportedOperationException()
@@ -184,9 +188,13 @@ class AMQPServerSerializationScheme(cordappCustomSerializers: Set<SerializationC
 }
 
 // TODO: This will eventually cover client RPC as well and move to client module, but for now this is not implemented
-class AMQPClientSerializationScheme(cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>> = emptySet())
-    : AbstractAMQPSerializationScheme(cordappCustomSerializers) {
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers)
+class AMQPClientSerializationScheme(
+    cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>>,
+    serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
+) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, ConcurrentHashMap())
+
+    constructor() : this(emptySet(), ConcurrentHashMap())
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         throw UnsupportedOperationException()

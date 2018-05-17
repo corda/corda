@@ -10,7 +10,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.serialization.amqp.testutils.*
 import net.corda.testing.core.TestIdentity
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 
 data class TestContractState(
@@ -23,7 +22,7 @@ class TestAttachmentConstraint : AttachmentConstraint {
 
 class GenericsTests {
     companion object {
-        val VERBOSE = true
+        const val VERBOSE = true
 
         @Suppress("UNUSED")
         var localPath = projectRootDir.toUri().resolve(
@@ -36,7 +35,7 @@ class GenericsTests {
 
     private fun <T : Any> BytesAndSchemas<T>.printSchema() = if (VERBOSE) println("${this.schema}\n") else Unit
 
-    private fun ConcurrentHashMap<Any, AMQPSerializer<Any>>.printKeyToType() {
+    private fun MutableMap<Any, AMQPSerializer<Any>>.printKeyToType() {
         if (!VERBOSE) return
 
         forEach {
@@ -53,11 +52,11 @@ class GenericsTests {
 
         val bytes1 = SerializationOutput(factory).serializeAndReturnSchema(G("hi")).apply { printSchema() }
 
-        factory.getSerializersByDescriptor().printKeyToType()
+        factory.serializersByDescriptor.printKeyToType()
 
         val bytes2 = SerializationOutput(factory).serializeAndReturnSchema(G(121)).apply { printSchema() }
 
-        factory.getSerializersByDescriptor().printKeyToType()
+        factory.serializersByDescriptor.printKeyToType()
 
         listOf(factory, testDefaultFactory()).forEach { f ->
             DeserializationInput(f).deserialize(bytes1.obj).apply { assertEquals("hi", this.a) }
@@ -90,14 +89,14 @@ class GenericsTests {
 
         val bytes = ser.serializeAndReturnSchema(G("hi")).apply { printSchema() }
 
-        factory.getSerializersByDescriptor().printKeyToType()
+        factory.serializersByDescriptor.printKeyToType()
 
         assertEquals("hi", DeserializationInput(factory).deserialize(bytes.obj).a)
         assertEquals("hi", DeserializationInput(altContextFactory).deserialize(bytes.obj).a)
 
         val bytes2 = ser.serializeAndReturnSchema(Wrapper(1, G("hi"))).apply { printSchema() }
 
-        factory.getSerializersByDescriptor().printKeyToType()
+        factory.serializersByDescriptor.printKeyToType()
 
         printSeparator()
 
@@ -149,21 +148,21 @@ class GenericsTests {
         ser.serialize(Wrapper(Container(InnerA(1)))).apply {
             factories.forEach {
                 DeserializationInput(it).deserialize(this).apply { assertEquals(1, c.b.a_a) }
-                it.getSerializersByDescriptor().printKeyToType(); printSeparator()
+                it.serializersByDescriptor.printKeyToType(); printSeparator()
             }
         }
 
         ser.serialize(Wrapper(Container(InnerB(1)))).apply {
             factories.forEach {
                 DeserializationInput(it).deserialize(this).apply { assertEquals(1, c.b.a_b) }
-                it.getSerializersByDescriptor().printKeyToType(); printSeparator()
+                it.serializersByDescriptor.printKeyToType(); printSeparator()
             }
         }
 
         ser.serialize(Wrapper(Container(InnerC("Ho ho ho")))).apply {
             factories.forEach {
                 DeserializationInput(it).deserialize(this).apply { assertEquals("Ho ho ho", c.b.a_c) }
-                it.getSerializersByDescriptor().printKeyToType(); printSeparator()
+                it.serializersByDescriptor.printKeyToType(); printSeparator()
             }
         }
     }
@@ -199,7 +198,7 @@ class GenericsTests {
             a: ForceWildcard<*>,
             factory: SerializerFactory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())): SerializedBytes<*> {
         val bytes = SerializationOutput(factory).serializeAndReturnSchema(a)
-        factory.getSerializersByDescriptor().printKeyToType()
+        factory.serializersByDescriptor.printKeyToType()
         bytes.printSchema()
         return bytes.obj
     }

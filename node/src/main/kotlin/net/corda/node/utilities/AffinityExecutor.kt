@@ -36,10 +36,10 @@ interface AffinityExecutor : Executor {
      * way! Make sure the executor can't possibly be waiting for the calling thread.
      */
     fun <T> fetchFrom(fetcher: () -> T): T {
-        if (isOnThread)
-            return fetcher()
+        return if (isOnThread)
+            fetcher()
         else
-            return CompletableFuture.supplyAsync(Supplier { fetcher() }, this).get()
+            CompletableFuture.supplyAsync(Supplier { fetcher() }, this).get()
     }
 
     /**

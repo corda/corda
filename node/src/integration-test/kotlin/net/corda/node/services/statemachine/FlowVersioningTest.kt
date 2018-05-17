@@ -45,5 +45,4 @@ class FlowVersioningTest : NodeBasedTest() {
         @Suspendable
         override fun call() = otherSideSession.send(otherSideSession.getCounterpartyFlowInfo().flowVersion)
     }
-
 }

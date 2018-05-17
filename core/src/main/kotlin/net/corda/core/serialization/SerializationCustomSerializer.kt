@@ -14,11 +14,11 @@ interface SerializationCustomSerializer<OBJ, PROXY> {
      * Should facilitate the conversion of the third party object into the serializable
      * local class specified by [PROXY]
      */
-    fun toProxy(obj: OBJ) : PROXY
+    fun toProxy(obj: OBJ): PROXY
 
     /**
      * Should facilitate the conversion of the proxy object into a new instance of the
      * unserializable type
      */
-    fun fromProxy(proxy: PROXY) : OBJ
+    fun fromProxy(proxy: PROXY): OBJ
 }

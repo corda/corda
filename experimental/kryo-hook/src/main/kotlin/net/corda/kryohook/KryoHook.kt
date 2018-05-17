@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap
 class KryoHookAgent {
     companion object {
         @JvmStatic
-        fun premain(argumentsString: String?, instrumentation: Instrumentation) {
+        fun premain(@SuppressWarnings("unused") argumentsString: String?, instrumentation: Instrumentation) {
             Runtime.getRuntime().addShutdownHook(Thread {
                 val statsTrees = KryoHook.events.values.flatMap {
                     readTrees(it, 0).second
@@ -51,9 +51,9 @@ fun prettyStatsTree(indent: Int, statsTree: StatsTree, builder: StringBuilder) {
  * Later we "parse" these lists into a tree.
  */
 object KryoHook : ClassFileTransformer {
-    val classPool = ClassPool.getDefault()
+    val classPool = ClassPool.getDefault()!!
 
-    val hookClassName = javaClass.name
+    val hookClassName = javaClass.name!!
 
     override fun transform(
             loader: ClassLoader?,
@@ -95,14 +95,14 @@ object KryoHook : ClassFileTransformer {
     val events = ConcurrentHashMap<Long, ArrayList<StatsEvent>>()
 
     @JvmStatic
-    fun writeEnter(kryo: Kryo, output: Output, obj: Any) {
+    fun writeEnter(@SuppressWarnings("unused") kryo: Kryo, output: Output, obj: Any) {
         events.getOrPut(Strand.currentStrand().id) { ArrayList() }.add(
                 StatsEvent.Enter(obj.javaClass.name, output.total())
         )
     }
     @JvmStatic
-    fun writeExit(kryo: Kryo, output: Output, obj: Any) {
-        events.get(Strand.currentStrand().id)!!.add(
+    fun writeExit(@SuppressWarnings("unused") kryo: Kryo, output: Output, obj: Any) {
+        events[Strand.currentStrand().id]!!.add(
                 StatsEvent.Exit(obj.javaClass.name, output.total())
         )
     }

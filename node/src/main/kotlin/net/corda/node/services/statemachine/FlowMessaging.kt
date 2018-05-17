@@ -39,7 +39,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     companion object {
         val log = contextLogger()
 
-        val sessionTopic = "platform.session"
+        const val sessionTopic = "platform.session"
     }
 
     override fun start(onMessage: (ReceivedMessage, deduplicationHandler: DeduplicationHandler) -> Unit) {

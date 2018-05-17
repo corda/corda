@@ -10,7 +10,7 @@ These should be written in [Markdown](https://github.com/adam-p/markdown-here/wi
 
 ## Design Review Process
 
-Please see the [design review process](./designReviewProcess.md).
+Please see the [design review process](design-review-process.md).
 
 * Feature request submission
 * High level design
@@ -21,7 +21,7 @@ Please see the [design review process](./designReviewProcess.md).
 
 ## Design Template
 
-Please copy this [directory](./designTemplate) to a new location under `/docs/source/design` (use a meaningful short descriptive directory name) and use the [Design Template](./designTemplate/design.md) contained within to guide writing your Design Proposal. Whilst the section headings may be treated as placeholders for guidance, you are expected to be able to answer any questions related to pertinent section headings (where relevant to your design) at the design review stage. Use the [Design Decision Template](./designTemplate/decisions/decision.md)  (as many times as needed) to record the pros and cons, and justification of any design decision recommendations where multiple options are available. These should be directly referenced from the *Design Decisions* section of the main design document.
+Please copy this [directory](template) to a new location under `/docs/source/design` (use a meaningful short descriptive directory name) and use the [Design Template](template/design.md) contained within to guide writing your Design Proposal. Whilst the section headings may be treated as placeholders for guidance, you are expected to be able to answer any questions related to pertinent section headings (where relevant to your design) at the design review stage. Use the [Design Decision Template](template/decisions/decision.md)  (as many times as needed) to record the pros and cons, and justification of any design decision recommendations where multiple options are available. These should be directly referenced from the *Design Decisions* section of the main design document.
 
 The design document may be completed in one or two iterations, by completing the following main two sections individually or singularly:
 

@@ -251,8 +251,8 @@ open class PersistentNetworkMapCache(
     }
 
     private fun removeInfoDB(session: Session, nodeInfo: NodeInfo) {
-        val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey).single()
-        session.remove(info)
+        val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey).singleOrNull()
+        info?.let { session.remove(it) }
         // invalidate cache last - this way, we might serve up the wrong info for a short time, but it will get refreshed
         // on the next load
         invalidateCaches(nodeInfo)
@@ -305,7 +305,7 @@ open class PersistentNetworkMapCache(
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         query.setParameter("host", hostAndPort.host)
         query.setParameter("port", hostAndPort.port)
-        query.setMaxResults(1)
+        query.maxResults = 1
         val result = query.resultList
         return result.map { it.toNodeInfo() }.singleOrNull()
     }

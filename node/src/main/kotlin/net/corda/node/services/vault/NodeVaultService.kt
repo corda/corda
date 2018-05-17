@@ -397,13 +397,18 @@ class NodeVaultService(
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
+        return _queryBy(criteria, paging, sorting, contractStateType, false)
+    }
+
+    @Throws(VaultQueryException::class)
+    private fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean): Vault.Page<T> {
         log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
         // calculate total results where a page specification has been defined
         var totalStates = -1L
-        if (!paging.isDefault) {
+        if (!skipPagingChecks && !paging.isDefault) {
             val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
             val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
-            val results = queryBy(contractStateType, criteria.and(countCriteria))
+            val results = _queryBy(criteria.and(countCriteria), PageSpecification(), Sort(emptyList()), contractStateType, true)  // only skip pagination checks for total results count query
             totalStates = results.otherResults.last() as Long
         }
 
@@ -422,7 +427,7 @@ class NodeVaultService(
         val query = session.createQuery(criteriaQuery)
 
         // pagination checks
-        if (!paging.isDefault) {
+        if (!skipPagingChecks && !paging.isDefault) {
             // pagination
             if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
             if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
@@ -435,7 +440,7 @@ class NodeVaultService(
         val results = query.resultList
 
         // final pagination check (fail-fast on too many results when no pagination specified)
-        if (paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
+        if (!skipPagingChecks && paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
             throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [$DEFAULT_PAGE_SIZE]")
 
         val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
@@ -466,7 +471,7 @@ class NodeVaultService(
                     }
                 }
         if (stateRefs.isNotEmpty())
-            statesAndRefs.addAll(servicesForResolution.loadStates(stateRefs) as Collection<StateAndRef<T>>)
+            statesAndRefs.addAll(uncheckedCast(servicesForResolution.loadStates(stateRefs)))
 
         return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
     }

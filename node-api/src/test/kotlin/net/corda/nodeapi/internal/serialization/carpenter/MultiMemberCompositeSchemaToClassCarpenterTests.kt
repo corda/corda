@@ -48,7 +48,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
 
         assertNotEquals(null, aSchema)
 
-        val pinochio = ClassCarpenter(whitelist = AllWhitelist).build(aSchema!!)
+        val pinochio = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema!!)
         val p = pinochio.constructors[0].newInstance(testA, testB)
 
         assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
@@ -92,12 +92,11 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
 
         assertNotEquals(null, aSchema)
 
-        val pinochio = ClassCarpenter(whitelist = AllWhitelist).build(aSchema!!)
+        val pinochio = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema!!)
         val p = pinochio.constructors[0].newInstance(testA, testB)
 
         assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
         assertEquals(pinochio.getMethod("getB").invoke(p), amqpObj.b)
     }
-
 }
 

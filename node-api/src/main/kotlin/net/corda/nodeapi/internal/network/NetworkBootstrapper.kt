@@ -15,6 +15,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.ContractsJar
@@ -222,7 +223,8 @@ class NetworkBootstrapper {
                     maxMessageSize = 10485760,
                     maxTransactionSize = Int.MAX_VALUE,
                     whitelistedContractImplementations = whitelist,
-                    epoch = 1
+                    epoch = 1,
+                    eventHorizon = 30.days
             )
         }
         val copier = NetworkParametersCopier(networkParameters, overwriteFile = true)

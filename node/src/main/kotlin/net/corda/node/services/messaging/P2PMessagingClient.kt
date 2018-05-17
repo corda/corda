@@ -1,7 +1,6 @@
 package net.corda.node.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
-import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
@@ -16,7 +15,11 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.*
+import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.internal.LifecycleSupport
 import net.corda.node.internal.artemis.ReactiveArtemisConsumer
@@ -29,21 +32,31 @@ import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisAddress
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.ServiceAddress
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.requireMessageSize
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.client.*
+import org.apache.activemq.artemis.api.core.client.ActiveMQClient
+import org.apache.activemq.artemis.api.core.client.ClientConsumer
+import org.apache.activemq.artemis.api.core.client.ClientMessage
+import org.apache.activemq.artemis.api.core.client.ClientProducer
+import org.apache.activemq.artemis.api.core.client.ClientSession
+import org.apache.activemq.artemis.api.core.client.ServerLocator
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.Subscription
@@ -193,7 +206,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 // would be the default and the two lines below can be deleted.
                 connectionTTL = -1
                 clientFailureCheckPeriod = -1
-                minLargeMessageSize = maxMessageSize
+                minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
             }
             val sessionFactory = locator!!.createSessionFactory()
@@ -258,7 +271,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         networkChangeSubscription = networkMap.changed.subscribe { updateBridgesOnNetworkChange(it) }
     }
 
-     private fun sendBridgeControl(message: BridgeControl) {
+    private fun sendBridgeControl(message: BridgeControl) {
         state.locked {
             val controlPacket = message.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
             val artemisMessage = producerSession!!.createMessage(false)
@@ -366,6 +379,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private fun artemisToCordaMessage(message: ClientMessage): ReceivedMessage? {
         try {
+            requireMessageSize(message.bodySize, maxMessageSize)
             val topic = message.required(P2PMessagingHeaders.topicProperty) { getStringProperty(it) }
             val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
             val platformVersion = message.required(P2PMessagingHeaders.platformVersionProperty) { getIntProperty(it) }
@@ -409,7 +423,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 deliver(cordaMessage, artemisMessage)
             } else {
                 log.trace { "Discard duplicate message ${cordaMessage.uniqueMessageId} for ${cordaMessage.topic}" }
-                artemisMessage.individualAcknowledge()
+                messagingExecutor!!.acknowledge(artemisMessage)
             }
         }
     }
@@ -494,6 +508,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     @Suspendable
     override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
+        requireMessageSize(message.data.size, maxMessageSize)
         messagingExecutor!!.send(message, target)
         retryId?.let {
             database.transaction {
@@ -528,7 +543,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
         scheduledMessageRedeliveries[retryId] = nodeExecutor.schedule({
             sendWithRetry(retryCount + 1, message, target, retryId)
-        },messageRedeliveryDelaySeconds * Math.pow(backoffBase, retryCount.toDouble()).toLong(), TimeUnit.SECONDS)
+        }, messageRedeliveryDelaySeconds * Math.pow(backoffBase, retryCount.toDouble()).toLong(), TimeUnit.SECONDS)
     }
 
     override fun cancelRedelivery(retryId: Long) {
@@ -549,7 +564,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
         } else {
             // Otherwise we send the message to an internal queue for the target residing on our broker. It's then the
             // broker's job to route the message to the target's P2P queue.
-            val internalTargetQueue = (address as? ArtemisAddress)?.queueName ?: throw IllegalArgumentException("Not an Artemis address")
+            val internalTargetQueue = (address as? ArtemisAddress)?.queueName
+                    ?: throw IllegalArgumentException("Not an Artemis address")
             state.locked {
                 createQueueIfAbsent(internalTargetQueue, producerSession!!)
             }

@@ -70,7 +70,7 @@ class CashSelectionPostgreSQLImpl : AbstractCashSelection() {
                 paramOffset += 1
             }
             withIssuerRefs.map { it.bytes }.forEach {
-                statement.setBytes( 3 + paramOffset, it)
+                statement.setBytes(3 + paramOffset, it)
                 paramOffset += 1
             }
             statement.setLong(3 + paramOffset, amount.quantity)

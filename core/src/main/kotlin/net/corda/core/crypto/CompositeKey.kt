@@ -100,7 +100,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
                 // We can't print the node details, because doing so involves serializing the node, which we can't
                 // do because of the cyclic graph.
                 require(!curVisitedMap.contains(node)) { "Cycle detected for CompositeKey" }
-                curVisitedMap.put(node, true)
+                curVisitedMap[node] = true
                 node.cycleDetection(curVisitedMap)
             }
         }
@@ -116,7 +116,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
     fun checkValidity() {
         if (validated) return
         val visitedMap = IdentityHashMap<CompositeKey, Boolean>()
-        visitedMap.put(this, true)
+        visitedMap[this] = true
         cycleDetection(visitedMap) // Graph cycle testing on the root node.
         checkConstraints()
         for ((node, _) in children) {
@@ -271,15 +271,17 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
         fun build(threshold: Int? = null): PublicKey {
             require(threshold == null || threshold > 0)
             val n = children.size
-            return if (n > 1)
-                CompositeKey(threshold ?: children.map { (_, weight) -> weight }.sum(), children)
-            else if (n == 1) {
-                require(threshold == null || threshold == children.first().weight)
-                { "Trying to build invalid CompositeKey, threshold value different than weight of single child node." }
-                // Returning the only child node which is [PublicKey] itself. We need to avoid single-key [CompositeKey] instances,
-                // as there are scenarios where developers expected the underlying key and its composite versions to be equivalent.
-                children.first().node
-            } else throw IllegalStateException("Trying to build CompositeKey without child nodes.")
+            return when {
+                n > 1 -> CompositeKey(threshold ?: children.map { (_, weight) -> weight }.sum(), children)
+                n == 1 -> {
+                    require(threshold == null || threshold == children.first().weight)
+                    { "Trying to build invalid CompositeKey, threshold value different than weight of single child node." }
+                    // Returning the only child node which is [PublicKey] itself. We need to avoid single-key [CompositeKey] instances,
+                    // as there are scenarios where developers expected the underlying key and its composite versions to be equivalent.
+                    children.first().node
+                }
+                else -> throw IllegalStateException("Trying to build CompositeKey without child nodes.")
+            }
         }
     }
 }

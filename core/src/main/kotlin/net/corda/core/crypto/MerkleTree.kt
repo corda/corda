@@ -48,8 +48,8 @@ sealed class MerkleTree {
          * @return Tree root.
          */
         private tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>): MerkleTree {
-            if (lastNodesList.size == 1) {
-                return lastNodesList[0] // Root reached.
+            return if (lastNodesList.size == 1) {
+                lastNodesList[0] // Root reached.
             } else {
                 val newLevelHashes: MutableList<MerkleTree> = ArrayList()
                 val n = lastNodesList.size
@@ -61,7 +61,7 @@ sealed class MerkleTree {
                     val combined = Node(newHash, left, right)
                     newLevelHashes.add(combined)
                 }
-                return buildMerkleTree(newLevelHashes)
+                buildMerkleTree(newLevelHashes)
             }
         }
     }

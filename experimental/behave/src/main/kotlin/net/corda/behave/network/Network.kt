@@ -147,8 +147,8 @@ class Network private constructor(
                 val matches = LogSource(targetDirectory)
                         .find(".*[Ee]xception.*")
                         .groupBy { it.filename.toAbsolutePath() }
-                for (match in matches) {
-                    log.info("Log(${match.key}):\n${match.value.joinToString("\n") { it.contents }}")
+                for ((key, value) in matches) {
+                    log.info("Log($key):\n${value.joinToString("\n") { it.contents }}")
                 }
             }
         } else {

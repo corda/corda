@@ -12,7 +12,7 @@ class ConjunctiveWatch(
     override fun ready() = left.ready() && right.ready()
 
     override fun await(timeout: Duration): Boolean {
-        val countDownLatch =  CountDownLatch(2)
+        val countDownLatch = CountDownLatch(2)
         listOf(left, right).parallelStream().forEach {
             if (it.await(timeout)) {
                 countDownLatch.countDown()
@@ -20,5 +20,4 @@ class ConjunctiveWatch(
         }
         return countDownLatch.await(timeout)
     }
-
 }

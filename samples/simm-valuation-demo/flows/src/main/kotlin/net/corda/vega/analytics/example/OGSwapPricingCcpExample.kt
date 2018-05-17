@@ -198,5 +198,4 @@ class SwapPricingCcpExample {
                 100000000.0, // the notional amount  
                 0.015)                    // the fixed interest rate
     }
-
 }

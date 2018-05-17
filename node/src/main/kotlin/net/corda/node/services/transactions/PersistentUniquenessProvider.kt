@@ -33,7 +33,7 @@ import javax.persistence.*
 @ThreadSafe
 class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, SingletonSerializeAsToken() {
     @MappedSuperclass
-    open class BaseComittedState(
+    class BaseComittedState(
             @EmbeddedId
             val id: PersistentStateRef,
 

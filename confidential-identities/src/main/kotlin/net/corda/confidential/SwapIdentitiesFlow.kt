@@ -80,7 +80,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
         // TODO: for increased privacy, we should create one anonymous key per output state.
         val identities = LinkedHashMap<Party, AnonymousParty>()
         if (serviceHub.myInfo.isLegalIdentity(otherParty)) {
-            identities.put(otherParty, legalIdentityAnonymous.party.anonymise())
+            identities[otherParty] = legalIdentityAnonymous.party.anonymise()
         } else {
             val otherSession = initiateFlow(otherParty)
             val data = buildDataToSign(legalIdentityAnonymous)

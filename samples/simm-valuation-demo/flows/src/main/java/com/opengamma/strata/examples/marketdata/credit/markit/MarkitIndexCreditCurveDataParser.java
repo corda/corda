@@ -120,16 +120,12 @@ public class MarkitIndexCreditCurveDataParser {
                 spread = parseRate(compositeSpreadText);
             }
 
-            List<Point> points = curveData.get(id);
-            if (points == null) {
-                points = Lists.newArrayList();
-                curveData.put(id, points);
-            }
+            List<Point> points = curveData.computeIfAbsent(id, k -> Lists.newArrayList());
             points.add(new Point(term, maturity, spread));
         }
 
-        for (IsdaIndexCreditCurveInputsId curveId : curveData.keySet()) {
-            MarkitRedCode redCode = MarkitRedCode.from(curveId.getReferenceInformation().getIndexId());
+        for (Map.Entry<IsdaIndexCreditCurveInputsId, List<Point>> isdaIndexCreditCurveInputsIdListEntry : curveData.entrySet()) {
+            MarkitRedCode redCode = MarkitRedCode.from((isdaIndexCreditCurveInputsIdListEntry.getKey()).getReferenceInformation().getIndexId());
             StaticData staticData = staticDataMap.get(redCode);
             ArgChecker.notNull(staticData, "Did not find a static data record for " + redCode);
             CdsConvention convention = staticData.getConvention();
@@ -137,9 +133,9 @@ public class MarkitIndexCreditCurveDataParser {
             double indexFactor = staticData.getIndexFactor();
             // TODO add fromDate handling
 
-            String creditCurveName = curveId.toString();
+            String creditCurveName = (isdaIndexCreditCurveInputsIdListEntry.getKey()).toString();
 
-            List<Point> points = curveData.get(curveId);
+            List<Point> points = isdaIndexCreditCurveInputsIdListEntry.getValue();
 
             Period[] periods = points.stream().map(s -> s.getTenor().getPeriod()).toArray(Period[]::new);
             LocalDate[] endDates = points.stream().map(s -> s.getDate()).toArray(LocalDate[]::new);
@@ -153,9 +149,9 @@ public class MarkitIndexCreditCurveDataParser {
                     convention,
                     indexFactor);
 
-            builder.addValue(curveId, curveInputs);
+            builder.addValue(isdaIndexCreditCurveInputsIdListEntry.getKey(), curveInputs);
 
-            IsdaIndexRecoveryRateId recoveryRateId = IsdaIndexRecoveryRateId.of(curveId.getReferenceInformation());
+            IsdaIndexRecoveryRateId recoveryRateId = IsdaIndexRecoveryRateId.of((isdaIndexCreditCurveInputsIdListEntry.getKey()).getReferenceInformation());
             CdsRecoveryRate cdsRecoveryRate = CdsRecoveryRate.of(recoveryRate);
 
             builder.addValue(recoveryRateId, cdsRecoveryRate);

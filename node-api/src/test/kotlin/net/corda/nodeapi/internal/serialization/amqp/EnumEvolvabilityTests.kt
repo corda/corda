@@ -2,6 +2,9 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.*
 import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
+import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
 import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions
@@ -12,9 +15,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serializeAndReturnSchema
-import net.corda.nodeapi.internal.serialization.amqp.testutils.serialize
-import net.corda.nodeapi.internal.serialization.amqp.testutils.deserializeAndReturnEnvelope
 
 class EnumEvolvabilityTests {
     @Suppress("UNUSED")
@@ -397,6 +397,7 @@ class EnumEvolvabilityTests {
         val f = sf.javaClass.getDeclaredField("transformsCache")
         f.isAccessible = true
 
+        @Suppress("UNCHECKED_CAST")
         val transformsCache = f.get(sf) as ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>
 
         assertEquals(0, transformsCache.size)

@@ -5,6 +5,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.doOnError
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.doOnError
@@ -66,6 +67,7 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
 
     override fun networkParametersFeed() = wrapFeed(delegate::networkParametersFeed)
 
+    @Suppress("DEPRECATION", "OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsFeed() = wrapFeed(delegate::internalVerifiedTransactionsFeed)
 
     override fun stateMachinesSnapshot() = wrap(delegate::stateMachinesSnapshot)
@@ -80,6 +82,7 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
 
     override fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort) = wrap { delegate.vaultQueryByWithSorting(contractStateType, criteria, sorting) }
 
+    @Suppress("DEPRECATION", "OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsSnapshot() = wrap(delegate::internalVerifiedTransactionsSnapshot)
 
     override fun stateMachineRecordedTransactionMappingSnapshot() = wrap(delegate::stateMachineRecordedTransactionMappingSnapshot)
@@ -87,6 +90,8 @@ class RpcExceptionHandlingProxy(private val delegate: SecureCordaRPCOps) : Corda
     override fun networkMapSnapshot() = wrap(delegate::networkMapSnapshot)
 
     override fun acceptNewNetworkParameters(parametersHash: SecureHash) = wrap { delegate.acceptNewNetworkParameters(parametersHash) }
+
+    override fun killFlow(id: StateMachineRunId) = wrap { delegate.killFlow(id) }
 
     override fun nodeInfo() = wrap(delegate::nodeInfo)
 

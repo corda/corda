@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.webserver
 
 import net.corda.core.utilities.NetworkHostAndPort
@@ -13,7 +15,7 @@ import java.util.concurrent.ScheduledExecutorService
 
 class WebserverDriverTests {
     companion object {
-        val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
+        private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
         fun webserverMustBeUp(webserverHandle: WebserverHandle) {
             addressMustBeBound(executorService, webserverHandle.listenAddress, webserverHandle.process)

@@ -336,7 +336,7 @@ class SingleThreadedStateMachineManager(
             val flowId = sessionToFlow[recipientId]
             if (flowId == null) {
                 deduplicationHandler.afterDatabaseTransaction()
-                if (sessionMessage.payload is EndSessionMessage) {
+                if (sessionMessage.payload === EndSessionMessage) {
                     logger.debug {
                         "Got ${EndSessionMessage::class.java.simpleName} for " +
                                 "unknown session $recipientId, discarding..."
@@ -559,7 +559,7 @@ class SingleThreadedStateMachineManager(
     private fun addAndStartFlow(id: StateMachineRunId, flow: Flow) {
         val checkpoint = flow.fiber.snapshot().checkpoint
         for (sessionId in getFlowSessionIds(checkpoint)) {
-            sessionToFlow.put(sessionId, id)
+            sessionToFlow[sessionId] = id
         }
         mutex.locked {
             if (stopping) {
@@ -568,7 +568,7 @@ class SingleThreadedStateMachineManager(
             } else {
                 incrementLiveFibers()
                 unfinishedFibers.countUp()
-                flows.put(id, flow)
+                flows[id] = flow
                 flow.fiber.scheduleEvent(Event.DoRemainingWork)
                 when (checkpoint.flowState) {
                     is FlowState.Unstarted -> {

@@ -11,7 +11,7 @@ data class SSHDConfiguration(val port: Int) {
          */
         @JvmStatic
         fun parse(str: String): SSHDConfiguration {
-            require(!str.isNullOrBlank()) { SSHDConfiguration.MISSING_PORT_FORMAT.format(str) }
+            require(!str.isBlank()) { SSHDConfiguration.MISSING_PORT_FORMAT.format(str) }
             val port = try {
                 str.toInt()
             } catch (ex: NumberFormatException) {

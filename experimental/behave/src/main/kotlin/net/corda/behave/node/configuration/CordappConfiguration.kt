@@ -24,5 +24,4 @@ class CordappConfiguration(var apps: List<String> = emptyList(), val includeFina
     private fun formatApp(config: Configuration, app: String): String {
         return "\"${app.replace("CORDA_VERSION", config.distribution.version)}\""
     }
-
 }

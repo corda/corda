@@ -8,7 +8,6 @@ import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.utilities.days
 import net.corda.node.internal.configureDatabase
@@ -20,6 +19,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.internal.doLookup
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.spectator
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.TestClock
 import org.junit.Ignore
@@ -44,16 +44,9 @@ open class NodeSchedulerServiceTestBase {
     protected val testClock = TestClock(rigorousMock<Clock>().also {
         doReturn(mark).whenever(it).instant()
     })
-    private val database = rigorousMock<CordaPersistence>().also {
-        doAnswer {
-            val block: DatabaseTransaction.() -> Any? = uncheckedCast(it.arguments[0])
-            rigorousMock<DatabaseTransaction>().block()
-        }.whenever(it).transaction(any())
-    }
-
     protected val flowStarter = rigorousMock<FlowStarter>().also {
         doAnswer {
-            val dedupe = it.arguments[2] as DeduplicationHandler
+            val dedupe: DeduplicationHandler = it.getArgument(2)
             dedupe.insideDatabaseTransaction()
             dedupe.afterDatabaseTransaction()
             openFuture<FlowStateMachine<*>>()
@@ -74,11 +67,8 @@ open class NodeSchedulerServiceTestBase {
     protected val servicesForResolution = rigorousMock<ServicesForResolution>().also {
         doLookup(transactionStates).whenever(it).loadState(any())
     }
-    protected val log = rigorousMock<Logger>().also {
+    protected val log = spectator<Logger>().also {
         doReturn(false).whenever(it).isTraceEnabled
-        doNothing().whenever(it).trace(any(), any<Any>())
-        doNothing().whenever(it).info(any())
-        doNothing().whenever(it).error(any(), any<Throwable>())
     }
 
     protected fun assertWaitingFor(ssr: ScheduledStateRef, total: Int = 1) {
@@ -90,7 +80,7 @@ open class NodeSchedulerServiceTestBase {
 
     protected fun assertStarted(flowLogic: FlowLogic<*>) {
         // Like in assertWaitingFor, use timeout to make verify wait as we often race the call to startFlow:
-        verify(flowStarter, timeout(5000)).startFlow(same(flowLogic)!!, any(), any())
+        verify(flowStarter, timeout(5000)).startFlow(same(flowLogic), any(), any())
     }
 
     protected fun assertStarted(event: Event) = assertStarted(event.flowLogic)
@@ -108,7 +98,7 @@ class MockScheduledFlowRepository : ScheduledFlowRepository {
         if (map.containsKey(value.ref)) {
             result = true
         }
-        map.put(value.ref, value)
+        map[value.ref] = value
         return result
     }
 
@@ -124,7 +114,7 @@ class MockScheduledFlowRepository : ScheduledFlowRepository {
 class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     private val database = rigorousMock<CordaPersistence>().also {
         doAnswer {
-            val block: DatabaseTransaction.() -> Any? = uncheckedCast(it.arguments[0])
+            val block: DatabaseTransaction.() -> Any? = it.getArgument(0)
             rigorousMock<DatabaseTransaction>().block()
         }.whenever(it).transaction(any())
     }
@@ -154,7 +144,7 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
         val logicRef = rigorousMock<FlowLogicRef>()
         transactionStates[stateRef] = rigorousMock<TransactionState<SchedulableState>>().also {
             doReturn(rigorousMock<SchedulableState>().also {
-                doReturn(ScheduledActivity(logicRef, time)).whenever(it).nextScheduledActivity(same(stateRef)!!, any())
+                doReturn(ScheduledActivity(logicRef, time)).whenever(it).nextScheduledActivity(same(stateRef), any())
             }).whenever(it).data
         }
         flows[logicRef] = flowLogic

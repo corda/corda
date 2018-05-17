@@ -51,7 +51,7 @@ public final class LambdaCheckpointSerializationTest {
 
         assertThat(throwable).isNotNull();
         assertThat(throwable).isInstanceOf(IllegalArgumentException.class);
-        assertThat(throwable).hasMessage(CordaClosureSerializer.INSTANCE.getERROR_MESSAGE());
+        assertThat(throwable).hasMessage(CordaClosureSerializer.ERROR_MESSAGE);
     }
 
     private <T> SerializedBytes<T> serialize(final T target) {

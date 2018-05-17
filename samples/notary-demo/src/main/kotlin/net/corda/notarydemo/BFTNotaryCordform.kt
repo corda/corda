@@ -16,7 +16,7 @@ import java.nio.file.Paths
 
 fun main(args: Array<String>) = BFTNotaryCordform().nodeRunner().deployAndRunNodes()
 
-private val clusterSize = 4 // Minimum size that tolerates a faulty replica.
+private const val clusterSize = 4 // Minimum size that tolerates a faulty replica.
 private val notaryNames = createNotaryNames(clusterSize)
 
 // This is not the intended final design for how to use CordformDefinition, please treat this as experimental and DO
@@ -34,6 +34,7 @@ class BFTNotaryCordform : CordformDefinition() {
                 adminAddress("localhost:10103")
             }
             rpcUsers(notaryDemoUser)
+            devMode(true)
         }
         node {
             name(BOB_NAME)
@@ -42,11 +43,12 @@ class BFTNotaryCordform : CordformDefinition() {
                 address("localhost:10006")
                 adminAddress("localhost:10106")
             }
+            devMode(true)
         }
         val clusterAddresses = (0 until clusterSize).map { NetworkHostAndPort("localhost", 11000 + it * 10) }
         fun notaryNode(replicaId: Int, configure: CordformNode.() -> Unit) = node {
             name(notaryNames[replicaId])
-            notary(NotaryConfig(validating = false, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses)))
+            notary(NotaryConfig(validating = false, serviceLegalName = clusterName, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses)))
             configure()
         }
         notaryNode(0) {
@@ -55,6 +57,7 @@ class BFTNotaryCordform : CordformDefinition() {
                 address("localhost:10010")
                 adminAddress("localhost:10110")
             }
+            devMode(true)
         }
         notaryNode(1) {
             p2pPort(10013)
@@ -62,6 +65,7 @@ class BFTNotaryCordform : CordformDefinition() {
                 address("localhost:10014")
                 adminAddress("localhost:10114")
             }
+            devMode(true)
         }
         notaryNode(2) {
             p2pPort(10017)
@@ -69,6 +73,7 @@ class BFTNotaryCordform : CordformDefinition() {
                 address("localhost:10018")
                 adminAddress("localhost:10118")
             }
+            devMode(true)
         }
         notaryNode(3) {
             p2pPort(10021)
@@ -76,6 +81,7 @@ class BFTNotaryCordform : CordformDefinition() {
                 address("localhost:10022")
                 adminAddress("localhost:10122")
             }
+            devMode(true)
         }
     }
 

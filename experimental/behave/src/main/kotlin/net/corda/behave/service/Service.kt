@@ -59,7 +59,7 @@ abstract class Service(
 
     override fun toString() = "Service(name = $name, port = $port)"
 
-    protected open fun checkPrerequisites() { }
+    protected open fun checkPrerequisites() {}
 
     protected open fun startService() = true
 
@@ -68,5 +68,4 @@ abstract class Service(
     protected open fun verify() = true
 
     protected open fun waitUntilStarted() = true
-
 }

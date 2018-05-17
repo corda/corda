@@ -15,10 +15,14 @@ import net.corda.core.utilities.minutes
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
-import net.corda.nodeapi.internal.network.*
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.NetworkMap
+import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import rx.Subscription
 import rx.subjects.PublishSubject
-import java.net.URL
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Duration
@@ -59,7 +63,17 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     fun subscribeToNetworkMap() {
         require(fileWatcherSubscription == null) { "Should not call this method twice." }
         // Subscribe to file based networkMap
-        fileWatcherSubscription = fileWatcher.nodeInfoUpdates().subscribe(networkMapCache::addNode)
+        fileWatcherSubscription = fileWatcher.nodeInfoUpdates().subscribe {
+            when (it) {
+                is NodeInfoUpdate.Add -> {
+                    networkMapCache.addNode(it.nodeInfo)
+                }
+                is NodeInfoUpdate.Remove -> {
+                    val nodeInfo = networkMapCache.getNodeByHash(it.hash)
+                    nodeInfo?.let { networkMapCache.removeNode(it) }
+                }
+            }
+        }
 
         if (networkMapClient == null) return
 
