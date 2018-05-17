@@ -11,6 +11,7 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.r3.corda.networkmanage.common.DOORMAN_DB_NAME
+import com.r3.corda.networkmanage.common.configSupplierForSupportedDatabases
 import com.r3.corda.networkmanage.common.networkMapInMemoryH2DataSourceConfig
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
@@ -174,7 +175,8 @@ class NodeRegistrationTest : IntegrationTest() {
     }
 
     private fun startServer(startNetworkMap: Boolean = true): NetworkManagementServer {
-        val server = NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig), makeTestDatabaseProperties(DOORMAN_DB_NAME), doormanConfig, revocationConfig)
+        val server = NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, configSupplier = configSupplierForSupportedDatabases(), fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig),
+                makeTestDatabaseProperties(configSupplier = configSupplierForSupportedDatabases()), doormanConfig, revocationConfig)
         server.start(
                 serverAddress,
                 CertPathAndKey(listOf(doormanCa.certificate, rootCaCert), doormanCa.keyPair.private),
@@ -192,7 +194,8 @@ class NodeRegistrationTest : IntegrationTest() {
 
     private fun applyNetworkParametersAndStart(networkParametersCmd: NetworkParametersCmd) {
         server?.close()
-        NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig), makeTestDatabaseProperties(DOORMAN_DB_NAME), doormanConfig, revocationConfig).use {
+        NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, configSupplier = configSupplierForSupportedDatabases(), fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig),
+                makeTestDatabaseProperties(configSupplier = configSupplierForSupportedDatabases()), doormanConfig, revocationConfig).use {
             it.netParamsUpdateHandler.processNetworkParameters(networkParametersCmd)
         }
         server = startServer(startNetworkMap = true)

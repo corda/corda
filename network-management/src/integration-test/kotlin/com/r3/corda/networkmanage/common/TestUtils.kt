@@ -14,6 +14,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.SecureHash
 import net.corda.testing.database.DatabaseConstants
+import net.corda.testing.node.internal.databaseProviderDataSourceConfig
 
 const val HOST = "localhost"
 
@@ -29,3 +30,10 @@ fun networkMapInMemoryH2DataSourceConfig(nodeName: String? = null, postfix: Stri
             DatabaseConstants.DATA_SOURCE_USER to "sa",
             DatabaseConstants.DATA_SOURCE_PASSWORD to ""))
 }
+
+//TODO add more dbs to test once doorman supports them
+fun configSupplierForSupportedDatabases(): (String?, String?) -> Config =
+        when (System.getProperty("custom.databaseProvider", "")) {
+            "integration-sql-server", "integration-azure-sql" -> ::databaseProviderDataSourceConfig
+            else -> { _, _ -> ConfigFactory.empty() }
+        }

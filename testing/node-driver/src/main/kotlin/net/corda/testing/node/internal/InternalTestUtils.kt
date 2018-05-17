@@ -151,9 +151,9 @@ internal interface InternalMockMessagingService : MessagingService {
  * @param fallBackConfigSupplier Returns [Config] with dataSourceProperties, invoked with [nodeName] and [nodeNameExtension] parameters.
  * Defaults to configuration of in-memory H2 instance.
  */
-fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString(),
+fun makeTestDataSourceProperties(nodeName: String? = SecureHash.randomSHA256().toString(),
                                  nodeNameExtension: String? = null,
-                                 configSupplier: (String, String?) -> Config = ::databaseProviderDataSourceConfig,
+                                 configSupplier: (String?, String?) -> Config = ::databaseProviderDataSourceConfig,
                                  fallBackConfigSupplier: (String?, String?) -> Config = ::inMemoryH2DataSourceConfig): Properties {
     val config = configSupplier(nodeName, nodeNameExtension)
             .withFallback(fallBackConfigSupplier(nodeName, nodeNameExtension))
@@ -172,9 +172,11 @@ fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().to
  * Make properties appropriate for creating a Database for unit tests.
  *
  * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.
+ * @param configSupplier Returns [Config] with databaseProperties, invoked with [nodeName] parameter.
  */
-fun makeTestDatabaseProperties(nodeName: String? = null): DatabaseConfig {
-    val config = databaseProviderDataSourceConfig(nodeName)
+fun makeTestDatabaseProperties(nodeName: String? = null,
+                               configSupplier: (String?, String?) -> Config = ::databaseProviderDataSourceConfig): DatabaseConfig {
+    val config = configSupplier(nodeName, null)
     val transactionIsolationLevel = if (config.hasPath(DatabaseConstants.TRANSACTION_ISOLATION_LEVEL))
         TransactionIsolationLevel.valueOf(config.getString(DatabaseConstants.TRANSACTION_ISOLATION_LEVEL))
     else TransactionIsolationLevel.READ_COMMITTED
