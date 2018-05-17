@@ -6,14 +6,12 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.messaging.ObservableContextInterface
 import net.corda.node.services.messaging.ObservableSubscription
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.serialization.amqp.*
+import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data
-
 import rx.Notification
 import rx.Observable
 import rx.Subscriber
 import java.io.NotSerializableException
-
 import java.lang.reflect.Type
 
 /**
