@@ -157,7 +157,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
             val proxy = toProxy(obj)
             data.withList {
                 proxySerializer.propertySerializers.serializationOrder.forEach {
-                    it.getter.writeProperty(proxy, this, output, context)
+                    it.serializer.writeProperty(proxy, this, output, context)
                 }
             }
         }

@@ -160,7 +160,7 @@ public class JavaPrivatePropertyTests {
         ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);
         assertEquals(1, cSerializer.getPropertySerializers().getSerializationOrder().size());
         Object[] propertyReaders = cSerializer.getPropertySerializers().getSerializationOrder().toArray();
-        assertTrue (((PropertyAccessor)propertyReaders[0]).getGetter().getPropertyReader() instanceof PrivatePropertyReader);
+        assertTrue (((PropertyAccessor)propertyReaders[0]).getSerializer().getPropertyReader() instanceof PrivatePropertyReader);
     }
 
     @Test
@@ -190,6 +190,6 @@ public class JavaPrivatePropertyTests {
         ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);
         assertEquals(1, cSerializer.getPropertySerializers().getSerializationOrder().size());
         Object[] propertyReaders = cSerializer.getPropertySerializers().getSerializationOrder().toArray();
-        assertTrue (((PropertyAccessor)propertyReaders[0]).getGetter().getPropertyReader() instanceof PublicPropertyReader);
+        assertTrue (((PropertyAccessor)propertyReaders[0]).getSerializer().getPropertyReader() instanceof PublicPropertyReader);
     }
 }

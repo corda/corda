@@ -23,11 +23,9 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
         private val logger = contextLogger()
     }
 
-    internal open val propertySerializers: PropertySerializers by lazy {
+    open val propertySerializers: PropertySerializers by lazy {
         propertiesForSerialization(kotlinConstructor, clazz, factory)
     }
-
-    fun getPropertySerializers() = propertySerializers
 
     private val typeName = nameForType(clazz)
 
@@ -48,7 +46,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             }
 
             propertySerializers.serializationOrder.forEach { property ->
-                property.getter.writeClassInfo(output)
+                property.serializer.writeClassInfo(output)
             }
         }
     }
@@ -74,7 +72,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             // Write list
             withList {
                 propertySerializers.serializationOrder.forEach { property ->
-                    property.getter.writeProperty(obj, this, output, context, debugIndent + 1)
+                    property.serializer.writeProperty(obj, this, output, context, debugIndent + 1)
                 }
             }
         }
@@ -109,7 +107,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
         return construct(propertySerializers.serializationOrder
                 .zip(obj)
-                .map { Pair(it.first.initialPosition, it.first.getter.readProperty(it.second, schemas, input, context)) }
+                .map { Pair(it.first.initialPosition, it.first.serializer.readProperty(it.second, schemas, input, context)) }
                 .sortedWith(compareBy({ it.first }))
                 .map { it.second })
     }
@@ -128,7 +126,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
         // do it in doesn't matter
         val propertiesFromBlob = obj
                 .zip(propertySerializers.serializationOrder)
-                .map { it.second.getter.readProperty(it.first, schemas, input, context) }
+                .map { it.second.serializer.readProperty(it.first, schemas, input, context) }
 
         // one by one take a property and invoke the setter on the class
         propertySerializers.serializationOrder.zip(propertiesFromBlob).forEach {
@@ -140,7 +138,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
     private fun generateFields(): List<Field> {
         return propertySerializers.serializationOrder.map {
-            Field(it.getter.name, it.getter.type, it.getter.requires, it.getter.default, null, it.getter.mandatory, false)
+            Field(it.serializer.name, it.serializer.type, it.serializer.requires, it.serializer.default, null, it.serializer.mandatory, false)
         }
     }
 

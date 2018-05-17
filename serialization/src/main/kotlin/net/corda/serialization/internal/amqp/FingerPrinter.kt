@@ -192,9 +192,9 @@ class SerializerFingerPrinter : FingerPrinter {
         propertiesForSerialization(constructorForDeserialization(type), contextType ?: type, factory)
                 .serializationOrder
                 .fold(hasher.putUnencodedChars(name)) { orig, prop ->
-                    fingerprintForType(prop.getter.resolvedType, type, alreadySeen, orig, debugIndent + 1)
-                            .putUnencodedChars(prop.getter.name)
-                            .putUnencodedChars(if (prop.getter.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
+                    fingerprintForType(prop.serializer.resolvedType, type, alreadySeen, orig, debugIndent + 1)
+                            .putUnencodedChars(prop.serializer.name)
+                            .putUnencodedChars(if (prop.serializer.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
                 }
         interfacesForSerialization(type, factory).map { fingerprintForType(it, type, alreadySeen, hasher, debugIndent + 1) }
         return hasher
