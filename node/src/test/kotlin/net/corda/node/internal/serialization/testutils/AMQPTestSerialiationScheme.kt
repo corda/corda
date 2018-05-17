@@ -2,17 +2,15 @@ package net.corda.node.internal.serialization.testutils
 
 import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableSerializer
 import net.corda.core.context.Trace
-import net.corda.core.cordapp.Cordapp
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.serialization.AllWhitelist
-import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
-import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
-import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
-import java.util.concurrent.ConcurrentHashMap
+import net.corda.serialization.internal.CordaSerializationMagic
+import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.AllWhitelist
 import net.corda.client.rpc.internal.ObservableContext as ClientObservableContext
 
 /**

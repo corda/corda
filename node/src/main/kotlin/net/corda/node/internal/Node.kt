@@ -42,7 +42,7 @@ import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.serialization.*
+import net.corda.serialization.internal.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Scheduler

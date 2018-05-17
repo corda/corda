@@ -4,7 +4,7 @@ import com.opengamma.strata.product.common.BuySell
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.packageName
 import net.corda.core.utilities.getOrThrow
-import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.driver.DriverParameters

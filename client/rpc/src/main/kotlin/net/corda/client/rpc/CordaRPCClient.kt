@@ -1,8 +1,8 @@
 package net.corda.client.rpc
 
-import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
+import net.corda.client.rpc.internal.RPCClient
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.messaging.CordaRPCOps
@@ -11,7 +11,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.serialization.AMQP_RPC_CLIENT_CONTEXT
+import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import java.time.Duration
 
 /**
