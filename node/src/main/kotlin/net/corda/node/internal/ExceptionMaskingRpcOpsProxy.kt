@@ -5,7 +5,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.doOnError
-import net.corda.core.flows.ClientRelevantError
+import net.corda.core.flows.RpcSerializableError
 import net.corda.core.flows.ContextAware
 import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.mapError
@@ -32,7 +32,7 @@ internal class ExceptionMaskingRpcOpsProxy(private val delegate: CordaRPCOps) : 
         private val logger = loggerFor<ExceptionMaskingRpcOpsProxy>()
 
         private val whitelist = setOf(
-                ClientRelevantError::class,
+                RpcSerializableError::class,
                 InvalidClassException::class,
                 TransactionVerificationException::class
         )

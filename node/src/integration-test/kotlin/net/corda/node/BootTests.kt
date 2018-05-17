@@ -34,7 +34,7 @@ class BootTests {
                     start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
             assertThatThrownBy { future.getOrThrow() }
                     .isInstanceOf(CordaRuntimeException::class.java)
-                    .hasMessageContaining(InternalNodeException.defaultMessage())
+                    .hasMessageContaining(InternalNodeException.message)
         }
     }
 

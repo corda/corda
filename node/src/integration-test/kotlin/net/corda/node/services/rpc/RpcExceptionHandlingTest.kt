@@ -130,9 +130,6 @@ class ClientRelevantErrorFlow(private val message: String) : FlowLogic<String>()
 
 @StartableByRPC
 class FlowExceptionFlow(private val message: String, private val errorId: Long? = null) : FlowLogic<String>() {
-
-    constructor(message: String) : this(message, null)
-
     @Suspendable
     override fun call(): String {
 
