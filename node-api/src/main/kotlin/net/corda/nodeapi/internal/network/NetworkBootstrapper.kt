@@ -23,20 +23,22 @@ import net.corda.nodeapi.internal.ContractsJarFile
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
-import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
+import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
-import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
+import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
-import java.nio.file.Path
-import java.nio.file.Paths
+import java.nio.file.*
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
 import kotlin.streams.toList
+import kotlin.collections.HashSet
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 
 /**
  * Class to bootstrap a local network of Corda nodes on the same filesystem.
@@ -65,6 +67,10 @@ class NetworkBootstrapper {
     fun bootstrap(directory: Path, cordappJars: List<Path>) {
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
+
+        println("Checking for duplicate nodes in $directory")
+        checkForDuplicateLegalNames(directory, cordappJars)
+
         generateDirectoriesIfNeeded(directory, cordappJars)
         val nodeDirs = directory.list { paths -> paths.filter { (it / "corda.jar").exists() }.toList() }
         require(nodeDirs.isNotEmpty()) { "No nodes found" }
@@ -91,6 +97,23 @@ class NetworkBootstrapper {
             processes.forEach { if (it.isAlive) it.destroyForcibly() }
         }
     }
+
+    /*the function checks for duplicate myLegalName in the all the *_node.conf files
+    All the myLegalName values are added to a HashSet - this helps detect duplicate values.
+    If a duplicate name is found the process is aborted with an error message
+    */
+    private fun checkForDuplicateLegalNames(directory: Path, cordappJars: List<Path>) {
+      val legalNames = HashSet<String>()
+      val confFiles = directory.list { it.filter { it.toString().endsWith("_node.conf") }.toList() }
+      for (confFile in confFiles) {
+        val legalName = confFile.readLines { it.findFirst().get() }
+        if(!legalNames.add(legalName)){
+          println("Duplicate Node Found - ensure every node has a unique legal name");
+          throw Error("Duplicate Node Found");
+        }
+      }
+    }
+
 
     private fun generateDirectoriesIfNeeded(directory: Path, cordappJars: List<Path>) {
         val confFiles = directory.list { it.filter { it.toString().endsWith("_node.conf") }.toList() }
@@ -279,7 +302,7 @@ class NetworkBootstrapper {
         _contextSerializationEnv.set(SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
                     registerScheme(KryoParametersSerializationScheme)
-                    registerScheme(AMQPParametersSerializationScheme)
+                    registerScheme(AMQPServerSerializationScheme())
                 },
                 AMQP_P2P_CONTEXT)
         )
@@ -292,14 +315,5 @@ class NetworkBootstrapper {
 
         override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
         override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
-    }
-
-    private object AMQPParametersSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
-        override fun rpcClientSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
-        override fun rpcServerSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
-
-        override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-            return magic == amqpMagic && target == SerializationContext.UseCase.P2P
-        }
     }
 }
