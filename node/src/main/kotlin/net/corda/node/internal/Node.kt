@@ -293,7 +293,7 @@ open class Node(configuration: NodeConfiguration,
             runOnStop += this::close
             when (rpcOps) {
                 // not sure what this RPCOps base interface is for
-                is SecureCordaRPCOps -> start(RpcExceptionHandlingProxy(rpcOps), securityManager)
+                is SecureCordaRPCOps -> start(ExceptionMaskingRpcOpsProxy(rpcOps), securityManager)
                 else -> start(rpcOps, securityManager)
             }
         }

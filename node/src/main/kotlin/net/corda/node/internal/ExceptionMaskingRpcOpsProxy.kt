@@ -6,7 +6,6 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.doOnError
 import net.corda.core.flows.ClientRelevantError
-import net.corda.core.flows.FlowException
 import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.mapErrors
@@ -22,14 +21,15 @@ import net.corda.nodeapi.exceptions.InternalNodeException
 import rx.Observable
 import java.io.InvalidClassException
 import java.lang.reflect.InvocationHandler
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy.newProxyInstance
 import kotlin.reflect.KClass
 
-class RpcExceptionHandlingProxy(private val delegate: CordaRPCOps) : CordaRPCOps by proxy(delegate) {
+class ExceptionMaskingRpcOpsProxy(private val delegate: CordaRPCOps) : CordaRPCOps by proxy(delegate) {
 
     private companion object {
-        private val logger = loggerFor<RpcExceptionHandlingProxy>()
+        private val logger = loggerFor<ExceptionMaskingRpcOpsProxy>()
 
         private val whitelist = setOf(
                 ClientRelevantError::class,
@@ -43,14 +43,11 @@ class RpcExceptionHandlingProxy(private val delegate: CordaRPCOps) : CordaRPCOps
         }
     }
 
-    private class ErrorObfuscatingInvocationHandler(private val delegate: CordaRPCOps, private val whitelist: Set<KClass<*>>) : InvocationHandler {
-
+    private class ErrorObfuscatingInvocationHandler(override val delegate: CordaRPCOps, private val whitelist: Set<KClass<*>>) : InvocationHandlerTemplate {
         override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
             try {
-                // TODO sollecitom check whether this is passed correctly or needs the spread operator
-                val args = arguments ?: emptyArray()
-                val result = method.invoke(delegate, *args)
-                return obfuscateResult(result)
+                val result = super.invoke(proxy, method, arguments)
+                return result?.let { obfuscateResult(it) }
             } catch (exception: Exception) {
                 // In this special case logging and re-throwing is the right approach.
                 log(exception)
@@ -124,6 +121,6 @@ class RpcExceptionHandlingProxy(private val delegate: CordaRPCOps) : CordaRPCOps
     }
 
     override fun toString(): String {
-        return "RpcExceptionHandlingProxy"
+        return "ExceptionMaskingRpcOpsProxy"
     }
 }
