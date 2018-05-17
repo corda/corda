@@ -27,7 +27,6 @@ import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
-import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
@@ -71,12 +70,9 @@ class BridgeInstance(val conf: BridgeConfiguration,
             val classloader = this.javaClass.classLoader
             nodeSerializationEnv = SerializationEnvironmentImpl(
                     SerializationFactoryImpl().apply {
-                        registerScheme(AMQPServerSerializationScheme(emptyList()))
+                        registerScheme(AMQPBridgeSerializationScheme(emptyList()))
                     },
-                    p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
-                    rpcServerContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
-                    storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
-                    checkpointContext = AMQP_P2P_CONTEXT.withClassLoader(classloader))
+                    p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader))
         }
     }
 
