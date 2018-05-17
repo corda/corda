@@ -73,6 +73,10 @@ jar {
     exclude "META-INF/NOTICE"
 }
 
+cordappInfo {
+    vendor = "R3"
+}
+
 publish {
     name jar.baseName
 }
