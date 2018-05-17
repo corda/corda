@@ -108,6 +108,7 @@ see changes to this list.
 * Lars Stage Thomsen (Danske Bank)
 * Lee Braine (Barclays)
 * Lucas Salmen (Itau)
+* Lulu Ren (S-Labs)
 * Maksymilian Pawlak (R3)
 * Marek Scocovsky (ABSA)
 * marekdapps
@@ -138,7 +139,6 @@ see changes to this list.
 * Przemyslaw Bak (R3)
 * quiark
 * RangerOfFire
-* renlulu (s-labs)
 * Rex Maudsley (Société Générale)
 * Rhett Brewer (Goldman Sachs)
 * Richard Crook (RBS)

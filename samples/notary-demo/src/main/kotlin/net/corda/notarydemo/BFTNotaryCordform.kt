@@ -48,7 +48,7 @@ class BFTNotaryCordform : CordformDefinition() {
         val clusterAddresses = (0 until clusterSize).map { NetworkHostAndPort("localhost", 11000 + it * 10) }
         fun notaryNode(replicaId: Int, configure: CordformNode.() -> Unit) = node {
             name(notaryNames[replicaId])
-            notary(NotaryConfig(validating = false, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses)))
+            notary(NotaryConfig(validating = false, serviceLegalName = clusterName, bftSMaRt = BFTSMaRtConfiguration(replicaId, clusterAddresses)))
             configure()
         }
         notaryNode(0) {

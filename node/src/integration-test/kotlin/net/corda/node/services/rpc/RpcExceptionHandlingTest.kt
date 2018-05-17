@@ -21,7 +21,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
-import org.assertj.core.api.Assertions.assertThatCode
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForInterfaceTypes.assertThat
 import org.hibernate.exception.GenericJDBCException
 import org.junit.Test
@@ -38,12 +38,12 @@ class RpcExceptionHandlingTest {
 
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
 
-            assertThatCode { node.rpc.startFlow(::Flow).returnValue.getOrThrow() }
-                    .isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
-                        assertThat(exception).hasNoCause()
-                        assertThat(exception.stackTrace).isEmpty()
-                        assertThat(exception.message).isEqualTo(InternalNodeException.message)
-                    }
+            assertThatThrownBy { node.rpc.startFlow(::Flow).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+
+                assertThat(exception).hasNoCause()
+                assertThat(exception.stackTrace).isEmpty()
+                assertThat(exception.message).isEqualTo(InternalNodeException.message)
+            }
         }
     }
 
@@ -54,12 +54,12 @@ class RpcExceptionHandlingTest {
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
             val clientRelevantMessage = "This is for the players!"
 
-            assertThatCode { node.rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow() }
-                    .isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
-                        assertThat(exception).hasNoCause()
-                        assertThat(exception.stackTrace).isEmpty()
-                        assertThat(exception.message).isEqualTo(clientRelevantMessage)
-                    }
+            assertThatThrownBy { node.rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
+
+                assertThat(exception).hasNoCause()
+                assertThat(exception.stackTrace).isEmpty()
+                assertThat(exception.message).isEqualTo(clientRelevantMessage)
+            }
         }
     }
 
@@ -69,12 +69,12 @@ class RpcExceptionHandlingTest {
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
             val exceptionMessage = "Flow error!"
             val expectedErrorId = 123L
-            assertThatCode { node.rpc.startFlow(::FlowExceptionFlow, exceptionMessage, expectedErrorId).returnValue.getOrThrow() }
-                    .isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
-                        assertThat(exception).hasNoCause()
-                        assertThat(exception.stackTrace).isEmpty()
-                        assertThat(exception.additionalContext["errorId"]).isEqualTo(expectedErrorId)
-                    }
+            assertThatThrownBy { node.rpc.startFlow(::FlowExceptionFlow, exceptionMessage, expectedErrorId).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+
+                assertThat(exception).hasNoCause()
+                assertThat(exception.stackTrace).isEmpty()
+                assertThat(exception.additionalContext["errorId"]).isEqualTo(expectedErrorId)
+            }
         }
     }
 
@@ -85,12 +85,12 @@ class RpcExceptionHandlingTest {
             val nodeA = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = users)).getOrThrow()
             val nodeB = startNode(NodeParameters(providedName = BOB_NAME, rpcUsers = users)).getOrThrow()
 
-            assertThatCode { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }
-                    .isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
-                        assertThat(exception).hasNoCause()
-                        assertThat(exception.stackTrace).isEmpty()
-                        assertThat(exception.message).isEqualTo(InternalNodeException.message)
-                    }
+            assertThatThrownBy { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+
+                assertThat(exception).hasNoCause()
+                assertThat(exception.stackTrace).isEmpty()
+                assertThat(exception.message).isEqualTo(InternalNodeException.message)
+            }
         }
     }
 }

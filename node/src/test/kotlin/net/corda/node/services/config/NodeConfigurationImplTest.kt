@@ -13,6 +13,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.net.URI
+import java.net.URL
 import java.nio.file.Paths
 import java.util.*
 import kotlin.test.assertFalse
@@ -26,6 +27,27 @@ class NodeConfigurationImplTest {
         configDebugOptions(true, null)
         assertThatThrownBy { configDebugOptions(false, debugOptions) }.hasMessageMatching("Cannot use devModeOptions outside of dev mode")
         configDebugOptions(false, null)
+    }
+
+    @Test
+    fun `can't have tlsCertCrlDistPoint null when tlsCertCrlIssuer is given`() {
+        val configValidationResult = configTlsCertCrlOptions(null, "C=US, L=New York, OU=Corda, O=R3 HoldCo LLC, CN=Corda Root CA").validate()
+        assertTrue { configValidationResult.isNotEmpty() }
+        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL")
+    }
+
+    @Test
+    fun `tlsCertCrlIssuer validation fails when misconfigured`() {
+        val configValidationResult = configTlsCertCrlOptions(URL("http://test.com/crl"), "Corda Root CA").validate()
+        assertTrue { configValidationResult.isNotEmpty() }
+        assertThat(configValidationResult.first()).contains("Error when parsing tlsCertCrlIssuer:")
+    }
+
+    @Test
+    fun `can't have tlsCertCrlDistPoint null when crlCheckSoftFail is false`() {
+        val configValidationResult = configTlsCertCrlOptions(null, null, false).validate()
+        assertTrue { configValidationResult.isNotEmpty() }
+        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE")
     }
 
     @Test
@@ -114,8 +136,8 @@ class NodeConfigurationImplTest {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
 
-    private fun testConfiguration(dataSourceProperties: Properties): NodeConfigurationImpl {
-        return testConfiguration.copy(dataSourceProperties = dataSourceProperties)
+    private fun configTlsCertCrlOptions(tlsCertCrlDistPoint: URL?, tlsCertCrlIssuer: String?, crlCheckSoftFail: Boolean = true): NodeConfiguration {
+        return testConfiguration.copy(tlsCertCrlDistPoint = tlsCertCrlDistPoint, tlsCertCrlIssuer = tlsCertCrlIssuer, crlCheckSoftFail = crlCheckSoftFail)
     }
 
     private val testConfiguration = testNodeConfiguration()
@@ -147,7 +169,8 @@ class NodeConfigurationImplTest {
                 devMode = true,
                 noLocalShell = false,
                 rpcSettings = rpcSettings,
-                crlCheckSoftFail = true
+                crlCheckSoftFail = true,
+                tlsCertCrlDistPoint = null
         )
     }
 }

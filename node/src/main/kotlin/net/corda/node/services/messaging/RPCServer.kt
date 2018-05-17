@@ -15,13 +15,14 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.LifeCycle
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializationDefaults.RPC_SERVER_CONTEXT
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.*
 import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManager
-import net.corda.node.serialization.kryo.RpcServerObservableSerializer
 import net.corda.node.services.logging.pushToLoggingContext
+import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.externalTrace
 import net.corda.nodeapi.impersonatedActor
@@ -44,6 +45,8 @@ import java.time.Duration
 import java.util.*
 import java.util.concurrent.*
 import kotlin.concurrent.thread
+
+private typealias ObservableSubscriptionMap = Cache<InvocationId, ObservableSubscription>
 
 data class RPCServerConfiguration(
         /** The number of threads to use for handling RPC requests */
@@ -406,19 +409,22 @@ class RPCServer(
 
     /*
      * We construct an observable context on each RPC request. If subsequently a nested Observable is encountered this
-     * same context is propagated by the instrumented KryoPool. This way all observations rooted in a single RPC will be
+     * same context is propagated by serialization context. This way all observations rooted in a single RPC will be
      * muxed correctly. Note that the context construction itself is quite cheap.
      */
     inner class ObservableContext(
-            val observableMap: ObservableSubscriptionMap,
-            val clientAddressToObservables: ConcurrentHashMap<SimpleString, HashSet<InvocationId>>,
-            val deduplicationIdentity: String,
-            val clientAddress: SimpleString
-    ) {
-        private val serializationContextWithObservableContext = RpcServerObservableSerializer.createContext(this)
+            override val observableMap: ObservableSubscriptionMap,
+            override val clientAddressToObservables: ConcurrentHashMap<SimpleString, HashSet<InvocationId>>,
+            override val deduplicationIdentity: String,
+            override val clientAddress: SimpleString
+    ) : ObservableContextInterface {
+        private val serializationContextWithObservableContext = RpcServerObservableSerializer.createContext(
+                observableContext = this,
+                serializationContext = SerializationDefaults.RPC_SERVER_CONTEXT)
 
-        fun sendMessage(serverToClient: RPCApi.ServerToClient) {
-            sendJobQueue.put(RpcSendJob.Send(contextDatabaseOrNull, clientAddress, serializationContextWithObservableContext, serverToClient))
+        override fun sendMessage(serverToClient: RPCApi.ServerToClient) {
+            sendJobQueue.put(RpcSendJob.Send(contextDatabaseOrNull, clientAddress,
+                    serializationContextWithObservableContext, serverToClient))
         }
     }
 
@@ -478,4 +484,4 @@ class ObservableSubscription(
         val subscription: Subscription
 )
 
-typealias ObservableSubscriptionMap = Cache<InvocationId, ObservableSubscription>
+

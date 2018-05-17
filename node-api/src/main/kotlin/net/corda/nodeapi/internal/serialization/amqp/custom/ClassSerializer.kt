@@ -2,7 +2,6 @@ package net.corda.nodeapi.internal.serialization.amqp.custom
 
 import net.corda.nodeapi.internal.serialization.amqp.CustomSerializer
 import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
-import net.corda.nodeapi.internal.serialization.amqp.custom.ClassSerializer.ClassProxy
 
 /**
  * A serializer for [Class] that uses [ClassProxy] proxy object to write out

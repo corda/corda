@@ -15,6 +15,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.ContractsJar
@@ -22,10 +23,11 @@ import net.corda.nodeapi.internal.ContractsJarFile
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
-import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
+import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
+import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
 import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
 import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
 import java.nio.file.Path
@@ -222,7 +224,8 @@ class NetworkBootstrapper {
                     maxMessageSize = 10485760,
                     maxTransactionSize = Int.MAX_VALUE,
                     whitelistedContractImplementations = whitelist,
-                    epoch = 1
+                    epoch = 1,
+                    eventHorizon = 30.days
             )
         }
         val copier = NetworkParametersCopier(networkParameters, overwriteFile = true)
@@ -276,7 +279,7 @@ class NetworkBootstrapper {
         _contextSerializationEnv.set(SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
                     registerScheme(KryoParametersSerializationScheme)
-                    registerScheme(AMQPServerSerializationScheme())
+                    registerScheme(AMQPParametersSerializationScheme)
                 },
                 AMQP_P2P_CONTEXT)
         )
@@ -289,5 +292,14 @@ class NetworkBootstrapper {
 
         override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
         override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
+    }
+
+    private object AMQPParametersSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
+        override fun rpcClientSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
+        override fun rpcServerSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
+
+        override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+            return magic == amqpMagic && target == SerializationContext.UseCase.P2P
+        }
     }
 }

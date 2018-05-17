@@ -52,9 +52,6 @@ There are two main steps to implementing scheduled events:
 .. note:: The scheduler's clock always operates in the UTC time zone for uniformity, so any time zone logic must be
    performed by the contract, using ``ZonedDateTime``.
 
-In the short term, until we have automatic flow session set up, you will also likely need to install a network
-handler to help with obtaining a unique and secure random session.  An example is described below.
-
 The production and consumption of ``ContractStates`` is observed by the scheduler and the activities associated with
 any consumed states are unscheduled.  Any newly produced states are then queried via the ``nextScheduledActivity``
 method and if they do not return ``null`` then that activity is scheduled based on the content of the
@@ -82,11 +79,3 @@ should become available and schedules an activity at that time to work out what 
 business process and to take on those roles.  That ``FlowLogic`` will be handed the ``StateRef`` for the interest
 rate swap ``State`` in question, as well as a tolerance ``Duration`` of how long to wait after the activity is triggered
 for the interest rate before indicating an error.
-
-.. note:: This is a way to create a reference to the FlowLogic class and its constructor parameters to instantiate.
-
-As previously mentioned, we currently need a small network handler to assist with session setup until the work to
-automate that is complete.  See the interest rate swap specific implementation ``FixingSessionInitiationHandler`` which
-is responsible for starting a ``FlowLogic`` to perform one role in the fixing flow with the ``sessionID`` sent
-by the ``FixingRoleDecider`` on the other node which then launches the other role in the fixing flow.  Currently
-the handler needs to be manually installed in the node.

@@ -92,7 +92,12 @@ internal class AttachmentsClassLoaderBuilder(private val properties: Map<Any, An
     }
 }
 
-open class SerializationFactoryImpl : SerializationFactory() {
+open class SerializationFactoryImpl(
+    // TODO: This is read-mostly. Probably a faster implementation to be found.
+    private val schemes: MutableMap<Pair<CordaSerializationMagic, SerializationContext.UseCase>, SerializationScheme>
+) : SerializationFactory() {
+    constructor() : this(ConcurrentHashMap())
+
     companion object {
         val magicSize = sequenceOf(kryoMagic, amqpMagic).map { it.size }.distinct().single()
     }
@@ -103,17 +108,15 @@ open class SerializationFactoryImpl : SerializationFactory() {
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    // TODO: This is read-mostly. Probably a faster implementation to be found.
-    private val schemes: ConcurrentHashMap<Pair<CordaSerializationMagic, SerializationContext.UseCase>, SerializationScheme> = ConcurrentHashMap()
-
     private fun schemeFor(byteSequence: ByteSequence, target: SerializationContext.UseCase): Pair<SerializationScheme, CordaSerializationMagic> {
         // truncate sequence to at most magicSize, and make sure it's a copy to avoid holding onto large ByteArrays
         val magic = CordaSerializationMagic(byteSequence.slice(end = magicSize).copyBytes())
         val lookupKey = magic to target
         return schemes.computeIfAbsent(lookupKey) {
             registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
-            logger.warn("Cannot find serialization scheme for: $lookupKey, registeredSchemes are: $registeredSchemes")
-            throw UnsupportedOperationException("Serialization scheme not supported.")
+            logger.warn("Cannot find serialization scheme for: [$lookupKey, " +
+                    "${if (magic == amqpMagic) "AMQP" else if (magic == kryoMagic) "Kryo" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")
+            throw UnsupportedOperationException("Serialization scheme $lookupKey not supported.")
         } to magic
     }
 

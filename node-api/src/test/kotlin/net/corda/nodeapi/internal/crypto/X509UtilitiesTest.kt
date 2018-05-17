@@ -8,13 +8,13 @@ import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.node.serialization.kryo.KryoServerSerializationScheme
+import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.serialization.AllWhitelist
 import net.corda.nodeapi.internal.serialization.SerializationContextImpl
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
+import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
@@ -335,8 +335,8 @@ class X509UtilitiesTest {
 
     @Test
     fun `serialize - deserialize X509Certififcate`() {
-        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
-        val context = SerializationContextImpl(kryoMagic,
+        val factory = SerializationFactoryImpl().apply { registerScheme(AMQPServerSerializationScheme()) }
+        val context = SerializationContextImpl(amqpMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
@@ -351,8 +351,8 @@ class X509UtilitiesTest {
 
     @Test
     fun `serialize - deserialize X509CertPath`() {
-        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
-        val context = SerializationContextImpl(kryoMagic,
+        val factory = SerializationFactoryImpl().apply { registerScheme(AMQPServerSerializationScheme()) }
+        val context = SerializationContextImpl(amqpMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
