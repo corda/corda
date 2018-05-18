@@ -38,6 +38,24 @@
       <module name="publish-utils_test" target="1.8" />
       <module name="quasar-utils_main" target="1.8" />
       <module name="quasar-utils_test" target="1.8" />
+      <module name="rpc_integrationTest" target="1.8" />
+      <module name="rpc_main" target="1.8" />
+      <module name="rpc_smokeTest" target="1.8" />
+      <module name="rpc_test" target="1.8" />
+      <module name="samples_main" target="1.8" />
+      <module name="samples_test" target="1.8" />
+      <module name="sandbox_main" target="1.8" />
+      <module name="sandbox_test" target="1.8" />
+      <module name="serialization_main" target="1.8" />
+      <module name="serialization_test" target="1.8" />
+      <module name="shell_integrationTest" target="1.8" />
+      <module name="shell_main" target="1.8" />
+      <module name="shell_test" target="1.8" />
+      <module name="simm-valuation-demo_integrationTest" target="1.8" />
+      <module name="simm-valuation-demo_main" target="1.8" />
+      <module name="simm-valuation-demo_test" target="1.8" />
+      <module name="smoke-test-utils_main" target="1.8" />
+      <module name="smoke-test-utils_test" target="1.8" />
       <module name="source-example-code_integrationTest" target="1.8" />
       <module name="source-example-code_main" target="1.8" />
       <module name="source-example-code_test" target="1.8" />

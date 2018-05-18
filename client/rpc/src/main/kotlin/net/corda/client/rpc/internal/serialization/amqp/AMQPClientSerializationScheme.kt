@@ -7,12 +7,12 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.nodeapi.internal.serialization.*
-import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
-import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
-import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
-import java.util.concurrent.ConcurrentHashMap
 import net.corda.nodeapi.internal.serialization.amqp.custom.RxNotificationSerializer
+import net.corda.serialization.internal.*
+import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.amqpMagic
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * When set as the serialization scheme for a process, sets it to be the Corda AMQP implementation.
