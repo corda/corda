@@ -11,7 +11,7 @@ The Corda Testnet is currently in private beta. Interested parties can request i
    
 
 Deploying a Corda node to the Corda Testnet
-----------------------------------
+------------------------------------
 
 Access to the Corda Testnet is enabled by visiting https://testnet.corda.network.
 
@@ -44,10 +44,12 @@ To set up a Github account please see https://github.com/join
 	   
 Once you have been approved to join the beta you will recieve an email. Follow the link in the email to sign in or click on "I have an invitation" on the https://testnet.corda.network
 
+Sign in using either the Google or Github login services:
+
 .. image:: resources/testnet-signin.png 
    :scale: 50 %
 
-Sign in using either the Google or Github login services:
+When prompted approve the Testnet application:
 
 .. image:: resources/testnet-signin-auth.png 
    :scale: 50 %
@@ -58,4 +60,21 @@ Next agree to the terms of service:
 
 .. image:: resources/testnet-terms.png 
    :scale: 50 %
+
+You can now choose how to deploy your Corda node to the Corda Testnet. We strongly recommend hosting your Corda node on a public cloud resource. Select the cloud provider you wish to use for documentation on how to specifically configure Corda for that environment. 
+
+
+.. image:: resources/testnet-platform-clean.png 
+   :scale: 50 %
+
+Once your cloud instance is set up you can install and run your Testnet pre-provisioned Corda node by clicking on "Copy" and pasting the one time link into your cloud shell. 
+	   
+Corda networks require a PKI certificate infrastructure to provide identity on the network. The Corda Testnet onboarding application automatically provisions Corda nodes and enables a one-step deployment of the Corda server to your chosen hosting infrastructure as well as automatic connection and configuration to the Testnet. The installation script will download the Corda binaries as well as your PKI certificates, private keys and suporting files and will install and run Corda on your fresh cloud VM. Your node will register itself with the Corda Testnet when it first runs and be added to the global network map and be visible to counterparties after approximately 5 minutes. 
+
+Hosting a Corda node locally is possible but will require manually configuring firewall and port forwarding on your local router. If you want this option then click on the "Download" button to download a Zip file with a pre-configured Corda node.
+
+A note on identities on Corda Testnet
+------------------------------
+
+Unlike the main Corda Network, which is designed for verified real world identities, The Corda Testnet automatically assigns a "distinguished name" as your identity on the network for security reasons. If you require a human readable name then please contact support. 
 
