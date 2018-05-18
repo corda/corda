@@ -30,6 +30,15 @@ This will create you an account with the Testnet onboarding application which wi
 
 Fill in the form with your details. This helps prioritise requests to join the private beta.
 
+
 .. image:: resources/testnet-form.png 
    :scale: 50 %
 
+
+Note we currently only support federated login using either Google email accounts or Github enabled email accounts. Please ensure the email you use to register is either set up as a Google or Github account.
+
+To enable your email for Google please see https://support.google.com/accounts/answer/176347?hl=en
+To set up a Github account please see https://github.com/join
+
+	   
+Once you have been approved to join the beta you will recieve an email 
