@@ -1,12 +1,13 @@
-Deploying a Corda Node to a Google Cloud Platform VM
+Deploying Corda to Corda Testnet from an Google Cloud Platform VM
 ====================================================
 
 .. contents::
 
-Corda Connect Explore will allow you to create a self service download
-link with a node preconfigured to join the Explore environment. This
+https://testnet.corda.network enables a self service download
+link with a node preconfigured to join the Corda Testnet. This
 document will describe how to set up a virtual machine on the Google
-Cloud Platform to deploy your pre-generated Corda node on.
+Cloud Platform (GCP) to deploy your pre-generated Corda node and automatically connnect
+to Testnet.
 
 Pre-requisites
 --------------
@@ -74,14 +75,6 @@ cloud SSH terminal in a new window.
 .. image:: resources/gcpshell.png
    :scale: 50 %
 
-We need a few utilities so go ahead and check the following are
-installed and if not install with apt-get:
-
-.. code:: bash
-
-    sudo apt-get update
-    sudo apt-get install -y unzip  screen wget openjdk-8-jdk
-
 Now run the following to configure the firewall to allow Corda traffic
 
 .. code:: bash
@@ -115,38 +108,23 @@ the --addresses flag and the region:
 
 **STEP 4: Download and set up your Corda node**
 
-Now your environment is configured you can switch to the Explore
-application and click on the copy to clipboard button to get the installation command.
+Now your GCP environment is configured you can switch to the Testnet 
+web application and click on the copy to clipboard button to get a one
+time installation script:
 
-In your cloud VM terminal run the following command to download the
-bundle to your instance:
 
-.. code:: bash
+.. image:: resources/testnet-platform.png
+   :scale: 50 %
 
-    wget [your-specific-download-link]
-
-Make a directory and unzip the file in this directory:
-
-.. code:: bash
-
-    mkdir corda
-    mv node.zip corda
-    cd corda
-    unzip node.zip
-
-Make sure the run-corda.sh script is executable
+You can generate as many Testnet identites as you like by refreshing
+this page to generate a new one time link. 
+	   
+In your terminal paste the command you just copied to install and run
+your unique Corda instance:
 
 .. code:: bash
 
-    chmod +x run-corda.sh
-
-and then run the script to start Corda:
-
-.. code:: bash
-
-    ./run-corda.sh
+    ONE_TIME_DOWNLOAD_KEY=a1ecd6eb-62f8-4ccb-8ba6-e57b70bfc7fd sudo bash -c "$(curl -L https://cces.corda.r3cev.com/api/user/node/install.sh)"
 
 You can now navigate to the external web address of the instance and
-see the cordapps running on port 8080.
-
-
+see any cordapps running on port 8080 (if you have any installed). 
