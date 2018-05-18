@@ -57,7 +57,7 @@ class SocksTests {
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 
-    private class SocksServer(val port: Int) {
+    private class SocksServer(port: Int) {
         private val bossGroup = NioEventLoopGroup(1)
         private val workerGroup = NioEventLoopGroup()
         private var closeFuture: ChannelFuture? = null
@@ -314,7 +314,9 @@ class SocksTests {
                 clientKeystore,
                 clientConfig.keyStorePassword,
                 clientTruststore, true,
-                socksProxyConfig = SocksProxyConfig(SocksProxyVersion.SOCKS5, NetworkHostAndPort("127.0.0.1", socksPort), null, null))
+                socksProxyConfig = SocksProxyConfig(SocksProxyVersion.SOCKS5,
+                        NetworkHostAndPort("127.0.0.1", socksPort), null, null),
+                maxMessageSize = MAX_MESSAGE_SIZE)
     }
 
     private fun createSharedThreadsClient(sharedEventGroup: EventLoopGroup, id: Int): AMQPClient {
@@ -336,7 +338,9 @@ class SocksTests {
                 clientKeystore,
                 clientConfig.keyStorePassword,
                 clientTruststore, true, true, sharedEventGroup,
-                socksProxyConfig = SocksProxyConfig(SocksProxyVersion.SOCKS5, NetworkHostAndPort("127.0.0.1", socksPort), null, null))
+                socksProxyConfig = SocksProxyConfig(SocksProxyVersion.SOCKS5,
+                        NetworkHostAndPort("127.0.0.1", socksPort), null, null),
+                maxMessageSize = MAX_MESSAGE_SIZE)
     }
 
     private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME): AMQPServer {
@@ -358,6 +362,8 @@ class SocksTests {
                 serverKeystore,
                 serverConfig.keyStorePassword,
                 serverTruststore,
-                true)
+                true,
+                false,
+                MAX_MESSAGE_SIZE)
     }
 }
