@@ -71,8 +71,7 @@ class NodeAttachmentService(
     }
 
     @Entity
-    @Table(name = "${NODE_DATABASE_PREFIX}attachments",
-            indexes = arrayOf(Index(name = "att_id_idx", columnList = "att_id")))
+    @Table(name = "${NODE_DATABASE_PREFIX}attachments", indexes = [Index(name = "att_id_idx", columnList = "att_id")])
     class DBAttachment(
             @Id
             @Column(name = "att_id")
