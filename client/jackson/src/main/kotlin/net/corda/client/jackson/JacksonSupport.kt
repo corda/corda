@@ -4,25 +4,28 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.*
 import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.fasterxml.jackson.module.kotlin.convertValue
-import net.corda.client.jackson.internal.addSerAndDeser
+import net.corda.client.jackson.internal.CordaModule
+import net.corda.client.jackson.internal.ToStringSerialize
 import net.corda.client.jackson.internal.jsonObject
 import net.corda.client.jackson.internal.readValueAs
 import net.corda.core.CordaInternal
+import net.corda.core.CordaOID
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
-import net.corda.core.crypto.TransactionSignature
-import net.corda.core.identity.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.internal.CertRole
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
@@ -32,15 +35,19 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.utilities.toBase58String
+import org.bouncycastle.asn1.x509.KeyPurposeId
+import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.security.PublicKey
+import java.security.cert.CertPath
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.util.*
+import javax.security.auth.x500.X500Principal
 
 /**
  * Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
@@ -88,30 +95,9 @@ object JacksonSupport {
         override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? = null
     }
 
-    val cordaModule: Module by lazy {
-        SimpleModule("core").apply {
-            addSerAndDeser(AnonymousPartySerializer, AnonymousPartyDeserializer)
-            addSerAndDeser(PartySerializer, PartyDeserializer)
-            addDeserializer(AbstractParty::class.java, PartyDeserializer)
-            addSerAndDeser<BigDecimal>(toStringSerializer, NumberDeserializers.BigDecimalDeserializer())
-            addSerAndDeser<SecureHash.SHA256>(toStringSerializer, SecureHashDeserializer())
-            addSerAndDeser(toStringSerializer, AmountDeserializer)
-            addSerAndDeser(OpaqueBytesSerializer, OpaqueBytesDeserializer)
-            addSerAndDeser(toStringSerializer, CordaX500NameDeserializer)
-            addSerAndDeser(PublicKeySerializer, PublicKeyDeserializer)
-            addDeserializer(CompositeKey::class.java, CompositeKeyDeseriaizer)
-            addSerAndDeser(toStringSerializer, NetworkHostAndPortDeserializer)
-            // TODO Add deserialization which follows the same lookup logic as Party
-            addSerializer(PartyAndCertificate::class.java, PartyAndCertificateSerializer)
-            addDeserializer(NodeInfo::class.java, NodeInfoDeserializer)
-
-            listOf(TransactionSignatureSerde, SignedTransactionSerde).forEach { serde -> serde.applyTo(this) }
-
-            // Using mixins to fine-tune the default serialised output
-            setMixInAnnotation(WireTransaction::class.java, WireTransactionMixin::class.java)
-            setMixInAnnotation(NodeInfo::class.java, NodeInfoMixin::class.java)
-        }
-    }
+    @Suppress("unused")
+    @Deprecated("Do not use this as it's not thread safe. Instead get a ObjectMapper instance with one of the create*Mapper methods.")
+    val cordaModule: Module by lazy(::CordaModule)
 
     /**
      * Creates a Jackson ObjectMapper that uses RPC to deserialise parties from string names.
@@ -166,12 +152,19 @@ object JacksonSupport {
             registerModule(JavaTimeModule().apply {
                 addSerializer(Date::class.java, DateSerializer)
             })
-            registerModule(cordaModule)
+            registerModule(CordaModule())
             registerModule(KotlinModule())
+
+            addMixIn(BigDecimal::class.java, BigDecimalMixin::class.java)
+            addMixIn(X500Principal::class.java, X500PrincipalMixin::class.java)
+            addMixIn(X509Certificate::class.java, X509CertificateMixin::class.java)
+            addMixIn(CertPath::class.java, CertPathMixin::class.java)
         }
     }
 
-    private val toStringSerializer = com.fasterxml.jackson.databind.ser.std.ToStringSerializer.instance
+    @ToStringSerialize
+    @JsonDeserialize(using = NumberDeserializers.BigDecimalDeserializer::class)
+    private interface BigDecimalMixin
 
     private object DateSerializer : JsonSerializer<Date>() {
         override fun serialize(value: Date, gen: JsonGenerator, serializers: SerializerProvider) {
@@ -179,120 +172,89 @@ object JacksonSupport {
         }
     }
 
-    private object NetworkHostAndPortDeserializer : JsonDeserializer<NetworkHostAndPort>() {
-        override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): NetworkHostAndPort {
-            return NetworkHostAndPort.parse(parser.text)
-        }
-    }
+    @ToStringSerialize
+    private interface X500PrincipalMixin
 
-    private object CompositeKeyDeseriaizer : JsonDeserializer<CompositeKey>() {
-        override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): CompositeKey {
-            val publicKey = parser.readValueAs<PublicKey>()
-            return publicKey as? CompositeKey ?: throw JsonParseException(parser, "Not a CompositeKey: $publicKey")
-        }
-    }
+    @JsonSerialize(using = X509CertificateSerializer::class)
+    @JsonDeserialize(using = X509CertificateDeserializer::class)
+    private interface X509CertificateMixin
 
-    private object PartyAndCertificateSerializer : JsonSerializer<PartyAndCertificate>() {
-        override fun serialize(value: PartyAndCertificate, gen: JsonGenerator, serializers: SerializerProvider) {
+    private object X509CertificateSerializer : JsonSerializer<X509Certificate>() {
+        val keyUsages = arrayOf(
+                "digitalSignature",
+                "nonRepudiation",
+                "keyEncipherment",
+                "dataEncipherment",
+                "keyAgreement",
+                "keyCertSign",
+                "cRLSign",
+                "encipherOnly",
+                "decipherOnly"
+        )
+
+        val keyPurposeIds = KeyPurposeId::class.java
+                .fields
+                .filter { Modifier.isStatic(it.modifiers) && it.type == KeyPurposeId::class.java }
+                .associateBy({ (it.get(null) as KeyPurposeId).id }, { it.name })
+
+        val knownExtensions = setOf("2.5.29.15", "2.5.29.37", "2.5.29.19", "2.5.29.17", "2.5.29.18", CordaOID.X509_EXTENSION_CORDA_ROLE)
+
+        override fun serialize(value: X509Certificate, gen: JsonGenerator, serializers: SerializerProvider) {
             gen.jsonObject {
-                writeObjectField("name", value.name)
-                writeObjectField("owningKey", value.owningKey)
-                // TODO Add configurable option to output the certPath
-            }
-        }
-    }
-
-    @Suppress("unused")
-    private interface NodeInfoMixin {
-        @get:JsonIgnore val legalIdentities: Any  // This is already covered by legalIdentitiesAndCerts
-    }
-
-    private interface JsonSerde<TYPE> {
-        val type: Class<TYPE>
-        val serializer: JsonSerializer<TYPE>
-        val deserializer: JsonDeserializer<TYPE>
-
-        fun applyTo(module: SimpleModule) {
-            with(module) {
-                addSerializer(type, serializer)
-                addDeserializer(type, deserializer)
-            }
-        }
-    }
-
-    private inline fun <reified RESULT> JsonNode.get(fieldName: String, condition: (JsonNode) -> Boolean, mapper: ObjectMapper, parser: JsonParser): RESULT {
-        if (get(fieldName)?.let(condition) != true) {
-            JsonParseException(parser, "Missing required object field \"$fieldName\".")
-        }
-        return mapper.treeToValue(get(fieldName), RESULT::class.java)
-    }
-
-    private object TransactionSignatureSerde : JsonSerde<TransactionSignature> {
-        override val type: Class<TransactionSignature> = TransactionSignature::class.java
-
-        override val serializer = object : StdSerializer<TransactionSignature>(type) {
-            override fun serialize(value: TransactionSignature, gen: JsonGenerator, serializers: SerializerProvider) {
-                gen.jsonObject {
-                    writeObjectField("by", value.by)
-                    writeObjectField("signatureMetadata", value.signatureMetadata)
-                    writeObjectField("bytes", value.bytes)
-                    writeObjectField("partialMerkleTree", value.partialMerkleTree)
+                writeNumberField("version", value.version)
+                writeObjectField("serialNumber", value.serialNumber)
+                writeObjectField("subject", value.subjectX500Principal)
+                writeObjectField("publicKey", value.publicKey)
+                writeObjectField("issuer", value.issuerX500Principal)
+                writeObjectField("notBefore", value.notBefore)
+                writeObjectField("notAfter", value.notAfter)
+                writeObjectField("issuerUniqueID", value.issuerUniqueID)
+                writeObjectField("subjectUniqueID", value.subjectUniqueID)
+                writeObjectField("keyUsage", value.keyUsage?.asList()?.mapIndexedNotNull { i, flag -> if (flag) keyUsages[i] else null })
+                writeObjectField("extendedKeyUsage", value.extendedKeyUsage.map { keyPurposeIds.getOrDefault(it, it) })
+                jsonObject("basicConstraints") {
+                    writeBooleanField("isCA", value.basicConstraints != -1)
+                    writeObjectField("pathLength", value.basicConstraints.let { if (it != Int.MAX_VALUE) it else null })
                 }
-            }
-        }
-
-        override val deserializer = object : StdDeserializer<TransactionSignature>(type) {
-            override fun deserialize(parser: JsonParser, context: DeserializationContext): TransactionSignature {
-                val mapper = parser.codec as ObjectMapper
-                val json = mapper.readTree<JsonNode>(parser)
-                val by = mapper.convertValue<PublicKey>(json["by"])
-                val signatureMetadata = json.get<SignatureMetadata>("signatureMetadata", JsonNode::isObject, mapper, parser)
-                val bytes = json.get<ByteArray>("bytes", JsonNode::isObject, mapper, parser)
-                val partialMerkleTree = json.get<PartialMerkleTree>("partialMerkleTree", JsonNode::isObject, mapper, parser)
-
-                return TransactionSignature(bytes, by, signatureMetadata, partialMerkleTree)
+                writeObjectField("subjectAlternativeNames", value.subjectAlternativeNames)
+                writeObjectField("issuerAlternativeNames", value.issuerAlternativeNames)
+                writeObjectField("cordaCertRole", CertRole.extract(value))
+                writeObjectField("otherCriticalExtensions", value.criticalExtensionOIDs - knownExtensions)
+                writeObjectField("otherNonCriticalExtensions", value.nonCriticalExtensionOIDs - knownExtensions)
+                writeBinaryField("encoded", value.encoded)
             }
         }
     }
 
-    private object SignedTransactionSerde : JsonSerde<SignedTransaction> {
-        override val type: Class<SignedTransaction> = SignedTransaction::class.java
-
-        override val serializer = object : StdSerializer<SignedTransaction>(type) {
-            override fun serialize(value: SignedTransaction, gen: JsonGenerator, serializers: SerializerProvider) {
-                gen.jsonObject {
-                    writeObjectField("txBits", value.txBits.bytes)
-                    writeObjectField("signatures", value.sigs)
-                }
-            }
+    private class X509CertificateDeserializer : JsonDeserializer<X509Certificate>() {
+        private val certFactory = CertificateFactory.getInstance("X.509")
+        override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): X509Certificate {
+            val encoded = parser.readValueAsTree<ObjectNode>()["encoded"]
+            return certFactory.generateCertificate(encoded.binaryValue().inputStream()) as X509Certificate
         }
-
-        override val deserializer = object : StdDeserializer<SignedTransaction>(type) {
-            override fun deserialize(parser: JsonParser, context: DeserializationContext): SignedTransaction {
-                val mapper = parser.codec as ObjectMapper
-                val json = mapper.readTree<JsonNode>(parser)
-
-                val txBits = json.get<ByteArray>("txBits", JsonNode::isTextual, mapper, parser)
-                val signatures = json.get<TransactionSignatures>("signatures", JsonNode::isArray, mapper, parser)
-
-                return SignedTransaction(SerializedBytes(txBits), signatures)
-            }
-        }
-
-        private class TransactionSignatures : ArrayList<TransactionSignature>()
     }
 
+    @JsonSerialize(using = CertPathSerializer::class)
+    @JsonDeserialize(using = CertPathDeserializer::class)
+    private interface CertPathMixin
 
+    private class CertPathSerializer : JsonSerializer<CertPath>() {
+        override fun serialize(value: CertPath, gen: JsonGenerator, serializers: SerializerProvider) {
+            gen.writeObject(CertPathWrapper(value.type, uncheckedCast(value.certificates)))
+        }
+    }
 
-    //
-    // The following should not have been made public and are thus deprecated with warnings.
-    //
+    private class CertPathDeserializer : JsonDeserializer<CertPath>() {
+        private val certFactory = CertificateFactory.getInstance("X.509")
+        override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): CertPath {
+            val wrapper = parser.readValueAs<CertPathWrapper>()
+            return certFactory.generateCertPath(wrapper.certificates)
+        }
+    }
 
-    @Deprecated("No longer used as jackson already has a toString serializer",
-            replaceWith = ReplaceWith("com.fasterxml.jackson.databind.ser.std.ToStringSerializer.instance"))
-    object ToStringSerializer : JsonSerializer<Any>() {
-        override fun serialize(obj: Any, generator: JsonGenerator, provider: SerializerProvider) {
-            generator.writeString(obj.toString())
+    private data class CertPathWrapper(val type: String, val certificates: List<X509Certificate>) {
+        init {
+            require(type == "X.509") { "Only X.509 cert paths are supported" }
         }
     }
 
@@ -345,14 +307,6 @@ object JacksonSupport {
     }
 
     @Deprecated("This is an internal class, do not use")
-    // This is no longer used
-    object CordaX500NameSerializer : JsonSerializer<CordaX500Name>() {
-        override fun serialize(obj: CordaX500Name, generator: JsonGenerator, provider: SerializerProvider) {
-            generator.writeString(obj.toString())
-        }
-    }
-
-    @Deprecated("This is an internal class, do not use")
     object CordaX500NameDeserializer : JsonDeserializer<CordaX500Name>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): CordaX500Name {
             return try {
@@ -360,14 +314,6 @@ object JacksonSupport {
             } catch (e: IllegalArgumentException) {
                 throw JsonParseException(parser, "Invalid Corda X.500 name ${parser.text}: ${e.message}", e)
             }
-        }
-    }
-
-    @Deprecated("This is an internal class, do not use")
-    // This is no longer used
-    object NodeInfoSerializer : JsonSerializer<NodeInfo>() {
-        override fun serialize(value: NodeInfo, gen: JsonGenerator, serializers: SerializerProvider) {
-            gen.writeString(Base58.encode(value.serialize().bytes))
         }
     }
 
@@ -380,17 +326,6 @@ object JacksonSupport {
         }
     }
 
-    @Deprecated("This is an internal class, do not use")
-    // This is no longer used
-    object SecureHashSerializer : JsonSerializer<SecureHash>() {
-        override fun serialize(obj: SecureHash, generator: JsonGenerator, provider: SerializerProvider) {
-            generator.writeString(obj.toString())
-        }
-    }
-
-    /**
-     * Implemented as a class so that we can instantiate for T.
-     */
     @Deprecated("This is an internal class, do not use")
     class SecureHashDeserializer<T : SecureHash> : JsonDeserializer<T>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): T {
@@ -421,37 +356,64 @@ object JacksonSupport {
     }
 
     @Deprecated("This is an internal class, do not use")
-    // This is no longer used
-    object AmountSerializer : JsonSerializer<Amount<*>>() {
-        override fun serialize(value: Amount<*>, gen: JsonGenerator, serializers: SerializerProvider) {
-            gen.writeString(value.toString())
-        }
-    }
-
-    @Deprecated("This is an internal class, do not use")
     object AmountDeserializer : JsonDeserializer<Amount<*>>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): Amount<*> {
             return if (parser.currentToken == JsonToken.VALUE_STRING) {
                 Amount.parseCurrency(parser.text)
             } else {
-                try {
-                    val tree = parser.readValueAsTree<ObjectNode>()
-                    val quantity = tree["quantity"].apply { require(canConvertToLong()) }
-                    val token = tree["token"]
-                    // Attempt parsing as a currency token. TODO: This needs thought about how to extend to other token types.
-                    val currency = (parser.codec as ObjectMapper).convertValue<Currency>(token)
-                    Amount(quantity.longValue(), currency)
-                } catch (e: Exception) {
-                    throw JsonParseException(parser, "Invalid amount", e)
-                }
+                val wrapper = parser.readValueAs<CurrencyAmountWrapper>()
+                Amount(wrapper.quantity, wrapper.token)
             }
         }
     }
+
+    private data class CurrencyAmountWrapper(val quantity: Long, val token: Currency)
 
     @Deprecated("This is an internal class, do not use")
     object OpaqueBytesDeserializer : JsonDeserializer<OpaqueBytes>() {
         override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
             return OpaqueBytes(parser.binaryValue)
+        }
+    }
+
+
+    //
+    // Everything below this point is no longer used but can't be deleted as they leaked into the public API
+    //
+
+    @Deprecated("No longer used as jackson already has a toString serializer",
+            replaceWith = ReplaceWith("com.fasterxml.jackson.databind.ser.std.ToStringSerializer.instance"))
+    object ToStringSerializer : JsonSerializer<Any>() {
+        override fun serialize(obj: Any, generator: JsonGenerator, provider: SerializerProvider) {
+            generator.writeString(obj.toString())
+        }
+    }
+
+    @Deprecated("This is an internal class, do not use")
+    object CordaX500NameSerializer : JsonSerializer<CordaX500Name>() {
+        override fun serialize(obj: CordaX500Name, generator: JsonGenerator, provider: SerializerProvider) {
+            generator.writeString(obj.toString())
+        }
+    }
+
+    @Deprecated("This is an internal class, do not use")
+    object NodeInfoSerializer : JsonSerializer<NodeInfo>() {
+        override fun serialize(value: NodeInfo, gen: JsonGenerator, serializers: SerializerProvider) {
+            gen.writeString(Base58.encode(value.serialize().bytes))
+        }
+    }
+
+    @Deprecated("This is an internal class, do not use")
+    object SecureHashSerializer : JsonSerializer<SecureHash>() {
+        override fun serialize(obj: SecureHash, generator: JsonGenerator, provider: SerializerProvider) {
+            generator.writeString(obj.toString())
+        }
+    }
+
+    @Deprecated("This is an internal class, do not use")
+    object AmountSerializer : JsonSerializer<Amount<*>>() {
+        override fun serialize(value: Amount<*>, gen: JsonGenerator, serializers: SerializerProvider) {
+            gen.writeString(value.toString())
         }
     }
 
@@ -467,7 +429,7 @@ object JacksonSupport {
     abstract class SignedTransactionMixin {
         @JsonIgnore abstract fun getTxBits(): SerializedBytes<CoreTransaction>
         @JsonProperty("signatures") protected abstract fun getSigs(): List<TransactionSignature>
-        @JsonProperty protected abstract fun getTransaction(): CoreTransaction  // TODO It seems this should be coreTransaction
+        @JsonProperty protected abstract fun getTransaction(): CoreTransaction
         @JsonIgnore abstract fun getTx(): WireTransaction
         @JsonIgnore abstract fun getNotaryChangeTx(): NotaryChangeWireTransaction
         @JsonIgnore abstract fun getInputs(): List<StateRef>

@@ -4,7 +4,7 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "corda-4.0-snapshot"
+    ext.corda_release_version = "corda-4.0-SNAPSHOT"
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
@@ -52,7 +52,7 @@ buildscript {
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.3.3'
     ext.junit_version = '4.12'
-    ext.mockito_version = '2.10.0'
+    ext.mockito_version = '2.18.3'
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
@@ -103,9 +103,7 @@ buildscript {
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:cordformation:$gradle_plugins_version"
         classpath "net.corda.plugins:cordapp:$gradle_plugins_version"
-        //TODO Anthony- this should be changed back to $gradle_plugins_version when the api-scaner is fixed
-//        classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
-        classpath "net.corda.plugins:api-scanner:4.0.15"
+        classpath "net.corda.plugins:api-scanner:$gradle_plugins_version"
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
@@ -220,12 +218,23 @@ allprojects {
                 force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
                 force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
                 force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+                // Demand that everything uses our given version of Netty.
+                eachDependency { details ->
+                    if (details.requested.group == 'io.netty' && details.requested.name.startsWith('netty-')) {
+                        details.useVersion netty_version
+                    }
+                }
             }
         }
         compile {
             // We want to use SLF4J's version of these bindings: jcl-over-slf4j
             // Remove any transitive dependency on Apache's version.
             exclude group: 'commons-logging', module: 'commons-logging'
+
+            // Netty-All is an uber-jar which contains every Netty module.
+            // Exclude it to force us to use the individual Netty modules instead.
+            exclude group: 'io.netty', module: 'netty-all'
         }
         runtime {
             // We never want isolated.jar on classPath, since we want to test jar being dynamically loaded as an attachment
@@ -313,7 +322,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities', 'corda-shell']
+    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities', 'corda-shell', 'corda-serialization']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'

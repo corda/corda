@@ -50,3 +50,5 @@ include 'samples:simm-valuation-demo:contracts-states'
 include 'samples:notary-demo'
 include 'samples:bank-of-corda-demo'
 include 'samples:cordapp-configuration'
+include 'serialization'
+

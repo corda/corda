@@ -29,9 +29,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.*
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
@@ -88,6 +86,7 @@ import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.time.Clock
 import java.time.Duration
+import java.time.format.DateTimeParseException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -364,6 +363,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // Write the node-info file even if nothing's changed, just in case the file has been deleted.
         NodeInfoWatcher.saveToFile(configuration.baseDirectory, nodeInfoAndSigned)
 
+        // Always republish on startup, it's treated by network map server as a heartbeat.
         if (networkMapClient != null) {
             tryPublishNodeInfoAsync(nodeInfoAndSigned.signed, networkMapClient)
         }
@@ -371,18 +371,31 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return Pair(keyPairs, nodeInfo)
     }
 
+    // Publish node info on startup and start task that sends every day a heartbeat - republishes node info.
     private fun tryPublishNodeInfoAsync(signedNodeInfo: SignedNodeInfo, networkMapClient: NetworkMapClient) {
+        // By default heartbeat interval should be set to 1 day, but for testing we may change it.
+        val republishProperty = System.getProperty("net.corda.node.internal.nodeinfo.publish.interval")
+        val heartbeatInterval = if (republishProperty != null) {
+            try {
+                Duration.parse(republishProperty)
+            } catch (e: DateTimeParseException) {
+                1.days
+            }
+        } else {
+            1.days
+        }
         val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater", Executors.defaultThreadFactory()))
-
         executor.submit(object : Runnable {
             override fun run() {
-                try {
+                val republishInterval = try {
                     networkMapClient.publish(signedNodeInfo)
+                    heartbeatInterval
                 } catch (t: Throwable) {
                     log.warn("Error encountered while publishing node info, will retry again", t)
-                    // TODO: Exponential backoff?
-                    executor.schedule(this, 1, TimeUnit.MINUTES)
+                    // TODO: Exponential backoff? It should reach max interval of eventHorizon/2.
+                    1.minutes
                 }
+                executor.schedule(this, republishInterval.toMinutes(), TimeUnit.MINUTES)
             }
         })
     }
@@ -809,10 +822,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
 
         val subject = CordaX500Name.build(certificates[0].subjectX500Principal)
-        // TODO Include the name of the distributed notary, which the node is part of, in the notary config so that we
-        // can cross-check the identity we get from the key store
         if (singleName != null && subject != singleName) {
             throw ConfigurationException("The name '$singleName' for $id doesn't match what's in the key store: $subject")
+        } else if (notaryConfig != null && notaryConfig.isClusterConfig && notaryConfig.serviceLegalName != null && subject != notaryConfig.serviceLegalName) {
+            // Note that we're not checking if `notaryConfig.serviceLegalName` is not present for backwards compatibility.
+            throw ConfigurationException("The name of the notary service '${notaryConfig.serviceLegalName}' for $id doesn't match what's in the key store: $subject. "+
+                    "You might need to adjust the configuration of `notary.serviceLegalName`.")
         }
 
         val certPath = X509Utilities.buildCertPath(certificates)

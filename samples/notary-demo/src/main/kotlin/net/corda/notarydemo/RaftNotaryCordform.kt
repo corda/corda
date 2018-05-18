@@ -48,7 +48,7 @@ class RaftNotaryCordform : CordformDefinition() {
         fun notaryNode(index: Int, nodePort: Int, clusterPort: Int? = null, configure: CordformNode.() -> Unit) = node {
             name(notaryNames[index])
             val clusterAddresses = if (clusterPort != null) listOf(NetworkHostAndPort("localhost", clusterPort)) else emptyList()
-            notary(NotaryConfig(validating = true, raft = RaftConfig(NetworkHostAndPort("localhost", nodePort), clusterAddresses)))
+            notary(NotaryConfig(validating = true, serviceLegalName = clusterName, raft = RaftConfig(NetworkHostAndPort("localhost", nodePort), clusterAddresses)))
             configure()
             devMode(true)
         }

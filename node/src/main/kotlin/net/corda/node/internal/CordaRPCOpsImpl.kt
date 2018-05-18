@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -110,6 +111,8 @@ internal class CordaRPCOpsImpl(
         updates.notUsed()
         return snapshot
     }
+
+    override fun killFlow(id: StateMachineRunId) = smm.killFlow(id)
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
         return database.transaction {

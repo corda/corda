@@ -1,5 +1,5 @@
-Corda networks
-==============
+Networks
+========
 
 .. toctree::
    :maxdepth: 1

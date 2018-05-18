@@ -16,7 +16,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.coreContractClasses
-import net.corda.nodeapi.internal.serialization.DefaultWhitelist
+import net.corda.serialization.internal.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
 import java.lang.reflect.Modifier
 import java.net.JarURLConnection

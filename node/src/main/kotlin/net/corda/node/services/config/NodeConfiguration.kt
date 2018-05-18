@@ -16,6 +16,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
+import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.net.URL
 import java.nio.file.Path
@@ -55,6 +56,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
     // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
     val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
     val extraNetworkMapKeys: List<UUID>
+    val tlsCertCrlDistPoint: URL?
+    val tlsCertCrlIssuer: String?
 
     fun validate(): List<String>
 
@@ -85,7 +88,8 @@ fun NodeConfiguration.shouldInitCrashShell() = shouldStartLocalShell() || should
 data class NotaryConfig(val validating: Boolean,
                         val raft: RaftConfig? = null,
                         val bftSMaRt: BFTSMaRtConfiguration? = null,
-                        val custom: Boolean = false
+                        val custom: Boolean = false,
+                        val serviceLegalName: CordaX500Name? = null
 ) {
     init {
         require(raft == null || bftSMaRt == null || !custom) {
@@ -135,6 +139,8 @@ data class NodeConfigurationImpl(
         override val crlCheckSoftFail: Boolean,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
+        override val tlsCertCrlDistPoint: URL? = null,
+        override val tlsCertCrlIssuer: String? = null,
         override val rpcUsers: List<User>,
         override val security: SecurityConfiguration? = null,
         override val verifierType: VerifierType,
@@ -182,10 +188,29 @@ data class NodeConfigurationImpl(
         }.asOptions(fallbackSslOptions)
     }
 
+    private fun validateTlsCertCrlConfig(): List<String> {
+        val errors = mutableListOf<String>()
+        if (tlsCertCrlIssuer != null) {
+            if (tlsCertCrlDistPoint == null) {
+                errors += "tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL"
+            }
+            try {
+                X500Name(tlsCertCrlIssuer)
+            } catch (e: Exception) {
+                errors += "Error when parsing tlsCertCrlIssuer: ${e.message}"
+            }
+        }
+        if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {
+            errors += "tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE"
+        }
+        return errors
+    }
+
     override fun validate(): List<String> {
         val errors = mutableListOf<String>()
         errors += validateDevModeOptions()
         errors += validateRpcOptions(rpcOptions)
+        errors += validateTlsCertCrlConfig()
         return errors
     }
 

@@ -70,7 +70,8 @@ class NodeMonitorModel {
 
             // Only execute using "runLater()" if JavaFX been initialized.
             // It may not be initialized in the unit test.
-            if(initialized.value.get()) {
+            // Also if we are already in the JavaFX thread - perform direct invocation without postponing it.
+            if(initialized.value.get() && !Platform.isFxApplicationThread()) {
                 Platform.runLater(op)
             } else {
                 op()

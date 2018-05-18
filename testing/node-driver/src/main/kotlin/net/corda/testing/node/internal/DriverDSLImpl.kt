@@ -38,7 +38,7 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
-import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -531,6 +531,7 @@ class DriverDSLImpl(
             val clusterAddresses = if (clusterAddress != null) listOf(clusterAddress) else emptyList()
             val config = NotaryConfig(
                     validating = spec.validating,
+                    serviceLegalName = spec.name,
                     raft = RaftConfig(nodeAddress = nodeAddress, clusterAddresses = clusterAddresses))
             return config.toConfigMap()
         }
@@ -1119,5 +1120,3 @@ fun writeConfig(path: Path, filename: String, config: Config) {
 private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
-
-private operator fun Config.plus(property: Pair<String, Any>) = withValue(property.first, ConfigValueFactory.fromAnyRef(property.second))
