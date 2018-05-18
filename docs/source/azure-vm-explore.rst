@@ -22,8 +22,17 @@ Browse to `https://portal.azure.com` and log in with your Microsoft account.
 
 **STEP 1: Create a Resource Group**
 
-Create a resource group. 
+Click on the "Resource groups" link in the side nav in the Azure
+Portal and then click "Add":
 
+.. image:: resources/azure-rg.png
+   :scale: 50 %
+
+Fill in the form and click "Create":
+
+.. image:: resources/azure-rg-2.png
+   :scale: 50 %
+      
 
 **STEP 2: Launch the VM**
 
