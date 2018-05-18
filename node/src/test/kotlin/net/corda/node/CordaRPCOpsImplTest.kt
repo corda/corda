@@ -265,10 +265,10 @@ class CordaRPCOpsImplTest {
     @Test
     fun `can't upload the same attachment`() {
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachment), invokeRpc(CordaRPCOps::attachmentExists)) {
+            val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+            val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+            val secureHash1 = rpc.uploadAttachment(inputJar1)
             assertThatExceptionOfType(java.nio.file.FileAlreadyExistsException::class.java).isThrownBy {
-                val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
-                val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
-                val secureHash1 = rpc.uploadAttachment(inputJar1)
                 val secureHash2 = rpc.uploadAttachment(inputJar2)
             }
         }
@@ -292,6 +292,7 @@ class CordaRPCOpsImplTest {
     @Test
     fun `attempt to start non-RPC flow`() {
         withPermissions(startFlow<NonRPCFlow>()) {
+            // TODO sollecitom fix this
             assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
                 rpc.startFlow(::NonRPCFlow)
             }

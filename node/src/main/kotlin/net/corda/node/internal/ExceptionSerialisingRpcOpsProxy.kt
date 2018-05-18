@@ -5,7 +5,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy.newProxyInstance
-import kotlin.reflect.full.findAnnotation
 
 internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps) : CordaRPCOps by proxy(delegate) {
     private companion object {
@@ -25,7 +24,21 @@ internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps
         }
 
         private fun ensureSerialisable(error: Throwable): Throwable {
-            return error::cause.findAnnotation<CordaSerializable>()?.let { error } ?: CordaRuntimeException(error.message, error)
+
+            val serialisable = (superclasses(error::class.java) + error::class.java.interfaces).any { it.isAnnotationPresent(CordaSerializable::class.java) }
+            return if (serialisable) error else CordaRuntimeException(error.message, error)
+        }
+
+        private fun superclasses(clazz: Class<*>): List<Class<*>> {
+            val superclasses = mutableListOf<Class<*>>()
+            var current: Class<*>?
+            var superclass = clazz.superclass
+            while (superclass != null) {
+                superclasses += superclass
+                current = superclass
+                superclass = current?.superclass
+            }
+            return superclasses
         }
     }
 
