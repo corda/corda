@@ -186,7 +186,7 @@ class NodeRegistrationTest : IntegrationTest() {
 
     private fun startServer(startNetworkMap: Boolean = true): NetworkManagementServer {
         val server = NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, configSupplier = configSupplierForSupportedDatabases(), fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig),
-                makeTestDatabaseProperties(configSupplier = configSupplierForSupportedDatabases()), doormanConfig, revocationConfig)
+                makeTestDatabaseProperties(DOORMAN_DB_NAME, configSupplier = configSupplierForSupportedDatabases()), doormanConfig, revocationConfig)
         server.start(
                 serverAddress,
                 CertPathAndKey(listOf(doormanCa.certificate, rootCaCert), doormanCa.keyPair.private),
@@ -205,7 +205,7 @@ class NodeRegistrationTest : IntegrationTest() {
     private fun applyNetworkParametersAndStart(networkParametersCmd: NetworkParametersCmd) {
         server?.close()
         NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, configSupplier = configSupplierForSupportedDatabases(), fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig),
-                makeTestDatabaseProperties(configSupplier = configSupplierForSupportedDatabases()), doormanConfig, revocationConfig).use {
+                makeTestDatabaseProperties(DOORMAN_DB_NAME, configSupplier = configSupplierForSupportedDatabases()), doormanConfig, revocationConfig).use {
             it.netParamsUpdateHandler.processNetworkParameters(networkParametersCmd)
         }
         server = startServer(startNetworkMap = true)
