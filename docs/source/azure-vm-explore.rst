@@ -93,8 +93,9 @@ Add 3 rules with the following port, name and priorities:
     Port range: 10003, Priority: 1042  Name: Port_10003
     Port range: 8080, Priority: 1043  Name: Port_8080
 
-.. note:: The priority has to be unique number in the range 900  (highest) and 4096 (lowest) priority. Make sure each rule has a unique priority or there will be a
-validation failure and error message.
+.. note:: The priority has to be unique number in the range 900
+	  (highest) and 4096 (lowest) priority. Make sure each rule
+	  has a unique priority or there will be a validation failure and error message.
 	   
 .. image:: resources/azure-nsg-2.png
    :scale: 50 %
