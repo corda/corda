@@ -2,9 +2,8 @@ package net.corda.client.rpc.internal.serialization.amqp
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.toFuture
-import net.corda.core.toObservable
-import net.corda.nodeapi.internal.serialization.amqp.CustomSerializer
-import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.CustomSerializer
+import net.corda.serialization.internal.amqp.SerializerFactory
 import rx.Observable
 import java.io.NotSerializableException
 

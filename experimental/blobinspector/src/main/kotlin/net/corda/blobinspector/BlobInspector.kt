@@ -4,8 +4,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.utilities.ByteSequence
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.*
+import net.corda.serialization.internal.SerializationFactoryImpl
+import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.Symbol

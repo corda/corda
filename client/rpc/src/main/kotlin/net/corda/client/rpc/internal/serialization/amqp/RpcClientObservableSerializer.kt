@@ -5,7 +5,7 @@ import net.corda.client.rpc.internal.ObservableContext
 import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.serialization.amqp.*
+import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data
 import rx.Notification
 import rx.Observable
