@@ -1,12 +1,13 @@
-Deploying a Corda Node to an Azure Cloud Platform VM
-====================================================
+Deploying Corda to Corda Testnet from an Azure Cloud Platform VM
+================================================================
 
 .. contents::
 
-Corda Connect Explore will allow you to create a self service download
-link with a node preconfigured to join the Explore environment. This
+https://testnet.corda.network enables a self service download
+link with a node preconfigured to join the Corda Testnet. This
 document will describe how to set up a virtual machine on the Azure
-Cloud Platform to deploy your pre-generated Corda node on.
+Cloud Platform to deploy your pre-generated Corda node and automatically connnect
+to Testnet.
 
 Pre-requisites
 --------------
