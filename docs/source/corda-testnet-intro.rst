@@ -38,7 +38,24 @@ Fill in the form with your details. This helps prioritise requests to join the p
 Note we currently only support federated login using either Google email accounts or Github enabled email accounts. Please ensure the email you use to register is either set up as a Google or Github account.
 
 To enable your email for Google please see https://support.google.com/accounts/answer/176347?hl=en
+
 To set up a Github account please see https://github.com/join
 
 	   
-Once you have been approved to join the beta you will recieve an email 
+Once you have been approved to join the beta you will recieve an email. Follow the link in the email to sign in or click on "I have an invitation" on the https://testnet.corda.network
+
+.. image:: resources/testnet-signin.png 
+   :scale: 50 %
+
+Sign in using either the Google or Github login services:
+
+.. image:: resources/testnet-signin-auth.png 
+   :scale: 50 %
+
+At this point you may need to verify your email address is valid. If prompted check your email and click on the link to validate then return to the sign in page and sign in again.
+
+Next agree to the terms of service:
+
+.. image:: resources/testnet-terms.png 
+   :scale: 50 %
+
