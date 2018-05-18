@@ -53,7 +53,7 @@ Allowed parameters are:
 
 :revocation: Revocation service specific configuration
 
-        :localSigning: Configuration for local CRL signing using the file key store. If not defined t
+        :localSigning: Configuration for local CRL signing using the file key store. If not defined then an external signing process is assumed.
 
             :crlUpdateInterval: Validity time of the issued certificate revocation lists (in milliseconds).
 

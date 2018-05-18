@@ -29,7 +29,7 @@ fun submit(url: URL, inputReader: InputReader = ConsoleInputReader()) {
     val csrRequestId = inputReader.getOptionalInput("certificate signing request ID")
     val legalName = inputReader.getOptionalInput("node X.500 legal name")?.let { CordaX500Name.parse(it) }
     CertificateRevocationRequest.validateOptional(certificateSerialNumber, csrRequestId, legalName)
-    val reason = inputReader.getRequiredInput("revocation reason").let { CRLReason.valueOf(it) }
+    val reason = getReason(inputReader)
     val reporter = inputReader.getRequiredInput("reporter of the revocation request")
     val request = CertificateRevocationRequest(certificateSerialNumber, csrRequestId, legalName, reason, reporter)
     logger.debug("POST to $url request: $request")
@@ -52,5 +52,30 @@ private fun InputReader.getRequiredInput(attributeName: String): String {
         throw IllegalArgumentException("The $attributeName needs to be specified.")
     } else {
         line
+    }
+}
+
+private enum class SupportedCrlReasons {
+    UNSPECIFIED,
+    KEY_COMPROMISE,
+    CA_COMPROMISE,
+    AFFILIATION_CHANGED,
+    SUPERSEDED,
+    CESSATION_OF_OPERATION,
+    PRIVILEGE_WITHDRAWN
+}
+
+private fun getReason(inputReader: InputReader): CRLReason {
+    while (true) {
+        SupportedCrlReasons.values().forEachIndexed { index, value ->
+            println("${index + 1}. $value")
+        }
+        print("Selected the reason for the revocation:")
+        val input = inputReader.readLine()!!.toInt()
+        if (input < 1 || input > SupportedCrlReasons.values().size) {
+            println("Incorrect selection. Try again.")
+        } else {
+            return CRLReason.valueOf(SupportedCrlReasons.values()[input -1 ].name)
+        }
     }
 }
