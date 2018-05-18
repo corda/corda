@@ -31,6 +31,7 @@ interface AMQPSerializer<out T> {
     /**
      * Write the given object, with declared type, to the output.
      */
+    @JvmDefault
     fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput,
                     context: SerializationContext, debugIndent: Int = 0)
 
