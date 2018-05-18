@@ -14,6 +14,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
 import java.util.Collections.nCopies
+import kotlin.test.assertNotNull
 
 class CashSelectionH2ImplTest {
     private val mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance"))
@@ -52,5 +53,24 @@ class CashSelectionH2ImplTest {
         assertThatThrownBy { flow1.getOrThrow() }.isInstanceOf(CashException::class.java)
         assertThatThrownBy { flow2.getOrThrow() }.isInstanceOf(CashException::class.java)
         assertThatThrownBy { flow3.getOrThrow() }.isInstanceOf(CashException::class.java)
+    }
+
+    @Test
+    fun `special Coin Selection`() {
+        val bankA = mockNet.createNode()
+        val bankB = mockNet.createNode()
+        val notary = mockNet.defaultNotaryIdentity
+
+        // Issue some cash to Bank A
+        bankA.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(1), notary)).getOrThrow()
+        bankA.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(2), notary)).getOrThrow()
+        bankA.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(3), notary)).getOrThrow()
+        bankA.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(4), notary)).getOrThrow()
+        bankA.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(5), notary)).getOrThrow()
+        bankA.startFlow(CashIssueFlow(1000.POUNDS, OpaqueBytes.of(6), notary)).getOrThrow()
+
+        // Make a payment to Bank B
+        val paymentResult = bankA.startFlow(CashPaymentFlow(999.POUNDS, anonymous = false, recipient = bankB.info.legalIdentities.single())).getOrThrow()
+        assertNotNull(paymentResult.recipient)
     }
 }
