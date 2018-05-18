@@ -61,7 +61,7 @@ class NetworkMapUpdaterTest {
         server = NetworkMapServer(cacheExpiryMs.millis, PortAllocation.Incremental(10000).nextHostAndPort())
         val hostAndPort = server.start()
         networkMapClient = NetworkMapClient(URL("http://${hostAndPort.host}:${hostAndPort.port}"), DEV_ROOT_CA.certificate)
-        updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, server.networkParameters.serialize().hash, baseDir, listOf(privateNetUUID))
+        updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, server.networkParameters.serialize().hash, null, baseDir, listOf(privateNetUUID))
     }
 
     @After

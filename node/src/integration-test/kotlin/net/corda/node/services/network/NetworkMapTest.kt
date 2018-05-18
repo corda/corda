@@ -216,6 +216,23 @@ class NetworkMapTest {
         }
     }
 
+    @Test
+    fun `don't remove own nodeInfo from cache if it is not in NetworkMap`() {
+        // This scenario can happen when signing of network map server is performed much longer after the node joined the network.
+        // Network map will advertise hashes without that node.
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                initialiseSerialization = false,
+                notarySpecs = emptyList()
+        ) {
+            val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
+            networkMapServer.removeNodeInfo(alice.nodeInfo)
+            Thread.sleep(2000)
+            alice.onlySees(alice.nodeInfo)
+        }
+    }
+
     private fun NodeHandle.onlySees(vararg nodes: NodeInfo) {
         // Make sure the nodes aren't getting the node infos from their additional directories
         val nodeInfosDir = baseDirectory / CordformNode.NODE_INFO_DIRECTORY
