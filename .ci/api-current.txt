@@ -6514,8 +6514,8 @@ public final class net.corda.testing.node.User extends java.lang.Object
   public String toString()
 ##
 public final class net.corda.client.rpc.CordaRPCClient extends java.lang.Object
-  public <init>(List)
-  public <init>(List, net.corda.client.rpc.CordaRPCClientConfiguration)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, net.corda.client.rpc.CordaRPCClientConfiguration)
   public <init>(net.corda.core.utilities.NetworkHostAndPort)
   public <init>(net.corda.core.utilities.NetworkHostAndPort, net.corda.client.rpc.CordaRPCClientConfiguration)
   @NotNull
@@ -6526,8 +6526,10 @@ public final class net.corda.client.rpc.CordaRPCClient extends java.lang.Object
   public static final net.corda.client.rpc.CordaRPCClient$Companion Companion
 ##
 public static final class net.corda.client.rpc.CordaRPCClient$Companion extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.client.rpc.CordaRPCClient createWithSsl(List, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
-  @org.jetbrains.annotations.NotNull public final net.corda.client.rpc.CordaRPCClient createWithSsl(net.corda.core.utilities.NetworkHostAndPort, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
+  @NotNull
+  public final net.corda.client.rpc.CordaRPCClient createWithSsl(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
+  @NotNull
+  public final net.corda.client.rpc.CordaRPCClient createWithSsl(net.corda.core.utilities.NetworkHostAndPort, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
 ##
 public interface net.corda.client.rpc.CordaRPCClientConfiguration
   public abstract int getCacheConcurrencyLevel()
