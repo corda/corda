@@ -1,8 +1,8 @@
-Api Stability Check
+API stability check
 ===================
 
 We have committed not to alter Corda's API so that developers will not have to keep rewriting their CorDapps with each
-new Corda release. The stable Corda modules are listed :doc:`here </corda-api>`. Our CI process runs an "API Stability"
+new Corda release. The stable Corda modules are listed :ref:`here <internal-apis-and-stability-guarantees>`. Our CI process runs an "API Stability"
 check for each GitHub pull request in order to check that we don't accidentally introduce an API-breaking change.
 
 Build Process
@@ -15,22 +15,22 @@ As part of the build process the following commands are run for each PR:
    $ gradlew generateApi
    $ .ci/check-api-changes.sh
 
-This `bash` script has been tested on both MacOS and various Linux distributions, it can also be run on Windows with the
+This ``bash`` script has been tested on both MacOS and various Linux distributions, it can also be run on Windows with the
 use of a suitable bash emulator such as git bash. The script's return value is the number of API-breaking changes that it
-has detected, and this should be zero for the check to pass. The maximum return value is 255, however, the script will still
+has detected, and this should be zero for the check to pass. The maximum return value is 255, although the script will still
 correctly report higher numbers of breaking changes.
 
-There are three kinds of breaking changes:
+There are three kinds of breaking change:
 
 * Removal or modification of existing API, i.e. an existing class, method or field has been either deleted or renamed, or
   its signature somehow altered.
 * Addition of a new method to an interface or abstract class. Types that have been annotated as ``@DoNotImplement`` are
   excluded from this check. (This annotation is also inherited across subclasses and subinterfaces.)
 * Exposure of an internal type via a public API. Internal types are considered to be anything in a ``*.internal.`` package
-  or anything in a module that isn't in the stable modules list :doc:`here </corda-api>`.
+  or anything in a module that isn't in the stable modules list :ref:`here <internal-apis-and-stability-guarantees>`.
 
 Developers can execute these commands themselves before submitting their PR, to ensure that they haven't inadvertently
-broken Corda's API. (The shell script works on MacOSX and distributions of Linux.)
+broken Corda's API.
 
 
 How it works
