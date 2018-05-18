@@ -102,7 +102,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
                         }
                         count++
                     }
-                } catch (e: ActiveMQNotConnectedException) {
+                } catch (e: RPCException) {
                     println("... node is not running.")
                     nodeIsShut.onCompleted()
                 } catch (e: ActiveMQSecurityException) {
