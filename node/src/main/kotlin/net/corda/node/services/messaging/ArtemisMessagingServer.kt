@@ -11,17 +11,10 @@ import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_P2P_
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pAcceptorTcpTransport
-import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
-import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
-import net.corda.node.services.messaging.NodeLoginModule.Companion.VERIFIER_ROLE
-import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
-import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem

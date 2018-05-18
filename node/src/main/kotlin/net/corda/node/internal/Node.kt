@@ -192,8 +192,7 @@ open class Node(configuration: NodeConfiguration,
 
         printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
         rpcServerAddresses?.let {
-            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, MAX_RPC_MESSAGE_SIZE)
-            internalRpcMessagingClient = InternalRPCMessagingClient(configuration, it.admin, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, CordaX500Name.build(configuration.loadSslKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal))
+            internalRpcMessagingClient = InternalRPCMessagingClient(configuration, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.loadSslKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal))
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }

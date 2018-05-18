@@ -15,19 +15,11 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.*
-import net.corda.nodeapi.internal.serialization.amqp.AMQP_ENABLED
-import org.mockito.Mockito
-import org.mockito.internal.stubbing.answers.ThrowsException
-import java.lang.reflect.Modifier
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
-import net.corda.nodeapi.internal.crypto.CertificateType
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.cert.X509Certificate
-import java.util.*
 import javax.security.auth.x500.X500Principal
 
 @Suppress("unused")
@@ -101,9 +93,6 @@ fun createDevNodeCaCertPath(
     val nodeCa = createDevNodeCa(intermediateCa, legalName, nodeKeyPair)
     return Triple(rootCa, intermediateCa, nodeCa)
 }
-
-/** Application of [doAnswer] that gets a value from the given [map] using the arg at [argIndex] as key. */
-fun doLookup(map: Map<*, *>, argIndex: Int = 0) = doAnswer { map[it.arguments[argIndex]] }
 
 fun BrokerRpcSslOptions.useSslRpcOverrides(): Map<String, String> {
     return mapOf(

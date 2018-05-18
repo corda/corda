@@ -189,6 +189,7 @@ class CordaRPCClient private constructor(
                         sslConfiguration,
                         configuration,
                         if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
+            }
         }
     }
 
