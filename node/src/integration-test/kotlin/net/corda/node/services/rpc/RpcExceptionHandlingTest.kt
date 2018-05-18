@@ -73,7 +73,7 @@ class RpcExceptionHandlingTest {
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
-                assertThat(exception.additionalContext["errorId"]).isEqualTo(expectedErrorId)
+                assertThat(exception.errorId).isEqualTo(expectedErrorId)
             }
         }
     }
