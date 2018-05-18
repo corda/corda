@@ -8,15 +8,19 @@ check for each GitHub pull request in order to check that we don't accidentally 
 Build Process
 -------------
 
-As part of the build process our the following commands are run for each PR:
+As part of the build process the following commands are run for each PR:
 
 .. code-block:: shell
 
    $ gradlew generateApi
    $ .ci/check-api-changes.sh
 
-The script's return value is the number of API-breaking changes that it has detected, and this should be zero for the
-check to pass. There are three kinds of breaking changes.
+This `bash` script has been tested on both MacOS and various Linux distributions, it can also be run on Windows with the
+use of a suitable bash emulator such as git bash. The script's return value is the number of API-breaking changes that it
+has detected, and this should be zero for the check to pass. The maximum return value is 255, however, the script will still
+correctly report higher numbers of breaking changes.
+
+There are three kinds of breaking changes:
 
 * Removal or modification of existing API, i.e. an existing class, method or field has been either deleted or renamed, or
   its signature somehow altered.
@@ -49,6 +53,6 @@ the public API in ways that would not break developers' CorDapps but which would
 For example, migrating a method from an interface into a superinterface. Any changes to the API summary file should be
 included in the PR, which would then need explicit approval from either Mike Hearn, Rick Parker or Matthew Nesbit.
 
-.. note:: If you need to modify ``api-current.txt``, do not re-generate the file on the master branch. This will include new api that
+.. note:: If you need to modify ``api-current.txt``, do not re-generate the file on the master branch. This will include new API that
    hasn't been released or committed to, and may be subject to change. Manually change the specific line or lines of the
-   existing committed api that has changed.
+   existing committed API that has changed.
