@@ -7,7 +7,12 @@ import com.google.common.hash.HashingInputStream
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sha256
+import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
@@ -25,7 +30,10 @@ import rx.Observable
 import rx.Observer
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
-import java.io.*
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
@@ -41,11 +49,23 @@ import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.security.cert.*
+import java.security.cert.CertPath
+import java.security.cert.CertPathValidator
+import java.security.cert.CertPathValidatorException
+import java.security.cert.PKIXCertPathValidatorResult
+import java.security.cert.PKIXParameters
+import java.security.cert.TrustAnchor
+import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
-import java.util.Spliterator.*
+import java.util.Spliterator.DISTINCT
+import java.util.Spliterator.IMMUTABLE
+import java.util.Spliterator.NONNULL
+import java.util.Spliterator.ORDERED
+import java.util.Spliterator.SIZED
+import java.util.Spliterator.SORTED
+import java.util.Spliterator.SUBSIZED
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.stream.IntStream
@@ -267,6 +287,12 @@ fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaCl
  */
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
+/**
+ * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
+ * in its superclass [clazz].
+ */
+fun <T> Any.declaredField(clazz: Class<*>, name: String): DeclaredField<T> = DeclaredField(clazz, name, this)
+
 /** creates a new instance if not a Kotlin object */
 fun <T : Any> KClass<T>.objectOrNewInstance(): T {
     return this.objectInstance ?: this.createInstance()
@@ -277,10 +303,39 @@ fun <T : Any> KClass<T>.objectOrNewInstance(): T {
  * visibility.
  */
 class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
-    private val javaField = clazz.getDeclaredField(name).apply { isAccessible = true }
+    private val javaField = findField(name, clazz)
     var value: T
-        get() = uncheckedCast<Any?, T>(javaField.get(receiver))
-        set(value) = javaField.set(receiver, value)
+        get() {
+            return javaField.accessible { uncheckedCast<Any?, T>(get(receiver)) }
+        }
+        set(value) {
+            javaField.accessible {
+                set(receiver, value)
+            }
+        }
+    val name: String = javaField.name
+
+    private fun <RESULT> Field.accessible(action: Field.() -> RESULT): RESULT {
+        val accessible = isAccessible
+        isAccessible = true
+        try {
+            return action(this)
+        } finally {
+            isAccessible = accessible
+        }
+    }
+}
+
+@Throws(NoSuchFieldException::class)
+private fun findField(fieldName: String, clazz: Class<*>?): Field {
+    if (clazz == null) {
+        throw NoSuchFieldException(fieldName)
+    }
+    return try {
+        return clazz.getDeclaredField(fieldName)
+    } catch (e: NoSuchFieldException) {
+        findField(fieldName, clazz.superclass)
+    }
 }
 
 /** The annotated object would have a more restricted visibility were it not needed in tests. */

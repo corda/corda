@@ -3,7 +3,7 @@
 package net.corda.core.node.services.vault
 
 import net.corda.core.DoNotImplement
-import net.corda.core.findField
+import net.corda.core.internal.declaredField
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
@@ -441,6 +441,6 @@ class FieldInfo internal constructor(val name: String, val entityClass: Class<*>
 @Throws(NoSuchFieldException::class)
 fun getField(fieldName: String, entityClass: Class<*>): FieldInfo {
 
-    val field = findField(fieldName, entityClass)
+    val field = entityClass.declaredField<Any>(entityClass, fieldName)
     return FieldInfo(field.name, entityClass)
 }

@@ -6,9 +6,10 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.doOnError
 import net.corda.core.flows.ClientRelevantError
-import net.corda.core.flows.ContextAware
+import net.corda.core.flows.IdentifiableException
 import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.mapError
+import net.corda.core.internal.declaredField
 import net.corda.core.mapErrors
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.DataFeed
@@ -16,11 +17,9 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowHandleImpl
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.FlowProgressHandleImpl
-import net.corda.core.setFieldToNull
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.exceptions.InternalNodeException
 import rx.Observable
-import java.io.InvalidClassException
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy.newProxyInstance
 import kotlin.reflect.KClass
@@ -33,7 +32,6 @@ internal class ExceptionMaskingRpcOpsProxy(private val delegate: CordaRPCOps) : 
 
         private val whitelist = setOf(
                 ClientRelevantError::class,
-                InvalidClassException::class,
                 TransactionVerificationException::class
         )
 
@@ -96,16 +94,15 @@ internal class ExceptionMaskingRpcOpsProxy(private val delegate: CordaRPCOps) : 
         }
 
         private fun obfuscate(error: Throwable): Throwable {
-            val additionalContext = if (error is ContextAware) error.additionalContext else emptyMap()
-            val exposed = if (error.isWhitelisted()) error else InternalNodeException(additionalContext)
+            val exposed = if (error.isWhitelisted()) error else InternalNodeException((error as? IdentifiableException)?.errorId)
             removeDetails(exposed)
             return exposed
         }
 
         private fun removeDetails(error: Throwable) {
             error.stackTrace = arrayOf<StackTraceElement>()
-            error.setFieldToNull("cause")
-            error.setFieldToNull("suppressedExceptions")
+            error.declaredField<Any?>("cause").value = null
+            error.declaredField<Any?>("suppressedExceptions").value = null
             when (error) {
                 is CordaException -> error.setCause(null)
                 is CordaRuntimeException -> error.setCause(null)

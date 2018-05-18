@@ -33,8 +33,7 @@ class BootTests {
             val future = CordaRPCClient(startNode(rpcUsers = listOf(user)).getOrThrow().rpcAddress).
                     start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
             assertThatThrownBy { future.getOrThrow() }
-                    .isInstanceOf(CordaRuntimeException::class.java)
-                    .hasMessageContaining(InternalNodeException.message)
+                    .isInstanceOf(InternalNodeException::class.java)
         }
     }
 

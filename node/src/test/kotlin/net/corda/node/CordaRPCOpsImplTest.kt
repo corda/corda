@@ -37,6 +37,7 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
+import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.expect
@@ -292,8 +293,7 @@ class CordaRPCOpsImplTest {
     @Test
     fun `attempt to start non-RPC flow`() {
         withPermissions(startFlow<NonRPCFlow>()) {
-            // TODO sollecitom fix this
-            assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            assertThatExceptionOfType(NonRpcFlowException::class.java).isThrownBy {
                 rpc.startFlow(::NonRPCFlow)
             }
         }
