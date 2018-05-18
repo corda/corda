@@ -67,10 +67,10 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                  private val keyStorePrivateKeyPassword: String,
                  private val trustStore: KeyStore,
                  private val crlCheckSoftFail: Boolean,
+                 private val maxMessageSize: Int,
                  private val trace: Boolean = false,
                  private val sharedThreadPool: EventLoopGroup? = null,
-                 private val socksProxyConfig: SocksProxyConfig? = null,
-                 private val maxMessageSize: Int) : AutoCloseable {
+                 private val socksProxyConfig: SocksProxyConfig? = null) : AutoCloseable {
     companion object {
         init {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)

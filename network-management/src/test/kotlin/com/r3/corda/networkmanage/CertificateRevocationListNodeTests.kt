@@ -8,10 +8,7 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.CHARLIE_NAME
-import net.corda.testing.core.freePort
+import net.corda.testing.core.*
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Before
 import org.junit.Ignore
@@ -89,7 +86,8 @@ class CertificateRevocationListNodeTests {
                 sslS,
                 "cordacadevpass",
                 tS,
-                false)
+                false,
+                MAX_MESSAGE_SIZE)
     }
 
     private fun createServer(port: Int): AMQPServer {
@@ -103,6 +101,7 @@ class CertificateRevocationListNodeTests {
                 sslS,
                 "cordacadevpass",
                 tS,
-                false)
+                false,
+                MAX_MESSAGE_SIZE)
     }
 }

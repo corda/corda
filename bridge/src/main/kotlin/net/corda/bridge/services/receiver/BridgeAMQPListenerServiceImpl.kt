@@ -69,8 +69,8 @@ class BridgeAMQPListenerServiceImpl(val conf: BridgeConfiguration,
                 keyStorePrivateKeyPassword,
                 trustStore,
                 conf.crlCheckSoftFail,
-                conf.enableAMQPPacketTrace,
-                maxMessageSize)
+                maxMessageSize,
+                conf.enableAMQPPacketTrace)
         onConnectSubscription = server.onConnection.subscribe(_onConnection)
         onConnectAuditSubscription = server.onConnection.subscribe {
             if (it.connected) {

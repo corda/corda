@@ -52,8 +52,8 @@ class AMQPServer(val hostName: String,
                  private val keyStorePrivateKeyPassword: CharArray,
                  private val trustStore: KeyStore,
                  private val crlCheckSoftFail: Boolean,
-                 private val trace: Boolean = false,
-                 private val maxMessageSize: Int) : AutoCloseable {
+                 private val maxMessageSize: Int,
+                 private val trace: Boolean = false) : AutoCloseable {
 
     companion object {
         init {
@@ -80,8 +80,8 @@ class AMQPServer(val hostName: String,
                 keyStorePrivateKeyPassword: String,
                 trustStore: KeyStore,
                 crlCheckSoftFail: Boolean,
-                trace: Boolean = false,
-                maxMessageSize: Int) : this(hostName, port, userName, password, keyStore, keyStorePrivateKeyPassword.toCharArray(), trustStore, crlCheckSoftFail, trace, maxMessageSize)
+                maxMessageSize: Int,
+                trace: Boolean = false) : this(hostName, port, userName, password, keyStore, keyStorePrivateKeyPassword.toCharArray(), trustStore, crlCheckSoftFail, maxMessageSize, trace)
 
     private class ServerChannelInitializer(val parent: AMQPServer) : ChannelInitializer<SocketChannel>() {
         private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())

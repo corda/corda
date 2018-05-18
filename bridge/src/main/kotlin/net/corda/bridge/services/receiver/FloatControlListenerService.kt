@@ -91,8 +91,8 @@ class FloatControlListenerService(val conf: BridgeConfiguration,
                     keyStorePrivateKeyPassword,
                     trustStore,
                     conf.crlCheckSoftFail,
-                    conf.enableAMQPPacketTrace,
-                    maxMessageSize)
+                    maxMessageSize,
+                    conf.enableAMQPPacketTrace)
             connectSubscriber = controlServer.onConnection.subscribe { onConnectToControl(it) }
             receiveSubscriber = controlServer.onReceive.subscribe { onControlMessage(it) }
             amqpControlServer = controlServer

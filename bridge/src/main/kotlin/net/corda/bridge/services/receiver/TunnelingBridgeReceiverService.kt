@@ -81,8 +81,8 @@ class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
                         controLinkKeyStorePrivateKeyPassword,
                         controlLinkTrustStore,
                         conf.crlCheckSoftFail,
-                        conf.enableAMQPPacketTrace,
-                        maxMessageSize = maxMessageSize)
+                        maxMessageSize,
+                        conf.enableAMQPPacketTrace)
                 connectSubscriber = controlClient.onConnection.subscribe { onConnectToControl(it) }
                 receiveSubscriber = controlClient.onReceive.subscribe { onFloatMessage(it) }
                 amqpControlClient = controlClient
