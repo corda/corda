@@ -1324,9 +1324,6 @@ public static class net.corda.core.crypto.DigitalSignature$WithKey extends net.c
   @NotNull
   public final net.corda.core.crypto.DigitalSignature withoutKey()
 ##
-public final class net.corda.core.crypto.DummySecureRandom extends java.security.SecureRandom
-  public static final net.corda.core.crypto.DummySecureRandom INSTANCE
-##
 public abstract class net.corda.core.crypto.MerkleTree extends java.lang.Object
   @NotNull
   public abstract net.corda.core.crypto.SecureHash getHash()
@@ -4262,7 +4259,6 @@ public final class net.corda.core.schemas.CommonSchema extends java.lang.Object
   public static final net.corda.core.schemas.CommonSchema INSTANCE
 ##
 public final class net.corda.core.schemas.CommonSchemaV1 extends net.corda.core.schemas.MappedSchema
-  @org.jetbrains.annotations.NotNull protected String getMigrationResource()
   public static final net.corda.core.schemas.CommonSchemaV1 INSTANCE
 ##
 @MappedSuperclass
@@ -4302,10 +4298,11 @@ public static class net.corda.core.schemas.CommonSchemaV1$LinearState extends ne
   public void setUuid(java.util.UUID)
 ##
 public class net.corda.core.schemas.MappedSchema extends java.lang.Object
-  public <init>(Class, int, Iterable)
-  @org.jetbrains.annotations.NotNull public final Iterable getMappedTypes()
-  @org.jetbrains.annotations.Nullable protected String getMigrationResource()
-  @org.jetbrains.annotations.NotNull public final String getName()
+  public <init>(Class<?>, int, Iterable<? extends Class<?>>)
+  @NotNull
+  public final Iterable<Class<?>> getMappedTypes()
+  @NotNull
+  public final String getName()
   public final int getVersion()
   @NotNull
   public String toString()
@@ -4324,7 +4321,7 @@ public class net.corda.core.schemas.PersistentStateRef extends java.lang.Object 
   public <init>()
   public <init>(String, Integer)
   public <init>(net.corda.core.contracts.StateRef)
-  @NullableCc
+  @Nullable
   public final String component1()
   @Nullable
   public final Integer component2()
@@ -4346,9 +4343,6 @@ public interface net.corda.core.schemas.QueryableState extends net.corda.core.co
   public abstract net.corda.core.schemas.PersistentState generateMappedObject(net.corda.core.schemas.MappedSchema)
   @NotNull
   public abstract Iterable<net.corda.core.schemas.MappedSchema> supportedSchemas()
-
-
-
 ##
 public interface net.corda.core.schemas.StatePersistable extends java.io.Serializable
 ##
@@ -5499,18 +5493,6 @@ public static final class net.corda.core.utilities.ProgressTracker$UNSTARTED ext
   public static final net.corda.core.utilities.ProgressTracker$UNSTARTED INSTANCE
 ##
 public interface net.corda.core.utilities.PropertyDelegate
-<<<<<<< HEAD
-  public abstract Object getValue(Object, kotlin.reflect.KProperty)
-##
-public final class net.corda.core.utilities.SgxSupport extends java.lang.Object
-  public static final boolean isInsideEnclave()
-  public static final net.corda.core.utilities.SgxSupport INSTANCE
-##
-@net.corda.core.serialization.CordaSerializable public abstract class net.corda.core.utilities.Try extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.Try combine(net.corda.core.utilities.Try, kotlin.jvm.functions.Function2)
-  @org.jetbrains.annotations.NotNull public final net.corda.core.utilities.Try flatMap(kotlin.jvm.functions.Function1)
-  public abstract Object getOrThrow()
-=======
   public abstract T getValue(Object, kotlin.reflect.KProperty<?>)
 ##
 @CordaSerializable
@@ -5520,7 +5502,6 @@ public abstract class net.corda.core.utilities.Try extends java.lang.Object
   @NotNull
   public final net.corda.core.utilities.Try<B> flatMap(kotlin.jvm.functions.Function1<? super A, ? extends net.corda.core.utilities.Try<? extends B>>)
   public abstract A getOrThrow()
->>>>>>> open/master
   public abstract boolean isFailure()
   public abstract boolean isSuccess()
   @NotNull
@@ -6888,25 +6869,6 @@ public final class net.corda.testing.core.TestUtils extends java.lang.Object
   @NotNull
   public static final net.corda.core.identity.PartyAndCertificate singleIdentityAndCert(net.corda.core.node.NodeInfo)
 ##
-public final class net.corda.testing.database.DatabaseConstants extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public static final String DATA_SOURCE_CLASSNAME = "dataSourceProperties.dataSourceClassName"
-  @org.jetbrains.annotations.NotNull public static final String DATA_SOURCE_PASSWORD = "dataSourceProperties.dataSource.password"
-  @org.jetbrains.annotations.NotNull public static final String DATA_SOURCE_URL = "dataSourceProperties.dataSource.url"
-  @org.jetbrains.annotations.NotNull public static final String DATA_SOURCE_USER = "dataSourceProperties.dataSource.user"
-  public static final net.corda.testing.database.DatabaseConstants INSTANCE
-  @org.jetbrains.annotations.NotNull public static final String SCHEMA = "database.schema"
-  @org.jetbrains.annotations.NotNull public static final String TRANSACTION_ISOLATION_LEVEL = "database.transactionIsolationLevel"
-##
-public final class net.corda.testing.database.DbScriptRunner extends java.lang.Object
-  @org.jetbrains.annotations.NotNull public final List merge(List, String)
-  @org.jetbrains.annotations.NotNull public final List merge(List, List)
-  public final void runDbScript(String, String, List)
-  public static final net.corda.testing.database.DbScriptRunner INSTANCE
-##
-public final class net.corda.testing.database.ListPopulator extends java.lang.Object implements org.springframework.jdbc.datasource.init.DatabasePopulator
-  public <init>(boolean, boolean, List)
-  public void populate(java.sql.Connection)
-##
 public final class net.corda.testing.dsl.AttachmentResolutionException extends net.corda.core.flows.FlowException
   public <init>(net.corda.core.crypto.SecureHash)
 ##
@@ -7102,7 +7064,6 @@ public final class net.corda.testing.dsl.TransactionDSL extends java.lang.Object
   @NotNull
   public net.corda.testing.dsl.LedgerDSLInterpreter<net.corda.testing.dsl.TransactionDSLInterpreter> getLedgerInterpreter()
   public final void input(String)
-  public final void input(String, String)
   public final void input(String, net.corda.core.contracts.ContractState)
   public void input(net.corda.core.contracts.StateRef)
   public final void output(String, int, net.corda.core.contracts.ContractState)
