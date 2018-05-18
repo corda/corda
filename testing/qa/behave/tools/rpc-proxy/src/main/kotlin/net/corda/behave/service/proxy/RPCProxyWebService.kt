@@ -3,7 +3,7 @@ package net.corda.behave.service.proxy
 import net.corda.behave.service.proxy.RPCProxyWebService.Companion.RPC_PROXY_PATH
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
-import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.CordaRPCOps
@@ -36,7 +36,7 @@ class RPCProxyWebService(targetHostAndPort: NetworkHostAndPort) {
             effectiveSerializationEnv
         } catch (e: IllegalStateException) {
             try {
-                KryoClientSerializationScheme.initialiseSerialization()
+                AMQPClientSerializationScheme.initialiseSerialization()
             } catch (e: IllegalStateException) {
                 // Race e.g. two of these constructed in parallel, ignore.
             }
