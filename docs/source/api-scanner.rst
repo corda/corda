@@ -51,7 +51,7 @@ As a rule, ``api-current.txt`` should only be updated by the release manager for
 We do not expect modifications to ``api-current.txt`` as part of normal development. However, we may sometimes need to adjust
 the public API in ways that would not break developers' CorDapps but which would be blocked by the API Stabilty check.
 For example, migrating a method from an interface into a superinterface. Any changes to the API summary file should be
-included in the PR, which would then need explicit approval from either Mike Hearn, Rick Parker or Matthew Nesbit.
+included in the PR, which would then need explicit approval from either `Mike Hearn <https://github.com/mikehearn>`_, `Rick Parker <https://github.com/rick-r3>`_ or `Matthew Nesbit <https://github.com/mnesbit>`_.
 
 .. note:: If you need to modify ``api-current.txt``, do not re-generate the file on the master branch. This will include new API that
    hasn't been released or committed to, and may be subject to change. Manually change the specific line or lines of the
