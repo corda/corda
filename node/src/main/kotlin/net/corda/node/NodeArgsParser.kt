@@ -68,7 +68,12 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
         require(!optionSet.has(baseDirectoryArg) || !optionSet.has(configFileArg)) {
             "${baseDirectoryArg.options()[0]} and ${configFileArg.options()[0]} cannot be specified together"
         }
-        val baseDirectory = optionSet.valueOf(baseDirectoryArg).normalize().toAbsolutePath()
+        // Workaround for javapackager polluting cwd: restore it from system property set by launcher.
+        val baseDirectory = System.getProperty("corda.launcher.cwd")?.let { Paths.get(it) }
+                ?: optionSet.valueOf(baseDirectoryArg)
+                        .normalize()
+                        .toAbsolutePath()
+
         val configFile = baseDirectory / optionSet.valueOf(configFileArg)
         val loggingLevel = optionSet.valueOf(loggerLevel)
         val logToConsole = optionSet.has(logToConsoleArg)

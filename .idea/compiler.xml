@@ -52,6 +52,12 @@
       <module name="core_test" target="1.8" />
       <module name="demobench_main" target="1.8" />
       <module name="demobench_test" target="1.8" />
+      <module name="dist_binFiles" target="1.8" />
+      <module name="dist_licenseFiles" target="1.8" />
+      <module name="dist_main" target="1.8" />
+      <module name="dist_readmeFiles" target="1.8" />
+      <module name="dist_startupScripts" target="1.8" />
+      <module name="dist_test" target="1.8" />
       <module name="docs_main" target="1.8" />
       <module name="docs_source_example-code_integrationTest" target="1.8" />
       <module name="docs_source_example-code_main" target="1.8" />
@@ -98,6 +104,8 @@
       <module name="jfx_test" target="1.8" />
       <module name="kryo-hook_main" target="1.8" />
       <module name="kryo-hook_test" target="1.8" />
+      <module name="launcher_main" target="1.8" />
+      <module name="launcher_test" target="1.8" />
       <module name="loadtest_main" target="1.8" />
       <module name="loadtest_test" target="1.8" />
       <module name="mock_main" target="1.8" />

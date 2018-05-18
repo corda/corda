@@ -1,0 +1,9 @@
+Welcome to Corda Enterprise!
+
+This is a distributon package containing the Java Runtime Environment for convenience.
+
+To start a node, please edit supplied node.conf file so it contains appropriate data for your organization. More - https://docs.corda.net/corda-configuration-file.html
+
+Your CordApps should be placed in cordapps directory, from which they will be loaded automatically.
+
+Linux/Mac: main executable file is ./bin/corda

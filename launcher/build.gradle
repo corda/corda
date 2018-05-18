@@ -1,0 +1,19 @@
+group 'com.r3.corda'
+version 'R3.CORDA-3.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+}
+
+ext {
+    loaderClassName = "net.corda.launcher.Loader"
+    launcherClassName = "net.corda.launcher.Launcher"
+}
+
+jar {
+    baseName 'corda-launcher'
+}
