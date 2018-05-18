@@ -5158,8 +5158,6 @@ public final class net.corda.core.transactions.WireTransaction extends net.corda
   public static final net.corda.core.transactions.WireTransaction$Companion Companion
 ##
 public static final class net.corda.core.transactions.WireTransaction$Companion extends java.lang.Object
-  @NotNull
-  public final java.util.List<net.corda.core.transactions.ComponentGroup> createComponentGroups(java.util.List<net.corda.core.contracts.StateRef>, java.util.List<? extends net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>>, java.util.List<? extends net.corda.core.contracts.Command<?>>, java.util.List<? extends net.corda.core.crypto.SecureHash>, net.corda.core.identity.Party, net.corda.core.contracts.TimeWindow)
 ##
 public final class net.corda.core.utilities.ByteArrays extends java.lang.Object
   @NotNull

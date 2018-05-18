@@ -7,6 +7,9 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* ``WireTransaction.Companion.createComponentGroups`` has been marked as ``@CordaInternal``. It was never intended to be
+  public and was already internal for Kotlin code.
+
 * RPC Framework moved from Kryo to the Corda AMQP implementation [Corda-847]. This completes the removal
   of ``Kryo`` from general use within Corda, remaining only for use in flow checkpointing. 
 
