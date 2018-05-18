@@ -1,4 +1,4 @@
-Deploying Corda to Corda Testnet from an Google Cloud Platform VM
+Deploying Corda to Corda Testnet from a Google Cloud Platform VM
 ====================================================
 
 .. contents::
