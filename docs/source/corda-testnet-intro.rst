@@ -15,4 +15,5 @@ Deploying Corda node to the Corda Testnet
 
 Access to the Corda Testnet is enabled by visiting https://testnet.corda.network.
 
-
+.. image:: resources/testnet-landing.png
+   :scale: 50 %
