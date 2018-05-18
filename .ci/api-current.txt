@@ -2506,14 +2506,21 @@ public interface net.corda.core.messaging.AllPossibleRecipients extends net.cord
 ##
 public final class net.corda.core.messaging.ClientRpcSslOptions extends java.lang.Object
   public <init>(java.nio.file.Path, String, String)
-  @org.jetbrains.annotations.NotNull public final java.nio.file.Path component1()
-  @org.jetbrains.annotations.NotNull public final String component2()
-  @org.jetbrains.annotations.NotNull public final String component3()
-  @org.jetbrains.annotations.NotNull public final net.corda.core.messaging.ClientRpcSslOptions copy(java.nio.file.Path, String, String)
+  @NotNull
+  public final java.nio.file.Path component1()
+  @NotNull
+  public final String component2()
+  @NotNull
+  public final String component3()
+  @NotNull
+  public final net.corda.core.messaging.ClientRpcSslOptions copy(java.nio.file.Path, String, String)
   public boolean equals(Object)
-  @org.jetbrains.annotations.NotNull public final String getTrustStorePassword()
-  @org.jetbrains.annotations.NotNull public final java.nio.file.Path getTrustStorePath()
-  @org.jetbrains.annotations.NotNull public final String getTrustStoreProvider()
+  @NotNull
+  public final String getTrustStorePassword()
+  @NotNull
+  public final java.nio.file.Path getTrustStorePath()
+  @NotNull
+  public final String getTrustStoreProvider()
   public int hashCode()
   public String toString()
 ##
