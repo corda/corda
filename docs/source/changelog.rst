@@ -90,6 +90,10 @@ Version 3.1
 * Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
   all the needed network data, waiting in the background for network map to become available.
 
+* API change: ``net.corda.core.schemas.PersistentStateRef`` fields (index and txId) are now non-nullable, refer to :doc:`upgrade-notes`
+  in case Cordapps use this entity class to persist data in own custom tables as non Primary Key.
+
+
 .. _changelog_v3:
 
 Version 3.0

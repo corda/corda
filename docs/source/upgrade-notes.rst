@@ -33,6 +33,29 @@ UNRELEASED
 
 <<< Fill this in >>>
 
+* API change: net.corda.core.schemas.PersistentStateRef fields (index and txId) are now non-nullable.
+
+  H2 database upgrade action:
+
+  For Cordapps persisting custom entities with PersistentStateRef used as non Primary Key column,
+  the backing table needs to be updated:
+
+  (1) SELECT count(*) FROM [TABLE] WHERE [COLUMN] IS NULL;
+
+  If no rows has NULL column value it's safe to update DDL statement 3.
+  In case your table already contains rows with NULL columns, and the logic doesn't distinguish between NULL and an empty string,
+  all NULL column occurrences can be changed to an empty string - run SQL statements 2 and 3:
+
+  (2) UPDATE [Table] SET [Column]="" WHERE [Column] IS NULL;
+  (3) ALTER TABLE [Table]  ALTER COLUMN [Column] SET NOT NULL;
+
+  If the table already contains rows with NULL values, and the logic caters differently between NULL and an empty string,
+  and the logic has to be preserved you would need to create copy of PersistentStateRef class with different name and use the new class in your entity.
+
+  No action is needed for:
+  - default node tables as PersistentStateRef is used as Primary Key only and the backing columns are automatically not nullable,
+  - custom Cordapp entities using PersistentStateRef as Primary Key.
+
 v3.0 to v3.1
 ------------
 
