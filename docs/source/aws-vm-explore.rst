@@ -66,7 +66,13 @@ On AWS a permenant IP address is called an Elastic IP. Click on the
 
 .. image:: resources/aws-elastic.png
 
+Follow thew form then once the address is allocated click on "Actions"
+then "Associate address":
 
+.. image:: resources/aws-elastic-actions.png
+
+Then select the instance you created for your Corda node to attach the
+IP address to. 
 
 **STEP 3: Connect to your VM and set up the environment**
 
