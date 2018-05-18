@@ -27,7 +27,6 @@ import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
-import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import sun.security.x509.X500Name
 import java.net.URL
