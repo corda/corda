@@ -18,10 +18,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.config.*
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.P2PMessagingRetryConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
@@ -35,7 +31,6 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -169,6 +164,7 @@ class ArtemisMessagingTest {
 
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
+
     @Test
     fun `server should not process if incoming message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
@@ -180,9 +176,9 @@ class ArtemisMessagingTest {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
 
         val tooLagerMessage = messagingClient.createMessage(TOPIC, data = ByteArray(100_000))
-        assertThatThrownBy {
+        thread {
             messagingClient.send(tooLagerMessage, messagingClient.myAddress)
-        }.isInstanceOf(ActiveMQConnectionTimedOutException::class.java)
+        }.join(10.seconds.toMillis())
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
