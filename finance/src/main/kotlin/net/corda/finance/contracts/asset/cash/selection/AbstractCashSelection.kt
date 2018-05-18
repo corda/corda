@@ -151,16 +151,22 @@ abstract class AbstractCashSelection {
                         stateAndRefs.addAll(uncheckedCast(services.loadStates(stateRefs)))
                     }
 
-                    val success = stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity
+                    val revisedTotalPennies = if(totalPennies > amount.quantity) {
+                        tryOptimizingStatesInvolved(stateAndRefs, amount.quantity)
+                    } else {
+                        totalPennies
+                    }
+
+                    val success = stateAndRefs.isNotEmpty() && revisedTotalPennies >= amount.quantity
                     if (success) {
                         // we should have a minimum number of states to satisfy our selection `amount` criteria
-                        log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
+                        log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $revisedTotalPennies pennies: $stateAndRefs")
 
                         // With the current single threaded state machine available states are guaranteed to lock.
                         // TODO However, we will have to revisit these methods in the future multi-threaded.
                         services.vaultService.softLockReserve(lockId, (stateAndRefs.map { it.ref }).toNonEmptySet())
                     } else {
-                        log.trace("Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")
+                        log.trace("Coin selection requested $amount but retrieved $revisedTotalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")
                     }
                     success
                 }
@@ -176,5 +182,39 @@ abstract class AbstractCashSelection {
             }
         }
         return false
+    }
+
+    /**
+     * The idea here is to remove some of the not needed items from `stateAndRefs` such that target amount is met or
+     * exceeded.
+     *
+     * There are many algorithms exist, but we just try a primitive one which involves not touching the coins of small denominations if at all possible,
+     * reducing number of states participating in the transaction.
+     */
+    private fun tryOptimizingStatesInvolved(stateAndRefs: MutableList<StateAndRef<Cash.State>>, targetPennies: Long): Long {
+
+        // Shorthand helper.
+        fun StateAndRef<Cash.State>.quantity() : Long = state.data.amount.quantity
+
+        // Sort in descending amount order.
+        stateAndRefs.sortByDescending { it.quantity() }
+
+        // Establish cut index.
+        var totalPennies: Long = 0
+        var index = -1
+        for(stateAndRef in stateAndRefs) {
+            index++
+            totalPennies += stateAndRef.quantity()
+            if(totalPennies >= targetPennies) break
+        }
+
+        // If cut index is not at the end - truncate to reduce population.
+        if(index < stateAndRefs.size - 1) {
+            val shortenedVersion = stateAndRefs.take(index + 1)
+            stateAndRefs.clear()
+            stateAndRefs.addAll(shortenedVersion)
+        }
+
+        return totalPennies
     }
 }
