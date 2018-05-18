@@ -61,7 +61,10 @@ Click on the link to go to the Instances pages in the AWS console where after a 
 
 **STEP 2: Set up static IP address**
 
+On AWS a permenant IP address is called an Elastic IP. Click on the
+"Elastic IP" link in the sidenav and then click on "Allocate new address":
 
+.. image:: resources/aws-elastic.png
 
 
 
