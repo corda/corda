@@ -65,7 +65,7 @@ class CertificateRevocationRequestSubmissionToolTest {
         givenUserConsoleSequentialInputOnReadLine(request.certificateSerialNumber.toString(),
                 request.csrRequestId!!,
                 request.legalName.toString(),
-                request.reason.name,
+                "${request.reason.ordinal + 1}",
                 request.reporter)
 
         val requestId = SecureHash.randomSHA256().toString()

@@ -57,6 +57,7 @@ class PersistentCertificateRevocationListStorageTest : TestBase() {
                 certificateSerialNumber = certificate.serialNumber,
                 reason = REVOCATION_REASON,
                 reporter = REPORTER))
+        crrStorage.markRequestTicketCreated(requestId)
         crrStorage.approveRevocationRequest(requestId, "Approver")
         val revocationRequest = crrStorage.getRevocationRequest(requestId)!!
         val crl = createDummyCertificateRevocationList(listOf(revocationRequest.certificateSerialNumber))
@@ -80,6 +81,7 @@ class PersistentCertificateRevocationListStorageTest : TestBase() {
                 certificateSerialNumber = createNodeCertificate(csrStorage, legalName = "Bank A").serialNumber,
                 reason = REVOCATION_REASON,
                 reporter = REPORTER))
+        crrStorage.markRequestTicketCreated(done)
         crrStorage.approveRevocationRequest(done, "Approver")
         val doneRevocationRequest = crrStorage.getRevocationRequest(done)!!
 
@@ -95,6 +97,7 @@ class PersistentCertificateRevocationListStorageTest : TestBase() {
                 certificateSerialNumber = createNodeCertificate(csrStorage, legalName = "Bank C").serialNumber,
                 reason = REVOCATION_REASON,
                 reporter = REPORTER))
+        crrStorage.markRequestTicketCreated(approved)
         crrStorage.approveRevocationRequest(approved, "Approver")
         val approvedRevocationRequest = crrStorage.getRevocationRequest(approved)!!
 

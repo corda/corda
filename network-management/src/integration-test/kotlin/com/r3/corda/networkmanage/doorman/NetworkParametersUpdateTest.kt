@@ -1,6 +1,7 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.r3.corda.networkmanage.common.DOORMAN_DB_NAME
+import com.r3.corda.networkmanage.common.configSupplierForSupportedDatabases
 import com.r3.corda.networkmanage.common.networkMapInMemoryH2DataSourceConfig
 import com.r3.corda.networkmanage.common.utils.CertPathAndKey
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
@@ -154,7 +155,8 @@ class NetworkParametersUpdateTest : IntegrationTest() {
 
     private fun startServer(startNetworkMap: Boolean = true): NetworkManagementServer {
         val doormanConfig = DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis)
-        val server = NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig), DatabaseConfig(runMigration = true), doormanConfig, null)
+        val server = NetworkManagementServer(makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, configSupplier = configSupplierForSupportedDatabases(), fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig),
+                DatabaseConfig(runMigration = true), doormanConfig, null)
         server.start(
                 serverAddress,
                 CertPathAndKey(listOf(doormanCa.certificate, rootCaCert), doormanCa.keyPair.private),
@@ -173,7 +175,7 @@ class NetworkParametersUpdateTest : IntegrationTest() {
     private fun applyNetworkParametersAndStart(networkParametersCmd: NetworkParametersCmd) {
         server?.close()
         NetworkManagementServer(
-                makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig),
+                makeTestDataSourceProperties(DOORMAN_DB_NAME, dbNamePostfix, configSupplier = configSupplierForSupportedDatabases(), fallBackConfigSupplier = ::networkMapInMemoryH2DataSourceConfig),
                 DatabaseConfig(runMigration = true),
                 DoormanConfig(approveAll = true, jira = null, approveInterval = timeoutMillis),
                 null).use {

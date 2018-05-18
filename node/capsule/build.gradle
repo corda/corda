@@ -28,6 +28,11 @@ dependencies {
     capsuleRuntime "com.typesafe:config:$typesafe_config_version"
 }
 
+ext {
+    quasarExcludeExpression = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**)"
+    applicationClass = 'net.corda.node.Corda'
+}
+
 // Force the Caplet to target Java 6. This ensures that running 'java -jar corda.jar' on any Java 6 VM upwards
 // will get as far as the Capsule version checks, meaning that if your JVM is too old, you will at least get
 // a sensible error message telling you what to do rather than a bytecode version exception that doesn't.
@@ -37,8 +42,8 @@ sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
 task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
-    applicationClass 'net.corda.node.Corda'
     archiveName "corda-r3-${corda_release_version}.jar"
+    applicationClass 'net.corda.node.Corda'
     applicationSource = files(
             project(':node').configurations.runtime,
             project(':node').jar,
@@ -54,7 +59,6 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
         applicationVersion = corda_release_version
 
         // See experimental/quasar-hook/README.md for how to generate.
-        def quasarExcludeExpression = "x(antlr**;bftsmart**;ch**;co.paralleluniverse**;com.codahale**;com.esotericsoftware**;com.fasterxml**;com.google**;com.ibm**;com.intellij**;com.jcabi**;com.nhaarman**;com.opengamma**;com.typesafe**;com.zaxxer**;de.javakaffee**;groovy**;groovyjarjarantlr**;groovyjarjarasm**;io.atomix**;io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**)"
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar=${quasarExcludeExpression}"]
         systemProperties['visualvm.display.name'] = 'CordaEnterprise'
         minJavaVersion = '1.8.0'

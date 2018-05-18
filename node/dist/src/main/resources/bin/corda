@@ -1,0 +1,20 @@
+#!/bin/sh
+# ------------------------
+# Corda startup script 
+# -------------------------
+
+MAINCLASSNAME="net.corda.node.Corda"
+READLINK=`which readlink`
+
+# Locate this script and relative launcher executable
+SCRIPT_LOCATION=$0
+if [ -x "$READLINK" ]; then
+  while [ -L "$SCRIPT_LOCATION" ]; do
+    SCRIPT_LOCATION=`"$READLINK" -e "$SCRIPT_LOCATION"`
+  done
+fi
+SCRIPT_DIR=`dirname "$SCRIPT_LOCATION"`
+LAUNCHER_LOCATION="$SCRIPT_DIR/../launcher/launcher"
+
+# Run Corda
+CORDA_LAUNCHER_CWD="`pwd`" ${LAUNCHER_LOCATION} ${MAINCLASSNAME} "$@"

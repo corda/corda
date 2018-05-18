@@ -24,6 +24,7 @@ import net.corda.tools.shell.SSHDConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.net.URL
 import java.net.URI
 import java.net.URL
 import java.nio.file.Paths

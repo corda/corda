@@ -11,8 +11,7 @@
 package com.r3.corda.networkmanage.hsm
 
 import com.nhaarman.mockito_kotlin.*
-import com.r3.corda.networkmanage.common.HOST
-import com.r3.corda.networkmanage.common.HsmBaseTest
+import com.r3.corda.networkmanage.common.*
 import com.r3.corda.networkmanage.common.persistence.configureDatabase
 import com.r3.corda.networkmanage.doorman.CertificateRevocationConfig
 import com.r3.corda.networkmanage.doorman.DoormanConfig
@@ -26,9 +25,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.hours
-import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
@@ -40,6 +36,7 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
@@ -48,6 +45,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.net.URL
+import java.nio.file.Path
 import java.security.cert.X509Certificate
 import java.util.*
 import javax.persistence.PersistenceException
@@ -59,25 +57,31 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
+    private val portAllocation = PortAllocation.Incremental(10000)
+    private val serverAddress = portAllocation.nextHostAndPort()
+
     private lateinit var timer: Timer
     private lateinit var rootCaCert: X509Certificate
     private lateinit var intermediateCa: CertificateAndKeyPair
+    private val timeoutMillis = 5.seconds.toMillis()
 
     private lateinit var dbName: String
 
     private val doormanConfig: DoormanConfig get() = DoormanConfig(approveAll = true, approveInterval = 2.seconds.toMillis(), jira = null)
-    private val revocationConfig: CertificateRevocationConfig
-        get() = CertificateRevocationConfig(
+    private lateinit var revocationConfig: CertificateRevocationConfig
+
+    private fun createCertificateRevocationConfig(emptyCrlPath: Path, caCrlPath: Path): CertificateRevocationConfig {
+        return CertificateRevocationConfig(
                 approveAll = true,
                 jira = null,
-                crlCacheTimeout = 30.minutes.toMillis(),
-                approveInterval = 10.minutes.toMillis(),
+                approveInterval = timeoutMillis,
+                crlCacheTimeout = timeoutMillis,
                 localSigning = CertificateRevocationConfig.LocalSigning(
-                        crlEndpoint = URL("http://test.com/crl"),
-                        crlUpdateInterval = 2.hours.toMillis()
-                )
-        )
-
+                        crlEndpoint = getNodeCrlEndpoint(serverAddress),
+                        crlUpdateInterval = timeoutMillis),
+                emptyCrlPath = emptyCrlPath,
+                caCrlPath = caCrlPath)
+    }
 
     @Before
     override fun setUp() {
@@ -87,6 +91,8 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
         rootCaCert = rootCa.certificate
         this.intermediateCa = intermediateCa
+        val (caCrlPath, emptyCrlPath) = generateEmptyCrls(tempFolder, rootCa, getCaCrlEndpoint(serverAddress), getEmptyCrlEndpoint(serverAddress))
+        revocationConfig = createCertificateRevocationConfig(emptyCrlPath, caCrlPath)
     }
 
     @After
@@ -116,7 +122,7 @@ class SigningServiceIntegrationTest : HsmBaseTest() {
         //Start doorman server
         NetworkManagementServer(makeTestDataSourceProperties(), makeTestDatabaseProperties(), doormanConfig, revocationConfig).use { server ->
             server.start(
-                    hostAndPort = NetworkHostAndPort(HOST, 0),
+                    hostAndPort = serverAddress,
                     csrCertPathAndKey = null,
                     startNetworkMap = null)
             val doormanHostAndPort = server.hostAndPort

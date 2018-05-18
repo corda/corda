@@ -39,6 +39,8 @@ Allowed parameters are:
 
     :approveInterval: How often to process Jira approved requests in seconds.
 
+    :crlEndpoint: URL to the CRL issued by the Doorman CA. This parameter is only useful when Doorman is executing in the local signing mode.
+
     :jira: The Jira configuration for certificate signing requests
 
         :address: The URL to use to connect to Jira
@@ -51,7 +53,7 @@ Allowed parameters are:
 
 :revocation: Revocation service specific configuration
 
-        :localSigning: Configuration for local CRL signing using the file key store. If not defined t
+        :localSigning: Configuration for local CRL signing using the file key store. If not defined then an external signing process is assumed.
 
             :crlUpdateInterval: Validity time of the issued certificate revocation lists (in milliseconds).
 
@@ -65,6 +67,12 @@ Allowed parameters are:
                           Processing in this context means: querying the JIRA for approved/rejected request and syncing with the Doorman persistence.
 
         :approveAll: Whether to approve all requests (defaults to false), this is for debug only.
+
+        :caCrlPath: Path (including the file name) to the location of the file containing the bytes of the CRL issued by the ROOT CA.
+                    Note: Byte encoding is the one given by the package java.security.cert.X509CRL.encoded method - i.e. ASN.1 DER
+
+            :emptyCrlPath: Path (including the file name) to the location of the generated file containing the bytes of the empty CRL issued by the ROOT CA.
+                           Note: Byte encoding is the one given by the package java.security.cert.X509CRL.encoded method - i.e. ASN.1 DER
 
         :jira: The Jira configuration for certificate revocation requests
 
@@ -87,6 +95,22 @@ Allowed parameters are:
     that binds with an HSM.
 
 :rootStorePath: Path for the root keystore
+
+:caCrlPath: Path (including the file name) to the location of the generated file containing the bytes of the CRL issued by the ROOT CA.
+            This configuration parameter is used in the ROOT_KEYGEN mode.
+            Note: Byte encoding is the one given by the package java.security.cert.X509CRL.encoded method - i.e. ASN.1 DER
+
+:caCrlUrl: URL to the CRL issued by the ROOT CA. This URL is going to be included in the generated CRL that is signed by the ROOT CA.
+           This configuration parameter is used in the ROOT_KEYGEN and CA_KEYGEN modes.
+
+:emptyCrlPath: Path (including the file name) to the location of the generated file containing the bytes of the empty CRL issued by the ROOT CA.
+               This configuration parameter is used in the ROOT_KEYGEN mode.
+               Note: Byte encoding is the one given by the package java.security.cert.X509CRL.encoded method - i.e. ASN.1 DER
+               This CRL is to allow nodes to operate in the strict CRL checking mode. This mode requires all the certificates in the chain being validated
+               to point a CRL. Since the TLS-level certificate is managed by the nodes, this CRL is a facility one for infrastructures without CRL provisioning.
+
+:emptyCrlUrl: URL to the empty CRL issued by the ROOT CA. This URL is going to be included in the generated empty CRL that is signed by the ROOT CA.
+              This configuration parameter is used in the ROOT_KEYGEN mode.
 
 Bootstrapping the network parameters
 ------------------------------------

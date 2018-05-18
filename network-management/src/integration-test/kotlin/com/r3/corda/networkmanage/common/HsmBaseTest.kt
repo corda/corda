@@ -26,7 +26,7 @@ import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.internal.makeTestDataSourceProperties
 import net.corda.testing.node.internal.makeTestDatabaseProperties
 import org.junit.Before
 import org.junit.ClassRule
@@ -185,10 +185,10 @@ abstract class HsmBaseTest : IntegrationTest() {
     }
 
     fun makeTestDataSourceProperties(): Properties {
-        return makeTestDataSourceProperties(DOORMAN_DB_NAME)
+        return makeTestDataSourceProperties(DOORMAN_DB_NAME, configSupplier = configSupplierForSupportedDatabases())
     }
 
     fun makeTestDatabaseProperties(): DatabaseConfig {
-        return makeTestDatabaseProperties(DOORMAN_DB_NAME)
+        return makeTestDatabaseProperties(DOORMAN_DB_NAME, configSupplier = configSupplierForSupportedDatabases())
     }
 }

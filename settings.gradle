@@ -56,6 +56,7 @@ include 'tools:explorer'
 include 'tools:explorer:capsule'
 include 'tools:demobench'
 include 'tools:loadtest'
+include 'tools:notarytest'
 include 'tools:graphs'
 include 'tools:bootstrapper'
 include 'tools:dbmigration'
@@ -82,3 +83,5 @@ project(':hsm-tool').with {
     name = 'sgx-hsm-tool'
     projectDir = file("$settingsDir/sgx-jvm/hsm-tool")
 }
+include 'launcher'
+include 'node:dist'

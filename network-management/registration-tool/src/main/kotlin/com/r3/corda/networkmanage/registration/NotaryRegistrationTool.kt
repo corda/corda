@@ -68,4 +68,5 @@ data class NotaryRegistrationConfig(val legalName: CordaX500Name,
                                     val networkRootTrustStorePassword: String?,
                                     val trustStorePassword: String?,
                                     val keystorePath: Path?,
-                                    val crlCheckSoftFail: Boolean)
+                                    val crlCheckSoftFail: Boolean,
+                                    val crlDistributionPoint: URL? = null)

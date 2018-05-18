@@ -15,6 +15,7 @@ import com.r3.corda.networkmanage.common.utils.*
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.exists
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.slf4j.LoggerFactory
@@ -36,7 +37,14 @@ fun main(args: Array<String>) {
 
     logger.info("Running in ${cmdLineOptions.mode} mode")
     when (cmdLineOptions.mode) {
-        Mode.ROOT_KEYGEN -> rootKeyGenMode(cmdLineOptions, config)
+        Mode.ROOT_KEYGEN -> {
+            val emptyCrlPath = requireNotNull(config.emptyCrlPath) { "emptyCrlPath needs to be specified" }
+            val emptyCrlUrl = requireNotNull(config.emptyCrlUrl) { "emptyCrlUrl needs to be specified" }
+            val caCrlPath = requireNotNull(config.caCrlPath) { "caCrlPath needs to be specified" }
+            val caCrlUrl = requireNotNull(config.caCrlUrl) { "caCrlUrl needs to be specified" }
+            val rootCertificateAndKeyPair = rootKeyGenMode(cmdLineOptions, config)
+            createEmptyCrls(rootCertificateAndKeyPair, emptyCrlPath, emptyCrlUrl, caCrlPath, caCrlUrl)
+        }
         Mode.CA_KEYGEN -> caKeyGenMode(config)
         Mode.DOORMAN -> doormanMode(cmdLineOptions, config)
     }
@@ -61,8 +69,8 @@ private fun processKeyStore(config: NetworkManagementServerConfig): Pair<CertPat
     return Pair(csrCertPathAndKey, networkMapSigner)
 }
 
-private fun rootKeyGenMode(cmdLineOptions: DoormanCmdLineOptions, config: NetworkManagementServerConfig) {
-    generateRootKeyPair(
+private fun rootKeyGenMode(cmdLineOptions: DoormanCmdLineOptions, config: NetworkManagementServerConfig): CertificateAndKeyPair {
+    return generateRootKeyPair(
             requireNotNull(config.rootStorePath) { "The 'rootStorePath' parameter must be specified when generating keys!" },
             config.rootKeystorePassword,
             config.rootPrivateKeyPassword,
@@ -77,7 +85,8 @@ private fun caKeyGenMode(config: NetworkManagementServerConfig) {
             config.rootKeystorePassword,
             config.rootPrivateKeyPassword,
             config.keystorePassword,
-            config.caPrivateKeyPassword
+            config.caPrivateKeyPassword,
+            config.caCrlUrl
     )
 }
 

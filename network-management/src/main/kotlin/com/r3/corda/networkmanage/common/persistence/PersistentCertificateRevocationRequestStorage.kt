@@ -5,6 +5,7 @@ import com.r3.corda.networkmanage.common.persistence.entity.CertificateRevocatio
 import com.r3.corda.networkmanage.common.persistence.entity.CertificateSigningRequestEntity
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.CertificateRevocationRequest
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
@@ -25,6 +26,7 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
                 CRLReason.SUPERSEDED,
                 CRLReason.UNSPECIFIED
         )
+        val logger = contextLogger()
     }
 
     override fun saveRevocationRequest(request: CertificateRevocationRequest): String {
@@ -60,7 +62,7 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
         }
     }
 
-    private fun validate(request:CertificateRevocationRequest) {
+    private fun validate(request: CertificateRevocationRequest) {
         require(request.reason in ALLOWED_REASONS) { "The given revocation reason is not allowed." }
     }
 
@@ -140,11 +142,20 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
             if (revocation == null) {
                 throw NoSuchElementException("Error while approving! Certificate revocation id=$id does not exist")
             } else {
-                session.merge(revocation.copy(
-                        status = RequestStatus.APPROVED,
-                        modifiedAt = Instant.now(),
-                        modifiedBy = approvedBy
-                ))
+                when (revocation.status) {
+                    RequestStatus.TICKET_CREATED -> {
+                        session.merge(revocation.copy(
+                                status = RequestStatus.APPROVED,
+                                modifiedAt = Instant.now(),
+                                modifiedBy = approvedBy
+                        ))
+                        logger.debug("`request id` = $requestId marked as APPROVED")
+                    }
+                    else -> {
+                        logger.warn("`request id` = $requestId cannot be marked as APPROVED. Its current status is ${revocation.status}")
+                        return@transaction
+                    }
+                }
             }
         }
     }
@@ -155,27 +166,45 @@ class PersistentCertificateRevocationRequestStorage(private val database: CordaP
             if (revocation == null) {
                 throw NoSuchElementException("Error while rejecting! Certificate revocation id=$id does not exist")
             } else {
-                session.merge(revocation.copy(
-                        status = RequestStatus.REJECTED,
-                        modifiedAt = Instant.now(),
-                        modifiedBy = rejectedBy,
-                        remark = reason
-                ))
+                when (revocation.status) {
+                    RequestStatus.TICKET_CREATED -> {
+                        session.merge(revocation.copy(
+                                status = RequestStatus.REJECTED,
+                                modifiedAt = Instant.now(),
+                                modifiedBy = rejectedBy,
+                                remark = reason
+                        ))
+                        logger.debug("`request id` = $requestId marked as REJECTED")
+                    }
+                    else -> {
+                        logger.warn("`request id` = $requestId cannot be marked as REJECTED. Its current status is ${revocation.status}")
+                        return@transaction
+                    }
+                }
             }
         }
     }
 
     override fun markRequestTicketCreated(requestId: String) {
-        // Even though, we have an assumption that there is always a single instance of the doorman service running,
-        // the SERIALIZABLE isolation level is used here just to ensure data consistency between the updates.
-        return database.transaction(TransactionIsolationLevel.SERIALIZABLE) {
-            val request = requireNotNull(getRevocationRequestEntity(requestId, RequestStatus.NEW)) {
-                "Error when creating request ticket with id: $requestId. Request does not exist or its status is not NEW."
+        database.transaction {
+            val revocation = getRevocationRequestEntity(requestId)
+            if (revocation == null) {
+                throw NoSuchElementException("Error while marking the request as ticket created! Certificate revocation id=$id does not exist")
+            } else {
+                when (revocation.status) {
+                    RequestStatus.NEW -> {
+                        session.merge(revocation.copy(
+                                modifiedAt = Instant.now(),
+                                status = RequestStatus.TICKET_CREATED
+                        ))
+                        logger.debug("`request id` = $requestId marked as TICKED_CREATED")
+                    }
+                    else -> {
+                        logger.warn("`request id` = $requestId cannot be marked as TICKED_CREATED. Its current status is ${revocation.status}")
+                        return@transaction
+                    }
+                }
             }
-            val update = request.copy(
-                    modifiedAt = Instant.now(),
-                    status = RequestStatus.TICKET_CREATED)
-            session.merge(update)
         }
     }
 
