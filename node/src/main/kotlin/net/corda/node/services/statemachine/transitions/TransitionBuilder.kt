@@ -25,7 +25,7 @@ class TransitionBuilder(val context: TransitionContext, initialState: StateMachi
      */
     fun freshErrorTransition(error: Throwable) {
         val flowError = FlowError(
-                errorId = (error as? IdentifiableException)?.getErrorId() ?: context.secureRandom.nextLong(),
+                errorId = (error as? IdentifiableException)?.errorId ?: context.secureRandom.nextLong(),
                 exception = error
         )
         errorTransition(flowError)
