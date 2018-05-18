@@ -56,7 +56,7 @@ class CashSelectionH2ImplTest {
     }
 
     @Test
-    fun `select coins from more that two different issue references`() {
+    fun `select coins with a change from more that two different issuer references`() {
         val node = mockNet.createNode()
         val notary = mockNet.defaultNotaryIdentity
 
