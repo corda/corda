@@ -238,6 +238,13 @@ absolute path to the node's base directory.
 
                 .. note:: This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.
 
+:tlsCertCrlDistPoint: CRL distribution point (i.e. URL) for the TLS certificate. Default value is NULL, which indicates no CRL availability for the TLS certificate.
+                      Note: If crlCheckSoftFail is FALSE (meaning that there is the strict CRL checking mode) this value needs to be set.
+
+:tlsCertCrlIssuer: CRL issuer (given in the X500 name format) for the TLS certificate. Default value is NULL,
+                       which indicates that the issuer of the TLS certificate is also the issuer of the CRL.
+                       Note: If this parameter is set then the tlsCertCrlDistPoint needs to be set as well.
+
 Examples
 --------
 

@@ -26,7 +26,7 @@ class PersistentCertificateRevocationListStorage(private val database: CordaPers
 
     override fun saveCertificateRevocationList(crl: X509CRL, crlIssuer: CrlIssuer, signedBy: String, revokedAt: Instant) {
         database.transaction {
-            crl.revokedCertificates.forEach {
+            crl.revokedCertificates?.forEach {
                 revokeCertificate(it.serialNumber, revokedAt, this)
             }
             session.save(CertificateRevocationListEntity(

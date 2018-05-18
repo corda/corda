@@ -85,6 +85,7 @@ class PersistentCertificateRevocationRequestStorageTest : TestBase() {
                     certificateSerialNumber = createNodeCertificate(csrStorage, "LegalName" + it.toString()).serialNumber,
                     reason = REVOCATION_REASON,
                     reporter = REPORTER))
+            crrStorage.markRequestTicketCreated(requestId)
             crrStorage.approveRevocationRequest(requestId, "Approver")
         }
 
@@ -117,6 +118,7 @@ class PersistentCertificateRevocationRequestStorageTest : TestBase() {
                 certificateSerialNumber = certificate.serialNumber,
                 reason = REVOCATION_REASON,
                 reporter = REPORTER))
+        crrStorage.markRequestTicketCreated(requestId)
 
         // when
         crrStorage.approveRevocationRequest(requestId, "Approver")
@@ -135,6 +137,7 @@ class PersistentCertificateRevocationRequestStorageTest : TestBase() {
                 certificateSerialNumber = certificate.serialNumber,
                 reason = REVOCATION_REASON,
                 reporter = REPORTER))
+        crrStorage.markRequestTicketCreated(requestId)
 
         // when
         crrStorage.rejectRevocationRequest(requestId, "Rejector", "No reason")

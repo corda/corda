@@ -68,6 +68,8 @@ class NetworkRegistrationHelperTest {
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(nodeLegalName).whenever(it).myLegalName
             doReturn("").whenever(it).emailAddress
+            doReturn(null).whenever(it).tlsCertCrlDistPoint
+            doReturn(null).whenever(it).tlsCertCrlIssuer
         }
     }
 

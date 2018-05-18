@@ -28,6 +28,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigT
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
 import org.slf4j.Logger
+import sun.security.x509.X500Name
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
@@ -70,6 +71,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
     // do not change this value without syncing it with ScheduledFlowsDrainingModeTest
     val drainingModePollPeriod: Duration get() = Duration.ofSeconds(5)
     val extraNetworkMapKeys: List<UUID>
+    val tlsCertCrlDistPoint: URL?
+    val tlsCertCrlIssuer: String?
 
     fun validate(): List<String>
 
@@ -190,6 +193,8 @@ data class NodeConfigurationImpl(
         override val crlCheckSoftFail: Boolean,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
+        override val tlsCertCrlDistPoint: URL? = null,
+        override val tlsCertCrlIssuer: String? = null,
         override val rpcUsers: List<User>,
         override val security: SecurityConfiguration? = null,
         override val verifierType: VerifierType,
@@ -241,10 +246,29 @@ data class NodeConfigurationImpl(
         }.asOptions(fallbackSslOptions)
     }
 
+    private fun validateTlsCertCrlConfig(): List<String> {
+        val errors = mutableListOf<String>()
+        if (tlsCertCrlIssuer != null) {
+            if (tlsCertCrlDistPoint == null) {
+                errors += "tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL"
+            }
+            try {
+                X500Name(tlsCertCrlIssuer)
+            } catch (e: Exception) {
+                errors += "Error when parsing tlsCertCrlIssuer: ${e.message}"
+            }
+        }
+        if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {
+            errors += "tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE"
+        }
+        return errors
+    }
+
     override fun validate(): List<String> {
         val errors = mutableListOf<String>()
         errors += validateDevModeOptions()
         errors += validateRpcOptions(rpcOptions)
+        errors += validateTlsCertCrlConfig()
         return errors
     }
 

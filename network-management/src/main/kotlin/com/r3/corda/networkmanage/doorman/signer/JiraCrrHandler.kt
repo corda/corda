@@ -59,10 +59,10 @@ class JiraCrrHandler(private val jiraClient: CrrJiraClient,
 
     private fun updateJiraTickets(approvedRequest: List<ApprovedRequest>, rejectedRequest: List<RejectedRequest>) {
         // Reconfirm request status and update jira status
+        logger.debug("Updating JIRA tickets: `approved` = $approvedRequest, `rejected` = $rejectedRequest")
         approvedRequest.mapNotNull { crrStorage.getRevocationRequest(it.requestId) }
                 .filter { it.status == RequestStatus.DONE }
                 .forEachWithExceptionLogging(logger) { jiraClient.updateDoneCertificateRevocationRequest(it.requestId) }
-
         rejectedRequest.mapNotNull { crrStorage.getRevocationRequest(it.requestId) }
                 .filter { it.status == RequestStatus.REJECTED }
                 .forEachWithExceptionLogging(logger) { jiraClient.updateRejectedRequest(it.requestId) }

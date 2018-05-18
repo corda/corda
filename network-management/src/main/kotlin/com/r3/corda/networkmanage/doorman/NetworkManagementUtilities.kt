@@ -11,10 +11,14 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
+import com.r3.corda.networkmanage.common.utils.createSignedCrl
+import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
+import net.corda.core.utilities.days
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
@@ -22,6 +26,8 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import net.corda.nodeapi.internal.crypto.X509Utilities.createCertificate
 import net.corda.nodeapi.internal.crypto.X509Utilities.createSelfSignedCACertificate
+import org.apache.commons.io.FileUtils
+import java.net.URL
 import java.nio.file.Path
 import javax.security.auth.x500.X500Principal
 import kotlin.system.exitProcess
@@ -41,7 +47,7 @@ internal fun readPassword(fmt: String): String {
 }
 
 // Keygen utilities.
-fun generateRootKeyPair(rootStoreFile: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?, networkRootTrustPass: String?) {
+fun generateRootKeyPair(rootStoreFile: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?, networkRootTrustPass: String?): CertificateAndKeyPair {
     println("Generating Root CA keypair and certificate.")
     // Get password from console if not in config.
     val rootKeystorePassword = rootKeystorePass ?: readPassword("Root Keystore Password: ")
@@ -76,9 +82,22 @@ fun generateRootKeyPair(rootStoreFile: Path, rootKeystorePass: String?, rootPriv
     println("Trust store for distribution to nodes created in $trustStorePath")
     println("Root CA keypair and certificate stored in ${rootStoreFile.toAbsolutePath()}.")
     println(rootCert)
+    return CertificateAndKeyPair(rootCert, selfSignKey)
 }
 
-fun generateSigningKeyPairs(keystoreFile: Path, rootStoreFile: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?, keystorePass: String?, caPrivateKeyPass: String?) {
+fun createEmptyCrls(rootCertificateAndKeyPair: CertificateAndKeyPair, emptyCrlPath: Path, emptyCrlUrl: URL, caCrlPath: Path, caCrlUrl: URL) {
+    val rootCert = rootCertificateAndKeyPair.certificate
+    val rootKey = rootCertificateAndKeyPair.keyPair.private
+    val emptyCrl = createSignedCrl(rootCert, emptyCrlUrl, 3650.days, LocalSigner(rootKey, rootCert), emptyList(), true)
+    FileUtils.writeByteArrayToFile(emptyCrlPath.toFile(), emptyCrl.encoded)
+    val caCrl = createSignedCrl(rootCert, caCrlUrl, 3650.days, LocalSigner(rootKey, rootCert), emptyList())
+    FileUtils.writeByteArrayToFile(caCrlPath.toFile(), caCrl.encoded)
+    println("Empty CRL: $emptyCrl")
+    println("CA CRL: $caCrl")
+    println("Root signed empty and CA CRL files created in $emptyCrlPath and $caCrlPath respectively")
+}
+
+fun generateSigningKeyPairs(keystoreFile: Path, rootStoreFile: Path, rootKeystorePass: String?, rootPrivateKeyPass: String?, keystorePass: String?, caPrivateKeyPass: String?, caCrlUrl: URL?) {
     println("Generating intermediate and network map key pairs and certificates using root key store $rootStoreFile.")
     // Get password from console if not in config.
     val rootKeystorePassword = rootKeystorePass ?: readPassword("Root key store password: ")
@@ -106,7 +125,8 @@ fun generateSigningKeyPairs(keystoreFile: Path, rootStoreFile: Path, rootKeystor
                 rootKeyPairAndCert.certificate,
                 rootKeyPairAndCert.keyPair,
                 subject,
-                keyPair.public
+                keyPair.public,
+                crlDistPoint = caCrlUrl?.toString()
         )
 
         keyStore.update {

@@ -11,6 +11,7 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.google.common.primitives.Booleans
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.config.OldConfig
@@ -41,7 +42,15 @@ data class NetworkManagementServerConfig( // TODO: Move local signing to signing
         // TODO Should be part of a localSigning sub-config
         val rootKeystorePassword: String?,
         // TODO Should be part of a localSigning sub-config
-        val rootPrivateKeyPassword: String?
+        val rootPrivateKeyPassword: String?,
+        // TODO Should be part of a localSigning sub-config
+        val caCrlPath: Path? = null,
+        // TODO Should be part of a localSigning sub-config
+        val caCrlUrl: URL? = null,
+        // TODO Should be part of a localSigning sub-config
+        val emptyCrlPath: Path? = null,
+        // TODO Should be part of a localSigning sub-config
+        val emptyCrlUrl: URL? = null
 ) {
     companion object {
         // TODO: Do we really need these defaults?
@@ -53,6 +62,7 @@ data class NetworkManagementServerConfig( // TODO: Move local signing to signing
 data class DoormanConfig(val approveAll: Boolean = false,
                          @OldConfig("jiraConfig")
                          val jira: JiraConfig? = null,
+                         val crlEndpoint: URL? = null,
                          val approveInterval: Long = NetworkManagementServerConfig.DEFAULT_APPROVE_INTERVAL.toMillis()) {
     init {
         require(Booleans.countTrue(approveAll, jira != null) == 1) {
@@ -65,6 +75,8 @@ data class CertificateRevocationConfig(val approveAll: Boolean = false,
                                        val jira: JiraConfig? = null,
                                        val localSigning: LocalSigning?,
                                        val crlCacheTimeout: Long,
+                                       val caCrlPath: Path,
+                                       val emptyCrlPath: Path,
                                        val approveInterval: Long = NetworkManagementServerConfig.DEFAULT_APPROVE_INTERVAL.toMillis()) {
     init {
         require(Booleans.countTrue(approveAll, jira != null) == 1) {

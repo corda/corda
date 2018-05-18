@@ -23,14 +23,15 @@ fun createSignedCrl(issuerCertificate: X509Certificate,
                     endpointUrl: URL,
                     nextUpdateInterval: Duration,
                     signer: Signer,
-                    includeInCrl: List<CertificateRevocationRequestData>): X509CRL {
+                    includeInCrl: List<CertificateRevocationRequestData>,
+                    indirectIssuingPoint: Boolean = false): X509CRL {
     val extensionUtils = JcaX509ExtensionUtils()
-    val builder = X509v2CRLBuilder(X500Name.getInstance(issuerCertificate.issuerX500Principal.encoded), Date())
+    val builder = X509v2CRLBuilder(X500Name.getInstance(issuerCertificate.subjectX500Principal.encoded), Date())
     builder.addExtension(Extension.authorityKeyIdentifier, false, extensionUtils.createAuthorityKeyIdentifier(issuerCertificate))
     val issuingDistributionPointName = GeneralName(GeneralName.uniformResourceIdentifier, endpointUrl.toString())
-    val issuingDistributionPoint = IssuingDistributionPoint(DistributionPointName(GeneralNames(issuingDistributionPointName)), false, false)
+    val issuingDistributionPoint = IssuingDistributionPoint(DistributionPointName(GeneralNames(issuingDistributionPointName)), indirectIssuingPoint, false)
     builder.addExtension(Extension.issuingDistributionPoint, true, issuingDistributionPoint)
-    builder.setNextUpdate(Date((Instant.now() + nextUpdateInterval).toEpochMilli()))
+    builder.setNextUpdate(Date(Instant.now().toEpochMilli() + nextUpdateInterval.toMillis()))
     includeInCrl.forEach {
         builder.addCRLEntry(it.certificateSerialNumber, Date(it.modifiedAt.toEpochMilli()), it.reason.ordinal)
     }

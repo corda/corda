@@ -24,6 +24,7 @@ import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
+import java.net.URL
 import java.security.cert.CertPath
 import javax.security.auth.x500.X500Principal
 
@@ -34,7 +35,8 @@ interface CsrHandler {
 }
 
 class DefaultCsrHandler(private val storage: CertificateSigningRequestStorage,
-                        private val csrCertPathAndKey: CertPathAndKey?) : CsrHandler {
+                        private val csrCertPathAndKey: CertPathAndKey?,
+                        private val crlDistributionPoint: URL? = null) : CsrHandler {
 
     override fun processRequests() {
         if (csrCertPathAndKey == null) return
@@ -75,7 +77,8 @@ class DefaultCsrHandler(private val storage: CertificateSigningRequestStorage,
                 csrCertPathAndKey.toKeyPair(),
                 X500Principal(request.subject.encoded),
                 request.publicKey,
-                nameConstraints = nameConstraints)
+                nameConstraints = nameConstraints,
+                crlDistPoint = crlDistributionPoint?.toString())
         return X509CertificateFactory().generateCertPath(listOf(nodeCaCert) + csrCertPathAndKey.certPath)
     }
 }

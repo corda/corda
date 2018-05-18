@@ -20,6 +20,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import org.apache.commons.io.FileUtils
 import java.io.Closeable
 import java.net.URI
 import java.time.Duration
@@ -94,9 +95,9 @@ class NetworkManagementServer(dataSourceProperties: Properties,
         val requestProcessor = if (jiraConfig != null) {
             val jiraWebAPI = AsynchronousJiraRestClientFactory().createWithBasicHttpAuthentication(URI(jiraConfig.address), jiraConfig.username, jiraConfig.password)
             val jiraClient = CsrJiraClient(jiraWebAPI, jiraConfig.projectCode)
-            JiraCsrHandler(jiraClient, csrStorage, DefaultCsrHandler(csrStorage, csrCertPathAndKey))
+            JiraCsrHandler(jiraClient, csrStorage, DefaultCsrHandler(csrStorage, csrCertPathAndKey, config.crlEndpoint))
         } else {
-            DefaultCsrHandler(csrStorage, csrCertPathAndKey)
+            DefaultCsrHandler(csrStorage, csrCertPathAndKey, config.crlEndpoint)
         }
 
         val scheduledExecutor = Executors.newScheduledThreadPool(1)
@@ -131,7 +132,7 @@ class NetworkManagementServer(dataSourceProperties: Properties,
         val crlHandler = csrCertPathAndKeyPair?.let {
             LocalCrlHandler(crrStorage,
                     crlStorage,
-                    CertificateAndKeyPair(it.certPath.first(), it.toKeyPair()),
+                    CertificateAndKeyPair(it.certPath[0], it.toKeyPair()),
                     Duration.ofMillis(config.localSigning!!.crlUpdateInterval),
                     config.localSigning.crlEndpoint)
         }
@@ -158,7 +159,13 @@ class NetworkManagementServer(dataSourceProperties: Properties,
         scheduledExecutor.scheduleAtFixedRate(approvalThread, config.approveInterval, config.approveInterval, TimeUnit.MILLISECONDS)
         closeActions += scheduledExecutor::shutdown
         // TODO start socket server
-        return Pair(CertificateRevocationRequestWebService(crrHandler), CertificateRevocationListWebService(crlStorage, Duration.ofMillis(config.crlCacheTimeout)))
+        return Pair(
+                CertificateRevocationRequestWebService(crrHandler),
+                CertificateRevocationListWebService(
+                        crlStorage,
+                        FileUtils.readFileToByteArray(config.caCrlPath.toFile()),
+                        FileUtils.readFileToByteArray(config.emptyCrlPath.toFile()),
+                        Duration.ofMillis(config.crlCacheTimeout)))
     }
 
     fun start(hostAndPort: NetworkHostAndPort,

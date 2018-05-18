@@ -177,7 +177,7 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
         existingRequestByPubKeyHash?.let {
             // Compare subject, attribute.
             // We cannot compare the request directly because it contains nonce.
-            if (it.request.subject == request.subject && it.request.attributes.asList() == request.attributes.asList()) {
+            if (certNotRevoked(it) && it.request.subject == request.subject && it.request.attributes.asList() == request.attributes.asList()) {
                 return it.requestId
             } else {
                 //TODO Consider following scenario: There is a CSR that is signed but the certificate itself has expired or was revoked
@@ -190,9 +190,17 @@ class PersistentCertificateSigningRequestStorage(private val database: CordaPers
         // TODO consider scenario: There is a CSR that is signed but the certificate itself has expired or was revoked
         // Also, at the moment we assume that once the CSR is approved it cannot be rejected.
         // What if we approved something by mistake.
-        if (nonRejectedRequest(CertificateSigningRequestEntity::legalName.name, legalName) != null) throw RequestValidationException(legalName, rejectMessage = "Duplicate legal name")
-
+        val existingRequestByLegalName = nonRejectedRequest(CertificateSigningRequestEntity::legalName.name, legalName)
+        existingRequestByLegalName?.let {
+            if (certNotRevoked(it)) {
+                throw RequestValidationException(legalName, rejectMessage = "Duplicate legal name")
+            }
+        }
         return null
+    }
+
+    private fun certNotRevoked(request: CertificateSigningRequestEntity): Boolean {
+        return request.status != RequestStatus.DONE || request.certificateData?.certificateStatus != CertificateStatus.REVOKED
     }
 
     /**

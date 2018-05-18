@@ -17,6 +17,8 @@ import javax.ws.rs.core.Response.status
 
 @Path(CRL_PATH)
 class CertificateRevocationListWebService(private val revocationListStorage: CertificateRevocationListStorage,
+                                          private val caCrlBytes: ByteArray,
+                                          private val emptyCrlBytes: ByteArray,
                                           cacheTimeout: Duration) {
     companion object {
         private val logger = contextLogger()
@@ -24,6 +26,7 @@ class CertificateRevocationListWebService(private val revocationListStorage: Cer
         const val CRL_DATA_TYPE = "application/pkcs7-crl"
         const val DOORMAN = "doorman"
         const val ROOT = "root"
+        const val EMPTY = "empty"
     }
 
     private val crlCache: LoadingCache<CrlIssuer, ByteArray> = Caffeine.newBuilder()
@@ -43,7 +46,14 @@ class CertificateRevocationListWebService(private val revocationListStorage: Cer
     @Path(ROOT)
     @Produces(CRL_DATA_TYPE)
     fun getRootRevocationList(): Response {
-        return getCrlResponse(CrlIssuer.ROOT)
+        return ok(caCrlBytes).build()
+    }
+
+    @GET
+    @Path(EMPTY)
+    @Produces(CRL_DATA_TYPE)
+    fun getEmptyRevocationList(): Response {
+        return ok(emptyCrlBytes).build()
     }
 
     private fun getCrlResponse(issuer: CrlIssuer): Response {
