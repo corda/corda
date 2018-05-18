@@ -107,7 +107,7 @@ Click OK and OK again on the Settings panel.
    :scale: 50 %
 
 	   
-Click Create and wait a few minutes for your instance to provision
+Click "Create" and wait a few minutes for your instance to provision
 and start running.
 
 .. image:: resources/azure-create-vm.png
@@ -119,7 +119,7 @@ and start running.
 
 Once your instance is running click on the "Connect" button and copy the ssh command:
 
-.. image:: resources/azure-ssht.png
+.. image:: resources/azure-ssh.png
    :scale: 50 %
 
 Enter the ssh command into your terminal. At the prompt to continue connecting type yes and then enter the password you configured earlier to log into the remote VM:
