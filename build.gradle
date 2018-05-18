@@ -173,6 +173,7 @@ allprojects {
             apiVersion = "1.2"
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
+            freeCompilerArgs = ['-Xenable-jvm-default']
         }
     }
 
