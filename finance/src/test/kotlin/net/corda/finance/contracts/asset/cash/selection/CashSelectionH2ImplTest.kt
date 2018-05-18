@@ -56,21 +56,17 @@ class CashSelectionH2ImplTest {
     }
 
     @Test
-    fun `special Coin Selection`() {
-        val bankA = mockNet.createNode()
-        val bankB = mockNet.createNode()
+    fun `select coins from more that two different issue references`() {
+        val node = mockNet.createNode()
         val notary = mockNet.defaultNotaryIdentity
 
-        // Issue some cash to Bank A
-        bankA.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(1), notary)).getOrThrow()
-        bankA.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(2), notary)).getOrThrow()
-        bankA.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(3), notary)).getOrThrow()
-        bankA.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(4), notary)).getOrThrow()
-        bankA.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(5), notary)).getOrThrow()
-        bankA.startFlow(CashIssueFlow(1000.POUNDS, OpaqueBytes.of(6), notary)).getOrThrow()
+        // Issue some cash
+        node.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(1), notary)).getOrThrow()
+        node.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(2), notary)).getOrThrow()
+        node.startFlow(CashIssueFlow(1000.POUNDS, OpaqueBytes.of(3), notary)).getOrThrow()
 
-        // Make a payment to Bank B
-        val paymentResult = bankA.startFlow(CashPaymentFlow(999.POUNDS, anonymous = false, recipient = bankB.info.legalIdentities.single())).getOrThrow()
+        // Make a payment
+        val paymentResult = node.startFlow(CashPaymentFlow(999.POUNDS, node.info.legalIdentities[0], false)).getOrThrow()
         assertNotNull(paymentResult.recipient)
     }
 }
