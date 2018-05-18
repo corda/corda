@@ -45,6 +45,10 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
             h2Port   10004
             // Includes the corda-finance CorDapp on our node.
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
+            // Specify a JVM argument to be used when running the node (in this case, extra heap size).
+            extraConfig = [
+                jvmArgs : [ "-Xmx1g"]
+            ]
         }
         node {
             name "O=PartyA,L=London,C=GB"
