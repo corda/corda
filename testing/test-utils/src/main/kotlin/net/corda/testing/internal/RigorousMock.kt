@@ -115,5 +115,8 @@ private object ParticipantDefaultAnswer : DefaultAnswer() {
     }
 }
 
-/** Application of [doAnswer] that gets a value from the given [map] using the arg at [argIndex] as key. */
+/**
+ * Application of [doAnswer] that gets a value from the given [map] using the arg at [argIndex] as key.
+ * This should be used instead of concurrent stubbing, which leads to Mockito errors.
+ */
 fun doLookup(map: Map<*, *>, argIndex: Int = 0) = doAnswer { map[it.getArgument<Any?>(argIndex)] }

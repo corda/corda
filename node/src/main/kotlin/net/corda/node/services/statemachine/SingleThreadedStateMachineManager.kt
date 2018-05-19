@@ -162,6 +162,7 @@ class SingleThreadedStateMachineManager(
             val foundUnrestorableFibers = it.stop()
             check(!foundUnrestorableFibers) { "Unrestorable checkpoints were created, please check the logs for details." }
         }
+        scheduler.shutdown()
     }
 
     /**

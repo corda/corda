@@ -22,6 +22,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
+import net.corda.testing.internal.doLookup
 import net.corda.testing.internal.participant
 import net.corda.testing.internal.spectator
 import org.junit.After
@@ -68,6 +69,8 @@ open class StateMachineManagerHarness {
         doNothing().whenever(it).sendSessionMessage(any(), any(), any())
     }
     private val lookup = ConcurrentHashMap<SerializedBytes<Any>, Any>()
+    private val sessionMessages = ConcurrentHashMap<ByteSequence, ExistingSessionMessage>()
+    private val payloads = ConcurrentHashMap<SerializedBytes<Any>, UntrustworthyData<Any>>()
     private val serialization = participant<StateMachineSerialization>().also {
         doAnswer { invocation ->
             participant<SerializedBytes<Any>>().also {
@@ -75,6 +78,8 @@ open class StateMachineManagerHarness {
                 lookup[it] = invocation.getArgument(0)
             }
         }.whenever(it).serialize<Any>(any(), anyOrNull())
+        doLookup(sessionMessages).whenever(it).deserialize(any(), same(SessionMessage::class.java), same(null))
+        doLookup(payloads).whenever(it).checkPayloadIs<Any>(any(), any())
     }
     private val nextRandomLong = AtomicLong(1)
     private val secureRandom = participant<SecureRandom>().also {
@@ -103,6 +108,9 @@ open class StateMachineManagerHarness {
             { localSessions.removeAt(0) },
             { flowMessaging })
 
+    @After
+    fun smmStop() = smm.stop(0)
+
     init {
         smm.start(participant())
         onNodeReady.get()(participant())
@@ -124,6 +132,7 @@ open class StateMachineManagerHarness {
         }
 
         private fun expect(total: Int, predicate: (SessionMessage) -> Boolean) {
+            // When running tests in a loop this timeout may be achieved, which I suspect is due to something filling up the heap:
             verify(flowMessaging, timeout(5000).times(total)).sendSessionMessage(same(peer), argWhere(predicate), any())
         }
 
@@ -133,17 +142,15 @@ open class StateMachineManagerHarness {
             }
         }
 
-        private fun message(payload: ExistingSessionMessagePayload) {
-            val data = participant<ByteSequence>()
-            doReturn(participant<ExistingSessionMessage>().also {
-                doReturn(localSession).whenever(it).recipientSessionId
-                doReturn(payload).whenever(it).payload
-            }).whenever(serialization).deserialize(data, SessionMessage::class.java, null)
-            handler.get()(participant<ReceivedMessage>().also {
-                doReturn(peerName).whenever(it).peer
-                doReturn(data).whenever(it).data
-            }, deduplicationHandler)
-        }
+        private fun message(payload: ExistingSessionMessagePayload) = handler.get()(participant<ReceivedMessage>().also {
+            doReturn(peerName).whenever(it).peer
+            doReturn(participant<ByteSequence>().also {
+                sessionMessages[it] = participant<ExistingSessionMessage>().also {
+                    doReturn(localSession).whenever(it).recipientSessionId
+                    doReturn(payload).whenever(it).payload
+                }
+            }).whenever(it).data
+        }, deduplicationHandler)
 
         fun handshake(predicate: (Any?) -> Boolean) {
             expect(1) {
@@ -155,15 +162,13 @@ open class StateMachineManagerHarness {
             })
         }
 
-        fun dataMessage(data: Any) {
-            val payload = participant<SerializedBytes<Any>>()
-            doReturn(participant<UntrustworthyData<Any>>().also {
-                doReturn(data).whenever(it).unwrap { it }
-            }).whenever(serialization).checkPayloadIs(same(payload), argThat<Class<*>> { isAssignableFrom(data.javaClass) })
-            message(participant<DataSessionMessage>().also {
-                doReturn(payload).whenever(it).payload
-            })
-        }
+        fun dataMessage(data: Any) = message(participant<DataSessionMessage>().also {
+            doReturn(participant<SerializedBytes<Any>>().also {
+                payloads[it] = participant<UntrustworthyData<Any>>().also {
+                    doReturn(data).whenever(it).unwrap { it }
+                }
+            }).whenever(it).payload
+        })
 
         fun <T> run(task: Channel.() -> T) = task().also {
             expect(1) { it is ExistingSessionMessage && it.recipientSessionId == peerSession && it.payload == EndSessionMessage }
