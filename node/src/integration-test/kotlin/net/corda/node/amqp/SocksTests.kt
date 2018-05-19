@@ -314,9 +314,10 @@ class SocksTests {
                 clientKeystore,
                 clientConfig.keyStorePassword,
                 clientTruststore, true,
+                MAX_MESSAGE_SIZE,
                 socksProxyConfig = SocksProxyConfig(SocksProxyVersion.SOCKS5,
-                        NetworkHostAndPort("127.0.0.1", socksPort), null, null),
-                maxMessageSize = MAX_MESSAGE_SIZE)
+                        NetworkHostAndPort("127.0.0.1", socksPort), null, null)
+                )
     }
 
     private fun createSharedThreadsClient(sharedEventGroup: EventLoopGroup, id: Int): AMQPClient {
@@ -337,10 +338,14 @@ class SocksTests {
                 PEER_USER,
                 clientKeystore,
                 clientConfig.keyStorePassword,
-                clientTruststore, true, true, sharedEventGroup,
+                clientTruststore,
+                true,
+                MAX_MESSAGE_SIZE,
+                true,
+                sharedEventGroup,
                 socksProxyConfig = SocksProxyConfig(SocksProxyVersion.SOCKS5,
-                        NetworkHostAndPort("127.0.0.1", socksPort), null, null),
-                maxMessageSize = MAX_MESSAGE_SIZE)
+                        NetworkHostAndPort("127.0.0.1", socksPort), null, null)
+                )
     }
 
     private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME): AMQPServer {
@@ -363,7 +368,6 @@ class SocksTests {
                 serverConfig.keyStorePassword,
                 serverTruststore,
                 true,
-                false,
                 MAX_MESSAGE_SIZE)
     }
 }
