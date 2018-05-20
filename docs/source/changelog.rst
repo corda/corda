@@ -72,6 +72,9 @@ Unreleased
 
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
+* The second argument of the ``PersistentIdentityService`` now takes a list of ``X509Certificate`` instead of varargs. Given
+  that the types of the first and second parameters were the same previously, this has been done for more clarity of the API.
+
 .. _changelog_v3.1:
 
 Version 3.1
