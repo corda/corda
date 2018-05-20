@@ -3,6 +3,7 @@ package net.corda.tools.shell
 import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
+import net.corda.client.rpc.RPCException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
@@ -16,7 +17,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -125,7 +125,7 @@ class InteractiveShellIntegrationTest {
 
                         InteractiveShell.startShell(conf)
 
-                        assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQNotConnectedException::class.java)
+                        assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(RPCException::class.java)
                     }
                 }
             }
