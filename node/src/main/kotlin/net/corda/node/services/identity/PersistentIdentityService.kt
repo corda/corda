@@ -31,7 +31,7 @@ import javax.persistence.Lob
 // TODO There is duplicated logic between this and InMemoryIdentityService
 @ThreadSafe
 class PersistentIdentityService(override val trustRoot: X509Certificate,
-                                vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
+                                caCertificates: List<X509Certificate> = emptyList()) : SingletonSerializeAsToken(), IdentityServiceInternal {
 
     companion object {
         private val log = contextLogger()

@@ -760,7 +760,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     private fun makeIdentityService(identityCert: X509Certificate): PersistentIdentityService {
         val trustRoot = configuration.loadTrustStore().getCertificate(X509Utilities.CORDA_ROOT_CA)
         val nodeCa = configuration.loadNodeKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_CA)
-        return PersistentIdentityService(trustRoot, identityCert, nodeCa)
+        return PersistentIdentityService(trustRoot, listOf(identityCert, nodeCa))
     }
 
     protected abstract fun makeTransactionVerifierService(): TransactionVerifierService
