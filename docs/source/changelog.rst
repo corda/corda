@@ -55,14 +55,6 @@ Unreleased
 * The node RPC broker opens 2 endpoints that are configured with ``address`` and ``adminAddress``. RPC Clients would connect to the address, while the node will connect
   to the adminAddress. Previously if ssl was enabled for RPC the ``adminAddress`` was equal to ``address``.
 
-* Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
-  Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
-
-* Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored
-  as the raw type, List for example.
-
-* More types can be serialized now: java.security.cert.CRLReason, java.security.cert.X509CRL, java.math.BigInteger
-
 * Upgraded H2 to v1.4.197
 
 * Shell (embedded available only in dev mode or via SSH) connects to the node via RPC instead of using the ``CordaRPCOps`` object directly.
