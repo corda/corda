@@ -49,7 +49,11 @@ Unreleased
   * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
   * Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
 
-* More types can be serialized now: java.security.cert.CRLReason, java.security.cert.X509CRL, java.math.BigInteger
+* Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
+  a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
+
+* The node RPC broker opens 2 endpoints that are configured with ``address`` and ``adminAddress``. RPC Clients would connect to the address, while the node will connect
+  to the adminAddress. Previously if ssl was enabled for RPC the ``adminAddress`` was equal to ``address``.
 
 * Upgraded H2 to v1.4.197
 

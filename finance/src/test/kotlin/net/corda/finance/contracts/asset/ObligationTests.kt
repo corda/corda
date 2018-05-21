@@ -35,6 +35,7 @@ import net.corda.testing.core.*
 import net.corda.testing.dsl.*
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.vault.CommodityState
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import net.corda.testing.node.transaction
@@ -584,15 +585,15 @@ class ObligationTests {
             unverifiedTransaction {
                 attachments(Obligation.PROGRAM_ID)
                 output(Obligation.PROGRAM_ID, "Alice's 1 FCOJ obligation to Bob", oneUnitFcojObligation between Pair(ALICE, BOB))
-                output(Obligation.PROGRAM_ID, "Alice's 1 FCOJ", CommodityContract.State(oneUnitFcoj, ALICE))
+                output(Obligation.PROGRAM_ID, "Alice's 1 FCOJ", CommodityState(oneUnitFcoj, ALICE))
             }
             transaction("Settlement") {
                 attachments(Obligation.PROGRAM_ID)
                 input("Alice's 1 FCOJ obligation to Bob")
                 input("Alice's 1 FCOJ")
-                output(Obligation.PROGRAM_ID, "Bob's 1 FCOJ", CommodityContract.State(oneUnitFcoj, BOB))
+                output(Obligation.PROGRAM_ID, "Bob's 1 FCOJ", CommodityState(oneUnitFcoj, BOB))
                 command(ALICE_PUBKEY, Obligation.Commands.Settle(Amount(oneUnitFcoj.quantity, oneUnitFcojObligation.amount.token)))
-                command(ALICE_PUBKEY, CommodityContract.Commands.Move(Obligation::class.java))
+                command(ALICE_PUBKEY, Obligation.Commands.Move(Obligation::class.java))
                 attachment(attachment(commodityContractBytes.inputStream()))
                 verifies()
             }

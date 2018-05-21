@@ -12,6 +12,7 @@ package net.corda.tools.shell
 
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.messaging.ClientRpcSslOptions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.slf4j.event.Level
@@ -34,12 +35,9 @@ class StandaloneShellArgsParserTest {
                 "--sshd-port", "2223",
                 "--sshd-hostkey-directory", "/x/y/ssh",
                 "--help",
-                "--keystore-password", "pass1",
                 "--truststore-password", "pass2",
-                "--keystore-file", "/x/y/keystore.jks",
                 "--truststore-file", "/x/y/truststore.jks",
-                "--truststore-type", "dummy",
-                "--keystore-type", "JKS")
+                "--truststore-type", "dummy")
 
         val expectedOptions = CommandLineOptions(
                 configFile = "/x/y/z/config.conf",
@@ -53,12 +51,9 @@ class StandaloneShellArgsParserTest {
                 loggingLevel = Level.DEBUG,
                 sshdPort = "2223",
                 sshdHostKeyDirectory = Paths.get("/x/y/ssh").normalize().toAbsolutePath(),
-                keyStorePassword = "pass1",
                 trustStorePassword = "pass2",
-                keyStoreFile = Paths.get("/x/y/keystore.jks").normalize().toAbsolutePath(),
                 trustStoreFile = Paths.get("/x/y/truststore.jks").normalize().toAbsolutePath(),
-                trustStoreType = "dummy",
-                keyStoreType = "JKS")
+                trustStoreType = "dummy")
 
         val options = CommandLineOptionParser().parse(*args)
 
@@ -80,12 +75,9 @@ class StandaloneShellArgsParserTest {
                 loggingLevel = Level.INFO,
                 sshdPort = null,
                 sshdHostKeyDirectory = null,
-                keyStorePassword = null,
                 trustStorePassword = null,
-                keyStoreFile = null,
                 trustStoreFile = null,
-                trustStoreType = null,
-                keyStoreType = null)
+                trustStoreType = null)
 
         val options = CommandLineOptionParser().parse(*args)
 
@@ -106,19 +98,14 @@ class StandaloneShellArgsParserTest {
                 loggingLevel = Level.DEBUG,
                 sshdPort = "2223",
                 sshdHostKeyDirectory = Paths.get("/x/y/ssh"),
-                keyStorePassword = "pass1",
                 trustStorePassword = "pass2",
-                keyStoreFile = Paths.get("/x/y/keystore.jks"),
                 trustStoreFile = Paths.get("/x/y/truststore.jks"),
-                keyStoreType = "dummy",
                 trustStoreType = "dummy"
         )
 
-        val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/keystore.jks"),
-                keyStorePassword = "pass1",
-                trustStoreFile = Paths.get("/x/y/truststore.jks"),
-                trustStorePassword = "pass2",
-                crlCheckSoftFail = true)
+        val expectedSsl = ClientRpcSslOptions(
+                trustStorePath = Paths.get("/x/y/truststore.jks"),
+                trustStorePassword = "pass2")
         val expectedConfig = ShellConfiguration(
                 commandsDirectory = Paths.get("/x/y/commands"),
                 cordappsDirectory = Paths.get("/x/y/cordapps"),
@@ -149,25 +136,19 @@ class StandaloneShellArgsParserTest {
                 loggingLevel = Level.DEBUG,
                 sshdPort = null,
                 sshdHostKeyDirectory = null,
-                keyStorePassword = null,
                 trustStorePassword = null,
-                keyStoreFile = null,
                 trustStoreFile = null,
-                keyStoreType = null,
                 trustStoreType = null)
 
-        val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/keystore.jks"),
-                keyStorePassword = "pass1",
-                trustStoreFile = Paths.get("/x/y/truststore.jks"),
-                trustStorePassword = "pass2",
-                crlCheckSoftFail = true)
         val expectedConfig = ShellConfiguration(
                 commandsDirectory = Paths.get("/x/y/commands"),
                 cordappsDirectory = Paths.get("/x/y/cordapps"),
                 user = "demo",
                 password = "abcd1234",
                 hostAndPort = NetworkHostAndPort("alocalhost", 1234),
-                ssl = expectedSsl,
+                ssl = ClientRpcSslOptions(
+                        trustStorePath = Paths.get("/x/y/truststore.jks"),
+                        trustStorePassword = "pass2"),
                 sshdPort = 2223)
 
         val config = options.toConfig()
@@ -189,18 +170,13 @@ class StandaloneShellArgsParserTest {
                 loggingLevel = Level.DEBUG,
                 sshdPort = null,
                 sshdHostKeyDirectory = null,
-                keyStorePassword = null,
                 trustStorePassword = null,
-                keyStoreFile = Paths.get("/x/y/cmd.jks"),
                 trustStoreFile = null,
-                keyStoreType = null,
                 trustStoreType = null)
 
-        val expectedSsl = ShellSslOptions(sslKeystore = Paths.get("/x/y/cmd.jks"),
-                keyStorePassword = "pass1",
-                trustStoreFile = Paths.get("/x/y/truststore.jks"),
-                trustStorePassword = "pass2",
-                crlCheckSoftFail = true)
+        val expectedSsl = ClientRpcSslOptions(
+                trustStorePath = Paths.get("/x/y/truststore.jks"),
+                trustStorePassword = "pass2")
         val expectedConfig = ShellConfiguration(
                 commandsDirectory = Paths.get("/x/y/commands"),
                 cordappsDirectory = Paths.get("/x/y/cordapps"),

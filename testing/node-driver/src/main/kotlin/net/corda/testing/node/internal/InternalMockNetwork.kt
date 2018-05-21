@@ -477,7 +477,6 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(null).whenever(it).jmxMonitoringHttpPort
         doReturn(true).whenever(it).devMode
         doReturn(null).whenever(it).compatibilityZoneURL
-        doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
         doReturn(VerifierType.InMemory).whenever(it).verifierType
         doReturn(P2PMessagingRetryConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).p2pMessagingRetry
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec

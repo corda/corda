@@ -59,7 +59,7 @@ class FilterServiceTest {
         val artemisStarted = ArtemisMessagingClient.Started(
                 rigorousMock(),
                 rigorousMock<ClientSessionFactory>().also {
-                    doReturn(dummySession).whenever(it).createSession(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
+                    doReturn(dummySession).whenever(it).createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
                 },
                 rigorousMock(),
                 rigorousMock()
@@ -130,7 +130,7 @@ class FilterServiceTest {
         val artemisStarted = ArtemisMessagingClient.Started(
                 rigorousMock(),
                 rigorousMock<ClientSessionFactory>().also {
-                    doReturn(dummySession).whenever(it).createSession(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
+                    doReturn(dummySession).whenever(it).createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
                 },
                 rigorousMock(),
                 rigorousMock()

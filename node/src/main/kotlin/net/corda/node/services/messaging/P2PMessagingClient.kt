@@ -40,8 +40,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.PersistentMap
-import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisAddress
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
@@ -214,7 +213,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             started = true
             log.info("Connecting to message broker: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-            val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, config)
+            val tcpTransport = p2pConnectorTcpTransport(serverAddress, config)
             locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.
@@ -229,7 +228,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
             // size of 1MB is acknowledged.
-            val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER, false, true, true, locator!!.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
+            val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, locator!!.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
 
             producerSession = createNewSession()
             bridgeSession = createNewSession()
