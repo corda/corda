@@ -41,13 +41,13 @@ import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
-import net.corda.node.internal.SecureCordaRPCOps
 import net.corda.node.internal.StartedNode
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
+import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.expect
@@ -98,7 +98,7 @@ class CordaRPCOpsImplTest {
     fun setup() {
         mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
-        rpc = SecureCordaRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database, aliceNode.services, { })
+        rpc = aliceNode.rpcOps
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
 
         mockNet.runNetwork()
@@ -276,10 +276,10 @@ class CordaRPCOpsImplTest {
     @Test
     fun `can't upload the same attachment`() {
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachment), invokeRpc(CordaRPCOps::attachmentExists)) {
+            val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+            val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+            val secureHash1 = rpc.uploadAttachment(inputJar1)
             assertThatExceptionOfType(java.nio.file.FileAlreadyExistsException::class.java).isThrownBy {
-                val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
-                val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
-                val secureHash1 = rpc.uploadAttachment(inputJar1)
                 val secureHash2 = rpc.uploadAttachment(inputJar2)
             }
         }
@@ -303,7 +303,7 @@ class CordaRPCOpsImplTest {
     @Test
     fun `attempt to start non-RPC flow`() {
         withPermissions(startFlow<NonRPCFlow>()) {
-            assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            assertThatExceptionOfType(NonRpcFlowException::class.java).isThrownBy {
                 rpc.startFlow(::NonRPCFlow)
             }
         }
