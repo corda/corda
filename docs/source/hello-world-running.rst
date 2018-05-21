@@ -111,7 +111,7 @@ We want to create an IOU of 99 with PartyB. We start the ``IOUFlow`` by typing:
 
     .. code-block:: java
 
-        start IOUFlow arg0: 99, arg1: "O=PartyB,L=New York,C=US"
+        start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
 
     .. code-block:: kotlin
 
