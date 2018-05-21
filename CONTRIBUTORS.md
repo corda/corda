@@ -126,6 +126,7 @@ changes to this list.
 * Stephen Lane-Smith (BMO)
 * Thomas O'Donnell (Macquarie)
 * Thomas Schroeter (R3)
+* Tittu Varghese (Servntire Global)
 * Tom Menner (R3)
 * Tudor Malene (R3)
 * Tim Swanson (R3)
