@@ -419,7 +419,7 @@ the other counterparties. Instead they will be informed the flow has terminated 
 generic exception.
 
 .. note:: A future version will extend this to give the node administrator more control on what to do with such erroring
-flows.
+   flows.
 
 Throwing a ``FlowException`` enables a flow to reject a piece of data it has received back to the sender. This is typically
 done in the ``unwrap`` method of the received ``UntrustworthyData``. In the above example the seller checks the price

@@ -59,6 +59,8 @@ object, or by using named paramters in Kotlin:
    .. sourcecode:: kotlin
 
         val network = MockNetwork(
+                // A list of packages to scan. Any contracts, flows and Corda services within these
+                // packages will be automatically available to any nodes within the mock network
                 cordappPackages = listOf("my.cordapp.package", "my.other.cordapp.package"),
                 // If true then each node will be run in its own thread. This can result in race conditions in your
                 // code if not carefully written, but is more realistic and may help if you have flows in your app that
@@ -77,7 +79,10 @@ object, or by using named paramters in Kotlin:
                 // notary implementations.
                 servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random())
 
-        val network2 = MockNetwork(listOf("my.cordapp.package", "my.other.cordapp.package"), MockNetworkParameters(
+        val network2 = MockNetwork(
+                // A list of packages to scan. Any contracts, flows and Corda services within these
+                // packages will be automatically available to any nodes within the mock network
+                listOf("my.cordapp.package", "my.other.cordapp.package"), MockNetworkParameters(
                 // If true then each node will be run in its own thread. This can result in race conditions in your
                 // code if not carefully written, but is more realistic and may help if you have flows in your app that
                 // do long blocking operations.
@@ -98,7 +103,10 @@ object, or by using named paramters in Kotlin:
 
    .. sourcecode:: java
 
-        MockNetwork network = MockNetwork(ImmutableList.of("my.cordapp.package", "my.other.cordapp.package"),
+        MockNetwork network = MockNetwork(
+                // A list of packages to scan. Any contracts, flows and Corda services within these
+                // packages will be automatically available to any nodes within the mock network
+                ImmutableList.of("my.cordapp.package", "my.other.cordapp.package"),
                 new MockNetworkParameters()
                         // If true then each node will be run in its own thread. This can result in race conditions in
                         // your code if not carefully written, but is more realistic and may help if you have flows in
@@ -157,23 +165,39 @@ Nodes are created on the ``MockNetwork`` using:
             }
         }
 
-Registering a node's initiated flows
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Regular Corda nodes automatically register any response flows defined in their installed CorDapps. When using a
-``MockNetwork``, each ``StartedMockNode`` must manually register any responder flows it wishes to use.
-
-Responder flows are registered as follows:
+Nodes added using ``createPartyNode`` are provided a default set of node parameters. However, it is also possible to
+provide different parameters to each node using the following methods on ``MockNetwork``:
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
+    .. sourcecode:: kotlin
 
-        nodeA.registerInitiatedFlow(ExampleFlow.Acceptor::class.java)
+        /**
+         * Create a started node with the given parameters.
+         *
+         * @param legalName The node's legal name.
+         * @param forcedID A unique identifier for the node.
+         * @param entropyRoot The initial entropy value to use when generating keys. Defaults to an (insecure) random value,
+         * but can be overridden to cause nodes to have stable or colliding identity/service keys.
+         * @param configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
+         * @param extraCordappPackages Extra CorDapp packages to add for this node.
+         */
+        @JvmOverloads
+        fun createNode(legalName: CordaX500Name? = null,
+                       forcedID: Int? = null,
+                       entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
+                       configOverrides: (NodeConfiguration) -> Any? = {},
+                       extraCordappPackages: List<String> = emptyList()
+        ): StartedMockNode
 
-   .. sourcecode:: java
+        /** Create a started node with the given parameters. **/
+        fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedMockNode
 
-        nodeA.registerInitiatedFlow(ExampleFlow.Acceptor.class);
+As you can see above, parameters can be added individually or encapsulated within a ``MockNodeParameters`` object. Of
+particular interest are ``configOverrides`` which allow you to override any default config option specified within the
+``NodeConfiguration`` object. Also, the ``extraCordappPackages`` parameter allows you to add extra CorDapps to a
+specific node. This is useful when you wish for all nodes to load a common CorDapp but for a subset of nodes to load
+CorDapps specific to their role in the network.
 
 Running the network
 ^^^^^^^^^^^^^^^^^^^
@@ -294,6 +318,7 @@ Further examples
 ^^^^^^^^^^^^^^^^
 
 * See the flow testing tutorial :doc:`here <flow-testing>`
+* See the oracle tutorial :doc:`here <oracles>` for information on testing ``@CordaService`` classes
 * Further examples are available in the Example CorDapp in
   `Java <https://github.com/corda/cordapp-example/blob/release-V3/java-source/src/test/java/com/example/flow/IOUFlowTests.java>`_ and
   `Kotlin <https://github.com/corda/cordapp-example/blob/release-V3/kotlin-source/src/test/kotlin/com/example/flow/IOUFlowTests.kt>`_
@@ -303,6 +328,57 @@ Contract testing
 
 The Corda test framework includes the ability to create a test ledger by calling the ``ledger`` function
 on an implementation of the ``ServiceHub`` interface.
+
+Test identities
+^^^^^^^^^^^^^^^
+
+You can create dummy identities to use in test transactions using the ``TestIdentity`` class:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/kotlin/net/corda/docs/tutorial/testdsl/TutorialTestDSL.kt
+        :language: kotlin
+        :start-after: DOCSTART 14
+        :end-before: DOCEND 14
+        :dedent: 8
+
+    .. literalinclude:: ../../docs/source/example-code/src/test/java/net/corda/docs/java/tutorial/testdsl/CommercialPaperTest.java
+        :language: java
+        :start-after: DOCSTART 14
+        :end-before: DOCEND 14
+        :dedent: 4
+
+``TestIdentity`` exposes the following fields and methods:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        val identityParty: Party = bigCorp.party
+        val identityName: CordaX500Name = bigCorp.name
+        val identityPubKey: PublicKey = bigCorp.publicKey
+        val identityKeyPair: KeyPair = bigCorp.keyPair
+        val identityPartyAndCertificate: PartyAndCertificate = bigCorp.identity
+
+   .. sourcecode:: java
+
+        Party identityParty = bigCorp.getParty();
+        CordaX500Name identityName = bigCorp.getName();
+        PublicKey identityPubKey = bigCorp.getPublicKey();
+        KeyPair identityKeyPair = bigCorp.getKeyPair();
+        PartyAndCertificate identityPartyAndCertificate = bigCorp.getIdentity();
+
+You can also create a unique ``TestIdentity`` using the ``fresh`` method:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        val uniqueTestIdentity: TestIdentity = TestIdentity.fresh("orgName")
+
+   .. sourcecode:: java
+
+        TestIdentity uniqueTestIdentity = TestIdentity.Companion.fresh("orgName");
 
 MockServices
 ^^^^^^^^^^^^

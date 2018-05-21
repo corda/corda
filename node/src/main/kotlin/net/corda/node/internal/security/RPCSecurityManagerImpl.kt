@@ -1,9 +1,11 @@
 package net.corda.node.internal.security
 
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.Cache
+
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.primitives.Ints
 import net.corda.core.context.AuthServiceId
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.DataSourceFactory
 import net.corda.node.services.config.PasswordEncryption
@@ -76,8 +78,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
          * Instantiate RPCSecurityManager initialised with users data from a list of [User]
          */
         fun fromUserList(id: AuthServiceId, users: List<User>) =
-                RPCSecurityManagerImpl(
-                    AuthServiceConfig.fromUsers(users).copy(id = id))
+                RPCSecurityManagerImpl(AuthServiceConfig.fromUsers(users).copy(id = id))
 
         // Build internal Shiro securityManager instance
         private fun buildImpl(config: AuthServiceConfig): DefaultSecurityManager {
@@ -94,7 +95,7 @@ class RPCSecurityManagerImpl(config: AuthServiceConfig) : RPCSecurityManager {
             return DefaultSecurityManager(realm).also {
                 // Setup optional cache layer if configured
                 it.cacheManager = config.options?.cache?.let {
-                    GuavaCacheManager(
+                    CaffeineCacheManager(
                             timeToLiveSeconds = it.expireAfterSecs,
                             maxSize = it.maxEntries)
                 }
@@ -144,10 +145,10 @@ private class RPCPermission : DomainPermission {
  */
 private object RPCPermissionResolver : PermissionResolver {
 
-    private val SEPARATOR = '.'
-    private val ACTION_START_FLOW = "startflow"
-    private val ACTION_INVOKE_RPC = "invokerpc"
-    private val ACTION_ALL = "all"
+    private const val SEPARATOR = '.'
+    private const val ACTION_START_FLOW = "startflow"
+    private const val ACTION_INVOKE_RPC = "invokerpc"
+    private const val ACTION_ALL = "all"
     private val FLOW_RPC_CALLS = setOf(
             "startFlowDynamic",
             "startTrackedFlowDynamic",
@@ -185,7 +186,7 @@ private object RPCPermissionResolver : PermissionResolver {
     }
 }
 
-private class ShiroAuthorizingSubject(
+class ShiroAuthorizingSubject(
         private val subjectId: PrincipalCollection,
         private val manager: DefaultSecurityManager) : AuthorizingSubject {
 
@@ -200,7 +201,7 @@ private fun buildCredentialMatcher(type: PasswordEncryption) = when (type) {
     PasswordEncryption.SHIRO_1_CRYPT -> PasswordMatcher()
 }
 
-private class InMemoryRealm(users: List<User>,
+class InMemoryRealm(users: List<User>,
                             realmId: String,
                             passwordEncryption: PasswordEncryption = PasswordEncryption.NONE) : AuthorizingRealm() {
 
@@ -257,11 +258,10 @@ private class NodeJdbcRealm(config: SecurityConfiguration.AuthService.DataSource
 private typealias ShiroCache<K, V> = org.apache.shiro.cache.Cache<K, V>
 
 /*
- * Adapts a [com.google.common.cache.Cache] to a [org.apache.shiro.cache.Cache] implementation.
+ * Adapts a [com.github.benmanes.caffeine.cache.Cache] to a [org.apache.shiro.cache.Cache] implementation.
  */
-private fun <K, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<K, V> {
+private fun <K : Any, V> Cache<K, V>.toShiroCache() = object : ShiroCache<K, V> {
 
-    val name = name
     private val impl = this@toShiroCache
 
     override operator fun get(key: K) = impl.getIfPresent(key)
@@ -282,7 +282,7 @@ private fun <K, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<
         impl.invalidateAll()
     }
 
-    override fun size() = Ints.checkedCast(impl.size())
+    override fun size() = Ints.checkedCast(impl.estimatedSize())
     override fun keys() = impl.asMap().keys
     override fun values() = impl.asMap().values
     override fun toString() = "Guava cache adapter [$impl]"
@@ -290,29 +290,29 @@ private fun <K, V> Cache<K, V>.toShiroCache(name: String) = object : ShiroCache<
 
 /*
  * Implementation of [org.apache.shiro.cache.CacheManager] based on
- * cache implementation in [com.google.common.cache]
+ * cache implementation in [com.github.benmanes.caffeine.cache.Cache]
  */
-private class GuavaCacheManager(val maxSize: Long,
-                                val timeToLiveSeconds: Long) : CacheManager {
+private class CaffeineCacheManager(val maxSize: Long,
+                                   val timeToLiveSeconds: Long) : CacheManager {
 
     private val instances = ConcurrentHashMap<String, ShiroCache<*, *>>()
 
-    override fun <K, V> getCache(name: String): ShiroCache<K, V> {
+    override fun <K : Any, V> getCache(name: String): ShiroCache<K, V> {
         val result = instances[name] ?: buildCache<K, V>(name)
         instances.putIfAbsent(name, result)
-        return result as ShiroCache<K, V>
+        return uncheckedCast(result)
     }
 
-    private fun <K, V> buildCache(name: String) : ShiroCache<K, V> {
+    private fun <K : Any, V> buildCache(name: String): ShiroCache<K, V> {
         logger.info("Constructing cache '$name' with maximumSize=$maxSize, TTL=${timeToLiveSeconds}s")
-        return CacheBuilder.newBuilder()
+        return Caffeine.newBuilder()
                 .expireAfterWrite(timeToLiveSeconds, TimeUnit.SECONDS)
                 .maximumSize(maxSize)
                 .build<K, V>()
-                .toShiroCache(name)
+                .toShiroCache()
     }
 
     companion object {
-        private val logger = loggerFor<GuavaCacheManager>()
+        private val logger = loggerFor<CaffeineCacheManager>()
     }
 }

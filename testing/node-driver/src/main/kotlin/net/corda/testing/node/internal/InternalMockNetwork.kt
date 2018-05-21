@@ -6,6 +6,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -14,7 +15,6 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.createDirectory
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -74,7 +74,8 @@ data class MockNodeArgs(
         val network: InternalMockNetwork,
         val id: Int,
         val entropyRoot: BigInteger,
-        val version: VersionInfo = MOCK_VERSION_INFO
+        val version: VersionInfo = MOCK_VERSION_INFO,
+        val extraCordappPackages: List<String> = emptyList()
 )
 
 data class InternalMockNodeParameters(
@@ -82,12 +83,16 @@ data class InternalMockNodeParameters(
         val legalName: CordaX500Name? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
         val configOverrides: (NodeConfiguration) -> Any? = {},
-        val version: VersionInfo = MOCK_VERSION_INFO) {
+        val version: VersionInfo = MOCK_VERSION_INFO,
+        val extraCordappPackages: List<String> = emptyList()) {
     constructor(mockNodeParameters: MockNodeParameters) : this(
             mockNodeParameters.forcedID,
             mockNodeParameters.legalName,
             mockNodeParameters.entropyRoot,
-            mockNodeParameters.configOverrides)
+            mockNodeParameters.configOverrides,
+            MOCK_VERSION_INFO,
+            mockNodeParameters.extraCordappPackages
+    )
 }
 
 open class InternalMockNetwork(private val cordappPackages: List<String>,
@@ -218,7 +223,8 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
             args.config,
             TestClock(Clock.systemUTC()),
             args.version,
-            CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages),
+            // Add the specified additional CorDapps.
+            CordappLoader.createDefaultWithTestPackages(args.config, args.network.cordappPackages + args.extraCordappPackages),
             args.network.busyLatch
     ) {
         companion object {
@@ -230,7 +236,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         private val entropyRoot = args.entropyRoot
         var counter = entropyRoot
         override val log get() = staticLog
-        override val serverThread: AffinityExecutor =
+        override val serverThread: AffinityExecutor.ServiceAffinityExecutor =
                 if (mockNet.threadPerNode) {
                     ServiceAffinityExecutor("Mock node $id thread", 1)
                 } else {
@@ -260,7 +266,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
         override fun makeMessagingService(database: CordaPersistence, info: NodeInfo, nodeProperties: NodePropertiesStore, networkParameters: NetworkParameters): MessagingService {
-            require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
+            require(id >= 0) { "Node ID must be zero or positive, was passed: $id" }
             return mockNet.messagingNetwork.createNodeWithID(
                     !mockNet.threadPerNode,
                     id,
@@ -366,9 +372,10 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
             doReturn(baseDirectory(id).createDirectories()).whenever(it).baseDirectory
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
+            doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             parameters.configOverrides(it)
         }
-        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version))
+        val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version, parameters.extraCordappPackages))
         _nodes += node
         if (start) {
             node.start()
@@ -460,9 +467,8 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(null).whenever(it).jmxMonitoringHttpPort
         doReturn(true).whenever(it).devMode
         doReturn(null).whenever(it).compatibilityZoneURL
-        doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
         doReturn(VerifierType.InMemory).whenever(it).verifierType
-        doReturn(5).whenever(it).messageRedeliveryDelaySeconds
+        doReturn(P2PMessagingRetryConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).p2pMessagingRetry
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
     }

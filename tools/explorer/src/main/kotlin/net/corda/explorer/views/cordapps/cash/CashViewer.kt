@@ -11,6 +11,7 @@ import javafx.collections.ObservableList
 import javafx.geometry.Insets
 import javafx.scene.Parent
 import javafx.scene.chart.NumberAxis
+import javafx.scene.chart.XYChart
 import javafx.scene.control.*
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
@@ -76,7 +77,7 @@ class CashViewer : CordaView("Cash") {
             null -> FXCollections.observableArrayList(leftPane)
             else -> FXCollections.observableArrayList(leftPane, rightPane)
         }
-    })
+    }, "CashViewerSplitPane")
 
     /**
      * This holds the data for each row in the TreeTable.
@@ -313,18 +314,39 @@ class CashViewer : CordaView("Cash") {
             linechart(null, xAxis, yAxis) {
                 series("USD") {
                     sumAmount.addListener { _, _, _ ->
+                        val lastAmount = data.last().value?.yValue
+                        val currAmount = sumAmount.value.toDecimal()
                         val lastTimeStamp = data.last().value?.xValue
-                        if (lastTimeStamp == null || System.currentTimeMillis() - lastTimeStamp.toLong() > 1.seconds.toMillis()) {
-                            data(System.currentTimeMillis(), sumAmount.value.quantity)
-                            runInFxApplicationThread {
-                                // Modify data in UI thread.
-                                if (data.size > 300) data.remove(0, 1)
+                        val currentTimeStamp = System.currentTimeMillis()
+
+                        // If amount is not the same - always add a data point.
+                        if (lastAmount == null || lastAmount != currAmount) {
+                            // If update arrived in very close succession to the previous one - kill the last point received to eliminate un-necessary noise on the graph.
+                            if(lastTimeStamp != null && currentTimeStamp - lastTimeStamp.toLong() < 1.seconds.toMillis()) {
+                                data.safelyTransition {
+                                    remove(size - 1, size)
+                                }
+                            }
+
+                            // Add a new data point.
+                            data(currentTimeStamp, currAmount)
+
+                            // Limit population of data points to make graph painting faster.
+                            data.safelyTransition {
+                                if (size > 300) remove(0, 1)
                             }
                         }
                     }
                 }
                 createSymbols = false
                 animated = false
+            }
+        }
+
+        private fun <X, Y> ObservableList<XYChart.Data<X, Y>>.safelyTransition(block: ObservableList<XYChart.Data<X, Y>>.() -> Unit) {
+            runInFxApplicationThread {
+                // Modify data in UI thread to properly propagate to GUI.
+                this.block()
             }
         }
     }

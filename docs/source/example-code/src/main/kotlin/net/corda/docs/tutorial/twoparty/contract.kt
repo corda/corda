@@ -9,7 +9,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.contracts.*
 
 // Replace IOUContract's contract ID and definition with:
-val IOU_CONTRACT_ID = "com.template.IOUContract"
+const val IOU_CONTRACT_ID = "com.template.IOUContract"
 
 class IOUContract : Contract {
     // Our Create command.

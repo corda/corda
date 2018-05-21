@@ -128,10 +128,9 @@ class NodeVaultService(
 
     private fun makeUpdates(batch: Iterable<CoreTransaction>, statesToRecord: StatesToRecord): List<Vault.Update<ContractState>> {
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState>? {
-            val myKeys = keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
-                StatesToRecord.ONLY_RELEVANT -> tx.outputs.filter { isRelevant(it.data, myKeys.toSet()) }
+                StatesToRecord.ONLY_RELEVANT -> tx.outputs.filter { isRelevant(it.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet()) }
                 StatesToRecord.ALL_VISIBLE -> tx.outputs
             }.map { tx.outRef<ContractState>(it.data) }
 
@@ -156,12 +155,15 @@ class NodeVaultService(
                 is ContractUpgradeWireTransaction -> tx.resolve(servicesForResolution, emptyList())
                 else -> throw IllegalArgumentException("Unsupported transaction type: ${tx.javaClass.name}")
             }
-            val myKeys = keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } })
+            val myKeys by lazy { keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } }) }
             val (consumedStateAndRefs, producedStates) = ltx.inputs.
                     zip(ltx.outputs).
                     filter { (_, output) ->
-                        if (statesToRecord == StatesToRecord.ONLY_RELEVANT) isRelevant(output.data, myKeys.toSet())
-                        else true
+                        if (statesToRecord == StatesToRecord.ONLY_RELEVANT) {
+                            isRelevant(output.data, myKeys.toSet())
+                        } else {
+                            true
+                        }
                     }.
                     unzip()
 
@@ -186,9 +188,18 @@ class NodeVaultService(
     }
 
     private fun loadStates(refs: Collection<StateRef>): Collection<StateAndRef<ContractState>> {
-        return if (refs.isNotEmpty())
-            queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refs.toList())).states
-        else emptySet()
+        val states = mutableListOf<StateAndRef<ContractState>>()
+        if (refs.isNotEmpty()) {
+            val refsList = refs.toList()
+            val pageSize = PageSpecification().pageSize
+            (0..(refsList.size - 1) / pageSize).forEach {
+                val offset = it * pageSize
+                val limit = minOf(offset + pageSize, refsList.size)
+                val page = queryBy<ContractState>(QueryCriteria.VaultQueryCriteria(stateRefs = refsList.subList(offset, limit))).states
+                states.addAll(page)
+            }
+        }
+        return states
     }
 
     private fun processAndNotify(updates: List<Vault.Update<ContractState>>) {
@@ -197,9 +208,17 @@ class NodeVaultService(
         if (!netUpdate.isEmpty()) {
             recordUpdate(netUpdate)
             mutex.locked {
-                // flowId required by SoftLockManager to perform auto-registration of soft locks for new states
+                // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
                 val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
+                if (uuid != null) {
+                    val fungible = netUpdate.produced.filter { it.state.data is FungibleAsset<*> }
+                    if (fungible.isNotEmpty()) {
+                        val stateRefs = fungible.map { it.ref }.toNonEmptySet()
+                        log.trace { "Reserving soft locks for flow id $uuid and states $stateRefs" }
+                        softLockReserve(uuid, stateRefs)
+                    }
+                }
                 updatesPublisher.onNext(vaultUpdate)
             }
         }
@@ -378,14 +397,19 @@ class NodeVaultService(
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
+        return _queryBy(criteria, paging, sorting, contractStateType, false)
+    }
+
+    @Throws(VaultQueryException::class)
+    private fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean): Vault.Page<T> {
         log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
         // calculate total results where a page specification has been defined
         var totalStates = -1L
-        if (!paging.isDefault) {
+        if (!skipPagingChecks && !paging.isDefault) {
             val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
             val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
-            val results = queryBy(contractStateType, criteria.and(countCriteria))
-            totalStates = results.otherResults[0] as Long
+            val results = _queryBy(criteria.and(countCriteria), PageSpecification(), Sort(emptyList()), contractStateType, true)  // only skip pagination checks for total results count query
+            totalStates = results.otherResults.last() as Long
         }
 
         val session = getSession()
@@ -396,65 +420,60 @@ class NodeVaultService(
         // TODO: revisit (use single instance of parser for all queries)
         val criteriaParser = HibernateQueryCriteriaParser(contractStateType, contractStateTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
 
-        try {
-            // parse criteria and build where predicates
-            criteriaParser.parse(criteria, sorting)
+        // parse criteria and build where predicates
+        criteriaParser.parse(criteria, sorting)
 
-            // prepare query for execution
-            val query = session.createQuery(criteriaQuery)
+        // prepare query for execution
+        val query = session.createQuery(criteriaQuery)
 
-            // pagination checks
-            if (!paging.isDefault) {
-                // pagination
-                if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
-                if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
-            }
-
-            query.firstResult = (paging.pageNumber - 1) * paging.pageSize
-            query.maxResults = paging.pageSize + 1  // detection too many results
-
-            // execution
-            val results = query.resultList
-
-            // final pagination check (fail-fast on too many results when no pagination specified)
-            if (paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
-                throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [$DEFAULT_PAGE_SIZE]")
-
-            val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
-            val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
-            val otherResults: MutableList<Any> = mutableListOf()
-            val stateRefs = mutableSetOf<StateRef>()
-
-            results.asSequence()
-                    .forEachIndexed { index, result ->
-                        if (result[0] is VaultSchemaV1.VaultStates) {
-                            if (!paging.isDefault && index == paging.pageSize) // skip last result if paged
-                                return@forEachIndexed
-                            val vaultState = result[0] as VaultSchemaV1.VaultStates
-                            val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
-                            stateRefs.add(stateRef)
-                            statesMeta.add(Vault.StateMetadata(stateRef,
-                                    vaultState.contractStateClassName,
-                                    vaultState.recordedTime,
-                                    vaultState.consumedTime,
-                                    vaultState.stateStatus,
-                                    vaultState.notary,
-                                    vaultState.lockId,
-                                    vaultState.lockUpdateTime))
-                        } else {
-                            // TODO: improve typing of returned other results
-                            log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
-                            otherResults.addAll(result.toArray().asList())
-                        }
-                    }
-            if (stateRefs.isNotEmpty())
-                statesAndRefs.addAll(servicesForResolution.loadStates(stateRefs) as Collection<StateAndRef<T>>)
-
-            return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
-        } catch (e: java.lang.Exception) {
-            log.error(e.message)
-            throw e.cause ?: e
+        // pagination checks
+        if (!skipPagingChecks && !paging.isDefault) {
+            // pagination
+            if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
+            if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
         }
+
+        query.firstResult = (paging.pageNumber - 1) * paging.pageSize
+        query.maxResults = paging.pageSize + 1  // detection too many results
+
+        // execution
+        val results = query.resultList
+
+        // final pagination check (fail-fast on too many results when no pagination specified)
+        if (!skipPagingChecks && paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
+            throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [$DEFAULT_PAGE_SIZE]")
+
+        val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
+        val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
+        val otherResults: MutableList<Any> = mutableListOf()
+        val stateRefs = mutableSetOf<StateRef>()
+
+        results.asSequence()
+                .forEachIndexed { index, result ->
+                    if (result[0] is VaultSchemaV1.VaultStates) {
+                        if (!paging.isDefault && index == paging.pageSize) // skip last result if paged
+                            return@forEachIndexed
+                        val vaultState = result[0] as VaultSchemaV1.VaultStates
+                        val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
+                        stateRefs.add(stateRef)
+                        statesMeta.add(Vault.StateMetadata(stateRef,
+                                vaultState.contractStateClassName,
+                                vaultState.recordedTime,
+                                vaultState.consumedTime,
+                                vaultState.stateStatus,
+                                vaultState.notary,
+                                vaultState.lockId,
+                                vaultState.lockUpdateTime))
+                    } else {
+                        // TODO: improve typing of returned other results
+                        log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
+                        otherResults.addAll(result.toArray().asList())
+                    }
+                }
+        if (stateRefs.isNotEmpty())
+            statesAndRefs.addAll(uncheckedCast(servicesForResolution.loadStates(stateRefs)))
+
+        return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
     }
 
     @Throws(VaultQueryException::class)

@@ -22,6 +22,18 @@ Format
 The Corda configuration file uses the HOCON format which is superset of JSON. Please visit
 `<https://github.com/typesafehub/config/blob/master/HOCON.md>`_ for further details.
 
+Please do NOT use double quotes (``"``) in configuration keys.
+
+Node setup will log `Config files should not contain \" in property names. Please fix: [key]` as error
+when it founds double quotes around keys.
+This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them
+e.g.:
+The property `"dataSourceProperties.dataSourceClassName" = "val"` in ``reference.conf``
+would be not overwritten by the property `dataSourceProperties.dataSourceClassName = "val2"` in ``node.conf``.
+
+By default the node will fail to start in presence of unknown property keys. To alter this behaviour, program line argument
+``on-unknown-config-keys`` can be set to ``WARN`` or ``IGNORE``. Default is ``FAIL`` if unspecified.
+
 Defaults
 --------
 A set of default configuration options are loaded from the built-in resource file ``/node/src/main/resources/reference.conf``.
@@ -55,16 +67,23 @@ absolute path to the node's base directory.
 
     .. note:: Longer term these keys will be managed in secure hardware devices.
 
+:crlCheckSoftFail: This is a boolean flag that when enabled (i.e. `true` value is set) the certificate revocation list (CRL) checking will use the soft fail mode.
+                  The soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
+                  If this parameter is set to `false` the rigorous CRL checking takes place, meaning that each certificate in the
+                  certificate path being checked needs to have the CRL distribution point extension set and pointing to a URL serving a valid CRL.
+
 :database: Database configuration:
 
         :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
-            ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
+            ``java.sql.Connection``, but without the ``TRANSACTION_`` prefix. Defaults to REPEATABLE_READ.
         :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
 
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.
+
+:h2port: A number that's used to pick the H2 JDBC server port. If not set a randomly chosen port will be used.
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 
@@ -74,6 +93,13 @@ absolute path to the node's base directory.
         note that the host is the included as the advertised entry in the network map. As a result the value listed
         here must be externally accessible when running nodes across a cluster of machines. If the provided host is unreachable,
         the node will try to auto-discover its public one.
+
+:p2pMessagingRetry: Only used for notarisation requests. When the response doesn't arrive in time, the message is
+    resent to a different notary-replica round-robin in case of clustered notaries.
+
+        :messageRedeliveryDelay: The initial retry delay, e.g. `30 seconds`.
+        :maxRetryCount: How many retries to attempt.
+        :backoffBase: The base of the exponential backoff, `t_{wait} = messageRedeliveryDelay * backoffBase^{retryCount}`.
 
 :rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of the ``rpcSettings`` block.
 
@@ -133,9 +159,12 @@ absolute path to the node's base directory.
 :devMode: This flag sets the node to run in development mode. On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks``
     does not exist, a developer keystore will be used if ``devMode`` is true. The node will exit if ``devMode`` is false
     and the keystore does not exist. ``devMode`` also turns on background checking of flow checkpoints to shake out any
-    bugs in the checkpointing process. Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda
-    or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate an existing schema
-    failing on node start if this schema is either not present or not compatible.
+    bugs in the checkpointing process.
+    Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda
+    or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate the existing schema,
+    failing on node start if the schema is either not present or not compatible.
+    If no value is specified in the node config file, the node will attempt to detect if it's running on a developer machine and set ``devMode=true`` in that case.
+    This value can be overridden from the command line using the ``--dev-mode`` option.
 
 :detectPublicIp: This flag toggles the auto IP detection behaviour, it is enabled by default. On startup the node will
     attempt to discover its externally visible IP address first by looking for any public addresses on its network
@@ -152,7 +181,8 @@ absolute path to the node's base directory.
 
 :jarDirs: An optional list of file system directories containing JARs to include in the classpath when launching via ``corda.jar`` only.
     Each should be a string.  Only the JARs in the directories are added, not the directories themselves.  This is useful
-    for including JDBC drivers and the like. e.g. ``jarDirs = [ 'lib' ]``
+    for including JDBC drivers and the like. e.g. ``jarDirs = [ '${baseDirectory}/lib' ]`` (Note that you have to use the ``baseDirectory``
+    substitution value when pointing to a relative path)
 
 :sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials and permissions as RPC subsystem. It has one required parameter.
 
@@ -170,6 +200,17 @@ absolute path to the node's base directory.
 :attachmentCacheBound: Optionally specify how many attachments should be cached locally. Note that this includes only the key and
             metadata, the content is cached separately and can be loaded lazily. Defaults to 1024.
 
+:extraNetworkMapKeys: An optional list of private network map UUIDs. Your node will fetch the public network and private network maps based on
+            these keys. Private network UUID should be provided by network operator and lets you see nodes not visible on public network.
+
+            .. note:: This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.
+
+:tlsCertCrlDistPoint: CRL distribution point (i.e. URL) for the TLS certificate. Default value is NULL, which indicates no CRL availability for the TLS certificate.
+                      Note: If crlCheckSoftFail is FALSE (meaning that there is the strict CRL checking mode) this value needs to be set.
+
+:tlsCertCrlIssuer: CRL issuer (given in the X500 name format) for the TLS certificate. Default value is NULL,
+                   which indicates that the issuer of the TLS certificate is also the issuer of the CRL.
+                   Note: If this parameter is set then the tlsCertCrlDistPoint needs to be set as well.
 
 Examples
 --------
@@ -177,9 +218,8 @@ Examples
 General node configuration file for hosting the IRSDemo services:
 
 .. literalinclude:: example-code/src/main/resources/example-node.conf
-:language: javascript
 
-    Simple notary configuration file:
+Simple notary configuration file:
 
 .. parsed-literal::
 
@@ -228,7 +268,7 @@ path to the node's base directory.
     node certificate and private key.
 
     .. note:: This is the non-secret value for the development certificates automatically generated during the first node run.
-Longer term these keys will be managed in secure hardware devices.
+       Longer term these keys will be managed in secure hardware devices.
 
 :trustStorePassword: The password to unlock the Trust store file (``<workspace>/certificates/truststore.jks``) containing
     the Corda network root certificate. This is the non-secret value for the development certificates automatically
@@ -260,5 +300,15 @@ Longer term these keys will be managed in secure hardware devices.
         :password: The password
         :permissions: A list of permissions for starting flows via RPC. To give the user the permission to start the flow
             ``foo.bar.FlowClass``, add the string ``StartFlow.foo.bar.FlowClass`` to the list. If the list
-        contains the string ``ALL``, the user can start any flow via RPC. This value is intended for administrator
-        users and for development.
+            contains the string ``ALL``, the user can start any flow via RPC. This value is intended for administrator
+            users and for development.
+
+Fields Override
+---------------
+JVM options or environmental variables prefixed ``corda.`` can override ``node.conf`` fields.
+Provided system properties also can set value for absent fields in ``node.conf``.
+Example adding/overriding keyStore password when starting Corda node:
+
+.. sourcecode:: shell
+
+    java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar

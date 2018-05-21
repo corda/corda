@@ -2,16 +2,13 @@ package net.corda.smoketesting
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.core.internal.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.common.internal.testNetworkParameters
-import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -45,25 +42,24 @@ class NodeProcess(
         }
 
         log.info("Deleting Artemis directories, because they're large!")
-        (nodeDir / "artemis").toFile().deleteRecursively()
+        (nodeDir / "artemis").deleteRecursively()
     }
 
     // TODO All use of this factory have duplicate code which is either bundling the calling module or a 3rd party module
     // as a CorDapp for the nodes.
-    class Factory(
-            private val buildDirectory: Path = Paths.get("build"),
-            private val cordaJarUrl: URL? = this::class.java.getResource("/corda.jar")
-    ) {
+    class Factory(private val buildDirectory: Path = Paths.get("build")) {
         val cordaJar: Path by lazy {
-            require(cordaJarUrl != null, { "corda.jar could not be found in classpath" })
-            Paths.get(cordaJarUrl!!.toURI())
+            val cordaJarUrl = requireNotNull(this::class.java.getResource("/corda.jar")) {
+                "corda.jar could not be found in classpath"
+            }
+            cordaJarUrl.toPath()
         }
 
         private companion object {
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
             val defaultNetworkParameters = run {
-                KryoClientSerializationScheme.createSerializationEnv().asContextEnv {
+                AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
                     // There are no notaries in the network parameters for smoke test nodes. If this is required then we would
                     // need to introduce the concept of a "network" which predefines the notaries, like the driver and MockNetwork
                     NetworkParametersCopier(testNetworkParameters())
@@ -88,7 +84,7 @@ class NodeProcess(
             val nodeDir = baseDirectory(config).createDirectories()
             log.info("Node directory: {}", nodeDir)
 
-            config.toText().byteInputStream().copyTo(nodeDir / "node.conf")
+            (nodeDir / "node.conf").writeText(config.toText())
             defaultNetworkParameters.install(nodeDir)
 
             val process = startNode(nodeDir)

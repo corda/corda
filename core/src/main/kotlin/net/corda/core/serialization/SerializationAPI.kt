@@ -182,7 +182,16 @@ interface SerializationContext {
     /**
      * The use case that we are serializing for, since it influences the implementations chosen.
      */
-    enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint }
+    enum class UseCase { P2P, RPCServer, RPCClient, Storage, Checkpoint, Testing }
+}
+
+/**
+ * Set of well known properties that may be set on a serialization context. This doesn't preclude
+ * others being set that aren't keyed on this enumeration, but for general use properties adding a
+ * well known key here is preferred.
+ */
+enum class ContextPropertyKeys {
+    SERIALIZERS
 }
 
 /**

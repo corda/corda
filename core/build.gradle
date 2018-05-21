@@ -70,7 +70,7 @@ dependencies {
     testCompile project(":node")
     testCompile project(":node-driver")
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
@@ -105,8 +105,6 @@ dependencies {
     // This may be temporary until we experiment with other ways to do on-the-fly contract specialisation via an API.
     compile "org.apache.commons:commons-jexl3:3.0"
     compile 'commons-lang:commons-lang:2.6'
-    // For JSON
-    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
 
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
     compile "net.i2p.crypto:eddsa:$eddsa_version"

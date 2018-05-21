@@ -7,10 +7,10 @@ description 'Corda node API'
 
 dependencies {
     compile project(":core")
+    compile project(":serialization")  // TODO Remove this once the NetworkBootstrapper class is moved into the tools:bootstrapper module
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
     compile "org.apache.commons:commons-collections4:${commons_collections_version}"
@@ -27,23 +27,37 @@ dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
 
-    // Kryo: object graph serialization.
-    compile "com.esotericsoftware:kryo:4.0.0"
-    compile "de.javakaffee:kryo-serializers:0.41"
+    compile "org.apache.qpid:proton-j:$protonj_version"
 
-    // For AMQP serialisation.
-    compile "org.apache.qpid:proton-j:0.21.0"
+    // FastClasspathScanner: classpath scanning - needed for the NetworkBootstrapper.
+    compile "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
 
-    // FastClasspathScanner: classpath scanning - needed for the NetworkBootstraper
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
-
-    // Pure-Java Snappy compression
-    compile 'org.iq80.snappy:snappy:0.4'
+    // For caches rather than guava
+    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile project(':node-driver')
+
+    compile ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
+        // Gains our proton-j version from core module.
+        exclude group: 'org.apache.qpid', module: 'proton-j'
+    }
+}
+
+configurations {
+    testArtifacts.extendsFrom testRuntime
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+artifacts {
+    testArtifacts testJar
 }
 
 jar {

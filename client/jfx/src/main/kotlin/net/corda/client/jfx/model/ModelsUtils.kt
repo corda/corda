@@ -11,7 +11,6 @@ import org.reactfx.EventStream
 import rx.Observable
 import rx.Observer
 import rx.subjects.Subject
-import kotlin.reflect.KClass
 
 inline fun <reified M : Any, T> observable(noinline observableProperty: (M) -> Observable<T>) =
         TrackedDelegate.ObservableDelegate(M::class, observableProperty)

@@ -116,7 +116,7 @@ class ContractUpgradeFlowTest {
         return startRpcClient<CordaRPCOps>(
                 rpcAddress = startRpcServer(
                         rpcUser = user,
-                        ops = SecureCordaRPCOps(node.services, node.smm, node.database, node.services)
+                        ops = SecureCordaRPCOps(node.services, node.smm, node.database, node.services, { })
                 ).get().broker.hostAndPort!!,
                 username = user.username,
                 password = user.password

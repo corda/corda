@@ -61,10 +61,6 @@ transactions are valid) inside a ``database.transaction``.  All node flows run w
 nodes themselves, but any time we need to use the database directly from a unit test, you need to provide a database
 transaction as shown here.
 
-With regards to initiated flows (see :doc:`flow-state-machines` for information on initiated and initiating flows), the
-full node automatically registers them by scanning the CorDapp jars. In a unit test environment this is not possible so
-``MockNode`` has the ``registerInitiatedFlow`` method to manually register an initiated flow.
-
 .. MockNetwork message manipulation
 .. --------------------------------
 .. The MockNetwork has the ability to manipulate message streams. You can use this to test your flows behaviour on corrupted,

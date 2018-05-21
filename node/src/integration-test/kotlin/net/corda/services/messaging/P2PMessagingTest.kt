@@ -16,7 +16,6 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.send
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
@@ -118,7 +117,8 @@ class P2PMessagingTest {
     }
 
     private fun DriverDSL.startAlice(): InProcess {
-        return startNode(providedName = ALICE_NAME, customOverrides = mapOf("messageRedeliveryDelaySeconds" to 1))
+        return startNode(providedName = ALICE_NAME, customOverrides = mapOf("p2pMessagingRetry" to mapOf(
+                "messageRedeliveryDelay" to 1.seconds, "backoffBase" to 1.0, "maxRetryCount" to 3)))
                 .map { (it as InProcess) }
                 .getOrThrow()
     }
@@ -144,7 +144,7 @@ class P2PMessagingTest {
 
         distributedServiceNodes.forEach {
             val nodeName = it.services.myInfo.legalIdentitiesAndCerts.first().name
-            it.internalServices.networkService.addMessageHandler("test.request") { netMessage, _ ->
+            it.internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handler ->
                 crashingNodes.requestsReceived.incrementAndGet()
                 crashingNodes.firstRequestReceived.countDown()
                 // The node which receives the first request will ignore all requests
@@ -159,6 +159,7 @@ class P2PMessagingTest {
                     val response = it.internalServices.networkService.createMessage("test.response", responseMessage.serialize().bytes)
                     it.internalServices.networkService.send(response, request.replyTo)
                 }
+                handler.afterDatabaseTransaction()
             }
         }
         return crashingNodes
@@ -186,10 +187,11 @@ class P2PMessagingTest {
     }
     
     private fun InProcess.respondWith(message: Any) {
-        internalServices.networkService.addMessageHandler("test.request") { netMessage, _ ->
+        internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handler ->
             val request = netMessage.data.deserialize<TestRequest>()
             val response = internalServices.networkService.createMessage("test.response", message.serialize().bytes)
             internalServices.networkService.send(response, request.replyTo)
+            handler.afterDatabaseTransaction()
         }
     }
 
@@ -211,11 +213,12 @@ class P2PMessagingTest {
      */
     inline fun MessagingService.runOnNextMessage(topic: String, crossinline callback: (ReceivedMessage) -> Unit) {
         val consumed = AtomicBoolean()
-        addMessageHandler(topic) { msg, reg ->
+        addMessageHandler(topic) { msg, reg, handler ->
             removeMessageHandler(reg)
             check(!consumed.getAndSet(true)) { "Called more than once" }
             check(msg.topic == topic) { "Topic/session mismatch: ${msg.topic} vs $topic" }
             callback(msg)
+            handler.afterDatabaseTransaction()
         }
     }
 

@@ -1,17 +1,17 @@
 package net.corda.client.rpc
 
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.client.rpc.internal.RPCClient
-import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
-import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import java.time.Duration
 
 /**
@@ -23,23 +23,46 @@ class CordaRPCConnection internal constructor(connection: RPCConnection<CordaRPC
 
 /**
  * Can be used to configure the RPC client connection.
- *
- * @property connectionMaxRetryInterval How much time to wait between connection retries if the server goes down. This
- *           time will be reached via exponential backoff.
  */
-data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration) {
-    internal fun toRpcClientConfiguration(): RPCClientConfiguration {
-        return RPCClientConfiguration.default.copy(
-                connectionMaxRetryInterval = connectionMaxRetryInterval
-        )
-    }
+interface CordaRPCClientConfiguration {
+
+    /** The minimum protocol version required from the server */
+    val minimumServerProtocolVersion: Int get() = default().minimumServerProtocolVersion
+    /**
+     * If set to true the client will track RPC call sites. If an error occurs subsequently during the RPC or in a
+     * returned Observable stream the stack trace of the originating RPC will be shown as well. Note that
+     * constructing call stacks is a moderately expensive operation.
+     */
+    val trackRpcCallSites: Boolean get() = default().trackRpcCallSites
+    /**
+     * The interval of unused observable reaping. Leaked Observables (unused ones) are detected using weak references
+     * and are cleaned up in batches in this interval. If set too large it will waste server side resources for this
+     * duration. If set too low it wastes client side cycles.
+     */
+    val reapInterval: Duration get() = default().reapInterval
+    /** The number of threads to use for observations (for executing [Observable.onNext]) */
+    val observationExecutorPoolSize: Int get() = default().observationExecutorPoolSize
+    /**
+     * Determines the concurrency level of the Observable Cache. This is exposed because it implicitly determines
+     * the limit on the number of leaked observables reaped because of garbage collection per reaping.
+     * See the implementation of [com.google.common.cache.LocalCache] for details.
+     */
+    val cacheConcurrencyLevel: Int get() = default().cacheConcurrencyLevel
+    /** The retry interval of artemis connections in milliseconds */
+    val connectionRetryInterval: Duration get() = default().connectionRetryInterval
+    /** The retry interval multiplier for exponential backoff */
+    val connectionRetryIntervalMultiplier: Double get() = default().connectionRetryIntervalMultiplier
+    /** Maximum retry interval */
+    val connectionMaxRetryInterval: Duration get() = default().connectionMaxRetryInterval
+    /** Maximum reconnect attempts on failover */
+    val maxReconnectAttempts: Int get() = default().maxReconnectAttempts
+    /** Maximum file size */
+    val maxFileSize: Int get() = default().maxFileSize
+    /** The cache expiry of a deduplication watermark per client. */
+    val deduplicationCacheExpiry: Duration get() = default().deduplicationCacheExpiry
 
     companion object {
-        /**
-         * Returns the default configuration we recommend you use.
-         */
-        @JvmField
-        val DEFAULT = CordaRPCClientConfiguration(connectionMaxRetryInterval = RPCClientConfiguration.default.connectionMaxRetryInterval)
+        fun default(): CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default
     }
 }
 
@@ -66,35 +89,76 @@ data class CordaRPCClientConfiguration(val connectionMaxRetryInterval: Duration)
  * with an error, the observable is closed and you can't then re-subscribe again: you'll have to re-request a fresh
  * observable with another RPC.
  *
+ * In case of loss of connection to the server, the client will try to reconnect using the settings provided via
+ * [CordaRPCClientConfiguration]. While attempting failover, current and future RPC calls will throw
+ * [RPCException] and previously returned observables will call onError().
+ *
+ * If the client was created using a list of hosts, automatic failover will occur (the servers have to be started in
+ * HA mode).
+ *
  * @param hostAndPort The network address to connect to.
  * @param configuration An optional configuration used to tweak client behaviour.
- * @param sslConfiguration An optional [SSLConfiguration] used to enable secure communication with the server.
+ * @param sslConfiguration An optional [ClientRpcSslOptions] used to enable secure communication with the server.
+ * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
+ * The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
+ * HA mode, the client will round-robin from the beginning of the list and try all servers.
  */
 class CordaRPCClient private constructor(
-        hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-        sslConfiguration: SSLConfiguration? = null,
-        classLoader: ClassLoader? = null
+        private val hostAndPort: NetworkHostAndPort,
+        private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+        private val sslConfiguration: ClientRpcSslOptions? = null,
+        private val nodeSslConfiguration: SSLConfiguration? = null,
+        private val classLoader: ClassLoader? = null,
+        private val haAddressPool: List<NetworkHostAndPort> = emptyList(),
+        private val internalConnection: Boolean = false
 ) {
     @JvmOverloads
-    constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(hostAndPort, configuration, null)
+    constructor(hostAndPort: NetworkHostAndPort,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default())
+            : this(hostAndPort, configuration, null)
+
+    /**
+     * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
+     * The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
+     * HA mode, the client will round-robin from the beginning of the list and try all servers.
+     * @param configuration An optional configuration used to tweak client behaviour.
+     */
+    @JvmOverloads
+    constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) : this(haAddressPool.first(), configuration, null, null, null, haAddressPool)
 
     companion object {
-        internal fun createWithSsl(
+        fun createWithSsl(
                 hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-                sslConfiguration: SSLConfiguration? = null
+                sslConfiguration: ClientRpcSslOptions,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()
         ): CordaRPCClient {
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
         }
 
+        fun createWithSsl(
+                haAddressPool: List<NetworkHostAndPort>,
+                sslConfiguration: ClientRpcSslOptions,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()
+        ): CordaRPCClient {
+            return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, haAddressPool = haAddressPool)
+        }
+
         internal fun createWithSslAndClassLoader(
                 hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-                sslConfiguration: SSLConfiguration? = null,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+                sslConfiguration: ClientRpcSslOptions? = null,
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {
-            return CordaRPCClient(hostAndPort, configuration, sslConfiguration, classLoader)
+            return CordaRPCClient(hostAndPort, configuration, sslConfiguration, null, classLoader)
+        }
+
+        internal fun createWithInternalSslAndClassLoader(
+                hostAndPort: NetworkHostAndPort,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+                sslConfiguration: SSLConfiguration?,
+                classLoader: ClassLoader? = null
+        ): CordaRPCClient {
+            return CordaRPCClient(hostAndPort, configuration, null, sslConfiguration, classLoader, internalConnection = true)
         }
     }
 
@@ -103,18 +167,31 @@ class CordaRPCClient private constructor(
             effectiveSerializationEnv
         } catch (e: IllegalStateException) {
             try {
-                KryoClientSerializationScheme.initialiseSerialization(classLoader)
+                AMQPClientSerializationScheme.initialiseSerialization()
             } catch (e: IllegalStateException) {
                 // Race e.g. two of these constructed in parallel, ignore.
             }
         }
     }
 
-    private val rpcClient = RPCClient<CordaRPCOps>(
-            tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = sslConfiguration),
-            configuration.toRpcClientConfiguration(),
-            if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT
-    )
+    private fun getRpcClient(): RPCClient<CordaRPCOps> {
+        return when {
+        // Node->RPC broker, mutually authenticated SSL. This is used when connecting the integrated shell
+            internalConnection == true -> RPCClient(hostAndPort, nodeSslConfiguration!!)
+
+        // Client->RPC broker
+            haAddressPool.isEmpty() -> RPCClient(
+                    rpcConnectorTcpTransport(hostAndPort, config = sslConfiguration),
+                    configuration,
+                    if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
+            else -> {
+                RPCClient(haAddressPool,
+                        sslConfiguration,
+                        configuration,
+                        if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
+            }
+        }
+    }
 
     /**
      * Logs in to the target server and returns an active connection. The returned connection is a [java.io.Closeable]
@@ -142,7 +219,7 @@ class CordaRPCClient private constructor(
      * @throws RPCException if the server version is too low or if the server isn't reachable within a reasonable timeout.
      */
     fun start(username: String, password: String, externalTrace: Trace?, impersonatedActor: Actor?): CordaRPCConnection {
-        return CordaRPCConnection(rpcClient.start(CordaRPCOps::class.java, username, password, externalTrace, impersonatedActor))
+        return CordaRPCConnection(getRpcClient().start(CordaRPCOps::class.java, username, password, externalTrace, impersonatedActor))
     }
 
     /**

@@ -53,5 +53,4 @@ class DBViewer : AutoCloseable {
             Server.openBrowser(url)
         }
     }
-
 }

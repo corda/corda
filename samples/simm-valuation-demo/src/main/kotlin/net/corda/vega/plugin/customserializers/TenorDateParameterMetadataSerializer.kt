@@ -11,5 +11,5 @@ class TenorDateParameterMetadataSerializer :
     data class Proxy(val tenor: Tenor, val date: LocalDate, val identifier: Tenor, val label: String)
 
     override fun toProxy(obj: TenorDateParameterMetadata) = Proxy(obj.tenor, obj.date, obj.identifier, obj.label)
-    override fun fromProxy(proxy: Proxy) = TenorDateParameterMetadata.of(proxy.date, proxy.tenor, proxy.label)
+    override fun fromProxy(proxy: Proxy): TenorDateParameterMetadata = TenorDateParameterMetadata.of(proxy.date, proxy.tenor, proxy.label)
 }

@@ -4,7 +4,7 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "3.0-SNAPSHOT"
+    ext.corda_release_version = "corda-4.0-SNAPSHOT"
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
@@ -21,7 +21,7 @@ buildscript {
     // TODO: Upgrade gradle-capsule-plugin to a version with capsule:1.0.3
     ext.capsule_version = '1.0.1'
 
-    ext.asm_version = '0.5.3'
+    ext.asm_version = '5.0.4'
 
     /*
      * TODO Upgrade to version 2.4 for large message streaming support
@@ -36,26 +36,27 @@ buildscript {
      * The issue has been reported to upstream:
      * https://issues.apache.org/jira/browse/ARTEMIS-1559
      */
-    ext.artemis_version = '2.2.0'
+    ext.artemis_version = '2.5.0'
     ext.jackson_version = '2.9.3'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
-    ext.json_version = '20180130'
     ext.assertj_version = '3.8.0'
     ext.slf4j_version = '1.7.25'
     ext.log4j_version = '2.9.1'
     ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
     ext.guava_version = constants.getProperty("guavaVersion")
+    ext.caffeine_version = constants.getProperty("caffeineVersion")
+    ext.metrics_version = constants.getProperty("metricsVersion")
     ext.okhttp_version = '3.5.0'
-    ext.netty_version = '4.1.9.Final'
+    ext.netty_version = '4.1.22.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.3.3'
     ext.junit_version = '4.12'
-    ext.mockito_version = '2.10.0'
+    ext.mockito_version = '2.18.3'
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
-    ext.h2_version = '1.4.194' // Update docs if renamed or removed.
+    ext.h2_version = '1.4.197' // Update docs if renamed or removed.
     ext.postgresql_version = '42.1.4'
     ext.rxjava_version = '1.2.4'
     ext.dokka_version = '0.9.16-eap-2'
@@ -63,7 +64,7 @@ buildscript {
     ext.dependency_checker_version = '3.1.0'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
-    ext.crash_version = 'cce5a00f114343c1145c1d7756e1dd6df3ea984e'
+    ext.crash_version = 'cadb53544fbb3c0fb901445da614998a6a419488'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.0'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
@@ -74,6 +75,10 @@ buildscript {
     ext.ghostdriver_version = '2.1.0'
     ext.eaagentloader_version = '1.0.3'
     ext.jsch_version = '0.1.54'
+    ext.commons_cli_version = '1.4'
+    ext.protonj_version = '0.27.1'
+    ext.snappy_version = '0.4'
+    ext.fast_classpath_scanner_version = '2.12.3'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'
@@ -92,6 +97,7 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
         classpath "net.corda.plugins:publish-utils:$gradle_plugins_version"
         classpath "net.corda.plugins:quasar-utils:$gradle_plugins_version"
@@ -139,6 +145,15 @@ allprojects {
     apply plugin: 'java'
     apply plugin: 'jacoco'
     apply plugin: 'org.owasp.dependencycheck'
+    apply plugin: 'kotlin-allopen'
+
+    allOpen {
+        annotations(
+                "javax.persistence.Entity",
+                "javax.persistence.Embeddable",
+                "javax.persistence.MappedSuperclass"
+        )
+    }
 
     dependencyCheck {
         suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
@@ -154,10 +169,11 @@ allprojects {
 
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
         kotlinOptions {
-            languageVersion = "1.1"
-            apiVersion = "1.1"
+            languageVersion = "1.2"
+            apiVersion = "1.2"
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
+            freeCompilerArgs = ['-Xenable-jvm-default']
         }
     }
 
@@ -197,10 +213,29 @@ allprojects {
     }
 
     configurations {
+        all {
+            resolutionStrategy {
+                // Force dependencies to use the same version of Kotlin as Corda.
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+                force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+                // Demand that everything uses our given version of Netty.
+                eachDependency { details ->
+                    if (details.requested.group == 'io.netty' && details.requested.name.startsWith('netty-')) {
+                        details.useVersion netty_version
+                    }
+                }
+            }
+        }
         compile {
             // We want to use SLF4J's version of these bindings: jcl-over-slf4j
             // Remove any transitive dependency on Apache's version.
             exclude group: 'commons-logging', module: 'commons-logging'
+
+            // Netty-All is an uber-jar which contains every Netty module.
+            // Exclude it to force us to use the individual Netty modules instead.
+            exclude group: 'io.netty', module: 'netty-all'
         }
         runtime {
             // We never want isolated.jar on classPath, since we want to test jar being dynamically loaded as an attachment
@@ -272,6 +307,12 @@ tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
+task testReport(type: TestReport) {
+    destinationDir = file("$buildDir/reports/allTests")
+    // Include the results from the `test` task in all subprojects
+    reportOn subprojects*.test
+}
+
 bintrayConfig {
     user = System.getenv('CORDA_BINTRAY_USER')
     key = System.getenv('CORDA_BINTRAY_KEY')
@@ -282,7 +323,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities']
+    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities', 'corda-shell', 'corda-serialization']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
@@ -359,4 +400,9 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
             }
         }
     }
+}
+
+wrapper {
+    gradleVersion = "4.4.1"
+    distributionType = Wrapper.DistributionType.ALL
 }

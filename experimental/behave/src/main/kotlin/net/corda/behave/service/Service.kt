@@ -1,6 +1,6 @@
 package net.corda.behave.service
 
-import net.corda.behave.logging.getLogger
+import net.corda.core.utilities.loggerFor
 import java.io.Closeable
 
 abstract class Service(
@@ -11,7 +11,7 @@ abstract class Service(
 
     private var isRunning: Boolean = false
 
-    protected val log = getLogger<Service>()
+    protected val log = loggerFor<Service>()
 
     fun start(): Boolean {
         if (isRunning) {
@@ -59,7 +59,7 @@ abstract class Service(
 
     override fun toString() = "Service(name = $name, port = $port)"
 
-    protected open fun checkPrerequisites() { }
+    protected open fun checkPrerequisites() {}
 
     protected open fun startService() = true
 
@@ -68,5 +68,4 @@ abstract class Service(
     protected open fun verify() = true
 
     protected open fun waitUntilStarted() = true
-
 }

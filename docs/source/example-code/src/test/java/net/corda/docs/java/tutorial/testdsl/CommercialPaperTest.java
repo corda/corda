@@ -27,7 +27,9 @@ import static net.corda.testing.node.NodeTestUtils.transaction;
 
 public class CommercialPaperTest {
     private static final TestIdentity alice = new TestIdentity(ALICE_NAME, 70L);
+    // DOCSTART 14
     private static final TestIdentity bigCorp = new TestIdentity(new CordaX500Name("BigCorp", "New York", "GB"));
+    // DOCEND 14
     private static final TestIdentity bob = new TestIdentity(BOB_NAME, 80L);
     private static final TestIdentity megaCorp = new TestIdentity(new CordaX500Name("MegaCorp", "London", "GB"));
     private final byte[] defaultRef = {123};

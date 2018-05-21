@@ -5,10 +5,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.InputStreamAndHash
-import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -22,7 +20,6 @@ import net.corda.testing.node.StartedMockNode
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -90,12 +87,11 @@ class MaxTransactionSizeTests {
             assertEquals(hash1, bigFile1.sha256)
             SendLargeTransactionFlow(notary, bob, hash1, hash2, hash3, hash4, verify = false)
         }
-        val ex = assertFailsWith<UnexpectedFlowEndException> {
+        assertFailsWith<UnexpectedFlowEndException> {
             val future = aliceNode.startFlow(flow)
             mockNet.runNetwork()
             future.getOrThrow()
         }
-        assertThat(ex).hasMessageContaining("Counterparty flow on O=Bob Plc, L=Rome, C=IT had an internal error and has terminated")
     }
 
     @StartableByRPC

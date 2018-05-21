@@ -25,21 +25,24 @@ import sphinx_rtd_theme
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
 
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
-extensions = []
+# m2r is a Markdown to RST converter, as our design docs use Markdown.
+extensions = ['rst2pdf.pdfbuilder', 'm2r']
+
+# PDF configuration
+pdf_documents = [('index', u'corda-developer-site', u'Corda Developer Documentation', u'R3')]
+pdf_stylesheets = ['sphinx', 'kerning', 'a4', 'murphy', 'tenpoint']
+pdf_compressed = True
+pdf_fit_mode = "shrink"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-# source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
-#source_encoding = 'utf-8-sig'
+source_encoding = 'utf-8-sig'
 
 # The master toctree document.
 master_doc = 'index'
@@ -141,7 +144,7 @@ html_add_permalinks = True
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-#html_favicon = None
+html_favicon = "_static/favicon.ico"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

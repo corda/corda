@@ -19,12 +19,6 @@ buildscript {
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    compile {
-        // We don't need these because we already include netty-all.
-        exclude group: 'io.netty', module: 'netty-transport'
-        exclude group: 'io.netty', module: 'netty-handler'
-    }
-
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 }
@@ -73,11 +67,14 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     compile "com.google.guava:guava:$guava_version"
+
+    // For caches rather than guava
+    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
@@ -104,7 +101,7 @@ dependencies {
     }
 
     // Coda Hale's Metrics: for monitoring of key statistics
-    compile "io.dropwizard.metrics:metrics-core:3.1.2"
+    compile "io.dropwizard.metrics:metrics-core:$metrics_version"
 
     // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
     compile "com.google.jimfs:jimfs:1.1"
@@ -140,12 +137,9 @@ dependencies {
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
     // Java Atomix: RAFT library
-    compile 'io.atomix.copycat:copycat-client:1.2.3'
-    compile 'io.atomix.copycat:copycat-server:1.2.3'
-    compile 'io.atomix.catalyst:catalyst-netty:1.1.2'
-
-    // Netty: All of it.
-    compile "io.netty:netty-all:$netty_version"
+    compile 'io.atomix.copycat:copycat-client:1.2.8'
+    compile 'io.atomix.copycat:copycat-server:1.2.8'
+    compile 'io.atomix.catalyst:catalyst-netty:1.2.1'
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
@@ -175,7 +169,8 @@ dependencies {
     testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 
-    runtime "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
+    // Jolokia JVM monitoring agent, required to push logs through slf4j
+    compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
 }
 
 task integrationTest(type: Test) {

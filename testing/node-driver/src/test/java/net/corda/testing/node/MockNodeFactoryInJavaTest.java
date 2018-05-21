@@ -1,7 +1,5 @@
 package net.corda.testing.node;
 
-import org.jetbrains.annotations.NotNull;
-
 import static java.util.Collections.emptyList;
 
 @SuppressWarnings("unused")

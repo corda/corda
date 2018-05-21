@@ -48,7 +48,7 @@ EOF
 #an internal class
 #TODO: check that only classes in a whitelist are part of the API rather than look for specific invalid cases going forward
 newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep "\.internal\." )
-newNodeExposures=$(echo "$userDiffContents" | grep "^+" | grep "net.corda.node" )
+newNodeExposures=$(echo "$userDiffContents" | grep "^+" | grep "net\.corda\.node\.")
 
 internalCount=`grep -v "^$" <<EOF | wc -l
 $newInternalExposures

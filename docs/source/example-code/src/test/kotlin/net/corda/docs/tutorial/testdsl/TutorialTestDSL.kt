@@ -3,7 +3,6 @@ package net.corda.docs.tutorial.testdsl
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.TransactionVerificationException
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.days
@@ -14,11 +13,14 @@ import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.ICommercialPaperState
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
-import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.node.transaction
 import org.junit.Rule
 import org.junit.Test
@@ -28,7 +30,9 @@ class CommercialPaperTest {
     private companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
         val bob = TestIdentity(BOB_NAME, 80)
+        // DOCSTART 14
         val bigCorp = TestIdentity((CordaX500Name("BigCorp", "New York", "GB")))
+        // DOCEND 14
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val TEST_TX_TIME: Instant = Instant.parse("2015-04-17T12:00:00.00Z")

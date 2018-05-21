@@ -1,6 +1,7 @@
 package net.corda.core.flows;
 
 import co.paralleluniverse.fibers.Suspendable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Primitives;
 import net.corda.core.identity.Party;
 import net.corda.testing.core.TestConstants;
@@ -13,19 +14,18 @@ import org.junit.Test;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import static java.util.Collections.emptyList;
 import static net.corda.testing.core.TestUtils.singleIdentity;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
 
 public class FlowsInJavaTest {
-    private final MockNetwork mockNet = new MockNetwork(emptyList());
+    private final MockNetwork mockNet = new MockNetwork(ImmutableList.of("net.corda.core.flows"));
     private StartedMockNode aliceNode;
     private StartedMockNode bobNode;
     private Party bob;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         aliceNode = mockNet.createPartyNode(TestConstants.ALICE_NAME);
         bobNode = mockNet.createPartyNode(TestConstants.BOB_NAME);
         bob = singleIdentity(bobNode.getInfo());
@@ -38,7 +38,6 @@ public class FlowsInJavaTest {
 
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
-        bobNode.registerInitiatedFlow(SendHelloAndThenReceive.class);
         Future<String> result = aliceNode.startFlow(new SendInUnwrapFlow(bob));
         mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
@@ -62,9 +61,8 @@ public class FlowsInJavaTest {
             fail("ExecutionException should have been thrown");
         } catch (ExecutionException e) {
             assertThat(e.getCause())
-                    .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("primitive")
-                    .hasMessageContaining(receiveType.getName());
+                    .hasMessageContaining(Primitives.unwrap(receiveType).getName());
         }
     }
 
@@ -114,7 +112,7 @@ public class FlowsInJavaTest {
 
         @Suspendable
         @Override
-        public Void call() throws FlowException {
+        public Void call() {
             FlowSession session = initiateFlow(otherParty);
             session.receive(Primitives.unwrap(receiveType));
             return null;

@@ -7,6 +7,3 @@ Tools
    network-simulator
    demobench
    node-explorer
-   azure-vm
-   aws-vm
-   loadtesting

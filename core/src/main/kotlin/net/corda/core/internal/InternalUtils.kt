@@ -2,15 +2,13 @@
 
 package net.corda.core.internal
 
+import com.google.common.hash.Hashing
+import com.google.common.hash.HashingInputStream
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
-import net.corda.core.flows.NotarisationRequest
-import net.corda.core.flows.NotarisationRequestSignature
-import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
@@ -29,18 +27,21 @@ import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.io.*
 import java.lang.reflect.Field
+import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.net.HttpURLConnection
+import java.net.HttpURLConnection.HTTP_OK
+import java.net.URI
 import java.net.URL
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.*
-import java.nio.file.attribute.FileAttribute
-import java.nio.file.attribute.FileTime
+import java.nio.file.CopyOption
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
-import java.security.cert.X509Certificate
+import java.security.PublicKey
+import java.security.cert.*
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
@@ -57,20 +58,11 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
 val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
-fun Throwable.getStackTraceAsString() = StringWriter().also { printStackTrace(PrintWriter(it)) }.toString()
 
 infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)
 
 operator fun Duration.div(divider: Long): Duration = dividedBy(divider)
 operator fun Duration.times(multiplicand: Long): Duration = multipliedBy(multiplicand)
-
-/**
- * Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform
- * separator problems.
- */
-operator fun Path.div(other: String): Path = resolve(other)
-
-operator fun String.div(other: String): Path = Paths.get(this) / other
 
 /**
  * Returns the single element matching the given [predicate], or `null` if the collection is empty, or throws exception
@@ -116,41 +108,27 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
     return i
 }
 
-fun Path.createDirectory(vararg attrs: FileAttribute<*>): Path = Files.createDirectory(this, *attrs)
-fun Path.createDirectories(vararg attrs: FileAttribute<*>): Path = Files.createDirectories(this, *attrs)
-fun Path.exists(vararg options: LinkOption): Boolean = Files.exists(this, *options)
-fun Path.copyToDirectory(targetDir: Path, vararg options: CopyOption): Path {
-    require(targetDir.isDirectory()) { "$targetDir is not a directory" }
-    val targetFile = targetDir.resolve(fileName)
-    Files.copy(this, targetFile, *options)
-    return targetFile
-}
-
-fun Path.moveTo(target: Path, vararg options: CopyOption): Path = Files.move(this, target, *options)
-fun Path.isRegularFile(vararg options: LinkOption): Boolean = Files.isRegularFile(this, *options)
-fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(this, *options)
-inline val Path.size: Long get() = Files.size(this)
-fun Path.lastModifiedTime(vararg options: LinkOption): FileTime = Files.getLastModifiedTime(this, *options)
-inline fun <R> Path.list(block: (Stream<Path>) -> R): R = Files.list(this).use(block)
-fun Path.deleteIfExists(): Boolean = Files.deleteIfExists(this)
-fun Path.reader(charset: Charset = UTF_8): BufferedReader = Files.newBufferedReader(this, charset)
-fun Path.writer(charset: Charset = UTF_8, vararg options: OpenOption): BufferedWriter = Files.newBufferedWriter(this, charset, *options)
-fun Path.readAll(): ByteArray = Files.readAllBytes(this)
-inline fun <R> Path.read(vararg options: OpenOption, block: (InputStream) -> R): R = Files.newInputStream(this, *options).use(block)
-inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = emptyArray(), block: (OutputStream) -> Unit) {
-    if (createDirs) {
-        normalize().parent?.createDirectories()
-    }
-    Files.newOutputStream(this, *options).use(block)
-}
-
-inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) -> R): R = Files.lines(this, charset).use(block)
-fun Path.readAllLines(charset: Charset = UTF_8): List<String> = Files.readAllLines(this, charset)
-fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, vararg options: OpenOption): Path = Files.write(this, lines, charset, *options)
-
-inline fun <reified T : Any> Path.readObject(): T = readAll().deserialize()
-
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
+
+/** Same as [InputStream.readBytes] but also closes the stream. */
+fun InputStream.readFully(): ByteArray = use { it.readBytes() }
+
+/** Calculate the hash of the remaining bytes in this input stream. The stream is closed at the end. */
+fun InputStream.hash(): SecureHash {
+    return use {
+        val his = HashingInputStream(Hashing.sha256(), it)
+        his.copyTo(NullOutputStream)  // To avoid reading in the entire stream into memory just write out the bytes to /dev/null
+        SecureHash.SHA256(his.hash().asBytes())
+    }
+}
+
+inline fun <reified T : Any> InputStream.readObject(): T = readFully().deserialize()
+
+object NullOutputStream : OutputStream() {
+    override fun write(b: Int) = Unit
+    override fun write(b: ByteArray) = Unit
+    override fun write(b: ByteArray, off: Int, len: Int) = Unit
+}
 
 fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
 
@@ -191,21 +169,28 @@ fun <T> Logger.logElapsedTime(label: String, body: () -> T): T = logElapsedTime(
 fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
     // Use nanoTime as it's monotonic.
     val now = System.nanoTime()
+    var failed = false
     try {
         return body()
-    } finally {
+    }
+    catch (th: Throwable) {
+        failed = true
+        throw th
+    }
+    finally {
         val elapsed = Duration.ofNanos(System.nanoTime() - now).toMillis()
+        val msg = (if(failed) "Failed " else "") + "$label took $elapsed msec"
         if (logger != null)
-            logger.info("$label took $elapsed msec")
+            logger.info(msg)
         else
-            println("$label took $elapsed msec")
+            println(msg)
     }
 }
 
 /** Convert a [ByteArrayOutputStream] to [InputStreamAndHash]. */
 fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {
     val bytes = toByteArray()
-    return InputStreamAndHash(ByteArrayInputStream(bytes), bytes.sha256())
+    return InputStreamAndHash(bytes.inputStream(), bytes.sha256())
 }
 
 data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHash.SHA256) {
@@ -324,28 +309,39 @@ fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, seri
 /** Convenience method to get the package name of a class literal. */
 val KClass<*>.packageName: String get() = java.`package`.name
 
+inline val Class<*>.isAbstractClass: Boolean get() = Modifier.isAbstract(modifiers)
+
+inline val Class<*>.isConcreteClass: Boolean get() = !isInterface && !isAbstractClass
+
+fun URI.toPath(): Path = Paths.get(this)
+
+fun URL.toPath(): Path = toURI().toPath()
+
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 
-fun URL.post(serializedData: OpaqueBytes) {
-    openHttpConnection().apply {
+fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String>): ByteArray {
+    return openHttpConnection().run {
         doOutput = true
         requestMethod = "POST"
+        properties.forEach { (key, value) -> setRequestProperty(key, value) }
         setRequestProperty("Content-Type", "application/octet-stream")
         outputStream.use { serializedData.open().copyTo(it) }
         checkOkResponse()
+        inputStream.readFully()
     }
 }
 
 fun HttpURLConnection.checkOkResponse() {
-    if (responseCode != 200) {
-        val message = errorStream.use { it.reader().readText() }
-        throw IOException("Response Code $responseCode: $message")
+    if (responseCode != HTTP_OK) {
+        throw IOException("Response Code $responseCode: $errorMessage")
     }
 }
 
+val HttpURLConnection.errorMessage: String? get() = errorStream?.let { it.use { it.reader().readText() } }
+
 inline fun <reified T : Any> HttpURLConnection.responseAs(): T {
     checkOkResponse()
-    return inputStream.use { it.readBytes() }.deserialize()
+    return inputStream.readObject()
 }
 
 /** Analogous to [Thread.join]. */
@@ -353,6 +349,23 @@ fun ExecutorService.join() {
     shutdown() // Do not change to shutdownNow, tests use this method to assert the executor has no more tasks.
     while (!awaitTermination(1, TimeUnit.SECONDS)) {
         // Try forever. Do not give up, tests use this method to assert the executor has no more tasks.
+    }
+}
+
+// TODO: Currently the certificate revocation status is not handled here. Nowhere in the code the second parameter is used. Consider adding the support in the future.
+fun CertPath.validate(trustAnchor: TrustAnchor, checkRevocation: Boolean = false): PKIXCertPathValidatorResult {
+    val parameters = PKIXParameters(setOf(trustAnchor)).apply { isRevocationEnabled = checkRevocation }
+    try {
+        return CertPathValidator.getInstance("PKIX").validate(this, parameters) as PKIXCertPathValidatorResult
+    } catch (e: CertPathValidatorException) {
+        throw CertPathValidatorException(
+                """Cert path failed to validate.
+Reason: ${e.reason}
+Offending cert index: ${e.index}
+Cert path: $this
+
+Trust anchor:
+$trustAnchor""", e, this, e.index)
     }
 }
 
@@ -377,10 +390,16 @@ val CordaX500Name.x500Name: X500Name
 val CordaX500Name.Companion.unspecifiedCountry
     get() = "ZZ"
 
-fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificate): SignedDataWithCert<T> {
+inline fun <T : Any> T.signWithCert(signer: (SerializedBytes<T>) -> DigitalSignatureWithCert): SignedDataWithCert<T> {
     val serialised = serialize()
-    val signature = Crypto.doSign(privateKey, serialised.bytes)
-    return SignedDataWithCert(serialised, DigitalSignatureWithCert(certificate, signature))
+    return SignedDataWithCert(serialised, signer(serialised))
+}
+
+fun <T : Any> T.signWithCert(privateKey: PrivateKey, certificate: X509Certificate): SignedDataWithCert<T> {
+    return signWithCert {
+        val signature = Crypto.doSign(privateKey, it.bytes)
+        DigitalSignatureWithCert(certificate, signature)
+    }
 }
 
 inline fun <T : Any> SerializedBytes<T>.sign(signer: (SerializedBytes<T>) -> DigitalSignature.WithKey): SignedData<T> {
@@ -395,19 +414,9 @@ fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoade
     return CordappContext(cordapp, attachmentId, classLoader, config)
 }
 
-/** Verifies that the correct notarisation request was signed by the counterparty. */
-fun NotaryFlow.Service.validateRequest(request: NotarisationRequest, signature: NotarisationRequestSignature) {
-    val requestingParty = otherSideSession.counterparty
-    request.verifySignature(signature, requestingParty)
-    // TODO: persist the signature for traceability. Do we need to persist the request as well?
-}
+val PublicKey.hash: SecureHash get() = encoded.sha256()
 
-/** Creates a signature over the notarisation request using the legal identity key. */
-fun NotarisationRequest.generateSignature(serviceHub: ServiceHub): NotarisationRequestSignature {
-    val serializedRequest = this.serialize().bytes
-    val signature = with(serviceHub) {
-        val myLegalIdentity = myInfo.legalIdentitiesAndCerts.first().owningKey
-        keyManagementService.sign(serializedRequest, myLegalIdentity)
-    }
-    return NotarisationRequestSignature(signature, serviceHub.myInfo.platformVersion)
-}
+/**
+ * Extension method for providing a sumBy method that processes and returns a Long
+ */
+fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector(it) }.sum()

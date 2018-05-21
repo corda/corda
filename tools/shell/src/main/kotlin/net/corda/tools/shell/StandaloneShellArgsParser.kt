@@ -6,6 +6,7 @@ import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.tools.shell.ShellConfiguration.Companion.COMMANDS_DIR
 import org.slf4j.event.Level
@@ -27,10 +28,10 @@ class CommandLineOptionParser {
             .accepts("commands-directory", "The directory with additional CrAsH shell commands.")
             .withOptionalArg()
     private val hostArg = optionParser
-            .acceptsAll(listOf("h","host"), "The host of the Corda node.")
+            .acceptsAll(listOf("h", "host"), "The host of the Corda node.")
             .withRequiredArg()
     private val portArg = optionParser
-            .acceptsAll(listOf("p","port"), "The port of the Corda node.")
+            .acceptsAll(listOf("p", "port"), "The port of the Corda node.")
             .withRequiredArg()
     private val userArg = optionParser
             .accepts("user", "The RPC user name.")
@@ -52,15 +53,6 @@ class CommandLineOptionParser {
     private val helpArg = optionParser
             .accepts("help")
             .forHelp()
-    private val keyStorePasswordArg = optionParser
-            .accepts("keystore-password", "The password to unlock the KeyStore file.")
-            .withOptionalArg()
-    private val keyStoreDirArg = optionParser
-            .accepts("keystore-file", "The path to the KeyStore file.")
-            .withOptionalArg()
-    private val keyStoreTypeArg = optionParser
-            .accepts("keystore-type", "The type of the KeyStore (e.g. JKS).")
-            .withOptionalArg()
     private val trustStorePasswordArg = optionParser
             .accepts("truststore-password", "The password to unlock the TrustStore file.")
             .withOptionalArg()
@@ -85,11 +77,8 @@ class CommandLineOptionParser {
                 loggingLevel = optionSet.valueOf(loggerLevel),
                 sshdPort = optionSet.valueOf(sshdPortArg),
                 sshdHostKeyDirectory = (optionSet.valueOf(sshdHostKeyDirectoryArg))?.let { Paths.get(it).normalize().toAbsolutePath() },
-                keyStorePassword = optionSet.valueOf(keyStorePasswordArg),
                 trustStorePassword = optionSet.valueOf(trustStorePasswordArg),
-                keyStoreFile = (optionSet.valueOf(keyStoreDirArg))?.let { Paths.get(it).normalize().toAbsolutePath() },
                 trustStoreFile = (optionSet.valueOf(trustStoreDirArg))?.let { Paths.get(it).normalize().toAbsolutePath() },
-                keyStoreType = optionSet.valueOf(keyStoreTypeArg),
                 trustStoreType = optionSet.valueOf(trustStoreTypeArg))
     }
 
@@ -107,11 +96,8 @@ data class CommandLineOptions(val configFile: String?,
                               val loggingLevel: Level,
                               val sshdPort: String?,
                               val sshdHostKeyDirectory: Path?,
-                              val keyStorePassword: String?,
                               val trustStorePassword: String?,
-                              val keyStoreFile: Path?,
                               val trustStoreFile: Path?,
-                              val keyStoreType: String?,
                               val trustStoreType: String?) {
 
     private fun toConfigFile(): Config {
@@ -123,9 +109,6 @@ data class CommandLineOptions(val configFile: String?,
         password?.apply { cmdOpts["node.password"] = this }
         host?.apply { cmdOpts["node.addresses.rpc.host"] = this }
         port?.apply { cmdOpts["node.addresses.rpc.port"] = this }
-        keyStoreFile?.apply { cmdOpts["ssl.keystore.path"] = this.toString() }
-        keyStorePassword?.apply { cmdOpts["ssl.keystore.password"] = this }
-        keyStoreType?.apply { cmdOpts["ssl.keystore.type"] = this }
         trustStoreFile?.apply { cmdOpts["ssl.truststore.path"] = this.toString() }
         trustStorePassword?.apply { cmdOpts["ssl.truststore.password"] = this }
         trustStoreType?.apply { cmdOpts["ssl.truststore.type"] = this }
@@ -187,12 +170,11 @@ private class ShellConfigurationFile {
 
     data class KeyStore(
             val path: String,
-            val type: String,
+            val type: String = "JKS",
             val password: String
     )
 
     data class Ssl(
-            val keystore: KeyStore,
             val truststore: KeyStore
     )
 
@@ -205,15 +187,14 @@ private class ShellConfigurationFile {
 
             val sslOptions =
                     ssl?.let {
-                        ShellSslOptions(
-                                sslKeystore = Paths.get(it.keystore.path),
-                                keyStorePassword = it.keystore.password,
-                                trustStoreFile = Paths.get(it.truststore.path),
+                        ClientRpcSslOptions(
+                                trustStorePath = Paths.get(it.truststore.path),
                                 trustStorePassword = it.truststore.password)
                     }
 
             return ShellConfiguration(
-                    commandsDirectory = extensions?.commands?.let { Paths.get(it.path) } ?: Paths.get(".") / COMMANDS_DIR,
+                    commandsDirectory = extensions?.commands?.let { Paths.get(it.path) } ?: Paths.get(".")
+                    / COMMANDS_DIR,
                     cordappsDirectory = extensions?.cordapps?.let { Paths.get(it.path) },
                     user = node.user ?: "",
                     password = node.password ?: "",

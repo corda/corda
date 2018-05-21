@@ -2,10 +2,6 @@ package net.corda.node.services.transactions
 
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
-import io.atomix.catalyst.buffer.BufferInput
-import io.atomix.catalyst.buffer.BufferOutput
-import io.atomix.catalyst.serializer.Serializer
-import io.atomix.catalyst.serializer.TypeSerializer
 import io.atomix.catalyst.transport.Address
 import io.atomix.catalyst.transport.Transport
 import io.atomix.catalyst.transport.netty.NettyTransport
@@ -18,26 +14,33 @@ import io.atomix.copycat.server.cluster.Member
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
-import net.corda.core.node.services.UniquenessException
-import net.corda.core.node.services.UniquenessProvider
-import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.UniquenessProvider
+import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.node.services.config.RaftConfig
+import net.corda.node.services.transactions.RaftTransactionCommitLog.Commands.CommitTransaction
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import java.io.Serializable
 import java.nio.file.Path
+import java.time.Clock
 import java.util.concurrent.CompletableFuture
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.EmbeddedId
+import javax.persistence.Entity
+import javax.persistence.Table
 
 /**
  * A uniqueness provider that records committed input states in a distributed collection replicated and
@@ -48,39 +51,51 @@ import javax.persistence.*
  * to the cluster leader to be actioned.
  */
 @ThreadSafe
-class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfiguration, private val db: CordaPersistence, private val metrics: MetricRegistry, private val raftConfig: RaftConfig) : UniquenessProvider, SingletonSerializeAsToken() {
+class RaftUniquenessProvider(
+        private val transportConfiguration: NodeSSLConfiguration,
+        private val db: CordaPersistence,
+        private val clock: Clock,
+        private val metrics: MetricRegistry,
+        private val raftConfig: RaftConfig
+) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
-        fun createMap(): AppendOnlyPersistentMap<String, Pair<Long, Any>, RaftState, String> =
+        fun createMap(): AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, CommittedState, PersistentStateRef> =
                 AppendOnlyPersistentMap(
-                        toPersistentEntityKey = { it },
+                        toPersistentEntityKey = { PersistentStateRef(it) },
                         fromPersistentEntity = {
-                            Pair(it.key, Pair(it.index, it.value.deserialize(context = SerializationDefaults.STORAGE_CONTEXT)))
+                            val txId = it.id.txId
+                                    ?: throw IllegalStateException("DB returned null SecureHash transactionId")
+                            val index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                            Pair(
+                                    StateRef(txhash = SecureHash.parse(txId), index = index),
+                                    Pair(it.index, SecureHash.parse(it.value) as SecureHash))
+
                         },
-                        toPersistentEntity = { k: String, v: Pair<Long, Any> ->
-                            RaftState().apply {
-                                key = k
-                                value = v.second.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
-                                index = v.first
-                            }
+                        toPersistentEntity = { k: StateRef, (first, second) ->
+                            CommittedState(
+                                    PersistentStateRef(k),
+                                    second.toString(),
+                                    first)
+
                         },
-                        persistentEntityClass = RaftState::class.java
+                        persistentEntityClass = CommittedState::class.java
                 )
+
+        fun StateRef.encoded() = "$txhash:$index"
+        fun String.parseStateRef() = split(":").let { StateRef(SecureHash.parse(it[0]), it[1].toInt()) }
     }
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}raft_committed_states")
-    class RaftState(
-            @Id
-            @Column(name = "id")
-            var key: String = "",
-
-            @Lob
-            @Column(name = "state_value")
-            var value: ByteArray = EMPTY_BYTE_ARRAY,
-            @Column(name = "state_index")
+    class CommittedState(
+            @EmbeddedId
+            val id: PersistentStateRef,
+            @Column(name = "consuming_transaction_id")
+            var value: String = "",
+            @Column(name = "raft_log_index")
             var index: Long = 0
-    )
+    ) : Serializable
 
     /** Directory storing the Raft log and state machine snapshots */
     private val storagePath: Path = transportConfiguration.baseDirectory
@@ -95,43 +110,19 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
         get() = _clientFuture.get()
 
     fun start() {
-        log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
+        log.info("Creating Copycat server, log stored in: ${storagePath.toAbsolutePath()}")
         val stateMachineFactory = {
-            DistributedImmutableMap(db, RaftUniquenessProvider.Companion::createMap)
+            RaftTransactionCommitLog(db, clock, RaftUniquenessProvider.Companion::createMap)
         }
         val address = raftConfig.nodeAddress.let { Address(it.host, it.port) }
         val storage = buildStorage(storagePath)
         val transport = buildTransport(transportConfiguration)
-        val serializer = Serializer().apply {
-            // Add serializers so Catalyst doesn't attempt to fall back on Java serialization for these types, which is disabled process-wide:
-            register(DistributedImmutableMap.Commands.PutAll::class.java) {
-                object : TypeSerializer<DistributedImmutableMap.Commands.PutAll<*, *>> {
-                    override fun write(obj: DistributedImmutableMap.Commands.PutAll<*, *>,
-                                       buffer: BufferOutput<out BufferOutput<*>>,
-                                       serializer: Serializer) {
-                        writeMap(obj.entries, buffer, serializer)
-                    }
-
-                    override fun read(type: Class<DistributedImmutableMap.Commands.PutAll<*, *>>,
-                                      buffer: BufferInput<out BufferInput<*>>,
-                                      serializer: Serializer): DistributedImmutableMap.Commands.PutAll<Any, Any> {
-                        return DistributedImmutableMap.Commands.PutAll(readMap(buffer, serializer))
-                    }
-                }
-            }
-            register(LinkedHashMap::class.java) {
-                object : TypeSerializer<LinkedHashMap<*, *>> {
-                    override fun write(obj: LinkedHashMap<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) = writeMap(obj, buffer, serializer)
-                    override fun read(type: Class<LinkedHashMap<*, *>>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer) = readMap(buffer, serializer)
-                }
-            }
-        }
 
         server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)
                 .withStorage(storage)
                 .withServerTransport(transport)
-                .withSerializer(serializer)
+                .withSerializer(RaftTransactionCommitLog.serializer)
                 .build()
 
         val serverFuture = if (raftConfig.clusterAddresses.isNotEmpty()) {
@@ -148,7 +139,7 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
         val client = CopycatClient.builder(address)
                 .withTransport(transport) // TODO: use local transport for client-server communications
                 .withConnectionStrategy(ConnectionStrategies.EXPONENTIAL_BACKOFF)
-                .withSerializer(serializer)
+                .withSerializer(RaftTransactionCommitLog.serializer)
                 .withRecoveryStrategy(RecoveryStrategies.RECOVER)
                 .build()
         _clientFuture = serverFuture.thenCompose { client.connect(address) }
@@ -196,47 +187,24 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
         })
     }
 
-
-    override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
-        val entries = states.mapIndexed { i, stateRef -> stateRef to UniquenessProvider.ConsumingTx(txId, i, callerIdentity) }
-
-        log.debug("Attempting to commit input states: ${states.joinToString()}")
-        val commitCommand = DistributedImmutableMap.Commands.PutAll(encode(entries))
-        val conflicts = client.submit(commitCommand).get()
-
-        if (conflicts.isNotEmpty()) throw UniquenessException(UniquenessProvider.Conflict(decode(conflicts)))
-        log.debug("All input states of transaction $txId have been committed")
-    }
-
-    /**
-     * Copycat uses its own serialization framework so we convert and store entries as String -> ByteArray
-     * here to avoid having to define additional serializers for our custom types.
-     */
-    private fun encode(items: List<Pair<StateRef, UniquenessProvider.ConsumingTx>>): Map<String, ByteArray> {
-        fun StateRef.encoded() = "$txhash:$index"
-        return items.map { it.first.encoded() to it.second.serialize().bytes }.toMap()
-    }
-
-    private fun decode(items: Map<String, ByteArray>): Map<StateRef, UniquenessProvider.ConsumingTx> {
-        fun String.toStateRef() = split(":").let { StateRef(SecureHash.parse(it[0]), it[1].toInt()) }
-        return items.map { it.key.toStateRef() to it.value.deserialize<UniquenessProvider.ConsumingTx>() }.toMap()
+    override fun commit(
+            states: List<StateRef>,
+            txId: SecureHash,
+            callerIdentity: Party,
+            requestSignature: NotarisationRequestSignature,
+            timeWindow: TimeWindow?) {
+        log.debug { "Attempting to commit input states: ${states.joinToString()}" }
+        val commitCommand = CommitTransaction(
+                states,
+                txId,
+                callerIdentity.name.toString(),
+                requestSignature.serialize().bytes,
+                timeWindow
+        )
+        val commitError = client.submit(commitCommand).get()
+        if (commitError != null) throw NotaryInternalException(commitError)
+        log.debug { "All input states of transaction $txId have been committed" }
     }
 }
 
-private fun writeMap(map: Map<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) = with(map) {
-    buffer.writeInt(size)
-    forEach {
-        with(serializer) {
-            writeObject(it.key, buffer)
-            writeObject(it.value, buffer)
-        }
-    }
-}
 
-private fun readMap(buffer: BufferInput<out BufferInput<*>>, serializer: Serializer): LinkedHashMap<Any, Any> {
-    return LinkedHashMap<Any, Any>().apply {
-        repeat(buffer.readInt()) {
-            put(serializer.readObject(buffer), serializer.readObject(buffer))
-        }
-    }
-}

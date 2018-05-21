@@ -51,14 +51,17 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     private companion object {
-        @JvmStatic
-        private fun createContractFor(className: ContractClassName): Try<Contract> {
-            return Try.on { this::class.java.classLoader.loadClass(className).asSubclass(Contract::class.java).getConstructor().newInstance() }
+        private fun contractClassFor(className: ContractClassName, classLoader: ClassLoader?): Try<Class<out Contract>> {
+            return Try.on {
+                (classLoader ?: this::class.java.classLoader)
+                        .loadClass(className)
+                        .asSubclass(Contract::class.java)
+            }
         }
     }
 
-    private val contracts: Map<ContractClassName, Try<Contract>> = (inputs.map { it.state.contract } + outputs.map { it.contract })
-            .toSet().map { it to createContractFor(it) }.toMap()
+    private val contracts: Map<ContractClassName, Try<Class<out Contract>>> = (inputs.map { it.state } + outputs)
+            .map { it.contract to contractClassFor(it.contract, it.data::class.java.classLoader) }.toMap()
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
 
@@ -116,17 +119,24 @@ data class LedgerTransaction @JvmOverloads constructor(
      * If any contract fails to verify, the whole transaction is considered to be invalid.
      */
     private fun verifyContracts() {
+        val contractInstances = ArrayList<Contract>(contracts.size)
         for ((key, result) in contracts) {
             when (result) {
                 is Try.Failure -> throw TransactionVerificationException.ContractCreationError(id, key, result.exception)
                 is Try.Success -> {
-                    val contract = result.value
                     try {
-                        contract.verify(this)
+                        contractInstances.add(result.value.newInstance())
                     } catch (e: Throwable) {
-                        throw TransactionVerificationException.ContractRejection(id, contract, e)
+                        throw TransactionVerificationException.ContractCreationError(id, result.value.name, e)
                     }
                 }
+            }
+        }
+        contractInstances.forEach { contract ->
+            try {
+                contract.verify(this)
+            } catch (e: Throwable) {
+                throw TransactionVerificationException.ContractRejection(id, contract, e)
             }
         }
     }

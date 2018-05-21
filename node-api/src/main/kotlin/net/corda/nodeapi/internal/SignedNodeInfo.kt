@@ -25,7 +25,7 @@ class SignedNodeInfo(val raw: SerializedBytes<NodeInfo>, val signatures: List<Di
     fun verified(): NodeInfo {
         val nodeInfo = raw.deserialize()
         val identities = nodeInfo.legalIdentities.filterNot { it.owningKey is CompositeKey }
-
+        require(identities.isNotEmpty()) { "At least one identity with a non-composite key needs to be specified." }
         if (identities.size < signatures.size) {
             throw SignatureException("Extra signatures. Found ${signatures.size} expected ${identities.size}")
         }
@@ -60,6 +60,7 @@ inline fun NodeInfo.sign(signer: (PublicKey, SerializedBytes<NodeInfo>) -> Digit
 class NodeInfoAndSigned private constructor(val nodeInfo: NodeInfo, val signed: SignedNodeInfo) {
     constructor(nodeInfo: NodeInfo, signer: (PublicKey, SerializedBytes<NodeInfo>) -> DigitalSignature) : this(nodeInfo, nodeInfo.sign(signer))
     constructor(signedNodeInfo: SignedNodeInfo) : this(signedNodeInfo.verified(), signedNodeInfo)
+
     operator fun component1(): NodeInfo = nodeInfo
     operator fun component2(): SignedNodeInfo = signed
 }

@@ -8,6 +8,7 @@ import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
+import javafx.collections.ListChangeListener
 import javafx.geometry.Bounds
 import javafx.geometry.Insets
 import javafx.geometry.Point2D
@@ -30,6 +31,7 @@ import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
@@ -68,7 +70,15 @@ class Network : CordaView() {
     private val notaryButtons = notaryComponents.map { it.button }
     private val peerComponents = peers.map { it.render() }
     private val peerButtons = peerComponents.filtered { myIdentity.value !in it.nodeInfo.legalIdentitiesAndCerts.map { it.party } }.map { it.button }
-    private val allComponents = FXCollections.observableArrayList(notaryComponents, peerComponents).concatenate()
+    private val allComponents = FXCollections.observableArrayList(notaryComponents, peerComponents).concatenate().apply {
+        addListener(ListChangeListener {
+            if (it.next()) {
+                it.removed.forEach {
+                    mapPane.children.remove(it.label)
+                }
+            }
+        })
+    }
     private val mapLabels = allComponents.map { it.label }
 
     private data class MapViewComponents(val nodeInfo: NodeInfo, val button: Button, val label: Label)
@@ -81,7 +91,11 @@ class Network : CordaView() {
                     .map { it as? PartiallyResolvedTransaction.InputResolution.Resolved }
                     .filterNotNull()
                     .map { it.stateAndRef.state.data }.getParties()
-            val outputParties = it.transaction.tx.outputStates.observable().getParties()
+            val outputParties = it.transaction.coreTransaction.let {
+                if (it is WireTransaction) it.outputStates.observable().getParties()
+                // For ContractUpgradeWireTransaction and NotaryChangeWireTransaction the output parties are the same as input parties
+                else inputParties
+            }
             val signingParties = it.transaction.sigs.map { it.by.toKnownParty() }
             // Input parties fire a bullets to all output parties, and to the signing parties. !! This is a rough guess of how the message moves in the network.
             // TODO : Expose artemis queue to get real message information.

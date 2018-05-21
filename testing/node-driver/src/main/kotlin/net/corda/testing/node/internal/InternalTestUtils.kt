@@ -1,5 +1,6 @@
 package net.corda.testing.node.internal
 
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
@@ -16,6 +17,7 @@ import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.User
 import net.corda.testing.node.testContext
 import org.slf4j.LoggerFactory
 import java.net.Socket
@@ -113,4 +115,4 @@ internal interface InternalMockMessagingService : MessagingService {
     fun stop()
 }
 
-
+fun CordaRPCClient.start(user: User) = start(user.username, user.password)

@@ -17,7 +17,6 @@ import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.flows.ConfigHolder.Companion.supportedCurrencies
 import java.io.IOException
-import java.nio.file.Path
 import java.util.*
 
 // TODO Until apps have access to their own config, we'll hack things by first getting the baseDirectory, read the node.conf
@@ -34,7 +33,7 @@ class ConfigHolder(services: AppServiceHub) : SingletonSerializeAsToken() {
         // Warning!! You are about to see a major hack!
         val baseDirectory = services.declaredField<Any>("serviceHub").value
                 .let { it.javaClass.getMethod("getConfiguration").apply { isAccessible = true }.invoke(it) }
-                .let { it.javaClass.getMethod("getBaseDirectory").apply { isAccessible = true }.invoke(it)}
+                .let { it.javaClass.getMethod("getBaseDirectory").apply { isAccessible = true }.invoke(it) }
                 .let { it.javaClass.getMethod("toString").apply { isAccessible = true }.invoke(it) as String }
 
         var issuableCurrenciesValue: List<Currency>
@@ -52,7 +51,6 @@ class ConfigHolder(services: AppServiceHub) : SingletonSerializeAsToken() {
         issuableCurrencies = issuableCurrenciesValue
     }
 }
-
 
 /**
  * Flow to obtain cash cordapp app configuration.

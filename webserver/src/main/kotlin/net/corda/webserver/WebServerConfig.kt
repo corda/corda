@@ -14,6 +14,7 @@ import java.nio.file.Path
 class WebServerConfig(override val baseDirectory: Path, val config: Config) : NodeSSLConfiguration {
     override val keyStorePassword: String by config
     override val trustStorePassword: String by config
+    override val crlCheckSoftFail: Boolean by config
     val useHTTPS: Boolean by config
     val myLegalName: String by config
     val rpcAddress: NetworkHostAndPort by lazy {
@@ -36,6 +37,6 @@ class WebServerConfig(override val baseDirectory: Path, val config: Config) : No
         } else {
             config.getConfigList("security.authService.dataSource.users")
         }
-        runAs = users.first().parseAs<User>()
+        runAs = users.first().parseAs()
     }
 }

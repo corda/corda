@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
 import net.corda.core.internal.CertRole
+import net.corda.core.internal.hash
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
@@ -17,6 +18,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
+import java.io.Serializable
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -61,7 +63,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
             )
         }
 
-        private fun mapToKey(owningKey: PublicKey) = SecureHash.sha256(owningKey.encoded)
+        private fun mapToKey(owningKey: PublicKey) = owningKey.hash
         private fun mapToKey(party: PartyAndCertificate) = mapToKey(party.owningKey)
     }
 
@@ -75,7 +77,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
             @Lob
             @Column(name = "identity_value")
             var identity: ByteArray = EMPTY_BYTE_ARRAY
-    )
+    ) : Serializable
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}named_identities")
@@ -86,7 +88,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
 
             @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE)
             var publicKeyHash: String = ""
-    )
+    ) : Serializable
 
     override val caCertStore: CertStore
     override val trustAnchor: TrustAnchor = TrustAnchor(trustRoot, null)
@@ -109,6 +111,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         confidentialIdentities.forEach {
             principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it), false)
         }
+        log.debug("Identities loaded")
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
@@ -177,22 +180,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         val results = LinkedHashSet<Party>()
         for ((x500name, partyId) in principalToParties.allPersisted()) {
-            val party = keyToParties[partyId]!!.party
-            val components = listOfNotNull(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country)
-            components.forEach { component ->
-                if (exactMatch && component == query) {
-                    results += party
-                } else if (!exactMatch) {
-                    // We can imagine this being a query over a lucene index in future.
-                    //
-                    // Kostas says: We can easily use the Jaro-Winkler distance metric as it is best suited for short
-                    // strings such as entity/company names, and to detect small typos. We can also apply it for city
-                    // or any keyword related search in lists of records (not raw text - for raw text we need indexing)
-                    // and we can return results in hierarchical order (based on normalised String similarity 0.0-1.0).
-                    if (component.contains(query, ignoreCase = true))
-                        results += party
-                }
-            }
+            partiesFromName(query, exactMatch, x500name, results, keyToParties[partyId]!!.party)
         }
         return results
     }

@@ -62,7 +62,7 @@ const val MAX_ISSUER_REF_SIZE = 512
  * cares about specific issuers with code that will accept any, or which is imposing issuer constraints via some
  * other mechanism and the additional type safety is not wanted.
  */
-fun <T : Any> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.product)
+fun <T : Any> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, displayTokenSize, token.product)
 
 // DOCSTART 3
 
@@ -196,7 +196,7 @@ data class Command<T : CommandData>(val value: T, val signers: List<PublicKey>) 
     constructor(data: T, key: PublicKey) : this(data, listOf(key))
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
-    override fun toString() = "${commandDataToString()} with pubkeys ${signers.map { it.toStringShort() }.joinToString()}"
+    override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString { it.toStringShort() }}"
 }
 
 /** A common move command for contract states which can change owner. */

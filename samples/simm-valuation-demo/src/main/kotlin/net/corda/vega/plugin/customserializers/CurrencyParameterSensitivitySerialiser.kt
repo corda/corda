@@ -14,13 +14,12 @@ class CurrencyParameterSensitivitySerializer :
                      val parameterMetadata: List<ParameterMetadata>,
                      val sensitivity: DoubleArray)
 
-    override fun fromProxy(proxy: CurrencyParameterSensitivitySerializer.Proxy) =
+    override fun fromProxy(proxy: CurrencyParameterSensitivitySerializer.Proxy): CurrencyParameterSensitivity =
             CurrencyParameterSensitivity.of(
                     proxy.marketDataName,
                     proxy.parameterMetadata,
                     proxy.currency,
                     proxy.sensitivity)
 
-    override fun toProxy(obj: CurrencyParameterSensitivity) = Proxy((obj as CurrencyParameterSensitivity).currency,
-            obj.marketDataName, obj.parameterMetadata, obj.sensitivity)
+    override fun toProxy(obj: CurrencyParameterSensitivity) = Proxy(obj.currency, obj.marketDataName, obj.parameterMetadata, obj.sensitivity)
 }

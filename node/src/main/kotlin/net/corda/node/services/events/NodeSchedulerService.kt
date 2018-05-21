@@ -8,7 +8,6 @@ import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.internal.ThreadBox
@@ -26,14 +25,15 @@ import net.corda.node.MutableClock
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchedulerService
-import net.corda.node.utilities.PersistentMap
+import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.apache.mina.util.ConcurrentHashSet
 import org.slf4j.Logger
+import java.io.Serializable
 import java.time.Duration
 import java.time.Instant
-import java.util.*
 import java.util.concurrent.*
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
@@ -60,16 +60,16 @@ class NodeSchedulerService(private val clock: CordaClock,
                            private val flowStarter: FlowStarter,
                            private val servicesForResolution: ServicesForResolution,
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch(),
-                           private val serverThread: Executor,
                            private val flowLogicRefFactory: FlowLogicRefFactory,
                            private val nodeProperties: NodePropertiesStore,
                            private val drainingModePollPeriod: Duration,
                            private val log: Logger = staticLog,
-                           private val scheduledStates: MutableMap<StateRef, ScheduledStateRef> = createMap())
+                           private val schedulerRepo: ScheduledFlowRepository = PersistentScheduledFlowRepository(database))
     : SchedulerService, SingletonSerializeAsToken() {
 
     companion object {
         private val staticLog get() = contextLogger()
+
         /**
          * Wait until the given [Future] is complete or the deadline is reached, with support for [MutableClock] implementations
          * used in demos or testing.  This will substitute a Fiber compatible Future so the current
@@ -108,26 +108,6 @@ class NodeSchedulerService(private val clock: CordaClock,
             return future.isDone
         }
 
-        fun createMap(): PersistentMap<StateRef, ScheduledStateRef, PersistentScheduledState, PersistentStateRef> {
-            return PersistentMap(
-                    toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
-                    fromPersistentEntity = {
-                        //TODO null check will become obsolete after making DB/JPA columns not nullable
-                        val txId = it.output.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
-                        val index = it.output.index ?: throw IllegalStateException("DB returned null SecureHash index")
-                        Pair(StateRef(SecureHash.parse(txId), index),
-                                ScheduledStateRef(StateRef(SecureHash.parse(txId), index), it.scheduledAt))
-                    },
-                    toPersistentEntity = { key: StateRef, value: ScheduledStateRef ->
-                        PersistentScheduledState().apply {
-                            output = PersistentStateRef(key.txhash.toString(), key.index)
-                            scheduledAt = value.scheduledAt
-                        }
-                    },
-                    persistentEntityClass = PersistentScheduledState::class.java
-            )
-        }
-
         /**
          * Convert a Guava [ListenableFuture] or JDK8 [CompletableFuture] to Quasar implementation and set to true when a result
          * or [Throwable] is available in the original.
@@ -155,39 +135,36 @@ class NodeSchedulerService(private val clock: CordaClock,
 
             @Column(name = "scheduled_at", nullable = false)
             var scheduledAt: Instant = Instant.now()
-    )
+    ) : Serializable
 
     private class InnerState {
-        var scheduledStatesQueue: PriorityQueue<ScheduledStateRef> = PriorityQueue({ a, b -> a.scheduledAt.compareTo(b.scheduledAt) })
-
         var rescheduled: GuavaSettableFuture<Boolean>? = null
+        var nextScheduledAction: ScheduledStateRef? = null
     }
+
+    // Used to de-duplicate flow starts in case a flow is starting but the corresponding entry hasn't been removed yet
+    // from the database
+    private val startingStateRefs = ConcurrentHashSet<ScheduledStateRef>()
 
     private val mutex = ThreadBox(InnerState())
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         mutex.locked {
-            scheduledStatesQueue.addAll(scheduledStates.values)
             rescheduleWakeUp()
         }
     }
 
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
-        val previousState = scheduledStates[action.ref]
-        scheduledStates[action.ref] = action
+        if (!schedulerRepo.merge(action)) {
+            // Only increase the number of unfinished schedules if the state didn't already exist on the queue
+            unfinishedSchedules.countUp()
+        }
         mutex.locked {
-            val previousEarliest = scheduledStatesQueue.peek()
-            scheduledStatesQueue.remove(previousState)
-            scheduledStatesQueue.add(action)
-            if (previousState == null) {
-                unfinishedSchedules.countUp()
-            }
-
-            if (action.scheduledAt.isBefore(previousEarliest?.scheduledAt ?: Instant.MAX)) {
+            if (action.scheduledAt < nextScheduledAction?.scheduledAt ?: Instant.MAX) {
                 // We are earliest
                 rescheduleWakeUp()
-            } else if (previousEarliest?.ref == action.ref && previousEarliest.scheduledAt != action.scheduledAt) {
+            } else if (action.ref == nextScheduledAction?.ref && action.scheduledAt != nextScheduledAction?.scheduledAt) {
                 // We were earliest but might not be any more
                 rescheduleWakeUp()
             }
@@ -196,17 +173,12 @@ class NodeSchedulerService(private val clock: CordaClock,
 
     override fun unscheduleStateActivity(ref: StateRef) {
         log.trace { "Unschedule $ref" }
-        val removedAction = scheduledStates.remove(ref)
+        if (startingStateRefs.all { it.ref != ref } && schedulerRepo.delete(ref)) {
+            unfinishedSchedules.countDown()
+        }
         mutex.locked {
-            if (removedAction != null) {
-                val wasNext = (removedAction == scheduledStatesQueue.peek())
-                val wasRemoved = scheduledStatesQueue.remove(removedAction)
-                if (wasRemoved) {
-                    unfinishedSchedules.countDown()
-                }
-                if (wasNext) {
-                    rescheduleWakeUp()
-                }
+            if (nextScheduledAction?.ref == ref) {
+                rescheduleWakeUp()
             }
         }
     }
@@ -225,7 +197,9 @@ class NodeSchedulerService(private val clock: CordaClock,
         val (scheduledState, ourRescheduledFuture) = mutex.alreadyLocked {
             rescheduled?.cancel(false)
             rescheduled = GuavaSettableFuture.create()
-            Pair(scheduledStatesQueue.peek(), rescheduled!!)
+            //get the next scheduled action that isn't currently running
+            nextScheduledAction = schedulerRepo.getLatest(startingStateRefs.size + 1).firstOrNull { !startingStateRefs.contains(it.second) }?.second
+            Pair(nextScheduledAction, rescheduled!!)
         }
         if (scheduledState != null) {
             schedulerTimerExecutor.execute {
@@ -247,46 +221,61 @@ class NodeSchedulerService(private val clock: CordaClock,
         schedulerTimerExecutor.join()
     }
 
-    private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        serverThread.execute {
-            var flowName: String? = "(unknown)"
-            try {
-                database.transaction {
-                    val scheduledFlow = getScheduledFlow(scheduledState)
-                    if (scheduledFlow != null) {
-                        flowName = scheduledFlow.javaClass.name
-                        // TODO refactor the scheduler to store and propagate the original invocation context
-                        val context = InvocationContext.newInstance(InvocationOrigin.Scheduled(scheduledState))
-                        val future = flowStarter.startFlow(scheduledFlow, context).flatMap { it.resultFuture }
-                        future.then {
-                            unfinishedSchedules.countDown()
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                log.error("Failed to start scheduled flow $flowName for $scheduledState due to an internal error", e)
-            }
+    @VisibleForTesting
+    internal fun cancelAndWait() {
+        schedulerTimerExecutor.shutdownNow()
+        schedulerTimerExecutor.join()
+    }
+
+    private inner class FlowStartDeduplicationHandler(val scheduledState: ScheduledStateRef) : DeduplicationHandler {
+        override fun insideDatabaseTransaction() {
+            schedulerRepo.delete(scheduledState.ref)
+        }
+
+        override fun afterDatabaseTransaction() {
+            startingStateRefs.remove(scheduledState)
+        }
+
+        override fun toString(): String {
+            return "${javaClass.simpleName}($scheduledState)"
         }
     }
 
-    private fun getScheduledFlow(scheduledState: ScheduledStateRef): FlowLogic<*>? {
+    private fun onTimeReached(scheduledState: ScheduledStateRef) {
+        var flowName: String? = "(unknown)"
+        try {
+            database.transaction {
+                val scheduledFlow = getFlow(scheduledState)
+                if (scheduledFlow != null) {
+                    flowName = scheduledFlow.javaClass.name
+                    // TODO refactor the scheduler to store and propagate the original invocation context
+                    val context = InvocationContext.newInstance(InvocationOrigin.Scheduled(scheduledState))
+                    val deduplicationHandler = FlowStartDeduplicationHandler(scheduledState)
+                    val future = flowStarter.startFlow(scheduledFlow, context, deduplicationHandler).flatMap { it.resultFuture }
+                    future.then {
+                        unfinishedSchedules.countDown()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            log.error("Failed to start scheduled flow $flowName for $scheduledState due to an internal error", e)
+        }
+    }
+
+    private fun getFlow(scheduledState: ScheduledStateRef): FlowLogic<*>? {
         val scheduledActivity = getScheduledActivity(scheduledState)
         var scheduledFlow: FlowLogic<*>? = null
         mutex.locked {
             // need to remove us from those scheduled, but only if we are still next
-            val previousState = scheduledStates[scheduledState.ref]
-            if (previousState != null && previousState === scheduledState) {
+            if (nextScheduledAction != null && nextScheduledAction === scheduledState) {
                 if (scheduledActivity == null) {
                     log.info("Scheduled state $scheduledState has rescheduled to never.")
                     unfinishedSchedules.countDown()
-                    scheduledStates.remove(scheduledState.ref)
-                    scheduledStatesQueue.remove(scheduledState)
+                    schedulerRepo.delete(scheduledState.ref)
                 } else if (scheduledActivity.scheduledAt.isAfter(clock.instant())) {
                     log.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
                     val newState = ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
-                    scheduledStates[scheduledState.ref] = newState
-                    scheduledStatesQueue.remove(scheduledState)
-                    scheduledStatesQueue.add(newState)
+                    schedulerRepo.merge(newState)
                 } else {
                     val flowLogic = flowLogicRefFactory.toFlowLogic(scheduledActivity.logicRef)
                     scheduledFlow = when {
@@ -297,8 +286,8 @@ class NodeSchedulerService(private val clock: CordaClock,
                         }
                         else -> {
                             log.trace { "Scheduler starting FlowLogic $flowLogic" }
-                            scheduledStates.remove(scheduledState.ref)
-                            scheduledStatesQueue.remove(scheduledState)
+                            //Add this to the in memory list of starting refs so it is not picked up on the next rescheduleWakeUp()
+                            startingStateRefs.add(scheduledState)
                             flowLogic
                         }
                     }

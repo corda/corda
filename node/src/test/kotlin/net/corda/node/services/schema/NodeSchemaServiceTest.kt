@@ -20,6 +20,7 @@ import org.hibernate.annotations.Cascade
 import org.hibernate.annotations.CascadeType
 import org.junit.Ignore
 import org.junit.Test
+import java.io.Serializable
 import javax.persistence.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -106,8 +107,8 @@ class NodeSchemaServiceTest {
     @Test
     fun `check node runs inclusive of notary node schema set using driverDSL`() {
         driver(DriverParameters(startNodesInProcess = true)) {
-            val notaryNode = defaultNotaryNode.getOrThrow().rpc.startFlow(::MappedSchemasFlow)
-            val mappedSchemas = notaryNode.returnValue.getOrThrow()
+            val notary = defaultNotaryNode.getOrThrow()
+            val mappedSchemas = notary.rpc.startFlow(::MappedSchemasFlow).returnValue.getOrThrow()
             // check against NodeCore + NodeNotary Schemas
             assertTrue(mappedSchemas.contains(NodeCoreV1.name))
             assertTrue(mappedSchemas.contains(NodeNotaryV1.name))
@@ -141,7 +142,7 @@ object TestSchema : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::clas
     @Suppress("unused")
     @Entity
     @Table(name = "Children")
-    class Child {
+    class Child : Serializable {
         @Id
         @GeneratedValue
         @Column(name = "child_id", unique = true, nullable = false)

@@ -1,6 +1,8 @@
 package net.corda.nodeapi.internal.network
 
-import net.corda.core.internal.*
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.div
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.createDevNetworkMapCa
@@ -11,16 +13,13 @@ import java.nio.file.StandardCopyOption
 
 class NetworkParametersCopier(
         networkParameters: NetworkParameters,
-        networkMapCa: CertificateAndKeyPair = createDevNetworkMapCa(),
+        signingCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa(),
         overwriteFile: Boolean = false,
         @VisibleForTesting
         val update: Boolean = false
 ) {
     private val copyOptions = if (overwriteFile) arrayOf(StandardCopyOption.REPLACE_EXISTING) else emptyArray()
-    private val serialisedSignedNetParams = networkParameters.signWithCert(
-            networkMapCa.keyPair.private,
-            networkMapCa.certificate
-    ).serialize()
+    private val serialisedSignedNetParams = signingCertAndKeyPair.sign(networkParameters).serialize()
 
     fun install(nodeDir: Path) {
         val fileName = if (update) NETWORK_PARAMS_UPDATE_FILE_NAME else NETWORK_PARAMS_FILE_NAME

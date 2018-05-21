@@ -20,7 +20,7 @@ stored states, transactions and attachments as follows:
 
   ``Database connection URL is              : jdbc:h2:tcp://10.18.0.150:56736/node``
 
-* Paste this string into the JDBC URL field and click ``Connect``, using the default username and password.
+* Paste this string into the JDBC URL field and click ``Connect``, using the default username (``sa``) and no password.
 
 You will be presented with a web interface that shows the contents of your node's storage and vault, and provides an
 interface for you to query them using SQL.

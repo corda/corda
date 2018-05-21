@@ -50,10 +50,12 @@ class CashExitFlow(private val amount: Amount<Currency>,
                 .getInstance { serviceHub.jdbcSession().metaData }
                 .unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
+            val changeOwner = exitStates.map { it.state.data.owner }.toSet().firstOrNull() ?: throw InsufficientBalanceException(amount)
             Cash().generateExit(
                     builder,
                     amount.issuedBy(issuer),
-                    exitStates)
+                    exitStates,
+                    changeOwner)
         } catch (e: InsufficientBalanceException) {
             throw CashException("Exiting more cash than exists", e)
         }

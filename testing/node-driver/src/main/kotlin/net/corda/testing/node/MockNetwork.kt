@@ -33,17 +33,23 @@ import java.nio.file.Path
  * @property entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
  * but can be overridden to cause nodes to have stable or colliding identity/service keys.
  * @property configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
+ * @property extraCordappPackages Extra CorDapp packages to include for this node.
  */
 @Suppress("unused")
-data class MockNodeParameters(
+data class MockNodeParameters @JvmOverloads constructor(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-        val configOverrides: (NodeConfiguration) -> Any? = {}) {
+        val configOverrides: (NodeConfiguration) -> Any? = {},
+        val extraCordappPackages: List<String> = emptyList()) {
     fun withForcedID(forcedID: Int?): MockNodeParameters = copy(forcedID = forcedID)
     fun withLegalName(legalName: CordaX500Name?): MockNodeParameters = copy(legalName = legalName)
     fun withEntropyRoot(entropyRoot: BigInteger): MockNodeParameters = copy(entropyRoot = entropyRoot)
     fun withConfigOverrides(configOverrides: (NodeConfiguration) -> Any?): MockNodeParameters = copy(configOverrides = configOverrides)
+    fun withExtraCordappPackages(extraCordappPackages: List<String>): MockNodeParameters = copy(extraCordappPackages = extraCordappPackages)
+    fun copy(forcedID: Int?, legalName: CordaX500Name?, entropyRoot: BigInteger, configOverrides: (NodeConfiguration) -> Any?): MockNodeParameters {
+        return MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides)
+    }
 }
 
 /**
@@ -248,14 +254,15 @@ open class MockNetwork(
      * @param entropyRoot The initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overridden to cause nodes to have stable or colliding identity/service keys.
      * @param configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
-     * @param version The mock node's platform, release, revision and vendor versions.
+     * @param extraCordappPackages Extra CorDapp packages to add for this node.
      */
     @JvmOverloads
     fun createNode(legalName: CordaX500Name? = null,
                    forcedID: Int? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                   configOverrides: (NodeConfiguration) -> Any? = {}): StartedMockNode {
-        val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides)
+                   configOverrides: (NodeConfiguration) -> Any? = {},
+                   extraCordappPackages: List<String> = emptyList()): StartedMockNode {
+        val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, extraCordappPackages)
         return StartedMockNode.create(internalMockNetwork.createNode(InternalMockNodeParameters(parameters)))
     }
 
@@ -270,14 +277,15 @@ open class MockNetwork(
      * @param entropyRoot The initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overridden to cause nodes to have stable or colliding identity/service keys.
      * @param configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
-     * @param version The mock node's platform, release, revision and vendor versions.
+     * @param extraCordappPackages Extra CorDapp packages to add for this node.
      */
     @JvmOverloads
     fun createUnstartedNode(legalName: CordaX500Name? = null,
                             forcedID: Int? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                            configOverrides: (NodeConfiguration) -> Any? = {}): UnstartedMockNode {
-        val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides)
+                            configOverrides: (NodeConfiguration) -> Any? = {},
+                            extraCordappPackages: List<String> = emptyList()): UnstartedMockNode {
+        val parameters = MockNodeParameters(forcedID, legalName, entropyRoot, configOverrides, extraCordappPackages)
         return UnstartedMockNode.create(internalMockNetwork.createUnstartedNode(InternalMockNodeParameters(parameters)))
     }
 

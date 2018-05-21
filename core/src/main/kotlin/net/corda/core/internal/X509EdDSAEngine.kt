@@ -29,7 +29,7 @@ class X509EdDSAEngine : Signature {
     override fun engineInitVerify(publicKey: PublicKey) {
         val parsedKey = try {
             publicKey as? EdDSAPublicKey ?: EdDSAPublicKey(X509EncodedKeySpec(publicKey.encoded))
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             throw (InvalidKeyException(e.message))
         }
         engine.initVerify(parsedKey)
@@ -43,9 +43,9 @@ class X509EdDSAEngine : Signature {
 
     override fun engineGetParameters(): AlgorithmParameters = engine.parameters
     override fun engineSetParameter(params: AlgorithmParameterSpec) = engine.setParameter(params)
-    @Suppress("DEPRECATION")
+    @Suppress("DEPRECATION", "OverridingDeprecatedMember")
     override fun engineGetParameter(param: String): Any = engine.getParameter(param)
 
-    @Suppress("DEPRECATION")
+    @Suppress("DEPRECATION", "OverridingDeprecatedMember")
     override fun engineSetParameter(param: String, value: Any?) = engine.setParameter(param, value)
 }

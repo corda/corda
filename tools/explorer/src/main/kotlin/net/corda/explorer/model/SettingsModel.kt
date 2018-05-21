@@ -4,12 +4,8 @@ import javafx.beans.InvalidationListener
 import javafx.beans.Observable
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.SimpleObjectProperty
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.*
 import tornadofx.*
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
@@ -46,12 +42,12 @@ class SettingsModel(path: Path = Paths.get("conf")) : Component(), Observable {
     // Load config from properties file.
     fun load() = config.apply {
         clear()
-        if (Files.exists(path)) Files.newInputStream(path).use { load(it) }
+        if (path.exists()) path.read { load(it) }
         listeners.forEach { it.invalidated(this@SettingsModel) }
     }
 
     // Save all changes in memory to properties file.
-    fun commit() = Files.newOutputStream(path).use { config.store(it, "") }
+    fun commit() = path.write { config.store(it, "") }
 
     private operator fun <T> Properties.getValue(receiver: Any, metadata: KProperty<*>): T {
         return when (metadata.returnType.javaType) {

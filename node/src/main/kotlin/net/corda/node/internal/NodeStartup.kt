@@ -1,21 +1,27 @@
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
-import joptsimple.OptionException
+import io.netty.channel.unix.Errors
+import net.corda.core.crypto.Crypto
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.loggerFor
-import net.corda.node.*
+import net.corda.node.CmdLineOptions
+import net.corda.node.NodeArgsParser
+import net.corda.node.NodeRegistrationOption
+import net.corda.node.SerialFilter
+import net.corda.node.VersionInfo
+import net.corda.node.defaultSerialFilter
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
-import net.corda.node.utilities.registration.NetworkRegistrationHelper
+import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.tools.shell.InteractiveShell
@@ -29,14 +35,13 @@ import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
-import kotlin.system.exitProcess
 
 /** This class is responsible for starting a Node from command line arguments. */
 open class NodeStartup(val args: Array<String>) {
     companion object {
         private val logger by lazy { loggerFor<Node>() } // I guess this is lazy to allow for logging init, but why Node?
-        val LOGS_DIRECTORY_NAME = "logs"
-        val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
+        const val LOGS_DIRECTORY_NAME = "logs"
+        const val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
     }
 
     /**
@@ -49,7 +54,7 @@ open class NodeStartup(val args: Array<String>) {
             println("Corda will now exit...")
             return false
         }
-        val (argsParser, cmdlineOptions) = parseArguments()
+        val cmdlineOptions = NodeArgsParser().parseOrExit(*args)
 
         // We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
@@ -57,18 +62,17 @@ open class NodeStartup(val args: Array<String>) {
 
         initLogging(cmdlineOptions)
 
+        // Register all cryptography [Provider]s.
+        // Required to install our [SecureRandom] before e.g., UUID asks for one.
+        // This needs to go after initLogging(netty clashes with our logging).
+        Crypto.registerProviders()
+
         val versionInfo = getVersionInfo()
 
         if (cmdlineOptions.isVersion) {
             println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
             println("Revision ${versionInfo.revision}")
             println("Platform Version ${versionInfo.platformVersion}")
-            return true
-        }
-
-        // Maybe render command line help.
-        if (cmdlineOptions.help) {
-            argsParser.printHelp(System.out)
             return true
         }
 
@@ -104,9 +108,9 @@ open class NodeStartup(val args: Array<String>) {
         try {
             banJavaSerialisation(conf)
             preNetworkRegistration(conf)
-            if (cmdlineOptions.nodeRegistrationConfig != null) {
+            if (cmdlineOptions.nodeRegistrationOption != null) {
                 // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-                registerWithNetwork(conf, cmdlineOptions.nodeRegistrationConfig)
+                registerWithNetwork(conf, cmdlineOptions.nodeRegistrationOption)
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
@@ -119,6 +123,10 @@ open class NodeStartup(val args: Array<String>) {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
         } catch (e: Exception) {
+            if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
+                logger.error("One of the ports required by the Corda node is already in use.")
+                return false
+            }
             if (e.message?.startsWith("Unknown named curve:") == true) {
                 logger.error("Exception during node startup - ${e.message}. " +
                         "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
@@ -132,11 +140,11 @@ open class NodeStartup(val args: Array<String>) {
         return true
     }
 
-    open protected fun preNetworkRegistration(conf: NodeConfiguration) = Unit
+    protected open fun preNetworkRegistration(conf: NodeConfiguration) = Unit
 
-    open protected fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
+    protected open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
-    open protected fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
+    protected open fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
         val node = createNode(conf, versionInfo)
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
@@ -154,7 +162,7 @@ open class NodeStartup(val args: Array<String>) {
             if (conf.shouldStartLocalShell()) {
                 startedNode.internals.startupComplete.then {
                     try {
-                        InteractiveShell.runLocalShell( {startedNode.dispose()} )
+                        InteractiveShell.runLocalShell({ startedNode.dispose() })
                     } catch (e: Throwable) {
                         logger.error("Shell failed to start", e)
                     }
@@ -170,7 +178,7 @@ open class NodeStartup(val args: Array<String>) {
         startedNode.internals.run()
     }
 
-    open protected fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
+    protected open fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
         logger.info("Vendor: ${versionInfo.vendor}")
         logger.info("Release: ${versionInfo.releaseVersion}")
         logger.info("Platform Version: ${versionInfo.platformVersion}")
@@ -192,7 +200,7 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Starting as node on ${conf.p2pAddress}")
     }
 
-    open protected fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
+    protected open fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
         val compatibilityZoneURL = conf.compatibilityZoneURL!!
         println()
         println("******************************************************************")
@@ -200,16 +208,16 @@ open class NodeStartup(val args: Array<String>) {
         println("*       Registering as a new participant with Corda network      *")
         println("*                                                                *")
         println("******************************************************************")
-        NetworkRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
+        NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
     }
 
-    open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
+    protected open fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
 
-    open protected fun banJavaSerialisation(conf: NodeConfiguration) {
+    protected open fun banJavaSerialisation(conf: NodeConfiguration) {
         SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
     }
 
-    open protected fun getVersionInfo(): VersionInfo {
+    protected open fun getVersionInfo(): VersionInfo {
         // Manifest properties are only available if running from the corda jar
         fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
@@ -228,7 +236,6 @@ open class NodeStartup(val args: Array<String>) {
         // twice with the same directory: that's a user error and we should bail out.
         val pidFile = (baseDirectory / "process-id").toFile()
         pidFile.createNewFile()
-        pidFile.deleteOnExit()
         val pidFileRw = RandomAccessFile(pidFile, "rw")
         val pidFileLock = pidFileRw.channel.tryLock()
         if (pidFileLock == null) {
@@ -236,6 +243,7 @@ open class NodeStartup(val args: Array<String>) {
             println("Shut that other node down and try again. It may have process ID ${pidFile.readText()}")
             System.exit(1)
         }
+        pidFile.deleteOnExit()
         // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
         // when our process shuts down, but we try in stop() anyway just to be nice.
         addShutdownHook {
@@ -246,19 +254,7 @@ open class NodeStartup(val args: Array<String>) {
         pidFileRw.write(ourProcessID.toByteArray())
     }
 
-    private fun parseArguments(): Pair<ArgsParser, CmdLineOptions> {
-        val argsParser = ArgsParser()
-        val cmdlineOptions = try {
-            argsParser.parse(*args)
-        } catch (ex: OptionException) {
-            println("Invalid command line arguments: ${ex.message}")
-            argsParser.printHelp(System.out)
-            exitProcess(1)
-        }
-        return Pair(argsParser, cmdlineOptions)
-    }
-
-    open protected fun initLogging(cmdlineOptions: CmdLineOptions) {
+    protected open fun initLogging(cmdlineOptions: CmdLineOptions) {
         val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase(Locale.ENGLISH)
         System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
         if (cmdlineOptions.logToConsole) {
@@ -343,11 +339,7 @@ open class NodeStartup(val args: Array<String>) {
                     """  / ____/     _________/ /___ _""").newline().a(
                     """ / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
                     """/ /___  /_/ / /  / /_/ / /_/ /          """).fgBrightBlue().a(msg2).newline().fgBrightRed().a(
-                    """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
-                    a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").
-                    newline().
-                    newline().
-                    reset())
+                    """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").newline().newline().reset())
         }
     }
 }

@@ -1,41 +1,27 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.StateAndRef
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.sign
-import net.corda.core.flows.*
+import net.corda.core.crypto.*
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.Party
-import net.corda.core.internal.generateSignature
-import net.corda.core.messaging.MessageRecipients
+import net.corda.core.internal.NotaryChangeTransactionBuilder
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.messaging.Message
-import net.corda.node.services.statemachine.InitialSessionMessage
-import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.dummyCommand
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.internal.*
-import org.assertj.core.api.Assertions.assertThat
+import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.time.Instant
-import java.util.*
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 class NotaryServiceTests {
     private lateinit var mockNet: InternalMockNetwork
@@ -46,7 +32,10 @@ class NotaryServiceTests {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(
+                cordappPackages = listOf("net.corda.testing.contracts"),
+                notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME, validating = false))
+        )
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         notaryServices = mockNet.defaultNotaryNode.services //TODO get rid of that
         notary = mockNet.defaultNotaryIdentity
@@ -59,188 +48,39 @@ class NotaryServiceTests {
     }
 
     @Test
-    fun `should sign a unique transaction with a valid time-window`() {
-        val stx = run {
-            val inputState = issueState(aliceNode.services, alice)
-            val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
-                    .addCommand(dummyCommand(alice.owningKey))
-                    .setTimeWindow(Instant.now(), 30.seconds)
-            aliceNode.services.signInitialTransaction(tx)
-        }
-
-        val future = runNotaryClient(stx)
-        val signatures = future.getOrThrow()
-        signatures.forEach { it.verify(stx.id) }
+    fun `should reject a transaction with too many inputs`() {
+        notariseWithTooManyInputs(aliceNode, alice, notary, mockNet)
     }
 
-    @Test
-    fun `should sign a unique transaction without a time-window`() {
-        val stx = run {
-            val inputState = issueState(aliceNode.services, alice)
-            val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
-                    .addCommand(dummyCommand(alice.owningKey))
-            aliceNode.services.signInitialTransaction(tx)
+    internal companion object {
+        /** This is used by both [NotaryServiceTests] and [ValidatingNotaryServiceTests]. */
+        fun notariseWithTooManyInputs(node: StartedNode<InternalMockNetwork.MockNode>, party: Party, notary: Party, network: InternalMockNetwork) {
+            val stx = generateTransaction(node, party, notary)
+
+            val future = node.services.startFlow(DummyClientFlow(stx, notary)).resultFuture
+            network.runNetwork()
+            assertFailsWith<NotaryException> { future.getOrThrow() }
         }
 
-        val future = runNotaryClient(stx)
-        val signatures = future.getOrThrow()
-        signatures.forEach { it.verify(stx.id) }
-    }
+        private fun generateTransaction(node: StartedNode<InternalMockNetwork.MockNode>, party: Party, notary: Party): SignedTransaction {
+            val txHash = SecureHash.randomSHA256()
+            val inputs = (1..10_005).map { StateRef(txHash, it) }
+            val tx = NotaryChangeTransactionBuilder(inputs, notary, party).build()
 
-    @Test
-    fun `should report error for transaction with an invalid time-window`() {
-        val stx = run {
-            val inputState = issueState(aliceNode.services, alice)
-            val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
-                    .addCommand(dummyCommand(alice.owningKey))
-                    .setTimeWindow(Instant.now().plusSeconds(3600), 30.seconds)
-            aliceNode.services.signInitialTransaction(tx)
-        }
-
-        val future = runNotaryClient(stx)
-
-        val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
-        assertThat(ex.error).isInstanceOf(NotaryError.TimeWindowInvalid::class.java)
-    }
-
-    @Test
-    fun `should sign identical transaction multiple times (notarisation is idempotent)`() {
-        val stx = run {
-            val inputState = issueState(aliceNode.services, alice)
-            val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
-                    .addCommand(dummyCommand(alice.owningKey))
-            aliceNode.services.signInitialTransaction(tx)
-        }
-
-        val firstAttempt = NotaryFlow.Client(stx)
-        val secondAttempt = NotaryFlow.Client(stx)
-        val f1 = aliceNode.services.startFlow(firstAttempt).resultFuture
-        val f2 = aliceNode.services.startFlow(secondAttempt).resultFuture
-
-        mockNet.runNetwork()
-
-        // Note that the notary will only return identical signatures when using deterministic signature
-        // schemes (e.g. EdDSA) and when deterministic metadata is attached (no timestamps or nonces).
-        // We only really care that both signatures are over the same transaction and by the same notary.
-        val sig1 = f1.getOrThrow().single()
-        assertEquals(sig1.by, notary.owningKey)
-        assertTrue(sig1.isValid(stx.id))
-
-        val sig2 = f2.getOrThrow().single()
-        assertEquals(sig2.by, notary.owningKey)
-        assertTrue(sig2.isValid(stx.id))
-    }
-
-    @Test
-    fun `should report conflict when inputs are reused across transactions`() {
-        val inputState = issueState(aliceNode.services, alice)
-        val stx = run {
-            val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
-                    .addCommand(dummyCommand(alice.owningKey))
-            aliceNode.services.signInitialTransaction(tx)
-        }
-        val stx2 = run {
-            val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
-                    .addInputState(issueState(aliceNode.services, alice))
-                    .addCommand(dummyCommand(alice.owningKey))
-            aliceNode.services.signInitialTransaction(tx)
-        }
-
-        val firstSpend = NotaryFlow.Client(stx)
-        val secondSpend = NotaryFlow.Client(stx2) // Double spend the inputState in a second transaction.
-        aliceNode.services.startFlow(firstSpend)
-        val future = aliceNode.services.startFlow(secondSpend)
-
-        mockNet.runNetwork()
-
-        val ex = assertFailsWith(NotaryException::class) { future.resultFuture.getOrThrow() }
-        val notaryError = ex.error as NotaryError.Conflict
-        assertEquals(notaryError.txId, stx2.id)
-        notaryError.conflict.verified()
-    }
-
-    @Test
-    fun `should reject when notarisation request not signed by the requesting party`() {
-        runNotarisationAndInterceptClientPayload { originalPayload ->
-            val transaction = originalPayload.signedTransaction
-            val randomKeyPair = Crypto.generateKeyPair()
-            val bytesToSign = NotarisationRequest(transaction.inputs, transaction.id).serialize().bytes
-            val modifiedSignature = NotarisationRequestSignature(randomKeyPair.sign(bytesToSign), aliceNode.services.myInfo.platformVersion)
-            originalPayload.copy(requestSignature = modifiedSignature)
-        }
-    }
-
-    @Test
-    fun `should reject when incorrect notarisation request signed - inputs don't match`() {
-        runNotarisationAndInterceptClientPayload { originalPayload ->
-            val transaction = originalPayload.signedTransaction
-            val wrongInputs = listOf(StateRef(SecureHash.randomSHA256(), 0))
-            val request = NotarisationRequest(wrongInputs, transaction.id)
-            val modifiedSignature = request.generateSignature(aliceNode.services)
-            originalPayload.copy(requestSignature = modifiedSignature)
-        }
-    }
-
-    @Test
-    fun `should reject when incorrect notarisation request signed - transaction id doesn't match`() {
-        runNotarisationAndInterceptClientPayload { originalPayload ->
-            val transaction = originalPayload.signedTransaction
-            val wrongTransactionId = SecureHash.randomSHA256()
-            val request = NotarisationRequest(transaction.inputs, wrongTransactionId)
-            val modifiedSignature = request.generateSignature(aliceNode.services)
-            originalPayload.copy(requestSignature = modifiedSignature)
-        }
-    }
-
-    private fun runNotarisationAndInterceptClientPayload(payloadModifier: (NotarisationPayload) -> NotarisationPayload) {
-        aliceNode.setMessagingServiceSpy(object : MessagingServiceSpy(aliceNode.network) {
-            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
-                val messageData = message.data.deserialize<Any>() as? InitialSessionMessage
-                val payload = messageData?.firstPayload!!.deserialize()
-
-                if (payload is NotarisationPayload) {
-                    val alteredPayload = payloadModifier(payload)
-                    val alteredMessageData = messageData.copy(firstPayload = alteredPayload.serialize())
-                    val alteredMessage = InMemoryMessage(message.topic, OpaqueBytes(alteredMessageData.serialize().bytes), message.uniqueMessageId)
-                    messagingService.send(alteredMessage, target, retryId)
-
-                } else {
-                    messagingService.send(message, target, retryId)
-                }
+            return node.services.run {
+                val myKey = myInfo.legalIdentities.first().owningKey
+                val signableData = SignableData(tx.id, SignatureMetadata(myInfo.platformVersion, Crypto.findSignatureScheme(myKey).schemeNumberID))
+                val mySignature = keyManagementService.sign(signableData, myKey)
+                SignedTransaction(tx, listOf(mySignature))
             }
-        })
-
-        val stx = run {
-            val inputState = issueState(aliceNode.services, alice)
-            val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
-                    .addCommand(dummyCommand(alice.owningKey))
-            aliceNode.services.signInitialTransaction(tx)
         }
 
-        val future = runNotaryClient(stx)
-        val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
-        assertThat(ex.error).isInstanceOf(NotaryError.RequestSignatureInvalid::class.java)
-    }
-
-    private fun runNotaryClient(stx: SignedTransaction): CordaFuture<List<TransactionSignature>> {
-        val flow = NotaryFlow.Client(stx)
-        val future = aliceNode.services.startFlow(flow).resultFuture
-        mockNet.runNetwork()
-        return future
-    }
-
-    private fun issueState(services: ServiceHub, identity: Party): StateAndRef<*> {
-        val tx = DummyContract.generateInitial(Random().nextInt(), notary, identity.ref(0))
-        val signedByNode = services.signInitialTransaction(tx)
-        val stx = notaryServices.addSignature(signedByNode, notary.owningKey)
-        services.recordTransactions(stx)
-        return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
+        private class DummyClientFlow(stx: SignedTransaction, val notary: Party) : NotaryFlow.Client(stx) {
+            @Suspendable
+            override fun call(): List<TransactionSignature> {
+                notarise(notary)
+                throw UnsupportedOperationException()
+            }
+        }
     }
 }

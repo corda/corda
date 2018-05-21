@@ -1,6 +1,6 @@
 package net.corda.client.rpc
 
-import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
@@ -49,7 +49,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
         override fun newLatch(numberOfDowns: Int): Long {
             val id = random63BitValue()
             val latch = CountDownLatch(numberOfDowns)
-            latches.put(id, latch)
+            latches[id] = latch
             return id
         }
 
@@ -90,9 +90,8 @@ class RPCConcurrencyTests : AbstractRPCTest() {
     private fun RPCDriverDSL.testProxy(): TestProxy<TestOps> {
         return testProxy<TestOps>(
                 TestOpsImpl(pool),
-                clientConfiguration = RPCClientConfiguration.default.copy(
-                        reapInterval = 100.millis,
-                        cacheConcurrencyLevel = 16
+                clientConfiguration = CordaRPCClientConfigurationImpl.default.copy(
+                        reapInterval = 100.millis
                 ),
                 serverConfiguration = RPCServerConfiguration.default.copy(
                         rpcThreadPoolSize = 4

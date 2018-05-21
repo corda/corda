@@ -20,12 +20,15 @@ const val TEST_UPLOADER = "test"
 const val P2P_UPLOADER = "p2p"
 const val UNKNOWN_UPLOADER = "unknown"
 
+fun isUploaderTrusted(uploader: String?) =
+        uploader?.let { it in listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER, TEST_UPLOADER) } ?: false
+
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     companion object {
         fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
             return {
                 val a = serviceHub.attachments.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
-                (a as? AbstractAttachment)?.attachmentData ?: a.open().use { it.readBytes() }
+                (a as? AbstractAttachment)?.attachmentData ?: a.open().readFully()
             }
         }
 

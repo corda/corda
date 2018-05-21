@@ -3,10 +3,10 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.internal.hash
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.persistence.NodeAttachmentService
@@ -19,7 +19,6 @@ import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
@@ -58,7 +57,7 @@ class AttachmentTests {
         bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         // Insert an attachment into node zero's store directly.
         val id = aliceNode.database.transaction {
-            aliceNode.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
+            aliceNode.attachments.importAttachment(fakeAttachment().inputStream())
         }
 
         // Get node one to run a flow to fetch it and insert it.
@@ -72,7 +71,7 @@ class AttachmentTests {
             bobNode.attachments.openAttachment(id)!!
         }
 
-        assertEquals(id, attachment.open().readBytes().sha256())
+        assertEquals(id, attachment.open().hash())
 
         // Shut down node zero and ensure node one can still resolve the attachment.
         aliceNode.dispose()
@@ -82,7 +81,7 @@ class AttachmentTests {
     }
 
     @Test
-    fun `missing`() {
+    fun missing() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         aliceNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
@@ -111,7 +110,7 @@ class AttachmentTests {
         val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.
         val id = aliceNode.database.transaction {
-            aliceNode.attachments.importAttachment(ByteArrayInputStream(attachment))
+            aliceNode.attachments.importAttachment(attachment.inputStream())
         }
 
         // Corrupt its store.

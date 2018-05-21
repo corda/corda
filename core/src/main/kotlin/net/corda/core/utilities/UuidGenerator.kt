@@ -5,6 +5,6 @@ import java.util.*
 class UuidGenerator {
 
     companion object {
-        fun next() : UUID = UUID.randomUUID()
+        fun next(): UUID = UUID.randomUUID()
     }
 }

@@ -12,34 +12,33 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.USD
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.contracts.getCashBalances
-import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.core.*
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import rx.subjects.PublishSubject
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
-    private val rpcUser = User("user1", "test", permissions = setOf(
-            startFlow<CashIssueFlow>(),
-            startFlow<CashPaymentFlow>(),
-            invokeRpc("vaultQueryBy"),
-            invokeRpc(CordaRPCOps::stateMachinesFeed),
-            invokeRpc("vaultQueryByCriteria"))
+    private val rpcUser = User("user1", "test", permissions = setOf(all())
     )
     private lateinit var node: StartedNode<Node>
     private lateinit var identity: Party
@@ -53,7 +52,9 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     @Before
     fun setUp() {
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!)
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!, object : CordaRPCClientConfiguration {
+            override val maxReconnectAttempts = 5
+        })
         identity = node.info.identityFromX500Name(ALICE_NAME)
     }
 
@@ -82,6 +83,61 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     }
 
     @Test
+    fun `shutdown command stops the node`() {
+
+        val nodeIsShut: PublishSubject<Unit> = PublishSubject.create()
+        val latch = CountDownLatch(1)
+        var successful = false
+        val maxCount = 20
+        var count = 0
+        CloseableExecutor(Executors.newSingleThreadScheduledExecutor()).use { scheduler ->
+
+            val task = scheduler.scheduleAtFixedRate({
+                try {
+                    println("Checking whether node is still running...")
+                    client.start(rpcUser.username, rpcUser.password).use {
+                        println("... node is still running.")
+                        if (count == maxCount) {
+                            nodeIsShut.onError(AssertionError("Node does not get shutdown by RPC"))
+                        }
+                        count++
+                    }
+                } catch (e: ActiveMQNotConnectedException) {
+                    println("... node is not running.")
+                    nodeIsShut.onCompleted()
+                } catch (e: ActiveMQSecurityException) {
+                    // nothing here - this happens if trying to connect before the node is started
+                } catch (e: Throwable) {
+                    nodeIsShut.onError(e)
+                }
+            }, 1, 1, TimeUnit.SECONDS)
+
+            nodeIsShut.doOnError { error ->
+                error.printStackTrace()
+                successful = false
+                task.cancel(true)
+                latch.countDown()
+            }.doOnCompleted {
+                        successful = (node.internals.started == null)
+                        task.cancel(true)
+                        latch.countDown()
+                    }.subscribe()
+
+            client.start(rpcUser.username, rpcUser.password).use { rpc -> rpc.proxy.shutdown() }
+
+            latch.await()
+            assertThat(successful).isTrue()
+        }
+    }
+
+    private class CloseableExecutor(private val delegate: ScheduledExecutorService) : AutoCloseable, ScheduledExecutorService by delegate {
+
+        override fun close() {
+            delegate.shutdown()
+        }
+    }
+
+    @Test
     fun `close-send deadlock and premature shutdown on empty observable`() {
         println("Starting client")
         login(rpcUser.username, rpcUser.password)
@@ -95,15 +151,6 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
             println("PROGRESS $it")
         }
         println("Result: ${flowHandle.returnValue.getOrThrow()}")
-    }
-
-    @Test
-    fun `sub-type of FlowException thrown by flow`() {
-        login(rpcUser.username, rpcUser.password)
-        val handle = connection!!.proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, identity)
-        assertThatExceptionOfType(CashException::class.java).isThrownBy {
-            handle.returnValue.getOrThrow()
-        }
     }
 
     @Test
@@ -141,7 +188,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
 
         val updates = proxy.stateMachinesFeed().updates
 
-        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0),identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
         proxy.startFlow(::CashIssueFlow, 123.DOLLARS, OpaqueBytes.of(0), identity).returnValue.getOrThrow()
         proxy.startFlowDynamic(CashIssueFlow::class.java, 1000.DOLLARS, OpaqueBytes.of(0), identity).returnValue.getOrThrow()
 

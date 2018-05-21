@@ -3,9 +3,10 @@
 Writing a custom notary service (experimental)
 ==============================================
 
-.. warning:: Customising a notary service is still an experimental feature and not recommended for most use-cases. Currently,
-   customising Raft or BFT notaries is not yet fully supported. If you want to write your own Raft notary you will have to
-   implement a custom database connector (or use a separate database for the notary), and use a custom configuration file.
+.. warning:: Customising a notary service is still an experimental feature and not recommended for most use-cases. The APIs
+   for writing a custom notary may change in the future. Additionally, customising Raft or BFT notaries is not yet
+   fully supported. If you want to write your own Raft notary you will have to implement a custom database connector
+   (or use a separate database for the notary), and use a custom configuration file.
 
 Similarly to writing an oracle service, the first step is to create a service class in your CorDapp and annotate it
 with ``@CordaService``. The Corda node scans for any class with this annotation and initialises them. The custom notary

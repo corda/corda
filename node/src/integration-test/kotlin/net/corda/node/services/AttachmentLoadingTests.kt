@@ -5,10 +5,10 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.toLedgerTransaction
@@ -22,6 +22,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -30,15 +31,14 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.withoutTestSerialization
-import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import java.net.URLClassLoader
-import java.nio.file.Files
 import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests {
@@ -54,7 +54,7 @@ class AttachmentLoadingTests {
     private companion object {
         private val logger = contextLogger()
         val isolatedJAR = AttachmentLoadingTests::class.java.getResource("isolated.jar")!!
-        val ISOLATED_CONTRACT_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
+        const val ISOLATED_CONTRACT_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
 
         val bankAName = CordaX500Name("BankA", "Zurich", "CH")
         val bankBName = CordaX500Name("BankB", "Zurich", "CH")
@@ -74,11 +74,7 @@ class AttachmentLoadingTests {
             // Copy the app jar to the first node. The second won't have it.
             val path = (baseDirectory(nodeName) / "cordapps").createDirectories() / "isolated.jar"
             logger.info("Installing isolated jar to $path")
-            isolatedJAR.openStream().buffered().use { input ->
-                Files.newOutputStream(path).buffered().use { output ->
-                    input.copyTo(output)
-                }
-            }
+            isolatedJAR.openStream().use { it.copyTo(path) }
         }
     }
 
@@ -114,7 +110,7 @@ class AttachmentLoadingTests {
         driver {
             installIsolatedCordappTo(bankAName)
             val (bankA, bankB) = createTwoNodes()
-            assertFailsWith<UnexpectedFlowEndException>("Party C=CH,L=Zurich,O=BankB rejected session request: Don't know net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator") {
+            assertFailsWith<InternalNodeException> {
                 bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
             }
         }

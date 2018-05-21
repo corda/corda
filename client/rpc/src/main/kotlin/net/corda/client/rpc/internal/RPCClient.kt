@@ -1,6 +1,5 @@
 package net.corda.client.rpc.internal
 
-import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCConnection
 import net.corda.client.rpc.RPCException
@@ -14,9 +13,11 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.*
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
-import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
 import net.corda.nodeapi.RPCApi
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -27,51 +28,26 @@ import java.time.Duration
 /**
  * This configuration may be used to tweak the internals of the RPC client.
  */
-data class RPCClientConfiguration(
-        /** The minimum protocol version required from the server */
-        val minimumServerProtocolVersion: Int,
-        /**
-         * If set to true the client will track RPC call sites. If an error occurs subsequently during the RPC or in a
-         * returned Observable stream the stack trace of the originating RPC will be shown as well. Note that
-         * constructing call stacks is a moderately expensive operation.
-         */
-        val trackRpcCallSites: Boolean,
-        /**
-         * The interval of unused observable reaping. Leaked Observables (unused ones) are detected using weak references
-         * and are cleaned up in batches in this interval. If set too large it will waste server side resources for this
-         * duration. If set too low it wastes client side cycles.
-         */
-        val reapInterval: Duration,
-        /** The number of threads to use for observations (for executing [Observable.onNext]) */
-        val observationExecutorPoolSize: Int,
-        /**
-         * Determines the concurrency level of the Observable Cache. This is exposed because it implicitly determines
-         * the limit on the number of leaked observables reaped because of garbage collection per reaping.
-         * See the implementation of [com.google.common.cache.LocalCache] for details.
-         */
-        val cacheConcurrencyLevel: Int,
-        /** The retry interval of artemis connections in milliseconds */
-        val connectionRetryInterval: Duration,
-        /** The retry interval multiplier for exponential backoff */
-        val connectionRetryIntervalMultiplier: Double,
-        /** Maximum retry interval */
-        val connectionMaxRetryInterval: Duration,
-        /** Maximum reconnect attempts on failover */
-        val maxReconnectAttempts: Int,
-        /** Maximum file size */
-        val maxFileSize: Int,
-        /** The cache expiry of a deduplication watermark per client. */
-        val deduplicationCacheExpiry: Duration
-) {
+data class CordaRPCClientConfigurationImpl(
+        override val minimumServerProtocolVersion: Int,
+        override val trackRpcCallSites: Boolean,
+        override val reapInterval: Duration,
+        override val observationExecutorPoolSize: Int,
+        override val connectionRetryInterval: Duration,
+        override val connectionRetryIntervalMultiplier: Double,
+        override val connectionMaxRetryInterval: Duration,
+        override val maxReconnectAttempts: Int,
+        override val maxFileSize: Int,
+        override val deduplicationCacheExpiry: Duration
+) : CordaRPCClientConfiguration {
     companion object {
-        val unlimitedReconnectAttempts = -1
+        private const val unlimitedReconnectAttempts = -1
         @JvmStatic
-        val default = RPCClientConfiguration(
+        val default = CordaRPCClientConfigurationImpl(
                 minimumServerProtocolVersion = 0,
                 trackRpcCallSites = false,
                 reapInterval = 1.seconds,
                 observationExecutorPoolSize = 4,
-                cacheConcurrencyLevel = 8,
                 connectionRetryInterval = 5.seconds,
                 connectionRetryIntervalMultiplier = 1.5,
                 connectionMaxRetryInterval = 3.minutes,
@@ -83,17 +59,36 @@ data class RPCClientConfiguration(
     }
 }
 
+/**
+ * This runs on the client JVM
+ */
 class RPCClient<I : RPCOps>(
         val transport: TransportConfiguration,
-        val rpcConfiguration: RPCClientConfiguration = RPCClientConfiguration.default,
-        val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
+        val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+        val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
+        val haPoolTransportConfigurations: List<TransportConfiguration> = emptyList()
 ) {
     constructor(
             hostAndPort: NetworkHostAndPort,
-            sslConfiguration: SSLConfiguration? = null,
-            configuration: RPCClientConfiguration = RPCClientConfiguration.default,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
-    ) : this(tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfiguration), configuration, serializationContext)
+    ) : this(rpcConnectorTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
+
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            sslConfiguration: SSLConfiguration,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
+    ) : this(rpcInternalClientTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
+
+    constructor(
+            haAddressPool: List<NetworkHostAndPort>,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
+    ) : this(rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration),
+            configuration, serializationContext, rpcConnectorTcpTransportsFromList(haAddressPool, sslConfiguration))
 
     companion object {
         private val log = contextLogger()
@@ -109,11 +104,15 @@ class RPCClient<I : RPCOps>(
         return log.logElapsedTime("Startup") {
             val clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.${random63BitValue()}")
 
-            val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(transport).apply {
+            val serverLocator = (if (haPoolTransportConfigurations.isEmpty()) {
+                ActiveMQClient.createServerLocatorWithoutHA(transport)
+            } else {
+                ActiveMQClient.createServerLocatorWithoutHA(*haPoolTransportConfigurations.toTypedArray())
+            }).apply {
                 retryInterval = rpcConfiguration.connectionRetryInterval.toMillis()
                 retryIntervalMultiplier = rpcConfiguration.connectionRetryIntervalMultiplier
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
-                reconnectAttempts = rpcConfiguration.maxReconnectAttempts
+                reconnectAttempts = if (haPoolTransportConfigurations.isEmpty()) rpcConfiguration.maxReconnectAttempts else 0
                 minLargeMessageSize = rpcConfiguration.maxFileSize
                 isUseGlobalPools = nodeSerializationEnv != null
             }

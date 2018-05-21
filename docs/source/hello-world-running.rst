@@ -105,7 +105,7 @@ commands.
 .. note:: Local terminal shell is available only in a development mode. In production environment SSH server can be enabled.
     More about SSH and how to connect can be found on the :doc:`shell` page.
 
-We want to create an IOU of 100 with PartyB. We start the ``IOUFlow`` by typing:
+We want to create an IOU of 99 with PartyB. We start the ``IOUFlow`` by typing:
 
 .. container:: codeset
 
@@ -124,7 +124,7 @@ If the flow worked, it should have recorded a new IOU in the vaults of both Part
 
 We can check the contents of each node's vault by running:
 
-.. code-block:: base
+.. code-block:: bash
 
         run vaultQuery contractStateType: com.template.IOUState
 

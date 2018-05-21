@@ -13,7 +13,6 @@ import net.corda.client.jfx.model.observableList
 import net.corda.client.jfx.utils.map
 import net.corda.explorer.model.CordaView
 import net.corda.explorer.model.IssuerModel
-import net.corda.explorer.model.ReportingCurrencyModel
 import net.corda.explorer.model.SettingsModel
 import java.util.*
 

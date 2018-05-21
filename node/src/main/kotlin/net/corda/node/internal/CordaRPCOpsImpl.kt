@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -45,7 +46,8 @@ internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
         private val database: CordaPersistence,
-        private val flowStarter: FlowStarter
+        private val flowStarter: FlowStarter,
+        private val shutdownNode: () -> Unit
 ) : CordaRPCOps {
     override fun networkMapSnapshot(): List<NodeInfo> {
         val (snapshot, updates) = networkMapFeed()
@@ -90,12 +92,14 @@ internal class CordaRPCOpsImpl(
         }
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsSnapshot(): List<SignedTransaction> {
-        val (snapshot, updates) = internalVerifiedTransactionsFeed()
+        val (snapshot, updates) = @Suppress("DEPRECATION") internalVerifiedTransactionsFeed()
         updates.notUsed()
         return snapshot
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return database.transaction {
             services.validatedTransactions.track()
@@ -107,6 +111,8 @@ internal class CordaRPCOpsImpl(
         updates.notUsed()
         return snapshot
     }
+
+    override fun killFlow(id: StateMachineRunId) = smm.killFlow(id)
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
         return database.transaction {
@@ -203,14 +209,9 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
-        try {
-            return database.transaction {
+        // TODO: this operation should not require an explicit transaction
+        return database.transaction {
                 services.attachments.queryAttachments(query, sorting)
-            }
-        } catch (e: Exception) {
-            // log and rethrow exception so we keep a copy server side
-            log.error(e.message)
-            throw e.cause ?: e
         }
     }
 
@@ -296,6 +297,10 @@ internal class CordaRPCOpsImpl(
 
     override fun isFlowsDrainingModeEnabled(): Boolean {
         return services.nodeProperties.flowsDrainingMode.isEnabled()
+    }
+
+    override fun shutdown() {
+        shutdownNode.invoke()
     }
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {

@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import net.corda.finance.contracts.BusinessCalendar
 import java.time.LocalDate
 
-fun registerFinanceJSONMappers(objectMapper: ObjectMapper): Unit {
+fun registerFinanceJSONMappers(objectMapper: ObjectMapper) {
     val financeModule = SimpleModule("finance").apply {
         addSerializer(BusinessCalendar::class.java, CalendarSerializer)
         addDeserializer(BusinessCalendar::class.java, CalendarDeserializer)

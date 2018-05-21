@@ -1,49 +1,360 @@
 Release notes
 =============
 
-Here are release notes for each snapshot release from M9 onwards.
+.. _release_notes_v3_1:
 
-Unreleased
-----------
-* X.509 certificates now have an extension that specifies the Corda role the certificate is used for, and the role
+Release 3.1
+-----------
+
+This rapid follow-up to Corda 3.0 corrects an issue discovered by some users of Spring Boot and a number of other
+smaller issues discovered post release. All users are recommended to upgrade.
+
+Special Thanks
+~~~~~~~~~~~~~~
+
+Without passionate and engaged users Corda would be all the poorer. As such, we are extremely grateful to
+`Bret Lichtenwald <https://github.com/bret540>`_ for helping nail down a reproducible test case for the
+Spring Boot issue.
+
+Major Bug Fixes
+~~~~~~~~~~~~~~~
+
+* **Corda Serialization fails with "Unknown constant pool tag"**
+
+  This issue is most often seen when running a CorDapp with a Rest API using / provided by ``Spring Boot``.
+
+  The fundamental cause was ``Corda 3.0`` shipping with an out of date dependency for the
+  `fast-classpath-scanner <https://github.com/lukehutch/fast-classpath-scanner>`_ library, where the manifesting
+  bug was already fixed in a released version newer than our dependant one. In response, we've updated our dependent
+  version to one including that bug fix.
+
+* **Corda Versioning**
+
+  Those eagle eyed amongst you will have noticed for the 3.0 release we altered the versioning scheme from that used by previous Corda
+  releases (1.0.0, 2.0.0, etc) with the addition of an prepended product name, resulting in ``corda-3.0``. The reason for this was so
+  that developers could clearly distinguish between the base open source platform and any distributions based on on Corda that may
+  be shipped in the future (including from R3), However, we have heard the complaints and feel the pain that's caused by various
+  tools not coping well with this change. As such, from now on the versioning scheme will be inverted, with this release being ``3.1-corda``.
+
+  As to those curious as to why we dropped the patch number from the version string, the reason is very simple: there won't
+  be any patches applied to a release of Corda. Either a release will be a collection of bug fixes and non API breaking
+  changes, thus eliciting a minor version bump as with this release, or major functional changes or API additions and warrant
+  a major version bump. Thus, rather than leave a dangling ``.0`` patch version on every release we've just dropped it. In the
+  case where a major security flaw needed addressing, for example, then that would generate a release of a new minor version.
+
+Issues Fixed
+~~~~~~~~~~~~
+
+* RPC server leaks if a single client submits a lot of requests over time [`CORDA-1295 <https://r3-cev.atlassian.net/browse/CORDA-1295>`_]
+* Flaky startup, no db transaction in context, when using postgresql [`CORDA-1276 <https://r3-cev.atlassian.net/browse/CORDA-1276>`_]
+* Corda's JPA classes should not be final or have final methods [`CORDA-1267 <https://r3-cev.atlassian.net/browse/CORDA-1267>`_]
+* Backport api-scanner changes [`CORDA-1178 <https://r3-cev.atlassian.net/browse/CORDA-1178>`_]
+* Misleading error message shown when node is restarted after the flag day
+* Hash constraints not working from Corda 3.0 onwards
+* Serialisation Error between Corda 3 RC01 and Corda 3
+* Nodes don't start when network-map/doorman is down
+
+.. _release_notes_v3_0:
+
+Release 3.0
+-----------
+
+Corda 3.0 is here and brings with it a commitment to a wire stable platform, a path for contract and node upgradability,
+and a host of other exciting features. The aim of which is to enhance the developer and user experience whilst providing
+for the long term usability of deployed Corda instances. This release will provide functionality to ensure anyone wishing
+to move to the anticipated release of R3 Corda can do so seamlessly and with the assurance that stateful data persisted to
+the vault will remain understandable between newer and older nodes.
+
+Special Thanks
+~~~~~~~~~~~~~~
+
+As ever, we are grateful to the enthusiastic user and developer community that has  grown up to surround Corda.
+As an open project we are always grateful to take code contributions from individual users where they feel they
+can add functionality useful to themselves and the wider community.
+
+As such we'd like to extend special thanks to
+
+  * Ben Wyeth for providing a mechanism for registering a callback on app shutdown
+
+    Ben's contribution can be found on GitHub
+    `here <https://github.com/corda/corda/commit/d17670c747d16b7f6e06e19bbbd25eb06e45cb93>`__
+
+  * Tomas Tauber for adding support for running Corda atop PostgresSQL in place of the in-memory H2 service
+
+    Tomas's contribution can be found on GitHub
+    `here <https://github.com/corda/corda/commit/342090db62ae40cef2be30b2ec4aa451b099d0b7>`__
+
+    .. warning:: This is an experimental feature that has not been tested as part of our standard release testing.
+
+  * Rose Molina Atienza for correcting our careless spelling slip
+
+    Rose's change can be found on GitHub
+    `here <https://github.com/corda/corda/commit/128d5cad0af7fc5595cac3287650663c9c9ac0a3>`__
+
+Significant Changes in 3.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* **Wire Stability**:
+
+  Wire stability brings the same promise to developers for their data that API stability did for their code. From this
+  point any state generated by a Corda system will always be retrievable, understandable, and seen as valid by any
+  subsequently released version (versions 3.0 and above).
+
+  Systems can thus be deployed safe in the knowledge that valuable and important information will always be accessible through
+  upgrade and change. Practically speaking this means from this point forward upgrading all, or part, of a Corda network
+  will not require the replaying of data; "it will just work".
+
+  This has been facilitated by the switch over from Kryo to Corda's own AMQP based serialization framework, a framework
+  designed to interoperate with stateful information and allow the evolution of such contract states over time as developers
+  refine and improve their systems written atop the core Corda platform.
+
+  * **AMQP Serialization**
+
+    AMQP Serialization is now enabled for both peer to peer communication and the writing of states to the vault. This
+    change brings a serialisation format that will allow us to deliver enhanced security and wire stability. This was a key
+    prerequisite to enabling different Corda node versions to coexist on the same network and to enable easier upgrades.
+
+    Details on the AMQP serialization framework can be found :ref:`here <amqp_ref>`. This provides an introduction and
+    overview of the framework whilst more specific details on object evolution as it relates to serialization can be
+    found in :doc:`serialization-default-evolution` and :doc:`serialization-enum-evolution` respectively.
+
+    .. note:: This release delivers the bulk of our transition from Kryo serialisation to AMQP serialisation. This means
+      that many of the restrictions that were documented in previous versions of Corda are now enforced.
+
+      In particular, you are advised to review the section titled :ref:`Custom Types <amqp_custom_types_ref>`.
+      To aid with the transition, we have included support in this release for default construction and instantiation of
+      objects with inaccessible private fields, but it is not guaranteed that this support will continue into future versions;
+      the restrictions documented at the link above are the canonical source.
+
+    Whilst this is an important step for Corda, in no way is this the end of the serialisation story. We have many new
+    features and tools planned for future releases, but feel it is more important to deliver the guarantees discussed above
+    as early as possible to allow the community to develop with greater confidence.
+
+   .. important:: Whilst Corda has stabilised its wire protocol and infrastructure for peer to peer communication and persistent storage
+      of states, the RPC framework will, for this release, not be covered by this guarantee. The moving of the client and
+      server contexts away from Kryo to our stable AMQP implementation is planned for the next release of Corda
+
+  * **Artemis and Bridges**
+
+    Corda has now achieved the long stated goal of using the AMQP 1.0 open protocol standard as its communication protocol
+    between peers. This forms a strong and flexible framework upon which we can deliver future enhancements that will allow
+    for much smoother integrations between Corda and third party brokers, languages, and messaging systems. In addition,
+    this is also an important step towards formally defining the official peer to peer messaging protocol of Corda, something
+    required for more in-depth security audits of the Corda protocol.
+
+* **New Network Map Service**:
+
+  This release introduces the new network map architecture. The network map service has been completely redesigned and
+  implemented to enable future increased network scalability and redundancy, reduced runtime operational overhead,
+  support for multiple notaries, and administration of network compatibility zones (CZ).
+
+  A Corda Compatibility Zone is defined as a grouping of participants and services (notaries, oracles,
+  doorman, network map server) configured within an operational Corda network to be interoperable and compatible with
+  each other.
+
+  We introduce the concept of network parameters to specify precisely the set of constants (or ranges of constants) upon
+  which the nodes within a network need to agree in order to be assured of seamless inter-operation. Additional security
+  controls ensure that all network map data is now signed, thus reducing the power of the network operator to tamper with
+  the map.
+
+  There is also support for a group of nodes to operate locally, which is achieved by copying each
+  node's signed info file to the other nodes' directories. We've added a bootstrapping tool to facilitate this use case.
+
+  .. important:: This replaces the Network Map service that was present in Corda 1.0 and Corda 2.0.
+
+  Further information can be found in the :doc:`changelog`, :doc:`network-map` and :doc:`setting-up-a-corda-network` documentation.
+
+* **Contract Upgrade**
+
+  Support for the upgrading of contracts has been significantly extended in this release.
+
+  Contract states express which attached JARs can define and verify them using _constraints_. In older versions the only supported
+  constraint was a hash constraint. This provides similar behaviour as public blockchain systems like Bitcoin and Ethereum, in
+  which code is entirely fixed once deployed and cannot be changed later. In Corda there is an upgrade path that involves the
+  cooperation of all involved parties (as advertised by the states themselves), but this requires explicit transactions to be
+  applied to all states and be signed by all parties.
+
+  .. tip:: This is a fairly heavyweight operation. As such, consideration should be given as to the most opportune time at
+    which it should be performed.
+
+  Hash constraints provide for maximum decentralisation and minimum trust, at the cost of flexibility. In Corda 3.0 we add a
+  new constraint, a *network parameters* constraint, that allows the list of acceptable contract JARs to be maintained by the
+  operator of the compatibility zone rather than being hard-coded. This allows for simple upgrades at the cost of the introduction
+  of an element of centralisation.
+
+  Zone constraints provide a less restrictive but more centralised control mechanism. This can be useful when you want
+  the ability to upgrade an app and you don’t mind the upgrade taking effect “just in time” when a transaction happens
+  to be required for other business reasons. These allow you to specify that the network parameters of a compatibility zone
+  (see :doc:`network-map`) is expected to contain a map of class name to hashes of JARs that are allowed to provide that
+  class. The process for upgrading an app then involves asking the zone operator to add the hash of your new JAR to the
+  parameters file, and trigger the network parameters upgrade process. This involves each node operator running a shell
+  command to accept the new parameters file and then restarting the node. Node owners who do not restart their node in
+  time effectively stop being a part of the network.
+
+  .. note:: In prior versions of Corda, states included the hash of their defining application JAR (in the Hash Constraint).
+    In this release, transactions have the JAR containing the contract and states attached to them, so the code will be copied
+    over the network to the recipient if that peer lacks a copy of the app.
+
+    Prior to running the verification code of a contract the JAR within which the verification code of the contract resides
+    is tested for compliance to the contract constraints:
+
+        - For the ``HashConstraint``: the hash of the deployed CorDapp jar must be the same as the hash found in the Transaction.
+        - For the ``ZoneConstraint``: the Transaction must come with a whitelisted attachment for each Contract State.
+
+    If this step fails the normal transaction verification failure path is followed.
+
+    Corda 3.0 lays the groundwork for future releases, when contract verification will be done against the attached contract JARs
+    rather than requiring a locally deployed CorDapp of the exact version specified by the transaction. The future vision for this
+    feature will entail the dynamic downloading of the appropriate version of the smart contract and its execution within a
+    sandboxed environment.
+
+    .. warning:: This change means that your app JAR must now fit inside the 10mb attachment size limit. To avoid redundantly copying
+      unneeded code over the network and to simplify upgrades, consider splitting your application into two or more JARs - one that
+      contains states and contracts (which we call the app "kernel"), and another that contains flows, services, web apps etc. For
+      example, our `Cordapp template <https://github.com/corda/cordapp-template-kotlin/tree/release-V3>`_ is structured like that.
+      Only the first will be attached. Also be aware that any dependencies your app kernel has must be bundled into a fat JAR,
+      as JAR dependencies are not supported in Corda 3.0.
+
+  Future versions of Corda will add support for signature based constraints, in which any JAR signed by a given identity
+  can be attached to the transaction. This final constraint type provides a balance of all requirements: smooth rolling upgrades
+  can be performed without any additional steps or transactions being signed, at the cost of trusting the app developer more and
+  some additional complexity around managing app signing.
+
+  Please see the :doc:`upgrading-cordapps` for more information on upgrading contracts.
+
+* **Test API Stability**
+
+  A great deal of work has been carried out to refine the APIs provided to test CorDapps, making them simpler, more intuitive,
+  and generally easier to use. In addition, these APIs have been added to the *locked* list of the APIs we guarantee to be stable
+  over time. This should greatly increase productivity when upgrading between versions, as your testing environments will work
+  without alteration.
+
+  Please see the :doc:`upgrade-notes` for more information on transitioning older tests to the new framework.
+
+Other Functional Improvements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* **Clean Node Shutdown**
+
+  We, alongside user feedback, concluded there was a strong need for the ability to have a clean inflection point where a node
+  could be shutdown without any in-flight transactions pending to allow for a clean system for upgrade purposes. As such, a flows
+  draining mode has been added. When activated, this places the node into a state of quiescence that guarantees no new work will
+  be started and all outstanding work completed prior to shutdown.
+
+  A clean shutdown can thus be achieved by:
+
+    1. Subscribing to state machine updates
+    2. Trigger flows draining mode by ``rpc.setFlowsDrainingModeEnabled(true)``
+    3. Wait until the subscription setup as phase 1 lets you know that no more checkpoints are around
+    4. Shut the node down however you want
+
+  .. note:: Once set, this mode is a persistent property that will be preserved across node restarts. It must be explicitly disabled
+    before a node will accept new RPC flow connections.
+
+* **X.509 certificates**
+
+  These now have an extension that specifies the Corda role the certificate is used for, and the role
   hierarchy is now enforced in the validation code. This only has impact on those developing integrations with external
-  PKI solutions, in most cases it is managed transparently by Corda. A formal specification of the extension can be
-  found at :doc:`permissioning`.
+  PKI solutions; in most cases it is managed transparently by Corda. A formal specification of the extension can be
+  found at see :doc:`permissioning-certificate-specification`.
 
-* **Enum Class Evolution**
-  With the addition of AMQP serialization Corda now supports enum constant evolution.
+* **Configurable authorization and authentication data sources**
 
-  That is the ability to alter an enum constant and, as long as certain rules are followed and the correct
-  annotations applied, have older and newer instances of that enumeration be understood.
+  Corda can now be configured to load RPC user credentials and permissions from an external database and supports password
+  encryption based on the `Apache Shiro framework <https://shiro.apache.org>`_. See :ref:`RPC security management
+  <rpc_security_mgmt_ref>` for documentation.
 
-* **AMQP Enabled**:
-  AMQP Serialization is now enabled for both peer to peer communication and the writing of states to the vault. This change
-  brings a stable format Corda can support internally throughout it's lifetime that meets the needs of Corda and our
-  users.
+* **SSH Server**
 
-  Details on the AMQP serialization framework can be found in the :doc:`serialization` document :ref:`here <amqp_ref>`.
-  This provides an introduction and overview of the framework whilst more specific details on object evolution as it relates to
-  serialization is similarly found in pages :doc:`serialization-default-evolution` and :doc:`serialization-enum-evolution`
-  respectively. Recommendations on how best to code CorDapps using your own :ref:`custom types <amqp_custom_types_ref>`.
+  Remote administration of Corda nodes through the CRaSH shell is now available via SSH, please see :doc:`shell` for more details.
 
-  .. note:: This release delivers the bulk of our transition from Kryo serialisation to AMQP serialisation. This means that many of the restrictions
-    that were documented in previous versions of Corda are now enforced. (https://docs.corda.net/releases/release-V1.0/serialization.html).
+* **RPC over SSL**
 
-    In particular, you are advised to review the section titled "Custom Types". To aid with the transition, we have included support
-    in this release for default construction of objects and their instantiation through getters as well as objects with inaccessible
-    private fields but it is not guaranteed that this support will continue into future versions; the restrictions documented at the
-    link above are the canonical source.
+  Corda now allows for the configuration of its RPC calls to be made over SSL. See :doc:`corda-configuration-file` for details
+  how to configure this.
 
-* **Custom Serializers**
+* **Improved Notary configuration**
 
-  To allow interop with third party libraries that cannot be recompiled we add functionality that allows custom serializers
-  to be written for those classes. If needed, a proxy object can be created as an interim step that allows Corda's internal
-  serializers to operate on those types.
+  The configuration of notaries has been simplified into a single ``notary`` configuration object. See
+  :doc:`corda-configuration-file` for more details.
 
-  A good example of this is the SIMM valuation demo which has a number of such serializers defined in the plugin/customserializers package
+  .. note:: ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` configs have been
+    removed.
+
+* **Database Tables Naming Scheme**
+
+  To align with common conventions across all supported Corda and R3 Corda databases some table names have been changed.
+
+  In addition, for existing contract ORM schemas that extend from CommonSchemaV1.LinearState or CommonSchemaV1.FungibleState,
+  you will need to explicitly map the participants collection to a database table. Previously this mapping was done in the
+  superclass, but that makes it impossible to properly configure the table name. The required change is to add the override var
+  ``participants: MutableSet<AbstractParty>? = null`` field to your class, and add JPA mappings.
+
+* **Pluggable Custom Serializers**
+
+  With the introduction of AMQP we have introduced the requirement that to be seamlessly serializable classes, specifically
+  Java classes (as opposed to Kotlin), must be compiled with the ``-parameter`` flag. However, we recognise that this
+  isn't always possible, especially dealing with third party libraries in tightly controlled business environments.
+
+  To work around this problem as simply as possible CorDapps now support the creation of pluggable proxy serializers for
+  such classes. These should be written such that they create an intermediary representation that Corda can serialise that
+  is mappable directly to and from the unserializable class.
+
+  A number of examples are provided by the SIMM Valuation Demo in
+
+  ``samples/simm-valuation-demo/src/main/kotlin/net/corda/vega/plugin/customserializers``
+
+  Documentation can be found in :doc:`cordapp-custom-serializers`
+
+
+Security Auditing
+~~~~~~~~~~~~~~~~~
+
+  This version of Corda is the first to have had select components subjected to the newly established security review process
+  by R3's internal security team. Security review will be an on-going process that seeks to provide assurance that the
+  security model of Corda has been implemented to the highest standard, and is in line with industry best practice.
+
+  As part of this security review process, an independent external security audit of the HTTP based components of the code
+  was undertaken and its recommendations were acted upon. The security assurance process will develop in parallel to the
+  Corda platform and will combine code review, automated security testing and secure development practices to ensure Corda
+  fulfils its security guarantees.
+
+Security fixes
+~~~~~~~~~~~~~~
+
+  * Due to a potential privacy leak, there has been a breaking change in the error object returned by the
+    notary service when trying to consume the same state twice: `NotaryError.Conflict` no longer contains the identity
+    of the party that initiated the first spend of the state, and specifies the hash of the consuming transaction id for
+    a state instead of the id itself.
+
+    Without this change, knowing the reference of a particular state, an attacker could construct an invalid
+    double-spend transaction, and obtain the information on the transaction and the party that consumed it. It could
+    repeat this process with the newly obtained transaction id by guessing its output indexes to obtain the forward
+    transaction graph with associated identities. When anonymous identities are used, this could also reveal the identity
+    of the owner of an asset.
+
+Minor Changes
+~~~~~~~~~~~~~
+
+  * Upgraded gradle to 4.4.1.
+
+    .. note:: To avoid potential incompatibility issues we recommend you also upgrade your CorDapp's gradle
+      plugin to match. Details on how to do this can be found on the official
+      `gradle website <https://docs.gradle.org/current/userguide/gradle_wrapper.html#sec:upgrading_wrapper>`_
+
+  * Cash Spending now allows for sending multiple amounts to multiple parties with a single API call
+
+    - documentation can be found within the JavaDocs on ``TwoPartyTradeFlow``.
+  * Overall improvements to error handling (RPC, Flows, Network Client).
+  * TLS authentication now supports mixed RSA and ECDSA keys.
+  * PrivacySalt computation is faster as it does not depend on the OS's entropy pool directly.
+  * Numerous bug fixes and documentation tweaks.
+  * Removed dependency on Jolokia WAR file.
+
+.. _release_notes_v2_0:
 
 Release 2.0
-----------
+-----------
 Following quickly on the heels of the release of Corda 1.0, Corda version 2.0 consolidates
 a number of security updates for our dependent libraries alongside the reintroduction of the Observer node functionality.
 This was absent from version 1 but based on user feedback its re-introduction removes the need for complicated "isRelevant()" checks.
@@ -61,6 +372,8 @@ Adds the facility for transparent forwarding of transactions to some third party
 that entity simply run an Observer node they can simply recieve a stream of digitally signed, de-duplicated reports that
 can be used for reporting.
 
+.. _release_notes_v1_0:
+
 Release 1.0
 -----------
 Corda 1.0 is finally here!
@@ -73,14 +386,14 @@ will only evolve to include new features.
 As of Corda 1.0, the following modules export public APIs for which we guarantee to maintain backwards compatibility,
 unless an incompatible change is required for security reasons:
 
- * **core**: 
-   Contains the bulk of the APIs to be used for building CorDapps: contracts, transactions, flows, identity, node services, 
+ * **core**:
+   Contains the bulk of the APIs to be used for building CorDapps: contracts, transactions, flows, identity, node services,
    cryptographic libraries, and general utility functions.
 
- * **client-rpc**: 
+ * **client-rpc**:
    An RPC client interface to Corda, for use by both UI facing clients and integration with external systems.
 
- * **client-jackson**: 
+ * **client-jackson**:
    Utilities and serialisers for working with JSON representations of basic types.
 
 Our extensive testing frameworks will continue to evolve alongside future Corda APIs. As part of our commitment to ease of use and modularity
@@ -96,8 +409,8 @@ Please read :doc:`corda-api` for complete details.
 Significant changes implemented in reaching Corda API stability include:
 
 * **Flow framework**:
-  The Flow framework communications API has been redesigned around session based communication with the introduction of a new 
-  ``FlowSession`` to encapsulate the counterparty information associated with a flow. 
+  The Flow framework communications API has been redesigned around session based communication with the introduction of a new
+  ``FlowSession`` to encapsulate the counterparty information associated with a flow.
   All shipped Corda flows have been upgraded to use the new `FlowSession`. Please read :doc:`api-flows` for complete details.
 
 * **Complete API cleanup**:
@@ -112,14 +425,14 @@ Significant changes implemented in reaching Corda API stability include:
   optional `LegalProseReference` annotation to specify a URI is used.
 
 * **Java usability**:
-  All code has been updated to enable simple access to static API parameters. Developers no longer need to 
+  All code has been updated to enable simple access to static API parameters. Developers no longer need to
   call getter methods, and can reference static API variables directly.
 
 In addition to API stability this release encompasses a number of major functional improvements, including:
 
 * **Contract constraints**:
   Provides a means with which to enforce a specific implementation of a State's verify method during transaction verification.
-  When loading an attachment via the attachment classloader, constraints of a transaction state are checked against the 
+  When loading an attachment via the attachment classloader, constraints of a transaction state are checked against the
   list of attachment hashes provided, and the attachment is rejected if the constraints are not matched.
 
 * **Signature Metadata support**:
@@ -156,7 +469,7 @@ In addition to API stability this release encompasses a number of major function
   identities will occur as we make the integration of this privacy feature into applications even easier for developers.
 
 * **Re-designed network map service**:
-  The foundations for a completely redesigned network map service have been implemented to enable future increased network 
+  The foundations for a completely redesigned network map service have been implemented to enable future increased network
   scalability and redundancy, support for multiple notaries, and administration of network compatibility zones and business networks.
 
 Finally, please note that the 1.0 release has not yet been security audited.

@@ -2,6 +2,7 @@ package net.corda.testing.node.internal
 
 import net.corda.core.utilities.ByteSequence
 import net.corda.node.services.messaging.Message
+import net.corda.node.services.statemachine.DeduplicationId
 import java.time.Instant
 
 /**
@@ -9,7 +10,11 @@ import java.time.Instant
  */
 data class InMemoryMessage(override val topic: String,
                            override val data: ByteSequence,
-                           override val uniqueMessageId: String,
-                           override val debugTimestamp: Instant = Instant.now()) : Message {
+                           override val uniqueMessageId: DeduplicationId,
+                           override val debugTimestamp: Instant = Instant.now(),
+                           override val senderUUID: String? = null) : Message {
+
+    override val additionalHeaders: Map<String, String> = emptyMap()
+
     override fun toString() = "$topic#${String(data.bytes)}"
 }

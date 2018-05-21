@@ -7,7 +7,7 @@ import org.crsh.auth.AuthInfo
 import org.crsh.auth.AuthenticationPlugin
 import org.crsh.plugin.CRaSHPlugin
 
-class CordaAuthenticationPlugin(private val rpcOps: (username: String, credential: String) -> CordaRPCOps): CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
+class CordaAuthenticationPlugin(private val rpcOps: (username: String, credential: String) -> CordaRPCOps) : CRaSHPlugin<AuthenticationPlugin<String>>(), AuthenticationPlugin<String> {
 
     companion object {
         private val logger = loggerFor<CordaAuthenticationPlugin>()
@@ -24,7 +24,7 @@ class CordaAuthenticationPlugin(private val rpcOps: (username: String, credentia
         }
         try {
             val ops = rpcOps(username, credential)
-            return CordaSSHAuthInfo(true, ops)
+            return CordaSSHAuthInfo(true, ops, isSsh = true)
         } catch (e: ActiveMQSecurityException) {
             logger.warn(e.message)
         } catch (e: Exception) {

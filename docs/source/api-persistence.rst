@@ -123,7 +123,7 @@ JDBC connection (session) as described by the `Java SQL Connection API <https://
 
 Use the ``ServiceHub`` ``jdbcSession`` function to obtain a JDBC connection as illustrated in the following example:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/database/HibernateConfigurationTest.kt
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/persistence/HibernateConfigurationTest.kt
   :language: kotlin
   :start-after: DOCSTART JdbcSession
   :end-before: DOCEND JdbcSession
@@ -143,4 +143,6 @@ which is then referenced within a custom flow:
   :language: kotlin
   :start-after: DOCSTART TopupIssuer
   :end-before: DOCEND TopupIssuer
+
+For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`
 

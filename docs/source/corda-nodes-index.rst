@@ -1,9 +1,10 @@
-Corda nodes
-===========
+Nodes
+=====
 
 .. toctree::
    :maxdepth: 1
 
+   node-structure
    generating-a-node
    running-a-node
    deploying-a-node

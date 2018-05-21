@@ -17,6 +17,9 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
         }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
     }
 }
 
@@ -28,6 +31,9 @@ dependencies {
 
     // TODO Remove this once we have app configs
     compile "com.typesafe:config:$typesafe_config_version"
+
+    // For JSON
+    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
 
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')
@@ -59,6 +65,12 @@ artifacts {
 
 jar {
     baseName 'corda-finance'
+    exclude "META-INF/*.DSA"
+    exclude "META-INF/*.RSA"
+    exclude "META-INF/*.SF"
+    exclude "META-INF/*.MF"
+    exclude "META-INF/LICENSE"
+    exclude "META-INF/NOTICE"
 }
 
 publish {

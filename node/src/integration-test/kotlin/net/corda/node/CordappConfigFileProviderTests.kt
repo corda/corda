@@ -4,57 +4,56 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
+import net.corda.core.internal.div
+import net.corda.core.internal.writeText
 import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.Paths
 
 class CordappConfigFileProviderTests {
     private companion object {
-        val cordappConfDir = File("build/tmp/cordapps/config")
-        val cordappName = "test"
-        val cordappConfFile = File(cordappConfDir, cordappName + ".conf").toPath()
+        val cordappConfDir = Paths.get("build") / "tmp" / "cordapps" / "config"
+        const val cordappName = "test"
+        val cordappConfFile = cordappConfDir / "$cordappName.conf"
 
-        val validConfig = ConfigFactory.parseString("key=value")
-        val alternateValidConfig = ConfigFactory.parseString("key=alternateValue")
-        val invalidConfig = "Invalid"
+        val validConfig: Config = ConfigFactory.parseString("key=value")
+        val alternateValidConfig: Config = ConfigFactory.parseString("key=alternateValue")
+        const val invalidConfig = "Invalid"
     }
 
-    val provider = CordappConfigFileProvider(cordappConfDir)
+    private val provider = CordappConfigFileProvider(cordappConfDir)
 
     @Test
     fun `test that config can be loaded`() {
-        writeConfig(validConfig, cordappConfFile)
+        writeConfig(validConfig)
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(validConfig)
     }
 
     @Test
     fun `config is idempotent if the underlying file is not changed`() {
-        writeConfig(validConfig, cordappConfFile)
+        writeConfig(validConfig)
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(validConfig)
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(validConfig)
     }
 
     @Test
     fun `config is not idempotent if the underlying file is changed`() {
-        writeConfig(validConfig, cordappConfFile)
+        writeConfig(validConfig)
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(validConfig)
 
-        writeConfig(alternateValidConfig, cordappConfFile)
+        writeConfig(alternateValidConfig)
         assertThat(provider.getConfigByName(cordappName)).isEqualTo(alternateValidConfig)
     }
 
     @Test(expected = ConfigException.Parse::class)
     fun `an invalid config throws an exception`() {
-        Files.write(cordappConfFile, invalidConfig.toByteArray())
-
+        cordappConfFile.writeText(invalidConfig)
         provider.getConfigByName(cordappName)
     }
 
     /**
      * Writes the config to the path provided - will (and must) overwrite any existing config
      */
-    private fun writeConfig(config: Config, to: Path) = Files.write(cordappConfFile, config.root().render(ConfigRenderOptions.concise()).toByteArray())
+    private fun writeConfig(config: Config) = cordappConfFile.writeText(config.root().render(ConfigRenderOptions.concise()))
 }

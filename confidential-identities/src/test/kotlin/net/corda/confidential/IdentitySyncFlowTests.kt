@@ -109,7 +109,7 @@ class IdentitySyncFlowTests {
      * Very lightweight wrapping flow to trigger the counterparty flow that receives the identities.
      */
     @InitiatingFlow
-    class Initiator(private val otherSide: Party, private val tx: WireTransaction): FlowLogic<Boolean>() {
+    class Initiator(private val otherSide: Party, private val tx: WireTransaction) : FlowLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
             val session = initiateFlow(otherSide)
@@ -120,7 +120,7 @@ class IdentitySyncFlowTests {
     }
 
     @InitiatedBy(IdentitySyncFlowTests.Initiator::class)
-    class Receive(private val otherSideSession: FlowSession): FlowLogic<Unit>() {
+    class Receive(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             subFlow(IdentitySyncFlow.Receive(otherSideSession))

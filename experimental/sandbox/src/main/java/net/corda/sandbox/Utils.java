@@ -8,9 +8,9 @@ import java.util.regex.Pattern;
  */
 public final class Utils {
 
-    public final static String SANDBOX_PREFIX_INTERNAL = "sandbox/";
+    public static final String SANDBOX_PREFIX_INTERNAL = "sandbox/";
 
-    public final static String CLASSFILE_NAME_SUFFIX = "^(.*)\\.class$";
+    public static final String CLASSFILE_NAME_SUFFIX = "^(.*)\\.class$";
 
     public static final Pattern JAVA_LANG_PATTERN_INTERNAL = Pattern.compile("^java/lang/(.*)");
 
@@ -141,7 +141,7 @@ public final class Utils {
             return remaining;
 
         final StringBuilder out = new StringBuilder();
-        while (remaining.length() > 0) {
+        while (!remaining.isEmpty()) {
             final Matcher refTypeFound = REFTYPE_PATTERN_INTERNAL.matcher(remaining);
             if (refTypeFound.find()) {
                 final int startOfType = refTypeFound.start();

@@ -1,7 +1,7 @@
 package net.corda.node.services.persistence
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.cache.Weigher
+import com.github.benmanes.caffeine.cache.Weigher
 import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
@@ -11,9 +11,11 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.readFully
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
@@ -24,11 +26,13 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
-import net.corda.node.utilities.defaultCordaCacheConcurrencyLevel
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
-import java.io.*
+import java.io.FilterInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.Serializable
 import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
@@ -71,8 +75,7 @@ class NodeAttachmentService(
     }
 
     @Entity
-    @Table(name = "${NODE_DATABASE_PREFIX}attachments",
-            indexes = arrayOf(Index(name = "att_id_idx", columnList = "att_id")))
+    @Table(name = "${NODE_DATABASE_PREFIX}attachments", indexes = [Index(name = "att_id_idx", columnList = "att_id")])
     class DBAttachment(
             @Id
             @Column(name = "att_id")
@@ -93,8 +96,7 @@ class NodeAttachmentService(
 
             @ElementCollection
             @Column(name = "contract_class_name")
-            @CollectionTable(name = "node_attchments_contracts", joinColumns = arrayOf(
-                    JoinColumn(name = "att_id", referencedColumnName = "att_id")),
+            @CollectionTable(name = "node_attchments_contracts", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
                     foreignKey = ForeignKey(name = "FK__ctr_class__attachments"))
             var contractClassNames: List<ContractClassName>? = null
     ) : Serializable
@@ -207,14 +209,9 @@ class NodeAttachmentService(
     // If repeatedly looking for non-existing attachments becomes a performance issue, this is either indicating a
     // a problem somewhere else or this needs to be revisited.
 
-    private val attachmentContentCache = NonInvalidatingWeightBasedCache<SecureHash, Optional<Pair<Attachment, ByteArray>>>(
+    private val attachmentContentCache = NonInvalidatingWeightBasedCache(
             maxWeight = attachmentContentCacheSize,
-            concurrencyLevel = defaultCordaCacheConcurrencyLevel,
-            weigher = object : Weigher<SecureHash, Optional<Pair<Attachment, ByteArray>>> {
-                override fun weigh(key: SecureHash, value: Optional<Pair<Attachment, ByteArray>>): Int {
-                    return key.size + if (value.isPresent) value.get().second.size else 0
-                }
-            },
+            weigher = Weigher<SecureHash, Optional<Pair<Attachment, ByteArray>>> { key, value -> key.size + if (value.isPresent) value.get().second.size else 0 },
             loadFunction = { Optional.ofNullable(loadAttachmentContent(it)) }
     )
 
@@ -234,12 +231,11 @@ class NodeAttachmentService(
 
     private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
             attachmentCacheBound,
-            defaultCordaCacheConcurrencyLevel,
             { key -> Optional.ofNullable(createAttachment(key)) }
     )
 
     private fun createAttachment(key: SecureHash): Attachment? {
-        val content = attachmentContentCache.get(key)
+        val content = attachmentContentCache.get(key)!!
         if (content.isPresent) {
             return content.get().first
         }
@@ -249,7 +245,7 @@ class NodeAttachmentService(
     }
 
     override fun openAttachment(id: SecureHash): Attachment? {
-        val attachment = attachmentCache.get(id)
+        val attachment = attachmentCache.get(id)!!
         if (attachment.isPresent) {
             return attachment.get()
         }
@@ -257,20 +253,13 @@ class NodeAttachmentService(
         return null
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun importAttachment(jar: InputStream): AttachmentId {
         return import(jar, UNKNOWN_UPLOADER, null)
     }
 
     override fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
         return import(jar, uploader, filename)
-    }
-
-    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> {
-        val hs = HashingInputStream(Hashing.sha256(), jar)
-        val bytes = hs.readBytes()
-        checkIsAValidJAR(ByteArrayInputStream(bytes))
-        val id = SecureHash.SHA256(hs.hash().asBytes())
-        return Pair(id, bytes)
     }
 
     override fun hasAttachment(attachmentId: AttachmentId): Boolean =
@@ -281,15 +270,16 @@ class NodeAttachmentService(
         return withContractsInJar(jar) { contractClassNames, inputStream ->
             require(inputStream !is JarInputStream)
 
-            // Read the file into RAM, hashing it to find the ID as we go. The attachment must fit into memory.
+            // Read the file into RAM and then calculate its hash. The attachment must fit into memory.
             // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
             // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
             // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
             // set the hash field of the new attachment record.
 
-            val (id, bytes) = getAttachmentIdAndBytes(inputStream)
+            val bytes = inputStream.readFully()
+            val id = bytes.sha256()
             if (!hasAttachment(id)) {
-                checkIsAValidJAR(ByteArrayInputStream(bytes))
+                checkIsAValidJAR(bytes.inputStream())
                 val session = currentDBSession()
                 val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename, contractClassNames = contractClassNames)
                 session.save(attachment)
@@ -302,8 +292,9 @@ class NodeAttachmentService(
         }
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId = try {
-        importAttachment(jar)
+        import(jar, UNKNOWN_UPLOADER, null)
     } catch (faee: java.nio.file.FileAlreadyExistsException) {
         AttachmentId.parse(faee.message!!)
     }

@@ -1,18 +1,16 @@
 package net.corda.core.crypto
 
-import net.corda.core.internal.X509EdDSAEngine
+import net.corda.core.crypto.internal.*
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.EdDSASecurityProvider
 import net.i2p.crypto.eddsa.math.GroupElement
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1Integer
-import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.DERNull
 import org.bouncycastle.asn1.DLSequence
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
@@ -27,7 +25,6 @@ import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
-import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
@@ -37,7 +34,6 @@ import org.bouncycastle.jce.spec.ECPublicKeySpec
 import org.bouncycastle.math.ec.ECConstants
 import org.bouncycastle.math.ec.FixedPointCombMultiplier
 import org.bouncycastle.math.ec.WNafUtil
-import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
@@ -74,7 +70,7 @@ object Crypto {
             "RSA_SHA256",
             AlgorithmIdentifier(PKCSObjectIdentifiers.sha256WithRSAEncryption, null),
             listOf(AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, null)),
-            BouncyCastleProvider.PROVIDER_NAME,
+            cordaBouncyCastleProvider.name,
             "RSA",
             "SHA256WITHRSA",
             null,
@@ -89,7 +85,7 @@ object Crypto {
             "ECDSA_SECP256K1_SHA256",
             AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256, SECObjectIdentifiers.secp256k1),
             listOf(AlgorithmIdentifier(X9ObjectIdentifiers.id_ecPublicKey, SECObjectIdentifiers.secp256k1)),
-            BouncyCastleProvider.PROVIDER_NAME,
+            cordaBouncyCastleProvider.name,
             "ECDSA",
             "SHA256withECDSA",
             ECNamedCurveTable.getParameterSpec("secp256k1"),
@@ -104,7 +100,7 @@ object Crypto {
             "ECDSA_SECP256R1_SHA256",
             AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256, SECObjectIdentifiers.secp256r1),
             listOf(AlgorithmIdentifier(X9ObjectIdentifiers.id_ecPublicKey, SECObjectIdentifiers.secp256r1)),
-            BouncyCastleProvider.PROVIDER_NAME,
+            cordaBouncyCastleProvider.name,
             "ECDSA",
             "SHA256withECDSA",
             ECNamedCurveTable.getParameterSpec("secp256r1"),
@@ -118,14 +114,13 @@ object Crypto {
      * Not to be confused with the EdDSA variants, Ed25519ctx and Ed25519ph.
      */
     @JvmField
-    val EDDSA_ED25519_SHA512 = SignatureScheme(
+    val EDDSA_ED25519_SHA512: SignatureScheme = SignatureScheme(
             4,
             "EDDSA_ED25519_SHA512",
-            // OID taken from https://tools.ietf.org/html/draft-ietf-curdle-pkix-00
-            AlgorithmIdentifier(ASN1ObjectIdentifier("1.3.101.112"), null),
+            AlgorithmIdentifier(`id-Curve25519ph`, null),
             emptyList(), // Both keys and the signature scheme use the same OID in i2p library.
             // We added EdDSA to bouncy castle for certificate signing.
-            BouncyCastleProvider.PROVIDER_NAME,
+            cordaBouncyCastleProvider.name,
             "1.3.101.112",
             EdDSAEngine.SIGNATURE_ALGORITHM,
             EdDSANamedCurveTable.getByName("ED25519"),
@@ -148,7 +143,7 @@ object Crypto {
             "SPHINCS-256_SHA512",
             AlgorithmIdentifier(BCObjectIdentifiers.sphincs256_with_SHA512, DLSequence(arrayOf(ASN1Integer(0), SHA512_256))),
             listOf(AlgorithmIdentifier(BCObjectIdentifiers.sphincs256, DLSequence(arrayOf(ASN1Integer(0), SHA512_256)))),
-            "BCPQC",
+            bouncyCastlePQCProvider.name,
             "SPHINCS256",
             "SHA512WITHSPHINCS256",
             SPHINCS256KeyGenParameterSpec(SPHINCS256KeyGenParameterSpec.SHA512_256),
@@ -165,7 +160,7 @@ object Crypto {
             "COMPOSITE",
             AlgorithmIdentifier(CordaObjectIdentifier.COMPOSITE_KEY),
             emptyList(),
-            CordaSecurityProvider.PROVIDER_NAME,
+            cordaSecurityProvider.name,
             CompositeKey.KEY_ALGORITHM,
             CompositeSignature.SIGNATURE_ALGORITHM,
             null,
@@ -199,35 +194,12 @@ object Crypto {
             + signatureSchemeMap.values.map { Pair(it.signatureOID, it) })
             .toMap()
 
-    // This map is required to defend against users that forcibly call Security.addProvider / Security.removeProvider
-    // that could cause unexpected and suspicious behaviour.
-    // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
-    // The val is private to avoid any harmful state changes.
-    private val providerMap: Map<String, Provider> = mapOf(
-            BouncyCastleProvider.PROVIDER_NAME to getBouncyCastleProvider(),
-            CordaSecurityProvider.PROVIDER_NAME to CordaSecurityProvider(),
-            "BCPQC" to BouncyCastlePQCProvider()) // Unfortunately, provider's name is not final in BouncyCastlePQCProvider, so we explicitly set it.
-
-    private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
-        putAll(EdDSASecurityProvider())
-        // Override the normal EdDSA engine with one which can handle X509 keys.
-        put("Signature.${EdDSAEngine.SIGNATURE_ALGORITHM}", X509EdDSAEngine::class.qualifiedName)
-        addKeyInfoConverter(EDDSA_ED25519_SHA512.signatureOID.algorithm, KeyInfoConverter(EDDSA_ED25519_SHA512))
-    }
-
     @JvmStatic
     fun supportedSignatureSchemes(): List<SignatureScheme> = ArrayList(signatureSchemeMap.values)
 
     @JvmStatic
     fun findProvider(name: String): Provider {
         return providerMap[name] ?: throw IllegalArgumentException("Unrecognised provider: $name")
-    }
-
-    init {
-        // This registration is needed for reading back EdDSA key from java keystore.
-        // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
-        Security.addProvider(getBouncyCastleProvider())
-        Security.addProvider(CordaSecurityProvider())
     }
 
     /**
@@ -876,7 +848,7 @@ object Crypto {
     // Compute the HMAC-SHA512 using a privateKey as the MAC_key and a seed ByteArray.
     private fun deriveHMAC(privateKey: PrivateKey, seed: ByteArray): ByteArray {
         // Compute hmac(privateKey, seed).
-        val mac = Mac.getInstance("HmacSHA512", providerMap[BouncyCastleProvider.PROVIDER_NAME])
+        val mac = Mac.getInstance("HmacSHA512", cordaBouncyCastleProvider)
         val keyData = when (privateKey) {
             is BCECPrivateKey -> privateKey.d.toByteArray()
             is EdDSAPrivateKey -> privateKey.geta()
@@ -885,16 +857,6 @@ object Crypto {
         val key = SecretKeySpec(keyData, "HmacSHA512")
         mac.init(key)
         return mac.doFinal(seed)
-    }
-
-    private class KeyInfoConverter(val signatureScheme: SignatureScheme) : AsymmetricKeyInfoConverter {
-        override fun generatePublic(keyInfo: SubjectPublicKeyInfo?): PublicKey? {
-            return keyInfo?.let { decodePublicKey(signatureScheme, it.encoded) }
-        }
-
-        override fun generatePrivate(keyInfo: PrivateKeyInfo?): PrivateKey? {
-            return keyInfo?.let { decodePrivateKey(signatureScheme, it.encoded) }
-        }
     }
 
     /**
@@ -1028,5 +990,17 @@ object Crypto {
         } else {
             txId
         }
-     }
+    }
+
+    /**
+     * Method to force registering all [Crypto]-related cryptography [Provider]s.
+     * It is recommended that it is invoked first thing on `main` functions, so the [Provider]s are in place before any
+     * cryptographic operation is requested outside [Crypto] (i.e., SecureRandom, KeyStore, cert-path validation,
+     * CRL & CSR checks etc.).
+     */
+    // TODO: perform all cryptographic operations via Crypto.
+    @JvmStatic
+    fun registerProviders() {
+        providerMap
+    }
 }

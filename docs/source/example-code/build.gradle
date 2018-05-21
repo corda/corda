@@ -34,7 +34,6 @@ dependencies {
     compile project(':client:jfx')
     compile project(':node-driver')
     compile project(':webserver')
-    testCompile project(':verifier')
     testCompile project(':test-utils')
 
     compile "org.graphstream:gs-core:1.3"

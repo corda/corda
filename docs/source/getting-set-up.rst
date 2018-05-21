@@ -39,9 +39,9 @@ any issues, please consult the :doc:`troubleshooting` page, or reach out on `Sla
 
 The set-up instructions are available for the following platforms:
 
-* :ref:`windows-label` (or `in video form <https://vimeo.com/217462250>`_)
+* :ref:`windows-label` (or `in video form <https://vimeo.com/217462250>`__)
 
-* :ref:`mac-label` (or `in video form <https://vimeo.com/217462230>`_)
+* :ref:`mac-label` (or `in video form <https://vimeo.com/217462230>`__)
 
 .. _windows-label:
 
@@ -57,7 +57,8 @@ Java
 3. Toggle "Accept License Agreement"
 4. Click the download link for jdk-8uXXX-windows-x64.exe (where "XXX" is the latest minor version number)
 5. Download and run the executable to install Java (use the default settings)
-6. Open a new command prompt and run ``java -version`` to test that Java is installed correctly
+6. Add Java to the PATH environment variable by following the instructions at https://docs.oracle.com/javase/7/docs/webnotes/install/windows/jdk-installation-windows.html#path
+7. Open a new command prompt and run ``java -version`` to test that Java is installed correctly
 
 Git
 ^^^
@@ -107,11 +108,12 @@ Mac
 
 Java
 ^^^^
-1. Open "System Preferences > Java"
-2. In the Java Control Panel, if an update is available, click "Update Now"
-3. In the "Software Update" window, click "Install Update". If required, enter your password and click "Install Helper" when prompted
-4. Wait for a pop-up window indicating that you have successfully installed the update, and click "Close"
-5. Open a new terminal and type ``java -version`` to test that Java is installed correctly
+1. Visit http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
+2. Scroll down to "Java SE Development Kit 8uXXX" (where "XXX" is the latest minor version number)
+3. Toggle "Accept License Agreement"
+4. Click the download link for jdk-8uXXX-macosx-x64.dmg (where "XXX" is the latest minor version number)
+5. Download and run the executable to install Java (use the default settings)
+6. Open a new terminal window and run ``java -version`` to test that Java is installed correctly
 
 IntelliJ
 ^^^^^^^^
@@ -169,8 +171,8 @@ The best way to check that everything is working fine is by taking a deeper look
 Next, you should read through :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
 
 By then, you'll be ready to start writing your own CorDapps. Learn how to do this in the
-:doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the :doc:`API docs <api-index>`, the
+:doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the API documentation, the
 :doc:`flow cookbook <flow-cookbook>` and the `samples <https://www.corda.net/samples/>`_ along the way.
 
-If you encounter any issues, please see the :doc:`troubleshooting` page, or get in touch with us on the
-`forums <https://discourse.corda.net/>`_ or via `slack <http://slack.corda.net/>`_.
+If you encounter any issues, please see the :doc:`troubleshooting` page, or ask on
+`Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ or via `our Slack channels <http://slack.corda.net/>`_.

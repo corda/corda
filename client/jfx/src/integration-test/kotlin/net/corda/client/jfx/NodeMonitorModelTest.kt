@@ -78,7 +78,7 @@ class NodeMonitorModelTest {
             networkMapUpdates = monitor.networkMap.bufferUntilSubscribed()
 
             monitor.register(aliceNodeHandle.rpcAddress, cashUser.username, cashUser.password)
-            rpc = monitor.proxyObservable.value!!
+            rpc = monitor.proxyObservable.value!!.cordaRPCOps
             notaryParty = defaultNotaryIdentity
 
             val bobNodeHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(cashUser)).getOrThrow()
@@ -86,7 +86,7 @@ class NodeMonitorModelTest {
             val monitorBob = NodeMonitorModel()
             stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
             monitorBob.register(bobNodeHandle.rpcAddress, cashUser.username, cashUser.password)
-            rpcBob = monitorBob.proxyObservable.value!!
+            rpcBob = monitorBob.proxyObservable.value!!.cordaRPCOps
             runTest()
         }
     }
@@ -100,13 +100,13 @@ class NodeMonitorModelTest {
                     sequence(
                             // TODO : Add test for remove when driver DSL support individual node shutdown.
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentities.any { it.name == ALICE_NAME }) { "Expecting : ${ALICE_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
+                                require(output.node.legalIdentities.any { it.name == ALICE_NAME }) { "Expecting : $ALICE_NAME, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentities.any { it.name == BOB_NAME }) { "Expecting : ${BOB_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
+                                require(output.node.legalIdentities.any { it.name == BOB_NAME }) { "Expecting : $BOB_NAME, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentities.any { it.name == CHARLIE_NAME }) { "Expecting : ${CHARLIE_NAME}, Actual : ${output.node.legalIdentities.map(Party::name)}" }
+                                require(output.node.legalIdentities.any { it.name == CHARLIE_NAME }) { "Expecting : $CHARLIE_NAME, Actual : ${output.node.legalIdentities.map(Party::name)}" }
                             }
                     )
                 }

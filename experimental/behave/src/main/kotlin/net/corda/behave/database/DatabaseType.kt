@@ -1,11 +1,11 @@
 package net.corda.behave.database
 
 import net.corda.behave.database.configuration.H2ConfigurationTemplate
-import net.corda.behave.database.configuration.SqlServerConfigurationTemplate
+import net.corda.behave.database.configuration.PostgresConfigurationTemplate
 import net.corda.behave.node.configuration.Configuration
 import net.corda.behave.node.configuration.DatabaseConfiguration
 import net.corda.behave.service.database.H2Service
-import net.corda.behave.service.database.SqlServerService
+import net.corda.behave.service.database.PostgreSQLService
 
 enum class DatabaseType(val settings: DatabaseSettings) {
 
@@ -19,15 +19,18 @@ enum class DatabaseType(val settings: DatabaseSettings) {
             }
     ),
 
-    SQL_SERVER(DatabaseSettings()
-            .withDatabase(SqlServerService.database)
-            .withSchema(SqlServerService.schema)
-            .withUser(SqlServerService.username)
-            .withConfigTemplate(SqlServerConfigurationTemplate())
+    POSTGRES(DatabaseSettings()
+            .withDatabase(PostgreSQLService.database)
+            .withDriver(PostgreSQLService.driver)
+            .withSchema(PostgreSQLService.schema)
+            .withUser(PostgreSQLService.username)
+            .withConfigTemplate(PostgresConfigurationTemplate())
             .withServiceInitiator {
-                SqlServerService("sqlserver-${it.name}", it.database.port, it.database.password)
+                PostgreSQLService("postgres-${it.name}", it.database.port, it.database.password)
             }
     );
+
+    val driverJar = settings.driverJar
 
     fun dependencies(config: Configuration) = settings.dependencies(config)
 
@@ -37,12 +40,9 @@ enum class DatabaseType(val settings: DatabaseSettings) {
 
         fun fromName(name: String): DatabaseType? = when (name.toLowerCase()) {
             "h2" -> H2
-            "sql_server" -> SQL_SERVER
-            "sql server" -> SQL_SERVER
-            "sqlserver" -> SQL_SERVER
+            "postgres" -> POSTGRES
+            "postgresql" -> POSTGRES
             else -> null
         }
-
     }
-
 }

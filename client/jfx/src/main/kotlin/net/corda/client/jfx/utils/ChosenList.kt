@@ -21,14 +21,13 @@ import javafx.collections.ObservableListBase
  * The above will create a list that chooses and delegates to the appropriate filtered list based on the type of filter.
  */
 class ChosenList<E>(
-        private val chosenListObservable: ObservableValue<out ObservableList<out E>>
+        private val chosenListObservable: ObservableValue<out ObservableList<out E>>,
+        private val logicalName: String? = null
 ) : ObservableListBase<E>() {
 
     private var currentList = chosenListObservable.value
 
-    private val listener = object : ListChangeListener<E> {
-        override fun onChanged(change: ListChangeListener.Change<out E>) = fireChange(change)
-    }
+    private val listener = ListChangeListener<E> { change -> fireChange(change) }
 
     init {
         chosenListObservable.addListener { _: Observable -> rechoose() }
@@ -38,7 +37,7 @@ class ChosenList<E>(
         endChange()
     }
 
-    override fun get(index: Int) = currentList.get(index)
+    override fun get(index: Int): E = currentList[index]
     override val size: Int get() = currentList.size
 
     private fun rechoose() {
@@ -58,4 +57,7 @@ class ChosenList<E>(
         endChange()
     }
 
+    override fun toString(): String {
+        return "ChosenList: $logicalName"
+    }
 }

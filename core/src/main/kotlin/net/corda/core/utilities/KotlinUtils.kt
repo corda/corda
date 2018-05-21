@@ -5,7 +5,6 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import rx.Observable
 import java.time.Duration
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
@@ -107,8 +106,10 @@ interface VariablePropertyDelegate<T> : PropertyDelegate<T> {
 
 @CordaSerializable
 private class TransientProperty<out T> internal constructor(private val initialiser: () -> T) : PropertyDelegate<T> {
-    @Transient private var initialised = false
-    @Transient private var value: T? = null
+    @Transient
+    private var initialised = false
+    @Transient
+    private var value: T? = null
 
     @Synchronized
     override operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
@@ -129,3 +130,4 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
 } catch (e: ExecutionException) {
     throw e.cause!!
 }
+

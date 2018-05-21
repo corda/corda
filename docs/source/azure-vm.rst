@@ -1,5 +1,5 @@
-Building a Corda Network on Azure Marketplace
-=============================================
+Azure Marketplace
+=================
 
 To help you design, build and test applications on Corda, called CorDapps, a Corda network can be deployed on the `Microsoft Azure Marketplace <https://azure.microsoft.com/en-gb/overview/what-is-azure>`_
 
@@ -8,7 +8,7 @@ This Corda network offering builds a pre-configured network of Corda nodes as Ub
 Pre-requisites
 --------------
 * Ensure you have a registered Microsoft Azure account which can create virtual machines under your subscription(s) and you are logged on to the Azure portal (portal.azure.com)
-* It is recommended you generate a private-public SSH key pair (see `here <https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2/>`_)
+* It is recommended you generate a private-public SSH key pair (see `here <https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2/>`__)
 
 
 Deploying the Corda Network

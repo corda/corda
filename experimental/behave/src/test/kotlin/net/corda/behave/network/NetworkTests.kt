@@ -2,7 +2,7 @@ package net.corda.behave.network
 
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.node.configuration.NotaryType
-import net.corda.behave.seconds
+import net.corda.core.utilities.seconds
 import org.junit.Ignore
 import org.junit.Test
 
@@ -29,7 +29,7 @@ class NetworkTests {
         val network = Network
                 .new()
                 .addNode("Foo")
-                .addNode("Bar", databaseType = DatabaseType.SQL_SERVER)
+                .addNode("Bar", databaseType = DatabaseType.POSTGRES)
                 .addNode("Baz", notaryType = NotaryType.NON_VALIDATING)
                 .generate()
         network.use {
@@ -38,5 +38,4 @@ class NetworkTests {
             it.keepAlive(30.seconds)
         }
     }
-
 }

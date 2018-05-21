@@ -3,11 +3,15 @@ package net.corda.core.transactions
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.serializedHash
+import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
+import net.corda.core.transactions.NotaryChangeWireTransaction.Component.*
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
 import java.security.PublicKey
 
@@ -18,10 +22,18 @@ import java.security.PublicKey
  */
 @CordaSerializable
 data class NotaryChangeWireTransaction(
-        override val inputs: List<StateRef>,
-        override val notary: Party,
-        val newNotary: Party
+        /**
+         * Contains all of the transaction components in serialized form.
+         * This is used for calculating the transaction id in a deterministic fashion, since re-serializing properties
+         * may result in a different byte sequence depending on the serialization context.
+         */
+        val serializedComponents: List<OpaqueBytes>
 ) : CoreTransaction() {
+    override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
+    override val notary: Party = serializedComponents[NOTARY.ordinal].deserialize()
+    /** Identity of the notary service to reassign the states to.*/
+    val newNotary: Party = serializedComponents[NEW_NOTARY.ordinal].deserialize()
+
     /**
      * This transaction does not contain any output states, outputs can be obtained by resolving a
      * [NotaryChangeLedgerTransaction] and applying the notary modification to inputs.
@@ -33,22 +45,36 @@ data class NotaryChangeWireTransaction(
     init {
         check(inputs.isNotEmpty()) { "A notary change transaction must have inputs" }
         check(notary != newNotary) { "The old and new notaries must be different – $newNotary" }
+        checkBaseInvariants()
     }
 
     /**
      * A privacy salt is not really required in this case, because we already used nonces in normal transactions and
      * thus input state refs will always be unique. Also, filtering doesn't apply on this type of transactions.
      */
-    override val id: SecureHash by lazy { serializedHash(inputs + notary + newNotary) }
+    override val id: SecureHash by lazy {
+        serializedComponents.map { component ->
+            component.bytes.sha256()
+        }.reduce { combinedHash, componentHash ->
+            combinedHash.hashConcat(componentHash)
+        }
+    }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
-    fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>) : NotaryChangeLedgerTransaction {
+    fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
         val resolvedInputs = services.loadStates(inputs.toSet()).toList()
         return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs)
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
     fun resolve(services: ServiceHub, sigs: List<TransactionSignature>) = resolve(services as ServicesForResolution, sigs)
+
+    enum class Component {
+        INPUTS, NOTARY, NEW_NOTARY
+    }
+
+    @Deprecated("Required only for backwards compatibility purposes. This type of transaction should not be constructed outside Corda code.", ReplaceWith("NotaryChangeTransactionBuilder"), DeprecationLevel.WARNING)
+    constructor(inputs: List<StateRef>, notary: Party, newNotary: Party) : this(listOf(inputs, notary, newNotary).map { it.serialize() })
 }
 
 /**
