@@ -26,6 +26,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
+import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
@@ -287,7 +288,7 @@ class NodeAttachmentService(
                 log.info("Stored new attachment $id")
                 id
             } else {
-                throw java.nio.file.FileAlreadyExistsException(id.toString())
+                throw DuplicateAttachmentException(id.toString())
             }
         }
     }

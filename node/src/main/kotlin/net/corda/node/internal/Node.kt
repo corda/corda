@@ -82,7 +82,7 @@ open class Node(configuration: NodeConfiguration,
 
         fun printWarning(message: String) {
             Emoji.renderIfSupported {
-                println("${Emoji.warningSign} ATTENTION: ${message}")
+                println("${Emoji.warningSign} ATTENTION: $message")
             }
             staticLog.warn(message)
         }
@@ -183,7 +183,7 @@ open class Node(configuration: NodeConfiguration,
         val serverAddress = configuration.messagingServerAddress
                 ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port)
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
-            BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress)
+            BrokerAddresses(configuration.rpcOptions.address, configuration.rpcOptions.adminAddress)
         } else {
             startLocalRpcBroker()
         }
@@ -293,10 +293,7 @@ open class Node(configuration: NodeConfiguration,
         // Start up the MQ clients.
         internalRpcMessagingClient?.run {
             runOnStop += this::close
-            when (rpcOps) {
-                is SecureCordaRPCOps -> init(RpcExceptionHandlingProxy(rpcOps), securityManager)
-                else -> init(rpcOps, securityManager)
-            }
+            init(rpcOps, securityManager)
         }
         verifierMessagingClient?.run {
             runOnStop += this::stop
@@ -385,7 +382,7 @@ open class Node(configuration: NodeConfiguration,
                 SerializationFactoryImpl().apply {
                     registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps))
                     registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps))
-                    registerScheme(KryoServerSerializationScheme() )
+                    registerScheme(KryoServerSerializationScheme())
                 },
                 p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader),

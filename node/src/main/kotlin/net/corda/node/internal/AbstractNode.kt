@@ -37,6 +37,8 @@ import net.corda.node.internal.cordapp.CordappConfigFileProvider
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.CordappProviderInternal
+import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
+import net.corda.node.internal.rpc.proxies.ExceptionSerialisingRpcOpsProxy
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
@@ -168,7 +170,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager): CordaRPCOps {
 
-        return SecureCordaRPCOps(services, smm, database, flowStarter, { shutdownExecutor.submit { stop() } })
+        val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, database, flowStarter, { shutdownExecutor.submit { stop() } })
+        // Mind that order is relevant here.
+        val proxies = listOf(::AuthenticatedRpcOpsProxy, ::ExceptionSerialisingRpcOpsProxy)
+        return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
     private fun initCertificate() {

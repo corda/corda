@@ -267,6 +267,12 @@ fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaCl
  */
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
+/**
+ * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
+ * in its superclass [clazz].
+ */
+fun <T> Any.declaredField(clazz: Class<*>, name: String): DeclaredField<T> = DeclaredField(clazz, name, this)
+
 /** creates a new instance if not a Kotlin object */
 fun <T : Any> KClass<T>.objectOrNewInstance(): T {
     return this.objectInstance ?: this.createInstance()
@@ -277,10 +283,43 @@ fun <T : Any> KClass<T>.objectOrNewInstance(): T {
  * visibility.
  */
 class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
-    private val javaField = clazz.getDeclaredField(name).apply { isAccessible = true }
+    private val javaField = findField(name, clazz)
     var value: T
-        get() = uncheckedCast<Any?, T>(javaField.get(receiver))
-        set(value) = javaField.set(receiver, value)
+        get() {
+            synchronized(this) {
+                return javaField.accessible { uncheckedCast<Any?, T>(get(receiver)) }
+            }
+        }
+        set(value) {
+            synchronized(this) {
+                javaField.accessible {
+                    set(receiver, value)
+                }
+            }
+        }
+    val name: String = javaField.name
+
+    private fun <RESULT> Field.accessible(action: Field.() -> RESULT): RESULT {
+        val accessible = isAccessible
+        isAccessible = true
+        try {
+            return action(this)
+        } finally {
+            isAccessible = accessible
+        }
+    }
+
+    @Throws(NoSuchFieldException::class)
+    private fun findField(fieldName: String, clazz: Class<*>?): Field {
+        if (clazz == null) {
+            throw NoSuchFieldException(fieldName)
+        }
+        return try {
+            return clazz.getDeclaredField(fieldName)
+        } catch (e: NoSuchFieldException) {
+            findField(fieldName, clazz.superclass)
+        }
+    }
 }
 
 /** The annotated object would have a more restricted visibility were it not needed in tests. */
