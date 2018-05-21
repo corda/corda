@@ -72,7 +72,7 @@ buildscript {
     ext.postgresql_version = '42.1.4'
     ext.rxjava_version = '1.2.4'
     ext.dokka_version = '0.9.16-eap-2'
-    ext.eddsa_version = '0.2.0'
+    ext.eddsa_version = '0.3.0' // Performance tuned version for enterprise.
     ext.dependency_checker_version = '3.1.0'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'

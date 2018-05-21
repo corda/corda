@@ -103,7 +103,7 @@ class X509EdDSAEngineTest {
     }
 
     /**
-     * Verify that signing with an X509Key wrapped EdDSA key fails when using the underlying EdDSAEngine.
+     * Verify that signing with an X509Key wrapped EdDSA key succeeds when using the underlying EdDSAEngine.
      */
     @Test
     fun `sign and verify with X509Key and old engine fails`() {
@@ -118,11 +118,9 @@ class X509EdDSAEngineTest {
 
         // Now verify the signature
         val signature = engine.sign()
-        assertFailsWith<InvalidKeyException> {
-            engine.initVerify(publicKey)
-            engine.update(randomBytes)
-            engine.verify(signature)
-        }
+        engine.initVerify(publicKey)
+        engine.update(randomBytes)
+        engine.verify(signature)
     }
 
     /** Verify will fail if the input public key cannot be converted to EdDSA public key. */
