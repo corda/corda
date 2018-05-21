@@ -1,6 +1,7 @@
 package net.corda.node.services.rpc
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.RPCException
 import net.corda.core.internal.div
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
@@ -16,7 +17,6 @@ import net.corda.testing.internal.saveToTrustStore
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
 import org.apache.activemq.artemis.api.core.ActiveMQException
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
@@ -90,7 +90,7 @@ class RpcSslTest {
                     successful = true
                 }
                 connection.close()
-            }.isInstanceOf(ActiveMQNotConnectedException::class.java)
+            }.isInstanceOf(RPCException::class.java)
 
         }
 
