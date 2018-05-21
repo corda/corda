@@ -63,7 +63,7 @@ class MigrationExporter(val parent: Path, val datasourceProperties: Properties, 
             createNewFile()
             appendText(LIQUIBASE_HEADER)
             appendText("\n\n")
-            appendText("--changeset $CORDA_USER:initial_schema_for_${mappedSchema::class.simpleName!!}")
+            appendText("--changeset ${CORDA_USER}:initial_schema_for_${mappedSchema::class.simpleName!!}")
             appendText("\n")
         }
 
