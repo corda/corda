@@ -286,11 +286,15 @@ class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?
     private val javaField = findField(name, clazz)
     var value: T
         get() {
-            return javaField.accessible { uncheckedCast<Any?, T>(get(receiver)) }
+            synchronized(this) {
+                return javaField.accessible { uncheckedCast<Any?, T>(get(receiver)) }
+            }
         }
         set(value) {
-            javaField.accessible {
-                set(receiver, value)
+            synchronized(this) {
+                javaField.accessible {
+                    set(receiver, value)
+                }
             }
         }
     val name: String = javaField.name
@@ -304,17 +308,17 @@ class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?
             isAccessible = accessible
         }
     }
-}
 
-@Throws(NoSuchFieldException::class)
-private fun findField(fieldName: String, clazz: Class<*>?): Field {
-    if (clazz == null) {
-        throw NoSuchFieldException(fieldName)
-    }
-    return try {
-        return clazz.getDeclaredField(fieldName)
-    } catch (e: NoSuchFieldException) {
-        findField(fieldName, clazz.superclass)
+    @Throws(NoSuchFieldException::class)
+    private fun findField(fieldName: String, clazz: Class<*>?): Field {
+        if (clazz == null) {
+            throw NoSuchFieldException(fieldName)
+        }
+        return try {
+            return clazz.getDeclaredField(fieldName)
+        } catch (e: NoSuchFieldException) {
+            findField(fieldName, clazz.superclass)
+        }
     }
 }
 

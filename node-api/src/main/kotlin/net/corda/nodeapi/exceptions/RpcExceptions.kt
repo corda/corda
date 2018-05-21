@@ -2,7 +2,7 @@ package net.corda.nodeapi.exceptions
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.ClientRelevantError
+import net.corda.core.ClientRelevantError
 import net.corda.core.flows.IdentifiableException
 
 /**

@@ -1,4 +1,4 @@
-package net.corda.core.flows
+package net.corda.core
 
 import net.corda.core.serialization.CordaSerializable
 

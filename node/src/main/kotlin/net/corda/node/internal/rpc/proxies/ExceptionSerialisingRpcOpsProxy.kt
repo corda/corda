@@ -1,4 +1,4 @@
-package net.corda.node.internal
+package net.corda.node.internal.rpc.proxies
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.CordaThrowable
@@ -12,6 +12,7 @@ import net.corda.core.messaging.FlowHandleImpl
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.serialization.CordaSerializable
+import net.corda.node.internal.InvocationHandlerTemplate
 import rx.Observable
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy.newProxyInstance
@@ -71,7 +72,7 @@ internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps
         }
 
         private fun ensureSerialisable(error: Throwable): Throwable {
-            val serialisable = (superclasses(error::class.java) + error::class.java.interfaces).any { it.isAnnotationPresent(CordaSerializable::class.java) }
+            val serialisable = (superclasses(error::class.java) + error::class.java).any { it.isAnnotationPresent(CordaSerializable::class.java) || it.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) } }
             val result = if (serialisable) error else CordaRuntimeException(error.message, error)
             if (result is CordaThrowable) {
                 result.stackTrace = arrayOf<StackTraceElement>()
