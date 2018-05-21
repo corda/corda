@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import net.corda.core.CordaRuntimeException
+import net.corda.core.CordaThrowable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.mapErrors
@@ -69,10 +70,14 @@ internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps
             return future.mapError(::ensureSerialisable)
         }
 
-
         private fun ensureSerialisable(error: Throwable): Throwable {
             val serialisable = (superclasses(error::class.java) + error::class.java.interfaces).any { it.isAnnotationPresent(CordaSerializable::class.java) }
-            return if (serialisable) error else CordaRuntimeException(error.message, error)
+            val result = if (serialisable) error else CordaRuntimeException(error.message, error)
+            if (result is CordaThrowable) {
+                result.stackTrace = arrayOf<StackTraceElement>()
+                result.setCause(null)
+            }
+            return result
         }
 
         private fun superclasses(clazz: Class<*>): List<Class<*>> {

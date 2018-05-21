@@ -170,7 +170,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
         val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, database, flowStarter, { shutdownExecutor.submit { stop() } })
         // Mind that order is relevant here.
-        val proxies = listOf(::AuthenticatedRpcOpsProxy, ::ExceptionSerialisingRpcOpsProxy, ::ExceptionMaskingRpcOpsProxy)
+        val proxies = listOf(::AuthenticatedRpcOpsProxy, ::ExceptionSerialisingRpcOpsProxy)
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
     }
 
