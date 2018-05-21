@@ -118,5 +118,11 @@ interface BridgeConfiguration : NodeSSLConfiguration {
     // e.g links to the Float Outer, or Artemis sessions, before the process continues shutting down anyway.
     // Default value is 1000 ms.
     val politeShutdownPeriod: Int
+    // p2pConfirmationWindowSize determines the number of bytes buffered by the broker before flushing to disk and
+    // acking the triggering send. Setting this to -1 causes session commits to immediately return, potentially
+    // causing blowup in the broker if the rate of sends exceeds the broker's flush rate. Note also that this window
+    // causes send latency to be around [brokerConnectionTtlCheckInterval] if the window isn't saturated.
+    // This is relevant to bridges, because we push messages into the inbox and use the async acknowledgement responses to reply to sender.
+    val p2pConfirmationWindowSize: Int
     val whitelistedHeaders: List<String>
 }
