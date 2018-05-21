@@ -1,9 +1,9 @@
 package net.corda.tools.shell
 
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import java.nio.file.Path
-import java.nio.file.Paths
 
 data class ShellConfiguration(
         val commandsDirectory: Path,
@@ -11,7 +11,8 @@ data class ShellConfiguration(
         var user: String = "",
         var password: String = "",
         val hostAndPort: NetworkHostAndPort,
-        val ssl: ShellSslOptions? = null,
+        val ssl: ClientRpcSslOptions? = null,
+        val nodeSslConfig: SSLConfiguration? = null,
         val sshdPort: Int? = null,
         val sshHostKeyDirectory: Path? = null,
         val noLocalShell: Boolean = false) {
@@ -21,14 +22,4 @@ data class ShellConfiguration(
         const val CORDAPPS_DIR = "cordapps"
         const val SSHD_HOSTKEY_DIR = "ssh"
     }
-}
-
-//TODO: sslKeystore -> it's a path not the keystore itself.
-//TODO: trustStoreFile -> it's a path not the file itself.
-data class ShellSslOptions(override val sslKeystore: Path,
-                           override val keyStorePassword: String,
-                           override val trustStoreFile: Path,
-                           override val trustStorePassword: String,
-                           override val crlCheckSoftFail: Boolean) : SSLConfiguration {
-    override val certificatesDirectory: Path get() = Paths.get("")
 }

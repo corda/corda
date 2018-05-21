@@ -148,8 +148,15 @@ class ProgressTracker(vararg steps: Step) {
     val currentStepRecursive: Step
         get() = getChildProgressTracker(currentStep)?.currentStepRecursive ?: currentStep
 
+    /** Returns the current step, descending into children to find the deepest started step we are up to. */
+    private val currentStartedStepRecursive: Step
+        get() {
+            val step = getChildProgressTracker(currentStep)?.currentStartedStepRecursive ?: currentStep
+            return if (step == UNSTARTED) currentStep else step
+        }
+
     private fun currentStepRecursiveWithoutUnstarted(): Step {
-        val stepRecursive = getChildProgressTracker(currentStep)?.currentStepRecursive
+        val stepRecursive = getChildProgressTracker(currentStep)?.currentStartedStepRecursive
         return if (stepRecursive == null || stepRecursive == UNSTARTED) currentStep else stepRecursive
     }
 

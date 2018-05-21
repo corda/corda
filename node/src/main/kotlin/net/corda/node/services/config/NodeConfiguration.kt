@@ -10,6 +10,10 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.artemis.CertificateChainCheckPolicy
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.internal.config.*
+import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
 import org.bouncycastle.asn1.x500.X500Name
@@ -18,7 +22,6 @@ import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
 import java.util.*
-
 
 val Int.MB: Long get() = this * 1024L * 1024L
 
@@ -148,7 +151,8 @@ data class NodeConfigurationImpl(
         override val messagingServerAddress: NetworkHostAndPort?,
         override val messagingServerExternal: Boolean = (messagingServerAddress != null),
         override val notary: NotaryConfig?,
-        override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
+        @Deprecated("Do not configure")
+        override val certificateChainCheckPolicies: List<CertChainPolicyConfig> = emptyList(),
         override val devMode: Boolean = false,
         override val noLocalShell: Boolean = false,
         override val devModeOptions: DevModeOptions? = null,
@@ -171,9 +175,9 @@ data class NodeConfigurationImpl(
         private val logger = loggerFor<NodeConfigurationImpl>()
     }
 
-    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword, crlCheckSoftFail))
+    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword))
 
-    private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
+    private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: BrokerRpcSslOptions): NodeRpcOptions {
         return when {
             explicitAddress != null -> {
                 require(settings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
@@ -243,17 +247,22 @@ data class NodeConfigurationImpl(
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
         }
+        if(certificateChainCheckPolicies.isNotEmpty()) {
+            logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
+                |Please contact the R3 team on the public slack to discuss your use case.
+            """.trimMargin())
+        }
     }
 }
 
 data class NodeRpcSettings(
-        val address: NetworkHostAndPort?,
-        val adminAddress: NetworkHostAndPort?,
+        val address: NetworkHostAndPort,
+        val adminAddress: NetworkHostAndPort,
         val standAloneBroker: Boolean = false,
         val useSsl: Boolean = false,
-        val ssl: SslOptions?
+        val ssl: BrokerRpcSslOptions?
 ) {
-    fun asOptions(fallbackSslOptions: SSLConfiguration): NodeRpcOptions {
+    fun asOptions(fallbackSslOptions: BrokerRpcSslOptions): NodeRpcOptions {
         return object : NodeRpcOptions {
             override val address = this@NodeRpcSettings.address
             override val adminAddress = this@NodeRpcSettings.adminAddress
@@ -281,6 +290,7 @@ enum class CertChainPolicyType {
     UsernameMustMatch
 }
 
+@Deprecated("Do not use")
 data class CertChainPolicyConfig(val role: String, private val policy: CertChainPolicyType, private val trustedAliases: Set<String>) {
     val certificateChainCheckPolicy: CertificateChainCheckPolicy
         get() {

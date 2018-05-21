@@ -50,7 +50,7 @@ be structured one parameter per line.
 
 Code is vertically dense, blank lines in methods are used sparingly. This is so more code can fit on screen at once.
 
-We use spaces and not tabs.
+We use spaces and not tabs, with indents being 4 spaces wide.
 
 1.2 Naming
 ----------

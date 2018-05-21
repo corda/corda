@@ -4,8 +4,7 @@ import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -35,7 +34,7 @@ class ArtemisMessagingClient(private val config: SSLConfiguration,
         check(started == null) { "start can't be called twice" }
         log.info("Connecting to message broker: $serverAddress")
         // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-        val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, config)
+        val tcpTransport = ArtemisTcpTransport.p2pConnectorTcpTransport(serverAddress, config)
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
             // would be the default and the two lines below can be deleted.
@@ -50,7 +49,7 @@ class ArtemisMessagingClient(private val config: SSLConfiguration,
         // using our TLS certificate.
         // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
         // size of 1MB is acknowledged.
-        val session = sessionFactory!!.createSession(NODE_USER, NODE_USER, false, true, true, locator.isPreAcknowledge, DEFAULT_ACK_BATCH_SIZE)
+        val session = sessionFactory!!.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, locator.isPreAcknowledge, DEFAULT_ACK_BATCH_SIZE)
         session.start()
         // Create a general purpose producer.
         val producer = session.createProducer()
