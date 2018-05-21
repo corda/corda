@@ -67,6 +67,12 @@ UNRELEASED
   No action is needed for default node tables as ``PersistentStateRef`` is used as Primary Key only and the backing columns are automatically not nullable
   or custom Cordapp entities using ``PersistentStateRef`` as Primary Key.
 
+* H2 database upgrade - the table with a typo has been change, for each database instance and schema run the following SQL statement:
+
+    ALTER TABLE [schema].NODE_ATTCHMENTS_CONTRACTS RENAME TO NODE_ATTACHMENTS_CONTRACTS;
+
+  Schema is optional, run SQL when the node is not running.
+
 v3.0 to v3.1
 ------------
 

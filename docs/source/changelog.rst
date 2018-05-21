@@ -30,6 +30,8 @@ Unreleased
   (even if JPA annotation nullable=false was absent).
   In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
 
+* Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
+
 .. _changelog_v3.1:
 
 Version 3.1
