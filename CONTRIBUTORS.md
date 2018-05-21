@@ -17,7 +17,6 @@ see changes to this list.
 * Andrius Dagys (R3)
 * Andrzej Cichocki (R3)
 * Andrzej Grzesik (R3)
-* Anthony Coates (Deutsche Bank)
 * Anthony Keenan (R3)
 * Anthony Woolley (Société Générale)
 * Anton Semenov (Commerzbank)
@@ -186,4 +185,3 @@ see changes to this list.
 * Wawrzek Niewodniczanski (R3)
 * Wei Wu Zhang (Commonwealth Bank of Australia)
 * Zabrina Smith (Northern Trust)
-* zorenmith (Northern Trust)
