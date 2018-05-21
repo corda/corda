@@ -101,7 +101,7 @@ your unique Corda instance:
 
 .. code:: bash
 
-    sudo ONE_TIME_DOWNLOAD_KEY=cd6913a4-5390-4956-a544-94148a8c70a7 bash -c "$(curl -L https://cces.corda.r3cev.com/api/user/node/install.sh)"
+    sudo ONE_TIME_DOWNLOAD_KEY=cd6913a4-5390-4956-a544-94148a8c70a7 bash -c "$(curl -L https://testnet.corda.network/api/user/node/install.sh)"
 
 You can now navigate to the external web address of the instance and
 see any cordapps running on port 8080 (if you have any installed). 
