@@ -84,6 +84,8 @@
       <module name="gradle-plugins-cordapp_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
       <module name="graphs_test" target="1.8" />
+      <module name="ha-testing_main" target="1.8" />
+      <module name="ha-testing_test" target="1.8" />
       <module name="irs-demo-cordapp_integrationTest" target="1.8" />
       <module name="irs-demo-cordapp_main" target="1.8" />
       <module name="irs-demo-cordapp_main~1" target="1.8" />

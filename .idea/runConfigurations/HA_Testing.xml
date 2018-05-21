@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="HA Testing" type="JetRunConfigurationType" factoryName="Kotlin">
+    <module name="ha-testing_main" />
+    <option name="VM_PARAMETERS" value="-Dlog4j2.debug=true" />
+    <option name="PROGRAM_PARAMETERS" value="--haNodeRpcAddress 52.174.253.60:10003 --haNodeRpcUserName corda --haNodeRpcPassword corda_is_awesome --normalNodeRpcAddress ha-testing-vm-d.westeurope.cloudapp.azure.com:10013 --normalNodeRpcUserName corda --normalNodeRpcPassword corda_is_awesome" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+    <option name="ALTERNATIVE_JRE_PATH" />
+    <option name="PASS_PARENT_ENVS" value="true" />
+    <option name="MAIN_CLASS_NAME" value="net.corda.haTesting.MainKt" />
+    <option name="WORKING_DIRECTORY" value="" />
+    <method />
+  </configuration>
+</component>
