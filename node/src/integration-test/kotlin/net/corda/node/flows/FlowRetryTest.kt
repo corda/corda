@@ -1,13 +1,3 @@
-/*
- * R3 Proprietary and Confidential
- *
- * Copyright (c) 2018 R3 Limited.  All rights reserved.
- *
- * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
- *
- * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
- */
-
 package net.corda.node.flows
 
 import co.paralleluniverse.fibers.Suspendable
@@ -20,12 +10,11 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.testing.core.*
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.node.User
-import org.junit.ClassRule
 import org.junit.Test
 import java.lang.management.ManagementFactory
 import java.sql.SQLException
@@ -34,14 +23,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 
-class FlowRetryTest : IntegrationTest() {
-    companion object {
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
-                .map { it.toDatabaseSchemaName() }.toTypedArray())
-    }
-
+class FlowRetryTest {
     @Test
     fun `flows continue despite errors`() {
         val numSessions = 2

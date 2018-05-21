@@ -39,7 +39,6 @@ class DatabaseTransaction(
 
     internal val boundary = PublishSubject.create<CordaPersistence.Boundary>()
     private var rolledBack = false
-    private var closed = false
 
     fun commit() {
         if (sessionDelegate.isInitialized()) {
@@ -59,7 +58,6 @@ class DatabaseTransaction(
     }
 
     fun close() {
-        closed = true
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.close()
         }
