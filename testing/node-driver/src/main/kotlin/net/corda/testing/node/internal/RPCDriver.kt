@@ -11,8 +11,8 @@
 package net.corda.testing.node.internal
 
 import net.corda.client.mock.Generator
-import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
+import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.AuthServiceId
@@ -33,7 +33,7 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.serialization.AMQP_RPC_CLIENT_CONTEXT
+import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy

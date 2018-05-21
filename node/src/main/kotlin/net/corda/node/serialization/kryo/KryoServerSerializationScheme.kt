@@ -12,9 +12,9 @@ package net.corda.node.serialization.kryo
 
 import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.serialization.SerializationContext
-import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
-import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
-import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
+import net.corda.serialization.internal.CordaSerializationMagic
+import net.corda.serialization.internal.kryo.AbstractKryoSerializationScheme
+import net.corda.serialization.internal.kryo.kryoMagic
 
 class KryoServerSerializationScheme : AbstractKryoSerializationScheme() {
     override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {

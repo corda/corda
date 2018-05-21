@@ -1,7 +1,7 @@
 package net.corda.nodeapi.internal.serialization.amqp.custom
 
-import net.corda.nodeapi.internal.serialization.amqp.CustomSerializer
-import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.CustomSerializer
+import net.corda.serialization.internal.amqp.SerializerFactory
 import rx.Notification
 
 class RxNotificationSerializer(

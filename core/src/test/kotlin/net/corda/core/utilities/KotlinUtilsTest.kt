@@ -13,9 +13,9 @@ package net.corda.core.utilities
 import com.esotericsoftware.kryo.KryoException
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.*
-import net.corda.nodeapi.internal.serialization.KRYO_CHECKPOINT_CONTEXT
-import net.corda.nodeapi.internal.serialization.SerializationContextImpl
-import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
+import net.corda.serialization.internal.KRYO_CHECKPOINT_CONTEXT
+import net.corda.serialization.internal.SerializationContextImpl
+import net.corda.serialization.internal.kryo.kryoMagic
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
@@ -34,8 +34,8 @@ class KotlinUtilsTest {
     @Rule
     val expectedEx: ExpectedException = ExpectedException.none()
 
-    val KRYO_CHECKPOINT_NOWHITELIST_CONTEXT = SerializationContextImpl(kryoMagic,
-            SerializationDefaults.javaClass.classLoader,
+    private val KRYO_CHECKPOINT_NOWHITELIST_CONTEXT = SerializationContextImpl(kryoMagic,
+            javaClass.classLoader,
             EmptyWhitelist,
             emptyMap(),
             true,

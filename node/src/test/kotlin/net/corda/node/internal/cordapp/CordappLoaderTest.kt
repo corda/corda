@@ -69,7 +69,7 @@ class CordappLoaderTest {
         assertThat(actualCordapp.schedulableFlows).isEmpty()
         assertThat(actualCordapp.services).isEmpty()
         assertThat(actualCordapp.serializationWhitelists).hasSize(1)
-        assertThat(actualCordapp.serializationWhitelists.first().javaClass.name).isEqualTo("net.corda.nodeapi.internal.serialization.DefaultWhitelist")
+        assertThat(actualCordapp.serializationWhitelists.first().javaClass.name).isEqualTo("net.corda.serialization.internal.DefaultWhitelist")
         assertThat(actualCordapp.jarPath).isEqualTo(isolatedJAR)
     }
 

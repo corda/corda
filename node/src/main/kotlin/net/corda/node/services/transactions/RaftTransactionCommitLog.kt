@@ -40,7 +40,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding
+import net.corda.serialization.internal.CordaSerializationEncoding
 import java.time.Clock
 
 /**

@@ -15,7 +15,7 @@ apply plugin: 'net.corda.plugins.api-scanner'
 apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
-    compile project(':core')
+    compile project(':serialization')
     testCompile project(':test-utils')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
