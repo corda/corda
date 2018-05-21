@@ -33,5 +33,4 @@ class UserConfiguration : ConfigurationTemplate(), Iterable<UserConfiguration.Us
             |}
             """.trimMargin()
     }
-
 }

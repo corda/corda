@@ -1,8 +1,8 @@
 package net.corda.behave.node.configuration
 
-class CordappConfiguration(vararg apps: String, var includeFinance: Boolean = false) : ConfigurationTemplate() {
+class CordappConfiguration(var apps: List<String> = emptyList(), val includeFinance: Boolean = false) : ConfigurationTemplate() {
 
-    private val applications = apps.toList() + if (includeFinance) {
+    private val applications = apps + if (includeFinance) {
         listOf("net.corda:corda-finance:CORDA_VERSION")
     } else {
         emptyList()
@@ -24,5 +24,4 @@ class CordappConfiguration(vararg apps: String, var includeFinance: Boolean = fa
     private fun formatApp(config: Configuration, app: String): String {
         return "\"${app.replace("CORDA_VERSION", config.distribution.version)}\""
     }
-
 }

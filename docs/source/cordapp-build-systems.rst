@@ -20,29 +20,32 @@ JAR will contain:
 Build tools
 -----------
 In the instructions that follow, we assume you are using ``gradle`` and the ``cordformation`` plugin to build your
-CorDapp. See the `example build file <https://github.com/corda/cordapp-template-kotlin/blob/release-V1/build.gradle>`_
-from the CorDapp template.
+CorDapp. You can find examples of building a CorDapp using these tools in the ``build.gradle`` file of the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
 
 Setting your dependencies
 -------------------------
 
-Choosing your Corda version
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-``ext.corda_release_version`` and ``ext.corda_gradle_plugins_version`` are used in the ``build.gradle`` to define the
-versions of Corda and the Corda Gradle Plugins that are used to build your CorDapp.
+Choosing your Corda, Quasar and Kotlin versions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Several ``ext`` variables are used in a CorDapp's ``build.gradle`` file to define which versions are used to build your CorDapp:
 
-For example, to use version 1.0 of Corda and version 1.0 of the Corda gradle plugins, you'd write:
-
-.. sourcecode:: groovy
-
-    ext.corda_release_version = '1.0.0'
-    ext.corda_gradle_plugins_version = '1.0.0'
-
-You can find the latest published version of both here: https://bintray.com/r3/corda.
+* ``ext.corda_release_version`` defines the version of Corda
+* ``ext.corda_gradle_plugins_version`` defines the version of the Corda Gradle Plugins
+* ``ext.quasar_version`` defines the version of Quasar
+* ``ext.kotlin_version`` defines the version of Kotlin (if using Kotlin to write your CorDapp)
 
 ``corda_gradle_plugins_versions`` are given in the form ``major.minor.patch``. You should use the same ``major`` and
 ``minor`` versions as the Corda version you are using, and the latest ``patch`` version. A list of all the available
-versions can be found here: https://bintray.com/r3/corda/cordapp.
+versions can be found here: https://bintray.com/r3/corda/cordapp. If in doubt, you should base yourself on the version numbers used in the ``build.gradle`` file of the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
+
+For example, to use version 3.0 of Corda, version 3.0.8 of the Corda gradle plugins, version 0.7.9 of Quasar, and version 1.1.60 of Kotlin, you'd write:
+
+.. sourcecode:: groovy
+
+    ext.corda_release_version = 'corda-3.0'
+    ext.corda_gradle_plugins_version = '3.0.8'
+    ext.quasar_version = '0.7.9'
+    ext.kotlin_version = '1.1.60'
 
 In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.
 
@@ -98,8 +101,7 @@ For further information about managing dependencies, see
 
 Example
 ^^^^^^^
-The following is a sample of what a gradle dependencies block for a CorDapp could look like. The CorDapp template
-is already correctly configured and this is for reference only;
+Below is a sample of what a CorDapp's Gradle dependencies block might look like. When building your own CorDapp, you should base yourself on the ``build.gradle`` file of the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
 
 .. container:: codeset
 

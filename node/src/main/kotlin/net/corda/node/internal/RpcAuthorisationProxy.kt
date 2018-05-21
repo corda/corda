@@ -4,6 +4,7 @@ import net.corda.client.rpc.PermissionException
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -53,8 +54,10 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
         implementation.vaultTrackBy(criteria, paging, sorting, contractStateType)
     }
 
+    @Suppress("DEPRECATION", "OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsSnapshot() = guard("internalVerifiedTransactionsSnapshot", implementation::internalVerifiedTransactionsSnapshot)
 
+    @Suppress("DEPRECATION", "OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsFeed() = guard("internalVerifiedTransactionsFeed", implementation::internalVerifiedTransactionsFeed)
 
     override fun stateMachineRecordedTransactionMappingSnapshot() = guard("stateMachineRecordedTransactionMappingSnapshot", implementation::stateMachineRecordedTransactionMappingSnapshot)
@@ -71,6 +74,10 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
 
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?) = guard("startTrackedFlowDynamic", listOf(logicType)) {
         implementation.startTrackedFlowDynamic(logicType, *args)
+    }
+
+    override fun killFlow(id: StateMachineRunId): Boolean = guard("killFlow") {
+        return implementation.killFlow(id)
     }
 
     override fun nodeInfo(): NodeInfo = guard("nodeInfo", implementation::nodeInfo)
@@ -166,6 +173,8 @@ class RpcAuthorisationProxy(private val implementation: CordaRPCOps, private val
     }
 
     override fun isFlowsDrainingModeEnabled(): Boolean = guard("isFlowsDrainingModeEnabled", implementation::isFlowsDrainingModeEnabled)
+
+    override fun shutdown() = guard("shutdown", implementation::shutdown)
 
     // TODO change to KFunction reference after Kotlin fixes https://youtrack.jetbrains.com/issue/KT-12140
     private inline fun <RESULT> guard(methodName: String, action: () -> RESULT) = guard(methodName, emptyList(), action)

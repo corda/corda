@@ -16,7 +16,7 @@ import net.corda.finance.EUR
 import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.flows.ConfigHolder.Companion.supportedCurrencies
-import java.nio.file.Path
+import java.io.IOException
 import java.util.*
 
 // TODO Until apps have access to their own config, we'll hack things by first getting the baseDirectory, read the node.conf
@@ -33,18 +33,24 @@ class ConfigHolder(services: AppServiceHub) : SingletonSerializeAsToken() {
         // Warning!! You are about to see a major hack!
         val baseDirectory = services.declaredField<Any>("serviceHub").value
                 .let { it.javaClass.getMethod("getConfiguration").apply { isAccessible = true }.invoke(it) }
-                .let { it.javaClass.getMethod("getBaseDirectory").apply { isAccessible = true }.invoke(it)}
+                .let { it.javaClass.getMethod("getBaseDirectory").apply { isAccessible = true }.invoke(it) }
                 .let { it.javaClass.getMethod("toString").apply { isAccessible = true }.invoke(it) as String }
-        val config = (baseDirectory / "node.conf").read { ConfigFactory.parseReader(it.reader()) }
-        if (config.hasPath("issuableCurrencies")) {
-            issuableCurrencies = config.getStringList("issuableCurrencies").map { Currency.getInstance(it) }
-            require(supportedCurrencies.containsAll(issuableCurrencies))
-        } else {
-            issuableCurrencies = emptyList()
+
+        var issuableCurrenciesValue: List<Currency>
+        try {
+            val config = (baseDirectory / "node.conf").read { ConfigFactory.parseReader(it.reader()) }
+            if (config.hasPath("custom.issuableCurrencies")) {
+                issuableCurrenciesValue = config.getStringList("custom.issuableCurrencies").map { Currency.getInstance(it) }
+                require(supportedCurrencies.containsAll(issuableCurrenciesValue))
+            } else {
+                issuableCurrenciesValue = emptyList()
+            }
+        } catch (e: IOException) {
+            issuableCurrenciesValue = emptyList()
         }
+        issuableCurrencies = issuableCurrenciesValue
     }
 }
-
 
 /**
  * Flow to obtain cash cordapp app configuration.

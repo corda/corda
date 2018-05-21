@@ -42,10 +42,10 @@ fun <A, B> ObservableValue<out A>.map(function: (A) -> B): ObservableValue<B> = 
  *     re-run the function.
  */
 fun <A, B> ObservableList<out A>.map(cached: Boolean = true, function: (A) -> B): ObservableList<B> {
-    if (cached) {
-        return MappedList(this, function)
+    return if (cached) {
+        MappedList(this, function)
     } else {
-        return EasyBind.map(this, function)
+        EasyBind.map(this, function)
     }
 }
 
@@ -120,11 +120,7 @@ fun <A> ObservableList<out A>.filter(predicate: ObservableValue<(A) -> Boolean>)
  */
 fun <A> ObservableList<out A?>.filterNotNull(): ObservableList<A> {
     //TODO This is a tactical work round for an issue with SAM conversion (https://youtrack.jetbrains.com/issue/ALL-1552) so that the M10 explorer works.
-    return uncheckedCast(uncheckedCast<Any, ObservableList<A?>>(this).filtered(object : Predicate<A?> {
-        override fun test(t: A?): Boolean {
-            return t != null
-        }
-    }))
+    return uncheckedCast(uncheckedCast<Any, ObservableList<A?>>(this).filtered { t -> t != null })
 }
 
 /**
@@ -247,8 +243,8 @@ fun <A : Any, B : Any, C, K : Any> ObservableList<A>.leftOuterJoin(
         assemble: (A, ObservableList<B>) -> C
 ): ObservableList<C> {
     val joinedMap = leftOuterJoin(rightTable, leftToJoinKey, rightToJoinKey)
-    return joinedMap.getObservableValues().map { pair ->
-        pair.first.map { assemble(it, pair.second) }
+    return joinedMap.getObservableValues().map { (first, second) ->
+        first.map { assemble(it, second) }
     }.concatenate()
 }
 
@@ -271,11 +267,9 @@ fun <A : Any, B : Any, K : Any> ObservableList<A>.leftOuterJoin(
 ): ObservableMap<K, Pair<ObservableList<A>, ObservableList<B>>> {
     val leftTableMap = associateByAggregation(leftToJoinKey)
     val rightTableMap = rightTable.associateByAggregation(rightToJoinKey)
-    val joinedMap: ObservableMap<K, Pair<ObservableList<A>, ObservableList<B>>> =
-            LeftOuterJoinedMap(leftTableMap, rightTableMap) { _, left, rightValue ->
-                Pair(left, ChosenList(rightValue.map { it ?: FXCollections.emptyObservableList() }))
-            }
-    return joinedMap
+    return LeftOuterJoinedMap(leftTableMap, rightTableMap) { _, left, rightValue ->
+        Pair(left, ChosenList(rightValue.map { it ?: FXCollections.emptyObservableList() }, "ChosenList from leftOuterJoin"))
+    }
 }
 
 fun <A> ObservableList<A>.getValueAt(index: Int): ObservableValue<A?> {
@@ -298,6 +292,10 @@ fun <A> ObservableList<A>.last(): ObservableValue<A?> {
 
 fun <T : Any> ObservableList<T>.unique(): ObservableList<T> {
     return AggregatedList(this, { it }, { key, _ -> key })
+}
+
+fun <T : Any, K : Any> ObservableList<T>.distinctBy(toKey: (T) -> K): ObservableList<T> {
+    return AggregatedList(this, toKey, { _, entryList -> entryList[0] })
 }
 
 fun ObservableValue<*>.isNotNull(): BooleanBinding {

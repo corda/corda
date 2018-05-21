@@ -22,7 +22,7 @@ import org.junit.Test
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-val TEST_TIMELOCK_ID = "net.corda.core.transactions.TransactionEncumbranceTests\$DummyTimeLock"
+const val TEST_TIMELOCK_ID = "net.corda.core.transactions.TransactionEncumbranceTests\$DummyTimeLock"
 
 class TransactionEncumbranceTests {
     private companion object {
@@ -65,7 +65,7 @@ class TransactionEncumbranceTests {
         }
     }
 
-    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name,
+    private val ledgerServices = MockServices(listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"), MEGA_CORP.name,
             rigorousMock<IdentityServiceInternal>().also {
                 doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
             })

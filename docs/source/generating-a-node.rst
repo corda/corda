@@ -3,96 +3,60 @@ Creating nodes locally
 
 .. contents::
 
-Node structure
---------------
-Each Corda node has the following structure:
+Handcrafting a node
+-------------------
+A node can be created manually by creating a folder that contains the following items:
 
-.. sourcecode:: none
+* The Corda JAR
 
-    .
-    ├── certificates            // The node's certificates
-    ├── corda-webserver.jar     // The built-in node webserver
-    ├── corda.jar               // The core Corda libraries
-    ├── logs                    // The node logs
-    ├── node.conf               // The node's configuration files
-    ├── persistence.mv.db       // The node's database
-    └── cordapps                // The CorDapps jars installed on the node
+    * Can be downloaded from https://r3.bintray.com/corda/net/corda/corda/ (under /VERSION_NUMBER/corda-VERSION_NUMBER.jar)
 
-The node is configured by editing its ``node.conf`` file. You install CorDapps on the node by dropping the CorDapp JARs
-into the ``cordapps`` folder.
+* A node configuration file entitled ``node.conf``, configured as per :doc:`corda-configuration-file`
 
-Node naming
------------
-A node's name must be a valid X.500 distinguished name. In order to be compatible with other implementations
-(particularly TLS implementations), we constrain the allowed X.500 attribute types to a subset of the minimum supported
-set for X.509 certificates (specified in RFC 3280), plus the locality attribute:
+* A folder entitled ``cordapps`` containing any CorDapp JARs you want the node to load
 
-* Organization (O)
-* State (ST)
-* Locality (L)
-* Country (C)
-* Organizational-unit (OU)
-* Common name (CN) (only used for service identities)
+* **Optional:** A webserver JAR entitled ``corda-webserver.jar`` that will connect to the node via RPC
 
-The name must also obey the following constraints:
+    * The (deprecated) default webserver can be downloaded from http://r3.bintray.com/corda/net/corda/corda-webserver/ (under /VERSION_NUMBER/corda-VERSION_NUMBER.jar)
+    * A Spring Boot alternative can be found here: https://github.com/corda/spring-webserver
 
-* The organisation, locality and country attributes are present
-
-    * The state, organisational-unit and common name attributes are optional
-
-* The fields of the name have the following maximum character lengths:
-
-    * Common name: 64
-    * Organisation: 128
-    * Organisation unit: 64
-    * Locality: 64
-    * State: 64
-
-* The country attribute is a valid ISO 3166-1 two letter code in upper-case
-
-* All attributes must obey the following constraints:
-
-    * Upper-case first letter
-    * Has at least two letters
-    * No leading or trailing whitespace
-    * Does not include the following characters: ``,`` , ``=`` , ``$`` , ``"`` , ``'`` , ``\``
-    * Is in NFKC normalization form
-    * Does not contain the null character
-    * Only the latin, common and inherited unicode scripts are supported
-
-* The organisation field of the name also obeys the following constraints:
-
-    * No double-spacing
-
-        * This is to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and
-          character confusability attacks
+The remaining files and folders described in :doc:`node-structure` will be generated at runtime.
 
 The Cordform task
 -----------------
 Corda provides a gradle plugin called ``Cordform`` that allows you to automatically generate and configure a set of
-nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined in the
-`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V2/build.gradle#L97>`_:
+nodes for testing and demos. Here is an example ``Cordform`` task called ``deployNodes`` that creates three nodes, defined
+in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin/blob/release-V3/build.gradle#L100>`_:
 
 .. sourcecode:: groovy
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
-        networkMap "O=NetworkMapAndNotary,L=London,C=GB"
         node {
-            name "O=NetworkMapAndNotary,L=London,C=GB"
+            name "O=Notary,L=London,C=GB"
             // The notary will offer a validating notary service.
             notary = [validating : true]
             p2pPort  10002
-            rpcPort  10003
+            rpcSettings {
+                port 10003
+                adminPort 10023
+            }
             // No webport property, so no webserver will be created.
             h2Port   10004
             // Includes the corda-finance CorDapp on our node.
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
+            // Specify a JVM argument to be used when running the node (in this case, extra heap size).
+            extraConfig = [
+                jvmArgs : [ "-Xmx1g"]
+            ]
         }
         node {
             name "O=PartyA,L=London,C=GB"
             p2pPort  10005
-            rpcPort  10006
+            rpcSettings {
+                port 10006
+                adminPort 10026
+            }
             webPort  10007
             h2Port   10008
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
@@ -102,7 +66,10 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
         node {
             name "O=PartyB,L=New York,C=US"
             p2pPort  10009
-            rpcPort  10010
+            rpcSettings {
+                port 10010
+                adminPort 10030
+            }
             webPort  10011
             h2Port   10012
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
@@ -113,16 +80,14 @@ nodes. Here is an example ``Cordform`` task called ``deployNodes`` that creates 
 
 Running this task will create three nodes in the ``build/nodes`` folder:
 
-* A ``NetworkMapAndNotary`` node that:
+* A ``Notary`` node that:
 
-  * Serves as the network map
   * Offers a validating notary service
   * Will not have a webserver (since ``webPort`` is not defined)
   * Is running the ``corda-finance`` CorDapp
 
 * ``PartyA`` and ``PartyB`` nodes that:
 
-  * Are pointing at the ``NetworkMapAndNotary`` as the network map service
   * Are not offering any services
   * Will have a webserver (since ``webPort`` is defined)
   * Are running the ``corda-finance`` CorDapp
@@ -132,13 +97,30 @@ Additionally, all three nodes will include any CorDapps defined in the project's
 CorDapps are not listed in each node's ``cordapps`` entry. This means that running the ``deployNodes`` task from the
 template CorDapp, for example, would automatically build and add the template CorDapp to each node.
 
-You can extend ``deployNodes`` to generate additional nodes. The only requirement is that you must specify
-a single node to run the network map service, by putting its name in the ``networkMap`` field.
+You can extend ``deployNodes`` to generate additional nodes.
 
 .. warning:: When adding nodes, make sure that there are no port clashes!
 
+To extend node configuration beyond the properties defined in the ``deployNodes`` task use the ``configFile`` property with the path (relative or absolute) set to an additional configuration file.
+This file should follow the standard :doc:`corda-configuration-file` format, as per node.conf. The properties from this file will be appended to the generated node configuration. Note, if you add a property already created by the 'deployNodes' task, both properties will be present in the file.
+The path to the file can also be added while running the Gradle task via the ``-PconfigFile`` command line option. However, the same file will be applied to all nodes.
+Following the previous example ``PartyB`` node will have additional configuration options added from a file ``none-b.conf``:
+
+.. sourcecode:: groovy
+
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        [...]
+        node {
+            name "O=PartyB,L=New York,C=US"
+            [...]
+            // Grants user1 the ability to start the MyFlow flow.
+            rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.net.corda.flows.MyFlow"]]]
+            configFile = "samples/trader-demo/src/main/resources/none-b.conf"
+        }
+    }
+
 Specifying a custom webserver
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 By default, any node listing a webport will use the default development webserver, which is not production-ready. You
 can use your own webserver JAR instead by using the ``webserverJar`` argument in a ``Cordform`` ``node`` configuration
 block:
@@ -156,8 +138,69 @@ The webserver JAR will be copied into the node's ``build`` folder with the name 
 .. warning:: This is an experimental feature. There is currently no support for reading the webserver's port from the
    node's ``node.conf`` file.
 
-Running deployNodes
+The Dockerform task
 -------------------
+
+The ``Dockerform`` is a sister task of ``Cordform``. It has nearly the same syntax and produces very
+similar results - enhanced by an extra file to enable easy spin up of nodes using ``docker-compose``.
+Below you can find the example task from the `IRS Demo <https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
+
+.. sourcecode:: groovy
+
+    def rpcUsersList = [
+        ['username' : "user",
+         'password' : "password",
+         'permissions' : [
+                 "StartFlow.net.corda.irs.flows.AutoOfferFlow\$Requester",
+                 "StartFlow.net.corda.irs.flows.UpdateBusinessDayFlow\$Broadcast",
+                 "StartFlow.net.corda.irs.api.NodeInterestRates\$UploadFixesFlow",
+                 "InvokeRpc.vaultQueryBy",
+                 "InvokeRpc.networkMapSnapshot",
+                 "InvokeRpc.currentNodeTime",
+                 "InvokeRpc.wellKnownPartyFromX500Name"
+         ]]
+    ]
+
+    // (...)
+
+    task deployNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar']) {
+
+        node {
+            name "O=Notary Service,L=Zurich,C=CH"
+            notary = [validating : true]
+            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+        node {
+            name "O=Bank A,L=London,C=GB"
+            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+        node {
+            name "O=Bank B,L=New York,C=US"
+            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+        node {
+            name "O=Regulator,L=Moscow,C=RU"
+            cordapps = ["${project.group}:finance:$corda_release_version"]
+            rpcUsers = rpcUsersList
+            useTestClock true
+        }
+    }
+
+There is no need to specify the ports, as every node is a separated container, so no ports conflict will occur. Every
+node by default will expose port 10003 which is the default port for RPC connections.
+
+.. warning:: The node webserver is not supported by this task!
+
+.. warning:: Nodes are run without the local shell enabled!
+
+Running the Cordform/Dockerform tasks
+-------------------------------------
 To create the nodes defined in our ``deployNodes`` task, run the following command in a terminal window from the root
 of the project where the ``deployNodes`` task is defined:
 
@@ -168,5 +211,8 @@ This will create the nodes in the ``build/nodes`` folder. There will be a node f
 in the ``deployNodes`` task, plus a ``runnodes`` shell script (or batch file on Windows) to run all the nodes at once
 for testing and development purposes. If you make any changes to your CorDapp source or ``deployNodes`` task, you will
 need to re-run the task to see the changes take effect.
+
+If the task is a ``Dockerform`` task, running the task will also create an additional ``Dockerfile`` in each node
+directory, and a ``docker-compose.yml`` file in the ``build/nodes`` directory.
 
 You can now run the nodes by following the instructions in :doc:`Running a node <running-a-node>`.

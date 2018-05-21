@@ -27,6 +27,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import java.security.PublicKey
+import java.security.Signature
 import java.time.Instant
 
 // ``InitiatorFlow`` is our first flow, and will communicate with
@@ -204,6 +205,19 @@ class InitiatorFlow(val arg1: Boolean, val arg2: Int, private val counterparty: 
         regulatorSession.send(Any())
         val packet3: UntrustworthyData<Any> = regulatorSession.receive<Any>()
         // DOCEND 06
+
+        // We may also batch receives in order to increase performance. This
+        // ensures that only a single checkpoint is created for all received
+        // messages.
+        // Type-safe variant:
+        val signatures: List<UntrustworthyData<Signature>> =
+                receiveAll(Signature::class.java, listOf(counterpartySession, regulatorSession))
+        // Dynamic variant:
+        val messages: Map<FlowSession, UntrustworthyData<*>> =
+                receiveAllMap(mapOf(
+                        counterpartySession to Boolean::class.java,
+                        regulatorSession to String::class.java
+                ))
 
         /**-----------------------------------
          * EXTRACTING STATES FROM THE VAULT *

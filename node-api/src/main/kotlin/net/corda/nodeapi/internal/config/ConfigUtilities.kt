@@ -2,22 +2,22 @@
 
 package net.corda.nodeapi.internal.config
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigUtil
-import com.typesafe.config.ConfigValueFactory
+import com.typesafe.config.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.noneOrSingle
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.NetworkHostAndPort
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Field
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier.isStatic
 import java.lang.reflect.ParameterizedType
 import java.net.Proxy
 import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.Temporal
@@ -32,26 +32,57 @@ import kotlin.reflect.jvm.jvmErasure
 @Target(AnnotationTarget.PROPERTY)
 annotation class OldConfig(val value: String)
 
+const val CUSTOM_NODE_PROPERTIES_ROOT = "custom"
+
 // TODO Move other config parsing to use parseAs and remove this
 operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
-    return getValueInternal(metadata.name, metadata.returnType)
+    return getValueInternal(metadata.name, metadata.returnType, UnknownConfigKeysPolicy.IGNORE::handle)
 }
 
-fun <T : Any> Config.parseAs(clazz: KClass<T>): T {
+fun <T : Any> Config.parseAs(clazz: KClass<T>, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle): T {
     require(clazz.isData) { "Only Kotlin data classes can be parsed. Offending: ${clazz.qualifiedName}" }
     val constructor = clazz.primaryConstructor!!
-    val args = constructor.parameters
-            .filterNot { it.isOptional && !hasPath(it.name!!) }
-            .associateBy({ it }) { param ->
+    val parameters = constructor.parameters
+    val parameterNames = parameters.flatMap { param ->
+        mutableSetOf<String>().apply {
+            param.name?.let(this::add)
+            clazz.memberProperties.singleOrNull { it.name == param.name }?.let { matchingProperty ->
+                matchingProperty.annotations.filterIsInstance<OldConfig>().map { it.value }.forEach { this.add(it) }
+            }
+        }
+    }
+    val unknownConfigurationKeys = this.entrySet()
+            .mapNotNull { it.key.split(".").firstOrNull() }
+            .filterNot { it == CUSTOM_NODE_PROPERTIES_ROOT }
+            .filterNot(parameterNames::contains)
+            .toSortedSet()
+    onUnknownKeys.invoke(unknownConfigurationKeys, logger)
+
+    val args = parameters.filterNot { it.isOptional && !hasPath(it.name!!) }.associateBy({ it }) { param ->
                 // Get the matching property for this parameter
                 val property = clazz.memberProperties.first { it.name == param.name }
                 val path = defaultToOldPath(property)
-                getValueInternal<Any>(path, param.type)
+                getValueInternal<Any>(path, param.type, onUnknownKeys)
             }
-    return constructor.callBy(args)
+    try {
+        return constructor.callBy(args)
+    } catch (e: InvocationTargetException) {
+        throw e.cause!!
+    }
 }
 
-inline fun <reified T : Any> Config.parseAs(): T = parseAs(T::class)
+class UnknownConfigurationKeysException private constructor(val unknownKeys: Set<String>) : IllegalArgumentException(message(unknownKeys)) {
+    init {
+        require(unknownKeys.isNotEmpty()) { "Absence of unknown keys should not raise UnknownConfigurationKeysException." }
+    }
+
+    companion object {
+        fun of(offendingKeys: Set<String>): UnknownConfigurationKeysException = UnknownConfigurationKeysException(offendingKeys)
+        private fun message(offendingKeys: Set<String>) = "Unknown configuration keys: ${offendingKeys.joinToString(", ", "[", "]")}."
+    }
+}
+
+inline fun <reified T : Any> Config.parseAs(noinline onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle): T = parseAs(T::class, onUnknownKeys)
 
 fun Config.toProperties(): Properties {
     return entrySet().associateByTo(
@@ -60,11 +91,11 @@ fun Config.toProperties(): Properties {
             { it.value.unwrapped().toString() })
 }
 
-private fun <T : Any> Config.getValueInternal(path: String, type: KType): T {
-    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type) else getCollectionValue(path, type))
+private fun <T : Any> Config.getValueInternal(path: String, type: KType, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit)): T {
+    return uncheckedCast(if (type.arguments.isEmpty()) getSingleValue(path, type, onUnknownKeys) else getCollectionValue(path, type, onUnknownKeys))
 }
 
-private fun Config.getSingleValue(path: String, type: KType): Any? {
+private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set<String>, logger: Logger) -> Unit): Any? {
     if (type.isMarkedNullable && !hasPath(path)) return null
     val typeClass = type.jvmErasure
     return when (typeClass) {
@@ -74,22 +105,29 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         Double::class -> getDouble(path)
         Boolean::class -> getBoolean(path)
         LocalDate::class -> LocalDate.parse(getString(path))
+        Duration::class -> getDuration(path)
         Instant::class -> Instant.parse(getString(path))
         NetworkHostAndPort::class -> NetworkHostAndPort.parse(getString(path))
         Path::class -> Paths.get(getString(path))
         URL::class -> URL(getString(path))
-        CordaX500Name::class -> CordaX500Name.parse(getString(path))
+        UUID::class -> UUID.fromString(getString(path))
+        CordaX500Name::class -> {
+            when (getValue(path).valueType()) {
+                ConfigValueType.OBJECT -> getConfig(path).parseAs(onUnknownKeys)
+                else -> CordaX500Name.parse(getString(path))
+            }
+        }
         Properties::class -> getConfig(path).toProperties()
         Config::class -> getConfig(path)
         else -> if (typeClass.java.isEnum) {
             parseEnum(typeClass.java, getString(path))
         } else {
-            getConfig(path).parseAs(typeClass)
+            getConfig(path).parseAs(typeClass, onUnknownKeys)
         }
     }
 }
 
-private fun Config.getCollectionValue(path: String, type: KType): Collection<Any> {
+private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: (Set<String>, logger: Logger) -> Unit): Collection<Any> {
     val typeClass = type.jvmErasure
     require(typeClass == List::class || typeClass == Set::class) { "$typeClass is not supported" }
     val elementClass = type.arguments[0].type?.jvmErasure ?: throw IllegalArgumentException("Cannot work with star projection: $type")
@@ -107,12 +145,13 @@ private fun Config.getCollectionValue(path: String, type: KType): Collection<Any
         NetworkHostAndPort::class -> getStringList(path).map(NetworkHostAndPort.Companion::parse)
         Path::class -> getStringList(path).map { Paths.get(it) }
         URL::class -> getStringList(path).map(::URL)
+        UUID::class -> getStringList(path).map { UUID.fromString(it) }
         CordaX500Name::class -> getStringList(path).map(CordaX500Name.Companion::parse)
         Properties::class -> getConfigList(path).map(Config::toProperties)
         else -> if (elementClass.java.isEnum) {
             getStringList(path).map { parseEnum(elementClass.java, it) }
         } else {
-            getConfigList(path).map { it.parseAs(elementClass) }
+            getConfigList(path).map { it.parseAs(elementClass, onUnknownKeys) }
         }
     }
     return if (typeClass == Set::class) values.toSet() else values
@@ -156,7 +195,7 @@ private fun Any.toConfigMap(): Map<String, Any> {
         val configValue = if (value is String || value is Boolean || value is Number) {
             // These types are supported by Config as use as is
             value
-        } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name || value is Path || value is URL) {
+        } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name || value is Path || value is URL || value is UUID) {
             // These types make sense to be represented as Strings and the exact inverse parsing function for use in parseAs
             value.toString()
         } else if (value is Enum<*>) {
@@ -191,6 +230,7 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
         NetworkHostAndPort::class.java -> map(Any?::toString)
         Path::class.java -> map(Any?::toString)
         URL::class.java -> map(Any?::toString)
+        UUID::class.java -> map(Any?::toString)
         CordaX500Name::class.java -> map(Any?::toString)
         Properties::class.java -> map { ConfigFactory.parseMap(uncheckedCast(it)).root() }
         else -> if (elementType.isEnum) {
@@ -202,3 +242,17 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
 }
 
 private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.config")
+
+enum class UnknownConfigKeysPolicy(private val handle: (Set<String>, logger: Logger) -> Unit) {
+
+    FAIL({ unknownKeys, _ -> throw UnknownConfigurationKeysException.of(unknownKeys) }),
+    WARN({ unknownKeys, logger -> logger.warn("Unknown configuration keys found: ${unknownKeys.joinToString(", ", "[", "]")}.") }),
+    IGNORE({ _, _ -> });
+
+    fun handle(unknownKeys: Set<String>, logger: Logger) {
+
+        if (unknownKeys.isNotEmpty()) {
+            handle.invoke(unknownKeys, logger)
+        }
+    }
+}

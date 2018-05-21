@@ -23,7 +23,7 @@ import java.util.*
 
 /**
  * Very basic flow which generates new confidential identities for parties in a transaction and exchanges the transaction
- * key and certificate paths between the parties. This is intended for use as a subflow of another flow which builds a
+ * key and certificate paths between the parties. This is intended for use as a sub-flow of another flow which builds a
  * transaction.
  */
 @StartableByRPC
@@ -38,7 +38,7 @@ class SwapIdentitiesFlow(private val otherParty: Party,
 
         fun tracker() = ProgressTracker(AWAITING_KEY)
         /**
-         * Generate the determinstic data blob the confidential identity's key holder signs to indicate they want to
+         * Generate the deterministic data blob the confidential identity's key holder signs to indicate they want to
          * represent the subject named in the X.509 certificate. Note that this is never actually sent between nodes,
          * but only the signature is sent. The blob is built independently on each node and the received signature
          * verified against the expected blob, rather than exchanging the blob.
@@ -76,10 +76,11 @@ class SwapIdentitiesFlow(private val otherParty: Party,
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, revocationEnabled)
         val serializedIdentity = SerializedBytes<PartyAndCertificate>(legalIdentityAnonymous.serialize().bytes)
 
-        // Special case that if we're both parties, a single identity is generated
+        // Special case that if we're both parties, a single identity is generated.
+        // TODO: for increased privacy, we should create one anonymous key per output state.
         val identities = LinkedHashMap<Party, AnonymousParty>()
         if (serviceHub.myInfo.isLegalIdentity(otherParty)) {
-            identities.put(otherParty, legalIdentityAnonymous.party.anonymise())
+            identities[otherParty] = legalIdentityAnonymous.party.anonymise()
         } else {
             val otherSession = initiateFlow(otherParty)
             val data = buildDataToSign(legalIdentityAnonymous)
@@ -90,8 +91,8 @@ class SwapIdentitiesFlow(private val otherParty: Party,
                         val confidentialIdentity: PartyAndCertificate = confidentialIdentityBytes.bytes.deserialize()
                         validateAndRegisterIdentity(serviceHub.identityService, otherParty, confidentialIdentity, theirSigBytes)
                     }
-            identities.put(ourIdentity, legalIdentityAnonymous.party.anonymise())
-            identities.put(otherParty, anonymousOtherSide.party.anonymise())
+            identities[ourIdentity] = legalIdentityAnonymous.party.anonymise()
+            identities[otherParty] = anonymousOtherSide.party.anonymise()
         }
         return identities
     }
@@ -101,9 +102,9 @@ class SwapIdentitiesFlow(private val otherParty: Party,
 }
 
 /**
- * Data class used only in the context of asserting the owner of the private key for the listed key wants to use it
- * to represent the named entity. This is pairs with an X.509 certificate (which asserts the signing identity says
- * the key represents the named entity), but protects against a certificate authority incorrectly claiming others'
+ * Data class used only in the context of asserting that the owner of the private key for the listed key wants to use it
+ * to represent the named entity. This is paired with an X.509 certificate (which asserts the signing identity says
+ * the key represents the named entity) and protects against a malicious party incorrectly claiming others'
  * keys.
  */
 @CordaSerializable

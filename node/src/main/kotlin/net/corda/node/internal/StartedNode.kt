@@ -3,9 +3,9 @@ package net.corda.node.internal
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.notary.NotaryService
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NotaryService
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.messaging.MessagingService
@@ -29,7 +29,7 @@ interface StartedNode<out N : AbstractNode> {
     /**
      * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
      * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].
-     * @return An [Observable] of the initiated flows started by counter-parties.
+     * @return An [Observable] of the initiated flows started by counterparties.
      */
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>) = internals.registerInitiatedFlow(smm, initiatedFlowClass)
 

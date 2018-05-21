@@ -18,6 +18,8 @@ ext['artemis.version'] = "$artemis_version"
 ext['hibernate.version'] = "$hibernate_version"
 ext['selenium.version'] = "$selenium_version"
 ext['jackson.version'] = "$jackson_version"
+ext['dropwizard-metrics.version'] = "$metrics_version"
+ext['mockito.version'] = "$mockito_version"
 
 apply plugin: 'java'
 apply plugin: 'kotlin'

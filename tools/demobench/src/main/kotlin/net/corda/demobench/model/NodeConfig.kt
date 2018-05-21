@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.Properties
 
 /**
  * This is a subset of FullNodeConfiguration, containing only those configs which we need. The node uses reference.conf
@@ -29,12 +30,15 @@ data class NodeConfig(
         val h2port: Int,
         val rpcUsers: List<User> = listOf(defaultUser),
         /** This is an extra config used by the Cash app. */
-        val issuableCurrencies: List<String> = emptyList()
+        val issuableCurrencies: List<String> = emptyList(),
+        /** Pass-through for generating node.conf with external DB */
+        val dataSourceProperties: Properties? = null,
+        val database: Properties? = null
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
         val defaultUser = user("guest")
-        val cordappDirName = "cordapps"
+        const val cordappDirName = "cordapps"
     }
 
     @Suppress("unused")
@@ -42,17 +46,49 @@ data class NodeConfig(
     @Suppress("unused")
     private val useTestClock = true
 
-    private fun asConfig(): Config {
+    fun nodeConf(): Config {
 
-        val config = toConfig()
+        val basic = NodeConfigurationData(myLegalName, p2pAddress, rpcAddress, notary, h2port, rpcUsers, useTestClock, detectPublicIp).toConfig()
         val rpcSettings = empty()
                 .withValue("address", ConfigValueFactory.fromAnyRef(rpcAddress.toString()))
                 .withValue("adminAddress", ConfigValueFactory.fromAnyRef(rpcAdminAddress.toString()))
                 .root()
-        return config.withoutPath("rpcAddress").withoutPath("rpcAdminAddress").withValue("rpcSettings", rpcSettings)
+        return basic.withoutPath("rpcAddress").withoutPath("rpcAdminAddress").withValue("rpcSettings", rpcSettings)
     }
 
-    fun toText(): String = asConfig().root().render(renderOptions)
+    fun webServerConf() = WebServerConfigurationData(myLegalName, rpcAddress, webAddress, rpcUsers).asConfig()
+
+    fun toNodeConfText() = nodeConf().render()
+
+    fun toWebServerConfText() = webServerConf().render()
+
+    fun serialiseAsString(): String {
+
+        return toConfig().render()
+    }
+
+    private fun Config.render(): String = root().render(renderOptions)
+}
+
+private data class NodeConfigurationData(
+        val myLegalName: CordaX500Name,
+        val p2pAddress: NetworkHostAndPort,
+        val rpcAddress: NetworkHostAndPort,
+        val notary: NotaryService?,
+        val h2port: Int,
+        val rpcUsers: List<User> = listOf(NodeConfig.defaultUser),
+        val useTestClock: Boolean,
+        val detectPublicIp: Boolean
+)
+
+private data class WebServerConfigurationData(
+        val myLegalName: CordaX500Name,
+        val rpcAddress: NetworkHostAndPort,
+        val webAddress: NetworkHostAndPort,
+        val rpcUsers: List<User>
+) {
+
+   fun asConfig() = toConfig()
 }
 
 /**

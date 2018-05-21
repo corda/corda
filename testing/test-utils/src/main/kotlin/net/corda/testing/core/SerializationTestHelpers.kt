@@ -2,19 +2,11 @@ package net.corda.testing.core
 
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
-import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.client.rpc.internal.KryoClientSerializationScheme
 import net.corda.core.DoNotImplement
 import net.corda.core.internal.staticField
 import net.corda.core.serialization.internal.SerializationEnvironment
-import net.corda.core.serialization.internal.SerializationEnvironmentImpl
-import net.corda.core.serialization.internal._globalSerializationEnv
 import net.corda.core.serialization.internal.effectiveSerializationEnv
-import net.corda.node.serialization.KryoServerSerializationScheme
-import net.corda.nodeapi.internal.serialization.*
-import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.internal.createTestSerializationEnv
 import net.corda.testing.internal.inVMExecutors
@@ -24,11 +16,14 @@ import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-/** @param inheritable whether new threads inherit the environment, use sparingly. */
+/**
+ * A test serialization rule implementation for use in tests
+ *
+ * @param inheritable whether new threads inherit the environment, use sparingly.
+ */
 class SerializationEnvironmentRule(private val inheritable: Boolean = false) : TestRule {
     companion object {
         init {
@@ -71,10 +66,3 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
         }
     }
 }
-
-@DoNotImplement
-interface GlobalSerializationEnvironment : SerializationEnvironment {
-    /** Unset this environment. */
-    fun unset()
-}
-

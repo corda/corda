@@ -34,7 +34,6 @@ dependencies {
     compile project(':client:jfx')
     compile project(':node-driver')
     compile project(':webserver')
-    testCompile project(':verifier')
     testCompile project(':test-utils')
 
     compile "org.graphstream:gs-core:1.3"
@@ -77,14 +76,20 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "O=Notary Service,OU=corda,L=London,C=GB"
         notary = [validating : true]
         p2pPort 10002
-        rpcPort 10003
+        rpcSettings {
+            address "localhost:10003"
+            adminAddress "localhost:10013"
+        }
         webPort 10004
         cordapps = []
     }
     node {
         name "O=Alice Corp,L=London,C=GB"
         p2pPort 10005
-        rpcPort 10006
+        rpcSettings {
+            address "localhost:10006"
+            adminAddress "localhost:10016"
+        }
         webPort 10007
         cordapps = []
         rpcUsers = [

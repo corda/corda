@@ -20,9 +20,8 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
@@ -53,8 +52,8 @@ class ScheduledFlowsDrainingModeTest {
     @Before
     fun setup() {
         mockNet = InternalMockNetwork(cordappPackages = listOf("net.corda.testing.contracts"), threadPerNode = true)
-        aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
-        bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
+        bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
         notary = mockNet.defaultNotaryIdentity
         alice = aliceNode.info.singleIdentity()
         bob = bobNode.info.singleIdentity()

@@ -9,6 +9,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.finance.POUNDS
 import net.corda.testing.core.*
+import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.junit.Before
@@ -82,7 +83,7 @@ class TransactionSerializationTests {
         stx.verifyRequiredSignatures()
 
         // Corrupt the data and ensure the signature catches the problem.
-        val bytesField = stx.id::bytes.javaField?.apply { setAccessible(true) }
+        val bytesField = stx.id::bytes.javaField?.apply { isAccessible = true }
         val bytes = bytesField?.get(stx.id) as ByteArray
         bytes[5] = bytes[5].inc()
 

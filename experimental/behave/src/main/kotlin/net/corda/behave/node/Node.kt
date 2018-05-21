@@ -4,22 +4,25 @@ import net.corda.behave.database.DatabaseConnection
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
 import net.corda.behave.file.currentDirectory
-import net.corda.behave.file.div
-import net.corda.behave.logging.getLogger
+import net.corda.behave.file.stagingRoot
 import net.corda.behave.monitoring.PatternWatch
 import net.corda.behave.node.configuration.*
 import net.corda.behave.process.JarCommand
-import net.corda.behave.seconds
 import net.corda.behave.service.Service
 import net.corda.behave.service.ServiceSettings
 import net.corda.behave.ssh.MonitoringSSHClient
 import net.corda.behave.ssh.SSHClient
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.seconds
 import org.apache.commons.io.FileUtils
-import java.io.File
+import java.net.InetAddress
+import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 
@@ -28,25 +31,25 @@ import java.util.concurrent.CountDownLatch
  */
 class Node(
         val config: Configuration,
-        private val rootDirectory: File = currentDirectory,
+        private val rootDirectory: Path = currentDirectory,
         private val settings: ServiceSettings = ServiceSettings()
 ) {
 
-    private val log = getLogger<Node>()
+    private val log = loggerFor<Node>()
 
     private val runtimeDirectory = rootDirectory / config.name
 
     private val logDirectory = runtimeDirectory / "logs"
 
     private val command = JarCommand(
-            config.distribution.jarFile,
+            config.distribution.cordaJar,
             arrayOf("--config", "node.conf"),
             runtimeDirectory,
             settings.timeout,
             enableRemoteDebugging = false
     )
 
-    private val isAliveLatch = PatternWatch("Node for \".*\" started up and registered")
+    private val isAliveLatch = PatternWatch(command.output, "Node for \".*\" started up and registered")
 
     private var isConfigured = false
 
@@ -76,7 +79,7 @@ class Node(
         log.info("Configuring {} ...", this)
         serviceDependencies.addAll(config.database.type.dependencies(config))
         config.distribution.ensureAvailable()
-        config.writeToFile(rootDirectory / "${config.name}.conf")
+        config.writeToFile(rootDirectory / "${config.name}_node.conf")
         installApps()
     }
 
@@ -97,7 +100,7 @@ class Node(
     }
 
     fun waitUntilRunning(waitDuration: Duration? = null): Boolean {
-        val ok = isAliveLatch.await(command.output, waitDuration ?: settings.timeout)
+        val ok = isAliveLatch.await(waitDuration ?: settings.timeout)
         if (!ok) {
             log.warn("{} did not start up as expected within the given time frame", this)
         } else {
@@ -126,7 +129,8 @@ class Node(
     }
 
     val logOutput: LogSource by lazy {
-        LogSource(logDirectory, "node-info-gen.log", filePatternUsedForExclusion = true)
+        val hostname = InetAddress.getLocalHost().hostName
+        LogSource(logDirectory, "node-$hostname.*.log")
     }
 
     val database: DatabaseConnection by lazy {
@@ -156,9 +160,9 @@ class Node(
         val user = config.users.first()
         val address = config.nodeInterface
         val targetHost = NetworkHostAndPort(address.host, address.rpcPort)
-        val config = CordaRPCClientConfiguration(
-                connectionMaxRetryInterval = 10.seconds
-        )
+        val config = object : CordaRPCClientConfiguration {
+            override val connectionMaxRetryInterval = 10.seconds
+        }
         log.info("Establishing RPC connection to ${targetHost.host} on port ${targetHost.port} ...")
         CordaRPCClient(targetHost, config).use(user.username, user.password) {
             log.info("RPC connection to ${targetHost.host}:${targetHost.port} established")
@@ -216,10 +220,10 @@ class Node(
 
     private fun installApps() {
         val version = config.distribution.version
-        val appDirectory = rootDirectory / "../../../deps/corda/$version/apps"
+        val appDirectory = stagingRoot / "corda" / version / "apps"
         if (appDirectory.exists()) {
             val targetAppDirectory = runtimeDirectory / "cordapps"
-            FileUtils.copyDirectory(appDirectory, targetAppDirectory)
+            FileUtils.copyDirectory(appDirectory.toFile(), targetAppDirectory.toFile())
         }
     }
 
@@ -228,7 +232,7 @@ class Node(
         var name: String? = null
             private set
 
-        private var distribution = Distribution.V3
+        private var distribution = Distribution.MASTER
 
         private var databaseType = DatabaseType.H2
 
@@ -244,7 +248,7 @@ class Node(
 
         private var includeFinance = false
 
-        private var directory: File? = null
+        private var directory: Path? = null
 
         private var timeout = Duration.ofSeconds(60)
 
@@ -294,7 +298,7 @@ class Node(
             return this
         }
 
-        fun withDirectory(newDirectory: File): Builder {
+        fun withDirectory(newDirectory: Path): Builder {
             directory = newDirectory
             return this
         }
@@ -314,13 +318,14 @@ class Node(
                             databaseType,
                             location = location,
                             country = country,
+                            notary = NotaryConfiguration(notaryType),
+                            cordapps = CordappConfiguration(
+                                    apps = apps,
+                                    includeFinance = includeFinance
+                            ),
                             configElements = *arrayOf(
                                     NotaryConfiguration(notaryType),
-                                    CurrencyConfiguration(issuableCurrencies),
-                                    CordappConfiguration(
-                                            apps = *apps.toTypedArray(),
-                                            includeFinance = includeFinance
-                                    )
+                                    CurrencyConfiguration(issuableCurrencies)
                             )
                     ),
                     directory,
@@ -331,7 +336,6 @@ class Node(
         private fun <T> error(message: String): T {
             throw IllegalArgumentException(message)
         }
-
     }
 
     companion object {

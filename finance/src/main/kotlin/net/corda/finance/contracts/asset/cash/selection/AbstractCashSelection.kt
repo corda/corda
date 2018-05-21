@@ -8,11 +8,15 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.utilities.*
 import net.corda.finance.contracts.asset.Cash
-import java.sql.*
+import java.sql.Connection
+import java.sql.DatabaseMetaData
+import java.sql.ResultSet
+import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
@@ -30,14 +34,15 @@ abstract class AbstractCashSelection {
 
         fun getInstance(metadata: () -> java.sql.DatabaseMetaData): AbstractCashSelection {
             return instance.get() ?: {
-                val _metadata = metadata()
-                val cashSelectionAlgos = ServiceLoader.load(AbstractCashSelection::class.java).toList()
-                val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(_metadata) }
+                val metadataLocal = metadata()
+                val cashSelectionAlgos = ServiceLoader.load(AbstractCashSelection::class.java, this::class.java.classLoader).toList()
+                val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(metadataLocal) }
                 cashSelectionAlgo?.let {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
-                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
-                        "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.java}")
+                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver name '${metadataLocal.driverName}'." +
+                        "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.qualifiedName}." +
+                        "\nAvailable implementations: $cashSelectionAlgos")
             }.invoke()
         }
 
@@ -57,11 +62,10 @@ abstract class AbstractCashSelection {
      * loaded JDBC driver.
      * Note: the first loaded implementation to pass this check will be used at run-time.
      */
-    abstract fun isCompatible(metadata: DatabaseMetaData): Boolean
+    protected abstract fun isCompatible(metadata: DatabaseMetaData): Boolean
 
     /**
      * A vendor specific query(ies) to gather Cash states that are available.
-     * @param statement The service hub to allow access to the database session
      * @param amount The amount of currency desired (ignoring issues, but specifying the currency)
      * @param lockId The FlowLogic.runId.uuid of the flow, which is used to soft reserve the states.
      * Also, previous outputs of the flow will be eligible as they are implicitly locked with this id until the flow completes.
@@ -73,10 +77,10 @@ abstract class AbstractCashSelection {
      * otherwise what is available is returned unlocked for informational purposes.
      * @return The result of the withResultSet function
      */
-    abstract fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
+    protected abstract fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
                               onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean
 
-    override abstract fun toString(): String
+    abstract override fun toString(): String
 
     /**
      * Query to gather Cash states that are available and retry if they are temporarily unavailable.
@@ -101,6 +105,7 @@ abstract class AbstractCashSelection {
                                         withIssuerRefs: Set<OpaqueBytes> = emptySet()): List<StateAndRef<Cash.State>> {
         val stateAndRefs = mutableListOf<StateAndRef<Cash.State>>()
 
+        // DOCSTART CASHSELECT 1
         for (retryCount in 1..MAX_RETRIES) {
             if (!attemptSpend(services, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs, stateAndRefs)) {
                 log.warn("Coin selection failed on attempt $retryCount")
@@ -116,6 +121,7 @@ abstract class AbstractCashSelection {
                 break
             }
         }
+        // DOCEND CASHSELECT 1
         return stateAndRefs
     }
 
@@ -142,7 +148,7 @@ abstract class AbstractCashSelection {
 
                     if (stateRefs.isNotEmpty()) {
                         // TODO: future implementation to retrieve contract states from a Vault BLOB store
-                        stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<StateAndRef<Cash.State>>)
+                        stateAndRefs.addAll(uncheckedCast(services.loadStates(stateRefs)))
                     }
 
                     val success = stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity

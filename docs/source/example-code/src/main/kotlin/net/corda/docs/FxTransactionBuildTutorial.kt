@@ -16,7 +16,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.schemas.CashSchemaV1
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import java.util.*
 
 @CordaSerializable
@@ -74,7 +74,7 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, lockId: UUID, req
     val outputs = if (residual > 0L) {
         // Build an output state for the residual change back to us
         val residualAmount = Amount(residual, sellAmount.token)
-        val residualOutput = Cash.State(residualAmount, serviceHub.myInfo.chooseIdentity())
+        val residualOutput = Cash.State(residualAmount, serviceHub.myInfo.singleIdentity())
         listOf(transferedFundsOutput, residualOutput)
     } else {
         listOf(transferedFundsOutput)

@@ -21,7 +21,7 @@ service.
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
         node {
-            name "O=NetworkMapAndNotary,L=London,C=GB"
+            name "O=Notary,L=London,C=GB"
             notary = [validating : true]
             p2pPort 10002
             rpcPort 10003
@@ -105,7 +105,7 @@ commands.
 .. note:: Local terminal shell is available only in a development mode. In production environment SSH server can be enabled.
     More about SSH and how to connect can be found on the :doc:`shell` page.
 
-We want to create an IOU of 100 with PartyB. We start the ``IOUFlow`` by typing:
+We want to create an IOU of 99 with PartyB. We start the ``IOUFlow`` by typing:
 
 .. container:: codeset
 
@@ -124,7 +124,7 @@ If the flow worked, it should have recorded a new IOU in the vaults of both Part
 
 We can check the contents of each node's vault by running:
 
-.. code-block:: base
+.. code-block:: bash
 
         run vaultQuery contractStateType: com.template.IOUState
 
@@ -142,7 +142,7 @@ The vaults of PartyA and PartyB should both display the following output:
           - "C=GB,L=London,O=PartyA"
           - "C=US,L=New York,O=PartyB"
         contract: "com.template.contract.IOUContract"
-        notary: "C=GB,L=London,O=NetworkMapAndNotary,CN=corda.notary.validating"
+        notary: "C=GB,L=London,O=Notary"
         encumbrance: null
         constraint:
           attachmentId: "F578320232CAB87BB1E919F3E5DB9D81B7346F9D7EA6D9155DC0F7BA8E472552"
@@ -157,7 +157,7 @@ The vaults of PartyA and PartyB should both display the following output:
       recordedTime: 1506415268.875000000
       consumedTime: null
       status: "UNCONSUMED"
-      notary: "C=GB,L=London,O=NetworkMapAndNotary,CN=corda.notary.validating"
+      notary: "C=GB,L=London,O=Notary"
       lockId: null
       lockUpdateTime: 1506415269.548000000
     totalStatesAvailable: -1

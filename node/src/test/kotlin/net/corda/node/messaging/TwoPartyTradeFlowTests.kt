@@ -35,21 +35,26 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.TwoPartyTradeFlow.Buyer
 import net.corda.finance.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.StartedNode
-import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.*
-import net.corda.testing.internal.LogHelper
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
+import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.VaultFiller
-import net.corda.testing.node.*
+import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.pumpReceive
+import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.ledger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -57,7 +62,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import rx.Observable
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.jar.JarOutputStream
@@ -278,7 +282,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
-            bobNode = mockNet.createNode(MockNodeParameters(bobAddr.id, BOB_NAME))
+            bobNode = mockNet.createNode(InternalMockNodeParameters(bobAddr.id, BOB_NAME))
             // Find the future representing the result of this state machine again.
             val bobFuture = bobNode.smm.findStateMachines(BuyerAcceptor::class.java).single().second
 
@@ -312,7 +316,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     // of gets and puts.
     private fun makeNodeWithTracking(name: CordaX500Name): StartedNode<InternalMockNetwork.MockNode> {
         // Create a node in the mock network ...
-        return mockNet.createNode(MockNodeParameters(legalName = name), nodeFactory = { args ->
+        return mockNet.createNode(InternalMockNodeParameters(legalName = name), nodeFactory = { args ->
             object : InternalMockNetwork.MockNode(args) {
                 // That constructs a recording tx storage
                 override fun makeTransactionStorage(database: CordaPersistence, transactionCacheSizeBytes: Long): WritableTransactionStorage {
@@ -344,7 +348,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 it.closeEntry()
             }
             val attachmentID = aliceNode.database.transaction {
-                attachment(ByteArrayInputStream(stream.toByteArray()))
+                attachment(stream.toByteArray().inputStream())
             }
 
             val bobsFakeCash = bobNode.database.transaction {
@@ -448,7 +452,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 it.closeEntry()
             }
             val attachmentID = aliceNode.database.transaction {
-                attachment(ByteArrayInputStream(stream.toByteArray()))
+                attachment(stream.toByteArray().inputStream())
             }
 
             val bobsKey = bobNode.services.keyManagementService.keys.single()
@@ -537,7 +541,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val buyerFlows: Observable<out FlowLogic<*>> = buyerNode.registerInitiatedFlow(BuyerAcceptor::class.java)
         val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
         val seller = SellerInitiator(buyer, notary, assetToSell, 1000.DOLLARS, anonymous)
-        val sellerResult = sellerNode.services.startFlow(seller)
+        val sellerResult = sellerNode.services.startFlow(seller).resultFuture
         return RunResult(firstBuyerFiber, sellerResult, seller.stateMachine.id)
     }
 
@@ -740,6 +744,12 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             private val database: CordaPersistence,
             private val delegate: WritableTransactionStorage
     ) : WritableTransactionStorage, SingletonSerializeAsToken() {
+        override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
+            return database.transaction {
+                delegate.trackTransaction(id)
+            }
+        }
+
         override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
             return database.transaction {
                 delegate.track()

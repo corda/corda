@@ -60,13 +60,12 @@ class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
         }
 
         // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
-        val move: SignedTransaction = run {
+
+        return run {
             val builder = TransactionBuilder(notary)
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), recipient)
             val stx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(stx))
         }
-
-        return move
     }
 }

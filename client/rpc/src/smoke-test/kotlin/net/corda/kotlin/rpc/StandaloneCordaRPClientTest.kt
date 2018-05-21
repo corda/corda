@@ -61,7 +61,6 @@ class StandaloneCordaRPClientTest {
             p2pPort = port.andIncrement,
             rpcPort = port.andIncrement,
             rpcAdminPort = port.andIncrement,
-            webPort = port.andIncrement,
             isNotary = true,
             users = listOf(user)
     )
@@ -219,7 +218,7 @@ class StandaloneCordaRPClientTest {
         flowHandle.returnValue.get()
 
         val balance = rpcProxy.getCashBalance(USD)
-        println("Balance: " + balance)
+        println("Balance: $balance")
         assertEquals(629.DOLLARS, balance)
     }
 

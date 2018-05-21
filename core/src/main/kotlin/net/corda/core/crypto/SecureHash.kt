@@ -78,17 +78,35 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          * Generates a random SHA-256 value.
          */
         @JvmStatic
-        fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
+        fun randomSHA256() = sha256(secureRandomBytes(32))
 
         /**
          * A SHA-256 hash value consisting of 32 0x00 bytes.
+         * This field provides more intuitive access from Java.
          */
-        val zeroHash = SecureHash.SHA256(ByteArray(32, { 0.toByte() }))
+        @JvmField
+        val zeroHash: SHA256 = SecureHash.SHA256(ByteArray(32, { 0.toByte() }))
+
+        /**
+         * A SHA-256 hash value consisting of 32 0x00 bytes.
+         * This function is provided for API stability.
+         */
+        @Suppress("Unused")
+        fun getZeroHash(): SHA256 = zeroHash
 
         /**
          * A SHA-256 hash value consisting of 32 0xFF bytes.
+         * This field provides more intuitive access from Java.
          */
-        val allOnesHash = SecureHash.SHA256(ByteArray(32, { 255.toByte() }))
+        @JvmField
+        val allOnesHash: SHA256 = SecureHash.SHA256(ByteArray(32, { 255.toByte() }))
+
+        /**
+         * A SHA-256 hash value consisting of 32 0xFF bytes.
+         * This function is provided for API stability.
+         */
+        @Suppress("Unused")
+        fun getAllOnesHash(): SHA256 = allOnesHash
     }
 
     // In future, maybe SHA3, truncated hashes etc.

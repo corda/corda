@@ -32,7 +32,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val nodes = startNodesWithPort(partiesList)
         nodes.forEach {
             infos.add(it.info)
-            addressesMap[it.info.chooseIdentity().name] = it.info.addresses[0]
+            addressesMap[it.info.singleIdentity().name] = it.info.addresses[0]
             it.dispose() // We want them to communicate with NetworkMapService to save data to cache.
         }
     }
@@ -81,7 +81,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val alice = startNodesWithPort(listOf(ALICE))[0]
         val netCache = alice.services.networkMapCache
         alice.database.transaction {
-            val res = netCache.getNodeByLegalIdentity(alice.info.chooseIdentity())
+            val res = netCache.getNodeByLegalIdentity(alice.info.singleIdentity())
             assertEquals(alice.info, res)
             val res2 = netCache.getNodeByLegalName(DUMMY_REGULATOR.name)
             assertEquals(infos.singleOrNull { DUMMY_REGULATOR.name in it.legalIdentities.map { it.name } }, res2)

@@ -6,11 +6,19 @@ buildscript {
 }
 
 apply plugin: 'maven'
+apply plugin: 'java'
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
 dependencies {
-    compile "com.google.guava:guava:$guava_version"
+    // Add the top-level projects ONLY to the host project.
+    runtime project.childProjects.values().collect {
+        project(it.path)
+    }
 }
+
+// Don't create an empty jar. The plugins are now in child projects.
+jar.enabled = false

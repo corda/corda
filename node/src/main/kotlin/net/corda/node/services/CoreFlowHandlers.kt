@@ -7,6 +7,7 @@ import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.ContractUpgradeUtils
+import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
 
@@ -54,15 +55,14 @@ class ContractUpgradeHandler(otherSide: FlowSession) : AbstractStateReplacementF
         val ourSTX = serviceHub.validatedTransactions.getTransaction(proposal.stateRef.txhash)
         requireNotNull(ourSTX) { "We don't have a copy of the referenced state" }
         val oldStateAndRef = ourSTX!!.tx.outRef<ContractState>(proposal.stateRef.index)
-        val authorisedUpgrade = serviceHub.contractUpgradeService.getAuthorisedContractUpgrade(oldStateAndRef.ref) ?:
-                throw IllegalStateException("Contract state upgrade is unauthorised. State hash : ${oldStateAndRef.ref}")
-        val proposedTx = stx.tx
-        val expectedTx = ContractUpgradeUtils.assembleBareTx(oldStateAndRef, proposal.modification, proposedTx.privacySalt).toWireTransaction(serviceHub)
+        val authorisedUpgrade = serviceHub.contractUpgradeService.getAuthorisedContractUpgrade(oldStateAndRef.ref) ?: throw IllegalStateException("Contract state upgrade is unauthorised. State hash : ${oldStateAndRef.ref}")
+        val proposedTx = stx.coreTransaction as ContractUpgradeWireTransaction
+        val expectedTx = ContractUpgradeUtils.assembleUpgradeTx(oldStateAndRef, proposal.modification, proposedTx.privacySalt, serviceHub)
         requireThat {
             "The instigator is one of the participants" using (initiatingSession.counterparty in oldStateAndRef.state.data.participants)
             "The proposed upgrade ${proposal.modification.javaClass} is a trusted upgrade path" using (proposal.modification.name == authorisedUpgrade)
             "The proposed tx matches the expected tx for this upgrade" using (proposedTx == expectedTx)
         }
-        proposedTx.toLedgerTransaction(serviceHub).verify()
+        proposedTx.resolve(serviceHub, stx.sigs)
     }
 }

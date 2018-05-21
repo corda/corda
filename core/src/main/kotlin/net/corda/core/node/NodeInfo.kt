@@ -31,7 +31,8 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
         require(platformVersion > 0) { "Platform version must be at least 1" }
     }
 
-    @Transient private var _legalIdentities: List<Party>? = null
+    @Transient
+    private var _legalIdentities: List<Party>? = null
 
     /**
      * An ordered list of legal identities supported by this node. The node will always have at least one, so if you

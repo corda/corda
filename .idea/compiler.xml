@@ -10,22 +10,36 @@
       <module name="bank-of-corda-demo_integrationTest" target="1.8" />
       <module name="bank-of-corda-demo_main" target="1.8" />
       <module name="bank-of-corda-demo_test" target="1.8" />
+      <module name="behave_behave" target="1.8" />
       <module name="behave_main" target="1.8" />
       <module name="behave_scenario" target="1.8" />
       <module name="behave_test" target="1.8" />
+      <module name="blobinspector_main" target="1.8" />
+      <module name="blobinspector_test" target="1.8" />
       <module name="bootstrapper_main" target="1.8" />
       <module name="bootstrapper_test" target="1.8" />
       <module name="buildSrc_main" target="1.8" />
       <module name="buildSrc_test" target="1.8" />
+      <module name="canonicalizer_main" target="1.8" />
+      <module name="canonicalizer_test" target="1.8" />
       <module name="client_main" target="1.8" />
       <module name="client_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
+      <module name="contracts-states_integrationTest" target="1.8" />
+      <module name="contracts-states_main" target="1.8" />
+      <module name="contracts-states_test" target="1.8" />
       <module name="corda-core_integrationTest" target="1.8" />
       <module name="corda-core_smokeTest" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
+      <module name="corda-smoke-test-utils_main" target="1.8" />
+      <module name="corda-smoke-test-utils_test" target="1.8" />
+      <module name="corda-test-common_main" target="1.8" />
+      <module name="corda-test-common_test" target="1.8" />
+      <module name="corda-test-utils_main" target="1.8" />
+      <module name="corda-test-utils_test" target="1.8" />
       <module name="corda-webserver_integrationTest" target="1.8" />
       <module name="corda-webserver_main" target="1.8" />
       <module name="corda-webserver_test" target="1.8" />
@@ -65,6 +79,9 @@
       <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />
+      <module name="flows_integrationTest" target="1.8" />
+      <module name="flows_main" target="1.8" />
+      <module name="flows_test" target="1.8" />
       <module name="gradle-plugins-cordapp_main" target="1.8" />
       <module name="gradle-plugins-cordapp_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
@@ -102,6 +119,8 @@
       <module name="node-driver_integrationTest" target="1.8" />
       <module name="node-driver_main" target="1.8" />
       <module name="node-driver_test" target="1.8" />
+      <module name="node-schemas_main" target="1.8" />
+      <module name="node-schemas_test" target="1.8" />
       <module name="node_integrationTest" target="1.8" />
       <module name="node_main" target="1.8" />
       <module name="node_smokeTest" target="1.8" />
@@ -122,6 +141,11 @@
       <module name="samples_test" target="1.8" />
       <module name="sandbox_main" target="1.8" />
       <module name="sandbox_test" target="1.8" />
+      <module name="serialization_main" target="1.8" />
+      <module name="serialization_test" target="1.8" />
+      <module name="shell_integrationTest" target="1.8" />
+      <module name="shell_main" target="1.8" />
+      <module name="shell_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />

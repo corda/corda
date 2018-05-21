@@ -19,7 +19,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -57,13 +57,13 @@ class IdentitySyncFlowTests {
         // Alice issues then pays some cash to a new confidential identity that Bob doesn't know about
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
-        val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notary))
+        val issueFlow = aliceNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, alice, anonymous, notary)).resultFuture
         val issueTx = issueFlow.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
 
         // Run the flow to sync up the identities
-        aliceNode.services.startFlow(Initiator(bob, issueTx.tx)).getOrThrow()
+        aliceNode.services.startFlow(Initiator(bob, issueTx.tx)).resultFuture.getOrThrow()
         val expected = aliceNode.database.transaction {
             aliceNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity)
         }
@@ -88,7 +88,7 @@ class IdentitySyncFlowTests {
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
         val issueFlow = charlieNode.services.startFlow(CashIssueAndPaymentFlow(1000.DOLLARS, ref, charlie, anonymous, notary))
-        val issueTx = issueFlow.getOrThrow().stx
+        val issueTx = issueFlow.resultFuture.getOrThrow().stx
         val confidentialIdentity = issueTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>().single().owner
         val confidentialIdentCert = charlieNode.services.identityService.certificateFromKey(confidentialIdentity.owningKey)!!
 
@@ -97,11 +97,11 @@ class IdentitySyncFlowTests {
         assertNotNull(aliceNode.database.transaction { aliceNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
 
         // Generate a payment from Charlie to Alice, including the confidential state
-        val payTx = charlieNode.services.startFlow(CashPaymentFlow(1000.DOLLARS, alice, anonymous)).getOrThrow().stx
+        val payTx = charlieNode.services.startFlow(CashPaymentFlow(1000.DOLLARS, alice, anonymous)).resultFuture.getOrThrow().stx
 
         // Run the flow to sync up the identities, and confirm Charlie's confidential identity doesn't leak
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
-        aliceNode.services.startFlow(Initiator(bob, payTx.tx)).getOrThrow()
+        aliceNode.services.startFlow(Initiator(bob, payTx.tx)).resultFuture.getOrThrow()
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
     }
 
@@ -109,7 +109,7 @@ class IdentitySyncFlowTests {
      * Very lightweight wrapping flow to trigger the counterparty flow that receives the identities.
      */
     @InitiatingFlow
-    class Initiator(private val otherSide: Party, private val tx: WireTransaction): FlowLogic<Boolean>() {
+    class Initiator(private val otherSide: Party, private val tx: WireTransaction) : FlowLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
             val session = initiateFlow(otherSide)
@@ -120,7 +120,7 @@ class IdentitySyncFlowTests {
     }
 
     @InitiatedBy(IdentitySyncFlowTests.Initiator::class)
-    class Receive(private val otherSideSession: FlowSession): FlowLogic<Unit>() {
+    class Receive(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             subFlow(IdentitySyncFlow.Receive(otherSideSession))

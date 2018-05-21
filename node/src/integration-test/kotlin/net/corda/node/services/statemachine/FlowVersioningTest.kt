@@ -7,11 +7,11 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.testing.core.chooseIdentity
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.NodeBasedTest
-import net.corda.testing.node.startFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -22,7 +22,7 @@ class FlowVersioningTest : NodeBasedTest() {
         val bob = startNode(BOB_NAME, platformVersion = 3)
         bob.internals.installCoreFlow(PretendInitiatingCoreFlow::class, ::PretendInitiatedCoreFlow)
         val (alicePlatformVersionAccordingToBob, bobPlatformVersionAccordingToAlice) = alice.services.startFlow(
-                PretendInitiatingCoreFlow(bob.info.chooseIdentity())).getOrThrow()
+                PretendInitiatingCoreFlow(bob.info.singleIdentity())).resultFuture.getOrThrow()
         assertThat(alicePlatformVersionAccordingToBob).isEqualTo(2)
         assertThat(bobPlatformVersionAccordingToAlice).isEqualTo(3)
     }
@@ -45,5 +45,4 @@ class FlowVersioningTest : NodeBasedTest() {
         @Suspendable
         override fun call() = otherSideSession.send(otherSideSession.getCounterpartyFlowInfo().flowVersion)
     }
-
 }

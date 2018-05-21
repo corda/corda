@@ -8,8 +8,10 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
@@ -17,6 +19,7 @@ import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
@@ -42,18 +45,24 @@ open class TransactionBuilder(
 ) {
     constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
+    private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
+
     /**
      * Creates a copy of the builder.
      */
-    fun copy() = TransactionBuilder(
-            notary = notary,
-            inputs = ArrayList(inputs),
-            attachments = ArrayList(attachments),
-            outputs = ArrayList(outputs),
-            commands = ArrayList(commands),
-            window = window,
-            privacySalt = privacySalt
-    )
+    fun copy(): TransactionBuilder {
+        val t = TransactionBuilder(
+                notary = notary,
+                inputs = ArrayList(inputs),
+                attachments = ArrayList(attachments),
+                outputs = ArrayList(outputs),
+                commands = ArrayList(commands),
+                window = window,
+                privacySalt = privacySalt
+        )
+        t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
+        return t
+    }
 
     // DOCSTART 1
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
@@ -83,31 +92,52 @@ open class TransactionBuilder(
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      */
     @Throws(MissingContractAttachments::class)
-    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services.cordappProvider)
+    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
 
-    internal fun toWireTransactionWithContext(cordappProvider: CordappProvider, serializationContext: SerializationContext? = null): WireTransaction {
-        // Resolves the AutomaticHashConstraints to HashAttachmentConstraints for convenience. The AutomaticHashConstraint
-        // allows for less boiler plate when constructing transactions since for the typical case the named contract
+    internal fun toWireTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
+
+        // Resolves the AutomaticHashConstraints to HashAttachmentConstraints or WhitelistedByZoneAttachmentConstraint based on a global parameter.
+        // The AutomaticHashConstraint allows for less boiler plate when constructing transactions since for the typical case the named contract
         // will be available when building the transaction. In exceptional cases the TransactionStates must be created
         // with an explicit [AttachmentConstraint]
         val resolvedOutputs = outputs.map { state ->
-            if (state.constraint is AutomaticHashConstraint) {
-                cordappProvider.getContractAttachmentID(state.contract)?.let {
+            when {
+                state.constraint !== AutomaticHashConstraint -> state
+                useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters) -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint)
+                else -> services.cordappProvider.getContractAttachmentID(state.contract)?.let {
                     state.copy(constraint = HashAttachmentConstraint(it))
                 } ?: throw MissingContractAttachments(listOf(state))
-            } else {
-                state
             }
         }
+
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            WireTransaction(WireTransaction.createComponentGroups(inputs, resolvedOutputs, commands, attachments, notary, window), privacySalt)
+            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + makeContractAttachments(services.cordappProvider), notary, window), privacySalt)
         }
+    }
+
+    private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters): Boolean {
+        return contractClassName in networkParameters.whitelistedContractImplementations.keys
+    }
+
+    /**
+     * The attachments added to the current transaction contain only the hashes of the current cordapps.
+     * NOT the hashes of the cordapps that were used when the input states were created ( in case they changed in the meantime)
+     * TODO - review this logic
+     */
+    private fun makeContractAttachments(cordappProvider: CordappProvider): List<AttachmentId> {
+        return (inputsWithTransactionState + outputs).map { state ->
+            cordappProvider.getContractAttachmentID(state.contract)
+                    ?: throw MissingContractAttachments(listOf(state))
+        }.distinct()
     }
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)
 
-    internal fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext) = toWireTransactionWithContext(services.cordappProvider, serializationContext).toLedgerTransaction(services)
+    internal fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
+        return toWireTransactionWithContext(services, serializationContext).toLedgerTransaction(services)
+    }
+
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub) {
         toLedgerTransaction(services).verify()
@@ -117,6 +147,7 @@ open class TransactionBuilder(
         val notary = stateAndRef.state.notary
         require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
         inputs.add(stateAndRef.ref)
+        inputsWithTransactionState.add(stateAndRef.state)
         return this
     }
 

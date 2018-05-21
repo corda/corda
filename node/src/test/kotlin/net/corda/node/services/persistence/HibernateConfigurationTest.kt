@@ -34,6 +34,7 @@ import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -118,10 +119,10 @@ class HibernateConfigurationTest {
             services = object : MockServices(cordappPackages, BOB_NAME, rigorousMock<IdentityServiceInternal>().also {
                 doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME })
             }, generateKeyPair(), dummyNotary.keyPair) {
-                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, validatedTransactions, hibernateConfig)
+                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, hibernateConfig)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        validatedTransactions.addTransaction(stx)
+                        (validatedTransactions as WritableTransactionStorage).addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(statesToRecord, txs.map { it.tx })

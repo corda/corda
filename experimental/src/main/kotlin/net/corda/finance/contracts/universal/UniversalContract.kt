@@ -116,12 +116,12 @@ class UniversalContract : Contract {
 
         val arr = replaceStartEnd(rollOut.template, start.toInstant(), nextStart.toInstant())
 
-        if (nextStart < end) {
+        return if (nextStart < end) {
             // TODO: we may have to save original start date in order to roll out correctly
             val newRollOut = RollOut(nextStart, end, rollOut.frequency, rollOut.template)
-            return replaceNext(arr, newRollOut)
+            replaceNext(arr, newRollOut)
         } else {
-            return removeNext(arr)
+            removeNext(arr)
         }
     }
 
@@ -132,7 +132,7 @@ class UniversalContract : Contract {
                 is EndDate -> uncheckedCast(const(end))
                 is StartDate -> uncheckedCast(const(start))
                 is UnaryPlus -> UnaryPlus(replaceStartEnd(p.arg, start, end))
-                is PerceivableOperation -> PerceivableOperation<T>(replaceStartEnd(p.left, start, end), p.op, replaceStartEnd(p.right, start, end))
+                is PerceivableOperation -> PerceivableOperation(replaceStartEnd(p.left, start, end), p.op, replaceStartEnd(p.right, start, end))
                 is Interest -> uncheckedCast(Interest(replaceStartEnd(p.amount, start, end), p.dayCountConvention, replaceStartEnd(p.interest, start, end), replaceStartEnd(p.start, start, end), replaceStartEnd(p.end, start, end)))
                 is Fixing -> uncheckedCast(Fixing(p.source, replaceStartEnd(p.date, start, end), p.tenor))
                 is PerceivableAnd -> uncheckedCast(replaceStartEnd(p.left, start, end) and replaceStartEnd(p.right, start, end))
@@ -221,7 +221,7 @@ class UniversalContract : Contract {
                     1 -> {
                         val outState = tx.outputsOfType<State>().single()
                         requireThat {
-                            "output state must match action result state" using (arrangement.equals(outState.details))
+                            "output state must match action result state" using (arrangement == outState.details)
                             "output state must match action result state" using (rest == zero)
                         }
                     }
@@ -230,7 +230,7 @@ class UniversalContract : Contract {
                         val allContracts = And(tx.outputsOfType<State>().map { it.details }.toSet())
 
                         requireThat {
-                            "output states must match action result state" using (arrangement.equals(allContracts))
+                            "output states must match action result state" using (arrangement == allContracts)
                         }
 
                     }
@@ -250,7 +250,7 @@ class UniversalContract : Contract {
                     "the transaction is signed by all liable parties" using
                             (liableParties(outState.details).all { it in cmd.signers })
                     "output state does not reflect move command" using
-                            (replaceParty(inState.details, value.from, value.to).equals(outState.details))
+                            (replaceParty(inState.details, value.from, value.to) == outState.details)
                 }
             }
             is Commands.Fix -> {
@@ -269,7 +269,7 @@ class UniversalContract : Contract {
                 requireThat {
                     "relevant fixing must be included" using unusedFixes.isEmpty()
                     "output state does not reflect fix command" using
-                            (expectedArr.equals(outState.details))
+                            (expectedArr == outState.details)
                 }
             }
             else -> throw IllegalArgumentException("Unrecognised command")

@@ -4,8 +4,8 @@ import org.junit.runner.RunWith
 
 @RunWith(Cucumber::class)
 @CucumberOptions(
-        glue = arrayOf("net.corda.behave.scenarios"),
-        plugin = arrayOf("pretty")
+        glue = ["net.corda.behave.scenarios"],
+        plugin = ["pretty"]
 )
 @Suppress("KDocMissingDocumentation")
 class CucumberTest

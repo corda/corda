@@ -10,6 +10,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
+import java.io.Serializable
 import javax.persistence.*
 
 object NodeInfoSchema
@@ -27,19 +28,19 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "node_info_id")
             var id: Int,
 
-            @Column(name="node_info_hash", length = 64)
+            @Column(name = "node_info_hash", length = 64)
             val hash: String,
 
             @Column(name = "addresses")
-            @OneToMany(cascade = arrayOf(CascadeType.ALL), orphanRemoval = true)
+            @OneToMany(cascade = [(CascadeType.ALL)], orphanRemoval = true)
             @JoinColumn(name = "node_info_id", foreignKey = ForeignKey(name = "FK__info_hosts__infos"))
             val addresses: List<DBHostAndPort>,
 
             @Column(name = "legal_identities_certs")
-            @ManyToMany(cascade = arrayOf(CascadeType.ALL))
+            @ManyToMany(cascade = [(CascadeType.ALL)])
             @JoinTable(name = "node_link_nodeinfo_party",
-                    joinColumns = arrayOf(JoinColumn(name = "node_info_id", foreignKey = ForeignKey(name = "FK__link_nodeinfo_party__infos"))),
-                    inverseJoinColumns = arrayOf(JoinColumn(name = "party_name", foreignKey = ForeignKey(name = "FK__link_ni_p__info_p_cert"))))
+                    joinColumns = [(JoinColumn(name = "node_info_id", foreignKey = ForeignKey(name = "FK__link_nodeinfo_party__infos")))],
+                    inverseJoinColumns = [(JoinColumn(name = "party_name", foreignKey = ForeignKey(name = "FK__link_ni_p__info_p_cert")))])
             val legalIdentitiesAndCerts: List<DBPartyAndCertificate>,
 
             @Column(name = "platform_version")
@@ -52,7 +53,7 @@ object NodeInfoSchemaV1 : MappedSchema(
              */
             @Column(name = "serial")
             val serial: Long
-    ) {
+    ) : Serializable {
         fun toNodeInfo(): NodeInfo {
             return NodeInfo(
                     this.addresses.map { it.toHostAndPort() },
@@ -72,7 +73,7 @@ object NodeInfoSchemaV1 : MappedSchema(
             var id: Int,
             val host: String? = null,
             val port: Int? = null
-    ) {
+    ) : Serializable {
         companion object {
             fun fromHostAndPort(hostAndPort: NetworkHostAndPort) = DBHostAndPort(
                     0, hostAndPort.host, hostAndPort.port
@@ -101,16 +102,15 @@ object NodeInfoSchemaV1 : MappedSchema(
             @Column(name = "party_cert_binary")
             val partyCertBinary: ByteArray,
 
-
             val isMain: Boolean,
 
-            @ManyToMany(mappedBy = "legalIdentitiesAndCerts", cascade = arrayOf(CascadeType.ALL)) // ManyToMany because of distributed services.
+            @ManyToMany(mappedBy = "legalIdentitiesAndCerts", cascade = [(CascadeType.ALL)]) // ManyToMany because of distributed services.
             private val persistentNodeInfos: Set<PersistentNodeInfo> = emptySet()
-    ) {
+    ) : Serializable {
         constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
                 : this(partyAndCert.name.toString(),
-                       partyAndCert.party.owningKey.toStringShort(),
-                       partyAndCert.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes, isMain)
+                partyAndCert.party.owningKey.toStringShort(),
+                partyAndCert.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes, isMain)
 
         fun toLegalIdentityAndCert(): PartyAndCertificate {
             return partyCertBinary.deserialize()

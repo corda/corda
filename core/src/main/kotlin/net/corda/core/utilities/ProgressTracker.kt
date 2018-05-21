@@ -1,5 +1,6 @@
 package net.corda.core.utilities
 
+import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
@@ -41,7 +42,7 @@ class ProgressTracker(vararg steps: Step) {
         }
 
         data class Structural(val tracker: ProgressTracker, val parent: Step) : Change(tracker) {
-            override fun toString() = "Structural step change in child of ${parent.label}"
+            override fun toString() = STRUCTURAL_STEP_PREFIX + parent.label
         }
     }
 
@@ -60,11 +61,11 @@ class ProgressTracker(vararg steps: Step) {
 
     // Sentinel objects. Overrides equals() to survive process restarts and serialization.
     object UNSTARTED : Step("Unstarted") {
-        override fun equals(other: Any?) = other is UNSTARTED
+        override fun equals(other: Any?) = other === UNSTARTED
     }
 
     object DONE : Step("Done") {
-        override fun equals(other: Any?) = other is DONE
+        override fun equals(other: Any?) = other === DONE
     }
 
     @CordaSerializable
@@ -117,7 +118,7 @@ class ProgressTracker(vararg steps: Step) {
             if (currentStep == value) return
 
             val index = steps.indexOf(value)
-            require(index != -1)
+            require(index != -1, { "Step ${value.label} not found in progress tracker." })
 
             if (index < stepIndex) {
                 // We are going backwards: unlink and unsubscribe from any child nodes that we're rolling back
@@ -147,8 +148,15 @@ class ProgressTracker(vararg steps: Step) {
     val currentStepRecursive: Step
         get() = getChildProgressTracker(currentStep)?.currentStepRecursive ?: currentStep
 
+    /** Returns the current step, descending into children to find the deepest started step we are up to. */
+    private val currentStartedStepRecursive: Step
+        get() {
+            val step = getChildProgressTracker(currentStep)?.currentStartedStepRecursive ?: currentStep
+            return if (step == UNSTARTED) currentStep else step
+        }
+
     private fun currentStepRecursiveWithoutUnstarted(): Step {
-        val stepRecursive = getChildProgressTracker(currentStep)?.currentStepRecursive
+        val stepRecursive = getChildProgressTracker(currentStep)?.currentStartedStepRecursive
         return if (stepRecursive == null || stepRecursive == UNSTARTED) currentStep else stepRecursive
     }
 
@@ -181,6 +189,8 @@ class ProgressTracker(vararg steps: Step) {
     fun endWithError(error: Throwable) {
         check(!hasEnded) { "Progress tracker has already ended" }
         _changes.onError(error)
+        _stepsTreeIndexChanges.onError(error)
+        _stepsTreeChanges.onError(error)
     }
 
     /** The parent of this tracker: set automatically by the parent when a tracker is added as a child */

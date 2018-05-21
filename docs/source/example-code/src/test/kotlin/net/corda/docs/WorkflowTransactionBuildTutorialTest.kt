@@ -9,11 +9,10 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.toFuture
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.api.StartedNodeServices
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.StartedMockNode
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -21,8 +20,8 @@ import kotlin.test.assertEquals
 
 class WorkflowTransactionBuildTutorialTest {
     private lateinit var mockNet: MockNetwork
-    private lateinit var aliceServices: StartedNodeServices
-    private lateinit var bobServices: StartedNodeServices
+    private lateinit var aliceNode: StartedMockNode
+    private lateinit var bobNode: StartedMockNode
     private lateinit var alice: Party
     private lateinit var bob: Party
 
@@ -35,11 +34,9 @@ class WorkflowTransactionBuildTutorialTest {
     @Before
     fun setup() {
         mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.docs"))
-        val aliceNode = mockNet.createPartyNode(ALICE_NAME)
-        val bobNode = mockNet.createPartyNode(BOB_NAME)
+        aliceNode = mockNet.createPartyNode(ALICE_NAME)
+        bobNode = mockNet.createPartyNode(BOB_NAME)
         aliceNode.registerInitiatedFlow(RecordCompletionFlow::class.java)
-        aliceServices = aliceNode.services
-        bobServices = bobNode.services
         alice = aliceNode.services.myInfo.identityFromX500Name(ALICE_NAME)
         bob = bobNode.services.myInfo.identityFromX500Name(BOB_NAME)
     }
@@ -52,20 +49,20 @@ class WorkflowTransactionBuildTutorialTest {
     @Test
     fun `Run workflow to completion`() {
         // Setup a vault subscriber to wait for successful upload of the proposal to NodeB
-        val nodeBVaultUpdate = bobServices.vaultService.updates.toFuture()
+        val nodeBVaultUpdate = bobNode.services.vaultService.updates.toFuture()
         // Kick of the proposal flow
-        val flow1 = aliceServices.startFlow(SubmitTradeApprovalFlow("1234", bob))
+        val flow1 = aliceNode.startFlow(SubmitTradeApprovalFlow("1234", bob))
         // Wait for the flow to finish
         val proposalRef = flow1.getOrThrow()
         val proposalLinearId = proposalRef.state.data.linearId
         // Wait for NodeB to include it's copy in the vault
         nodeBVaultUpdate.get()
         // Fetch the latest copy of the state from both nodes
-        val latestFromA = aliceServices.database.transaction {
-            aliceServices.latest<TradeApprovalContract.State>(proposalLinearId)
+        val latestFromA = aliceNode.transaction {
+            aliceNode.services.latest<TradeApprovalContract.State>(proposalLinearId)
         }
-        val latestFromB = bobServices.database.transaction {
-            bobServices.latest<TradeApprovalContract.State>(proposalLinearId)
+        val latestFromB = bobNode.transaction {
+            bobNode.services.latest<TradeApprovalContract.State>(proposalLinearId)
         }
         // Confirm the state as as expected
         assertEquals(WorkflowState.NEW, proposalRef.state.data.state)
@@ -75,21 +72,21 @@ class WorkflowTransactionBuildTutorialTest {
         assertEquals(proposalRef, latestFromA)
         assertEquals(proposalRef, latestFromB)
         // Setup a vault subscriber to pause until the final update is in NodeA and NodeB
-        val nodeAVaultUpdate = aliceServices.vaultService.updates.toFuture()
-        val secondNodeBVaultUpdate = bobServices.vaultService.updates.toFuture()
+        val nodeAVaultUpdate = aliceNode.services.vaultService.updates.toFuture()
+        val secondNodeBVaultUpdate = bobNode.services.vaultService.updates.toFuture()
         // Run the manual completion flow from NodeB
-        val flow2 = bobServices.startFlow(SubmitCompletionFlow(latestFromB.ref, WorkflowState.APPROVED))
+        val flow2 = bobNode.startFlow(SubmitCompletionFlow(latestFromB.ref, WorkflowState.APPROVED))
         // wait for the flow to end
         val completedRef = flow2.getOrThrow()
         // wait for the vault updates to stabilise
         nodeAVaultUpdate.get()
         secondNodeBVaultUpdate.get()
         // Fetch the latest copies from the vault
-        val finalFromA = aliceServices.database.transaction {
-            aliceServices.latest<TradeApprovalContract.State>(proposalLinearId)
+        val finalFromA = aliceNode.transaction {
+            aliceNode.services.latest<TradeApprovalContract.State>(proposalLinearId)
         }
-        val finalFromB = bobServices.database.transaction {
-            bobServices.latest<TradeApprovalContract.State>(proposalLinearId)
+        val finalFromB = bobNode.transaction {
+            bobNode.services.latest<TradeApprovalContract.State>(proposalLinearId)
         }
         // Confirm the state is as expected
         assertEquals(WorkflowState.APPROVED, completedRef.state.data.state)

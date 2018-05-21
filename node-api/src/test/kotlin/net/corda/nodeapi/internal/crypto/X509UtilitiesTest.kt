@@ -8,21 +8,19 @@ import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.node.serialization.KryoServerSerializationScheme
+import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
-import net.corda.nodeapi.internal.serialization.AllWhitelist
-import net.corda.nodeapi.internal.serialization.SerializationContextImpl
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
+import net.corda.serialization.internal.SerializationContextImpl
+import net.corda.serialization.internal.SerializationFactoryImpl
+import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.AllWhitelist
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import org.assertj.core.api.Assertions.assertThat
-import org.bouncycastle.asn1.x509.BasicConstraints
-import org.bouncycastle.asn1.x509.Extension
-import org.bouncycastle.asn1.x509.KeyUsage
+import org.bouncycastle.asn1.x509.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -104,6 +102,28 @@ class X509UtilitiesTest {
     }
 
     @Test
+    fun `create valid server certificate chain includes CRL info`() {
+        val caKey = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val caCert = X509Utilities.createSelfSignedCACertificate(X500Principal("CN=Test CA Cert,O=R3 Ltd,L=London,C=GB"), caKey)
+        val caSubjectKeyIdentifier = SubjectKeyIdentifier.getInstance(caCert.toBc().getExtension(Extension.subjectKeyIdentifier).parsedValue)
+        val keyPair = generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val crlDistPoint = "http://test.com"
+        val serverCert = X509Utilities.createCertificate(
+                CertificateType.TLS,
+                caCert,
+                caKey,
+                X500Principal("CN=Server Cert,O=R3 Ltd,L=London,C=GB"),
+                keyPair.public,
+                crlDistPoint = crlDistPoint)
+        serverCert.toBc().run {
+            val certCrlDistPoint = CRLDistPoint.getInstance(getExtension(Extension.cRLDistributionPoints).parsedValue)
+            assertTrue(certCrlDistPoint.distributionPoints.first().distributionPoint.toString().contains(crlDistPoint))
+            val certCaAuthorityKeyIdentifier = AuthorityKeyIdentifier.getInstance(getExtension(Extension.authorityKeyIdentifier).parsedValue)
+            assertTrue(Arrays.equals(caSubjectKeyIdentifier.keyIdentifier, certCaAuthorityKeyIdentifier.keyIdentifier))
+        }
+    }
+
+    @Test
     fun `storing EdDSA key in java keystore`() {
         val tmpKeyStore = tempFile("keystore.jks")
 
@@ -163,6 +183,7 @@ class X509UtilitiesTest {
             override val certificatesDirectory = tempFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"
+            override val crlCheckSoftFail: Boolean = true
         }
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
@@ -198,6 +219,7 @@ class X509UtilitiesTest {
             override val certificatesDirectory = tempFolder.root.toPath()
             override val keyStorePassword = "serverstorepass"
             override val trustStorePassword = "trustpass"
+            override val crlCheckSoftFail: Boolean = true
         }
 
         val (rootCa, intermediateCa) = createDevIntermediateCaCertPath()
@@ -313,13 +335,14 @@ class X509UtilitiesTest {
 
     @Test
     fun `serialize - deserialize X509Certififcate`() {
-        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
-        val context = SerializationContextImpl(kryoMagic,
+        val factory = SerializationFactoryImpl().apply { registerScheme(AMQPServerSerializationScheme()) }
+        val context = SerializationContextImpl(amqpMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.P2P)
+                SerializationContext.UseCase.P2P,
+                null)
         val expected = X509Utilities.createSelfSignedCACertificate(ALICE.name.x500Principal, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
         val serialized = expected.serialize(factory, context).bytes
         val actual = serialized.deserialize<X509Certificate>(factory, context)
@@ -328,13 +351,14 @@ class X509UtilitiesTest {
 
     @Test
     fun `serialize - deserialize X509CertPath`() {
-        val factory = SerializationFactoryImpl().apply { registerScheme(KryoServerSerializationScheme()) }
-        val context = SerializationContextImpl(kryoMagic,
+        val factory = SerializationFactoryImpl().apply { registerScheme(AMQPServerSerializationScheme()) }
+        val context = SerializationContextImpl(amqpMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
                 true,
-                SerializationContext.UseCase.P2P)
+                SerializationContext.UseCase.P2P,
+                null)
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE_NAME.x500Principal, rootCAKey)
         val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB_NAME.x500Principal, BOB.publicKey)

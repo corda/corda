@@ -70,9 +70,9 @@ class ExplorerSimulation(private val options: OptionSet) {
             val ukBankName = CordaX500Name(organisation = "UK Bank Plc", locality = "London", country = "GB")
             val usaBankName = CordaX500Name(organisation = "USA Bank Corp", locality = "New York", country = "US")
             val issuerGBP = startNode(providedName = ukBankName, rpcUsers = listOf(manager),
-                    customOverrides = mapOf("issuableCurrencies" to listOf("GBP")))
+                    customOverrides = mapOf("custom" to mapOf("issuableCurrencies" to listOf("GBP"))))
             val issuerUSD = startNode(providedName = usaBankName, rpcUsers = listOf(manager),
-                    customOverrides = mapOf("issuableCurrencies" to listOf("USD")))
+                    customOverrides = mapOf("custom" to mapOf("issuableCurrencies" to listOf("USD"))))
 
             notaryNode = defaultNotaryNode.get()
             aliceNode = alice.get()

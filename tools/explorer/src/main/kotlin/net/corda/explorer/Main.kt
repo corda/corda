@@ -69,10 +69,10 @@ class Main : App(MainView::class) {
     }
 
     private fun asInteger(s: String?): Int? {
-        try {
-            return s?.toInt()
+        return try {
+            s?.toInt()
         } catch (e: NumberFormatException) {
-            return null
+            null
         }
     }
 
@@ -118,8 +118,8 @@ class Main : App(MainView::class) {
 }
 
 /**
- * This main method will starts 5 nodes (Notary, Alice, Bob, UK Bank and USA Bank) locally for UI testing,
- * they will be on localhost ports 20003, 20006, 20009, 20012 and 20015 respectively.
+ * This main method will starts 5 nodes (Notary, USA Bank, UK Bank, Bob and Alice) locally for UI testing,
+ * they will be on localhost ports 20005, 20008, 20011, 20014 and 20017 respectively.
  *
  * The simulation start with pre-allocating chunks of cash to each of the party in 2 currencies (USD, GBP), then it enter a loop to generate random events.
  * On each iteration, the issuers will execute a Cash Issue or Cash Exit flow (at a 9:1 ratio) and a random party will execute a move of cash to another random party.

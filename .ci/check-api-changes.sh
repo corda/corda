@@ -46,16 +46,20 @@ EOF
 
 #Get a list of any methods that expose classes in .internal. namespaces, and any classes which extend/implement
 #an internal class
+#TODO: check that only classes in a whitelist are part of the API rather than look for specific invalid cases going forward
 newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep "\.internal\." )
+newNodeExposures=$(echo "$userDiffContents" | grep "^+" | grep "net\.corda\.node\.")
 
 internalCount=`grep -v "^$" <<EOF | wc -l
 $newInternalExposures
+$newNodeExposures
 EOF
 `
 
 echo "Number of new internal class exposures: "$internalCount
 if [ $internalCount -gt 0 ]; then
     echo "$newInternalExposures"
+	echo "$newNodeExposures"
     echo
 fi
 

@@ -20,6 +20,8 @@ Any object that needs to be identified by its hash should implement the ``NamedB
 ``SecureHash`` is a sealed class that only defines a single subclass, ``SecureHash.SHA256``. There are utility methods
 to create and parse ``SecureHash.SHA256`` objects.
 
+.. _composite_keys:
+
 CompositeKey
 ------------
 Corda supports scenarios where more than one signature is required to authorise a state object transition. For example:

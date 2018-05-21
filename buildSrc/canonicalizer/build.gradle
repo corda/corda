@@ -1,0 +1,22 @@
+plugins {
+    id 'groovy'
+    id 'java-gradle-plugin'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+gradlePlugin {
+    plugins {
+        canonicalizerPlugin {
+            id = 'net.corda.plugins.canonicalizer'
+            implementationClass = 'CanonicalizerPlugin'
+        }
+    }
+}
+
+dependencies {
+    compile "com.google.guava:guava:$guava_version"
+}

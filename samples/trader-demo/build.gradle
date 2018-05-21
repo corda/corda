@@ -23,7 +23,7 @@ configurations {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // The trader demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance')
@@ -50,6 +50,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
         p2pPort 10002
+        rpcSettings {
+            address "localhost:10003"
+            adminAddress "localhost:10004"
+        }
         cordapps = ["$project.group:finance:$corda_release_version"]
     }
     node {

@@ -1,6 +1,6 @@
 package net.corda.behave.ssh
 
-import net.corda.behave.logging.getLogger
+import net.corda.core.utilities.contextLogger
 import org.apache.sshd.client.SshClient
 import org.apache.sshd.client.channel.ChannelShell
 import org.apache.sshd.client.session.ClientSession
@@ -96,7 +96,7 @@ open class SSHClient private constructor(
 
     companion object {
 
-        private val log = getLogger<SSHClient>()
+        private val log = contextLogger()
 
         fun connect(
                 port: Int,

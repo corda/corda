@@ -106,38 +106,68 @@ Various types for common financial concepts like day roll conventions, fixes, et
 
 WARNING: NOT API STABLE.
 
-# net.corda.finance.contracts.asset
+# Package net.corda.finance.contracts.asset
 
 Cash states, obligations and commodities. 
 
 WARNING: NOT API STABLE. 
 
-# net.corda.finance.contracts.asset.cash.selection
+# Package net.corda.finance.contracts.asset.cash.selection
 
 Provisional support for pluggable cash selectors, needed for different database backends. 
 
 WARNING: NOT API STABLE. 
 
-# net.corda.finance.contracts.math
+# Package net.corda.finance.contracts.math
 
 Splines and interpolation.
 
 WARNING: NOT API STABLE. 
 
-# net.corda.finance.flows
+# Package net.corda.finance.flows
 
 Cash payments and issuances. Two party "delivery vs payment" atomic asset swaps.
 
 WARNING: NOT API STABLE. 
 
-# net.corda.finance.plugin
+# Package net.corda.finance.plugin
 
 JSON/Jackson plugin for business calendars.
 
 WARNING: NOT API STABLE.
 
-# net.corda.finance.schemas
+# Package net.corda.finance.schemas
 
 JPA (Java Persistence Architecture) schemas for the financial state types.
+
+WARNING: NOT API STABLE.
+
+# Package net.corda.testing.core
+
+Generic test utilities for contracts and flows
+
+# Package net.corda.testing.node
+
+Test utilites to help running nodes programmatically for tests
+
+# Package net.corda.testing.driver
+
+Test utilites to help running nodes programmatically for tests
+
+# Package net.corda.testing.dsl
+
+A simple DSL for building pseudo-transactions (not the same as the wire protocol) for testing purposes
+ 
+# Package net.corda.testing.contracts
+
+Dummy state and contracts for testing purposes
+
+# Package net.corda.testing.services
+
+Mock service implementations for testing purposes
+
+# Package net.corda.testing.http
+
+A small set of utilities for working with http calls. 
 
 WARNING: NOT API STABLE.

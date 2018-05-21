@@ -24,6 +24,13 @@ input {
     letter-spacing: 0.3px
 }
 
+p.caption {
+    margin-top: 2em;
+}
+span.caption-text {
+    font-size: larger;
+}
+
 p {
     font-size: 100%; /* Get rid of RTD rule that assumes nobody changes their browser font size */
 }

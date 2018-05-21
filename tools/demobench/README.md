@@ -110,6 +110,9 @@ Now choose `File/Open` from the main menu, and select the profile that you have
 just saved. DemoBench should close the two existing tabs and then relaunch the
 Notary and Bank nodes.
 
+If you want to edit the content, please make sure that when zipping content back, 
+the notary node is the first directory (ZIP files content is ordered) 
+
 ## Exiting DemoBench
 
 Close DemoBench as a normal application on your platform; it should close any

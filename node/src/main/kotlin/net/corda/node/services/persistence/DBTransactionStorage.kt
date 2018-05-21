@@ -1,21 +1,26 @@
 package net.corda.node.services.persistence
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
+import net.corda.core.toFuture
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
-import net.corda.node.utilities.*
+import net.corda.node.utilities.AppendOnlyPersistentMapBase
+import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.io.Serializable
 import java.util.*
 import javax.persistence.*
 
@@ -36,7 +41,7 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
             @Lob
             @Column(name = "transaction_value")
             var transaction: ByteArray = EMPTY_BYTE_ARRAY
-    )
+    ) : Serializable
 
     private companion object {
         fun createTransactionsMap(maxSizeInBytes: Long)
@@ -91,7 +96,18 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
 
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return txStorage.locked {
-            DataFeed(allPersisted().map { it.second.toSignedTx() }.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            DataFeed(allPersisted().map { it.second.toSignedTx() }.toList(), updates.bufferUntilSubscribed())
+        }
+    }
+
+    override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
+        return txStorage.locked {
+            val existingTransaction = get(id)
+            if (existingTransaction == null) {
+                updates.filter { it.id == id }.toFuture()
+            } else {
+                doneFuture(existingTransaction.toSignedTx())
+            }
         }
     }
 

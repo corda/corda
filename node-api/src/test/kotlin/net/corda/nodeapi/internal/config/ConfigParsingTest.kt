@@ -7,8 +7,7 @@ import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.*
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
@@ -19,32 +18,32 @@ import kotlin.reflect.full.primaryConstructor
 
 class ConfigParsingTest {
     @Test
-    fun `String`() {
+    fun String() {
         testPropertyType<StringData, StringListData, String>("hello world!", "bye")
     }
 
     @Test
-    fun `Int`() {
+    fun Int() {
         testPropertyType<IntData, IntListData, Int>(1, 2)
     }
 
     @Test
-    fun `Long`() {
+    fun Long() {
         testPropertyType<LongData, LongListData, Long>(Long.MAX_VALUE, Long.MIN_VALUE)
     }
 
     @Test
-    fun `Double`() {
+    fun Double() {
         testPropertyType<DoubleData, DoubleListData, Double>(1.2, 3.4)
     }
 
     @Test
-    fun `Boolean`() {
+    fun Boolean() {
         testPropertyType<BooleanData, BooleanListData, Boolean>(true, false)
     }
 
     @Test
-    fun `Enum`() {
+    fun Enum() {
         testPropertyType<EnumData, EnumListData, TestEnum>(TestEnum.Value2, TestEnum.Value1, valuesToString = true)
     }
 
@@ -57,17 +56,17 @@ class ConfigParsingTest {
     }
 
     @Test
-    fun `LocalDate`() {
+    fun LocalDate() {
         testPropertyType<LocalDateData, LocalDateListData, LocalDate>(LocalDate.now(), LocalDate.now().plusDays(1), valuesToString = true)
     }
 
     @Test
-    fun `Instant`() {
+    fun Instant() {
         testPropertyType<InstantData, InstantListData, Instant>(Instant.now(), Instant.now().plusMillis(100), valuesToString = true)
     }
 
     @Test
-    fun `NetworkHostAndPort`() {
+    fun NetworkHostAndPort() {
         testPropertyType<NetworkHostAndPortData, NetworkHostAndPortListData, NetworkHostAndPort>(
                 NetworkHostAndPort("localhost", 2223),
                 NetworkHostAndPort("localhost", 2225),
@@ -75,22 +74,32 @@ class ConfigParsingTest {
     }
 
     @Test
-    fun `Path`() {
+    fun Path() {
         val path = "tmp" / "test"
         testPropertyType<PathData, PathListData, Path>(path, path / "file", valuesToString = true)
     }
 
     @Test
-    fun `URL`() {
+    fun URL() {
         testPropertyType<URLData, URLListData, URL>(URL("http://localhost:1234"), URL("http://localhost:1235"), valuesToString = true)
     }
 
     @Test
+    fun UUID() {
+        testPropertyType<UUIDData, UUIDListData, UUID>(UUID.randomUUID(), UUID.randomUUID(), valuesToString = true)
+    }
+
+    @Test
     fun CordaX500Name() {
+        val name1 = CordaX500Name(organisation = "Mock Party", locality = "London", country = "GB")
         testPropertyType<CordaX500NameData, CordaX500NameListData, CordaX500Name>(
-                CordaX500Name(organisation = "Mock Party", locality = "London", country = "GB"),
+                name1,
                 CordaX500Name(organisation = "Mock Party 2", locality = "London", country = "GB"),
                 valuesToString = true)
+
+        // Test with config object.
+        val config = config("value" to mapOf("organisation" to "Mock Party", "locality" to "London", "country" to "GB"))
+        assertThat(config.parseAs<CordaX500NameData>().value).isEqualTo(name1)
     }
 
     @Test
@@ -127,7 +136,7 @@ class ConfigParsingTest {
     }
 
     @Test
-    fun `Set`() {
+    fun Set() {
         val data = StringSetData(setOf("a", "b"))
         assertThat(config("values" to listOf("a", "a", "b")).parseAs<StringSetData>()).isEqualTo(data)
         assertThat(data.toConfig()).isEqualTo(config("values" to listOf("a", "b")))
@@ -184,6 +193,14 @@ class ConfigParsingTest {
     }
 
     @Test
+    fun `data class with checks`() {
+        val config = config("positive" to -1)
+        assertThatExceptionOfType(IllegalArgumentException::class.java)
+                .isThrownBy { config.parseAs<PositiveData>() }
+                .withMessageContaining("-1")
+    }
+
+    @Test
     fun `old config property`() {
         assertThat(config("oldValue" to "old").parseAs<OldData>().newValue).isEqualTo("old")
         assertThat(config("newValue" to "new").parseAs<OldData>().newValue).isEqualTo("new")
@@ -193,6 +210,21 @@ class ConfigParsingTest {
     @Test
     fun `static field`() {
         assertThat(DataWithCompanion(3).toConfig()).isEqualTo(config("value" to 3))
+    }
+
+    @Test
+    fun `unknown configuration keys raise exception`() {
+
+        // intentional typo here, parsing should throw rather than sneakily return default value
+        val knownKey = "mandatory"
+        val unknownKey = "optioal"
+        val configuration = config(knownKey to "hello", unknownKey to "world")
+
+        assertThatThrownBy { configuration.parseAs<TypedConfiguration>() }.isInstanceOfSatisfying(UnknownConfigurationKeysException::class.java) { exception ->
+
+            assertThat(exception.unknownKeys).contains(unknownKey)
+            assertThat(exception.unknownKeys).doesNotContain(knownKey)
+        }
     }
 
     private inline fun <reified S : SingleData<V>, reified L : ListData<V>, V : Any> testPropertyType(
@@ -238,6 +270,7 @@ class ConfigParsingTest {
         val values: List<T>
     }
 
+    data class TypedConfiguration(private val mandatory: String, private val optional: String = "optional")
     data class StringData(override val value: String) : SingleData<String>
     data class StringListData(override val values: List<String>) : ListData<String>
     data class StringSetData(val values: Set<String>)
@@ -261,6 +294,8 @@ class ConfigParsingTest {
     data class PathListData(override val values: List<Path>) : ListData<Path>
     data class URLData(override val value: URL) : SingleData<URL>
     data class URLListData(override val values: List<URL>) : ListData<URL>
+    data class UUIDData(override val value: UUID) : SingleData<UUID>
+    data class UUIDListData(override val values: List<UUID>) : ListData<UUID>
     data class CordaX500NameData(override val value: CordaX500Name) : SingleData<CordaX500Name>
     data class CordaX500NameListData(override val values: List<CordaX500Name>) : ListData<CordaX500Name>
     data class PropertiesData(override val value: Properties) : SingleData<Properties>
@@ -270,9 +305,15 @@ class ConfigParsingTest {
     data class DataListData(val list: List<StringData>)
     data class DefaultData(val a: Int, val defaultOfTwo: Int = 2)
     data class NullableData(val nullable: String?)
+    data class PositiveData(private val positive: Int) {
+        init {
+            require(positive > 0) { "$positive is not positive" }
+        }
+    }
     data class OldData(
             @OldConfig("oldValue")
             val newValue: String)
+
     data class DataWithCompanion(val value: Int) {
         companion object {
             @Suppress("unused")

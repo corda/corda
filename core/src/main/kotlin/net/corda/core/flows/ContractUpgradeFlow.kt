@@ -2,7 +2,11 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.internal.ContractUpgradeUtils
+import net.corda.core.transactions.SignedTransaction
 
 /**
  * A flow to be used for authorising and upgrading state objects of an old contract to a new contract.
@@ -38,7 +42,6 @@ object ContractUpgradeFlow {
             serviceHub.contractUpgradeService.storeAuthorisedContractUpgrade(stateAndRef.ref, upgradedContractClass)
             return null
         }
-
     }
 
     /**
@@ -68,11 +71,13 @@ object ContractUpgradeFlow {
 
         @Suspendable
         override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {
-            val baseTx = ContractUpgradeUtils.assembleBareTx(originalState, modification, PrivacySalt())
+            val tx = ContractUpgradeUtils.assembleUpgradeTx(originalState, modification, PrivacySalt(), serviceHub)
             val participantKeys = originalState.state.data.participants.map { it.owningKey }.toSet()
             // TODO: We need a much faster way of finding our key in the transaction
             val myKey = serviceHub.keyManagementService.filterMyKeys(participantKeys).single()
-            val stx = serviceHub.signInitialTransaction(baseTx, myKey)
+            val signableData = SignableData(tx.id, SignatureMetadata(serviceHub.myInfo.platformVersion, Crypto.findSignatureScheme(myKey).schemeNumberID))
+            val mySignature = serviceHub.keyManagementService.sign(signableData, myKey)
+            val stx = SignedTransaction(tx, listOf(mySignature))
             return AbstractStateReplacementFlow.UpgradeTx(stx)
         }
     }

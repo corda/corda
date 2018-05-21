@@ -15,7 +15,7 @@ import net.corda.core.transactions.TransactionBuilder
 @StartableByRPC
 class DummyIssueAndMove(private val notary: Party, private val counterpartyNode: Party, private val discriminator: Int) : FlowLogic<SignedTransaction>() {
     companion object {
-        private val DO_NOTHING_PROGRAM_ID = "net.corda.notarydemo.flows.DummyIssueAndMove\$DoNothingContract"
+        private const val DO_NOTHING_PROGRAM_ID = "net.corda.notarydemo.flows.DummyIssueAndMove\$DoNothingContract"
     }
 
     class DoNothingContract : Contract {

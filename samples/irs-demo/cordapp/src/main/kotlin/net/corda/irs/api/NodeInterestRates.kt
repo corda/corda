@@ -160,7 +160,7 @@ object NodeInterestRates {
         }
 
         private fun addDefaultFixes() {
-            knownFixes = parseFile(IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt"), Charsets.UTF_8.name()))
+            knownFixes = parseFile(IOUtils.toString(this::class.java.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt"), Charsets.UTF_8.name()))
         }
     }
 
@@ -234,7 +234,7 @@ object NodeInterestRates {
         fun getRate(tenor: Tenor): BigDecimal? {
             return rates.getOrElse(tenor) {
                 val rate = interpolate(tenor)
-                if (rate != null) rates.put(tenor, rate)
+                if (rate != null) rates[tenor] = rate
                 return rate
             }
         }

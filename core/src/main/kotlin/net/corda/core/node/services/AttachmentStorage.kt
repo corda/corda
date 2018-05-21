@@ -33,6 +33,7 @@ interface AttachmentStorage {
      * @throws IllegalArgumentException if the given byte stream is empty or a [java.util.jar.JarInputStream].
      * @throws IOException if something went wrong.
      */
+    @Deprecated("More attachment information is required", replaceWith = ReplaceWith("importAttachment(jar, uploader, filename)"))
     @Throws(FileAlreadyExistsException::class, IOException::class)
     fun importAttachment(jar: InputStream): AttachmentId
 
@@ -43,13 +44,14 @@ interface AttachmentStorage {
      * @param filename Name of the file
      */
     @Throws(FileAlreadyExistsException::class, IOException::class)
-    fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId
+    fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId
 
     /**
      * Inserts or returns Attachment Id of attachment. Does not throw an exception if already uploaded.
      * @param jar [InputStream] of Jar file
      * @return [AttachmentId] of uploaded attachment
      */
+    @Deprecated("More attachment information is required", replaceWith = ReplaceWith("importAttachment(jar, uploader, filename)"))
     fun importOrGetAttachment(jar: InputStream): AttachmentId
 
     /**

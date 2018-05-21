@@ -1,6 +1,7 @@
 package net.corda.node.utilities
 
 import com.google.common.util.concurrent.SettableFuture
+import io.netty.util.concurrent.FastThreadLocalThread
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
@@ -35,10 +36,10 @@ interface AffinityExecutor : Executor {
      * way! Make sure the executor can't possibly be waiting for the calling thread.
      */
     fun <T> fetchFrom(fetcher: () -> T): T {
-        if (isOnThread)
-            return fetcher()
+        return if (isOnThread)
+            fetcher()
         else
-            return CompletableFuture.supplyAsync(Supplier { fetcher() }, this).get()
+            CompletableFuture.supplyAsync(Supplier { fetcher() }, this).get()
     }
 
     /**
@@ -55,8 +56,8 @@ interface AffinityExecutor : Executor {
         private val threads = Collections.synchronizedSet(HashSet<Thread>())
 
         init {
-            setThreadFactory(fun(runnable: Runnable): Thread {
-                val thread = object : Thread() {
+            setThreadFactory { runnable ->
+                val thread = object : FastThreadLocalThread() {
                     override fun run() {
                         try {
                             runnable.run()
@@ -68,8 +69,8 @@ interface AffinityExecutor : Executor {
                 thread.isDaemon = true
                 thread.name = threadName
                 threads += thread
-                return thread
-            })
+                thread
+            }
         }
 
         override val isOnThread: Boolean get() = Thread.currentThread() in threads

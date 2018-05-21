@@ -26,7 +26,6 @@ import net.corda.finance.contracts.Tenor
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.core.TEST_TX_TIME
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.dsl.*
 import net.corda.testing.internal.rigorousMock
@@ -36,10 +35,12 @@ import net.corda.testing.node.transaction
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigDecimal
+import java.time.Instant
 import java.time.LocalDate
 import java.util.*
 import kotlin.test.assertEquals
 
+private val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 private val DUMMY_PARTY = Party(CordaX500Name("Dummy", "Madrid", "ES"), generateKeyPair().public)
 private val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
 private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
@@ -261,7 +262,7 @@ class IRSTests {
      */
     private fun generateIRSTxn(irsSelect: Int): SignedTransaction {
         val dummyIRS = createDummyIRS(irsSelect)
-        val genTX: SignedTransaction = run {
+        return run {
             val gtx = InterestRateSwap().generateAgreement(
                     fixedLeg = dummyIRS.fixedLeg,
                     floatingLeg = dummyIRS.floatingLeg,
@@ -275,7 +276,6 @@ class IRSTests {
             val ptx2 = miniCorpServices.addSignature(ptx1)
             notaryServices.addSignature(ptx2)
         }
-        return genTX
     }
 
     /**

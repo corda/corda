@@ -75,7 +75,7 @@ You will now be able to browse the tables and row data within them.
 Monitoring your node
 --------------------
 
-Like most Java servers, the node exports various useful metrics and management operations via the industry-standard
+Like most Java servers, the node can be configured to export various useful metrics and management operations via the industry-standard
 `JMX infrastructure <https://en.wikipedia.org/wiki/Java_Management_Extensions>`_. JMX is a standard API
 for registering so-called *MBeans* ... objects whose properties and methods are intended for server management. It does
 not require any particular network protocol for export. So this data can be exported from the node in various ways:
@@ -87,7 +87,7 @@ them out to a statistics collector over the network. For those systems, follow t
              agent `here <https://jolokia.org/agent/jvm.html>`_.
 
 `Jolokia <https://jolokia.org/>`_ allows you to access the raw data and operations without connecting to the JMX port
-directly. The nodes export the data over HTTP on the ``/jolokia`` HTTP endpoint, Jolokia defines the JSON and REST
+directly. Nodes can be configured to export the data over HTTP on the ``/jolokia`` HTTP endpoint, Jolokia defines the JSON and REST
 formats for accessing MBeans, and provides client libraries to work with that protocol as well.
 
 Here are a few ways to build dashboards and extract monitoring data for a node:
@@ -134,14 +134,14 @@ Memory usage and tuning
 
 All garbage collected programs can run faster if you give them more memory, as they need to collect less
 frequently. As a default JVM will happily consume all the memory on your system if you let it, Corda is
-configured with a relatively small 200mb Java heap by default. When other overheads are added, this yields
-a total memory usage of about 500mb for a node (the overheads come from things like compiled code, metadata,
+configured with a 512mb Java heap by default. When other overheads are added, this yields
+a total memory usage of about 800mb for a node (the overheads come from things like compiled code, metadata,
 off-heap buffers, thread stacks, etc).
 
 If you want to make your node go faster and profiling suggests excessive GC overhead is the cause, or if your
 node is running out of memory, you can give it more by running the node like this:
 
-``java -Xmx1024m -jar corda.jar``
+``java -Dcapsule.jvm.args="-Xmx1024m" -jar corda.jar``
 
 The example command above would give a 1 gigabyte Java heap.
 

@@ -2,6 +2,7 @@ package net.corda.explorer.views
 
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
 import javafx.beans.binding.Bindings
+import javafx.beans.binding.ObjectBinding
 import javafx.beans.value.ObservableValue
 import javafx.collections.ObservableList
 import javafx.geometry.HPos
@@ -16,16 +17,14 @@ import javafx.scene.control.TitledPane
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.VBox
 import net.corda.client.jfx.model.*
-import net.corda.client.jfx.utils.filterNotNull
-import net.corda.client.jfx.utils.lift
-import net.corda.client.jfx.utils.map
-import net.corda.client.jfx.utils.sequence
+import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
@@ -59,7 +58,7 @@ class TransactionViewer : CordaView("Transactions") {
 
     private var scrollPosition: Int = 0
     private lateinit var expander: ExpanderColumn<TransactionViewer.Transaction>
-    var txIdToScroll: SecureHash? = null // Passed as param.
+    private var txIdToScroll: SecureHash? = null // Passed as param.
 
     /**
      * This is what holds data for a single transaction node. Note how a lot of these are nullable as we often simply don't
@@ -69,7 +68,7 @@ class TransactionViewer : CordaView("Transactions") {
             val tx: PartiallyResolvedTransaction,
             val id: SecureHash,
             val inputs: Inputs,
-            val outputs: ObservableList<StateAndRef<ContractState>>,
+            val outputs: Outputs,
             val inputParties: ObservableList<List<ObservableValue<Party?>>>,
             val outputParties: ObservableList<List<ObservableValue<Party?>>>,
             val commandTypes: List<Class<CommandData>>,
@@ -77,6 +76,7 @@ class TransactionViewer : CordaView("Transactions") {
     )
 
     data class Inputs(val resolved: ObservableList<StateAndRef<ContractState>>, val unresolved: ObservableList<StateRef>)
+    data class Outputs(val resolved: ObservableList<StateAndRef<ContractState>>, val unresolved: ObservableList<StateRef>)
 
     override fun onDock() {
         txIdToScroll?.let {
@@ -103,38 +103,42 @@ class TransactionViewer : CordaView("Transactions") {
      */
     init {
         val transactions = transactions.map {
-            val resolved = it.inputs.sequence()
+            val resolvedInputs = it.inputs.sequence()
                     .map { it as? PartiallyResolvedTransaction.InputResolution.Resolved }
                     .filterNotNull()
                     .map { it.stateAndRef }
-            val unresolved = it.inputs.sequence()
+            val unresolvedInputs = it.inputs.sequence()
                     .map { it as? PartiallyResolvedTransaction.InputResolution.Unresolved }
                     .filterNotNull()
                     .map { it.stateRef }
-            val outputs = it.transaction.tx.outputs
-                    .mapIndexed { index, transactionState ->
-                        val stateRef = StateRef(it.id, index)
-                        StateAndRef(transactionState, stateRef)
-                    }.observable()
+            val resolvedOutputs = it.outputs.sequence()
+                    .map { it as? PartiallyResolvedTransaction.OutputResolution.Resolved }
+                    .filterNotNull()
+                    .map { it.stateAndRef }
+            val unresolvedOutputs = it.inputs.sequence()
+                    .map { it as? PartiallyResolvedTransaction.InputResolution.Unresolved }
+                    .filterNotNull()
+                    .map { it.stateRef }
+            val commands = if (it.transaction.coreTransaction is WireTransaction) it.transaction.tx.commands else emptyList()
             Transaction(
                     tx = it,
                     id = it.id,
-                    inputs = Inputs(resolved, unresolved),
-                    outputs = outputs,
-                    inputParties = resolved.getParties(),
-                    outputParties = outputs.getParties(),
-                    commandTypes = it.transaction.tx.commands.map { it.value.javaClass },
+                    inputs = Inputs(resolvedInputs, unresolvedInputs),
+                    outputs = Outputs(resolvedOutputs, unresolvedOutputs),
+                    inputParties = resolvedInputs.getParties(),
+                    outputParties = resolvedOutputs.getParties(),
+                    commandTypes = commands.map { it.value.javaClass },
                     totalValueEquiv = ::calculateTotalEquiv.lift(myIdentity,
                             reportingExchange,
-                            resolved.map { it.state.data }.lift(),
-                            it.transaction.tx.outputStates.lift())
+                            resolvedInputs.map { it.state.data }.lift(),
+                            resolvedOutputs.map { it.state.data }.lift())
             )
-        }
+        }.distinctBy { it.id }
 
         val searchField = SearchField(transactions,
                 "Transaction ID" to { tx, s -> "${tx.id}".contains(s, true) },
                 "Input" to { tx, s -> tx.inputs.resolved.any { it.state.contract.contains(s, true) } },
-                "Output" to { tx, s -> tx.outputs.any { it.state.contract.contains(s, true) } },
+                "Output" to { tx, s -> tx.outputs.resolved.any { it.state.contract.contains(s, true) } },
                 "Input Party" to { tx, s -> tx.inputParties.any { it.any { it.value?.name?.organisation?.contains(s, true) == true } } },
                 "Output Party" to { tx, s -> tx.outputParties.any { it.any { it.value?.name?.organisation?.contains(s, true) == true } } },
                 "Command Type" to { tx, s -> tx.commandTypes.any { it.simpleName.contains(s, true) } }
@@ -161,7 +165,15 @@ class TransactionViewer : CordaView("Transactions") {
                     text += "Unresolved(${it.unresolved.size})"
                 }
             }
-            column("Output", Transaction::outputs).cellFormat { text = it.toText() }
+            column("Output", Transaction::outputs).cellFormat {
+                text = it.resolved.toText()
+                if (!it.unresolved.isEmpty()) {
+                    if (!text.isBlank()) {
+                        text += ", "
+                    }
+                    text += "Unresolved(${it.unresolved.size})"
+                }
+            }
             column("Input Party", Transaction::inputParties).setCustomCellFactory {
                 label {
                     text = it.formatJoinPartyNames(formatter = PartyNameFormatter.short)
@@ -178,7 +190,7 @@ class TransactionViewer : CordaView("Transactions") {
                     }
                 }
             }
-            column("Command type", Transaction::commandTypes).cellFormat { text = it.map { it.simpleName }.joinToString() }
+            column("Command type", Transaction::commandTypes).cellFormat { text = it.joinToString { it.simpleName } }
             column("Total value", Transaction::totalValueEquiv).cellFormat {
                 text = "${it.positivity.sign}${AmountFormatter.boring.format(it.amount)}"
                 titleProperty.bind(reportingCurrency.map { "Total value ($it equiv)" })
@@ -200,9 +212,9 @@ class TransactionViewer : CordaView("Transactions") {
     }
 
     private fun ObservableList<List<ObservableValue<Party?>>>.formatJoinPartyNames(separator: String = ",", formatter: Formatter<CordaX500Name>): String {
-        return flatten().map {
+        return flatten().mapNotNull {
             it.value?.let { formatter.format(it.name) }
-        }.filterNotNull().toSet().joinToString(separator)
+        }.toSet().joinToString(separator)
     }
 
     private fun ObservableList<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { it.owningKey.toKnownParty() } }
@@ -216,8 +228,17 @@ class TransactionViewer : CordaView("Transactions") {
         init {
             right {
                 label {
-                    val hash = SecureHash.randomSHA256()
-                    graphic = identicon(hash, 30.0)
+                    val hashList = partiallyResolvedTransactions.map { it.id }
+                    val hashBinding = object : ObjectBinding<SecureHash>() {
+                        init {
+                            bind(hashList)
+                        }
+                        override fun computeValue(): SecureHash {
+                            return if (hashList.isEmpty()) SecureHash.zeroHash
+                            else hashList.fold(hashList[0], { one, another -> one.hashConcat(another) })
+                        }
+                    }
+                    graphicProperty().bind(hashBinding.map { identicon(it, 30.0) })
                     textProperty().bind(Bindings.size(partiallyResolvedTransactions).map(Number::toString))
                     BorderPane.setAlignment(this, Pos.BOTTOM_RIGHT)
                 }
@@ -238,14 +259,14 @@ class TransactionViewer : CordaView("Transactions") {
             val signatureData = transaction.tx.transaction.sigs.map { it.by }
             // Bind count to TitlePane
             inputPane.text = "Input (${transaction.inputs.resolved.count()})"
-            outputPane.text = "Output (${transaction.outputs.count()})"
+            outputPane.text = "Output (${transaction.outputs.resolved.count()})"
             signaturesPane.text = "Signatures (${signatureData.count()})"
 
             inputs.cellCache { getCell(it) }
             outputs.cellCache { getCell(it) }
 
             inputs.items = transaction.inputs.resolved
-            outputs.items = transaction.outputs.observable()
+            outputs.items = transaction.outputs.resolved
 
             signatures.children.addAll(signatureData.map { signature ->
                 val party = signature.toKnownParty()
@@ -309,15 +330,13 @@ private fun calculateTotalEquiv(myIdentity: Party?,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>): AmountDiff<Currency> {
     val (reportingCurrency, exchange) = reportingCurrencyExchange
-    fun List<ContractState>.sum() = this.map { it as? Cash.State }
-            .filterNotNull()
+    fun List<ContractState>.sum() = this.mapNotNull { it as? Cash.State }
             .filter { it.owner.owningKey.toKnownParty().value == myIdentity }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum()
 
     // For issuing cash, if I am the issuer and not the owner (e.g. issuing cash to other party), count it as negative.
-    val issuedAmount = if (inputs.isEmpty()) outputs.map { it as? Cash.State }
-            .filterNotNull()
+    val issuedAmount = if (inputs.isEmpty()) outputs.mapNotNull { it as? Cash.State }
             .filter { it.amount.token.issuer.party.owningKey.toKnownParty().value == myIdentity && it.owner.owningKey.toKnownParty().value != myIdentity }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum() else 0

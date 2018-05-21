@@ -6,9 +6,9 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.testing.core.getTestPartyAndCertificate
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Test
@@ -28,12 +28,12 @@ class NetworkMapCacheTest {
     @Test
     fun `key collision`() {
         val entropy = BigInteger.valueOf(24012017L)
-        val aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME, entropyRoot = entropy))
+        val aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, entropyRoot = entropy))
         val alice = aliceNode.info.singleIdentity()
 
         // Node A currently knows only about itself, so this returns node A
         assertEquals(aliceNode.services.networkMapCache.getNodesByLegalIdentityKey(alice.owningKey).singleOrNull(), aliceNode.info)
-        val bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME, entropyRoot = entropy))
+        val bobNode = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, entropyRoot = entropy))
         val bob = bobNode.info.singleIdentity()
         assertEquals(alice, bob)
 
@@ -43,7 +43,7 @@ class NetworkMapCacheTest {
     }
 
     @Test
-    fun `getNodeByLegalIdentity`() {
+    fun getNodeByLegalIdentity() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val alice = aliceNode.info.singleIdentity()
         val bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -57,7 +57,7 @@ class NetworkMapCacheTest {
     }
 
     @Test
-    fun `getPeerByLegalName`() {
+    fun getPeerByLegalName() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val bobCache: NetworkMapCache = bobNode.services.networkMapCache

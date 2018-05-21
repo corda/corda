@@ -11,8 +11,8 @@ import static org.junit.Assert.assertEquals;
 public class CandidateMethodTest {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(CandidateMethodTest.class);
-    private final static String OBJECT_INIT_METHOD = "java/lang/Object.<init>:()V";
-    private final static String SYSTEM_OUT_PRINTLN = "java/io/PrintStream.println:(Ljava/lang/String;)V";
+    private static final String OBJECT_INIT_METHOD = "java/lang/Object.<init>:()V";
+    private static final String SYSTEM_OUT_PRINTLN = "java/io/PrintStream.println:(Ljava/lang/String;)V";
 
     private CandidateMethod candidateMethod;
 

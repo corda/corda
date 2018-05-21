@@ -16,8 +16,8 @@ class LeftOuterJoinedMap<K : Any, A, B, C>(
 ) : ReadOnlyBackedObservableMapBase<K, C, SimpleObjectProperty<B?>>() {
     init {
         leftTable.forEach { entry ->
-            val rightValueProperty = SimpleObjectProperty(rightTable.get(entry.key))
-            backingMap.set(entry.key, Pair(assemble(entry.key, entry.value, rightValueProperty), rightValueProperty))
+            val rightValueProperty = SimpleObjectProperty(rightTable[entry.key])
+            backingMap[entry.key] = Pair(assemble(entry.key, entry.value, rightValueProperty), rightValueProperty)
         }
 
         leftTable.addListener { change: MapChangeListener.Change<out K, out A> ->
@@ -29,10 +29,10 @@ class LeftOuterJoinedMap<K : Any, A, B, C>(
             }
 
             if (change.wasAdded()) {
-                val rightValue = rightTable.get(change.key)
+                val rightValue = rightTable[change.key]
                 val rightValueProperty = SimpleObjectProperty(rightValue)
                 val newValue = assemble(change.key, change.valueAdded, rightValueProperty)
-                backingMap.set(change.key, Pair(newValue, rightValueProperty))
+                backingMap[change.key] = Pair(newValue, rightValueProperty)
                 addedValue = newValue
             }
 
@@ -40,11 +40,11 @@ class LeftOuterJoinedMap<K : Any, A, B, C>(
         }
         rightTable.addListener { change: MapChangeListener.Change<out K, out B> ->
             if (change.wasRemoved() && !change.wasAdded()) {
-                backingMap.get(change.key)?.second?.set(null)
+                backingMap[change.key]?.second?.set(null)
             }
 
             if (change.wasAdded()) {
-                backingMap.get(change.key)?.second?.set(change.valueAdded)
+                backingMap[change.key]?.second?.set(change.valueAdded)
             }
         }
     }

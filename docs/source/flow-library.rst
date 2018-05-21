@@ -27,10 +27,10 @@ The flow returns the same transactions, in the same order, with the additional s
 CollectSignaturesFlow
 ---------------------
 
-The ``CollectSignaturesFlow`` is used to automate the collection of signatures from the counter-parties to a transaction.
+The ``CollectSignaturesFlow`` is used to automate the collection of signatures from the counterparties to a transaction.
 
 You use the ``CollectSignaturesFlow`` by passing it a ``SignedTransaction`` which has at least been signed by yourself.
-The flow will handle the resolution of the counter-party identities and request a signature from each counter-party.
+The flow will handle the resolution of the counterparty identities and request a signature from each counterparty.
 
 Finally, the flow will verify all the signatures  and return a ``SignedTransaction`` with all the collected signatures.
 

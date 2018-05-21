@@ -6,11 +6,18 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.node.internal.Node
-import net.corda.node.services.config.VerifierType
 import net.corda.testing.node.User
 import net.corda.testing.node.NotarySpec
 import java.nio.file.Path
 
+enum class VerifierType {
+    InMemory,
+    OutOfProcess
+}
+
+/**
+ * Underlying interface for the driver DSL. Do not instantiate directly, instead use the [driver] function.
+ * */
 @DoNotImplement
 interface DriverDSL {
     /** Returns a list of [NotaryHandle]s matching the list of [NotarySpec]s passed into [driver]. */
@@ -53,11 +60,16 @@ interface DriverDSL {
      *   when called from Java code.
      * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
      *     random. Note that this must be unique as the driver uses it as a primary key!
-     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
+     * @param verifierType The type of transaction verifier to use. See: [VerifierType].
+     * @param customOverrides A map of custom node configuration overrides.
      * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
      *     in. If null the Driver-level value will be used.
-     * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available.
+     * @param maximumHeapSize The maximum JVM heap size to use for the node as a [String]. By default a number is interpreted
+     *     as being in bytes. Append the letter 'k' or 'K' to the value to indicate Kilobytes, 'm' or 'M' to indicate
+     *     megabytes, and 'g' or 'G' to indicate gigabytes. The default value is "512m" = 512 megabytes.
+     * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available and
+     * it sees all previously started nodes, including the notaries.
      */
     fun startNode(
             defaultParameters: NodeParameters = NodeParameters(),
@@ -78,6 +90,7 @@ interface DriverDSL {
     fun startNode(parameters: NodeParameters): CordaFuture<NodeHandle> = startNode(defaultParameters = parameters)
 
     /** Call [startWebserver] with a default maximumHeapSize. */
+    @Suppress("DEPRECATION")
     fun startWebserver(handle: NodeHandle): CordaFuture<WebserverHandle> = startWebserver(handle, "200m")
 
     /**
@@ -85,6 +98,7 @@ interface DriverDSL {
      * @param handle The handle for the node that this webserver connects to via RPC.
      * @param maximumHeapSize Argument for JVM -Xmx option e.g. "200m".
      */
+    @Suppress("DEPRECATION")
     fun startWebserver(handle: NodeHandle, maximumHeapSize: String): CordaFuture<WebserverHandle>
 
     /**

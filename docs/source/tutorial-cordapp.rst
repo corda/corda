@@ -16,7 +16,7 @@ The example CorDapp allows nodes to agree IOUs with each other, as long as they 
 
 We will deploy and run the CorDapp on four test nodes:
 
-* **NetworkMapAndNotary**, which hosts a validating notary service
+* **Notary**, which hosts a validating notary service
 * **PartyA**
 * **PartyB**
 * **PartyC**
@@ -156,11 +156,13 @@ The key files and directories are as follows:
   about which version is required
 * **lib** contains the Quasar jar which rewrites our CorDapp's flows to be checkpointable
 * **kotlin-source** contains the source code for the example CorDapp written in Kotlin
- * **kotlin-source/src/main/kotlin** contains the source code for the example CorDapp
- * **kotlin-source/src/main/resources** contains the certificate store, some static web content to be served by the
-   nodes and the WebServerPluginRegistry file
- * **kotlin-source/src/test/kotlin** contains unit tests for the contracts and flows, and the driver to run the nodes
-   via IntelliJ
+
+  * **kotlin-source/src/main/kotlin** contains the source code for the example CorDapp
+  * **kotlin-source/src/main/resources** contains the certificate store, some static web content to be served by the
+    nodes and the WebServerPluginRegistry file
+  * **kotlin-source/src/test/kotlin** contains unit tests for the contracts and flows, and the driver to run the nodes
+    via IntelliJ
+
 * **java-source** contains the same source code, but written in Java. CorDapps can be developed in any language
   targeting the JVM
 
@@ -222,40 +224,39 @@ For each node, the ``runnodes`` script creates a node tab/window:
 
 .. sourcecode:: none
 
-       ______               __
-      / ____/     _________/ /___ _
-     / /     __  / ___/ __  / __ `/         It's kind of like a block chain but
-    / /___  /_/ / /  / /_/ / /_/ /          cords sounded healthier than chains.
-    \____/     /_/   \__,_/\__,_/
+      ______               __
+     / ____/     _________/ /___ _
+    / /     __  / ___/ __  / __ `/         Top tip: never say "oops", instead
+   / /___  /_/ / /  / /_/ / /_/ /          always say "Ah, Interesting!"
+   \____/     /_/   \__,_/\__,_/
 
-    --- Corda Open Source 0.12.1 (da47f1c) -----------------------------------------------
-
-    📚  New! Training now available worldwide, see https://corda.net/corda-training/
-
-    Logs can be found in                    : /Users/username/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs
-    Database connection url is              : jdbc:h2:tcp://10.163.199.132:54763/node
-    Listening on address                    : 127.0.0.1:10005
-    RPC service listening on address        : localhost:10006
-    Loaded plugins                          : com.example.plugin.ExamplePlugin
-    Node for "PartyA" started up and registered in 35.0 sec
+   --- Corda Open Source corda-3.0 (4157c25) -----------------------------------------------
 
 
-    Welcome to the Corda interactive shell.
-    Useful commands include 'help' to see what is available, and 'bye' to shut down the node.
+   Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs
+   Database connection url is              : jdbc:h2:tcp://localhost:59472/node
+   Incoming connection address             : localhost:10007
+   Listening on port                       : 10007
+   Loaded CorDapps                         : corda-finance-corda-3.0, cordapp-example-0.1, corda-core-corda-3.0
+   Node for "PartyA" started up and registered in 38.59 sec
 
-    Fri Jul 07 10:33:47 BST 2017>>>
 
-For every node except the network map/notary, the script also creates a webserver terminal tab/window:
+   Welcome to the Corda interactive shell.
+   Useful commands include 'help' to see what is available, and 'bye' to shut down the node.
+
+   Fri Mar 02 17:34:02 GMT 2018>>> 
+
+For every node except the notary, the script also creates a webserver terminal tab/window:
 
 .. sourcecode:: none
 
     Logs can be found in /Users/username/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs/web
-    Starting as webserver: localhost:10007
+    Starting as webserver: localhost:10009
     Webserver started up in 42.02 sec
 
 It usually takes around 60 seconds for the nodes to finish starting up. To ensure that all the nodes are running, you
 can query the 'status' end-point located at ``http://localhost:[port]/api/status`` (e.g.
-``http://localhost:10007/api/status`` for ``PartyA``).
+``http://localhost:10009/api/status`` for ``PartyA``).
 
 Running the example CorDapp from IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -276,9 +277,9 @@ Via HTTP
 ~~~~~~~~
 The nodes' webservers run locally on the following ports:
 
-* PartyA: ``localhost:10007``
-* PartyB: ``localhost:10010``
-* PartyC: ``localhost:10013``
+* PartyA: ``localhost:10009``
+* PartyB: ``localhost:10012``
+* PartyC: ``localhost:10015``
 
 These ports are defined in each node's node.conf file under ``kotlin-source/build/nodes/NodeX/node.conf``.
 
@@ -303,9 +304,9 @@ To create an IOU between PartyA and PartyB, run the following command from the c
 
 .. sourcecode:: bash
 
-   curl -X PUT 'http://localhost:10007/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
+   curl -X PUT 'http://localhost:10009/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
 
-Note that both PartyA's port number (``10007``) and PartyB are referenced in the PUT request path. This command
+Note that both PartyA's port number (``10009``) and PartyB are referenced in the PUT request path. This command
 instructs PartyA to agree an IOU with PartyB. Once the process is complete, both nodes will have a signed, notarised
 copy of the IOU. PartyC will not.
 
@@ -316,43 +317,26 @@ of the page, and enter the IOU details into the web-form. The IOU must have a po
 
 .. sourcecode:: none
 
-  Counter-party: Select from list
+  Counterparty: Select from list
   Value (Int):   5
 
 And click submit. Upon clicking submit, the modal dialogue will close, and the nodes will agree the IOU.
 
 Checking the output
 ^^^^^^^^^^^^^^^^^^^
-Assuming all went well, you should see some activity in PartyA's web-server terminal window:
-
-.. sourcecode:: none
-
-   >> Signing transaction with our private key.
-   >> Gathering the counterparty's signature.
-   >> Structural step change in child of Gathering the counterparty's signature.
-   >> Collecting signatures from counter-parties.
-   >> Verifying collected signatures.
-   >> Done
-   >> Obtaining notary signature and recording transaction.
-   >> Structural step change in child of Obtaining notary signature and recording transaction.
-   >> Requesting signature by notary service
-   >> Broadcasting transaction to participants
-   >> Done
-   >> Done
-
-You can view the newly-created IOU by accessing the vault of PartyA or PartyB:
+Assuming all went well, you can view the newly-created IOU by accessing the vault of PartyA or PartyB:
 
 *Via the HTTP API:*
 
-* PartyA's vault: Navigate to http://localhost:10007/api/example/ious
-* PartyB's vault: Navigate to http://localhost:10010/api/example/ious
+* PartyA's vault: Navigate to http://localhost:10009/api/example/ious
+* PartyB's vault: Navigate to http://localhost:10012/api/example/ious
 
 *Via web/example:*
 
-* PartyA: Navigate to http://localhost:10007/web/example and hit the "refresh" button
-* PartyA: Navigate to http://localhost:10010/web/example and hit the "refresh" button
+* PartyA: Navigate to http://localhost:10009/web/example and hit the "refresh" button
+* PartyA: Navigate to http://localhost:10012/web/example and hit the "refresh" button
 
-The vault and web front-end of PartyC (at ``localhost:10013``) will not display any IOUs. This is because PartyC was
+The vault and web front-end of PartyC (at ``localhost:10015``) will not display any IOUs. This is because PartyC was
 not involved in this transaction.
 
 Via the interactive shell (terminal only)
@@ -393,7 +377,7 @@ This will print out the following progress steps:
     ✅   Verifying contract constraints.
     ✅   Signing transaction with our private key.
     ✅   Gathering the counterparty's signature.
-        ✅   Collecting signatures from counter-parties.
+        ✅   Collecting signatures from counterparties.
         ✅   Verifying collected signatures.
     ✅   Obtaining notary signature and recording transaction.
         ✅   Requesting signature by notary service
@@ -444,24 +428,32 @@ For more information on the client RPC interface and how to build an RPC client 
 
 Running nodes across machines
 -----------------------------
-The nodes can be split across machines and configured to communicate across the network.
+The nodes can be split across different machines and configured to communicate across the network.
 
-After deploying the nodes, navigate to the build folder (``kotlin-source/build/nodes``) and move some of the individual
-node folders to a different machine (e.g. using a USB key). It is important that none of the nodes - including the
-network map/notary node - end up on more than one machine. Each computer should also have a copy of ``runnodes`` and
-``runnodes.bat``.
+After deploying the nodes, navigate to the build folder (``kotlin-source/build/nodes``) and for each node that needs to
+be moved to another machine open its config file and change the Artemis messaging address to the IP address of the machine
+where the node will run (e.g. ``p2pAddress="10.18.0.166:10007"``).
+
+These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
+(see :doc:`setting-up-a-corda-network` for more information on this and how to built it) to update the files and have
+them distributed locally.
+
+``java -jar network-bootstrapper.jar kotlin-source/build/nodes``
+
+Once that's done move the node folders to their designated machines (e.g. using a USB key). It is important that none of the
+nodes - including the notary - end up on more than one machine. Each computer should also have a copy of ``runnodes``
+and ``runnodes.bat``.
 
 For example, you may end up with the following layout:
 
-* Machine 1: ``NetworkMapAndNotary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
+* Machine 1: ``Notary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
 * Machine 2: ``PartyB``, ``PartyC``, ``runnodes``, ``runnodes.bat``
 
-You must now edit the configuration file for each node, including the network map/notary. Open each node's config file,
-and make the following changes:
-
-* Change the Artemis messaging address to the machine's IP address (e.g. ``p2pAddress="10.18.0.166:10006"``)
-
 After starting each node, the nodes will be able to see one another and agree IOUs among themselves.
+
+.. note:: If you are using H2 and wish to use the same ``h2port`` value for all the nodes, then only assign them that
+   value after the nodes have been moved to their machines. The initial bootstrapping process requires access to the nodes'
+   databases and if they share the same H2 port then the process will fail.
 
 Testing and debugging
 ---------------------

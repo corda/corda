@@ -9,7 +9,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.ArtemisSessionProvider
@@ -36,7 +37,7 @@ import kotlin.concurrent.withLock
  *  The Netty thread pool used by the AMQPBridges is also shared and managed by the AMQPBridgeManager.
  */
 @VisibleForTesting
-class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFactory: () -> ArtemisSessionProvider) : BridgeManager {
+class AMQPBridgeManager(config: NodeSSLConfiguration, private val maxMessageSize: Int, private val artemisMessageClientFactory: () -> ArtemisSessionProvider) : BridgeManager {
 
     private val lock = ReentrantLock()
     private val bridgeNameToBridgeMap = mutableMapOf<String, AMQPBridge>()
@@ -45,8 +46,9 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
     private val keyStorePrivateKeyPassword: String = config.keyStorePassword
     private val trustStore = config.loadTrustStore().internal
     private var artemis: ArtemisSessionProvider? = null
+    private val crlCheckSoftFail: Boolean = config.crlCheckSoftFail
 
-    constructor(config: NodeSSLConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int) : this(config, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+    constructor(config: NodeSSLConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int) : this(config, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private const val NUM_BRIDGE_THREADS = 0 // Default sized pool
@@ -66,15 +68,17 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
                              keyStore: KeyStore,
                              keyStorePrivateKeyPassword: String,
                              trustStore: KeyStore,
+                             crlCheckSoftFail: Boolean,
                              sharedEventGroup: EventLoopGroup,
-                             private val artemis: ArtemisSessionProvider) {
+                             private val artemis: ArtemisSessionProvider,
+                             private val maxMessageSize: Int) {
         companion object {
             fun getBridgeName(queueName: String, hostAndPort: NetworkHostAndPort): String = "$queueName -> $hostAndPort"
         }
 
         private val log = LoggerFactory.getLogger("$bridgeName:${legalNames.first()}")
 
-        val amqpClient = AMQPClient(listOf(target), legalNames, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, sharedThreadPool = sharedEventGroup)
+        val amqpClient = AMQPClient(listOf(target), legalNames, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, crlCheckSoftFail, sharedThreadPool = sharedEventGroup, maxMessageSize = maxMessageSize)
         val bridgeName: String get() = getBridgeName(queueName, target)
         private val lock = ReentrantLock() // lock to serialise session level access
         private var session: ClientSession? = null
@@ -108,7 +112,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
                     if (connected) {
                         log.info("Bridge Connected")
                         val sessionFactory = artemis.started!!.sessionFactory
-                        val session = sessionFactory.createSession(NODE_USER, NODE_USER, false, false, false, false, DEFAULT_ACK_BATCH_SIZE)
+                        val session = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
                         this.session = session
                         val consumer = session.createConsumer(queueName)
                         this.consumer = consumer
@@ -126,35 +130,44 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
         }
 
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
-            lock.withLock {
-                val data = ByteArray(artemisMessage.bodySize).apply { artemisMessage.bodyBuffer.readBytes(this) }
-                val properties = HashMap<Any?, Any?>()
-                for (key in artemisMessage.propertyNames) {
+            if (artemisMessage.bodySize > maxMessageSize) {
+                log.warn("Message exceeds maxMessageSize network parameter, maxMessageSize: [$maxMessageSize], message size: [${artemisMessage.bodySize}], " +
+                        "dropping message, uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
+                // Ack the message to prevent same message being sent to us again.
+                artemisMessage.acknowledge()
+                return
+            }
+            val data = ByteArray(artemisMessage.bodySize).apply { artemisMessage.bodyBuffer.readBytes(this) }
+            val properties = HashMap<String, Any?>()
+            for (key in P2PMessagingHeaders.whitelistedHeaders) {
+                if (artemisMessage.containsProperty(key)) {
                     var value = artemisMessage.getObjectProperty(key)
                     if (value is SimpleString) {
                         value = value.toString()
                     }
-                    properties[key.toString()] = value
+                    properties[key] = value
                 }
-                log.debug { "Bridged Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
-                val peerInbox = translateLocalQueueToInboxAddress(queueName)
-                val sendableMessage = amqpClient.createMessage(data, peerInbox,
-                        legalNames.first().toString(),
-                        properties)
-                sendableMessage.onComplete.then {
-                    log.debug { "Bridge ACK ${sendableMessage.onComplete.get()}" }
-                    lock.withLock {
-                        if (sendableMessage.onComplete.get() == MessageStatus.Acknowledged) {
-                            artemisMessage.acknowledge()
-                            session?.commit()
-                        } else {
-                            log.info("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
-                            session?.rollback(false)
-                        }
+            }
+            log.debug { "Bridged Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
+            val peerInbox = translateLocalQueueToInboxAddress(queueName)
+            val sendableMessage = amqpClient.createMessage(data, peerInbox,
+                    legalNames.first().toString(),
+                    properties)
+            sendableMessage.onComplete.then {
+                log.debug { "Bridge ACK ${sendableMessage.onComplete.get()}" }
+                lock.withLock {
+                    if (sendableMessage.onComplete.get() == MessageStatus.Acknowledged) {
+                        artemisMessage.acknowledge()
+                    } else {
+                        log.info("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
+                        // We need to commit any acknowledged messages before rolling back the failed
+                        // (unacknowledged) message.
+                        session?.commit()
+                        session?.rollback(false)
                     }
                 }
-                amqpClient.write(sendableMessage)
             }
+            amqpClient.write(sendableMessage)
         }
     }
 
@@ -166,7 +179,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, val artemisMessageClientFa
         if (bridgeExists(getBridgeName(queueName, target))) {
             return
         }
-        val newBridge = AMQPBridge(queueName, target, legalNames, keyStore, keyStorePrivateKeyPassword, trustStore, sharedEventLoopGroup!!, artemis!!)
+        val newBridge = AMQPBridge(queueName, target, legalNames, keyStore, keyStorePrivateKeyPassword, trustStore, crlCheckSoftFail, sharedEventLoopGroup!!, artemis!!, maxMessageSize)
         lock.withLock {
             bridgeNameToBridgeMap[newBridge.bridgeName] = newBridge
         }

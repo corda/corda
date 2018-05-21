@@ -27,7 +27,7 @@ RPC permissions
 ---------------
 For a node's owner to interact with their node via RPC, they must define one or more RPC users. Each user is
 authenticated with a username and password, and is assigned a set of permissions that control which RPC operations they
-can perform.
+can perform. Permissions are not required to interact with the node via the shell, unless the shell is being accessed via SSH.
 
 RPC users are created by adding them to the ``rpcUsers`` list in the node's ``node.conf`` file:
 
@@ -126,6 +126,8 @@ You can provide an RPC user with the permission to perform any RPC operation (in
             ...
         ]
 
+.. _rpc_security_mgmt_ref:
+
 RPC security management
 -----------------------
 
@@ -195,7 +197,7 @@ of ``INMEMORY`` type:
    an exception at node startup.
 
 Authentication/authorisation data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``dataSource`` structure defines the data provider supplying credentials and permissions for users. There exist two
 supported types of such data source, identified by the ``dataSource.type`` field:
@@ -216,7 +218,7 @@ supported types of such data source, identified by the ``dataSource.type`` field
     in each table alongside the expected ones.
 
 Password encryption
-^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 Storing passwords in plain text is discouraged in applications where security is critical. Passwords are assumed
 to be in plain format by default, unless a different format is specified by the ``passwordEncryption`` field, like:
@@ -233,7 +235,7 @@ it is currently the only non-plain password hash-encryption format supported. Ha
 format can be produced by using the `Apache Shiro Hasher command line tool <https://shiro.apache.org/command-line-hasher.html>`_.
 
 Caching user accounts data
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A cache layer on top of the external data source of users credentials and permissions can significantly improve
 performances in some cases, with the disadvantage of causing a (controllable) delay in picking up updates to the underlying data.
@@ -305,8 +307,16 @@ The client RPC wire protocol is defined and documented in ``net/corda/client/rpc
 
 Wire security
 -------------
-``CordaRPCClient`` has an optional constructor parameter of type ``SSLConfiguration``, defaulted to ``null``, which allows
+``CordaRPCClient`` has an optional constructor parameter of type ``ClientRpcSslOptions``, defaulted to ``null``, which allows
 communication with the node using SSL. Default ``null`` value means no SSL used in the context of RPC.
+
+To use this feature, the ``CordaRPCClient`` object provides a static factory method ``createWithSsl``.
+
+In order for this to work, the client needs to provide a truststore containing a certificate received from the node admin.
+(The Node does not expect the RPC client to present a certificate, as the client already authenticates using the mechanism described above.)
+
+For the communication to be secure, we recommend using the standard SSL best practices for key management.
+
 
 Whitelisting classes with the Corda node
 ----------------------------------------

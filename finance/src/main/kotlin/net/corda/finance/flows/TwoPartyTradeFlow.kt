@@ -97,7 +97,7 @@ object TwoPartyTradeFlow {
             val signTransactionFlow = object : SignTransactionFlow(otherSideSession, VERIFYING_AND_SIGNING.childProgressTracker()) {
                 override fun checkTransaction(stx: SignedTransaction) {
                     // Verify that we know who all the participants in the transaction are
-                    val states: Iterable<ContractState> = stx.tx.inputs.map { serviceHub.loadState(it).data } + stx.tx.outputs.map { it.data }
+                    val states: Iterable<ContractState> = serviceHub.loadStates(stx.tx.inputs.toSet()).map { it.state.data } + stx.tx.outputs.map { it.data }
                     states.forEach { state ->
                         state.participants.forEach { anon ->
                             require(serviceHub.identityService.wellKnownPartyFromAnonymous(anon) != null) {

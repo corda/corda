@@ -75,7 +75,6 @@ object AutoOfferFlow {
             subFlow(ReportToRegulatorFlow(regulator, finalTx))
             return finalTx
         }
-
     }
 
     @InitiatingFlow

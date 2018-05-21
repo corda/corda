@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.persistence
 
+import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.internal.castIfPossible
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
@@ -9,6 +10,8 @@ import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.Identifier
 import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
+import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl
+import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
@@ -19,21 +22,20 @@ import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
 import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
 import java.lang.management.ManagementFactory
 import java.sql.Connection
-import java.util.concurrent.ConcurrentHashMap
 import javax.management.ObjectName
 import javax.persistence.AttributeConverter
 
 class HibernateConfiguration(
         schemas: Set<MappedSchema>,
         private val databaseConfig: DatabaseConfig,
-        private val attributeConverters: Collection<AttributeConverter<*, *>>
+        private val attributeConverters: Collection<AttributeConverter<*, *>>,
+        val cordappClassLoader: ClassLoader? = null
 ) {
     companion object {
         private val logger = contextLogger()
     }
 
-    // TODO: make this a guava cache or similar to limit ability for this to grow forever.
-    private val sessionFactories = ConcurrentHashMap<Set<MappedSchema>, SessionFactory>()
+    private val sessionFactories = Caffeine.newBuilder().maximumSize(databaseConfig.mappedSchemaCacheSize).build<Set<MappedSchema>, SessionFactory>()
 
     val sessionFactoryForRegisteredSchemas = schemas.let {
         logger.info("Init HibernateConfiguration for schemas: $it")
@@ -41,7 +43,7 @@ class HibernateConfiguration(
     }
 
     /** @param key must be immutable, not just read-only. */
-    fun sessionFactoryForSchemas(key: Set<MappedSchema>) = sessionFactories.computeIfAbsent(key, { makeSessionFactoryForSchemas(key) })
+    fun sessionFactoryForSchemas(key: Set<MappedSchema>): SessionFactory = sessionFactories.get(key, ::makeSessionFactoryForSchemas)!!
 
     private fun makeSessionFactoryForSchemas(schemas: Set<MappedSchema>): SessionFactory {
         logger.info("Creating session factory for schemas: $schemas")
@@ -60,7 +62,7 @@ class HibernateConfiguration(
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
-        val sessionFactory = buildSessionFactory(config, metadataSources, databaseConfig.serverNameTablePrefix)
+        val sessionFactory = buildSessionFactory(config, metadataSources, databaseConfig.serverNameTablePrefix, cordappClassLoader)
         logger.info("Created session factory for schemas: $schemas")
 
         // export Hibernate JMX statistics
@@ -87,8 +89,15 @@ class HibernateConfiguration(
         }
     }
 
-    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String): SessionFactory {
+    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String, cordappClassLoader: ClassLoader?): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
+
+        if (cordappClassLoader != null) {
+            config.standardServiceRegistryBuilder.addService(
+                    ClassLoaderService::class.java,
+                    ClassLoaderServiceImpl(cordappClassLoader))
+        }
+
         val metadata = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build()).run {
             applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
                 override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
@@ -147,7 +156,7 @@ class HibernateConfiguration(
 
     // A tweaked version of `org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor` that truncates logged messages.
     private object CordaPrimitiveByteArrayTypeDescriptor : PrimitiveByteArrayTypeDescriptor() {
-        private val LOG_SIZE_LIMIT = 1024
+        private const val LOG_SIZE_LIMIT = 1024
 
         override fun extractLoggableRepresentation(value: ByteArray?): String {
             return if (value == null) {

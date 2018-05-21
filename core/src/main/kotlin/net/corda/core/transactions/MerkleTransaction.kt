@@ -85,18 +85,18 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
         val signersList = deserialiseComponentGroup(ComponentGroupEnum.SIGNERS_GROUP, { SerializedBytes<List<PublicKey>>(it).deserialize() })
         val commandDataList = deserialiseComponentGroup(ComponentGroupEnum.COMMANDS_GROUP, { SerializedBytes<CommandData>(it).deserialize(context = SerializationFactory.defaultFactory.defaultContext.withAttachmentsClassLoader(attachments)) })
         val group = componentGroups.firstOrNull { it.groupIndex == ComponentGroupEnum.COMMANDS_GROUP.ordinal }
-        if (group is FilteredComponentGroup) {
+        return if (group is FilteredComponentGroup) {
             check(commandDataList.size <= signersList.size) { "Invalid Transaction. Less Signers (${signersList.size}) than CommandData (${commandDataList.size}) objects" }
             val componentHashes = group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }
             val leafIndices = componentHashes.map { group.partialMerkleTree.leafIndex(it) }
             if (leafIndices.isNotEmpty())
                 check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }
-            return commandDataList.mapIndexed { index, commandData -> Command(commandData, signersList[leafIndices[index]]) }
+            commandDataList.mapIndexed { index, commandData -> Command(commandData, signersList[leafIndices[index]]) }
         } else {
             // It is a WireTransaction
             // or a FilteredTransaction with no Commands (in which case group is null).
             check(commandDataList.size == signersList.size) { "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match" }
-            return commandDataList.mapIndexed { index, commandData -> Command(commandData, signersList[index]) }
+            commandDataList.mapIndexed { index, commandData -> Command(commandData, signersList[index]) }
         }
     }
 }
@@ -148,9 +148,9 @@ class FilteredTransaction internal constructor(
                         // As all of the helper Map structures, like availableComponentNonces, availableComponentHashes
                         // and groupsMerkleRoots, are computed lazily via componentGroups.forEach, there should always be
                         // a match on Map.get ensuring it will never return null.
-                        filteredSerialisedComponents.put(componentGroupIndex, mutableListOf(serialisedComponent))
-                        filteredComponentNonces.put(componentGroupIndex, mutableListOf(wtx.availableComponentNonces[componentGroupIndex]!![internalIndex]))
-                        filteredComponentHashes.put(componentGroupIndex, mutableListOf(wtx.availableComponentHashes[componentGroupIndex]!![internalIndex]))
+                        filteredSerialisedComponents[componentGroupIndex] = mutableListOf(serialisedComponent)
+                        filteredComponentNonces[componentGroupIndex] = mutableListOf(wtx.availableComponentNonces[componentGroupIndex]!![internalIndex])
+                        filteredComponentHashes[componentGroupIndex] = mutableListOf(wtx.availableComponentHashes[componentGroupIndex]!![internalIndex])
                     } else {
                         group.add(serialisedComponent)
                         // If the group[componentGroupIndex] existed, then we guarantee that
@@ -165,9 +165,9 @@ class FilteredTransaction internal constructor(
                         val signersGroupIndex = ComponentGroupEnum.SIGNERS_GROUP.ordinal
                         // There exist commands, thus the signers group is not empty.
                         val signersGroupComponents = wtx.componentGroups.first { it.groupIndex == signersGroupIndex }
-                        filteredSerialisedComponents.put(signersGroupIndex, signersGroupComponents.components.toMutableList())
-                        filteredComponentNonces.put(signersGroupIndex, wtx.availableComponentNonces[signersGroupIndex]!!.toMutableList())
-                        filteredComponentHashes.put(signersGroupIndex, wtx.availableComponentHashes[signersGroupIndex]!!.toMutableList())
+                        filteredSerialisedComponents[signersGroupIndex] = signersGroupComponents.components.toMutableList()
+                        filteredComponentNonces[signersGroupIndex] = wtx.availableComponentNonces[signersGroupIndex]!!.toMutableList()
+                        filteredComponentHashes[signersGroupIndex] = wtx.availableComponentHashes[signersGroupIndex]!!.toMutableList()
                     }
                 }
             }
@@ -312,14 +312,14 @@ class FilteredTransaction internal constructor(
                 .filter { signers -> publicKey in signers }.size
     }
 
-    inline private fun verificationCheck(value: Boolean, lazyMessage: () -> Any) {
+    private inline fun verificationCheck(value: Boolean, lazyMessage: () -> Any) {
         if (!value) {
             val message = lazyMessage()
             throw FilteredTransactionVerificationException(id, message.toString())
         }
     }
 
-    inline private fun visibilityCheck(value: Boolean, lazyMessage: () -> Any) {
+    private inline fun visibilityCheck(value: Boolean, lazyMessage: () -> Any) {
         if (!value) {
             val message = lazyMessage()
             throw ComponentVisibilityException(id, message.toString())

@@ -5,7 +5,6 @@ import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.StartedNode
-import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.InternalMockNetwork
 import kotlin.reflect.KClass
 
@@ -39,7 +38,7 @@ class NoAnswer(private val closure: () -> Unit = {}) : FlowLogic<Unit>() {
 /**
  * Allows to register a flow of type [R] against an initiating flow of type [I].
  */
-inline fun <I : FlowLogic<*>, reified R : FlowLogic<*>> StartedNode<InternalMockNetwork.MockNode>.registerInitiatedFlow(initiatingFlowType: KClass<I>, crossinline construct: (session: FlowSession) -> R) {
+inline fun <I : FlowLogic<*>, reified R : FlowLogic<*>> StartedNode<*>.registerInitiatedFlow(initiatingFlowType: KClass<I>, crossinline construct: (session: FlowSession) -> R) {
     internalRegisterFlowFactory(initiatingFlowType.java, InitiatedFlowFactory.Core { session -> construct(session) }, R::class.javaObjectType, true)
 }
 
@@ -81,7 +80,7 @@ infix fun <T : Any> KClass<T>.from(session: FlowSession): Pair<FlowSession, Clas
 fun FlowLogic<*>.receiveAll(session: Pair<FlowSession, Class<out Any>>, vararg sessions: Pair<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>> {
     val allSessions = arrayOf(session, *sessions)
     allSessions.enforceNoDuplicates()
-    return receiveAll(mapOf(*allSessions))
+    return receiveAllMap(mapOf(*allSessions))
 }
 
 /**

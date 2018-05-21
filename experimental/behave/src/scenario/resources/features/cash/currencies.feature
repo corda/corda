@@ -2,14 +2,34 @@
 Feature: Cash - Issuable Currencies
   To have cash on ledger, certain nodes must have the ability to issue cash of various currencies.
 
-  Scenario: Node can issue no currencies by default
-    Given a node A of version master
-    And node A has the finance app installed
+  Scenario Outline: Node can issue no currencies by default
+    Given a node PartyA of version <Node-Version>
+    And node PartyA has the finance app installed
     When the network is ready
-    Then node A has 0 issuable currencies
+    Then node PartyA has 0 issuable currencies
 
-  Scenario: Node can issue a currency
-    Given a node A of version master
-    And node A can issue USD
+    Examples:
+      | Node-Version    |
+      | master          |
+
+  Scenario Outline: Node has an issuable currency
+    Given a node PartyA of version <Node-Version>
+    And node PartyA can issue currencies of denomination USD
+    And node PartyA has the finance app installed
     When the network is ready
-    Then node A has 1 issuable currency
+    Then node PartyA has 1 issuable currency
+
+    Examples:
+      | Node-Version    |
+      | master          |
+
+  Scenario Outline: Node can issue a currency
+    Given a node PartyA of version <Node-Version>
+    And a nonvalidating notary Notary of version <Node-Version>
+    And node PartyA has the finance app installed
+    When the network is ready
+    Then node PartyA can issue 100 USD
+
+    Examples:
+      | Node-Version    |
+      | master          |

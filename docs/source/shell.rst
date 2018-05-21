@@ -9,7 +9,7 @@ Shell
 
 .. contents::
 
-The Corda shell is an embedded command line that allows an administrator to control and monitor a node. It is based on
+The Corda shell is an embedded or standalone command line that allows an administrator to control and monitor a node. It is based on
 the `CRaSH`_ shell and supports many of the same features. These features include:
 
 * Invoking any of the node's RPC methods
@@ -18,12 +18,24 @@ the `CRaSH`_ shell and supports many of the same features. These features includ
 * Issuing SQL queries to the underlying database
 * Viewing JMX metrics and monitoring exports
 * UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnular data
+* Shutting the node down.
+
+Permissions
+-----------
+
+When accessing the shell (embedded, standalone, via SSH) RPC permissions are required. This is because the shell actually communicates
+with the node using RPC calls.
+
+* Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed``
+* Starting flows requires ``InvokeRpc.startTrackedFlowDynamic``, ``InvokeRpc.registeredFlows`` and ``InvokeRpc.wellKnownPartyFromX500Name``, as well as a
+  permission for the flow being started
 
 The shell via the local terminal
 --------------------------------
 
-In development mode, the shell will display in the node's terminal window. It may be disabled by passing the
-``--no-local-shell`` flag when running the node.
+In development mode, the shell will display in the node's terminal window.
+The shell connects to the node as 'shell' user with password 'shell' which is only available in dev mode.
+It may be disabled by passing the ``--no-local-shell`` flag when running the node.
 
 The shell via SSH
 -----------------
@@ -42,8 +54,8 @@ By default, the SSH server is *disabled*. To enable it, a port must be configure
 
 Authentication
 **************
-Users log in to shell via SSH using the same credentials as for RPC. This is because the shell actually communicates
-with the node using RPC calls. No RPC permissions are required to allow the connection and log in.
+Users log in to shell via SSH using the same credentials as for RPC.
+No RPC permissions are required to allow the connection and log in.
 
 The host key is loaded from the ``<node root directory>/sshkey/hostkey.pem`` file. If this file does not exist, it is
 generated automatically. In development mode, the seed may be specified to give the same results on the same computer
@@ -69,7 +81,7 @@ Where:
 
 The RPC password will be requested after a connection is established.
 
-:note: In development mode, restarting a node frequently may cause the host key to be regenerated. SSH usually saves
+.. note:: In development mode, restarting a node frequently may cause the host key to be regenerated. SSH usually saves
     trusted hosts and will refuse to connect in case of a change. This check can be disabled using the
     ``-o StrictHostKeyChecking=no`` flag. This option should never be used in production environment!
 
@@ -78,14 +90,99 @@ Windows
 
 Windows does not provide a built-in SSH tool. An alternative such as PuTTY should be used.
 
-Permissions
-***********
+The standalone shell
+--------------------
+The standalone shell is a standalone application interacting with a Corda node via RPC calls.
+RPC node permissions are necessary for authentication and authorisation.
+Certain operations, such as starting flows, require access to CordApps jars.
 
-When accessing the shell via SSH, some additional RPC permissions are required:
+Starting the standalone shell
+*****************************
 
-* Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed``
-* Starting flows requires ``InvokeRpc.startTrackedFlowDynamic`` and ``InvokeRpc.registeredFlows``, as well as a
-  permission for the flow being started
+Run the following command from the terminal:
+
+Linux and MacOS
+^^^^^^^^^^^^^^^
+
+.. code:: bash
+
+    ./shell [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+             --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
+             --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
+
+Windows
+^^^^^^^
+
+.. code:: bash
+
+    shell.bat [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+             --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
+             --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
+
+Where:
+
+* ``config-file`` is the path to config file, used instead of providing the rest of command line options
+* ``cordpass-directory`` is the directory containing Cordapps jars, Cordapps are require when starting flows
+* ``commands-directory`` is the directory with additional CrAsH shell commands
+* ``host`` is the Corda node's host
+* ``port`` is the Corda node's port, specified in the ``node.conf`` file
+* ``user`` is the RPC username, if not provided it will be requested at startup
+* ``password`` is the RPC user password, if not provided it will be requested at startup
+* ``sshd-port`` instructs the standalone shell app to start SSH server on the given port, optional
+* ``sshd-hostkey-directory`` is the directory containing hostkey.pem file for SSH server
+* ``keystore-password`` the password to unlock the KeyStore file containing the standalone shell certificate and private key, optional, unencrypted RPC connection without SSL will be used if the option is not provided
+* ``keystore-file`` is the path to the KeyStore file
+* ``truststore-password`` the password to unlock the TrustStore file containing the Corda node certificate, optional, unencrypted RPC connection without SSL will be used if the option is not provided
+* ``truststore-file`` is the path to the TrustStore file
+* ``help`` prints Shell help
+
+The format of ``config-file``:
+
+.. code:: bash
+
+    node {
+        addresses {
+            rpc {
+                host : "localhost"
+                port : 10006
+            }
+        }
+    }
+    shell {
+	    workDir : /path/to/dir
+    }
+    extensions {
+        cordapps {
+            path : /path/to/cordapps/dir
+        }
+        sshd {
+            enabled : "false"
+            port : 2223
+        }
+    }
+    ssl {
+        keystore {
+            path: "/path/to/keystore"
+            type: "JKS"
+            password: password
+        }
+        trustore {
+            path: "/path/to/trusttore"
+            type: "JKS"
+            password: password
+        }
+    }
+    user : demo
+    password : demo
+
+
+Standalone Shell via SSH
+------------------------
+The standalone shell can embed an SSH server which redirects interactions via RPC calls to the Corda node.
+To run SSH server use ``--sshd-port`` option when starting standalone shell or ``extensions.sshd`` entry in the configuration file.
+For connection to SSH refer to `Connecting to the shell`_.
+Certain operations (like starting Flows) will require Shell's ``--cordpass-directory`` to be configured correctly (see `Starting the standalone shell`_).
+
 
 Interacting with the node via the shell
 ---------------------------------------
@@ -100,6 +197,14 @@ Some RPCs return a stream of events that will be shown on screen until you press
 
 You can find a list of the available RPC methods
 `here <https://docs.corda.net/api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html>`_.
+
+Shutting down the node
+**********************
+
+You can shut the node down via shell:
+
+* ``gracefulShutdown`` will put node into draining mode, and shut down when there are no flows running
+* ``shutdown`` will shut the node down immediately
 
 Flow commands
 *************
@@ -148,8 +253,8 @@ Where ``newCampaign`` is a parameter of type ``Campaign``.
 
 Mappings from strings to types
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Several parameter types can automatically be mapped from strings. See the `defined parsers`_ for more information. We
-cover the most common types here.
+In addition to the types already supported by Jackson, several parameter types can automatically be mapped from strings.
+We cover the most common types here.
 
 Amount
 ~~~~~~
@@ -158,23 +263,44 @@ A parameter of type ``Amount<Currency>`` can be written as either:
 * A dollar ($), pound (£) or euro (€) symbol followed by the amount as a decimal
 * The amount as a decimal followed by the ISO currency code (e.g. "100.12 CHF")
 
-OpaqueBytes
-~~~~~~~~~~~
-A parameter of type ``OpaqueBytes`` can be provided as a string, which will be automatically converted to
-``OpaqueBytes``.
+SecureHash
+~~~~~~~~~~
+A parameter of type ``SecureHash`` can be written as a hexadecimal string: ``F69A7626ACC27042FEEAE187E6BFF4CE666E6F318DC2B32BE9FAF87DF687930C``
+
+OpaqueBytes and SerializedBytes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A parameter of type ``OpaqueBytes`` can be provided as a string in Base64.
+
+PublicKey and CompositeKey
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+A parameter of type ``PublicKey`` can be written as a Base58 string of its encoded format: ``GfHq2tTVk9z4eXgyQXzegw6wNsZfHcDhfw8oTt6fCHySFGp3g7XHPAyc2o6D``.
+``net.corda.core.utilities.EncodingUtils.toBase58String`` will convert a ``PublicKey`` to this string format.
 
 Party
 ~~~~~
 A parameter of type ``Party`` can be written in several ways:
 
-* By using the node's full name: ``"O=Monogram Bank,L=Sao Paulo,C=GB"``
+* By using the full name: ``"O=Monogram Bank,L=Sao Paulo,C=GB"``
 * By specifying the organisation name only: ``"Monogram Bank"``
 * By specifying any other non-ambiguous part of the name: ``"Sao Paulo"`` (if only one network node is located in Sao
   Paulo)
+* By specifying the public key (see above)
 
-Instant
-~~~~~~~
-A parameter of type ``Instant`` can be written as follows: ``"2017-12-22T00:00:00Z"``.
+NodeInfo
+~~~~~~~~
+A parameter of type ``NodeInfo`` can be written in terms of one of its identities (see ``Party`` above)
+
+AnonymousParty
+~~~~~~~~~~~~~~
+A parameter of type ``AnonymousParty`` can be written in terms of its ``PublicKey`` (see above)
+
+NetworkHostAndPort
+~~~~~~~~~~~~~~~~~~
+A parameter of type ``NetworkHostAndPort`` can be written as a "host:port" string: ``"localhost:1010"``
+
+Instant and Date
+~~~~~~~~~~~~~~~~
+A parameter of ``Instant`` and ``Date`` can be written as an ISO-8601 string: ``"2017-12-22T00:00:00Z"``
 
 Examples
 ^^^^^^^^
@@ -184,7 +310,7 @@ Starting a flow
 
 We would start the ``CashIssue`` flow as follows:
 
-``flow start CashIssue amount: $1000, issueRef: 1234, recipient: "O=Bank A,L=London,C=GB", notary: "O=Notary Service,OU=corda,L=London,C=GB"``
+``flow start CashIssueFlow amount: $1000, issuerBankPartyRef: 1234, notary: "O=Controller, L=London, C=GB"``
 
 This breaks down as follows:
 
@@ -251,6 +377,8 @@ Limitations
 
 The shell will be enhanced over time. The currently known limitations include:
 
+* Flows cannot be run unless they override the progress tracker
+* If a command requires an argument of an abstract type, the command cannot be run because the concrete subclass to use cannot be specified using the YAML syntax
 * There is no command completion for flows or RPCs
 * Command history is not preserved across restarts
 * The ``jdbc`` command requires you to explicitly log into the database first
@@ -258,6 +386,5 @@ The shell will be enhanced over time. The currently known limitations include:
 * The ``jul`` command advertises access to logs, but it doesn't work with the logging framework we're using
 
 .. _Yaml: http://www.yaml.org/spec/1.2/spec.html
-.. _defined parsers: api/kotlin/corda/net.corda.client.jackson/-jackson-support/index.html
 .. _Groovy: http://groovy-lang.org/
 .. _CRaSH: http://www.crashub.org/

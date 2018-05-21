@@ -3,21 +3,17 @@ package net.corda.demobench.model
 import javafx.beans.binding.IntegerExpression
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.copyToDirectory
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.noneOrSingle
+import net.corda.core.internal.*
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demobench.plugin.CordappController
 import net.corda.demobench.pty.R3Pty
-import net.corda.core.node.NetworkParameters
-import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.core.node.NotaryInfo
 import net.corda.nodeapi.internal.DevIdentityGenerator
+import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import tornadofx.*
 import java.io.IOException
 import java.lang.management.ManagementFactory
-import java.nio.file.Files
 import java.nio.file.Path
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -121,7 +117,11 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
             // Write this node's configuration file into its working directory.
             val confFile = config.nodeDir / "node.conf"
-            Files.write(confFile, config.nodeConfig.toText().toByteArray())
+            confFile.writeText(config.nodeConfig.toNodeConfText())
+
+            // Write this node's configuration file into its working directory.
+            val webConfFile = config.nodeDir / "web-server.conf"
+            webConfFile.writeText(config.nodeConfig.toWebServerConfText())
 
             // Execute the Corda node
             val cordaEnv = System.getenv().toMutableMap().apply {
@@ -145,7 +145,8 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 modifiedTime = Instant.now(),
                 maxMessageSize = 10485760,
                 maxTransactionSize = Int.MAX_VALUE,
-                epoch = 1
+                epoch = 1,
+                whitelistedContractImplementations = emptyMap()
         ))
         notaryIdentity = identity
         networkParametersCopier = parametersCopier
@@ -195,9 +196,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
             log.info("Installed: $plugin")
         }
 
-        if (!config.deleteBaseDir()) {
-            log.warning("Failed to remove '${config.baseDir}'")
-        }
+        config.deleteBaseDir()
 
         return installed
     }

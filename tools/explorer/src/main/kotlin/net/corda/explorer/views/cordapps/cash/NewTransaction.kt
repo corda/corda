@@ -39,7 +39,7 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.flows.CashPaymentFlow.PaymentRequest
-import net.corda.testing.core.chooseIdentityAndCert
+import net.corda.testing.core.singleIdentityAndCert
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
 import java.math.BigDecimal
@@ -84,7 +84,7 @@ class NewTransaction : Fragment() {
             CashTransaction.Exit -> currencyTypes
             else -> FXCollections.emptyObservableList()
         }
-    })
+    }, "NewTransactionCurrencyItems")
 
     fun show(window: Window) {
         newTransactionDialog(window).showAndWait().ifPresent { request ->
@@ -96,9 +96,9 @@ class NewTransaction : Fragment() {
                 show()
             }
             val handle: FlowHandle<AbstractCashFlow.Result> = when (request) {
-                is IssueAndPaymentRequest -> rpcProxy.value!!.startFlow(::CashIssueAndPaymentFlow, request)
-                is PaymentRequest -> rpcProxy.value!!.startFlow(::CashPaymentFlow, request)
-                is ExitRequest -> rpcProxy.value!!.startFlow(::CashExitFlow, request)
+                is IssueAndPaymentRequest -> rpcProxy.value!!.cordaRPCOps.startFlow(::CashIssueAndPaymentFlow, request)
+                is PaymentRequest -> rpcProxy.value!!.cordaRPCOps.startFlow(::CashPaymentFlow, request)
+                is ExitRequest -> rpcProxy.value!!.cordaRPCOps.startFlow(::CashExitFlow, request)
                 else -> throw IllegalArgumentException("Unexpected request type: $request")
             }
             runAsync {
@@ -181,7 +181,7 @@ class NewTransaction : Fragment() {
         partyBLabel.textProperty().bind(transactionTypeCB.valueProperty().map { it?.partyNameB?.let { "$it : " } })
         partyBChoiceBox.apply {
             visibleProperty().bind(transactionTypeCB.valueProperty().map { it?.partyNameB }.isNotNull())
-            items = FXCollections.observableList(parties.map { it.chooseIdentityAndCert() }).sorted()
+            items = FXCollections.observableList(parties.map { it.singleIdentityAndCert() }).sorted()
             converter = stringConverter { it?.let { PartyNameFormatter.short.format(it.name) } ?: "" }
         }
         // Issuer

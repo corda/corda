@@ -1,16 +1,21 @@
 package net.corda.node.services.persistence
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.cache.Weigher
+import com.github.benmanes.caffeine.cache.Weigher
 import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.readFully
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
@@ -21,10 +26,13 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
-import net.corda.node.utilities.defaultCordaCacheConcurrencyLevel
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
-import java.io.*
+import net.corda.nodeapi.internal.withContractsInJar
+import java.io.FilterInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.Serializable
 import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
@@ -67,8 +75,7 @@ class NodeAttachmentService(
     }
 
     @Entity
-    @Table(name = "${NODE_DATABASE_PREFIX}attachments",
-            indexes = arrayOf(Index(name = "att_id_idx", columnList = "att_id")))
+    @Table(name = "${NODE_DATABASE_PREFIX}attachments", indexes = [Index(name = "att_id_idx", columnList = "att_id")])
     class DBAttachment(
             @Id
             @Column(name = "att_id")
@@ -85,7 +92,13 @@ class NodeAttachmentService(
             var uploader: String? = null,
 
             @Column(name = "filename", updatable = false)
-            var filename: String? = null
+            var filename: String? = null,
+
+            @ElementCollection
+            @Column(name = "contract_class_name")
+            @CollectionTable(name = "node_attchments_contracts", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
+                    foreignKey = ForeignKey(name = "FK__ctr_class__attachments"))
+            var contractClassNames: List<ContractClassName>? = null
     ) : Serializable
 
     @VisibleForTesting
@@ -196,42 +209,35 @@ class NodeAttachmentService(
     // If repeatedly looking for non-existing attachments becomes a performance issue, this is either indicating a
     // a problem somewhere else or this needs to be revisited.
 
-    private val attachmentContentCache = NonInvalidatingWeightBasedCache<SecureHash, Optional<ByteArray>>(
+    private val attachmentContentCache = NonInvalidatingWeightBasedCache(
             maxWeight = attachmentContentCacheSize,
-            concurrencyLevel = defaultCordaCacheConcurrencyLevel,
-            weigher = object : Weigher<SecureHash, Optional<ByteArray>> {
-                override fun weigh(key: SecureHash, value: Optional<ByteArray>): Int {
-                    return key.size + if (value.isPresent) value.get().size else 0
-                }
-            },
+            weigher = Weigher<SecureHash, Optional<Pair<Attachment, ByteArray>>> { key, value -> key.size + if (value.isPresent) value.get().second.size else 0 },
             loadFunction = { Optional.ofNullable(loadAttachmentContent(it)) }
     )
 
-    private fun loadAttachmentContent(id: SecureHash): ByteArray? {
+    private fun loadAttachmentContent(id: SecureHash): Pair<Attachment, ByteArray>? {
         val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
-        return attachment?.content
+                ?: return null
+        val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
+            val contracts = attachment.contractClassNames
+            if (contracts != null && contracts.isNotEmpty()) {
+                ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader)
+            } else {
+                it
+            }
+        }
+        return Pair(attachmentImpl, attachment.content)
     }
-
 
     private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
             attachmentCacheBound,
-            defaultCordaCacheConcurrencyLevel,
             { key -> Optional.ofNullable(createAttachment(key)) }
     )
 
     private fun createAttachment(key: SecureHash): Attachment? {
-        val content = attachmentContentCache.get(key)
+        val content = attachmentContentCache.get(key)!!
         if (content.isPresent) {
-            return AttachmentImpl(
-                    key,
-                    {
-                        attachmentContentCache
-                                .get(key)
-                                .orElseThrow {
-                                    IllegalArgumentException("No attachement impl should have been created for non existent content")
-                                }
-                    },
-                    checkAttachmentsOnLoad)
+            return content.get().first
         }
         // if no attachement has been found, we don't want to cache that - it might arrive later
         attachmentContentCache.invalidate(key)
@@ -239,7 +245,7 @@ class NodeAttachmentService(
     }
 
     override fun openAttachment(id: SecureHash): Attachment? {
-        val attachment = attachmentCache.get(id)
+        val attachment = attachmentCache.get(id)!!
         if (attachment.isPresent) {
             return attachment.get()
         }
@@ -247,63 +253,50 @@ class NodeAttachmentService(
         return null
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun importAttachment(jar: InputStream): AttachmentId {
-        return import(jar, null, null)
+        return import(jar, UNKNOWN_UPLOADER, null)
     }
 
-    override fun importAttachment(jar: InputStream, uploader: String, filename: String): AttachmentId {
+    override fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
         return import(jar, uploader, filename)
     }
 
-    fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> {
-        val hs = HashingInputStream(Hashing.sha256(), jar)
-        val bytes = hs.readBytes()
-        checkIsAValidJAR(ByteArrayInputStream(bytes))
-        val id = SecureHash.SHA256(hs.hash().asBytes())
-        return Pair(id, bytes)
-    }
-
-    override fun hasAttachment(attachmentId: AttachmentId): Boolean {
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-        val attachments = criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)
-        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
-        criteriaQuery.where(criteriaBuilder.equal(attachments.get<String>(DBAttachment::attId.name), attachmentId.toString()))
-        return (session.createQuery(criteriaQuery).singleResult > 0)
-    }
+    override fun hasAttachment(attachmentId: AttachmentId): Boolean =
+            currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
-        require(jar !is JarInputStream)
+        return withContractsInJar(jar) { contractClassNames, inputStream ->
+            require(inputStream !is JarInputStream)
 
-        // Read the file into RAM, hashing it to find the ID as we go. The attachment must fit into memory.
-        // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
-        // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
-        // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
-        // set the hash field of the new attachment record.
+            // Read the file into RAM and then calculate its hash. The attachment must fit into memory.
+            // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
+            // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
+            // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
+            // set the hash field of the new attachment record.
 
-        val (id, bytes) = getAttachmentIdAndBytes(jar)
-        if (!hasAttachment(id)) {
-            checkIsAValidJAR(ByteArrayInputStream(bytes))
-            val session = currentDBSession()
-            val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename)
-            session.save(attachment)
-            attachmentCount.inc()
-            log.info("Stored new attachment $id")
-            return id
-        } else {
-            throw java.nio.file.FileAlreadyExistsException(id.toString())
+            val bytes = inputStream.readFully()
+            val id = bytes.sha256()
+            if (!hasAttachment(id)) {
+                checkIsAValidJAR(bytes.inputStream())
+                val session = currentDBSession()
+                val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename, contractClassNames = contractClassNames)
+                session.save(attachment)
+                attachmentCount.inc()
+                log.info("Stored new attachment $id")
+                id
+            } else {
+                throw java.nio.file.FileAlreadyExistsException(id.toString())
+            }
         }
     }
 
-    override fun importOrGetAttachment(jar: InputStream): AttachmentId {
-        try {
-            return importAttachment(jar)
-        }
-        catch (faee: java.nio.file.FileAlreadyExistsException) {
-            return AttachmentId.parse(faee.message!!)
-        }
+    @Suppress("OverridingDeprecatedMember")
+    override fun importOrGetAttachment(jar: InputStream): AttachmentId = try {
+        import(jar, UNKNOWN_UPLOADER, null)
+    } catch (faee: java.nio.file.FileAlreadyExistsException) {
+        AttachmentId.parse(faee.message!!)
     }
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
@@ -327,6 +320,5 @@ class NodeAttachmentService(
 
         return results.map { AttachmentId.parse(it.attId) }
     }
-
 
 }

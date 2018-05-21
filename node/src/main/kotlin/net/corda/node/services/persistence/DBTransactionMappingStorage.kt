@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import rx.subjects.PublishSubject
+import java.io.Serializable
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
@@ -33,17 +34,17 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
 
             @Column(name = "state_machine_run_id", length = 36)
             var stateMachineRunId: String = ""
-    )
+    ) : Serializable
 
     private companion object {
         fun createMap(): AppendOnlyPersistentMap<SecureHash, StateMachineRunId, DBTransactionMapping, String> {
             return AppendOnlyPersistentMap(
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = { Pair(SecureHash.parse(it.txId), StateMachineRunId(UUID.fromString(it.stateMachineRunId))) },
-                    toPersistentEntity = { key: SecureHash, value: StateMachineRunId ->
+                    toPersistentEntity = { key: SecureHash, (uuid) ->
                         DBTransactionMapping().apply {
                             txId = key.toString()
-                            stateMachineRunId = value.uuid.toString()
+                            stateMachineRunId = uuid.toString()
                         }
                     },
                     persistentEntityClass = DBTransactionMapping::class.java
@@ -62,5 +63,4 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
     override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> =
             DataFeed(stateMachineTransactionMap.allPersisted().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
                     updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
-
 }

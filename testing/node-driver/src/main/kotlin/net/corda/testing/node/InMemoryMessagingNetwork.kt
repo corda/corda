@@ -1,6 +1,5 @@
 package net.corda.testing.node
 
-import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.CordaX500Name
@@ -19,13 +18,12 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.trace
-import net.corda.node.services.messaging.Message
-import net.corda.node.services.messaging.MessageHandlerRegistration
-import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.messaging.ReceivedMessage
+import net.corda.node.services.messaging.*
+import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.node.InMemoryMessagingNetwork.TestMessagingService
+import net.corda.testing.node.internal.InMemoryMessage
+import net.corda.testing.node.internal.InternalMockMessagingService
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.LoggerFactory
 import rx.Observable
@@ -39,8 +37,8 @@ import kotlin.concurrent.schedule
 import kotlin.concurrent.thread
 
 /**
- * An in-memory network allows you to manufacture [TestMessagingService]s for a set of participants. Each
- * [TestMessagingService] maintains a queue of messages it has received, and a background thread that dispatches
+ * An in-memory network allows you to manufacture [InternalMockMessagingService]s for a set of participants. Each
+ * [InternalMockMessagingService] maintains a queue of messages it has received, and a background thread that dispatches
  * messages one by one to registered handlers. Alternatively, a messaging system may be manually pumped, in which
  * case no thread is created and a caller is expected to force delivery one at a time (this is useful for unit
  * testing).
@@ -69,8 +67,16 @@ class InMemoryMessagingNetwork private constructor(
     private var counter = 0   // -1 means stopped.
     private val handleEndpointMap = HashMap<PeerHandle, InMemoryMessaging>()
 
+    /** A class which represents a message being transferred from sender to recipients, within the [InMemoryMessageNetwork]. **/
     @CordaSerializable
-    data class MessageTransfer(val sender: PeerHandle, val message: Message, val recipients: MessageRecipients) {
+    class MessageTransfer private constructor(val sender: PeerHandle, internal val message: Message, val recipients: MessageRecipients) {
+        companion object {
+            internal fun createMessageTransfer(sender: PeerHandle, message: Message, recipients: MessageRecipients): MessageTransfer {
+                return MessageTransfer(sender, message, recipients)
+            }
+        }
+        /** Data contained in this message transfer **/
+        val messageData: ByteSequence get() = message.data
         override fun toString() = "${message.topic} from '$sender' to '$recipients'"
     }
 
@@ -79,7 +85,7 @@ class InMemoryMessagingNetwork private constructor(
     private val messageSendQueue = LinkedBlockingQueue<MessageTransfer>()
     private val _sentMessages = PublishSubject.create<MessageTransfer>()
     @Suppress("unused") // Used by the visualiser tool.
-            /** A stream of (sender, message, recipients) triples */
+    /** A stream of (sender, message, recipients) triples containing messages once they have been sent by [pumpSend]. */
     val sentMessages: Observable<MessageTransfer>
         get() = _sentMessages
 
@@ -92,16 +98,18 @@ class InMemoryMessagingNetwork private constructor(
     private val _receivedMessages = PublishSubject.create<MessageTransfer>()
 
     // Holds the mapping from services to peers advertising the service.
-    private val serviceToPeersMapping = HashMap<ServiceHandle, LinkedHashSet<PeerHandle>>()
+    private val serviceToPeersMapping = HashMap<DistributedServiceHandle, LinkedHashSet<PeerHandle>>()
     // Holds the mapping from node's X.500 name to PeerHandle.
     private val peersMapping = HashMap<CordaX500Name, PeerHandle>()
 
     @Suppress("unused") // Used by the visualiser tool.
-            /** A stream of (sender, message, recipients) triples */
+    /** A stream of (sender, message, recipients) triples containing messages once they have been received. */
     val receivedMessages: Observable<MessageTransfer>
         get() = _receivedMessages
+    internal val endpoints: List<InternalMockMessagingService> @Synchronized get() = handleEndpointMap.values.toList()
+    /** Get a [List] of all the [MockMessagingService] endpoints **/
+    val endpointsExternal: List<MockMessagingService> @Synchronized get() = handleEndpointMap.values.map{ MockMessagingService.createMockMessagingService(it) }.toList()
 
-    val endpoints: List<TestMessagingService> @Synchronized get() = handleEndpointMap.values.toList()
     /**
      * Creates a node at the given address: useful if you want to recreate a node to simulate a restart.
      *
@@ -119,11 +127,11 @@ class InMemoryMessagingNetwork private constructor(
             notaryService: PartyAndCertificate?,
             description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK"),
             database: CordaPersistence)
-            : TestMessagingService {
+            : InternalMockMessagingService {
         val peerHandle = PeerHandle(id, description)
-        peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
+        peersMapping[peerHandle.name] = peerHandle // Assume that the same name - the same entity in MockNetwork.
         notaryService?.let { if (it.owningKey !is CompositeKey) peersMapping[it.name] = peerHandle }
-        val serviceHandles = notaryService?.let { listOf(ServiceHandle(it.party)) }
+        val serviceHandles = notaryService?.let { listOf(DistributedServiceHandle(it.party)) }
                 ?: emptyList() //TODO only notary can be distributed?
         synchronized(this) {
             val node = InMemoryMessaging(manuallyPumped, peerHandle, executor, database)
@@ -135,7 +143,8 @@ class InMemoryMessagingNetwork private constructor(
         }
     }
 
-    interface LatencyCalculator { // XXX: Used?
+    /** Implement this interface in order to inject artificial latency between sender/recipient pairs. */
+    interface LatencyCalculator {
         fun between(sender: SingleMessageRecipient, receiver: SingleMessageRecipient): Duration
     }
 
@@ -147,7 +156,7 @@ class InMemoryMessagingNetwork private constructor(
     @Synchronized
     private fun msgSend(from: InMemoryMessaging, message: Message, recipients: MessageRecipients) {
         messagesInFlight.countUp()
-        messageSendQueue += MessageTransfer(from.myAddress, message, recipients)
+        messageSendQueue += MessageTransfer.createMessageTransfer(from.myAddress, message, recipients)
     }
 
     @Synchronized
@@ -159,12 +168,15 @@ class InMemoryMessagingNetwork private constructor(
     private fun getQueueForPeerHandle(recipients: PeerHandle) = messageReceiveQueues.getOrPut(recipients) { LinkedBlockingQueue() }
 
     @Synchronized
-    private fun getQueuesForServiceHandle(recipients: ServiceHandle): List<LinkedBlockingQueue<MessageTransfer>> {
+    private fun getQueuesForServiceHandle(recipients: DistributedServiceHandle): List<LinkedBlockingQueue<MessageTransfer>> {
         return serviceToPeersMapping[recipients]!!.map {
             messageReceiveQueues.getOrPut(it) { LinkedBlockingQueue() }
         }
     }
 
+    /**
+     * Stop all nodes within the network and clear any buffered messages
+     */
     fun stop() {
         val nodes = synchronized(this) {
             counter = -1
@@ -179,15 +191,26 @@ class InMemoryMessagingNetwork private constructor(
         timer.cancel()
     }
 
+    /**
+     * A class which represents information about an entity on the [InMemoryMessagingNetwork].
+     *
+     * @property id An integer giving the node an ID on the [InMemoryMessagingNetwork].
+     * @property name The node's [CordaX500Name].
+     */
     @CordaSerializable
-    data class PeerHandle(val id: Int, val description: CordaX500Name) : SingleMessageRecipient {
-        override fun toString() = description.toString()
+    data class PeerHandle(val id: Int, val name: CordaX500Name) : SingleMessageRecipient {
+        override fun toString() = name.toString()
         override fun equals(other: Any?) = other is PeerHandle && other.id == id
         override fun hashCode() = id.hashCode()
     }
 
+    /**
+     * A class which represents information about nodes offering the same distributed service on the [InMemoryMessagingNetwork].
+     *
+     * @property party The [Party] offering the service.
+     */
     @CordaSerializable
-    data class ServiceHandle(val party: Party) : MessageRecipientGroup {
+    data class DistributedServiceHandle(val party: Party) : MessageRecipientGroup {
         override fun toString() = "Service($party)"
     }
 
@@ -197,16 +220,16 @@ class InMemoryMessagingNetwork private constructor(
      */
     @DoNotImplement
     sealed class ServicePeerAllocationStrategy {
-        abstract fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A
+        abstract fun <A> pickNext(service: DistributedServiceHandle, pickFrom: List<A>): A
         class Random(val random: SplittableRandom = SplittableRandom()) : ServicePeerAllocationStrategy() {
-            override fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A {
+            override fun <A> pickNext(service: DistributedServiceHandle, pickFrom: List<A>): A {
                 return pickFrom[random.nextInt(pickFrom.size)]
             }
         }
 
         class RoundRobin : ServicePeerAllocationStrategy() {
-            private val previousPicks = HashMap<ServiceHandle, Int>()
-            override fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A {
+            private val previousPicks = HashMap<DistributedServiceHandle, Int>()
+            override fun <A> pickNext(service: DistributedServiceHandle, pickFrom: List<A>): A {
                 val nextIndex = previousPicks.compute(service) { _, previous ->
                     (previous?.plus(1) ?: 0) % pickFrom.size
                 }!!
@@ -215,7 +238,12 @@ class InMemoryMessagingNetwork private constructor(
         }
     }
 
-    // If block is set to true this function will only return once a message has been pushed onto the recipients' queues
+    /**
+     * Send the next queued message to the requested recipient(s) within the network
+     *
+     * @param block If set to true this function will only return once a message has been pushed onto the recipients'
+     * queues. This is only relevant if a [latencyCalculator] is being used to simulate latency in the network.
+     */
     fun pumpSend(block: Boolean): MessageTransfer? {
         val transfer = (if (block) messageSendQueue.take() else messageSendQueue.poll()) ?: return null
 
@@ -241,7 +269,7 @@ class InMemoryMessagingNetwork private constructor(
     private fun pumpSendInternal(transfer: MessageTransfer) {
         when (transfer.recipients) {
             is PeerHandle -> getQueueForPeerHandle(transfer.recipients).add(transfer)
-            is ServiceHandle -> {
+            is DistributedServiceHandle -> {
                 val queues = getQueuesForServiceHandle(transfer.recipients)
                 val queue = servicePeerAllocationStrategy.pickNext(transfer.recipients, queues)
                 queue.add(transfer)
@@ -257,36 +285,46 @@ class InMemoryMessagingNetwork private constructor(
         _sentMessages.onNext(transfer)
     }
 
-    data class InMemoryMessage(override val topic: String,
-                               override val data: ByteSequence,
-                               override val uniqueMessageId: String,
-                               override val debugTimestamp: Instant = Instant.now()) : Message {
-        override fun toString() = "$topic#${String(data.bytes)}"
-    }
-
     private data class InMemoryReceivedMessage(override val topic: String,
                                                override val data: ByteSequence,
                                                override val platformVersion: Int,
-                                               override val uniqueMessageId: String,
+                                               override val uniqueMessageId: DeduplicationId,
                                                override val debugTimestamp: Instant,
-                                               override val peer: CordaX500Name) : ReceivedMessage
+                                               override val peer: CordaX500Name,
+                                               override val senderUUID: String? = null,
+                                               override val senderSeqNo: Long? = null,
+                                               /** Note this flag is never set in the in memory network. */
+                                               override val isSessionInit: Boolean = false) : ReceivedMessage {
+
+        override val additionalHeaders: Map<String, String> = emptyMap()
+    }
 
     /**
-     * A [TestMessagingService] that provides a [MessagingService] abstraction that also contains the ability to
+     * A class that provides an abstraction over the nodes' messaging service that also contains the ability to
      * receive messages from the queue for testing purposes.
      */
-    @DoNotImplement
-    interface TestMessagingService : MessagingService {
-        fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer?
-        fun stop()
+    class MockMessagingService private constructor(private val messagingService: InternalMockMessagingService) {
+        companion object {
+            internal fun createMockMessagingService(messagingService: InternalMockMessagingService): MockMessagingService {
+                return MockMessagingService(messagingService)
+            }
+        }
+        /**
+         * Delivers a single message from the internal queue. If there are no messages waiting to be delivered and block
+         * is true, waits until one has been provided on a different thread via send. If block is false, the return
+         * result indicates whether a message was delivered or not.
+         *
+         * @return the message that was processed, if any in this round.
+         */
+        fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer? = messagingService.pumpReceive(block)
     }
 
     @ThreadSafe
     private inner class InMemoryMessaging(private val manuallyPumped: Boolean,
                                           private val peerHandle: PeerHandle,
                                           private val executor: AffinityExecutor,
-                                          private val database: CordaPersistence) : SingletonSerializeAsToken(), TestMessagingService {
-        inner class Handler(val topicSession: String, val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+                                          private val database: CordaPersistence) : SingletonSerializeAsToken(), InternalMockMessagingService {
+        private inner class Handler(val topicSession: String, val callback: MessageHandler) : MessageHandlerRegistration
 
         @Volatile
         private var running = true
@@ -297,7 +335,7 @@ class InMemoryMessagingNetwork private constructor(
         }
 
         private val state = ThreadBox(InnerState())
-        private val processedMessages: MutableSet<String> = Collections.synchronizedSet(HashSet<String>())
+        private val processedMessages: MutableSet<DeduplicationId> = Collections.synchronizedSet(HashSet<DeduplicationId>())
 
         override val myAddress: PeerHandle get() = peerHandle
 
@@ -316,11 +354,11 @@ class InMemoryMessagingNetwork private constructor(
             return when (partyInfo) {
                 is PartyInfo.SingleNode -> peersMapping[partyInfo.party.name]
                         ?: throw IllegalArgumentException("No StartedMockNode for party ${partyInfo.party.name}")
-                is PartyInfo.DistributedNode -> ServiceHandle(partyInfo.party)
+                is PartyInfo.DistributedNode -> DistributedServiceHandle(partyInfo.party)
             }
         }
 
-        override fun addMessageHandler(topic: String, callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
+        override fun addMessageHandler(topic: String, callback: MessageHandler): MessageHandlerRegistration {
             check(running)
             val (handler, transfers) = state.locked {
                 val handler = Handler(topic, callback).apply { handlers.add(this) }
@@ -341,7 +379,7 @@ class InMemoryMessagingNetwork private constructor(
             state.locked { check(handlers.remove(registration as Handler)) }
         }
 
-        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any, additionalHeaders: Map<String, String>) {
+        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
             check(running)
             msgSend(this, message, target)
             if (!sendManuallyPumped) {
@@ -367,7 +405,7 @@ class InMemoryMessagingNetwork private constructor(
         override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
-        override fun createMessage(topic: String, data: ByteArray, deduplicationId: String): Message {
+        override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId, additionalHeaders: Map<String, String>): Message {
             return InMemoryMessage(topic, OpaqueBytes(data), deduplicationId)
         }
 
@@ -432,7 +470,7 @@ class InMemoryMessagingNetwork private constructor(
                     database.transaction {
                         for (handler in deliverTo) {
                             try {
-                                handler.callback(transfer.toReceivedMessage(), handler)
+                                handler.callback(transfer.toReceivedMessage(), handler, DummyDeduplicationHandler())
                             } catch (e: Exception) {
                                 log.error("Caught exception in handler for $this/${handler.topicSession}", e)
                             }
@@ -454,6 +492,14 @@ class InMemoryMessagingNetwork private constructor(
                 1,
                 message.uniqueMessageId,
                 message.debugTimestamp,
-                sender.description)
+                sender.name)
+    }
+
+    private class DummyDeduplicationHandler : DeduplicationHandler {
+        override fun afterDatabaseTransaction() {
+        }
+        override fun insideDatabaseTransaction() {
+        }
     }
 }
+

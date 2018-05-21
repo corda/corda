@@ -6,7 +6,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.config.toConfig
 import net.corda.webserver.WebServerConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -28,16 +27,17 @@ class NodeConfigTest {
                 legalName = myLegalName,
                 p2pPort = 10001,
                 rpcPort = 40002,
-                rpcAdminPort = 40003,
+                rpcAdminPort = 40005,
                 webPort = 20001,
                 h2port = 30001,
                 notary = NotaryService(validating = false),
                 users = listOf(user("jenny"))
         )
 
-        val nodeConfig = config.toConfig()
+        val nodeConfig = config.nodeConf()
                 .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
                 .withFallback(ConfigFactory.parseResources("reference.conf"))
+                .withFallback(ConfigFactory.parseMap(mapOf("devMode" to true)))
                 .resolve()
         val fullConfig = nodeConfig.parseAsNodeConfiguration()
 
@@ -63,7 +63,7 @@ class NodeConfigTest {
                 users = listOf(user("jenny"))
         )
 
-        val nodeConfig = config.toConfig()
+        val nodeConfig = config.webServerConf()
                 .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
                 .withFallback(ConfigFactory.parseResources("web-reference.conf"))
                 .resolve()

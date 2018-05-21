@@ -19,12 +19,6 @@ buildscript {
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    compile {
-        // We don't need these because we already include netty-all.
-        exclude group: 'io.netty', module: 'netty-transport'
-        exclude group: 'io.netty', module: 'netty-handler'
-    }
-
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
 }
@@ -65,6 +59,7 @@ dependencies {
     compile project(':node-api')
     compile project(":confidential-identities")
     compile project(':client:rpc')
+    compile project(':tools:shell')
     compile "net.corda.plugins:cordform-common:$gradle_plugins_version"
 
     // Log4J: logging framework (with SLF4J bindings)
@@ -72,11 +67,14 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     compile "com.google.guava:guava:$guava_version"
+
+    // For caches rather than guava
+    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
@@ -102,11 +100,8 @@ dependencies {
         exclude group: "asm"
     }
 
-    // Jackson support: serialisation to/from JSON, YAML, etc
-    compile project(':client:jackson')
-
     // Coda Hale's Metrics: for monitoring of key statistics
-    compile "io.dropwizard.metrics:metrics-core:3.1.2"
+    compile "io.dropwizard.metrics:metrics-core:$metrics_version"
 
     // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
     compile "com.google.jimfs:jimfs:1.1"
@@ -142,23 +137,9 @@ dependencies {
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
     // Java Atomix: RAFT library
-    compile 'io.atomix.copycat:copycat-client:1.2.3'
-    compile 'io.atomix.copycat:copycat-server:1.2.3'
-    compile 'io.atomix.catalyst:catalyst-netty:1.1.2'
-
-    // Netty: All of it.
-    compile "io.netty:netty-all:$netty_version"
-
-    // CRaSH: An embeddable monitoring and admin shell with support for adding new commands written in Groovy.
-    compile("com.github.corda.crash:crash.shell:$crash_version") {
-        exclude group: "org.slf4j", module: "slf4j-jdk14"
-        exclude group: "org.bouncycastle"
-    }
-
-    compile("com.github.corda.crash:crash.connectors.ssh:$crash_version") {
-        exclude group: "org.slf4j", module: "slf4j-jdk14"
-        exclude group: "org.bouncycastle"
-    }
+    compile 'io.atomix.copycat:copycat-client:1.2.8'
+    compile 'io.atomix.copycat:copycat-server:1.2.8'
+    compile 'io.atomix.catalyst:catalyst-netty:1.2.1'
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
@@ -167,18 +148,12 @@ dependencies {
     compile 'commons-codec:commons-codec:1.10'
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
 
-    // FastClasspathScanner: classpath scanning
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
-
     // Apache Shiro: authentication, authorization and session management.
     compile "org.apache.shiro:shiro-core:${shiro_version}"
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
-
-    // Jsh: Testing SSH server
-    integrationTestCompile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
 
     // AgentLoader: dynamic loading of JVM agents
     compile group: 'com.ea.agentloader', name: 'ea-agent-loader', version: "${eaagentloader_version}"
@@ -194,7 +169,8 @@ dependencies {
     testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 
-    runtime "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
+    // Jolokia JVM monitoring agent, required to push logs through slf4j
+    compile "org.jolokia:jolokia-jvm:${jolokia_version}:agent"
 }
 
 task integrationTest(type: Test) {

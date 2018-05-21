@@ -9,12 +9,16 @@ import net.corda.core.transactions.TransactionBuilder
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes, but has to be serializable
 
+/**
+ * Dummy contract for testing purposes. Doesn't do anything useful.
+ */
 data class DummyContract(val blank: Any? = null) : Contract {
 
     val PROGRAM_ID = "net.corda.testing.contracts.DummyContract"
 
     @DoNotImplement // State is effectively a sealed class.
     interface State : ContractState {
+        /** Some information that the state represents for test purposes. **/
         val magicNumber: Int
     }
 
@@ -47,6 +51,11 @@ data class DummyContract(val blank: Any? = null) : Contract {
     companion object {
         const val PROGRAM_ID: ContractClassName = "net.corda.testing.contracts.DummyContract"
 
+        /**
+         * Returns a [TransactionBuilder] with the given notary, a list of owners and an output state of type
+         * [SingleOwnerState] or [MultipleOwnerState] (depending on the number of owner parameters passed) containing
+         * the given magicNumber.
+         */
         @JvmStatic
         fun generateInitial(magicNumber: Int, notary: Party, owner: PartyAndReference, vararg otherOwners: PartyAndReference): TransactionBuilder {
             val owners = listOf(owner) + otherOwners
@@ -59,9 +68,15 @@ data class DummyContract(val blank: Any? = null) : Contract {
             }
         }
 
+        /**
+         * An overload of move for just one input state.
+         */
         @JvmStatic
         fun move(prior: StateAndRef<SingleOwnerState>, newOwner: AbstractParty) = move(listOf(prior), newOwner)
 
+        /**
+         * Returns a [TransactionBuilder] that takes the given input states and transfers them to the newOwner.
+         */
         @JvmStatic
         fun move(priors: List<StateAndRef<SingleOwnerState>>, newOwner: AbstractParty): TransactionBuilder {
             require(priors.isNotEmpty())

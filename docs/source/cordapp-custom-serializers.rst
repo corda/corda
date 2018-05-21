@@ -17,16 +17,20 @@ Custom serializer classes should follow the rules for including classes found in
 Writing a Custom Serializer
 ---------------------------
 Serializers must
- * Inherit from net.corda.core.serialization.SerializationCustomSerializer
+
+ * Inherit from ``net.corda.core.serialization.SerializationCustomSerializer``
  * Provide a proxy class to transform the object to and from
  * Implement the ``toProxy`` and ``fromProxy`` methods
+ * Be either included into CorDapp Jar or made known to the running process via ``amqp.custom.serialization.scanSpec``
+   system property. This system property may be necessary to be able to discover custom serializer in the classpath. At a minimum the value
+   of the property should include comma separated set of packages where custom serializers located. Full syntax includes
+   scanning specification as defined by: `<http://github.com/lukehutch/fast-classpath-scanner/wiki/2.-Constructor#scan-spec>`
 
-Serializers inheriting from SerializationCustomSerializer have to implement two methods and two types.
+Serializers inheriting from ``SerializationCustomSerializer`` have to implement two methods and two types.
 
 Example
 -------
-Consider this example class
-
+Consider this example class:
 
 .. sourcecode:: java
 

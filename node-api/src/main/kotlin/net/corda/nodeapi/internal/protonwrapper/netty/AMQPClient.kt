@@ -15,8 +15,10 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
+import net.corda.nodeapi.internal.requireMessageSize
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.lang.Long.min
 import java.security.KeyStore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -38,15 +40,19 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                  private val keyStore: KeyStore,
                  private val keyStorePrivateKeyPassword: String,
                  private val trustStore: KeyStore,
+                 private val crlCheckSoftFail: Boolean,
                  private val trace: Boolean = false,
-                 private val sharedThreadPool: EventLoopGroup? = null) : AutoCloseable {
+                 private val sharedThreadPool: EventLoopGroup? = null,
+                 private val maxMessageSize: Int) : AutoCloseable {
     companion object {
         init {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)
         }
 
         val log = contextLogger()
-        const val RETRY_INTERVAL = 1000L
+        const val MIN_RETRY_INTERVAL = 1000L
+        const val MAX_RETRY_INTERVAL = 60000L
+        const val BACKOFF_MULTIPLIER = 2L
         const val NUM_CLIENT_THREADS = 2
     }
 
@@ -59,6 +65,13 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     // Offset into the list of targets, so that we can implement round-robin reconnect logic.
     private var targetIndex = 0
     private var currentTarget: NetworkHostAndPort = targets.first()
+    private var retryInterval = MIN_RETRY_INTERVAL
+
+    private fun nextTarget() {
+        targetIndex = (targetIndex + 1).rem(targets.size)
+        log.info("Retry connect to ${targets[targetIndex]}")
+        retryInterval = min(MAX_RETRY_INTERVAL, retryInterval * BACKOFF_MULTIPLIER)
+    }
 
     private val connectListener = object : ChannelFutureListener {
         override fun operationComplete(future: ChannelFuture) {
@@ -67,10 +80,9 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
                 if (!stopping) {
                     workerGroup?.schedule({
-                        log.info("Retry connect to $currentTarget")
-                        targetIndex = (targetIndex + 1).rem(targets.size)
+                        nextTarget()
                         restart()
-                    }, RETRY_INTERVAL, TimeUnit.MILLISECONDS)
+                    }, retryInterval, TimeUnit.MILLISECONDS)
                 }
             } else {
                 log.info("Connected to $currentTarget")
@@ -81,18 +93,15 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         }
     }
 
-    private val closeListener = object : ChannelFutureListener {
-        override fun operationComplete(future: ChannelFuture) {
-            log.info("Disconnected from $currentTarget")
-            future.channel()?.disconnect()
-            clientChannel = null
-            if (!stopping) {
-                workerGroup?.schedule({
-                    log.info("Retry connect")
-                    targetIndex = (targetIndex + 1).rem(targets.size)
-                    restart()
-                }, RETRY_INTERVAL, TimeUnit.MILLISECONDS)
-            }
+    private val closeListener = ChannelFutureListener { future ->
+        log.info("Disconnected from $currentTarget")
+        future.channel()?.disconnect()
+        clientChannel = null
+        if (!stopping) {
+            workerGroup?.schedule({
+                nextTarget()
+                restart()
+            }, retryInterval, TimeUnit.MILLISECONDS)
         }
     }
 
@@ -102,7 +111,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         init {
             keyManagerFactory.init(parent.keyStore, parent.keyStorePrivateKeyPassword.toCharArray())
-            trustManagerFactory.init(parent.trustStore)
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(parent.trustStore, parent.crlCheckSoftFail))
         }
 
         override fun initChannel(ch: SocketChannel) {
@@ -115,7 +124,10 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                     parent.userName,
                     parent.password,
                     parent.trace,
-                    { parent._onConnection.onNext(it.second) },
+                    {
+                        parent.retryInterval = MIN_RETRY_INTERVAL // reset to fast reconnect if we connect properly
+                        parent._onConnection.onNext(it.second)
+                    },
                     { parent._onConnection.onNext(it.second) },
                     { rcv -> parent._onReceive.onNext(rcv) }))
         }
@@ -132,9 +144,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     private fun restart() {
         val bootstrap = Bootstrap()
         // TODO Needs more configuration control when we profile. e.g. to use EPOLL on Linux
-        bootstrap.group(workerGroup).
-                channel(NioSocketChannel::class.java).
-                handler(ClientChannelInitializer(this))
+        bootstrap.group(workerGroup).channel(NioSocketChannel::class.java).handler(ClientChannelInitializer(this))
         currentTarget = targets[targetIndex]
         val clientFuture = bootstrap.connect(currentTarget.host, currentTarget.port)
         clientFuture.addListener(connectListener)
@@ -171,7 +181,8 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     fun createMessage(payload: ByteArray,
                       topic: String,
                       destinationLegalName: String,
-                      properties: Map<Any?, Any?>): SendableMessage {
+                      properties: Map<String, Any?>): SendableMessage {
+        requireMessageSize(payload.size, maxMessageSize)
         return SendableMessageImpl(payload, topic, destinationLegalName, currentTarget, properties)
     }
 

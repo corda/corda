@@ -1,5 +1,5 @@
-Corda networks
-==============
+Networks
+========
 
 .. toctree::
    :maxdepth: 1
@@ -8,4 +8,4 @@ Corda networks
    permissioning
    network-map
    versioning
-   permissioning-certificate-spec
+   cipher-suites

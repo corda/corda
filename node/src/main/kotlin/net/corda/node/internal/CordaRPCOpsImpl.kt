@@ -9,10 +9,13 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.RPC_UPLOADER
+import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.internal.sign
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
@@ -43,7 +46,8 @@ internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
         private val database: CordaPersistence,
-        private val flowStarter: FlowStarter
+        private val flowStarter: FlowStarter,
+        private val shutdownNode: () -> Unit
 ) : CordaRPCOps {
     override fun networkMapSnapshot(): List<NodeInfo> {
         val (snapshot, updates) = networkMapFeed()
@@ -52,7 +56,7 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
-        return services.networkMapUpdater.track()
+        return services.networkMapUpdater.trackParametersUpdate()
     }
 
     override fun acceptNewNetworkParameters(parametersHash: SecureHash) {
@@ -88,12 +92,14 @@ internal class CordaRPCOpsImpl(
         }
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsSnapshot(): List<SignedTransaction> {
-        val (snapshot, updates) = internalVerifiedTransactionsFeed()
+        val (snapshot, updates) = @Suppress("DEPRECATION") internalVerifiedTransactionsFeed()
         updates.notUsed()
         return snapshot
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return database.transaction {
             services.validatedTransactions.track()
@@ -105,6 +111,8 @@ internal class CordaRPCOpsImpl(
         updates.notUsed()
         return snapshot
     }
+
+    override fun killFlow(id: StateMachineRunId) = smm.killFlow(id)
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
         return database.transaction {
@@ -153,7 +161,7 @@ internal class CordaRPCOpsImpl(
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
-                progress = stateMachine.logic.track()?.updates ?: Observable.empty(),
+                progress = stateMachine.logic.track()?.updates?.filter { !it.startsWith(STRUCTURAL_STEP_PREFIX) } ?: Observable.empty(),
                 stepsTreeIndexFeed = stateMachine.logic.trackStepsTreeIndex(),
                 stepsTreeFeed = stateMachine.logic.trackStepsTree()
         )
@@ -189,7 +197,7 @@ internal class CordaRPCOpsImpl(
     override fun uploadAttachment(jar: InputStream): SecureHash {
         // TODO: this operation should not require an explicit transaction
         return database.transaction {
-            services.attachments.importAttachment(jar)
+            services.attachments.importAttachment(jar, RPC_UPLOADER, null)
         }
     }
 
@@ -201,14 +209,9 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
-        try {
-            return database.transaction {
+        // TODO: this operation should not require an explicit transaction
+        return database.transaction {
                 services.attachments.queryAttachments(query, sorting)
-            }
-        } catch (e: Exception) {
-            // log and rethrow exception so we keep a copy server side
-            log.error(e.message)
-            throw e.cause ?: e
         }
     }
 
@@ -294,6 +297,10 @@ internal class CordaRPCOpsImpl(
 
     override fun isFlowsDrainingModeEnabled(): Boolean {
         return services.nodeProperties.flowsDrainingMode.isEnabled()
+    }
+
+    override fun shutdown() {
+        shutdownNode.invoke()
     }
 
     private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {

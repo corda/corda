@@ -4,9 +4,11 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.P2PMessagingRetryConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
@@ -17,8 +19,9 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.internal.MOCK_VERSION_INFO
+import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -34,6 +37,7 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ArtemisMessagingTest {
     companion object {
@@ -69,7 +73,7 @@ class ArtemisMessagingTest {
             doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
-            doReturn(5).whenever(it).messageRedeliveryDelaySeconds
+            doReturn(P2PMessagingRetryConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).p2pMessagingRetry
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
@@ -132,6 +136,41 @@ class ArtemisMessagingTest {
     }
 
     @Test
+    fun `client should fail if message exceed maxMessageSize limit`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer()
+        val message = messagingClient.createMessage(TOPIC, data = ByteArray(MAX_MESSAGE_SIZE))
+        messagingClient.send(message, messagingClient.myAddress)
+
+        val actual: Message = receivedMessages.take()
+        assertTrue(ByteArray(MAX_MESSAGE_SIZE).contentEquals(actual.data.bytes))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+
+        val tooLagerMessage = messagingClient.createMessage(TOPIC, data = ByteArray(MAX_MESSAGE_SIZE + 1))
+        assertThatThrownBy {
+            messagingClient.send(tooLagerMessage, messagingClient.myAddress)
+        }.isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("Message exceeds maxMessageSize network parameter")
+
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+    }
+    @Test
+    fun `server should not process if incoming message exceed maxMessageSize limit`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
+        val message = messagingClient.createMessage(TOPIC, data = ByteArray(50_000))
+        messagingClient.send(message, messagingClient.myAddress)
+
+        val actual: Message = receivedMessages.take()
+        assertTrue(ByteArray(50_000).contentEquals(actual.data.bytes))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+
+        val tooLagerMessage = messagingClient.createMessage(TOPIC, data = ByteArray(100_000))
+        assertThatThrownBy {
+            messagingClient.send(tooLagerMessage, messagingClient.myAddress)
+        }.isInstanceOf(ActiveMQConnectionTimedOutException::class.java)
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+    }
+
+    @Test
     fun `platform version is included in the message`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(platformVersion = 3)
         val message = messagingClient.createMessage(TOPIC, data = "first msg".toByteArray())
@@ -145,13 +184,15 @@ class ArtemisMessagingTest {
         messagingClient!!.start()
     }
 
-    private fun createAndStartClientAndServer(platformVersion: Int = 1): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
+    private fun createAndStartClientAndServer(platformVersion: Int = 1, serverMaxMessageSize: Int = MAX_MESSAGE_SIZE, clientMaxMessageSize: Int = MAX_MESSAGE_SIZE): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
         val receivedMessages = LinkedBlockingQueue<ReceivedMessage>()
 
-        createMessagingServer().start()
+        createMessagingServer(maxMessageSize = serverMaxMessageSize).start()
 
-        val messagingClient = createMessagingClient(platformVersion = platformVersion)
-        messagingClient.addMessageHandler(TOPIC) { message, _ ->
+        val messagingClient = createMessagingClient(platformVersion = platformVersion, maxMessageSize = clientMaxMessageSize)
+        messagingClient.addMessageHandler(TOPIC) { message, _, handle ->
+            database.transaction { handle.insideDatabaseTransaction() }
+            handle.afterDatabaseTransaction() // We ACK first so that if it fails we won't get a duplicate in [receivedMessages]
             receivedMessages.add(message)
         }
         startNodeMessagingClient()
@@ -183,7 +224,7 @@ class ArtemisMessagingTest {
     }
 
     private fun createMessagingServer(local: Int = serverPort, maxMessageSize: Int = MAX_MESSAGE_SIZE): ArtemisMessagingServer {
-        return ArtemisMessagingServer(config, local, maxMessageSize).apply {
+        return ArtemisMessagingServer(config, NetworkHostAndPort("0.0.0.0", local), maxMessageSize).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this
         }

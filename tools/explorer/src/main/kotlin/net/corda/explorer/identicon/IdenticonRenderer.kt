@@ -1,8 +1,8 @@
 package net.corda.explorer.identicon
 
+import com.github.benmanes.caffeine.cache.CacheLoader
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.base.Splitter
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.CacheLoader
 import javafx.scene.SnapshotParameters
 import javafx.scene.canvas.Canvas
 import javafx.scene.canvas.GraphicsContext
@@ -66,17 +66,17 @@ object IdenticonRenderer {
             byteArrayOf(0, 2, 10, 0),
             byteArrayOf(0, 4, 24, 20, 0)).map(::Patch)
 
-    private val PATCH_CELLS = 4
+    private const val PATCH_CELLS = 4
     private val PATCH_GRIDS = PATCH_CELLS + 1
-    private val PATCH_SYMMETRIC: Byte = 1
-    private val PATCH_INVERTED: Byte = 2
+    private const val PATCH_SYMMETRIC: Byte = 1
+    private const val PATCH_INVERTED: Byte = 2
 
     private val patchFlags = byteArrayOf(PATCH_SYMMETRIC, 0, 0, 0, PATCH_SYMMETRIC, 0, 0, 0, PATCH_SYMMETRIC, 0, 0, 0, 0, 0, 0, (PATCH_SYMMETRIC + PATCH_INVERTED).toByte())
 
-    private val renderingSize = 30.0
+    private const val renderingSize = 30.0
 
-    private val cache = CacheBuilder.newBuilder().build(CacheLoader.from<SecureHash, Image> { key ->
-        key?.let { render(key.hashCode(), renderingSize) }
+    private val cache = Caffeine.newBuilder().build(CacheLoader<SecureHash, Image> { key ->
+        key.let { render(key.hashCode(), renderingSize) }
     })
 
     private class Patch(private val byteArray: ByteArray) {
@@ -92,7 +92,7 @@ object IdenticonRenderer {
     }
 
     fun getIdenticon(hash: SecureHash): Image {
-        return cache.get(hash)
+        return cache.get(hash)!!
     }
 
     /**

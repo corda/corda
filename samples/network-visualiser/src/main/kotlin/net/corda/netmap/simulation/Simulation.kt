@@ -11,10 +11,10 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MockNodeArgs
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -40,7 +40,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                           latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) {
     private companion object {
         val defaultParams // The get() is necessary so that entropyRoot isn't shared.
-            get() = MockNodeParameters(configOverrides = {
+            get() = InternalMockNodeParameters(configOverrides = {
                 doReturn(makeTestDataSourceProperties(it.myLegalName.organisation)).whenever(it).dataSourceProperties
             })
         val DUMMY_REGULATOR = TestIdentity(CordaX500Name("Regulator A", "Paris", "FR"), 100).party
@@ -141,7 +141,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
 
         // Keep going until one of the nodes has something to do, or we have checked every node.
-        val endpoints = mockNet.messagingNetwork.endpoints
+        val endpoints = mockNet.messagingNetwork.endpointsExternal
         var countDown = endpoints.size
         while (countDown > 0) {
             val handledMessage = endpoints[pumpCursor].pumpReceive(false)
@@ -187,7 +187,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    val networkInitialisationFinished = allOf(*mockNet.nodes.map { it.nodeReadyFuture.toCompletableFuture() }.toTypedArray())
+    val networkInitialisationFinished: CompletableFuture<Void> = allOf(*mockNet.nodes.map { it.nodeReadyFuture.toCompletableFuture() }.toTypedArray())
 
     fun start(): Future<Unit> {
         mockNet.startNodes()

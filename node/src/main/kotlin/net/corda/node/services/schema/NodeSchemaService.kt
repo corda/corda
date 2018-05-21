@@ -14,6 +14,7 @@ import net.corda.node.services.api.SchemaService.SchemaOptions
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.messaging.P2PMessageDeduplicator
 import net.corda.node.services.messaging.P2PMessagingClient
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.DBTransactionMappingStorage
@@ -43,9 +44,8 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
                     PersistentKeyManagementService.PersistentKey::class.java,
                     NodeSchedulerService.PersistentScheduledState::class.java,
                     NodeAttachmentService.DBAttachment::class.java,
-                    P2PMessagingClient.ProcessedMessage::class.java,
+                    P2PMessageDeduplicator.ProcessedMessage::class.java,
                     P2PMessagingClient.RetryMessage::class.java,
-                    NodeAttachmentService.DBAttachment::class.java,
                     PersistentIdentityService.PersistentIdentity::class.java,
                     PersistentIdentityService.PersistentIdentityNames::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java
@@ -55,10 +55,11 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
     object NodeNotary
 
     object NodeNotaryV1 : MappedSchema(schemaFamily = NodeNotary.javaClass, version = 1,
-            mappedTypes = listOf(PersistentUniquenessProvider.PersistentUniqueness::class.java,
-                    PersistentUniquenessProvider.PersistentNotaryCommit::class.java,
-                    RaftUniquenessProvider.RaftState::class.java,
-                    BFTNonValidatingNotaryService.PersistedCommittedState::class.java
+            mappedTypes = listOf(PersistentUniquenessProvider.BaseComittedState::class.java,
+                    PersistentUniquenessProvider.Request::class.java,
+                    PersistentUniquenessProvider.CommittedState::class.java,
+                    RaftUniquenessProvider.CommittedState::class.java,
+                    BFTNonValidatingNotaryService.CommittedState::class.java
             ))
 
     // Required schemas are those used by internal Corda services
@@ -86,9 +87,9 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
 
     // Because schema is always one supported by the state, just delegate.
     override fun generateMappedObject(state: ContractState, schema: MappedSchema): PersistentState {
-        if ((schema is VaultSchemaV1) && (state is LinearState))
+        if ((schema === VaultSchemaV1) && (state is LinearState))
             return VaultSchemaV1.VaultLinearStates(state.linearId, state.participants)
-        if ((schema is VaultSchemaV1) && (state is FungibleAsset<*>))
+        if ((schema === VaultSchemaV1) && (state is FungibleAsset<*>))
             return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference, state.participants)
         return (state as QueryableState).generateMappedObject(schema)
     }

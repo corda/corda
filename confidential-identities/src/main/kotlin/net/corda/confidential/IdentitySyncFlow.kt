@@ -12,14 +12,14 @@ import net.corda.core.utilities.unwrap
 
 object IdentitySyncFlow {
     /**
-     * Flow for ensuring that our counterparties in a transaction have the full certificate paths for *our* confidential
-     * identities used in states present in the transaction. This is intended for use as a subflow of another flow, typically between
-     * transaction assembly and signing. An example of where this is useful is where a recipient of a [Cash] state wants
-     * to know that it is being paid by the correct party, and the owner of the state is a confidential identity of that
-     * party. This flow would send a copy of the confidential identity path to the recipient, enabling them to verify that
-     * identity.
+     * Flow for ensuring that our counterparties in a transaction have the full certificate paths for *our*
+     * confidential identities used in states present in the transaction. This is intended for use as a sub-flow of
+     * another flow, typically between transaction assembly and signing. An example of where this is useful is where
+     * a recipient of a state wants to know that it is being paid by the correct party, and the owner of the state is a
+     * confidential identity of that party. This flow would send a copy of the confidential identity path to the
+     * recipient, enabling them to verify that identity.
      */
-    // TODO: Can this be triggered automatically from [SendTransactionFlow]
+    // TODO: Can this be triggered automatically from [SendTransactionFlow]?
     class Send(val otherSideSessions: Set<FlowSession>,
                val tx: WireTransaction,
                override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
@@ -53,7 +53,7 @@ object IdentitySyncFlow {
         }
 
         private fun extractOurConfidentialIdentities(): Map<AbstractParty, PartyAndCertificate?> {
-            val states: List<ContractState> = (tx.inputs.map { serviceHub.loadState(it) }.requireNoNulls().map { it.data } + tx.outputs.map { it.data })
+            val states: List<ContractState> = (serviceHub.loadStates(tx.inputs.toSet()).map { it.state.data } + tx.outputs.map { it.data })
             val identities: Set<AbstractParty> = states.flatMap(ContractState::participants).toSet()
             // Filter participants down to the set of those not in the network map (are not well known)
             val confidentialIdentities = identities
@@ -81,7 +81,7 @@ object IdentitySyncFlow {
         override val progressTracker: ProgressTracker = ProgressTracker(RECEIVING_IDENTITIES, RECEIVING_CERTIFICATES)
 
         @Suspendable
-        override fun call(): Unit {
+        override fun call() {
             progressTracker.currentStep = RECEIVING_IDENTITIES
             val allIdentities = otherSideSession.receive<List<AbstractParty>>().unwrap { it }
             val unknownIdentities = allIdentities.filter { serviceHub.identityService.wellKnownPartyFromAnonymous(it) == null }

@@ -7,6 +7,8 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
+import org.apache.activemq.artemis.api.core.Message
+import org.apache.activemq.artemis.api.core.SimpleString
 import java.security.PublicKey
 
 /**
@@ -20,14 +22,55 @@ class ArtemisMessagingComponent {
 
         // System users must contain an invalid RPC username character to prevent any chance of name clash which in this
         // case is a forward slash
-        const val NODE_USER = "SystemUsers/Node"
+        const val NODE_P2P_USER = "SystemUsers/Node"
+        const val NODE_RPC_USER = "SystemUsers/NodeRPC"
         const val PEER_USER = "SystemUsers/Peer"
+        // User used only in devMode when nodes have a shell attached by default.
+        const val INTERNAL_SHELL_USER = "internalShell"
+
         const val INTERNAL_PREFIX = "internal."
         const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers." //TODO Come up with better name for common peers/services queue
         const val P2P_PREFIX = "p2p.inbound."
         const val BRIDGE_CONTROL = "${INTERNAL_PREFIX}bridge.control"
         const val BRIDGE_NOTIFY = "${INTERNAL_PREFIX}bridge.notify"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
+        // This is a rough guess on the extra space needed on top of maxMessageSize to store the journal.
+        // TODO: we might want to make this value configurable.
+        const val JOURNAL_HEADER_SIZE = 1024
+        object P2PMessagingHeaders {
+            // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
+            // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint
+            // that will handle messages, like a URL) with the terminology used by underlying MQ libraries, to avoid
+            // confusion.
+            val topicProperty = SimpleString("platform-topic")
+            val cordaVendorProperty = SimpleString("corda-vendor")
+            val releaseVersionProperty = SimpleString("release-version")
+            val platformVersionProperty = SimpleString("platform-version")
+            val senderUUID = SimpleString("sender-uuid")
+            val senderSeqNo = SimpleString("send-seq-no")
+            /**
+             * In the operation mode where we have an out of process bridge we cannot correctly populate the Artemis validated user header
+             * as the TLS does not terminate directly onto Artemis. We therefore use this internal only header to forward
+             * the equivalent information from the Float.
+             */
+            val bridgedCertificateSubject = SimpleString("sender-subject-name")
+
+            object Type {
+                const val KEY = "corda_p2p_message_type"
+                const val SESSION_INIT_VALUE = "session_init"
+            }
+
+            val whitelistedHeaders: Set<String> = setOf(topicProperty.toString(),
+                    cordaVendorProperty.toString(),
+                    releaseVersionProperty.toString(),
+                    platformVersionProperty.toString(),
+                    senderUUID.toString(),
+                    senderSeqNo.toString(),
+                    bridgedCertificateSubject.toString(),
+                    Type.KEY,
+                    Message.HDR_DUPLICATE_DETECTION_ID.toString(),
+                    Message.HDR_VALIDATED_USER.toString())
+        }
     }
 
     interface ArtemisAddress : MessageRecipients {
@@ -90,5 +133,4 @@ class ArtemisMessagingComponent {
 
         override val queueName: String = "$P2P_PREFIX${identity.toStringShort()}"
     }
-
 }

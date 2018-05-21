@@ -18,10 +18,10 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.startFlow
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -42,6 +42,7 @@ private fun createAttachmentData(content: String) = ByteArrayOutputStream().appl
 
 private fun Attachment.extractContent() = ByteArrayOutputStream().apply { extractFile("content", this) }.toString(UTF_8.name())
 
+@SuppressWarnings("deprecation")
 private fun StartedNode<*>.saveAttachment(content: String) = database.transaction {
     attachments.importAttachment(createAttachmentData(content).inputStream())
 }
@@ -71,8 +72,8 @@ class AttachmentSerializationTest {
     @Before
     fun setUp() {
         mockNet = InternalMockNetwork(emptyList())
-        server = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
-        client = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        server = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
+        client = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME))
         client.internals.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
         mockNet.runNetwork()
         serverIdentity = server.info.singleIdentity()
@@ -160,7 +161,7 @@ class AttachmentSerializationTest {
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.dispose()
-        client = mockNet.createNode(MockNodeParameters(client.internals.id, client.internals.configuration.myLegalName), { args ->
+        client = mockNet.createNode(InternalMockNodeParameters(client.internals.id, client.internals.configuration.myLegalName), nodeFactory = { args ->
             object : InternalMockNetwork.MockNode(args) {
                 override fun start() = super.start().apply { attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad }
             }

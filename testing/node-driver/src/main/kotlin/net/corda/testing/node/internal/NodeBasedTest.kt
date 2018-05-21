@@ -19,7 +19,6 @@ import net.corda.testing.node.User
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.getFreeLocalPorts
 import net.corda.testing.internal.testThreadFactory
-import net.corda.testing.node.MockServices.Companion.MOCK_VERSION_INFO
 import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Before
@@ -93,6 +92,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
                 configOverrides = configOf(
                         "myLegalName" to legalName.toString(),
                         "p2pAddress" to p2pAddress,
+                        "devMode" to true,
                         "rpcSettings.address" to localPort[1].toString(),
                         "rpcSettings.adminAddress" to localPort[2].toString(),
                         "rpcUsers" to rpcUsers.map { it.toConfig().root().unwrapped() }

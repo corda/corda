@@ -166,7 +166,7 @@ parameter and ``CommandData`` classes.
 
 Let's see how the ``sign`` method for ``NodeInterestRates.Oracle`` is written:
 
-.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
+.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
    :language: kotlin
    :start-after: DOCSTART 1
    :end-before: DOCEND 1
@@ -192,7 +192,7 @@ Binding to the network
 The first step is to create the oracle as a service by annotating its class with ``@CordaService``.  Let's see how that's
 done:
 
-.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
+.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
    :language: kotlin
    :start-after: DOCSTART 3
    :end-before: DOCEND 3
@@ -201,7 +201,7 @@ done:
 The Corda node scans for any class with this annotation and initialises them. The only requirement is that the class provide
 a constructor with a single parameter of type ``ServiceHub``.
 
-.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
+.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
    :language: kotlin
    :start-after: DOCSTART 2
    :end-before: DOCEND 2
@@ -219,7 +219,7 @@ We mentioned the client sub-flow briefly above.  They are the mechanism that cli
 use to interact with your oracle.  Typically there will be one for querying and one for signing.  Let's take a look at
 those for ``NodeInterestRates.Oracle``.
 
-.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/flows/RatesFixFlow.kt
+.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/flows/RatesFixFlow.kt
    :language: kotlin
    :start-after: DOCSTART 1
    :end-before: DOCEND 1
@@ -238,7 +238,7 @@ The oracle is invoked through sub-flows to query for values, add them to the tra
 the transaction signed by the oracle.  Following on from the above examples, this is all encapsulated in a sub-flow
 called ``RatesFixFlow``.  Here's the ``call`` method of that flow.
 
-.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/flows/RatesFixFlow.kt
+.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/flows/RatesFixFlow.kt
    :language: kotlin
    :start-after: DOCSTART 2
    :end-before: DOCEND 2
@@ -255,7 +255,7 @@ As you can see, this:
 
 Here's an example of it in action from ``FixingFlow.Fixer``.
 
-.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/flows/FixingFlow.kt
+.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/flows/FixingFlow.kt
    :language: kotlin
    :start-after: DOCSTART 1
    :end-before: DOCEND 1
@@ -269,7 +269,26 @@ Here's an example of it in action from ``FixingFlow.Fixer``.
 Testing
 -------
 
-When unit testing, we make use of the ``MockNetwork`` which allows us to create ``MockNode`` instances. A ``MockNode``
-is a simplified node suitable for tests. One feature that isn't available (and which is not suitable for unit testing
-anyway) is the node's ability to scan and automatically install oracles it finds in the CorDapp jars. Instead, when
-working with ``MockNode``, use the ``installCordaService`` method to manually install the oracle on the relevant node.
+The ``MockNetwork`` allows the creation of ``MockNode`` instances, which are simplified nodes which can be used for
+testing (see :doc:`api-testing`). When creating the ``MockNetwork`` you supply a list of packages to scan for CorDapps.
+Make sure the packages you provide include your oracle service, and it automatically be installed in the test nodes.
+Then you can create an oracle node on the ``MockNetwork`` and insert any initialisation logic you want to use. In this
+case, our ``Oracle`` service is in the ``net.corda.irs.api`` package, so the following test setup will install
+the service in each node. Then an oracle node with an oracle service which is initialised with some data is created on
+the mock network:
+
+.. literalinclude:: ../../samples/irs-demo/cordapp/src/test/kotlin/net/corda/irs/api/OracleNodeTearOffTests.kt
+   :language: kotlin
+   :start-after: DOCSTART 1
+   :end-before: DOCEND 1
+   :dedent: 4
+
+You can then write tests on your mock network to verify the nodes interact with your Oracle correctly.
+
+.. literalinclude:: ../../samples/irs-demo/cordapp/src/test/kotlin/net/corda/irs/api/OracleNodeTearOffTests.kt
+   :language: kotlin
+   :start-after: DOCSTART 2
+   :end-before: DOCEND 2
+   :dedent: 4
+
+See `here <https://github.com/corda/corda/samples/irs-demo/cordapp/src/test/kotlin/net/corda/irs/api/OracleNodeTearOffTests.kt>`_ for more examples.

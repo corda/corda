@@ -7,7 +7,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
-import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.internal.NotaryChangeTransactionBuilder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 
@@ -30,11 +30,11 @@ class NotaryChangeFlow<out T : ContractState>(
     override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {
         val inputs = resolveEncumbrances(originalState)
 
-        val tx = NotaryChangeWireTransaction(
+        val tx = NotaryChangeTransactionBuilder(
                 inputs.map { it.ref },
                 originalState.state.notary,
                 modification
-        )
+        ).build()
 
         val participantKeys = inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet()
         // TODO: We need a much faster way of finding our key in the transaction

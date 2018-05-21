@@ -22,9 +22,9 @@ HTTP network map protocol
 -------------------------
 
 If the node is configured with the ``compatibilityZoneURL`` config then it first uploads its own signed ``NodeInfo``
-to the server (and each time it changes on startup) and then proceeds to download the entire network map. The network map
-consists of a list of ``NodeInfo`` hashes. The node periodically polls for the network map (based on the HTTP cache expiry
-header) and any new entries are downloaded and cached. Entries which no longer exist are deleted from the node's cache.
+to the server at that URL (and each time it changes on startup) and then proceeds to download the entire network map from 
+the same server. The network map consists of a list of ``NodeInfo`` hashes. The node periodically polls for the network map 
+(based on the HTTP cache expiry header) and any new entries are downloaded and cached. Entries which no longer exist are deleted from the node's cache.
 
 The set of REST end-points for the network map service are as follows.
 
@@ -35,7 +35,9 @@ The set of REST end-points for the network map service are as follows.
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | POST           | /network-map/ack-parameters             | For the node operator to acknowledge network map that new parameters were accepted for future update.                                        |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map                            | Retrieve the current signed network map object. The entire object is signed with the network map certificate which is also attached.         |
+| GET            | /network-map                            | Retrieve the current signed public network map object. The entire object is signed with the network map certificate which is also attached.  |
++----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
+| GET            | /network-map/{uuid}                     | Retrieve the current signed private network map object with given uuid. Format is the same as for ``/network-map`` endpoint.                 |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /network-map/node-info/{hash}           | Retrieve a signed ``NodeInfo`` as specified in the network map object.                                                                       |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
@@ -58,9 +60,10 @@ signed ``NodeInfo`` object that the network map service vends. These are automat
 be used to supplement or replace the HTTP network map. If the same node is advertised through both mechanisms then the
 latest one is taken.
 
-On startup the node generates its own signed node info file, filename of the format ``nodeInfo-${hash}``. To create a simple
-network without the HTTP network map service then simply place this file in the ``additional-node-infos`` directory
-of every node that's part of this network. For example, a simple way to do this is to use rsync.
+On startup the node generates its own signed node info file, filename of the format ``nodeInfo-${hash}``. It can also be
+generated using the ``--just-generate-node-info`` command line flag without starting the node. To create a simple network
+without the HTTP network map service simply place this file in the ``additional-node-infos`` directory of every node that's
+part of this network. For example, a simple way to do this is to use rsync.
 
 Usually, test networks have a structure that is known ahead of time. For the creation of such networks we provide a
 ``network-bootstrapper`` tool. This tool pre-generates node configuration directories if given the IP addresses/domain
@@ -98,15 +101,26 @@ The current set of network parameters:
 
 :minimumPlatformVersion: The minimum platform version that the nodes must be running. Any node which is below this will
         not start.
+
 :notaries: List of identity and validation type (either validating or non-validating) of the notaries which are permitted
         in the compatibility zone.
+
 :maxMessageSize: Maximum allowed size in bytes of an individual message sent over the wire. Note that attachments are
-        a special case and may be fragmented for streaming transfer, however, an individual transaction or flow message
-        may not be larger than this value.
+            a special case and may be fragmented for streaming transfer, however, an individual transaction or flow message
+            may not be larger than this value.
+
 :maxTransactionSize: Maximum allowed size in bytes of a transaction. This is the size of the transaction object and its attachments.
+
 :modifiedTime: The time when the network parameters were last modified by the compatibility zone operator.
+
 :epoch: Version number of the network parameters. Starting from 1, this will always increment whenever any of the
         parameters change.
+:whitelistedContractImplementations: List of whitelisted versions of contract code.
+        For each contract class there is a list of hashes of the approved CorDapp jar versions containing that contract.
+        Read more about *Zone constraints* here :doc:`api-contract-constraints`
+
+:eventHorizon: Time after which nodes are considered to be unresponsive and removed from network map. Nodes republish their
+        ``NodeInfo`` on a regular interval. Network map treats that as a heartbeat from the node.
 
 More parameters will be added in future releases to regulate things like allowed port numbers, how long a node can be
 offline before it is evicted from the zone, whether or not IPv6 connectivity is required for zone members, required
@@ -159,5 +173,3 @@ shell (see :doc:`shell`):
 If the administrator does not accept the update then next time the node polls network map after the deadline, the
 advertised network parameters will be the updated ones. The previous set of parameters will no longer be valid.
 At this point the node will automatically shutdown and will require the node operator to bring it back again.
-
-

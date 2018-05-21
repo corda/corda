@@ -2,6 +2,9 @@ package net.corda.testing.common.internal
 
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.AttachmentId
+import net.corda.core.utilities.days
+import java.time.Duration
 import java.time.Instant
 
 fun testNetworkParameters(
@@ -11,14 +14,18 @@ fun testNetworkParameters(
         maxMessageSize: Int = 10485760,
         // TODO: Make this configurable and consistence across driver, bootstrapper, demobench and NetworkMapServer
         maxTransactionSize: Int = maxMessageSize,
-        epoch: Int = 1
+        whitelistedContractImplementations: Map<String, List<AttachmentId>> = emptyMap(),
+        epoch: Int = 1,
+        eventHorizon: Duration = 30.days
 ): NetworkParameters {
     return NetworkParameters(
             minimumPlatformVersion = minimumPlatformVersion,
             notaries = notaries,
-            modifiedTime = modifiedTime,
             maxMessageSize = maxMessageSize,
             maxTransactionSize = maxTransactionSize,
-            epoch = epoch
+            whitelistedContractImplementations = whitelistedContractImplementations,
+            modifiedTime = modifiedTime,
+            epoch = epoch,
+            eventHorizon = eventHorizon
     )
 }

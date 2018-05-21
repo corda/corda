@@ -264,6 +264,14 @@ In order to create a communication session between your initiator flow and the r
 * ``sendAndReceive(receiveType: Class<R>, payload: Any): R``
     * Sends the ``payload`` object and receives an object of type ``receiveType`` back
 
+In addition ``FlowLogic`` provides functions that batch receives:
+
+* ``receiveAllMap(sessions: Map<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>>``
+  Receives from all ``FlowSession`` objects specified in the passed in map. The received types may differ.
+* ``receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>>``
+  Receives from all ``FlowSession`` objects specified in the passed in list. The received types must be the same.
+
+The batched functions are implemented more efficiently by the flow framework.
 
 InitiateFlow
 ~~~~~~~~~~~~
@@ -476,7 +484,7 @@ Subflows
 Subflows are pieces of reusable flows that may be run by calling ``FlowLogic.subFlow``. There are two broad categories
 of subflows, inlined and initiating ones. The main difference lies in the counter-flow's starting method, initiating
 ones initiate counter-flows automatically, while inlined ones expect some parent counter-flow to run the inlined
-counter-part.
+counterpart.
 
 Inlined subflows
 ^^^^^^^^^^^^^^^^
@@ -737,3 +745,44 @@ We then update the progress tracker's current step as we progress through the fl
         :start-after: DOCSTART 18
         :end-before: DOCEND 18
         :dedent: 12
+
+HTTP and database calls
+-----------------------
+HTTP, database and other calls to external resources are allowed in flows. However, their support is currently limited:
+
+* The call must be executed in a BLOCKING way. Flows don't currently support suspending to await the response to a call to an external resource
+
+  * For this reason, the call should be provided with a timeout to prevent the flow from suspending forever. If the timeout elapses, this should be treated as a soft failure and handled by the flow's business logic
+  
+* The call must be idempotent. If the flow fails and has to restart from a checkpoint, the call will also be replayed
+
+Concurrency, Locking and Waiting
+--------------------------------
+This is an advanced topic.  Because Corda is designed to:
+
+* run many flows in parallel,
+* may persist flows to storage and resurrect those flows much later,
+* (in the future) migrate flows between JVMs,
+
+flows should avoid use of locks and typically not even attempt to interact with objects shared between flows (except
+``ServiceHub`` and other carefully crafted services such as Oracles.  See :doc:`oracles`).
+Locks will significantly reduce the scalability of the node, in the best case, and can cause the node to deadlock if they
+remain locked across flow context switch boundaries (such as sending and receiving
+from peers discussed above, and the sleep discussed below).
+
+If you need activities that are scheduled, you should investigate the use of ``SchedulableState``.
+However, we appreciate that Corda support for some more advanced patterns is still in the future, and if there is a need
+for brief pauses in flows then you should use ``FlowLogic.sleep`` in place of where you might have used ``Thread.sleep``.
+Flows should expressly not use ``Thread.sleep``, since this will prevent the node from processing other flows
+in the meantime, significantly impairing the performance of the node.
+Even ``FlowLogic.sleep`` is not to be used to create long running flows, since the Corda ethos is for short lived flows
+(otherwise upgrading nodes or CorDapps is much more complicated), or as a substitute to using the ``SchedulableState`` scheduler.
+
+Currently the ``finance`` package uses ``FlowLogic.sleep`` to make several attempts at coin selection, where necessary,
+when many states are soft locked and we wish to wait for those, or other new states in their place, to become unlocked.
+
+    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/contracts/asset/cash/selection/AbstractCashSelection.kt
+        :language: kotlin
+        :start-after: DOCSTART CASHSELECT 1
+        :end-before: DOCEND CASHSELECT 1
+        :dedent: 8

@@ -3,12 +3,12 @@ package net.corda.node.internal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -26,9 +26,15 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
     val networkParameters by lazy { retrieveNetworkParameters() }
 
     private fun retrieveNetworkParameters(): NetworkParameters {
-        val advertisedParametersHash = networkMapClient?.getNetworkMap()?.networkMap?.networkParameterHash
+        val advertisedParametersHash = try {
+            networkMapClient?.getNetworkMap()?.payload?.networkParameterHash
+        } catch (e: Exception) {
+            logger.info("Unable to download network map", e)
+            // If NetworkMap is down while restarting the node, we should be still able to continue with parameters from file
+            null
+        }
         val signedParametersFromFile = if (networkParamsFile.exists()) {
-            networkParamsFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>()
+            networkParamsFile.readObject<SignedNetworkParameters>()
         } else {
             null
         }
@@ -38,32 +44,32 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
             //  you get them from network map, but you have to run the approval step.
             if (signedParametersFromFile == null) { // Node joins for the first time.
                 downloadParameters(trustRoot, advertisedParametersHash)
-            }
-            else if (signedParametersFromFile.raw.hash == advertisedParametersHash) { // Restarted with the same parameters.
+            } else if (signedParametersFromFile.raw.hash == advertisedParametersHash) { // Restarted with the same parameters.
                 signedParametersFromFile.verifiedNetworkMapCert(trustRoot)
             } else { // Update case.
                 readParametersUpdate(advertisedParametersHash, signedParametersFromFile.raw.hash).verifiedNetworkMapCert(trustRoot)
             }
         } else { // No compatibility zone configured. Node should proceed with parameters from file.
-            signedParametersFromFile?.verifiedNetworkMapCert(trustRoot) ?: throw IllegalArgumentException("Couldn't find network parameters file and compatibility zone wasn't configured")
+            signedParametersFromFile?.verifiedNetworkMapCert(trustRoot) ?: throw IllegalArgumentException("Couldn't find network parameters file and compatibility zone wasn't configured/isn't reachable")
         }
         logger.info("Loaded network parameters: $parameters")
         return parameters
     }
 
-    private fun readParametersUpdate(advertisedParametersHash: SecureHash, previousParametersHash: SecureHash): SignedDataWithCert<NetworkParameters> {
+    private fun readParametersUpdate(advertisedParametersHash: SecureHash, previousParametersHash: SecureHash): SignedNetworkParameters {
         if (!parametersUpdateFile.exists()) {
             throw IllegalArgumentException("Node uses parameters with hash: $previousParametersHash " +
-                    "but network map is advertising: ${advertisedParametersHash}.\n" +
+                    "but network map is advertising: $advertisedParametersHash.\n" +
                     "Please update node to use correct network parameters file.")
         }
-        val signedUpdatedParameters = parametersUpdateFile.readAll().deserialize<SignedDataWithCert<NetworkParameters>>()
+        val signedUpdatedParameters = parametersUpdateFile.readObject<SignedNetworkParameters>()
         if (signedUpdatedParameters.raw.hash != advertisedParametersHash) {
             throw IllegalArgumentException("Both network parameters and network parameters update files don't match" +
                     "parameters advertised by network map.\n" +
                     "Please update node to use correct network parameters file.")
         }
         parametersUpdateFile.moveTo(networkParamsFile, StandardCopyOption.REPLACE_EXISTING)
+        logger.info("Scheduled update to network parameters has occurred - node now updated to these new parameters.")
         return signedUpdatedParameters
     }
 

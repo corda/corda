@@ -13,6 +13,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -35,7 +36,7 @@ class AttachmentsClassLoaderStaticContractTests {
 
     class AttachmentDummyContract : Contract {
         companion object {
-            private val ATTACHMENT_PROGRAM_ID = "net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract"
+            private const val ATTACHMENT_PROGRAM_ID = "net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract"
         }
 
         data class State(val magicNumber: Int = 0) : ContractState {
@@ -59,7 +60,8 @@ class AttachmentsClassLoaderStaticContractTests {
     }
 
     private val serviceHub = rigorousMock<ServicesForResolution>().also {
-        doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage())).whenever(it).cordappProvider
+        doReturn(CordappProviderImpl(CordappLoader.createWithTestPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage(), testNetworkParameters().whitelistedContractImplementations)).whenever(it).cordappProvider
+        doReturn(testNetworkParameters()).whenever(it).networkParameters
     }
 
     @Test

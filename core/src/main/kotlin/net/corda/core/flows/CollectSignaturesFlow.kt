@@ -13,7 +13,7 @@ import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 
 /**
- * The [CollectSignaturesFlow] is used to automate the collection of counter-party signatures for a given transaction.
+ * The [CollectSignaturesFlow] is used to automate the collection of counterparty signatures for a given transaction.
  *
  * You would typically use this flow after you have built a transaction with the TransactionBuilder and signed it with
  * your key pair. If there are additional signatures to collect then they can be collected using this flow. Signatures
@@ -35,9 +35,9 @@ import java.security.PublicKey
  *   2. Any of the required signing parties cannot be found in the [ServiceHub.networkMapCache] of the initiator
  *   3. If the wrong key has been used by a counterparty to sign the transaction
  *   4. The counterparty rejects the provided transaction
- * - The flow will return a [SignedTransaction] with all the counter-party signatures (but not the notary's!)
- * - If the provided transaction has already been signed by all counter-parties then this flow simply returns the
- *   provided transaction without contacting any counter-parties
+ * - The flow will return a [SignedTransaction] with all the counterparty signatures (but not the notary's!)
+ * - If the provided transaction has already been signed by all counterparties then this flow simply returns the
+ *   provided transaction without contacting any counterparties
  * - Call the [FinalityFlow] with the return value of this flow
  *
  * Example - issuing a multi-lateral agreement which requires N signatures:
@@ -68,17 +68,18 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
     @JvmOverloads constructor(partiallySignedTx: SignedTransaction, sessionsToCollectFrom: Collection<FlowSession>, progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()) : this(partiallySignedTx, sessionsToCollectFrom, null, progressTracker)
 
     companion object {
-        object COLLECTING : ProgressTracker.Step("Collecting signatures from counter-parties.")
+        object COLLECTING : ProgressTracker.Step("Collecting signatures from counterparties.")
         object VERIFYING : ProgressTracker.Step("Verifying collected signatures.")
 
         @JvmStatic
         fun tracker() = ProgressTracker(COLLECTING, VERIFYING)
 
-        // TODO: Make the progress tracker adapt to the number of counter-parties to collect from.
+        // TODO: Make the progress tracker adapt to the number of counterparties to collect from.
 
     }
 
-    @Suspendable override fun call(): SignedTransaction {
+    @Suspendable
+    override fun call(): SignedTransaction {
         // Check the signatures which have already been provided and that the transaction is valid.
         // Usually just the Initiator and possibly an oracle would have signed at this point.
         val myKeys: Iterable<PublicKey> = myOptionalKeys ?: listOf(ourIdentity.owningKey)
@@ -101,7 +102,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         // the FinalityFlow.
         val unsigned = if (notaryKey != null) notSigned - notaryKey else notSigned
 
-        // If the unsigned counter-parties list is empty then we don't need to collect any more signatures here.
+        // If the unsigned counterparties list is empty then we don't need to collect any more signatures here.
         if (unsigned.isEmpty()) return partiallySignedTx
 
         val partyToKeysMap = groupPublicKeysByWellKnownParty(serviceHub, unsigned)
@@ -109,7 +110,7 @@ class CollectSignaturesFlow @JvmOverloads constructor(val partiallySignedTx: Sig
         require(sessionsToCollectFrom.map { it.counterparty }.toSet() == partyToKeysMap.keys) {
             "The Initiator of CollectSignaturesFlow must pass in exactly the sessions required to sign the transaction."
         }
-        // Collect signatures from all counter-parties and append them to the partially signed transaction.
+        // Collect signatures from all counterparties and append them to the partially signed transaction.
         val counterpartySignatures = sessionsToCollectFrom.flatMap { session ->
             subFlow(CollectSignatureFlow(partiallySignedTx, session, partyToKeysMap[session.counterparty]!!))
         }
@@ -161,7 +162,7 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
  *
  * 1. Should actually be signed by the [Party] invoking this flow
  * 2. Is valid as per the contracts referenced in the transaction
- * 3. Has been, at least, signed by the counter-party which created it
+ * 3. Has been, at least, signed by the counterparty which created it
  * 4. Conforms to custom checking provided in the [checkTransaction] method of the [SignTransactionFlow]
  *
  * Usage:
@@ -206,7 +207,8 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
         fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING)
     }
 
-    @Suspendable override fun call(): SignedTransaction {
+    @Suspendable
+    override fun call(): SignedTransaction {
         progressTracker.currentStep = RECEIVING
         // Receive transaction and resolve dependencies, check sufficient signatures is disabled as we don't have all signatures.
         val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
@@ -243,12 +245,13 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
         return stx + mySignatures
     }
 
-    @Suspendable private fun checkSignatures(stx: SignedTransaction) {
+    @Suspendable
+    private fun checkSignatures(stx: SignedTransaction) {
         // We set `ignoreUnrecognisedParties` to `true` in `groupPublicKeysByWellKnownParty`. This is because we don't 
         // need to recognise all keys, but just the initiator's.
         val signingWellKnownIdentities = groupPublicKeysByWellKnownParty(serviceHub, stx.sigs.map(TransactionSignature::by), true)
         require(otherSideSession.counterparty in signingWellKnownIdentities) {
-            "The Initiator of CollectSignaturesFlow must have signed the transaction. Found ${signingWellKnownIdentities}, expected ${otherSideSession}"
+            "The Initiator of CollectSignaturesFlow must have signed the transaction. Found $signingWellKnownIdentities, expected $otherSideSession"
         }
         val signed = stx.sigs.map { it.by }
         val allSigners = stx.tx.requiredSigningKeys
@@ -258,7 +261,7 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
 
     /**
      * The [checkTransaction] method allows the caller of this flow to provide some additional checks over the proposed
-     * transaction received from the counter-party. For example:
+     * transaction received from the counterparty. For example:
      *
      * - Ensuring that the transaction you are receiving is the transaction you *EXPECT* to receive. I.e. is has the
      *   expected type and number of inputs and outputs
@@ -273,14 +276,15 @@ abstract class SignTransactionFlow(val otherSideSession: FlowSession,
      * [IllegalArgumentException], [IllegalStateException] and [AssertionError] will be caught and rethrown as flow
      * exceptions i.e. the other side will be given information about what exact check failed.
      *
-     * @param stx a partially signed transaction received from your counter-party.
+     * @param stx a partially signed transaction received from your counterparty.
      * @throws FlowException if the proposed transaction fails the checks.
      */
     @Suspendable
     @Throws(FlowException::class)
-    abstract protected fun checkTransaction(stx: SignedTransaction)
+    protected abstract fun checkTransaction(stx: SignedTransaction)
 
-    @Suspendable private fun checkMySignaturesRequired(stx: SignedTransaction, signingKeys: Iterable<PublicKey>) {
+    @Suspendable
+    private fun checkMySignaturesRequired(stx: SignedTransaction, signingKeys: Iterable<PublicKey>) {
         require(signingKeys.all { it in stx.tx.requiredSigningKeys }) {
             "A signature was requested for a key that isn't part of the required signing keys for transaction ${stx.id}"
         }

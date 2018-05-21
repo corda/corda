@@ -5,17 +5,16 @@ import com.google.common.jimfs.Jimfs
 import net.corda.cordform.CordformNode
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
-import net.corda.core.node.NodeInfo
+import net.corda.core.internal.size
 import net.corda.core.node.services.KeyManagementService
-import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.createNodeInfoAndSigned
-import net.corda.testing.node.MockKeyManagementService
+import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.contentOf
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -37,10 +36,9 @@ class NodeInfoWatcherTest {
     val tempFolder = TemporaryFolder()
 
     private val scheduler = TestScheduler()
-    private val testSubscriber = TestSubscriber<NodeInfo>()
+    private val testSubscriber = TestSubscriber<NodeInfoUpdate>()
 
-    private lateinit var nodeInfo: NodeInfo
-    private lateinit var signedNodeInfo: SignedNodeInfo
+    private lateinit var nodeInfoAndSigned: NodeInfoAndSigned
     private lateinit var nodeInfoPath: Path
     private lateinit var keyManagementService: KeyManagementService
 
@@ -49,9 +47,7 @@ class NodeInfoWatcherTest {
 
     @Before
     fun start() {
-        val nodeInfoAndSigned = createNodeInfoAndSigned(ALICE_NAME)
-        nodeInfo = nodeInfoAndSigned.first
-        signedNodeInfo = nodeInfoAndSigned.second
+        nodeInfoAndSigned = createNodeInfoAndSigned(ALICE_NAME)
         val identityService = makeTestIdentityService()
         keyManagementService = MockKeyManagementService(identityService)
         nodeInfoWatcher = NodeInfoWatcher(tempFolder.root.toPath(), scheduler)
@@ -62,22 +58,22 @@ class NodeInfoWatcherTest {
     fun `save a NodeInfo`() {
         assertEquals(0,
                 tempFolder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }.size)
-        NodeInfoWatcher.saveToFile(tempFolder.root.toPath(), signedNodeInfo)
+        NodeInfoWatcher.saveToFile(tempFolder.root.toPath(), nodeInfoAndSigned)
 
         val nodeInfoFiles = tempFolder.root.list().filter { it.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX) }
         assertEquals(1, nodeInfoFiles.size)
         val fileName = nodeInfoFiles.first()
         assertTrue(fileName.startsWith(NodeInfoFilesCopier.NODE_INFO_FILE_NAME_PREFIX))
-        val file = (tempFolder.root.path / fileName).toFile()
+        val file = (tempFolder.root.path / fileName)
         // Just check that something is written, another tests verifies that the written value can be read back.
-        assertThat(contentOf(file)).isNotEmpty()
+        assertThat(file.size).isGreaterThan(0)
     }
 
     @Test
     fun `save a NodeInfo to JimFs`() {
         val jimFs = Jimfs.newFileSystem(Configuration.unix())
-        val jimFolder = jimFs.getPath("/nodeInfo")
-        NodeInfoWatcher.saveToFile(jimFolder, signedNodeInfo)
+        val jimFolder = jimFs.getPath("/nodeInfo").createDirectories()
+        NodeInfoWatcher.saveToFile(jimFolder, nodeInfoAndSigned)
     }
 
     @Test
@@ -104,7 +100,7 @@ class NodeInfoWatcherTest {
         try {
             val readNodes = testSubscriber.onNextEvents.distinct()
             assertEquals(1, readNodes.size)
-            assertEquals(nodeInfo, readNodes.first())
+            assertEquals(nodeInfoAndSigned.nodeInfo, (readNodes.first() as? NodeInfoUpdate.Add)?.nodeInfo)
         } finally {
             subscription.unsubscribe()
         }
@@ -129,7 +125,7 @@ class NodeInfoWatcherTest {
             testSubscriber.awaitValueCount(1, 5, TimeUnit.SECONDS)
             // The same folder can be reported more than once, so take unique values.
             val readNodes = testSubscriber.onNextEvents.distinct()
-            assertEquals(nodeInfo, readNodes.first())
+            assertEquals(nodeInfoAndSigned.nodeInfo, (readNodes.first() as? NodeInfoUpdate.Add)?.nodeInfo)
         } finally {
             subscription.unsubscribe()
         }
@@ -141,6 +137,6 @@ class NodeInfoWatcherTest {
 
     // Write a nodeInfo under the right path.
     private fun createNodeInfoFileInPath() {
-        NodeInfoWatcher.saveToFile(nodeInfoPath, signedNodeInfo)
+        NodeInfoWatcher.saveToFile(nodeInfoPath, nodeInfoAndSigned)
     }
 }
