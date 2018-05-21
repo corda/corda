@@ -10,7 +10,7 @@
 
 package net.corda.nodeapi.internal.serialization.amqp.custom
 
-import net.corda.nodeapi.internal.serialization.amqp.CustomSerializer
+import net.corda.serialization.internal.amqp.CustomSerializer
 
 /**
  * A serializer for [StringBuffer].

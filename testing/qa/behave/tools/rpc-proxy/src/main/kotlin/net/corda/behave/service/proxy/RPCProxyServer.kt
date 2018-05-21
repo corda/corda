@@ -7,9 +7,9 @@ import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.AMQP_RPC_CLIENT_CONTEXT
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
+import net.corda.serialization.internal.SerializationFactoryImpl
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection

@@ -29,10 +29,7 @@ import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.core.utilities.SgxSupport
-import net.corda.nodeapi.internal.serialization.CordaClassResolver
-import net.corda.nodeapi.internal.serialization.serializationContextKey
 import net.corda.serialization.internal.serializationContextKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

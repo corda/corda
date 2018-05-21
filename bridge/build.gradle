@@ -47,6 +47,10 @@ dependencies {
         transitive = false// we control dependencies directly as the bridge is likely to be audited
     }
 
+    compile(project(':serialization')) {
+        transitive = false// we control dependencies directly as the bridge is likely to be audited
+    }
+
     // Here we pull in dependencies that would normally be pulled in transitively from :core and :node-api, but we need more fine grained control
     // For AMQP serialisation.
     compile "org.apache.qpid:proton-j:${protonj_version}"

@@ -1,13 +1,12 @@
 package com.r3.corda.networkmanage.common.utils
 
-import net.corda.core.cordapp.Cordapp
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
-import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
-import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
-import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
-import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
+import net.corda.serialization.internal.CordaSerializationMagic
+import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.amqpMagic
 import java.util.concurrent.ConcurrentHashMap
 
 class AMQPNetworkServicesSerializationScheme (

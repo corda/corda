@@ -13,7 +13,7 @@
 package net.corda.serialization.internal
 
 import net.corda.core.serialization.*
-import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding.SNAPPY
+import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
 import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.serialization.internal.kryo.BuiltInExceptionsWhitelist
 import net.corda.serialization.internal.kryo.GlobalTransientClassWhiteList

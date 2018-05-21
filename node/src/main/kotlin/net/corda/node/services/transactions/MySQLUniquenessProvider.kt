@@ -41,7 +41,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.services.config.MySQLConfiguration
-import net.corda.nodeapi.internal.serialization.CordaSerializationEncoding.SNAPPY
+import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
 import java.sql.*
 import java.time.Clock
 import java.util.*
@@ -49,7 +49,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
-
 
 /**
  * Uniqueness provider backed by a MySQL database. It is intended to be used with a multi-master synchronously replicated

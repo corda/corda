@@ -15,14 +15,14 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.toHexString
-import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
-import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AbstractAMQPSerializationScheme
-import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
-import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
-import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
-import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.CordaSerializationMagic
+import net.corda.serialization.internal.SerializationFactoryImpl
+import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.kryo.AbstractKryoSerializationScheme
+import net.corda.serialization.internal.kryo.kryoMagic
 
 @Suppress("UNUSED")
 private class EnclaveletSerializationScheme {
