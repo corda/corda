@@ -49,7 +49,7 @@ object InputStreamSerializer : CustomSerializer.Implements<InputStream>(InputStr
 
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext
-    ): InputStream {
+    ) : InputStream {
         val bits = input.readObject(obj, schemas, ByteArray::class.java, context) as ByteArray
         return bits.inputStream()
     }

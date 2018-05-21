@@ -49,11 +49,11 @@ class AMQPListenerTest {
     @Test
     fun `Basic AMPQListenerService lifecycle test`() {
         val configResource = "/net/corda/bridge/singleprocess/bridge.conf"
-        createNetworkParams(tempFolder.root.toPath())
+        val maxMessageSize = createNetworkParams(tempFolder.root.toPath())
         val bridgeConfig = createAndLoadConfigFromResource(tempFolder.root.toPath() / "listener", configResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val auditService = TestAuditService()
-        val amqpListenerService = BridgeAMQPListenerServiceImpl(bridgeConfig, auditService)
+        val amqpListenerService = BridgeAMQPListenerServiceImpl(bridgeConfig, maxMessageSize, auditService)
         val stateFollower = amqpListenerService.activeChange.toBlocking().iterator
         val connectionFollower = amqpListenerService.onConnection.toBlocking().iterator
         val auditFollower = auditService.onAuditEvent.toBlocking().iterator
@@ -78,7 +78,7 @@ class AMQPListenerTest {
         // Fire lots of activity to prove we are good
         assertEquals(TestAuditService.AuditEvent.STATUS_CHANGE, auditFollower.next())
         assertEquals(true, amqpListenerService.active)
-        // Definitely a socket tehre
+        // Definitely a socket there
         assertEquals(true, serverListening("localhost", 10005))
         // But not a valid SSL link
         assertEquals(false, connectionFollower.next().connected)
@@ -95,7 +95,8 @@ class AMQPListenerTest {
                 clientKeyStore,
                 clientConfig.keyStorePassword,
                 clientTrustStore,
-                true)
+                true,
+                maxMessageSize = maxMessageSize)
 
         amqpClient.start()
         // Should see events to show we got a valid connection
@@ -134,11 +135,11 @@ class AMQPListenerTest {
     @Test
     fun `Bad certificate audit check`() {
         val configResource = "/net/corda/bridge/singleprocess/bridge.conf"
-        createNetworkParams(tempFolder.root.toPath())
+        val maxMessageSize = createNetworkParams(tempFolder.root.toPath())
         val bridgeConfig = createAndLoadConfigFromResource(tempFolder.root.toPath() / "listener", configResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val auditService = TestAuditService()
-        val amqpListenerService = BridgeAMQPListenerServiceImpl(bridgeConfig, auditService)
+        val amqpListenerService = BridgeAMQPListenerServiceImpl(bridgeConfig, maxMessageSize, auditService)
         amqpListenerService.start()
         auditService.start()
         val keyStoreBytes = bridgeConfig.sslKeystore.readAll()
@@ -165,7 +166,8 @@ class AMQPListenerTest {
                 clientKeyStore.internal,
                 "password",
                 clientTrustStore.internal,
-                 true)
+                true,
+                maxMessageSize = maxMessageSize)
         amqpClient.start()
         val connectionEvent = connectionFollower.next()
         assertEquals(false, connectionEvent.connected)

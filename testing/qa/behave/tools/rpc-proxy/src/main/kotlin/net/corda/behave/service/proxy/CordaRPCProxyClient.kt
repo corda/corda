@@ -1,6 +1,6 @@
 package net.corda.behave.service.proxy
 
-import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
@@ -36,8 +36,8 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
 
     init {
         try {
-            KryoClientSerializationScheme.initialiseSerialization()
-        } catch (e: Exception) { log.warn("Kryo RPC Client serialization already initialised.")}
+            AMQPClientSerializationScheme.initialiseSerialization()
+        } catch (e: Exception) { log.warn("AMQP RPC Client serialization already initialised.")}
     }
 
     override fun <T> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {

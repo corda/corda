@@ -20,6 +20,7 @@ import rx.Observable
  * [FlowHandle] is a serialisable handle for the started flow, parameterised by the type of the flow's return value.
  */
 @DoNotImplement
+@CordaSerializable
 interface FlowHandle<A> : AutoCloseable {
     /**
      * The started state machine's ID.

@@ -51,9 +51,9 @@ class BlacklistKotlinClosureTest : IntegrationTest() {
         driver(DriverParameters(startNodesInProcess = true)) {
             val rpc = startNode(providedName = ALICE_NAME).getOrThrow().rpc
             val packet = Packet { EVIL }
-            assertThatExceptionOfType(KryoException::class.java)
+            assertThatExceptionOfType(RPCException::class.java)
                     .isThrownBy { rpc.startFlow(::FlowC, packet) }
-                    .withMessageContaining("is not annotated or on the whitelist, so cannot be used in serialization")
+                    .withMessageContaining("is not on the whitelist or annotated with @CordaSerializable")
         }
     }
 }

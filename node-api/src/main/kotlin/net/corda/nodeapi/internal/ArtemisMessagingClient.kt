@@ -56,6 +56,7 @@ class ArtemisMessagingClient(
             minLargeMessageSize = maxMessageSize
             isUseGlobalPools = nodeSerializationEnv != null
             confirmationWindowSize = this@ArtemisMessagingClient.confirmationWindowSize
+            addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
         }
         val sessionFactory = locator.createSessionFactory()
         // Login using the node username. The broker will authenticate us as its node (as opposed to another peer)

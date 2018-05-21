@@ -34,7 +34,6 @@ import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
 import net.corda.nodeapi.internal.serialization.AMQP_STORAGE_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
 import rx.Subscription
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -71,12 +70,9 @@ class BridgeInstance(val conf: BridgeConfiguration,
             val classloader = this.javaClass.classLoader
             nodeSerializationEnv = SerializationEnvironmentImpl(
                     SerializationFactoryImpl().apply {
-                        registerScheme(AMQPServerSerializationScheme(emptyList()))
+                        registerScheme(AMQPBridgeSerializationScheme(emptyList()))
                     },
-                    p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
-                    rpcServerContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
-                    storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
-                    checkpointContext = AMQP_P2P_CONTEXT.withClassLoader(classloader))
+                    p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader))
         }
     }
 

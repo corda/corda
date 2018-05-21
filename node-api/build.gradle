@@ -76,6 +76,11 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile project(':node-driver')
+
+    compile ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
+        // Gains our proton-j version from core module.
+        exclude group: 'org.apache.qpid', module: 'proton-j'
+    }
 }
 
 configurations {

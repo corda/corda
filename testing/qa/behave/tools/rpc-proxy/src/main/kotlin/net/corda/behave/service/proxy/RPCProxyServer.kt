@@ -2,15 +2,14 @@ package net.corda.behave.service.proxy
 
 import net.corda.behave.service.proxy.RPCProxyServer.Companion.initialiseSerialization
 import net.corda.behave.service.proxy.RPCProxyServer.Companion.log
-import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.nodeapi.internal.serialization.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AMQPClientSerializationScheme
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -74,11 +73,10 @@ class RPCProxyServer(hostAndPort: NetworkHostAndPort, val webService: RPCProxyWe
                 nodeSerializationEnv =
                         SerializationEnvironmentImpl(
                                 SerializationFactoryImpl().apply {
-                                    registerScheme(KryoClientSerializationScheme())
                                     registerScheme(AMQPClientSerializationScheme(emptyList()))
                                 },
                                 AMQP_P2P_CONTEXT,
-                                rpcClientContext = KRYO_RPC_CLIENT_CONTEXT)
+                                rpcClientContext = AMQP_RPC_CLIENT_CONTEXT)
             }
             catch(e: Exception) {  log.warn("Skipping initialiseSerialization: ${e.message}") }
         }

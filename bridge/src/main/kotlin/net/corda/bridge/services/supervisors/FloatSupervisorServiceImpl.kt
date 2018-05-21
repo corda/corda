@@ -34,10 +34,10 @@ class FloatSupervisorServiceImpl(val conf: BridgeConfiguration,
     private var statusSubscriber: Subscription? = null
 
     init {
-        amqpListenerService = BridgeAMQPListenerServiceImpl(conf, auditService)
+        amqpListenerService = BridgeAMQPListenerServiceImpl(conf, maxMessageSize, auditService)
         floatControlService = if (conf.bridgeMode == BridgeMode.FloatOuter) {
             require(conf.haConfig == null) { "Float process should not have HA config, that is controlled via the bridge." }
-            FloatControlListenerService(conf, auditService, amqpListenerService)
+            FloatControlListenerService(conf, maxMessageSize, auditService, amqpListenerService)
         } else {
             null
         }

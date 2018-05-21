@@ -18,10 +18,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.config.*
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.P2PMessagingRetryConfiguration
-import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.transactions.PersistentUniquenessProvider
@@ -50,6 +46,7 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ArtemisMessagingTest {
     companion object {
@@ -86,7 +83,8 @@ class ArtemisMessagingTest {
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
-            doReturn(P2PMessagingRetryConfiguration(5.seconds, 3, backoffBase=1.0)).whenever(it).p2pMessagingRetry
+            doReturn(P2PMessagingRetryConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).p2pMessagingRetry
+
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), rigorousMock())
@@ -145,6 +143,42 @@ class ArtemisMessagingTest {
 
         val actual: Message = receivedMessages.take()
         assertEquals("first msg", String(actual.data.bytes))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+    }
+
+    @Test
+    fun `client should fail if message exceed maxMessageSize limit`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer()
+        val message = messagingClient.createMessage(TOPIC, data = ByteArray(MAX_MESSAGE_SIZE))
+        messagingClient.send(message, messagingClient.myAddress)
+
+        val actual: Message = receivedMessages.take()
+        assertTrue(ByteArray(MAX_MESSAGE_SIZE).contentEquals(actual.data.bytes))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+
+        val tooLagerMessage = messagingClient.createMessage(TOPIC, data = ByteArray(MAX_MESSAGE_SIZE + 1))
+        assertThatThrownBy {
+            messagingClient.send(tooLagerMessage, messagingClient.myAddress)
+        }.isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessageContaining("Message exceeds maxMessageSize network parameter")
+
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+    }
+
+    @Test
+    fun `server should not process if incoming message exceed maxMessageSize limit`() {
+        val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)
+        val message = messagingClient.createMessage(TOPIC, data = ByteArray(50_000))
+        messagingClient.send(message, messagingClient.myAddress)
+
+        val actual: Message = receivedMessages.take()
+        assertTrue(ByteArray(50_000).contentEquals(actual.data.bytes))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
+
+        val tooLagerMessage = messagingClient.createMessage(TOPIC, data = ByteArray(100_000))
+        thread {
+            messagingClient.send(tooLagerMessage, messagingClient.myAddress)
+        }.join(10.seconds.toMillis())
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
@@ -325,12 +359,15 @@ class ArtemisMessagingTest {
         messagingClient!!.start()
     }
 
-    private fun createAndStartClientAndServer(platformVersion: Int = 1, dontAckCondition: (msg: ReceivedMessage) -> Boolean = { false }): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
+    private fun createAndStartClientAndServer(platformVersion: Int = 1, serverMaxMessageSize: Int = MAX_MESSAGE_SIZE,
+                                              clientMaxMessageSize: Int = MAX_MESSAGE_SIZE,
+                                              dontAckCondition: (msg: ReceivedMessage) -> Boolean = { false }
+    ): Pair<P2PMessagingClient, BlockingQueue<ReceivedMessage>> {
         val receivedMessages = LinkedBlockingQueue<ReceivedMessage>()
 
-        createMessagingServer().start()
+        createMessagingServer(maxMessageSize = serverMaxMessageSize).start()
 
-        val messagingClient = createMessagingClient(platformVersion = platformVersion)
+        val messagingClient = createMessagingClient(platformVersion = platformVersion, maxMessageSize = clientMaxMessageSize)
         messagingClient.addMessageHandler(TOPIC) { message, _, handle ->
             if (dontAckCondition(message)) return@addMessageHandler
             database.transaction { handle.insideDatabaseTransaction() }

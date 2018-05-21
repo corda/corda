@@ -27,13 +27,6 @@ import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
  * MUST be kept separate!
  */
 
-val KRYO_RPC_SERVER_CONTEXT = SerializationContextImpl(kryoMagic,
-        SerializationDefaults.javaClass.classLoader,
-        GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
-        emptyMap(),
-        true,
-        SerializationContext.UseCase.RPCServer,
-        null)
 
 val AMQP_STORAGE_CONTEXT = SerializationContextImpl(amqpMagic,
         SerializationDefaults.javaClass.classLoader,

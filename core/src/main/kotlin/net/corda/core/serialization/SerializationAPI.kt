@@ -196,6 +196,15 @@ interface SerializationContext {
 }
 
 /**
+ * Set of well known properties that may be set on a serialization context. This doesn't preclude
+ * others being set that aren't keyed on this enumeration, but for general use properties adding a
+ * well known key here is preferred.
+ */
+enum class ContextPropertyKeys {
+    SERIALIZERS
+}
+
+/**
  * Global singletons to be used as defaults that are injected elsewhere (generally, in the node or in RPC client).
  */
 object SerializationDefaults {

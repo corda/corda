@@ -33,6 +33,7 @@ import kotlin.concurrent.withLock
 
 
 class FloatControlListenerService(val conf: BridgeConfiguration,
+                                  val maxMessageSize: Int,
                                   val auditService: BridgeAuditService,
                                   val amqpListener: BridgeAMQPListenerService,
                                   private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : FloatControlService, ServiceStateSupport by stateHelper {
@@ -82,7 +83,16 @@ class FloatControlListenerService(val conf: BridgeConfiguration,
 
     private fun startControlListener() {
         lock.withLock {
-            val controlServer = AMQPServer(floatControlAddress.host, floatControlAddress.port, null, null, keyStore, keyStorePrivateKeyPassword, trustStore, conf.crlCheckSoftFail, conf.enableAMQPPacketTrace)
+            val controlServer = AMQPServer(floatControlAddress.host,
+                    floatControlAddress.port,
+                    null,
+                    null,
+                    keyStore,
+                    keyStorePrivateKeyPassword,
+                    trustStore,
+                    conf.crlCheckSoftFail,
+                    maxMessageSize,
+                    conf.enableAMQPPacketTrace)
             connectSubscriber = controlServer.onConnection.subscribe { onConnectToControl(it) }
             receiveSubscriber = controlServer.onReceive.subscribe { onControlMessage(it) }
             amqpControlServer = controlServer
@@ -214,7 +224,7 @@ class FloatControlListenerService(val conf: BridgeConfiguration,
             message.complete(true) // consume message so it isn't resent forever
             return
         }
-        val appProperties = message.applicationProperties.map { Pair(it.key!!.toString(), it.value) }.toList()
+        val appProperties = message.applicationProperties.map { Pair(it.key, it.value) }.toList()
         try {
             val wrappedMessage = FloatDataPacket(message.topic,
                     appProperties,

@@ -10,9 +10,10 @@
 
 package net.corda.client.rpc
 
-import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
+
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.client.rpc.internal.RPCClient
-import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.messaging.CordaRPCOps
@@ -21,7 +22,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.nodeapi.internal.serialization.AMQP_RPC_CLIENT_CONTEXT
 import java.time.Duration
 
 /**
@@ -121,7 +122,9 @@ class CordaRPCClient private constructor(
         private val haAddressPool: List<NetworkHostAndPort> = emptyList()
 ) {
     @JvmOverloads
-    constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) : this(hostAndPort, configuration, null)
+    constructor(hostAndPort: NetworkHostAndPort,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default())
+            : this(hostAndPort, configuration, null)
 
     /**
      * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
@@ -173,7 +176,7 @@ class CordaRPCClient private constructor(
             effectiveSerializationEnv
         } catch (e: IllegalStateException) {
             try {
-                KryoClientSerializationScheme.initialiseSerialization(classLoader)
+                AMQPClientSerializationScheme.initialiseSerialization()
             } catch (e: IllegalStateException) {
                 // Race e.g. two of these constructed in parallel, ignore.
             }
@@ -185,12 +188,12 @@ class CordaRPCClient private constructor(
             RPCClient(
                     tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = sslConfiguration),
                     configuration,
-                    if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT)
+                    if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
         } else {
             RPCClient(haAddressPool,
                     sslConfiguration,
                     configuration,
-                    if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT)
+                    if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
         }
     }
 

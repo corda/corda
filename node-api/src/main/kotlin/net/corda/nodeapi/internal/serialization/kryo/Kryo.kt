@@ -17,7 +17,6 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -28,8 +27,6 @@ import net.corda.core.serialization.SerializationContext.UseCase.Checkpoint
 import net.corda.core.serialization.SerializationContext.UseCase.Storage
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.toFuture
-import net.corda.core.toObservable
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
@@ -38,7 +35,6 @@ import net.corda.nodeapi.internal.serialization.CordaClassResolver
 import net.corda.nodeapi.internal.serialization.serializationContextKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import rx.Observable
 import java.io.InputStream
 import java.lang.reflect.InvocationTargetException
 import java.security.PrivateKey
@@ -57,39 +53,16 @@ import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaType
 
 /**
- * Serialization utilities, using the Kryo framework with a custom serialiser for immutable data classes and a dead
- * simple, totally non-extensible binary (sub)format.
- *
- * This is NOT what should be used in any final platform product, rather, the final state should be a precisely
- * specified and standardised binary format with attention paid to anti-malleability, versioning and performance.
- * FIX SBE is a potential candidate: it prioritises performance over convenience and was designed for HFT. Google
- * Protocol Buffers with a minor tightening to make field reordering illegal is another possibility.
- *
- * FIX SBE:
- *     https://real-logic.github.io/simple-binary-encoding/
- *     http://mechanical-sympathy.blogspot.co.at/2014/05/simple-binary-encoding.html
- * Protocol buffers:
- *     https://developers.google.com/protocol-buffers/
- *
- * But for now we use Kryo to maximise prototyping speed.
- *
- * Note that this code ignores *ALL* concerns beyond convenience, in particular it ignores:
- *
- * - Performance
- * - Security
- *
- * This code will happily deserialise literally anything, including malicious streams that would reconstruct classes
- * in invalid states, thus violating system invariants. It isn't designed to handle malicious streams and therefore,
- * isn't usable beyond the prototyping stage. But that's fine: we can revisit serialisation technologies later after
- * a formal evaluation process.
- *
- * We now distinguish between internal, storage related Kryo and external, network facing Kryo.  We presently use
- * some non-whitelisted classes as part of internal storage.
- * TODO: eliminate internal, storage related whitelist issues, such as private keys in blob storage.
+ * Serialization utilities, using the Kryo framework with a custom serializer for immutable data classes and a dead
+ * simple, totally non-extensible binary (sub)format. Used exclusively within Corda for checkpointing flows as
+ * it will happily deserialise literally anything, including malicious streams that would reconstruct classes
+ * in invalid states and thus violating system invariants. In the context of checkpointing a Java stack, this is
+ * absolutely the functionality we desire, for a stable binary wire format and persistence technology, we have
+ * the AMQP implementation.
  */
 
 /**
- * A serialiser that avoids writing the wrapper class to the byte stream, thus ensuring [SerializedBytes] is a pure
+ * A serializer that avoids writing the wrapper class to the byte stream, thus ensuring [SerializedBytes] is a pure
  * type safety hack.
  */
 object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
@@ -402,44 +375,6 @@ open class CordaKryo(classResolver: ClassResolver) : Kryo(classResolver, MapRefe
         } finally {
             (classResolver as? CordaClassResolver)?.enableWhitelist()
         }
-    }
-}
-
-/**
- * The Kryo used for the RPC wire protocol.
- */
-// Every type in the wire protocol is listed here explicitly.
-// This is annoying to write out, but will make it easier to formalise the wire protocol when the time comes,
-// because we can see everything we're using in one place.
-class RPCKryo(observableSerializer: Serializer<Observable<*>>, serializationContext: SerializationContext) : CordaKryo(CordaClassResolver(serializationContext)) {
-    init {
-        DefaultKryoCustomizer.customize(this)
-
-        // RPC specific classes
-        register(InputStream::class.java, InputStreamSerializer)
-        register(Observable::class.java, observableSerializer)
-        register(CordaFuture::class,
-                read = { kryo, input -> observableSerializer.read(kryo, input, Observable::class.java).toFuture() },
-                write = { kryo, output, obj -> observableSerializer.write(kryo, output, obj.toObservable()) }
-        )
-    }
-
-    override fun getRegistration(type: Class<*>): Registration {
-        if (Observable::class.java != type && Observable::class.java.isAssignableFrom(type)) {
-            return super.getRegistration(Observable::class.java)
-        }
-        if (InputStream::class.java != type && InputStream::class.java.isAssignableFrom(type)) {
-            return super.getRegistration(InputStream::class.java)
-        }
-        if (CordaFuture::class.java != type && CordaFuture::class.java.isAssignableFrom(type)) {
-            return super.getRegistration(CordaFuture::class.java)
-        }
-        type.requireExternal("RPC not allowed to deserialise internal classes")
-        return super.getRegistration(type)
-    }
-
-    private fun Class<*>.requireExternal(msg: String) {
-        require(!name.startsWith("net.corda.node.") && ".internal" !in name) { "$msg: $name" }
     }
 }
 
