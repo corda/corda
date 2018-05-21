@@ -21,14 +21,6 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
             indexes = arrayOf(Index(name = "ccy_code_index2", columnList = "ccy_code"),
                     Index(name = "maturity_index2", columnList = "maturity_instant")))
     class PersistentCommercialPaperState(
-
-            @ElementCollection
-            @Column(name = "participants")
-            @CollectionTable(name="cp_states_v2_participants", joinColumns = arrayOf(
-                    JoinColumn(name = "output_index", referencedColumnName = "output_index"),
-                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
-            override var participants: MutableSet<AbstractParty>? = null,
-
             @Column(name = "maturity_instant")
             var maturity: Instant,
 
@@ -42,17 +34,18 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
             @Type(type = "corda-wrapper-binary")
             var faceValueIssuerRef: ByteArray,
 
-            /** parent attributes */
-            @Transient
-            val _participants: Set<AbstractParty>,
-            @Transient
-            val _owner: AbstractParty,
-            @Transient
-            // face value
-            val _quantity: Long,
-            @Transient
-            val _issuerParty: AbstractParty,
-            @Transient
-            val _issuerRef: OpaqueBytes
-    ) : CommonSchemaV1.FungibleState(_participants.toMutableSet(), _owner, _quantity, _issuerParty, _issuerRef.bytes)
+            participants: Set<AbstractParty>,
+            owner: AbstractParty,
+            quantity: Long,
+            issuerParty: AbstractParty,
+            issuerRef: OpaqueBytes
+    ) : CommonSchemaV1.FungibleState(participants.toMutableSet(), owner, quantity, issuerParty, issuerRef.bytes) {
+
+        @ElementCollection
+        @Column(name = "participants")
+        @CollectionTable(name="cp_states_v2_participants", joinColumns = arrayOf(
+                JoinColumn(name = "output_index", referencedColumnName = "output_index"),
+                JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
+        override var participants: MutableSet<AbstractParty>? = null
+    }
 }
