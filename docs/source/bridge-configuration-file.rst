@@ -105,6 +105,8 @@ absolute path to the bridge's base directory.
 
         :trustStoreFile: The path to the TrustStore file to use in outgoing ``TLS/AMQP 1.0`` connections.
 
+        :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL provider is unavailable.
+
    :socksProxyConfig:  This section is optionally present if outgoing peer connections should go via a SOCKS4, or SOCKS5 proxy:
 
         :version: Either SOCKS4, or SOCKS5 to define the protocol version used in connecting to the SOCKS proxy.
@@ -131,6 +133,8 @@ absolute path to the bridge's base directory.
 
         :trustStoreFile: The path to the TrustStore file to use in inbound ``TLS/AMQP 1.0`` connections.
 
+        :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL provider is unavailable.
+
 :bridgeInnerConfig:  This section is required for ``BridgeInner`` mode and configures the tunnel connection to the ``FloatOuter`` (s) in the DMZ. The section should be absent in ``SenderReceiver`` and ``FloatOuter`` modes:
 
         :floatAddresses: The list of host and ports to connect the available ``FloatOuter`` instances. At least one must be present.
@@ -149,6 +153,8 @@ absolute path to the bridge's base directory.
             :sslKeystore: The path to the KeyStore file to use in control tunnel connections.
 
             :trustStoreFile: The path to the TrustStore file to use in control tunnel connections.
+
+            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL provider is unavailable.
             
         :customFloatOuterSSLConfiguration: The keys and certificates for the ``FloatOuter`` are provisioned dynamically from the ``BridgeInner`` over the control tunnel and are not loaded from disk in the DMZ.
             By default, they are taken from (``<workspace>/certificates/sslkeystore.jks``)
@@ -161,6 +167,8 @@ absolute path to the bridge's base directory.
             :sslKeystore: The path to the KeyStore file to use in the ``FloatOuter`` when it activates the peer listening socket.
 
             :trustStoreFile: The path to the TrustStore file to use in the ``FloatOuter`` when it activates the peer listening socket.
+
+            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL provider is unavailable.
 
 :floatOuterConfig:   This section is required for ``FloatOuter`` mode and configures the control tunnel listening socket. It should be absent for ``SenderReceiver`` and ``BridgeInner`` modes:
 
@@ -179,6 +187,8 @@ absolute path to the bridge's base directory.
             :sslKeystore: The path to the KeyStore file to use in control tunnel connections.
 
             :trustStoreFile: The path to the TrustStore file to use in control tunnel connections.
+
+            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL provider is unavailable.
             
 :haConfig: Optionally the ``SenderReceiver`` and ``BridgeInner`` modes can be run in a hot-warm configuration, which determines the active instance using an external master election service.
     Currently, only Zookeeper can be used as master elector. Eventually other electors may be supported e.g. ``etcd``. This configuration section controls these options:
@@ -199,6 +209,9 @@ absolute path to the bridge's base directory.
     Subsequent retries will take be exponentially backed off until they reach [artemisReconnectionIntervalMax] ms.
 
 :artemisReconnectionIntervalMax: The worst case Artemis retry period after repeated failure to connect is [artemisReconnectionIntervalMax] ms. The default interval is 60000 ms.
+
+:p2pConfirmationWindowSize: This is a performance tuning detail within the Artemis connection setup, which controls the send acknowledgement behaviour.
+    Its value should only be modified from the default if suggested by R3 to resolve issues.
 
 :enableAMQPPacketTrace: Set this developer flag to true if very detailed logs are required for connectivity debugging. Note that the logging volume is substantial, so do not enable in production systems.
 
@@ -372,6 +385,7 @@ Configuration in ``bridge.conf`` for ``bridgeserver1``:
                trustStorePassword = "trustpass"
                sslKeystore = "./bridgecerts/bridge.jks"
                trustStoreFile = "./bridgecerts/trust.jks"
+               crlCheckSoftFail = true
         }
     }
     haConfig { // Enable HA pointing at Zookeeper cluster for master selection.
@@ -402,6 +416,7 @@ Configuration in ``bridge.conf`` for ``bridgeserver2``:
                trustStorePassword = "trustpass"
                sslKeystore = "./bridgecerts/bridge.jks"
                trustStoreFile = "./bridgecerts/trust.jks"
+               crlCheckSoftFail = true
         }
     }
     haConfig { // Enable HA pointing at Zookeeper cluster for master selection.
@@ -426,6 +441,7 @@ Configuration in ``bridge.conf`` for ``floatserver1``:
                trustStorePassword = "trustpass"
                sslKeystore = "./floatcerts/float.jks"
                trustStoreFile = "./floatcerts/trust.jks"
+               crlCheckSoftFail = true
         }
     }
     networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node after registration and here is expected in the workspace folder.
@@ -446,6 +462,7 @@ Configuration in ``bridge.conf`` for ``floatserver2``:
                trustStorePassword = "trustpass"
                sslKeystore = "./floatcerts/float.jks"
                trustStoreFile = "./floatcerts/trust.jks"
+               crlCheckSoftFail = true
         }
     }
     networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node after registration and here is expected in the workspace folder.
