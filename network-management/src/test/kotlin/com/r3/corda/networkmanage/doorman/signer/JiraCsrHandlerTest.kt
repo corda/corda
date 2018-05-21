@@ -14,6 +14,7 @@ import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.networkmanage.TestBase
 import com.r3.corda.networkmanage.common.persistence.*
 import com.r3.corda.networkmanage.doorman.ApprovedRequest
+import com.r3.corda.networkmanage.doorman.CertificationRequestData
 import com.r3.corda.networkmanage.doorman.CsrJiraClient
 import com.r3.corda.networkmanage.doorman.RejectedRequest
 import net.corda.core.crypto.Crypto
@@ -66,7 +67,7 @@ class JiraCsrHandlerTest : TestBase() {
     fun `If jira connection fails we don't mark the ticket as created`() {
         whenever(defaultCsrHandler.saveRequest(any())).thenReturn(requestId)
         whenever(defaultCsrHandler.getResponse(requestId)).thenReturn(certificateResponse)
-        whenever(jiraClient.createCertificateSigningRequestTicket(eq(requestId), any())).thenThrow(IllegalStateException("something broke"))
+        whenever(jiraClient.createCertificateSigningRequestTicket(any())).thenThrow(IllegalStateException("something broke"))
 
         // Test
         jiraCsrHandler.saveRequest(pkcS10CertificationRequest)
@@ -93,11 +94,10 @@ class JiraCsrHandlerTest : TestBase() {
                 status = RequestStatus.NEW,
                 request = pkcS10CertificationRequest)
         whenever(certificationRequestStorage.getRequests(RequestStatus.NEW)).thenReturn(listOf(csr))
-
         // Test
         jiraCsrHandler.processRequests()
 
-        verify(jiraClient).createCertificateSigningRequestTicket(requestId, csr.request)
+        verify(jiraClient).createCertificateSigningRequestTicket(CertificationRequestData(requestId, csr.request))
         verify(certificationRequestStorage).markRequestTicketCreated(requestId)
     }
 
@@ -133,8 +133,8 @@ class JiraCsrHandlerTest : TestBase() {
         // Test.
         jiraCsrHandler.processRequests()
 
-        verify(jiraClient).createCertificateSigningRequestTicket(id1, csr1.request)
-        verify(jiraClient).createCertificateSigningRequestTicket(id2, csr2.request)
+        verify(jiraClient).createCertificateSigningRequestTicket(CertificationRequestData(id1, csr1.request))
+        verify(jiraClient).createCertificateSigningRequestTicket(CertificationRequestData(id2, csr2.request))
 
         verify(certificationRequestStorage).markRequestTicketCreated(id1)
         verify(certificationRequestStorage).markRequestTicketCreated(id2)
@@ -145,7 +145,7 @@ class JiraCsrHandlerTest : TestBase() {
 
         // Verify jira client get the correct call.
         verify(jiraClient).updateRejectedRequest(id2)
-        verify(jiraClient, never()).updateDoneCertificateSigningRequest(any(), any())
+        verify(jiraClient, never()).transitRequestStatusToDone(any(), anyOrNull())
 
         // Sign request 1
         val certPath = mock<CertPath>()
@@ -156,6 +156,6 @@ class JiraCsrHandlerTest : TestBase() {
         jiraCsrHandler.processRequests()
 
         // Update signed request should be called.
-        verify(jiraClient).updateDoneCertificateSigningRequest(id1, certPath)
+        verify(jiraClient).transitRequestStatusToDone(eq(id1), anyOrNull())
     }
 }

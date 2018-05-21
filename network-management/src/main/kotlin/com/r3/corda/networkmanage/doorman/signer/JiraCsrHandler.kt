@@ -14,11 +14,9 @@ import com.r3.corda.networkmanage.common.persistence.CertificateResponse
 import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequest
 import com.r3.corda.networkmanage.common.persistence.CertificateSigningRequestStorage
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
-import com.r3.corda.networkmanage.doorman.ApprovedRequest
-import com.r3.corda.networkmanage.doorman.CsrJiraClient
-import com.r3.corda.networkmanage.doorman.RejectedRequest
-import com.r3.corda.networkmanage.doorman.forEachWithExceptionLogging
+import com.r3.corda.networkmanage.doorman.*
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 
 class JiraCsrHandler(private val jiraClient: CsrJiraClient, private val storage: CertificateSigningRequestStorage, private val delegate: CsrHandler) : CsrHandler by delegate {
@@ -31,7 +29,7 @@ class JiraCsrHandler(private val jiraClient: CsrJiraClient, private val storage:
         // Make sure request has been accepted.
         try {
             if (delegate.getResponse(requestId) !is CertificateResponse.Unauthorised) {
-                jiraClient.createCertificateSigningRequestTicket(requestId, rawRequest)
+                jiraClient.createCertificateSigningRequestTicket(CertificationRequestData(requestId, rawRequest))
                 storage.markRequestTicketCreated(requestId)
             }
         } catch (e: Exception) {
@@ -66,7 +64,10 @@ class JiraCsrHandler(private val jiraClient: CsrJiraClient, private val storage:
         approvedRequest.mapNotNull { storage.getRequest(it.requestId) }
                 .filter { it.status == RequestStatus.DONE && it.certData != null }
                 .forEachWithExceptionLogging(logger) {
-                    jiraClient.updateDoneCertificateSigningRequest(it.requestId, it.certData!!.certPath)
+                    val attachment = it.certData?.certPath?.certificates?.firstOrNull()?.let {
+                        Pair("${X509Utilities.CORDA_CLIENT_CA}.cer", it.encoded.inputStream())
+                    }
+                    jiraClient.transitRequestStatusToDone(it.requestId, attachment)
                 }
         rejectedRequest.mapNotNull { storage.getRequest(it.requestId) }
                 .filter { it.status == RequestStatus.REJECTED }
@@ -88,7 +89,7 @@ class JiraCsrHandler(private val jiraClient: CsrJiraClient, private val storage:
     }
 
     private fun createTicket(signingRequest: CertificateSigningRequest) {
-        jiraClient.createCertificateSigningRequestTicket(signingRequest.requestId, signingRequest.request)
+        jiraClient.createCertificateSigningRequestTicket(CertificationRequestData(signingRequest.requestId, signingRequest.request))
         storage.markRequestTicketCreated(signingRequest.requestId)
     }
 }

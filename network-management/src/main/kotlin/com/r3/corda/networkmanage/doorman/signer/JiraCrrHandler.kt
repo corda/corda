@@ -13,10 +13,7 @@ package com.r3.corda.networkmanage.doorman.signer
 import com.r3.corda.networkmanage.common.persistence.CertificateRevocationRequestData
 import com.r3.corda.networkmanage.common.persistence.CertificateRevocationRequestStorage
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
-import com.r3.corda.networkmanage.doorman.ApprovedRequest
-import com.r3.corda.networkmanage.doorman.CrrJiraClient
-import com.r3.corda.networkmanage.doorman.RejectedRequest
-import com.r3.corda.networkmanage.doorman.forEachWithExceptionLogging
+import com.r3.corda.networkmanage.doorman.*
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.CertificateRevocationRequest
 
@@ -62,7 +59,7 @@ class JiraCrrHandler(private val jiraClient: CrrJiraClient,
         logger.debug("Updating JIRA tickets: `approved` = $approvedRequest, `rejected` = $rejectedRequest")
         approvedRequest.mapNotNull { crrStorage.getRevocationRequest(it.requestId) }
                 .filter { it.status == RequestStatus.DONE }
-                .forEachWithExceptionLogging(logger) { jiraClient.updateDoneCertificateRevocationRequest(it.requestId) }
+                .forEachWithExceptionLogging(logger) { jiraClient.transitRequestStatusToDone(it.requestId) }
         rejectedRequest.mapNotNull { crrStorage.getRevocationRequest(it.requestId) }
                 .filter { it.status == RequestStatus.REJECTED }
                 .forEachWithExceptionLogging(logger) { jiraClient.updateRejectedRequest(it.requestId) }

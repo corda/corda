@@ -34,7 +34,7 @@ class CsrJiraClientTest {
     @Test
     fun createRequestTicket() {
         val request = X509Utilities.createCertificateSigningRequest(CordaX500Name("JiraAPITest", "R3 Ltd 3", "London", "GB").x500Principal, "test@test.com", Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
-        jiraClient.createCertificateSigningRequestTicket(SecureHash.randomSHA256().toString(), request)
+        jiraClient.createCertificateSigningRequestTicket(CertificationRequestData(SecureHash.randomSHA256().toString(), request))
     }
 
     @Test
@@ -54,7 +54,8 @@ class CsrJiraClientTest {
                 X500Principal("O=test,L=london,C=GB"),
                 Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)))
         jiraClient.getApprovedRequests().forEach {
-            jiraClient.updateDoneCertificateSigningRequest(it.requestId, selfSignedCaCertPath)
+            val attachment = Pair("${X509Utilities.CORDA_CLIENT_CA}.cer", selfSignedCaCertPath.certificates.first().encoded.inputStream())
+            jiraClient.transitRequestStatusToDone(it.requestId, attachment)
         }
     }
 
