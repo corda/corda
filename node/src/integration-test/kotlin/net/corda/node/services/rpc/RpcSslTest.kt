@@ -137,7 +137,7 @@ class RpcSslTest {
                 clientAdmin.start(NODE_RPC_USER, NODE_RPC_USER).use { connection ->
                     connection.proxy.nodeInfo()
                 }
-            }.isInstanceOf(ActiveMQException::class.java)
+            }.isInstanceOf(RPCException::class.java)
         }
     }
 
