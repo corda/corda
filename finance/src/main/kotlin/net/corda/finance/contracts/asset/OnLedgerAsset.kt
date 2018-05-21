@@ -162,7 +162,7 @@ abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>>
                         delta > 0 -> {
                             // The states from the current issuer more than covers this payment.
                             outputStates += deriveState(templateState, Amount(remainingToPay, token), party)
-                            remainingFromEachIssuer[0] = Pair(token, Amount(delta, token))
+                            remainingFromEachIssuer[remainingFromEachIssuer.lastIndex] = Pair(token, Amount(delta, token))
                             remainingToPay = 0
                         }
                         delta == 0L -> {

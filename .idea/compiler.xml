@@ -141,6 +141,8 @@
       <module name="samples_test" target="1.8" />
       <module name="sandbox_main" target="1.8" />
       <module name="sandbox_test" target="1.8" />
+      <module name="serialization_main" target="1.8" />
+      <module name="serialization_test" target="1.8" />
       <module name="shell_integrationTest" target="1.8" />
       <module name="shell_main" target="1.8" />
       <module name="shell_test" target="1.8" />

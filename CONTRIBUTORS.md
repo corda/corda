@@ -1,11 +1,11 @@
 # List of Contributors
 
-We'd like to thank the following people for contributing to Corda, either by 
-contributing to the design of Corda during the architecture review sessions of the 
-R3 Architecture Working Group and during design reviews since Corda has been 
-open-sourced, or by contributing code via pull requests. Some people have 
-moved to a different organisation since their contribution. Please forgive any 
-omissions, and create a pull request, or email <james@r3.com>, if you wish to 
+We'd like to thank the following people for contributing to Corda, either by
+contributing to the design of Corda during the architecture review sessions of the
+R3 Architecture Working Group and during design reviews since Corda has been
+open-sourced, or by contributing code via pull requests. Some people have
+moved to a different organisation since their contribution. Please forgive any
+omissions, and create a pull request, or email <james@r3.com>, if you wish to
 see changes to this list.
 
 * acetheultimate
@@ -164,6 +164,7 @@ see changes to this list.
 * Simon Taylor (Barclays)
 * Sofus Mortensen (Digital Asset Holdings)
 * stevenroose
+* Stanly Johnson (Servntire Global)
 * Szymon Sztuka (R3)
 * tb-pq
 * Thiago Rafael Ferreira (Scorpius IT Solutions)
@@ -175,7 +176,7 @@ see changes to this list.
 * tomconte
 * Tommy Lillehagen (R3)
 * tomtau
-* Tudor Malene (R3) 
+* Tudor Malene (R3)
 * Tushar Singh Bora
 * varunkm
 * verymahler

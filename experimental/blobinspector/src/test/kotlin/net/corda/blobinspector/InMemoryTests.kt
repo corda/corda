@@ -1,10 +1,10 @@
 package net.corda.blobinspector
 
 import net.corda.core.serialization.SerializedBytes
-import net.corda.nodeapi.internal.serialization.AllWhitelist
-import net.corda.nodeapi.internal.serialization.amqp.SerializationOutput
-import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
-import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.SerializationOutput
+import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import org.junit.Test
 
 

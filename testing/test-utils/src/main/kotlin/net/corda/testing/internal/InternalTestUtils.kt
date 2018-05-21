@@ -24,7 +24,7 @@ import net.corda.nodeapi.internal.createDevNodeCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.serialization.amqp.AMQP_ENABLED
+import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import java.nio.file.Files
 import java.security.KeyPair
 import javax.security.auth.x500.X500Principal

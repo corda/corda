@@ -1,9 +1,9 @@
 package net.corda.node.internal.serialization.testutils
 
 import net.corda.core.serialization.SerializationContext
-import net.corda.nodeapi.internal.serialization.AllWhitelist
-import net.corda.nodeapi.internal.serialization.SerializationContextImpl
-import net.corda.nodeapi.internal.serialization.amqp.amqpMagic
+import net.corda.serialization.internal.SerializationContextImpl
+import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.AllWhitelist
 
 val serializationProperties: MutableMap<Any, Any> = mutableMapOf()
 

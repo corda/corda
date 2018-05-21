@@ -142,6 +142,41 @@ class ProgressTrackerTest {
     }
 
     @Test
+    fun `steps tree index counts two levels of children steps`() {
+        pt.setChildProgressTracker(SimpleSteps.FOUR, pt2)
+        pt2.setChildProgressTracker(ChildSteps.SEA, pt3)
+        val allSteps = pt.allSteps
+
+        // Capture notifications.
+        val stepsIndexNotifications = LinkedList<Int>()
+        pt.stepsTreeIndexChanges.subscribe {
+            stepsIndexNotifications += it
+        }
+        val stepsTreeNotification = LinkedList<List<Pair<Int, String>>>()
+        pt.stepsTreeChanges.subscribe {
+            stepsTreeNotification += it
+        }
+
+        fun assertCurrentStepsTree(index: Int, step: ProgressTracker.Step) {
+            assertEquals(index, pt.stepsTreeIndex)
+            assertEquals(step, allSteps[pt.stepsTreeIndex].second)
+        }
+
+        pt.currentStep = SimpleSteps.ONE
+        assertCurrentStepsTree(0, SimpleSteps.ONE)
+
+        pt.currentStep = SimpleSteps.FOUR
+        assertCurrentStepsTree(3, SimpleSteps.FOUR)
+
+        pt2.currentStep = ChildSteps.SEA
+        assertCurrentStepsTree(6, ChildSteps.SEA)
+
+        // Assert no structure changes and proper steps propagation.
+        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(0, 3, 6))
+        assertThat(stepsTreeNotification).isEmpty()
+    }
+    
+    @Test
     fun `structure changes are pushed down when progress trackers are added`() {
         pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
 

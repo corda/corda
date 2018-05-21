@@ -31,7 +31,7 @@
             <PatternLayout pattern="%msg%n" />
         </Console>
 
-        <!-- Will generate up to 10 log files for a given day. During every rollover it will delete
+        <!-- Will generate up to 100 log files for a given day. During every rollover it will delete
              those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingFile name="RollingFile-Appender"
                      fileName="${sys:log-path}/${log-name}.log"
@@ -44,7 +44,7 @@
                 <SizeBasedTriggeringPolicy size="10MB"/>
             </Policies>
 
-            <DefaultRolloverStrategy min="1" max="10">
+            <DefaultRolloverStrategy min="1" max="100">
                 <Delete basePath="${archive}" maxDepth="1">
                     <IfFileName glob="${log-name}*.log.gz"/>
                     <IfLastModified age="60d">

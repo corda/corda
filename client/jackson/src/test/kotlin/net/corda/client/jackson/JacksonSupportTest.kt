@@ -415,6 +415,15 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         testToStringSerialisation(X500Principal("CN=Common,L=London,O=Org,C=UK"))
     }
 
+    @Test
+    fun `@CordaSerializable class which has non-c'tor properties`() {
+        val data = NonCtorPropertiesData(4434)
+        val json = mapper.valueToTree<ObjectNode>(data)
+        val (value) = json.assertHasOnlyFields("value")
+        assertThat(value.intValue()).isEqualTo(4434)
+        assertThat(mapper.convertValue<NonCtorPropertiesData>(json)).isEqualTo(data)
+    }
+
     private fun makeDummyStx(): SignedTransaction {
         val wtx = DummyContract.generateInitial(1, DUMMY_NOTARY, MINI_CORP.ref(1))
                 .toWireTransaction(services)
@@ -441,6 +450,12 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @CordaSerializable
     private data class SubTestData(val value: Int)
+
+    @CordaSerializable
+    private data class NonCtorPropertiesData(val value: Int) {
+        @Suppress("unused")
+        val nonCtor: Int get() = value
+    }
 
     private class TestPartyObjectMapper : JacksonSupport.PartyObjectMapper {
         val identities = ArrayList<Party>()
