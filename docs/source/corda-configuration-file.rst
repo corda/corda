@@ -335,3 +335,13 @@ path to the node's base directory.
             ``foo.bar.FlowClass``, add the string ``StartFlow.foo.bar.FlowClass`` to the list. If the list
             contains the string ``ALL``, the user can start any flow via RPC. This value is intended for administrator
             users and for development.
+
+Fields Override
+---------------
+JVM options or environmental variables prefixed ``corda.`` can override ``node.conf`` fields.
+Provided system properties also can set value for absent fields in ``node.conf``.
+Example adding/overriding keyStore password when starting Corda node:
+
+.. sourcecode:: shell
+
+    java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar

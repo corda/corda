@@ -23,10 +23,11 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.*
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransportsFromList
-import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
 import net.corda.nodeapi.RPCApi
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -68,6 +69,9 @@ data class CordaRPCClientConfigurationImpl(
     }
 }
 
+/**
+ * This runs on the client JVM
+ */
 class RPCClient<I : RPCOps>(
         val transport: TransportConfiguration,
         val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
@@ -76,18 +80,25 @@ class RPCClient<I : RPCOps>(
 ) {
     constructor(
             hostAndPort: NetworkHostAndPort,
-            sslConfiguration: SSLConfiguration? = null,
+            sslConfiguration: ClientRpcSslOptions? = null,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
-    ) : this(tcpTransport(ConnectionDirection.Outbound(), hostAndPort, sslConfiguration), configuration, serializationContext)
+    ) : this(rpcConnectorTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
+
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            sslConfiguration: SSLConfiguration,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+            serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
+    ) : this(rpcInternalClientTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
 
     constructor(
             haAddressPool: List<NetworkHostAndPort>,
-            sslConfiguration: SSLConfiguration? = null,
+            sslConfiguration: ClientRpcSslOptions? = null,
             configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
-    ) : this(tcpTransport(ConnectionDirection.Outbound(), haAddressPool.first(), sslConfiguration),
-            configuration, serializationContext, tcpTransportsFromList(ConnectionDirection.Outbound(), haAddressPool, sslConfiguration))
+    ) : this(rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration),
+            configuration, serializationContext, rpcConnectorTcpTransportsFromList(haAddressPool, sslConfiguration))
 
     companion object {
         private val log = contextLogger()

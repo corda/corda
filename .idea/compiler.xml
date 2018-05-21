@@ -162,6 +162,8 @@
       <module name="node-driver_integrationTest" target="1.8" />
       <module name="node-driver_main" target="1.8" />
       <module name="node-driver_test" target="1.8" />
+      <module name="node-schemas_main" target="1.8" />
+      <module name="node-schemas_test" target="1.8" />
       <module name="node_integrationTest" target="1.8" />
       <module name="node_main" target="1.8" />
       <module name="node_smokeTest" target="1.8" />
