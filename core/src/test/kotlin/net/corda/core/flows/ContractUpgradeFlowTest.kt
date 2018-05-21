@@ -19,7 +19,6 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.core.ALICE_NAME
@@ -153,7 +152,7 @@ class ContractUpgradeFlowTest {
                     DummyContractV2::class.java).returnValue
 
             mockNet.runNetwork()
-            assertFailsWith(InternalNodeException::class) { rejectedFuture.getOrThrow() }
+            assertFailsWith(UnexpectedFlowEndException::class) { rejectedFuture.getOrThrow() }
 
             // Party B authorise the contract state upgrade, and immediately deauthorise the same.
             rpcB.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Authorise(stateAndRef, upgrade) },
@@ -168,7 +167,7 @@ class ContractUpgradeFlowTest {
                     DummyContractV2::class.java).returnValue
 
             mockNet.runNetwork()
-            assertFailsWith(InternalNodeException::class) { deauthorisedFuture.getOrThrow() }
+            assertFailsWith(UnexpectedFlowEndException::class) { deauthorisedFuture.getOrThrow() }
 
             // Party B authorise the contract state upgrade.
             rpcB.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Authorise(stateAndRef, upgrade) },

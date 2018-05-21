@@ -12,7 +12,6 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
@@ -33,7 +32,7 @@ class BootTests {
             val future = CordaRPCClient(startNode(rpcUsers = listOf(user)).getOrThrow().rpcAddress).
                     start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
             assertThatThrownBy { future.getOrThrow() }
-                    .isInstanceOf(InternalNodeException::class.java)
+                    .isInstanceOf(CordaRuntimeException::class.java)
         }
     }
 

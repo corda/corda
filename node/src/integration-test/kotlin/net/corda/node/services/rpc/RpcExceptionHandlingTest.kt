@@ -2,18 +2,13 @@ package net.corda.node.services.rpc
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.ClientRelevantException
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.CordaRuntimeException
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
@@ -38,11 +33,10 @@ class RpcExceptionHandlingTest {
 
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
 
-            assertThatThrownBy { node.rpc.startFlow(::Flow).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+            assertThatThrownBy { node.rpc.startFlow(::Flow).returnValue.getOrThrow() }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
-                assertThat(exception.message).isEqualTo(InternalNodeException.message)
             }
         }
     }
@@ -54,7 +48,7 @@ class RpcExceptionHandlingTest {
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
             val clientRelevantMessage = "This is for the players!"
 
-            assertThatThrownBy { node.rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow() }.isInstanceOfSatisfying(ClientRelevantException::class.java) { exception ->
+            assertThatThrownBy { node.rpc.startFlow(::ClientRelevantErrorFlow, clientRelevantMessage).returnValue.getOrThrow() }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
@@ -64,17 +58,16 @@ class RpcExceptionHandlingTest {
     }
 
     @Test
-    fun `FlowException is converted to InternalNodeException`() {
+    fun `FlowException is received by the RPC client`() {
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val node = startNode(NodeParameters(rpcUsers = users)).getOrThrow()
             val exceptionMessage = "Flow error!"
-            val expectedErrorId = 123L
-            assertThatThrownBy { node.rpc.startFlow(::FlowExceptionFlow, exceptionMessage, expectedErrorId).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
-
-                assertThat(exception).hasNoCause()
-                assertThat(exception.stackTrace).isEmpty()
-                assertThat(exception.errorId).isEqualTo(expectedErrorId)
-            }
+            assertThatThrownBy { node.rpc.startFlow(::FlowExceptionFlow, exceptionMessage).returnValue.getOrThrow() }
+                    .isInstanceOfSatisfying(FlowException::class.java) { exception ->
+                        assertThat(exception).hasNoCause()
+                        assertThat(exception.stackTrace).isEmpty()
+                        assertThat(exception.message).isEqualTo(exceptionMessage)
+                    }
         }
     }
 
@@ -85,11 +78,10 @@ class RpcExceptionHandlingTest {
             val nodeA = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = users)).getOrThrow()
             val nodeB = startNode(NodeParameters(providedName = BOB_NAME, rpcUsers = users)).getOrThrow()
 
-            assertThatThrownBy { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }.isInstanceOfSatisfying(InternalNodeException::class.java) { exception ->
+            assertThatThrownBy { nodeA.rpc.startFlow(::InitFlow, nodeB.nodeInfo.singleIdentity()).returnValue.getOrThrow() }.isInstanceOfSatisfying(CordaRuntimeException::class.java) { exception ->
 
                 assertThat(exception).hasNoCause()
                 assertThat(exception.stackTrace).isEmpty()
-                assertThat(exception.message).isEqualTo(InternalNodeException.message)
             }
         }
     }
@@ -129,11 +121,7 @@ class ClientRelevantErrorFlow(private val message: String) : FlowLogic<String>()
 }
 
 @StartableByRPC
-class FlowExceptionFlow(private val message: String, private val errorId: Long? = null) : FlowLogic<String>() {
+class FlowExceptionFlow(private val message: String) : FlowLogic<String>() {
     @Suspendable
-    override fun call(): String {
-        val exception = FlowException(message)
-        errorId?.let { exception.originalErrorId = it }
-        throw exception
-    }
+    override fun call(): String = throw FlowException(message)
 }
