@@ -71,8 +71,8 @@ Allowed parameters are:
         :caCrlPath: Path (including the file name) to the location of the file containing the bytes of the CRL issued by the ROOT CA.
                     Note: Byte encoding is the one given by the package java.security.cert.X509CRL.encoded method - i.e. ASN.1 DER
 
-            :emptyCrlPath: Path (including the file name) to the location of the generated file containing the bytes of the empty CRL issued by the ROOT CA.
-                           Note: Byte encoding is the one given by the package java.security.cert.X509CRL.encoded method - i.e. ASN.1 DER
+        :emptyCrlPath: Path (including the file name) to the location of the generated file containing the bytes of the empty CRL issued by the ROOT CA.
+                       Note: Byte encoding is the one given by the package java.security.cert.X509CRL.encoded method - i.e. ASN.1 DER
 
         :jira: The Jira configuration for certificate revocation requests
 
