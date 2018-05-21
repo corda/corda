@@ -6,8 +6,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
-import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.internal.createCordaRPCClientWithSsl
+import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.concurrent.CordaFuture
@@ -149,12 +148,8 @@ class DriverDSLImpl(
     }
 
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
-        val rpcAddress = config.corda.rpcOptions.address!!
-        val client = if (config.corda.rpcOptions.useSsl) {
-            createCordaRPCClientWithSsl(rpcAddress, sslConfiguration = config.corda.rpcOptions.sslConfig)
-        } else {
-            CordaRPCClient(rpcAddress)
-        }
+        val rpcAddress = config.corda.rpcOptions.address
+        val client = createCordaRPCClientWithInternalSslAndClassLoader(config.corda.rpcOptions.adminAddress, sslConfiguration = config.corda)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
@@ -238,9 +233,13 @@ class DriverDSLImpl(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = configOf(
-                        "p2pAddress" to "localhost:1222", // required argument, not really used
+                        "p2pAddress" to portAllocation.nextHostAndPort().toString(),
                         "compatibilityZoneURL" to compatibilityZoneURL.toString(),
                         "myLegalName" to providedName.toString(),
+                        "rpcSettings" to mapOf(
+                                "address" to portAllocation.nextHostAndPort().toString(),
+                                "adminAddress" to portAllocation.nextHostAndPort().toString()
+                        ),
                         "devMode" to false)
         ))
 
@@ -341,17 +340,13 @@ class DriverDSLImpl(
         val rpcAddress = if (cordform.rpcAddress == null) {
             val overrides = mutableMapOf<String, Any>("rpcSettings.address" to portAllocation.nextHostAndPort().toString())
             cordform.config.apply {
-                if (!hasPath("rpcSettings.useSsl") || !getBoolean("rpcSettings.useSsl")) {
-                    overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
-                }
+                overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
             }
             overrides
         } else {
             val overrides = mutableMapOf<String, Any>()
             cordform.config.apply {
-                if ((!hasPath("rpcSettings.useSsl") || !getBoolean("rpcSettings.useSsl")) && !hasPath("rpcSettings.adminAddress")) {
-                    overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
-                }
+                overrides += "rpcSettings.adminAddress" to portAllocation.nextHostAndPort().toString()
             }
             overrides
         }
@@ -837,10 +832,10 @@ class DriverDSLImpl(
 
         private val propertiesInScope = setOf("java.io.tmpdir", AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
 
-        private fun inheritFromParentProcess() : Iterable<Pair<String, String>> {
+        private fun inheritFromParentProcess(): Iterable<Pair<String, String>> {
             return propertiesInScope.flatMap { propName ->
-                val propValue : String? = System.getProperty(propName)
-                if(propValue == null) {
+                val propValue: String? = System.getProperty(propName)
+                if (propValue == null) {
                     emptySet()
                 } else {
                     setOf(Pair(propName, propValue))
@@ -853,7 +848,7 @@ class DriverDSLImpl(
             var config = ConfigFactory.empty()
             config += "webAddress" to webAddress.toString()
             config += "myLegalName" to configuration.myLegalName.toString()
-            config += "rpcAddress" to configuration.rpcOptions.address!!.toString()
+            config += "rpcAddress" to configuration.rpcOptions.address.toString()
             config += "rpcUsers" to configuration.toConfig().getValue("rpcUsers")
             config += "useHTTPS" to useHTTPS
             config += "baseDirectory" to configuration.baseDirectory.toAbsolutePath().toString()

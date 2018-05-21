@@ -6,6 +6,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
@@ -151,7 +152,7 @@ class NodeConfigurationImplTest {
                 adminAddress = NetworkHostAndPort("localhost", 2),
                 standAloneBroker = false,
                 useSsl = false,
-                ssl = SslOptions(baseDirectory / "certificates", keyStorePassword, trustStorePassword, true))
+                ssl = null)
         return NodeConfigurationImpl(
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE_NAME,
@@ -165,7 +166,6 @@ class NodeConfigurationImplTest {
                 messagingServerAddress = null,
                 p2pMessagingRetry = P2PMessagingRetryConfiguration(5.seconds, 3, 1.0),
                 notary = null,
-                certificateChainCheckPolicies = emptyList(),
                 devMode = true,
                 noLocalShell = false,
                 rpcSettings = rpcSettings,

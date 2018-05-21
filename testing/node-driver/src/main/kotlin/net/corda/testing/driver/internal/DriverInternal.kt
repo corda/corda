@@ -24,7 +24,8 @@ interface NodeHandleInternal : NodeHandle {
     val useHTTPS: Boolean
     val webAddress: NetworkHostAndPort
     override val p2pAddress: NetworkHostAndPort get() = configuration.p2pAddress
-    override val rpcAddress: NetworkHostAndPort get() = configuration.rpcOptions.address!!
+    override val rpcAddress: NetworkHostAndPort get() = configuration.rpcOptions.address
+    override val rpcAdminAddress: NetworkHostAndPort get() = configuration.rpcOptions.adminAddress
     override val baseDirectory: Path get() = configuration.baseDirectory
 }
 
