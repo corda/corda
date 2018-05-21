@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -152,7 +153,7 @@ class ContractUpgradeFlowTest {
                     DummyContractV2::class.java).returnValue
 
             mockNet.runNetwork()
-            assertFailsWith(UnexpectedFlowEndException::class) { rejectedFuture.getOrThrow() }
+            assertFailsWith(CordaRuntimeException::class) { rejectedFuture.getOrThrow() }
 
             // Party B authorise the contract state upgrade, and immediately deauthorise the same.
             rpcB.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Authorise(stateAndRef, upgrade) },
@@ -167,7 +168,7 @@ class ContractUpgradeFlowTest {
                     DummyContractV2::class.java).returnValue
 
             mockNet.runNetwork()
-            assertFailsWith(UnexpectedFlowEndException::class) { deauthorisedFuture.getOrThrow() }
+            assertFailsWith(CordaRuntimeException::class) { deauthorisedFuture.getOrThrow() }
 
             // Party B authorise the contract state upgrade.
             rpcB.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Authorise(stateAndRef, upgrade) },
