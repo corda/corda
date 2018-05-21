@@ -17,6 +17,10 @@ import net.corda.node.services.Permissions.Companion.all
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree

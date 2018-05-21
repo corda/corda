@@ -34,7 +34,7 @@ operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.p
 
 object ConfigHelper {
 
-    private const val CORDA_PROPERTY_PREFIX = "corda."
+    const val CORDA_PROPERTY_PREFIX = "corda."
 
     private val log = LoggerFactory.getLogger(javaClass)
     fun loadConfig(baseDirectory: Path,

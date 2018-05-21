@@ -18,7 +18,6 @@ import net.corda.core.internal.ThreadBox
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -72,7 +71,7 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
             log.info("Connecting to message broker: ${outboundConf.artemisBrokerAddress}")
             val brokerAddresses = listOf(outboundConf.artemisBrokerAddress) + outboundConf.alternateArtemisBrokerAddresses
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-            val tcpTransports = brokerAddresses.map { ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), it, sslConfiguration) }
+            val tcpTransports = brokerAddresses.map { ArtemisTcpTransport.p2pConnectorTcpTransport(it, sslConfiguration) }
             locator = ActiveMQClient.createServerLocatorWithoutHA(*tcpTransports.toTypedArray()).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.
@@ -146,8 +145,8 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
                         latch.countDown()
                     }
                 }
-                val newSession = newSessionFactory.createSession(ArtemisMessagingComponent.NODE_USER,
-                        ArtemisMessagingComponent.NODE_USER,
+                val newSession = newSessionFactory.createSession(ArtemisMessagingComponent.NODE_P2P_USER,
+                        ArtemisMessagingComponent.NODE_P2P_USER,
                         false,
                         true,
                         true,

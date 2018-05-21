@@ -46,7 +46,7 @@ class SimpleMessageFilterService(val conf: BridgeConfiguration,
     override fun start() {
         statusSubscriber = statusFollower.activeChange.subscribe {
             if (it) {
-                inboundSession = artemisConnectionService.started!!.sessionFactory.createSession(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
+                inboundSession = artemisConnectionService.started!!.sessionFactory.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
                 inboundProducer = inboundSession!!.createProducer()
             } else {
                 inboundProducer?.close()
