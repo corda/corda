@@ -338,7 +338,7 @@ open class Node(configuration: NodeConfiguration,
         val h2Prefix = "jdbc:h2:file:"
 
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
-            val h2Settings = configuration.h2Settings
+            val h2Settings = configuration.effectiveH2Settings
 
             if(h2Settings != null && h2Settings.address != null) {
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
