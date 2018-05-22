@@ -24,13 +24,13 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.eventually
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.freePort
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import rx.Observable
@@ -334,6 +334,21 @@ class RPCStabilityTests {
 
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
+    }
+
+    @Test
+    fun `client throws RPCException after initial connection attempt fails`() {
+        val client = CordaRPCClient(NetworkHostAndPort("localhost", freePort()))
+        var exceptionMessage: String? = null
+        try {
+           client.start("user", "pass").proxy
+        } catch (e1: RPCException) {
+            exceptionMessage = e1.message
+        } catch (e2: Exception) {
+            fail("Expected RPCException to be thrown. Received ${e2.javaClass.simpleName} instead.")
+        }
+        assertNotNull(exceptionMessage)
+        assertEquals("Cannot connect to server(s). Tried with all available servers.", exceptionMessage)
     }
 
     interface ServerOps : RPCOps {

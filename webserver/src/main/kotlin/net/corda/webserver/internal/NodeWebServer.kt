@@ -13,6 +13,7 @@ package net.corda.webserver.internal
 import com.google.common.html.HtmlEscapers.htmlEscaper
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.RPCException
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.contextLogger
 import net.corda.webserver.WebServerConfig
@@ -23,7 +24,6 @@ import net.corda.webserver.servlets.CorDappInfoServlet
 import net.corda.webserver.servlets.DataUploadServlet
 import net.corda.webserver.servlets.ObjectMapperConfig
 import net.corda.webserver.servlets.ResponseFilter
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.eclipse.jetty.server.Connector
 import org.eclipse.jetty.server.HttpConfiguration
 import org.eclipse.jetty.server.HttpConnectionFactory
@@ -188,7 +188,7 @@ class NodeWebServer(val config: WebServerConfig) {
         while (true) {
             try {
                 return connectLocalRpcAsNodeUser()
-            } catch (e: ActiveMQNotConnectedException) {
+            } catch (e: RPCException) {
                 log.debug("Could not connect to ${config.rpcAddress} due to exception: ", e)
                 Thread.sleep(retryDelay)
                 // This error will happen if the server has yet to create the keystore

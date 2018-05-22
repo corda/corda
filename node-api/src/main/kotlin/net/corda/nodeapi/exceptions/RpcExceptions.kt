@@ -14,6 +14,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.ClientRelevantError
 import net.corda.core.flows.IdentifiableException
+import net.corda.core.serialization.CordaSerializable
 
 /**
  * Thrown to indicate that an attachment was already uploaded to a Corda node.
@@ -57,3 +58,10 @@ class OutdatedNetworkParameterHashException(old: SecureHash, new: SecureHash) : 
  * Thrown to indicate that the command was rejected by the node, typically due to a special temporary mode.
  */
 class RejectedCommandException(message: String) : CordaRuntimeException(message), ClientRelevantError
+
+/**
+ * Allows an implementing [Throwable] to be propagated to RPC clients.
+ */
+@Deprecated("Use ClientRelevantError instead.", replaceWith = ReplaceWith("ClientRelevantError"))
+@CordaSerializable
+interface RpcSerializableError
