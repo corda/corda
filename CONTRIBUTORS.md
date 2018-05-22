@@ -131,8 +131,9 @@ see changes to this list.
 * Nigel King (R3)
 * Nuam Athaweth (MUFG)
 * Oscar Zibordi de Paiva (Bradesco)
+* OP Financial
 * Patrick Kuo (R3)
-* Pekka Kaipio
+* Pekka Kaipio (OP Financial)
 * Phillip Griffin
 * Piotr Piskorski (Nordea)
 * Przemyslaw Bak (R3)
