@@ -143,21 +143,6 @@ class DeliverSessionMessageTransition(
         }
     }
 
-    private fun TransitionBuilder.persistCheckpoint() {
-        // We persist the message as soon as it arrives.
-        actions.addAll(arrayOf(
-                Action.CreateTransaction,
-                Action.PersistCheckpoint(context.id, currentState.checkpoint),
-                Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                Action.CommitTransaction,
-                Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers)
-        ))
-        currentState = currentState.copy(
-                pendingDeduplicationHandlers = emptyList(),
-                isAnyCheckpointPersisted = true
-        )
-    }
-
     private fun TransitionBuilder.endMessageTransition() {
         val sessionId = event.sessionMessage.recipientSessionId
         val sessions = currentState.checkpoint.sessions
