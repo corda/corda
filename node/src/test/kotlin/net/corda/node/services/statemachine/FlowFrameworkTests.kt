@@ -116,6 +116,19 @@ class FlowFrameworkTests {
         assertThat(flow.lazyTime).isNotNull()
     }
 
+    class SuspendThrowingActionExecutor(private val exception: Exception, val delegate: ActionExecutor) : ActionExecutor {
+        var thrown = false
+        @Suspendable
+        override fun executeAction(fiber: FlowFiber, action: Action) {
+            if (action is Action.CommitTransaction && !thrown) {
+                thrown = true
+                throw exception
+            } else {
+                delegate.executeAction(fiber, action)
+            }
+        }
+    }
+
     @Test
     fun `exception while fiber suspended`() {
         bobNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
@@ -123,7 +136,7 @@ class FlowFrameworkTests {
         val fiber = aliceNode.services.startFlow(flow) as FlowStateMachineImpl
         // Before the flow runs change the suspend action to throw an exception
         val exceptionDuringSuspend = Exception("Thrown during suspend")
-        val throwingActionExecutor = ThrowingActionExecutor(exceptionDuringSuspend, fiber.transientValues!!.value.actionExecutor)
+        val throwingActionExecutor = SuspendThrowingActionExecutor(exceptionDuringSuspend, fiber.transientValues!!.value.actionExecutor)
         fiber.transientValues = TransientReference(fiber.transientValues!!.value.copy(actionExecutor = throwingActionExecutor))
         mockNet.runNetwork()
         assertThatThrownBy {

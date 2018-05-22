@@ -8,11 +8,12 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-package net.corda.nodeapi.exceptions
+package net.corda.core
 
-import net.corda.core.CordaRuntimeException
+import net.corda.core.serialization.CordaSerializable
 
 /**
- * Thrown to indicate that the command was rejected by the node, typically due to a special temporary mode.
+ * Allows an implementing [Throwable] to be propagated to clients.
  */
-class RejectedCommandException(message: String) : CordaRuntimeException(message), RpcSerializableError
+@CordaSerializable
+interface ClientRelevantError

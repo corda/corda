@@ -38,6 +38,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.DeduplicationChecker
 import org.apache.activemq.artemis.api.core.ActiveMQException
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -224,7 +225,11 @@ class RPCClientProxyHandler(
         // If there's only one available, that one will be retried continuously as configured in rpcConfiguration.
         // There is no failover on first attempt, meaning that if a connection cannot be established, the serverLocator
         // will try another transport if it exists or throw an exception otherwise.
-        sessionFactory = serverLocator.createSessionFactory()
+        try {
+            sessionFactory = serverLocator.createSessionFactory()
+        } catch (e: ActiveMQNotConnectedException) {
+            throw (RPCException("Cannot connect to server(s). Tried with all available servers.", e))
+        }
         // Depending on how the client is constructed, connection failure is treated differently
         if (serverLocator.staticTransportConfigurations.size == 1) {
             sessionFactory!!.addFailoverListener(this::failoverHandler)

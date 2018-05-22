@@ -35,12 +35,12 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import rx.Observable
@@ -183,7 +183,7 @@ internal class CordaRPCOpsImpl(
     }
 
     private fun <T> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachine<T> {
-        require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
+        if (!logicType.isAnnotationPresent(StartableByRPC::class.java)) throw NonRpcFlowException(logicType)
         if (isFlowsDrainingModeEnabled()) {
             throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
         }
@@ -334,9 +334,5 @@ internal class CordaRPCOpsImpl(
             InvocationOrigin.Shell -> FlowInitiator.Shell
             is InvocationOrigin.Scheduled -> FlowInitiator.Scheduled((origin as InvocationOrigin.Scheduled).scheduledState)
         }
-    }
-
-    companion object {
-        private val log = contextLogger()
     }
 }

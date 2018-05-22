@@ -300,9 +300,11 @@ interface CordaRPCOps : RPCOps {
     fun openAttachment(id: SecureHash): InputStream
 
     /** Uploads a jar to the node, returns it's hash. */
+    @Throws(java.nio.file.FileAlreadyExistsException::class)
     fun uploadAttachment(jar: InputStream): SecureHash
 
     /** Uploads a jar including metadata to the node, returns it's hash. */
+    @Throws(java.nio.file.FileAlreadyExistsException::class)
     fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash
 
     /** Queries attachments metadata */

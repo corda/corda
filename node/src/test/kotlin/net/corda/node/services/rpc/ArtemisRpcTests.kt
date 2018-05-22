@@ -10,6 +10,7 @@
 
 package net.corda.node.services.rpc
 
+import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
@@ -34,7 +35,6 @@ import net.corda.testing.internal.createNodeSslConfig
 import net.corda.testing.internal.saveToKeyStore
 import net.corda.testing.internal.saveToTrustStore
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -99,7 +99,7 @@ class ArtemisRpcTests {
 
         assertThatThrownBy {
             testSslCommunication(createNodeSslConfig(tempFolder.root.toPath()), brokerSslOptions, true, clientSslOptions)
-        }.isInstanceOf(ActiveMQNotConnectedException::class.java)
+        }.isInstanceOf(RPCException::class.java)
     }
 
     private fun testSslCommunication(nodeSSlconfig: SSLConfiguration, brokerSslOptions: BrokerRpcSslOptions?, useSslForBroker: Boolean, clientSslOptions: ClientRpcSslOptions?, address: NetworkHostAndPort = ports.nextHostAndPort(),
