@@ -443,6 +443,65 @@ class EnumEvolvabilityTests {
     }
 
     //
+    // In this test we check that multiple transforms of a property are accepted
+    //
+    @CordaSerializationTransformRenames(
+            CordaSerializationTransformRename(from = "A", to = "B"),
+            CordaSerializationTransformRename(from = "B", to = "C")
+    )
+    enum class AcceptMultipleRename { C }
+
+    @Test
+    fun acceptMultipleRename() {
+        data class C(val e: AcceptMultipleRename)
+
+        val sf = testDefaultFactory()
+        SerializationOutput(sf).serialize(C(AcceptMultipleRename.C))
+    }
+
+    //
+    // In this example we will try to rename two different things to the same thing,
+    // which is not allowed
+    //
+    @CordaSerializationTransformRenames(
+            CordaSerializationTransformRename(from = "D", to = "C"),
+            CordaSerializationTransformRename(from = "E", to = "C")
+    )
+    enum class RejectMultipleRenameTo { A, B, C }
+
+    @Test
+    fun rejectMultipleRenameTo() {
+        data class C(val e: RejectMultipleRenameTo)
+
+        val sf = testDefaultFactory()
+        assertThatThrownBy {
+            SerializationOutput(sf).serialize(C(RejectMultipleRenameTo.A))
+        }.isInstanceOf(NotSerializableException::class.java)
+        .hasMessage("There are multiple transformations to C, which is not allowed")
+    }
+
+    //
+    // In this example we will try to rename two different things from the same thing,
+    // which is not allowed
+    //
+    @CordaSerializationTransformRenames(
+            CordaSerializationTransformRename(from = "D", to = "C"),
+            CordaSerializationTransformRename(from = "D", to = "B")
+    )
+    enum class RejectMultipleRenameFrom { A, B, C }
+
+    @Test
+    fun rejectMultipleRenameFrom() {
+        data class C(val e: RejectMultipleRenameFrom)
+
+        val sf = testDefaultFactory()
+        assertThatThrownBy {
+            SerializationOutput(sf).serialize(C(RejectMultipleRenameFrom.A))
+        }.isInstanceOf(NotSerializableException::class.java)
+        .hasMessage("There are multiple transformations from D, which is not allowed")
+    }
+
+    //
     // In this example we will have attempted to rename D back to C
     //
     // The life cycle of the class would've looked like this
