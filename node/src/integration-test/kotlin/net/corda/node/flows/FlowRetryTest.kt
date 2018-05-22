@@ -96,8 +96,14 @@ class InitiatorFlow(private val sessionsCount: Int, private val iterationsCount:
                 visit(sessionNum, iteration, Step.AfterReceive)
                 logger.info("A Got $sessionNum:$iteration")
             }
+            doSleep()
         }
         return received!!
+    }
+
+    // This non-flow-friendly sleep triggered a bug with session end messages and non-retryable checkpoints.
+    private fun doSleep() {
+        Thread.sleep(2000)
     }
 }
 

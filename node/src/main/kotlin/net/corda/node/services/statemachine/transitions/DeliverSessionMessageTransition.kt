@@ -46,9 +46,6 @@ class DeliverSessionMessageTransition(
                     is EndSessionMessage -> endMessageTransition()
                 }
             }
-            if (!isErrored()) {
-                persistCheckpoint()
-            }
             // Schedule a DoRemainingWork to check whether the flow needs to be woken up.
             actions.add(Action.ScheduleEvent(Event.DoRemainingWork))
             FlowContinuation.ProcessEvents
