@@ -75,7 +75,15 @@ class NetworkMapWebService(private val nodeInfoStorage: NodeInfoStorage,
             .softValues()
             .build(nodeInfoStorage::getNodeInfo)
 
-    private val networkMaps: NetworkMaps? get() = networkMapCache[true]
+    private val networkMaps: NetworkMaps?
+        get() {
+            if (networkMapCache[true]?.publicNetworkMap == null) {
+                // Refresh cache every time the public network map is NULL.
+                networkMapCache.refresh(true)
+            }
+            return networkMapCache[true]
+        }
+
     private val currentNodeInfoHashes: Set<SecureHash> get() = networkMaps?.allNodeInfoHashes ?: emptySet()
     private val currentNetworkParameters: NetworkParameters? get() = networkMaps?.publicNetworkMap?.networkParameters?.networkParameters
 
