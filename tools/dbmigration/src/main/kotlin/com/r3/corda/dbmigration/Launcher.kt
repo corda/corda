@@ -21,6 +21,7 @@ import joptsimple.util.EnumConverter
 import net.corda.core.internal.MigrationHelpers
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
+import net.corda.core.internal.exists
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.internal.DataSourceFactory.createDatasourceFromDriverJarFolders
 import net.corda.node.internal.cordapp.CordappLoader
@@ -60,7 +61,8 @@ const val RELEASE_LOCK = "release-lock"
 // output type
 const val CONSOLE = "CONSOLE"
 
-private val logger = LoggerFactory.getLogger("migration.tool")
+private val migrationLogger = LoggerFactory.getLogger("migration.tool")
+private val errorLogger = LoggerFactory.getLogger("errors")
 
 private enum class Mode {
     NODE, DOORMAN
@@ -121,7 +123,13 @@ private fun runCommand(options: OptionSet, parser: OptionParser) {
         options.has(HELP) -> parser.printHelpOn(System.out)
         mode == Mode.NODE -> {
             val baseDirectory = baseDirectory()
+            if (!baseDirectory.exists()) {
+                errorAndExit("Could not find base-directory: '$baseDirectory'.")
+            }
             val config = configFile("node.conf")
+            if (!config.exists()) {
+                errorAndExit("Not a valid node folder. Could not find the config file: '$config'.")
+            }
             val nodeConfig = ConfigHelper.loadConfig(baseDirectory, config).parseAsNodeConfiguration()
             val cordappLoader = CordappLoader.createDefault(baseDirectory)
 
@@ -131,13 +139,16 @@ private fun runCommand(options: OptionSet, parser: OptionParser) {
         }
         mode == Mode.DOORMAN -> {
             val fatJarPath = Paths.get(options.valueOf(DOORMAN_JAR_PATH) as String)
+            if (!fatJarPath.exists()) {
+                errorAndExit("Could not find the doorman jar in location: '$fatJarPath'.")
+            }
             val doormanClassloader = classLoaderFromCapsuleFatJar(fatJarPath)
             val doormanSchema = "com.r3.corda.networkmanage.common.persistence.NetworkManagementSchemaServices\$SchemaV1"
             val schema = loadMappedSchema(doormanSchema, doormanClassloader)
             handleCommand(options, baseDirectory(), configFile("network-management.conf"), mode, doormanClassloader, setOf(schema))
         }
     }
-    logger.info("Done")
+    migrationLogger.info("Done")
 }
 
 private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: Path, mode: Mode, classLoader: ClassLoader, schemas: Set<MappedSchema>) {
@@ -162,19 +173,19 @@ private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: P
         }
         options.has(DRY_RUN) -> {
             val writer = getMigrationOutput(baseDirectory, options)
-            logger.info("Exporting the current db migrations ...")
+            migrationLogger.info("Exporting the current db migrations ...")
             runMigrationCommand {
                 it.generateMigrationScript(writer)
             }
         }
         options.has(RUN_MIGRATION) -> {
-            logger.info("Running the database migration on  $baseDirectory")
+            migrationLogger.info("Running the database migration on  $baseDirectory")
             runMigrationCommand { it.runMigration() }
         }
         options.has(CREATE_MIGRATION_CORDAPP) && (mode == Mode.NODE) -> {
 
             fun generateMigrationFileForSchema(schemaClass: String) {
-                logger.info("Creating database migration files for schema: $schemaClass into ${baseDirectory / "migration"}")
+                migrationLogger.info("Creating database migration files for schema: $schemaClass into ${baseDirectory / "migration"}")
                 try {
                     runWithDataSource(config, baseDirectory, classLoader) {
                         MigrationExporter(baseDirectory, config.dataSourceProperties, classLoader, it).generateMigrationForCorDapp(schemaClass)
@@ -223,11 +234,26 @@ private fun getMigrationOutput(baseDirectory: Path, options: OptionSet): Writer 
 }
 
 private fun runWithDataSource(config: Configuration, baseDirectory: Path, classLoader: ClassLoader, withDatasource: (DataSource) -> Unit) {
-    val driversFolder = (baseDirectory / "drivers")
-    return withDatasource(createDatasourceFromDriverJarFolders(config.dataSourceProperties, classLoader, listOf(driversFolder) + config.jarDirs.map { Paths.get(it) }))
+    val driversFolder = (baseDirectory / "drivers").let { if (it.exists()) listOf(it) else emptyList() }
+    val jarDirs = config.jarDirs.map { Paths.get(it) }
+    for (jarDir in jarDirs) {
+        if (!jarDir.exists()) {
+            errorAndExit("Could not find the configured JDBC driver directory: '${jarDir}'.")
+        }
+    }
+
+    return try {
+        withDatasource(createDatasourceFromDriverJarFolders(config.dataSourceProperties, classLoader, driversFolder + jarDirs))
+    } catch (e: Exception) {
+        errorAndExit("""Failed to create datasource.
+            |Please check that the correct JDBC driver is installed in one of the following folders:
+            |${(driversFolder + jarDirs).joinToString("\n\t - ", "\t - ")}
+            |Caused By ${e}""".trimMargin(), e)
+    }
 }
 
-private fun errorAndExit(message: String?) {
+private fun errorAndExit(message: String?, exception: Exception? = null) {
+    errorLogger.error(message, exception)
     System.err.println(message)
     System.exit(1)
 }

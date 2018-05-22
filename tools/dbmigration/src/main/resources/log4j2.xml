@@ -26,12 +26,19 @@
         <File name="File-Appender" fileName="logs/migration.log">
             <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
         </File>
+
+        <File name="Errors-File-Appender" fileName="logs/migration-errors.log">
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
+        </File>
     </Appenders>
 
     <Loggers>
         <Root level="${sys:defaultLogLevel}">
             <AppenderRef ref="File-Appender" />
         </Root>
+        <Logger name="errors" >
+            <AppenderRef ref="Errors-File-Appender" />
+        </Logger>
         <Logger name="migration.tool" >
             <AppenderRef ref="Console-Appender"/>
             <AppenderRef ref="File-Appender" />
