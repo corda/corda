@@ -279,8 +279,8 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
                         EnumEvolutionSerializer.make(typeNotation, newSerializer, factory, schemas)
                     }
                     else {
-                        loggerFor<SerializerFactory>().error("Need to evolve unsupported type")
-                        throw NotSerializableException ("MY PANTS HURT")
+                        loggerFor<SerializerFactory>().error("typeNotation=${typeNotation.name} Need to evolve unsupported type")
+                        throw NotSerializableException ("${typeNotation.name} cannot be evolved")
                     }
                 }
             }
