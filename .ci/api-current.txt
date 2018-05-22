@@ -6563,7 +6563,7 @@ public final class net.corda.client.rpc.CordaRPCConnection extends java.lang.Obj
   public int getServerProtocolVersion()
   public void notifyServerAndClose()
 ##
-public final class net.corda.client.rpc.PermissionException extends net.corda.core.CordaRuntimeException implements net.corda.nodeapi.exceptions.RpcSerializableError
+public final class net.corda.client.rpc.PermissionException extends net.corda.core.CordaRuntimeException implements net.corda.nodeapi.exceptions.RpcSerializableError, net.corda.core.ClientRelevantError
   public <init>(String)
 ##
 @DoNotImplement
