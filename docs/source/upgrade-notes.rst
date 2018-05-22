@@ -33,28 +33,37 @@ UNRELEASED
 
 <<< Fill this in >>>
 
-* API change: net.corda.core.schemas.PersistentStateRef fields (index and txId) are now non-nullable.
+* API change: ``net.corda.core.schemas.PersistentStateRef`` fields (``index`` and ``txId``) incorrectly marked as nullable are now non-nullable,
+  :doc:`changelog` contains the explanation.
 
   H2 database upgrade action:
 
-  For Cordapps persisting custom entities with PersistentStateRef used as non Primary Key column,
-  the backing table needs to be updated:
+  For Cordapps persisting custom entities with ``PersistentStateRef`` used as non Primary Key column, the backing table needs to be updated:
 
-  (1) SELECT count(*) FROM [TABLE] WHERE [COLUMN] IS NULL;
+  .. sourcecode:: sql
 
-  If no rows has NULL column value it's safe to update DDL statement 3.
+       SELECT count(*) FROM [YOUR_PersistentState_TABLE_NAME] WHERE transaction_id IS NULL OR output_index IS NULL;
+
   In case your table already contains rows with NULL columns, and the logic doesn't distinguish between NULL and an empty string,
-  all NULL column occurrences can be changed to an empty string - run SQL statements 2 and 3:
+  all NULL column occurrences can be changed to an empty string:
 
-  (2) UPDATE [Table] SET [Column]="" WHERE [Column] IS NULL;
-  (3) ALTER TABLE [Table]  ALTER COLUMN [Column] SET NOT NULL;
+  .. sourcecode:: sql
+
+       UPDATE [YOUR_PersistentState_TABLE_NAME] SET transaction_id="" WHERE transaction_id IS NULL;
+       UPDATE [YOUR_PersistentState_TABLE_NAME] SET output_index="" WHERE output_index IS NULL;
+
+  If all rows have NON NULL ``transaction_ids`` and ``output_idx`` or you have assigned empty string values, then it's safe to update the table:
+
+  .. sourcecode:: sql
+
+       ALTER TABLE [YOUR_PersistentState_TABLE_NAME] ALTER COLUMN transaction_id SET NOT NULL;
+       ALTER TABLE [YOUR_PersistentState_TABLE_NAME] ALTER COLUMN output_index SET NOT NULL;
 
   If the table already contains rows with NULL values, and the logic caters differently between NULL and an empty string,
-  and the logic has to be preserved you would need to create copy of PersistentStateRef class with different name and use the new class in your entity.
+  and the logic has to be preserved you would need to create copy of ``PersistentStateRef`` class with different name and use the new class in your entity.
 
-  No action is needed for:
-  - default node tables as PersistentStateRef is used as Primary Key only and the backing columns are automatically not nullable,
-  - custom Cordapp entities using PersistentStateRef as Primary Key.
+  No action is needed for default node tables as ``PersistentStateRef`` is used as Primary Key only and the backing columns are automatically not nullable
+  or custom Cordapp entities using ``PersistentStateRef`` as Primary Key.
 
 v3.0 to v3.1
 ------------
