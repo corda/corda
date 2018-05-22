@@ -28,10 +28,10 @@ Allowed parameters are:
 :certConfig: Certificate specific configuration. See below section on Certificate Configuration.
 
 :trustStoreDirectory: Path to the directory where the generated trust store should be placed.
-                 The name of the generated file is "truststore.jks".
+                 The name of the generated file is "network-root-truststore.jks".
                  If the trust store file does not exist, it will be created.
                  IMPORTANT - This trust store is intended to be distributed across the nodes.
-                 Nodes are hardcoded to use "truststore.jks" file as the trust store name.
+                 Nodes are hardcoded to use "network-root-truststore.jks" file as the trust store name.
                  As such, it is required that the file name is as the one expected by nodes.
 
 :trustStorePassword: Password for the generated trust store.

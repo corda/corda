@@ -11,6 +11,7 @@
 package com.r3.corda.networkmanage.doorman
 
 import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
+import com.r3.corda.networkmanage.common.utils.NETWORK_ROOT_TRUSTSTORE_FILENAME
 import com.r3.corda.networkmanage.common.utils.createSignedCrl
 import com.r3.corda.networkmanage.doorman.signer.LocalSigner
 import net.corda.core.crypto.Crypto
@@ -34,7 +35,6 @@ import kotlin.system.exitProcess
 
 // TODO The cert subjects need to be configurable
 const val CORDA_X500_BASE = "O=R3 HoldCo LLC,OU=Corda,L=New York,C=US"
-const val NETWORK_ROOT_TRUSTSTORE_FILENAME = "network-root-truststore.jks"
 
 /** Read password from console, do a readLine instead if console is null (e.g. when debugging in IDE). */
 internal fun readPassword(fmt: String): String {

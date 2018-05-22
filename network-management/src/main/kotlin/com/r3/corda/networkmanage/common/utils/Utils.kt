@@ -36,6 +36,7 @@ import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 
 const val CORDA_NETWORK_MAP = "cordanetworkmap"
+const val NETWORK_ROOT_TRUSTSTORE_FILENAME = "network-root-truststore.jks"
 
 val logger: Logger = LoggerFactory.getLogger("com.r3.corda.networkmanage.common.utils")
 

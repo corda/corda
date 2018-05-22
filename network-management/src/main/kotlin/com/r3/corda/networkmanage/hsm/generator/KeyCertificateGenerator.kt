@@ -14,6 +14,7 @@ import CryptoServerCXI.CryptoServerCXI.KEY_ALGO_ECDSA
 import CryptoServerCXI.CryptoServerCXI.KeyAttributes
 import CryptoServerJCE.CryptoServerProvider
 import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
+import com.r3.corda.networkmanage.common.utils.NETWORK_ROOT_TRUSTSTORE_FILENAME
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.cleanEcdsaPublicKey
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createIntermediateCert
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities.createSelfSignedCert
@@ -89,7 +90,7 @@ class KeyCertificateGenerator(private val parameters: GeneratorParameters) {
                 crlDistributionUrl,
                 crlIssuer?.let { X500Name(it) })
         logger.info("Created root cert:\n$rootCert")
-        val trustStorePath = networkRootTrustStoreDirectory / "truststore.jks"
+        val trustStorePath = networkRootTrustStoreDirectory / NETWORK_ROOT_TRUSTSTORE_FILENAME
         X509KeyStore.fromFile(trustStorePath, networkRootTrustStorePassword, createNew = true).update {
             setCertificate(CORDA_ROOT_CA, rootCert)
         }

@@ -40,7 +40,7 @@ fun run(parameters: GeneratorParameters) {
                     val rootProviderConfig = CryptoServerProviderConfig(
                             Device = "$hsmPort@$hsmHost",
                             KeySpecifier = certConfig.keySpecifier,
-                            KeyGroup = certConfig.rootKeyGroup!!,
+                            KeyGroup = requireNotNull(certConfig.rootKeyGroup) { "rootKeyGroup needs to be specified." },
                             StoreKeysExternal = certConfig.storeKeysExternal)
                     AutoAuthenticator(rootProviderConfig, userConfigs).connectAndAuthenticate { rootProvider ->
                         generator.generate(provider, rootProvider)
