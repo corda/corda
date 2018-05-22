@@ -5,6 +5,7 @@ import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.*
 import net.corda.cordform.CordformNode.NODE_INFO_DIRECTORY
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -61,7 +62,6 @@ class NetworkMapUpdaterTest {
         server = NetworkMapServer(cacheExpiryMs.millis, PortAllocation.Incremental(10000).nextHostAndPort())
         val hostAndPort = server.start()
         networkMapClient = NetworkMapClient(URL("http://${hostAndPort.host}:${hostAndPort.port}"), DEV_ROOT_CA.certificate)
-        updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, server.networkParameters.serialize().hash, null, baseDir, listOf(privateNetUUID))
     }
 
     @After
@@ -71,8 +71,13 @@ class NetworkMapUpdaterTest {
         server.close()
     }
 
+    private fun setUpdater(ourNodeHash: SecureHash? = null, extraNetworkMapKeys: List<UUID> = emptyList()) {
+        updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, server.networkParameters.serialize().hash, ourNodeHash, baseDir, extraNetworkMapKeys)
+    }
+
     @Test
     fun `process add node updates from network map, with additional node infos from dir`() {
+        setUpdater()
         val (nodeInfo1, signedNodeInfo1) = createNodeInfoAndSigned("Info 1")
         val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned("Info 2")
         val (nodeInfo3, signedNodeInfo3) = createNodeInfoAndSigned("Info 3")
@@ -108,6 +113,7 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `process remove node updates from network map, with additional node infos from dir`() {
+        setUpdater()
         val (nodeInfo1, signedNodeInfo1) = createNodeInfoAndSigned("Info 1")
         val (nodeInfo2, signedNodeInfo2) = createNodeInfoAndSigned("Info 2")
         val (nodeInfo3, signedNodeInfo3) = createNodeInfoAndSigned("Info 3")
@@ -148,6 +154,7 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `receive node infos from directory, without a network map`() {
+        setUpdater()
         val fileNodeInfoAndSigned = createNodeInfoAndSigned("Info from file")
 
         // Not subscribed yet.
@@ -166,6 +173,7 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `emit new parameters update info on parameters update from network map`() {
+        setUpdater()
         val paramsFeed = updater.trackParametersUpdate()
         val snapshot = paramsFeed.snapshot
         val updates = paramsFeed.updates.bufferUntilSubscribed()
@@ -188,6 +196,7 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `ack network parameters update`() {
+        setUpdater()
         val newParameters = testNetworkParameters(epoch = 314)
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         updater.subscribeToNetworkMap()
@@ -204,6 +213,7 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `fetch nodes from private network`() {
+        setUpdater(extraNetworkMapKeys = listOf(privateNetUUID))
         server.addNodesToPrivateNetwork(privateNetUUID, listOf(ALICE_NAME))
         Assertions.assertThatThrownBy { networkMapClient.getNetworkMap(privateNetUUID).payload.nodeInfoHashes }
                 .isInstanceOf(IOException::class.java)
@@ -220,6 +230,7 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `remove node from filesystem deletes it from network map cache`() {
+        setUpdater()
         val fileNodeInfoAndSigned1 = createNodeInfoAndSigned("Info from file 1")
         val fileNodeInfoAndSigned2 = createNodeInfoAndSigned("Info from file 2")
         updater.subscribeToNetworkMap()
@@ -242,6 +253,7 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `remove node info file, but node in network map server`() {
+        setUpdater()
         val nodeInfoBuilder = TestNodeInfoBuilder()
         val (_, key) = nodeInfoBuilder.addLegalIdentity(CordaX500Name("Info", "London", "GB"))
         val (serverNodeInfo, serverSignedNodeInfo) = nodeInfoBuilder.buildWithSigned(1, 1)
@@ -268,6 +280,23 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
         // Instead of node from file we should have now the one from NetworkMapServer
         assertThat(networkMapCache.allNodeHashes).containsOnly(serverSignedNodeInfo.raw.hash)
+    }
+
+    // Test fix for ENT-1882
+    // This scenario can happen when signing of network map server is performed much longer after the node joined the network.
+    // Network map will advertise hashes without that node.
+    @Test
+    fun `not remove own node info when it is not in network map yet`() {
+        val (myInfo, signedMyInfo) = createNodeInfoAndSigned("My node info")
+        val (_, signedOtherInfo) = createNodeInfoAndSigned("Other info")
+        setUpdater(ourNodeHash = signedMyInfo.raw.hash)
+        networkMapCache.addNode(myInfo) // Simulate behaviour on node startup when our node info is added to cache
+        networkMapClient.publish(signedOtherInfo)
+        updater.subscribeToNetworkMap()
+        Thread.sleep(2L * cacheExpiryMs)
+        verify(networkMapCache, never()).removeNode(myInfo)
+        assertThat(server.networkMapHashes()).containsOnly(signedOtherInfo.raw.hash)
+        assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(signedMyInfo.raw.hash, signedOtherInfo.raw.hash)
     }
 
     private fun createMockNetworkMapCache(): NetworkMapCacheInternal {
