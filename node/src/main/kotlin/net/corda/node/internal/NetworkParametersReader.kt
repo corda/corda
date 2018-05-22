@@ -44,8 +44,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
             //  you get them from network map, but you have to run the approval step.
             if (signedParametersFromFile == null) { // Node joins for the first time.
                 downloadParameters(trustRoot, advertisedParametersHash)
-            }
-            else if (signedParametersFromFile.raw.hash == advertisedParametersHash) { // Restarted with the same parameters.
+            } else if (signedParametersFromFile.raw.hash == advertisedParametersHash) { // Restarted with the same parameters.
                 signedParametersFromFile.verifiedNetworkMapCert(trustRoot)
             } else { // Update case.
                 readParametersUpdate(advertisedParametersHash, signedParametersFromFile.raw.hash).verifiedNetworkMapCert(trustRoot)
@@ -70,6 +69,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
                     "Please update node to use correct network parameters file.")
         }
         parametersUpdateFile.moveTo(networkParamsFile, StandardCopyOption.REPLACE_EXISTING)
+        logger.info("Scheduled update to network parameters has occurred - node now updated to these new parameters.")
         return signedUpdatedParameters
     }
 

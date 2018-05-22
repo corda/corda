@@ -2894,7 +2894,7 @@ public final class net.corda.core.node.NetworkParameters extends java.lang.Objec
   @NotNull
   public final java.util.Map<String, java.util.List<net.corda.core.crypto.SecureHash>> getWhitelistedContractImplementations()
   public int hashCode()
-  public String toString()
+  @org.jetbrains.annotations.NotNull public String toString()
 ##
 @CordaSerializable
 public final class net.corda.core.node.NodeInfo extends java.lang.Object
