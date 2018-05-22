@@ -30,7 +30,7 @@ In our flow, the Initiator flow class will be doing the majority of the work:
 2. Create a transaction builder
 3. Extract any input states from the vault and add them to the builder
 4. Create any output states and add them to the builder
-5. Add any commands, attachments and timestamps to the builder
+5. Add any commands, attachments and time-window to the builder
 
 *Part 2 - Sign the transaction*
 

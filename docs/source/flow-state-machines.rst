@@ -228,7 +228,7 @@ Next, we call another subflow called ``SignTransactionFlow``. ``SignTransactionF
 * Sending the transaction back to the buyer.
 
 The transaction then needs to be finalized. This is the the process of sending the transaction to a notary to assert
-(with another signature) that the timestamp in the transaction (if any) is valid and there are no double spends.
+(with another signature) that the time-window in the transaction (if any) is valid and there are no double spends.
 In this flow, finalization is handled by the buyer, so we just wait for the signed transaction to appear in our
 transaction storage. It will have the same ID as the one we started with but more signatures.
 

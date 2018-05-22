@@ -111,10 +111,10 @@ As well as input states and output states, transactions contain:
 
 * Commands
 * Attachments
-* Timestamps
+* Time-Window
 
 For example, a transaction where Alice pays off £5 of an IOU with Bob using a £5 cash payment, supported by two
-attachments and a timestamp, may look as follows:
+attachments and a time-window, may look as follows:
 
 .. image:: resources/full-tx.png
    :scale: 25%
@@ -172,8 +172,8 @@ For this use case, we have *attachments*. Each transaction can refer to zero or 
 attachments are ZIP/JAR files containing arbitrary content. The information in these files can then be
 used when checking the transaction's validity.
 
-Time-windows
-^^^^^^^^^^^^
+Time-window
+^^^^^^^^^^^
 In some cases, we want a transaction proposed to only be approved during a certain time-window. For example:
 
 * An option can only be exercised after a certain date

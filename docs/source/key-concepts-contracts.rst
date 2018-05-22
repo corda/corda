@@ -36,7 +36,7 @@ We can picture this situation as follows:
 The contract code can be written in any JVM language, and has access to the full capabilities of the language,
 including:
 
-* Checking the number of inputs, outputs, commands, timestamps, and/or attachments
+* Checking the number of inputs, outputs, commands, time-window, and/or attachments
 * Checking the contents of any of these components
 * Looping constructs, variable assignment, function calls, helper methods, etc.
 * Grouping similar states to validate them as a group (e.g. imposing a rule on the combined value of all the cash
