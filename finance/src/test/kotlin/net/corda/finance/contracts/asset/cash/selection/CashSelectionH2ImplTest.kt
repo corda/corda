@@ -14,6 +14,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
 import java.util.Collections.nCopies
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class CashSelectionH2ImplTest {
@@ -68,5 +69,6 @@ class CashSelectionH2ImplTest {
         // Make a payment
         val paymentResult = node.startFlow(CashPaymentFlow(999.POUNDS, node.info.legalIdentities[0], false)).getOrThrow()
         assertNotNull(paymentResult.recipient)
+        assertEquals(1, paymentResult.stx.tx.inputs.size)
     }
 }
