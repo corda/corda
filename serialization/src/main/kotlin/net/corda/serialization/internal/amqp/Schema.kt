@@ -153,7 +153,13 @@ sealed class TypeNotation : DescribedType {
     abstract val descriptor: Descriptor
 }
 
-data class CompositeType(override val name: String, override val label: String?, override val provides: List<String>, override val descriptor: Descriptor, val fields: List<Field>) : TypeNotation() {
+data class CompositeType(
+        override val name: String,
+        override val label: String?,
+        override val provides: List<String>,
+        override val descriptor: Descriptor,
+        val fields: List<Field>
+) : TypeNotation() {
     companion object : DescribedTypeConstructor<CompositeType> {
         val DESCRIPTOR = AMQPDescriptorRegistry.COMPOSITE_TYPE.amqpDescriptor
 

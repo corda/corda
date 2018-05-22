@@ -14,7 +14,14 @@ import java.lang.reflect.Type
 object InputStreamSerializer : CustomSerializer.Implements<InputStream>(InputStream::class.java) {
     override val revealSubclassesInSchema: Boolean = true
 
-    override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), SerializerFactory.primitiveTypeName(ByteArray::class.java)!!, descriptor, emptyList())))
+    override val schemaForDocumentation = Schema(
+            listOf(
+                    RestrictedType(
+                            type.toString(),
+                            "",
+                            listOf(type.toString()),
+                            SerializerFactory.primitiveTypeName(ByteArray::class.java)!!,
+                            descriptor, emptyList())))
 
     override fun writeDescribedObject(obj: InputStream, data: Data, type: Type, output: SerializationOutput,
                                       context: SerializationContext

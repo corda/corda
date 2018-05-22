@@ -30,6 +30,15 @@ class TestSerializationOutput(
         }
         super.writeTransformSchema(transformsSchema, data)
     }
+
+    @Throws(NotSerializableException::class)
+    fun <T : Any> serialize(obj: T): SerializedBytes<T> {
+        try {
+            return _serialize(obj, testSerializationContext)
+        } finally {
+            andFinally()
+        }
+    }
 }
 
 fun testName(): String = Thread.currentThread().stackTrace[2].methodName
