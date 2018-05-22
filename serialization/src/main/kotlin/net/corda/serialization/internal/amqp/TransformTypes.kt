@@ -108,11 +108,10 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
                 reverseLinks[rename.to] = index
             }
 
-            // Check that every element in the current type is at the end of a renaming chain, if it is in one
+            // Check that every property in the current type is at the end of a renaming chain, if it is in one
             constants.keys.forEach {
                 if (reverseLinks.containsKey(it) && graph[reverseLinks[it]!!].next != null) {
-                    System.out.println("${it} is specified as an evolved type, but it also exists in the current type")
-                    throw NotSerializableException("${it} is specified as an evolved type, but it also exists in the current type")
+                    throw NotSerializableException("${it} is specified as a previously evolved type, but it also exists in the current type")
                 }
             }
 
