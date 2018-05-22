@@ -104,7 +104,12 @@ class BrokerJaasLoginModule : BaseBrokerJaasLoginModule() {
             loginSucceeded = true
             return true
         } catch (e: Exception) {
-            log.error("Login failed: ${e.message}", e)
+            // This is a known problem, so we swallow this exception. A peer will attempt to connect without presenting client certificates during SASL
+            if (e is IllegalArgumentException && e.stackTrace.any { it.className == "org.apache.activemq.artemis.protocol.amqp.sasl.PlainSASL" }) {
+                log.trace("SASL Login failed.")
+            } else {
+                log.error("Login failed: ${e.message}", e)
+            }
             if (e is LoginException) {
                 throw e
             } else {
