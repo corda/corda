@@ -52,6 +52,6 @@ class RejectedCommandException(message: String) : CordaRuntimeException(message)
 /**
  * Allows an implementing [Throwable] to be propagated to RPC clients.
  */
-@Deprecated("Use ClientRelevantError istead.", replaceWith = ReplaceWith("ClientRelevantError"))
+@Deprecated("Use ClientRelevantError instead.", replaceWith = ReplaceWith("ClientRelevantError"))
 @CordaSerializable
 interface RpcSerializableError
