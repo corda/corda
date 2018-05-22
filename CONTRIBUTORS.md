@@ -17,7 +17,6 @@ see changes to this list.
 * Andrius Dagys (R3)
 * Andrzej Cichocki (R3)
 * Andrzej Grzesik (R3)
-* Anthony Coates (Deutsche Bank)
 * Anthony Keenan (R3)
 * Anthony Woolley (Société Générale)
 * Anton Semenov (Commerzbank)
@@ -132,8 +131,9 @@ see changes to this list.
 * Nigel King (R3)
 * Nuam Athaweth (MUFG)
 * Oscar Zibordi de Paiva (Bradesco)
+* OP Financial
 * Patrick Kuo (R3)
-* Pekka Kaipio
+* Pekka Kaipio (OP Financial)
 * Phillip Griffin
 * Piotr Piskorski (Nordea)
 * Przemyslaw Bak (R3)
@@ -172,6 +172,7 @@ see changes to this list.
 * Thomas Schroeter (R3)
 * Tim Swanson (R3)
 * Timothy Smith
+* Tittu Varghese (Servntire Global)
 * Tom Menner (R3)
 * tomconte
 * Tommy Lillehagen (R3)
@@ -185,4 +186,3 @@ see changes to this list.
 * Wawrzek Niewodniczanski (R3)
 * Wei Wu Zhang (Commonwealth Bank of Australia)
 * Zabrina Smith (Northern Trust)
-* zorenmith (Northern Trust)

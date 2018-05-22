@@ -3,6 +3,7 @@
 package net.corda.core.node.services.vault
 
 import net.corda.core.DoNotImplement
+import net.corda.core.internal.declaredField
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
@@ -439,18 +440,7 @@ class FieldInfo internal constructor(val name: String, val entityClass: Class<*>
  */
 @Throws(NoSuchFieldException::class)
 fun getField(fieldName: String, entityClass: Class<*>): FieldInfo {
-    return getField(fieldName, entityClass, entityClass)
-}
 
-@Throws(NoSuchFieldException::class)
-private fun getField(fieldName: String, clazz: Class<*>?, invokingClazz: Class<*>): FieldInfo {
-    if (clazz == null) {
-        throw NoSuchFieldException(fieldName)
-    }
-    return try {
-        val field = clazz.getDeclaredField(fieldName)
-        return FieldInfo(field.name, invokingClazz)
-    } catch (e: NoSuchFieldException) {
-        getField(fieldName, clazz.superclass, invokingClazz)
-    }
+    val field = entityClass.declaredField<Any>(entityClass, fieldName)
+    return FieldInfo(field.name, entityClass)
 }

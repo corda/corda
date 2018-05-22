@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.core.CordaInternal
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
@@ -106,7 +107,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            @SuppressWarnings("unused") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
+            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
     ): LedgerTransaction {
         return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, null)
     }
@@ -226,11 +227,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         sig.verify(id)
     }
 
-    internal companion object {
+    companion object {
         /**
          * Creating list of [ComponentGroup] used in one of the constructors of [WireTransaction] required
          * for backwards compatibility purposes.
          */
+        @CordaInternal
         fun createComponentGroups(inputs: List<StateRef>,
                                   outputs: List<TransactionState<ContractState>>,
                                   commands: List<Command<*>>,

@@ -21,7 +21,6 @@ import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.core.*
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -102,7 +101,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
                         }
                         count++
                     }
-                } catch (e: ActiveMQNotConnectedException) {
+                } catch (e: RPCException) {
                     println("... node is not running.")
                     nodeIsShut.onCompleted()
                 } catch (e: ActiveMQSecurityException) {
