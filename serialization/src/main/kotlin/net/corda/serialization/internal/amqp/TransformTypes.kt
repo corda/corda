@@ -81,7 +81,12 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
          * @param constants The list of enum constants on the type the transforms are being applied to
          */
         override fun validate(list: List<Transform>, constants: Map<String, Int>) {
-            data class Node(val from: String, val to: String, var next: Int?, var prev: Int?, var visited: Boolean = false, var visitedBy: Int? = null)
+            data class Node(val from: String, val to: String, var next: Int?, var prev: Int?, var visited: Boolean = false, var visitedBy: Int? = null) {
+                fun visit(visitedBy: Int) {
+                    visited = true
+                    this.visitedBy = visitedBy
+                }
+            }
 
             val graph = mutableListOf<Node>()
             // Keep a list of forward links and back links in order to build the graph in one pass
@@ -90,19 +95,12 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
 
             // build a dependency graph
             @Suppress("UNCHECKED_CAST") (list as List<RenameSchemaTransform>).forEachIndexed { index, rename ->
-                if (forwardLinks.containsKey(rename.from)) {
-                    throw NotSerializableException("There are multiple transformations from ${rename.from}, which is not allowed")
-                }
-                if (reverseLinks.containsKey(rename.to)) {
-                    throw NotSerializableException("There are multiple transformations to ${rename.to}, which is not allowed")
-                }
-                val newNode = Node(rename.from, rename.to, forwardLinks[rename.to], reverseLinks[rename.from])
-                graph.add(newNode)
-                if (newNode.next != null) {
-                    graph[newNode.next!!].prev = index
-                }
-                if (newNode.prev != null) {
-                    graph[newNode.prev!!].next = index
+                forwardLinks[rename.from]?.let { throw NotSerializableException("There are multiple transformations from ${rename.from}, which is not allowed") }
+                reverseLinks[rename.to]?.let { throw NotSerializableException("There are multiple transformations to ${rename.to}, which is not allowed") }
+                Node(rename.from, rename.to, forwardLinks[rename.to], reverseLinks[rename.from]).apply {
+                    graph.add(this)
+                    this.next?.let { graph[this.next!!].prev = index }
+                    this.prev?.let { graph[this.prev!!].next = index }
                 }
                 forwardLinks[rename.from] = index
                 reverseLinks[rename.to] = index
@@ -111,36 +109,34 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
             // Check that every property in the current type is at the end of a renaming chain, if it is in one
             constants.keys.forEach {
                 if (reverseLinks.containsKey(it) && graph[reverseLinks[it]!!].next != null) {
-                    throw NotSerializableException("${it} is specified as a previously evolved type, but it also exists in the current type")
+                    throw NotSerializableException("$it is specified as a previously evolved type, but it also exists in the current type")
                 }
             }
 
             // Check for cyclic dependencies
             graph.forEachIndexed { index, node ->
                 if (!node.visited) {
+                    // Find an unvisited node
                     var currentNode = node
-                    currentNode.visited = true
-                    currentNode.visitedBy = index
+                    currentNode.visit(index)
                     while (currentNode.next != null) {
                         currentNode = graph[node.next!!]
                         if (currentNode.visited) {
                             if (currentNode.visitedBy == index) {
-                                //we have gone round in a loop
+                                // we have gone round in a loop
                                 throw NotSerializableException("Cyclic renames are not allowed (${currentNode.from})")
                             }
                             // we have found the start of another non-cyclic chain of dependencies
-                            // if they were cyclic we would have gone round in a loop
+                            // if they were cyclic we would have gone round in a loop and already thrown
                             break
                         }
-                        currentNode.visited = true
-                        currentNode.visitedBy = index
+                        currentNode.visit(index)
                     }
                 }
             }
         }
-
-
     }
+
     // Transform used to test the unknown handler, leave this at as the final constant, uncomment
     // when regenerating test cases - if Java had a pre-processor this would be much neater
     //
