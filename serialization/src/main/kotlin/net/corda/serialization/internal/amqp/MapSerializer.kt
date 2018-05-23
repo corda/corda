@@ -114,14 +114,33 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: Serial
 }
 
 internal fun Class<*>.checkSupportedMapType() {
+    checkHashMap()
+    checkWeakHashMap()
+    checkDictionary()
+}
+
+private fun Class<*>.checkHashMap() {
     if (HashMap::class.java.isAssignableFrom(this) && !LinkedHashMap::class.java.isAssignableFrom(this)) {
         throw IllegalArgumentException(
                 "Map type $this is unstable under iteration. Suggested fix: use java.util.LinkedHashMap instead.")
-    } else if (WeakHashMap::class.java.isAssignableFrom(this)) {
+    }
+}
+
+/**
+ * The [WeakHashMap] class does not exist within the DJVM, and so we need
+ * to isolate this reference.
+ */
+private fun Class<*>.checkWeakHashMap() {
+    if (WeakHashMap::class.java.isAssignableFrom(this)) {
         throw IllegalArgumentException("Weak references with map types not supported. Suggested fix: "
                 + "use java.util.LinkedHashMap instead.")
-    } else if (Dictionary::class.java.isAssignableFrom(this)) {
+    }
+}
+
+private fun Class<*>.checkDictionary() {
+    if (Dictionary::class.java.isAssignableFrom(this)) {
         throw IllegalArgumentException(
                 "Unable to serialise deprecated type $this. Suggested fix: prefer java.util.map implementations")
     }
 }
+
