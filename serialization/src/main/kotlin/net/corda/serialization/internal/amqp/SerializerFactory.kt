@@ -112,7 +112,8 @@ open class SerializerFactory(
                 }
             }
             Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                logger.debug("class=[${actualClass} | $declaredClass] is an enumeration type=${declaredType} "
+                logger.debug("class=[${actualClass?.simpleName} | $declaredClass] is an enumeration "
+                        + "declaredType=${declaredType.typeName} "
                         + "isEnum=${declaredType::class.java.isEnum}")
 
                 serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
@@ -121,7 +122,7 @@ open class SerializerFactory(
                 }
             }
             else -> {
-                logger.debug("class=[${actualClass} | $declaredClass] is a composite type")
+                logger.debug("class=[${actualClass?.simpleName} | $declaredClass] is a composite type")
                 makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
             }
         }

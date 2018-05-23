@@ -14,8 +14,7 @@ class StreamTests {
     private class WrapperStream(input: InputStream) : FilterInputStream(input)
 
     @Test
-    fun InputStream() {
-
+    fun inputStream() {
         val attachment = InputStreamAndHash.createInMemoryTestZip(2116, 1)
         val id : InputStream = WrapperStream(attachment.inputStream)
 
@@ -34,11 +33,9 @@ class StreamTests {
     }
 
     @Test
-    fun ListInputStream() {
-
+    fun listInputStream() {
         val attachment = InputStreamAndHash.createInMemoryTestZip(2116, 1)
         val id /* : List<InputStream> */= listOf(WrapperStream(attachment.inputStream))
-
 
         val serializerFactory = testDefaultFactory().apply {
             register(InputStreamSerializer)

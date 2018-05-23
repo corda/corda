@@ -21,7 +21,8 @@ object InputStreamSerializer : CustomSerializer.Implements<InputStream>(InputStr
                             "",
                             listOf(type.toString()),
                             SerializerFactory.primitiveTypeName(ByteArray::class.java)!!,
-                            descriptor, emptyList())))
+                            descriptor,
+                            emptyList())))
 
     override fun writeDescribedObject(obj: InputStream, data: Data, type: Type, output: SerializationOutput,
                                       context: SerializationContext
