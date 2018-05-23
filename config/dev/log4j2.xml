@@ -13,7 +13,7 @@
 
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout pattern="%highlight{%level{length=1} %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n}{INFO=white,WARN=red,FATAL=bright red}" />
+            <PatternLayout pattern="%highlight{%level{length=1} %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %equals{%X}{{}}{}%n}{INFO=white,WARN=red,FATAL=bright red}" />
         </Console>
 
         <!-- Required for printBasicInfo -->
