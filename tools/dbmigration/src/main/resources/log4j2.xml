@@ -20,15 +20,15 @@
 
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout pattern="-- %date{ISO8601}{UTC}Z %c{2}.%method - %msg %X%n"/>
+            <PatternLayout pattern="-- %date{ISO8601}{UTC}Z %c{2}.%method - %msg %n"/>
         </Console>
 
         <File name="File-Appender" fileName="logs/migration.log">
-            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %n"/>
         </File>
 
         <File name="Errors-File-Appender" fileName="logs/migration-errors.log">
-            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %n"/>
         </File>
     </Appenders>
 
