@@ -129,7 +129,9 @@ class NodeConfigurationImplTest {
 
     @Test
     fun `validation has error when compatibilityZoneURL is present and devMode is true`() {
-        val configuration = testConfiguration.copy(devMode = true, compatibilityZoneURL = URI.create("https://r3.com").toURL())
+        val configuration = testConfiguration.copy(
+                devMode = true,
+                compatibilityZoneURL = URL("https://r3.com"))
 
         val errors = configuration.validate()
 
@@ -151,8 +153,8 @@ class NodeConfigurationImplTest {
     @Test
     fun `validation has error when compatibilityZone is present and devMode is true`() {
         val configuration = testConfiguration.copy(devMode = true, networkServices = NetworkServicesConfig(
-                URI.create("https://r3.com.doorman").toURL(),
-                URI.create("https://r3.com/nm").toURL()))
+                URL("https://r3.com.doorman"),
+                URL("https://r3.com/nm")))
 
         val errors = configuration.validate()
 
@@ -163,10 +165,10 @@ class NodeConfigurationImplTest {
     fun `validation has error when both compatibilityZoneURL and networkServices are configured`() {
         val configuration = testConfiguration.copy(
                 devMode = false,
-                compatibilityZoneURL = URI.create("https://r3.com").toURL(),
+                compatibilityZoneURL = URL("https://r3.com"),
                 networkServices = NetworkServicesConfig(
-                        URI.create("https://r3.com.doorman").toURL(),
-                        URI.create("https://r3.com/nm").toURL()))
+                        URL("https://r3.com.doorman"),
+                        URL("https://r3.com/nm")))
 
         val errors = configuration.validate()
 

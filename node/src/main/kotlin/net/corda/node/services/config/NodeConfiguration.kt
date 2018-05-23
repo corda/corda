@@ -118,14 +118,15 @@ data class BFTSMaRtConfiguration(
 }
 
 /**
- * Used as an alternative to the older compatibilityZoneURL to allows the doorman and network map
- * services for a node to be configured a different URL's. Cannot be set at the same time as the
+ * Used as an alternative to the older compatibilityZoneURL to allow the doorman and network map
+ * services for a node to be configured as different URLs. Cannot be set at the same time as the
  * compatibilityZoneURL, and will be defaulted (if not set) to both point at the configured
  * compatibilityZoneURL.
  */
 data class NetworkServicesConfig(
         val doormanURL: URL,
-        val networkMapURL: URL
+        val networkMapURL: URL,
+        val inferred : Boolean = false
 )
 
 /**
@@ -198,6 +199,7 @@ data class NodeConfigurationImpl(
             explicitAddress != null -> {
                 require(settings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
                 logger.warn("Top-level declaration of property 'rpcAddress' is deprecated. Please use 'rpcSettings.address' instead.")
+
                 settings.copy(address = explicitAddress)
             }
             else -> {
@@ -245,22 +247,25 @@ data class NodeConfigurationImpl(
     }
 
     private fun validateDevModeOptions(): List<String> {
-        val errors = mutableListOf<String>()
         if (devMode) {
             compatibilityZoneURL?.let {
-                errors += "'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true."
+                return listOf("'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true.")
             }
+
+            // if compatibiliZoneURL is set then it will be copied into the networkServices field and thus skipping
+            // this check by returning above is fine.
             networkServices?.let {
-                errors += "'networkServices': present. Property cannot be set when 'devMode' is true."
+                return listOf("'networkServices': present. Property cannot be set when 'devMode' is true.")
             }
         }
-        return errors
+
+        return emptyList()
     }
 
     private fun validateNetworkServices(): List<String> {
         val errors = mutableListOf<String>()
 
-        if (compatibilityZoneURL != null && networkServices != null) {
+        if (compatibilityZoneURL != null && networkServices != null && !(networkServices!!.inferred)) {
             errors += "Cannot configure both compatibilityZoneUrl and networkServices simultaneously"
         }
 
@@ -287,7 +292,7 @@ data class NodeConfigurationImpl(
         }
 
         if (compatibilityZoneURL != null && networkServices == null) {
-            networkServices = NetworkServicesConfig(compatibilityZoneURL, compatibilityZoneURL)
+            networkServices = NetworkServicesConfig(compatibilityZoneURL, compatibilityZoneURL, true)
         }
     }
 }

@@ -23,6 +23,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.node.NodeRegistrationOption
+import net.corda.node.internal.ConfigurationException
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
@@ -184,7 +185,7 @@ class DriverDSLImpl(
 
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
-            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.url)
+            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.doormanURL())
         } else {
             doneFuture(Unit)
         }
@@ -209,7 +210,18 @@ class DriverDSLImpl(
         val rpcAdminAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
-        val czUrlConfig = if (compatibilityZone != null) mapOf("compatibilityZoneURL" to compatibilityZone.url.toString()) else emptyMap()
+        val czUrlConfig = when (compatibilityZone) {
+            null -> emptyMap()
+            is SharedCompatabilityZoneParams ->
+                mapOf("compatibilityZoneUR" to compatibilityZone.doormanURL().toString())
+            is SplitCompatabilityZoneParams ->
+                mapOf(
+                        "networkServices.doormanURL" to compatibilityZone.doormanURL().toString(),
+                        "networkServices.networkMapURL" to compatibilityZone.networkMapURL().toString())
+           else ->
+               throw ConfigurationException ("Unknown compatibility zone configuration")
+        }
+
         val overrides = configOf(
                 "myLegalName" to name.toString(),
                 "p2pAddress" to p2pAddress.toString(),
@@ -412,7 +424,7 @@ class DriverDSLImpl(
                 startNotaryIdentityGeneration()
             } else {
                 // With a root cert specified we delegate generation of the notary identities to the CZ.
-                startAllNotaryRegistrations(compatibilityZone.rootCert, compatibilityZone.url)
+                startAllNotaryRegistrations(compatibilityZone.rootCert, compatibilityZone.doormanURL())
             }
             notaryInfosFuture.map { notaryInfos ->
                 compatibilityZone.publishNotaries(notaryInfos)
@@ -1065,7 +1077,32 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
  * the registration response to be rooted at this cert. If not specified then no registration is performed and the dev
  * root cert is used as normal.
  */
-data class CompatibilityZoneParams(val url: URL, val publishNotaries: (List<NotaryInfo>) -> Unit, val rootCert: X509Certificate? = null)
+abstract class CompatibilityZoneParams(
+    val publishNotaries: (List<NotaryInfo>) -> Unit,
+    val rootCert: X509Certificate?
+) {
+    abstract fun networkMapURL() : URL
+    abstract fun doormanURL() : URL
+}
+
+class SharedCompatabilityZoneParams(
+        private val url: URL,
+        publishNotaries: (List<NotaryInfo>) -> Unit,
+        rootCert: X509Certificate?
+) : CompatibilityZoneParams (publishNotaries, rootCert){
+    override fun doormanURL() = url
+    override fun networkMapURL() = url
+}
+
+class SplitCompatabilityZoneParams(
+        private val doormanURL: URL,
+        private val networkMapURL: URL,
+        publishNotaries: (List<NotaryInfo>) -> Unit,
+        rootCert: X509Certificate?
+) : CompatibilityZoneParams (publishNotaries, rootCert){
+    override fun doormanURL() = doormanURL
+    override fun networkMapURL() = networkMapURL
+}
 
 fun <A> internalDriver(
         isDebug: Boolean = DriverParameters().isDebug,
