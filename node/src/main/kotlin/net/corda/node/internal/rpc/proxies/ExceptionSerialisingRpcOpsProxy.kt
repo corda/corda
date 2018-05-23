@@ -3,6 +3,8 @@ package net.corda.node.internal.rpc.proxies
 import net.corda.core.CordaRuntimeException
 import net.corda.core.CordaThrowable
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.doOnError
+import net.corda.core.internal.concurrent.doOnError
 import net.corda.core.internal.concurrent.mapError
 import net.corda.core.mapErrors
 import net.corda.core.messaging.CordaRPCOps
@@ -12,25 +14,30 @@ import net.corda.core.messaging.FlowHandleImpl
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.InvocationHandlerTemplate
 import rx.Observable
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy.newProxyInstance
 
-internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps) : CordaRPCOps by proxy(delegate) {
+internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps, doLog: Boolean) : CordaRPCOps by proxy(delegate, doLog) {
     private companion object {
-        private fun proxy(delegate: CordaRPCOps): CordaRPCOps {
-            val handler = ErrorSerialisingInvocationHandler(delegate)
+        private val logger = loggerFor<ExceptionSerialisingRpcOpsProxy>()
+
+        private fun proxy(delegate: CordaRPCOps, doLog: Boolean): CordaRPCOps {
+            val handler = ErrorSerialisingInvocationHandler(delegate, doLog)
             return newProxyInstance(delegate::class.java.classLoader, arrayOf(CordaRPCOps::class.java), handler) as CordaRPCOps
         }
     }
 
-    private class ErrorSerialisingInvocationHandler(override val delegate: CordaRPCOps) : InvocationHandlerTemplate {
+    private class ErrorSerialisingInvocationHandler(override val delegate: CordaRPCOps, private val doLog: Boolean) : InvocationHandlerTemplate {
         override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
             try {
                 val result = super.invoke(proxy, method, arguments)
                 return result?.let { ensureSerialisable(it) }
             } catch (exception: Exception) {
+                // In this special case logging and re-throwing is the right approach.
+                log(exception)
                 throw ensureSerialisable(exception)
             }
         }
@@ -60,15 +67,15 @@ internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps
         }
 
         private fun <ELEMENT> wrapObservable(observable: Observable<ELEMENT>): Observable<ELEMENT> {
-            return observable.mapErrors(::ensureSerialisable)
+            return observable.doOnError(::log).mapErrors(::ensureSerialisable)
         }
 
         private fun <SNAPSHOT, ELEMENT> wrapFeed(feed: DataFeed<SNAPSHOT, ELEMENT>): DataFeed<SNAPSHOT, ELEMENT> {
-            return feed.mapErrors(::ensureSerialisable)
+            return feed.doOnError(::log).mapErrors(::ensureSerialisable)
         }
 
         private fun <RESULT> wrapFuture(future: CordaFuture<RESULT>): CordaFuture<RESULT> {
-            return future.mapError(::ensureSerialisable)
+            return future.doOnError(::log).mapError(::ensureSerialisable)
         }
 
         private fun ensureSerialisable(error: Throwable): Throwable {
@@ -79,6 +86,12 @@ internal class ExceptionSerialisingRpcOpsProxy(private val delegate: CordaRPCOps
                 result.setCause(null)
             }
             return result
+        }
+
+        private fun log(error: Throwable) {
+            if (doLog) {
+                logger.error("Error during RPC invocation", error)
+            }
         }
 
         private fun superclasses(clazz: Class<*>): List<Class<*>> {

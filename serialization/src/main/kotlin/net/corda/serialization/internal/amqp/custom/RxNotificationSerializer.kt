@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.serialization.amqp.custom
+package net.corda.serialization.internal.amqp.custom
 
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
