@@ -81,8 +81,8 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
          * @param constants The list of enum constants on the type the transforms are being applied to
          */
         override fun validate(list: List<Transform>, constants: Map<String, Int>) {
-            data class Node(val from: String, val to: String, var next: Int?, var prev: Int?, var visited: Boolean = false, var visitedBy: Int? = null) {
-                fun visit(visitedBy: Int) {
+            data class Node(val from: String, val to: String, var next: Node?, var prev: Node?, var visited: Boolean = false, var visitedBy: Node? = null) {
+                fun visit(visitedBy: Node) {
                     visited = true
                     this.visitedBy = visitedBy
                 }
@@ -90,39 +90,39 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
 
             val graph = mutableListOf<Node>()
             // Keep a list of forward links and back links in order to build the graph in one pass
-            val forwardLinks = hashMapOf<String, Int>()
-            val reverseLinks = hashMapOf<String, Int>()
+            val forwardLinks = hashMapOf<String, Node>()
+            val reverseLinks = hashMapOf<String, Node>()
 
             // build a dependency graph
             val transforms: List<RenameSchemaTransform> = uncheckedCast(list)
-            transforms.forEachIndexed { index, rename ->
+            transforms.forEach { rename ->
                 forwardLinks[rename.from]?.let { throw NotSerializableException("There are multiple transformations from ${rename.from}, which is not allowed") }
                 reverseLinks[rename.to]?.let { throw NotSerializableException("There are multiple transformations to ${rename.to}, which is not allowed") }
                 val node = Node(rename.from, rename.to, forwardLinks[rename.to], reverseLinks[rename.from])
                 graph.add(node)
-                node.next?.let { graph[it].prev = index }
-                node.prev?.let { graph[it].next = index }
-                forwardLinks[rename.from] = index
-                reverseLinks[rename.to] = index
+                node.next?.let { it.prev = node }
+                node.prev?.let { it.next = node }
+                forwardLinks[rename.from] = node
+                reverseLinks[rename.to] = node
             }
 
             // Check that every property in the current type is at the end of a renaming chain, if it is in one
             constants.keys.forEach { key ->
                 reverseLinks[key]?.let {
-                    graph[it].next?.let { throw NotSerializableException("$key is specified as a previously evolved type, but it also exists in the current type") }
+                    it.next?.let { throw NotSerializableException("$key is specified as a previously evolved type, but it also exists in the current type") }
                 }
             }
 
             // Check for cyclic dependencies
-            graph.forEachIndexed { index, node ->
-                if (node.visited) return@forEachIndexed
+            graph.forEach { node ->
+                if (node.visited) return@forEach
                 // Find an unvisited node
                 var currentNode = node
-                currentNode.visit(index)
+                currentNode.visit(node)
                 while (currentNode.next != null) {
-                    currentNode = graph[node.next!!]
+                    currentNode = currentNode.next!!
                     if (currentNode.visited) {
-                        if (currentNode.visitedBy == index) {
+                        if (currentNode.visitedBy == node) {
                             // we have gone round in a loop
                             throw NotSerializableException("Cyclic renames are not allowed (${currentNode.from})")
                         }
@@ -130,7 +130,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
                         // if they were cyclic we would have gone round in a loop and already thrown
                         break
                     }
-                    currentNode.visit(index)
+                    currentNode.visit(node)
                 }
             }
         }
