@@ -21,10 +21,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
+import net.corda.core.identity.*
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
@@ -55,12 +52,13 @@ import javax.security.auth.x500.X500Principal
  *
  * Note that Jackson can also be used to serialise/deserialise other formats such as Yaml and XML.
  */
-@Suppress("DEPRECATION")
+@Suppress("DEPRECATION", "MemberVisibilityCanBePrivate")
 object JacksonSupport {
     // If you change this API please update the docs in the docsite (json.rst)
 
     @DoNotImplement
     interface PartyObjectMapper {
+        val isFullParties: Boolean
         fun wellKnownPartyFromX500Name(name: CordaX500Name): Party?
         fun partyFromKey(owningKey: PublicKey): Party?
         fun partiesFromName(query: String): Set<Party>
@@ -68,9 +66,11 @@ object JacksonSupport {
     }
 
     @Deprecated("This is an internal class, do not use", replaceWith = ReplaceWith("JacksonSupport.createDefaultMapper"))
-    class RpcObjectMapper(val rpc: CordaRPCOps,
-                          factory: JsonFactory,
-                          val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
+    class RpcObjectMapper
+    @JvmOverloads constructor(val rpc: CordaRPCOps,
+                              factory: JsonFactory,
+                              val fuzzyIdentityMatch: Boolean,
+                              override val isFullParties: Boolean = false) : PartyObjectMapper, ObjectMapper(factory) {
         override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = rpc.wellKnownPartyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = rpc.partyFromKey(owningKey)
         override fun partiesFromName(query: String) = rpc.partiesFromName(query, fuzzyIdentityMatch)
@@ -78,9 +78,11 @@ object JacksonSupport {
     }
 
     @Deprecated("This is an internal class, do not use")
-    class IdentityObjectMapper(val identityService: IdentityService,
-                               factory: JsonFactory,
-                               val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
+    class IdentityObjectMapper
+    @JvmOverloads constructor(val identityService: IdentityService,
+                              factory: JsonFactory,
+                              val fuzzyIdentityMatch: Boolean,
+                              override val isFullParties: Boolean = false) : PartyObjectMapper, ObjectMapper(factory) {
         override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = identityService.wellKnownPartyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = identityService.partyFromKey(owningKey)
         override fun partiesFromName(query: String) = identityService.partiesFromName(query, fuzzyIdentityMatch)
@@ -88,7 +90,9 @@ object JacksonSupport {
     }
 
     @Deprecated("This is an internal class, do not use", replaceWith = ReplaceWith("JacksonSupport.createNonRpcMapper"))
-    class NoPartyObjectMapper(factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
+    class NoPartyObjectMapper
+    @JvmOverloads constructor(factory: JsonFactory,
+                              override val isFullParties: Boolean = false) : PartyObjectMapper, ObjectMapper(factory) {
         override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = null
         override fun partyFromKey(owningKey: PublicKey): Party? = null
         override fun partiesFromName(query: String): Set<Party> = emptySet()
@@ -102,22 +106,33 @@ object JacksonSupport {
     /**
      * Creates a Jackson ObjectMapper that uses RPC to deserialise parties from string names.
      *
-     * If [fuzzyIdentityMatch] is false, fields mapped to [Party] objects must be in X.500 name form and precisely
+     * @param fuzzyIdentityMatch If false, fields mapped to [Party] objects must be in X.500 name form and precisely
      * match an identity known from the network map. If true, the name is matched more leniently but if the match
      * is ambiguous a [JsonParseException] is thrown.
+     *
+     * @param fullParties If true then [Party] objects will be serialised as JSON objects, with the owning key serialised
+     * in addition to the name. For [PartyAndCertificate] objects the cert path will be included.
      */
     @JvmStatic
     @JvmOverloads
     fun createDefaultMapper(rpc: CordaRPCOps,
                             factory: JsonFactory = JsonFactory(),
-                            fuzzyIdentityMatch: Boolean = false): ObjectMapper {
-        return configureMapper(RpcObjectMapper(rpc, factory, fuzzyIdentityMatch))
+                            fuzzyIdentityMatch: Boolean = false,
+                            fullParties: Boolean = false): ObjectMapper {
+        return configureMapper(RpcObjectMapper(rpc, factory, fuzzyIdentityMatch, fullParties))
     }
 
-    /** For testing or situations where deserialising parties is not required */
+    /**
+     * For testing or situations where deserialising parties is not required
+     *
+     * @param fullParties If true then [Party] objects will be serialised as JSON objects, with the owning key serialised
+     * in addition to the name. For [PartyAndCertificate] objects the cert path will be included.
+     */
     @JvmStatic
     @JvmOverloads
-    fun createNonRpcMapper(factory: JsonFactory = JsonFactory()): ObjectMapper = configureMapper(NoPartyObjectMapper(factory))
+    fun createNonRpcMapper(factory: JsonFactory = JsonFactory(), fullParties: Boolean = false): ObjectMapper {
+        return configureMapper(NoPartyObjectMapper(factory, fullParties))
+    }
 
     /**
      * Creates a Jackson ObjectMapper that uses an [IdentityService] directly inside the node to deserialise parties from string names.
@@ -197,7 +212,14 @@ object JacksonSupport {
                 .filter { Modifier.isStatic(it.modifiers) && it.type == KeyPurposeId::class.java }
                 .associateBy({ (it.get(null) as KeyPurposeId).id }, { it.name })
 
-        val knownExtensions = setOf("2.5.29.15", "2.5.29.37", "2.5.29.19", "2.5.29.17", "2.5.29.18", CordaOID.X509_EXTENSION_CORDA_ROLE)
+        val knownExtensions = setOf(
+                "2.5.29.15",
+                "2.5.29.17",
+                "2.5.29.18",
+                "2.5.29.19",
+                "2.5.29.37",
+                CordaOID.X509_EXTENSION_CORDA_ROLE
+        )
 
         override fun serialize(value: X509Certificate, gen: JsonGenerator, serializers: SerializerProvider) {
             gen.jsonObject {
@@ -208,17 +230,20 @@ object JacksonSupport {
                 writeObjectField("issuer", value.issuerX500Principal)
                 writeObjectField("notBefore", value.notBefore)
                 writeObjectField("notAfter", value.notAfter)
+                writeObjectField("cordaCertRole", CertRole.extract(value))
                 writeObjectField("issuerUniqueID", value.issuerUniqueID)
                 writeObjectField("subjectUniqueID", value.subjectUniqueID)
                 writeObjectField("keyUsage", value.keyUsage?.asList()?.mapIndexedNotNull { i, flag -> if (flag) keyUsages[i] else null })
                 writeObjectField("extendedKeyUsage", value.extendedKeyUsage.map { keyPurposeIds.getOrDefault(it, it) })
                 jsonObject("basicConstraints") {
-                    writeBooleanField("isCA", value.basicConstraints != -1)
-                    writeObjectField("pathLength", value.basicConstraints.let { if (it != Int.MAX_VALUE) it else null })
+                    val isCa = value.basicConstraints != -1
+                    writeBooleanField("isCA", isCa)
+                    if (isCa) {
+                        writeObjectField("pathLength", value.basicConstraints.let { if (it != Int.MAX_VALUE) it else null })
+                    }
                 }
                 writeObjectField("subjectAlternativeNames", value.subjectAlternativeNames)
                 writeObjectField("issuerAlternativeNames", value.issuerAlternativeNames)
-                writeObjectField("cordaCertRole", CertRole.extract(value))
                 writeObjectField("otherCriticalExtensions", value.criticalExtensionOIDs - knownExtensions)
                 writeObjectField("otherNonCriticalExtensions", value.nonCriticalExtensionOIDs - knownExtensions)
                 writeBinaryField("encoded", value.encoded)
@@ -229,8 +254,12 @@ object JacksonSupport {
     private class X509CertificateDeserializer : JsonDeserializer<X509Certificate>() {
         private val certFactory = CertificateFactory.getInstance("X.509")
         override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): X509Certificate {
-            val encoded = parser.readValueAsTree<ObjectNode>()["encoded"]
-            return certFactory.generateCertificate(encoded.binaryValue().inputStream()) as X509Certificate
+            val encoded = if (parser.currentToken == JsonToken.START_OBJECT) {
+                parser.readValueAsTree<ObjectNode>()["encoded"].binaryValue()
+            } else {
+                parser.binaryValue
+            }
+            return certFactory.generateCertificate(encoded.inputStream()) as X509Certificate
         }
     }
 
@@ -274,9 +303,13 @@ object JacksonSupport {
 
     @Deprecated("This is an internal class, do not use")
     object PartySerializer : JsonSerializer<Party>() {
-        override fun serialize(value: Party, generator: JsonGenerator, provider: SerializerProvider) {
-            // TODO Add configurable option to output this as an object which includes the owningKey
-            generator.writeObject(value.name)
+        override fun serialize(value: Party, gen: JsonGenerator, provider: SerializerProvider) {
+            val mapper = gen.codec as PartyObjectMapper
+            if (mapper.isFullParties) {
+                gen.writeObject(PartyAnalogue(value.name, value.owningKey))
+            } else {
+                gen.writeObject(value.name)
+            }
         }
     }
 
@@ -284,27 +317,38 @@ object JacksonSupport {
     object PartyDeserializer : JsonDeserializer<Party>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): Party {
             val mapper = parser.codec as PartyObjectMapper
-            // The comma character is invalid in Base58, and required as a separator for X.500 names. As Corda
-            // X.500 names all involve at least three attributes (organisation, locality, country), they must
-            // include a comma. As such we can use it as a distinguisher between the two types.
-            return if ("," in parser.text) {
-                val principal = CordaX500Name.parse(parser.text)
-                mapper.wellKnownPartyFromX500Name(principal) ?: throw JsonParseException(parser, "Could not find a Party with name $principal")
+            return if (parser.currentToken == JsonToken.START_OBJECT) {
+                val analogue = parser.readValueAs<PartyAnalogue>()
+                Party(analogue.name, analogue.owningKey)
             } else {
-                val nameMatches = mapper.partiesFromName(parser.text)
-                when {
-                    nameMatches.isEmpty() -> {
-                        val publicKey = parser.readValueAs<PublicKey>()
-                        mapper.partyFromKey(publicKey)
-                                ?: throw JsonParseException(parser, "Could not find a Party with key ${publicKey.toStringShort()}")
-                    }
-                    nameMatches.size == 1 -> nameMatches.first()
-                    else -> throw JsonParseException(parser, "Ambiguous name match '${parser.text}': could be any of " +
-                            nameMatches.map { it.name }.joinToString(" ... or ... "))
+                // The comma character is invalid in Base58, and required as a separator for X.500 names. As Corda
+                // X.500 names all involve at least three attributes (organisation, locality, country), they must
+                // include a comma. As such we can use it as a distinguisher between the two types.
+                if ("," in parser.text) {
+                    val principal = CordaX500Name.parse(parser.text)
+                    mapper.wellKnownPartyFromX500Name(principal) ?: throw JsonParseException(parser, "Could not find a Party with name $principal")
+                } else {
+                    lookupByNameSegment(mapper, parser)
                 }
             }
         }
+
+        private fun lookupByNameSegment(mapper: PartyObjectMapper, parser: JsonParser): Party {
+            val nameMatches = mapper.partiesFromName(parser.text)
+            return when {
+                nameMatches.isEmpty() -> {
+                    val publicKey = parser.readValueAs<PublicKey>()
+                    mapper.partyFromKey(publicKey)
+                            ?: throw JsonParseException(parser, "Could not find a Party with key ${publicKey.toStringShort()}")
+                }
+                nameMatches.size == 1 -> nameMatches.first()
+                else -> throw JsonParseException(parser, "Ambiguous name match '${parser.text}': could be any of " +
+                        nameMatches.map { it.name }.joinToString(" ... or ... "))
+            }
+        }
     }
+
+    private class PartyAnalogue(val name: CordaX500Name, val owningKey: PublicKey)
 
     @Deprecated("This is an internal class, do not use")
     object CordaX500NameDeserializer : JsonDeserializer<CordaX500Name>() {

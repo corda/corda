@@ -525,14 +525,17 @@ fun ClassWhitelist.requireWhitelisted(type: Type) {
     }
 }
 
-fun ClassWhitelist.isWhitelisted(clazz: Class<*>) = (hasListed(clazz) || hasAnnotationInHierarchy(clazz))
-fun ClassWhitelist.isNotWhitelisted(clazz: Class<*>) = !(this.isWhitelisted(clazz))
+fun ClassWhitelist.isWhitelisted(clazz: Class<*>) = hasListed(clazz) || hasCordaSerializable(clazz)
+fun ClassWhitelist.isNotWhitelisted(clazz: Class<*>) = !this.isWhitelisted(clazz)
 
-// Recursively check the class, interfaces and superclasses for our annotation.
-fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {
+/**
+ * Check the given [Class] has the [CordaSerializable] annotation, either directly or inherited from any of its super
+ * classes or interfaces.
+ */
+fun hasCordaSerializable(type: Class<*>): Boolean {
     return type.isAnnotationPresent(CordaSerializable::class.java)
-            || type.interfaces.any { hasAnnotationInHierarchy(it) }
-            || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
+            || type.interfaces.any(::hasCordaSerializable)
+            || (type.superclass != null && hasCordaSerializable(type.superclass))
 }
 
 /**
@@ -555,27 +558,28 @@ fun ClassWhitelist.hasAnnotationInHierarchy(type: Class<*>): Boolean {
  *
  * As such, if objectInstance fails access, revert to Java reflection and try that
  */
-fun Class<*>.objectInstance() =
-        try {
-            this.kotlin.objectInstance
-        } catch (e: IllegalAccessException) {
-            // Check it really is an object (i.e. it has no constructor)
-            if (constructors.isNotEmpty()) null
-            else {
-                try {
-                    this.getDeclaredField("INSTANCE")?.let { field ->
-                        // and must be marked as both static and final (>0 means they're set)
-                        if (modifiers and Modifier.STATIC == 0 || modifiers and Modifier.FINAL == 0) null
-                        else {
-                            val accessibility = field.isAccessible
-                            field.isAccessible = true
-                            val obj = field.get(null)
-                            field.isAccessible = accessibility
-                            obj
-                        }
+fun Class<*>.objectInstance(): Any? {
+    return try {
+        this.kotlin.objectInstance
+    } catch (e: IllegalAccessException) {
+        // Check it really is an object (i.e. it has no constructor)
+        if (constructors.isNotEmpty()) null
+        else {
+            try {
+                this.getDeclaredField("INSTANCE")?.let { field ->
+                    // and must be marked as both static and final (>0 means they're set)
+                    if (modifiers and Modifier.STATIC == 0 || modifiers and Modifier.FINAL == 0) null
+                    else {
+                        val accessibility = field.isAccessible
+                        field.isAccessible = true
+                        val obj = field.get(null)
+                        field.isAccessible = accessibility
+                        obj
                     }
-                } catch (e: NoSuchFieldException) {
-                    null
                 }
+            } catch (e: NoSuchFieldException) {
+                null
             }
         }
+    }
+}
