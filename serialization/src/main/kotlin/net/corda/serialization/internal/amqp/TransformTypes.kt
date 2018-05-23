@@ -94,44 +94,43 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
             val reverseLinks = hashMapOf<String, Int>()
 
             // build a dependency graph
-            @Suppress("UNCHECKED_CAST") (list as List<RenameSchemaTransform>).forEachIndexed { index, rename ->
-                forwardLinks[rename.from]?.let { throw NotSerializableException("There are multiple transformations from ${rename.from}, which is not allowed") }
+            val transforms: List<RenameSchemaTransform> = uncheckedCast(list)
+            transforms.forEachIndexed { index, rename ->
+                forwardLinks[rename.from]?.let { throw NotSerializableException("There ${rename.name} are multiple transformations from ${rename.from}, which is not allowed") }
                 reverseLinks[rename.to]?.let { throw NotSerializableException("There are multiple transformations to ${rename.to}, which is not allowed") }
-                Node(rename.from, rename.to, forwardLinks[rename.to], reverseLinks[rename.from]).apply {
-                    graph.add(this)
-                    this.next?.let { graph[this.next!!].prev = index }
-                    this.prev?.let { graph[this.prev!!].next = index }
-                }
+                val node = Node(rename.from, rename.to, forwardLinks[rename.to], reverseLinks[rename.from])
+                graph.add(node)
+                node.next?.let { graph[it].prev = index }
+                node.prev?.let { graph[it].next = index }
                 forwardLinks[rename.from] = index
                 reverseLinks[rename.to] = index
             }
 
             // Check that every property in the current type is at the end of a renaming chain, if it is in one
-            constants.keys.forEach {
-                if (reverseLinks.containsKey(it) && graph[reverseLinks[it]!!].next != null) {
-                    throw NotSerializableException("$it is specified as a previously evolved type, but it also exists in the current type")
+            constants.keys.forEach { key ->
+                reverseLinks[key]?.let {
+                    graph[it].next?.let { throw NotSerializableException("$key is specified as a previously evolved type, but it also exists in the current type") }
                 }
             }
 
             // Check for cyclic dependencies
             graph.forEachIndexed { index, node ->
-                if (!node.visited) {
-                    // Find an unvisited node
-                    var currentNode = node
-                    currentNode.visit(index)
-                    while (currentNode.next != null) {
-                        currentNode = graph[node.next!!]
-                        if (currentNode.visited) {
-                            if (currentNode.visitedBy == index) {
-                                // we have gone round in a loop
-                                throw NotSerializableException("Cyclic renames are not allowed (${currentNode.from})")
-                            }
-                            // we have found the start of another non-cyclic chain of dependencies
-                            // if they were cyclic we would have gone round in a loop and already thrown
-                            break
+                if (node.visited) return@forEachIndexed
+                // Find an unvisited node
+                var currentNode = node
+                currentNode.visit(index)
+                while (currentNode.next != null) {
+                    currentNode = graph[node.next!!]
+                    if (currentNode.visited) {
+                        if (currentNode.visitedBy == index) {
+                            // we have gone round in a loop
+                            throw NotSerializableException("Cyclic renames are not allowed (${currentNode.from})")
                         }
-                        currentNode.visit(index)
+                        // we have found the start of another non-cyclic chain of dependencies
+                        // if they were cyclic we would have gone round in a loop and already thrown
+                        break
                     }
+                    currentNode.visit(index)
                 }
             }
         }
