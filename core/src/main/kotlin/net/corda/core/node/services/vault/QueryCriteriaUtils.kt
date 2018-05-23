@@ -363,7 +363,7 @@ object Builder {
     @JvmStatic
     @JvmOverloads
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun <R> Field.sum(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = this.info().sum<R>(groupByColumns?.map { it.info() }, orderBy)
+    fun <R> Field.sum(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = this.info().sum<R>(groupByColumns?.map<Field, FieldInfo> { it.info() }, orderBy)
     @JvmStatic
     @JvmOverloads
     fun <R> FieldInfo.sum(groupByColumns: List<FieldInfo>? = null, orderBy: Sort.Direction? = null) =
@@ -382,7 +382,7 @@ object Builder {
     @JvmStatic
     @JvmOverloads
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun <R> Field.avg(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = this.info().avg<R>(groupByColumns?.map { it.info() }, orderBy)
+    fun <R> Field.avg(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = this.info().avg<R>(groupByColumns?.map<Field, FieldInfo> { it.info() }, orderBy)
 
     @JvmStatic
     @JvmOverloads
@@ -395,7 +395,7 @@ object Builder {
     @JvmStatic
     @JvmOverloads
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun <R> Field.min(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = this.info().min<R>(groupByColumns?.map { it.info() }, orderBy)
+    fun <R> Field.min(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = this.info().min<R>(groupByColumns?.map<Field, FieldInfo> { it.info() }, orderBy)
 
     @JvmStatic
     @JvmOverloads
@@ -408,7 +408,7 @@ object Builder {
     @JvmStatic
     @JvmOverloads
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun <R> Field.max(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = this.info().max<R>(groupByColumns?.map { it.info() }, orderBy)
+    fun <R> Field.max(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = this.info().max<R>(groupByColumns?.map<Field, FieldInfo> { it.info() }, orderBy)
 
     @JvmStatic
     @JvmOverloads
