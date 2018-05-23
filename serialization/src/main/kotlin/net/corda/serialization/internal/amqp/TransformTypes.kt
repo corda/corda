@@ -45,11 +45,11 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
          */
         override fun validate(list: List<Transform>, constants: Map<String, Int>) {
             uncheckedCast<List<Transform>, List<EnumDefaultSchemaTransform>>(list).forEach {
-                require(constants.contains(it.new), "Unknown enum constant ${it.new}")
-                require(constants.contains(it.old), "Enum extension defaults must be to a valid constant: ${it.new} -> ${it.old}. ${it.old} " +
+                requireThat(constants.contains(it.new), "Unknown enum constant ${it.new}")
+                requireThat(constants.contains(it.old), "Enum extension defaults must be to a valid constant: ${it.new} -> ${it.old}. ${it.old} " +
                         "doesn't exist in constant set $constants")
-                require(it.old != it.new, "Enum extension ${it.new} cannot default to itself")
-                require(constants[it.old]!! < constants[it.new]!!, "Enum extensions must default to older constants. ${it.new}[${constants[it.new]}] " +
+                requireThat(it.old != it.new, "Enum extension ${it.new} cannot default to itself")
+                requireThat(constants[it.old]!! < constants[it.new]!!, "Enum extensions must default to older constants. ${it.new}[${constants[it.new]}] " +
                         "defaults to ${it.old}[${constants[it.old]}] which is greater")
             }
         }
@@ -83,8 +83,8 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
             // build a dependency graph
             val transforms: List<RenameSchemaTransform> = uncheckedCast(list)
             transforms.forEach { rename ->
-                require(!forwardLinks.contains(rename.from), "There are multiple transformations from ${rename.from}, which is not allowed")
-                require(!reverseLinks.contains(rename.to), "There are multiple transformations to ${rename.to}, which is not allowed")
+                requireThat(!forwardLinks.contains(rename.from), "There are multiple transformations from ${rename.from}, which is not allowed")
+                requireThat(!reverseLinks.contains(rename.to), "There are multiple transformations to ${rename.to}, which is not allowed")
                 val node = Node(rename, forwardLinks[rename.to], reverseLinks[rename.from])
                 graph.add(node)
                 node.next?.prev = node
@@ -95,7 +95,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
 
             // Check that every property in the current type is at the end of a renaming chain, if it is in one
             constants.keys.forEach {
-                require(reverseLinks[it]?.next == null, "$it is specified as a previously evolved type, but it also exists in the current type")
+                requireThat(reverseLinks[it]?.next == null, "$it is specified as a previously evolved type, but it also exists in the current type")
             }
 
             // Check for cyclic dependencies
@@ -107,7 +107,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
                 while (currentNode.next != null) {
                     currentNode = currentNode.next!!
                     if (currentNode.visited) {
-                        require(currentNode.visitedBy != it, "Cyclic renames are not allowed (${currentNode.transform.from})")
+                        requireThat(currentNode.visitedBy != it, "Cyclic renames are not allowed (${currentNode.transform.from})")
                         // we have found the start of another non-cyclic chain of dependencies
                         // if they were cyclic we would have gone round in a loop and already thrown
                         break
@@ -141,7 +141,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
         override fun newInstance(obj: Any?): TransformTypes {
             val describedType = obj as DescribedType
 
-            require(describedType.descriptor == DESCRIPTOR, "Unexpected descriptor ${describedType.descriptor}.")
+            requireThat(describedType.descriptor == DESCRIPTOR, "Unexpected descriptor ${describedType.descriptor}.")
 
             return try {
                 values()[describedType.described as Int]
@@ -152,7 +152,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
 
         override fun getTypeClass(): Class<*> = TransformTypes::class.java
 
-        protected fun require(expr: Boolean, errorMessage: String) {
+        protected fun requireThat(expr: Boolean, errorMessage: String) {
             if (!expr) {
                 throw NotSerializableException(errorMessage)
             }
