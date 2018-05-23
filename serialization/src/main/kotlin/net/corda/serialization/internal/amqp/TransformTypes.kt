@@ -89,7 +89,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
             }
 
             val graph = mutableListOf<Node>()
-            // Keep a list of forward links and back links in order to build the graph in one pass
+            // Keep two maps of forward links and back links in order to build the graph in one pass
             val forwardLinks = hashMapOf<String, Node>()
             val reverseLinks = hashMapOf<String, Node>()
 
@@ -100,8 +100,8 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
                 reverseLinks[rename.to]?.let { throw NotSerializableException("There are multiple transformations to ${rename.to}, which is not allowed") }
                 val node = Node(rename.from, rename.to, forwardLinks[rename.to], reverseLinks[rename.from])
                 graph.add(node)
-                node.next?.let { it.prev = node }
-                node.prev?.let { it.next = node }
+                node.next?.prev = node
+                node.prev?.next = node
                 forwardLinks[rename.from] = node
                 reverseLinks[rename.to] = node
             }
