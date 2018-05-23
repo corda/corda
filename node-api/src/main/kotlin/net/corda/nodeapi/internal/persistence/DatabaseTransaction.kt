@@ -38,17 +38,17 @@ class DatabaseTransaction(
     private lateinit var hibernateTransaction: Transaction
 
     internal val boundary = PublishSubject.create<CordaPersistence.Boundary>()
-    private var rolledBack = false
+    private var committed = false
 
     fun commit() {
         if (sessionDelegate.isInitialized()) {
             hibernateTransaction.commit()
         }
         connection.commit()
+        committed = true
     }
 
     fun rollback() {
-        rolledBack = true
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.clear()
         }
@@ -64,7 +64,7 @@ class DatabaseTransaction(
         connection.close()
         contextTransactionOrNull = outerTransaction
         if (outerTransaction == null) {
-            boundary.onNext(CordaPersistence.Boundary(id, !rolledBack))
+            boundary.onNext(CordaPersistence.Boundary(id, committed))
         }
     }
 
