@@ -11,9 +11,7 @@
 package net.corda.node.services.network
 
 import net.corda.cordform.CordformNode
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.ParametersUpdateInfo
@@ -21,8 +19,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
@@ -35,9 +31,9 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.internal.CompatibilityZoneParams
-import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
+import net.corda.testing.node.internal.startNode
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.*
@@ -235,20 +231,4 @@ class NetworkMapTest : IntegrationTest() {
         }
         assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
     }
-}
-
-private fun DriverDSLImpl.startNode(providedName: CordaX500Name, devMode: Boolean): CordaFuture<NodeHandle> {
-    var customOverrides = emptyMap<String, String>()
-    if (!devMode) {
-        val nodeDir = baseDirectory(providedName)
-        val nodeSslConfig = object : NodeSSLConfiguration {
-            override val baseDirectory = nodeDir
-            override val keyStorePassword = "cordacadevpass"
-            override val trustStorePassword = "trustpass"
-            override val crlCheckSoftFail = true
-        }
-        nodeSslConfig.configureDevKeyAndTrustStores(providedName)
-        customOverrides = mapOf("devMode" to "false")
-    }
-    return startNode(providedName = providedName, customOverrides = customOverrides)
 }

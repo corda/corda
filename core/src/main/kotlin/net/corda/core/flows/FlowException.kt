@@ -31,13 +31,13 @@ import net.corda.core.CordaRuntimeException
  *     the exception is handled. This ID is propagated to counterparty flows, even when the [FlowException] is
  *     downgraded to an [UnexpectedFlowEndException]. This is so the error conditions may be correlated later on.
  */
-open class FlowException(message: String?, cause: Throwable?) :
+open class FlowException(message: String?, cause: Throwable?, var originalErrorId: Long? = null) :
         CordaException(message, cause), IdentifiableException {
+    constructor(message: String?, cause: Throwable?) : this(message, cause, null)
     constructor(message: String?) : this(message, null)
     constructor(cause: Throwable?) : this(cause?.toString(), cause)
     constructor() : this(null, null)
 
-    var originalErrorId: Long? = null
     override fun getErrorId(): Long? = originalErrorId
 }
 // DOCEND 1

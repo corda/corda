@@ -298,8 +298,13 @@ Error handling
 --------------
 If something goes wrong with the RPC infrastructure itself, an ``RPCException`` is thrown. If you call a method that
 requires a higher version of the protocol than the server supports, ``UnsupportedOperationException`` is thrown.
-Otherwise, if the server implementation throws an exception, that exception is serialised and rethrown on the client
+Otherwise the behaviour depends on the ``devMode`` node configuration option.
+
+In ``devMode``, if the server implementation throws an exception, that exception is serialised and rethrown on the client
 side as if it was thrown from inside the called RPC method. These exceptions can be caught as normal.
+
+When not in ``devMode``, the server will mask exceptions not meant for clients and return an ``InternalNodeException`` instead.
+This does not expose internal information to clients, strengthening privacy and security. CorDapps can have exceptions implement ``ClientRelevantError`` to allow them to reach RPC clients.
 
 Connection management
 ---------------------

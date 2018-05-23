@@ -30,6 +30,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.core.ALICE_NAME
@@ -147,6 +148,7 @@ class ContractUpgradeFlowTest {
                     startFlow<ContractUpgradeFlow.Authorise>(),
                     startFlow<ContractUpgradeFlow.Deauthorise>()
             ))
+            val expectedExceptionClass = if (aliceNode.internals.configuration.devMode) CordaRuntimeException::class else InternalNodeException::class
             val rpcA = startProxy(aliceNode, user)
             val rpcB = startProxy(bobNode, user)
             val handle = rpcA.startFlow(::FinalityInvoker, stx, setOf(bob))
@@ -163,7 +165,7 @@ class ContractUpgradeFlowTest {
                     DummyContractV2::class.java).returnValue
 
             mockNet.runNetwork()
-            assertFailsWith(CordaRuntimeException::class) { rejectedFuture.getOrThrow() }
+            assertFailsWith(expectedExceptionClass) { rejectedFuture.getOrThrow() }
 
             // Party B authorise the contract state upgrade, and immediately deauthorise the same.
             rpcB.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Authorise(stateAndRef, upgrade) },
@@ -178,7 +180,7 @@ class ContractUpgradeFlowTest {
                     DummyContractV2::class.java).returnValue
 
             mockNet.runNetwork()
-            assertFailsWith(CordaRuntimeException::class) { deauthorisedFuture.getOrThrow() }
+            assertFailsWith(expectedExceptionClass) { deauthorisedFuture.getOrThrow() }
 
             // Party B authorise the contract state upgrade.
             rpcB.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Authorise(stateAndRef, upgrade) },

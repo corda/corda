@@ -42,6 +42,7 @@ import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -1126,3 +1127,20 @@ fun writeConfig(path: Path, filename: String, config: Config) {
 private fun Config.toNodeOnly(): Config {
     return if (hasPath("webAddress")) withoutPath("webAddress").withoutPath("useHTTPS") else this
 }
+
+fun DriverDSL.startNode(providedName: CordaX500Name, devMode: Boolean, parameters: NodeParameters = NodeParameters()): CordaFuture<NodeHandle> {
+    var customOverrides = emptyMap<String, String>()
+    if (!devMode) {
+        val nodeDir = baseDirectory(providedName)
+        val nodeSslConfig = object : NodeSSLConfiguration {
+            override val baseDirectory = nodeDir
+            override val keyStorePassword = "cordacadevpass"
+            override val trustStorePassword = "trustpass"
+            override val crlCheckSoftFail = true
+        }
+        nodeSslConfig.configureDevKeyAndTrustStores(providedName)
+        customOverrides = mapOf("devMode" to "false")
+    }
+    return startNode(parameters, providedName = providedName, customOverrides = customOverrides)
+}
+
