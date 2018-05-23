@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* SLF4J's MDC will now only be printed to the console if not empty. No more log lines ending with "{}".
+
 * ``WireTransaction.Companion.createComponentGroups`` has been marked as ``@CordaInternal``. It was never intended to be
   public and was already internal for Kotlin code.
 
