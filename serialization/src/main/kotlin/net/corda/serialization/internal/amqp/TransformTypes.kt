@@ -96,7 +96,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
             // build a dependency graph
             val transforms: List<RenameSchemaTransform> = uncheckedCast(list)
             transforms.forEachIndexed { index, rename ->
-                forwardLinks[rename.from]?.let { throw NotSerializableException("There ${rename.name} are multiple transformations from ${rename.from}, which is not allowed") }
+                forwardLinks[rename.from]?.let { throw NotSerializableException("There are multiple transformations from ${rename.from}, which is not allowed") }
                 reverseLinks[rename.to]?.let { throw NotSerializableException("There are multiple transformations to ${rename.to}, which is not allowed") }
                 val node = Node(rename.from, rename.to, forwardLinks[rename.to], reverseLinks[rename.from])
                 graph.add(node)
