@@ -238,10 +238,15 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
                 type: String,
                 sf: SerializerFactory,
                 map: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>) {
-            get(type, sf).apply {
-                if (isNotEmpty()) {
-                    map[type] = this
+            try {
+                get(type, sf).apply {
+                    if (isNotEmpty()) {
+                        map[type] = this
+                    }
                 }
+            }
+            catch (e: NotSerializableException ) {
+                throw NotSerializableException("Error running transforms for $type: ${e.message}")
             }
         }
 

@@ -477,7 +477,8 @@ class EnumEvolvabilityTests {
         assertThatThrownBy {
             SerializationOutput(sf).serialize(C(RejectMultipleRenameTo.A))
         }.isInstanceOf(NotSerializableException::class.java)
-        .hasMessage("There are multiple transformations to C, which is not allowed")
+        .hasMessage("Error running transforms for net.corda.serialization.internal.amqp.EnumEvolvabilityTests\$RejectMultipleRenameTo: " +
+                "There are multiple transformations to C, which is not allowed")
     }
 
     //
@@ -498,7 +499,8 @@ class EnumEvolvabilityTests {
         assertThatThrownBy {
             SerializationOutput(sf).serialize(C(RejectMultipleRenameFrom.A))
         }.isInstanceOf(NotSerializableException::class.java)
-        .hasMessage("There are multiple transformations from D, which is not allowed")
+        .hasMessage("Error running transforms for net.corda.serialization.internal.amqp.EnumEvolvabilityTests\$RejectMultipleRenameFrom: " +
+                "There are multiple transformations from D, which is not allowed")
     }
 
     //
