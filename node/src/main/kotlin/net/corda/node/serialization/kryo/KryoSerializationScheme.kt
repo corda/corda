@@ -1,4 +1,4 @@
-package net.corda.serialization.internal.kryo
+package net.corda.node.serialization.kryo
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
@@ -12,10 +12,10 @@ import com.esotericsoftware.kryo.serializers.ClosureSerializer
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.*
-import net.corda.serialization.internal.SectionId
 import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap
 
@@ -130,3 +130,14 @@ abstract class AbstractKryoSerializationScheme : SerializationScheme {
         }
     }
 }
+
+val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(
+        kryoMagic,
+        SerializationDefaults.javaClass.classLoader,
+        QuasarWhitelist,
+        emptyMap(),
+        true,
+        SerializationContext.UseCase.Checkpoint,
+        null,
+        AlwaysAcceptEncodingWhitelist
+)

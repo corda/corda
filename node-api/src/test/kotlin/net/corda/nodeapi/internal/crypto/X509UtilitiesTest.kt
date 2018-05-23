@@ -11,10 +11,10 @@ import net.corda.core.serialization.serialize
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
+import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.amqpMagic
-import net.corda.serialization.internal.AllWhitelist
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
@@ -352,13 +352,15 @@ class X509UtilitiesTest {
     @Test
     fun `serialize - deserialize X509CertPath`() {
         val factory = SerializationFactoryImpl().apply { registerScheme(AMQPServerSerializationScheme()) }
-        val context = SerializationContextImpl(amqpMagic,
+        val context = SerializationContextImpl(
+                amqpMagic,
                 javaClass.classLoader,
                 AllWhitelist,
                 emptyMap(),
                 true,
                 SerializationContext.UseCase.P2P,
-                null)
+                null
+        )
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE_NAME.x500Principal, rootCAKey)
         val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB_NAME.x500Principal, BOB.publicKey)

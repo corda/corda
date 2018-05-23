@@ -1,4 +1,4 @@
-package net.corda.serialization.internal.kryo
+package net.corda.node.serialization.kryo
 
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.time.Instant
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.test.*
 
 class TestScheme : AbstractKryoSerializationScheme() {
@@ -93,7 +94,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
     fun `serialised form is stable when the same object instance is added to the deserialised object graph`() {
         val noReferencesContext = context.withoutReferences()
         val obj : ByteSequence = Ints.toByteArray(0x01234567).sequence()
-        val originalList : ArrayList<ByteSequence> = arrayListOf(obj)
+        val originalList : ArrayList<ByteSequence> = ArrayList<ByteSequence>().apply { this += obj }
         val deserialisedList = originalList.serialize(factory, noReferencesContext).deserialize(factory, noReferencesContext)
         originalList += obj
         deserialisedList += obj
@@ -106,8 +107,14 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
         val instant = Instant.ofEpochMilli(123)
         val instantCopy = Instant.ofEpochMilli(123)
         assertThat(instant).isNotSameAs(instantCopy)
-        val listWithCopies = arrayListOf(instant, instantCopy)
-        val listWithSameInstances = arrayListOf(instant, instant)
+        val listWithCopies = ArrayList<Instant>().apply {
+            this += instant
+            this += instantCopy
+        }
+        val listWithSameInstances = ArrayList<Instant>().apply {
+            this += instant
+            this += instant
+        }
         assertThat(listWithSameInstances.serialize(factory, noReferencesContext)).isEqualTo(listWithCopies.serialize(factory, noReferencesContext))
     }
 

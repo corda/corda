@@ -5,7 +5,11 @@ import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.SerializationFactoryImpl
-import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.CompositeType
+import net.corda.serialization.internal.amqp.DeserializationInput
+import net.corda.serialization.internal.amqp.RestrictedType
+import net.corda.serialization.internal.amqp.TypeNotation
+import net.corda.serialization.internal.amqp.amqpMagic
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.Symbol

@@ -1,4 +1,4 @@
-package net.corda.serialization.internal.kryo
+package net.corda.node.serialization.kryo
 
 import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.factories.ReflectionSerializerFactory

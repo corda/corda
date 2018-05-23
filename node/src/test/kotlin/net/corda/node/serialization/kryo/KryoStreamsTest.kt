@@ -1,4 +1,4 @@
-package net.corda.serialization.internal.kryo
+package net.corda.node.serialization.kryo
 
 import net.corda.core.internal.declaredField
 import net.corda.serialization.internal.ByteBufferOutputStream
@@ -28,7 +28,7 @@ class KryoStreamsTest {
     fun `substitute output works`() {
         assertArrayEquals(byteArrayOf(100, -101), kryoOutput {
             write(100)
-            substitute(::NegOutputStream)
+            substitute(KryoStreamsTest::NegOutputStream)
             write(101)
         })
     }
@@ -37,7 +37,7 @@ class KryoStreamsTest {
     fun `substitute input works`() {
         kryoInput(byteArrayOf(100, 101).inputStream()) {
             assertEquals(100, read())
-            substitute(::NegInputStream)
+            substitute(KryoStreamsTest::NegInputStream)
             assertEquals(-101, read().toByte())
             assertEquals(-1, read())
         }

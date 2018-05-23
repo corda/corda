@@ -15,7 +15,7 @@ internal val serializeOutputStreamPool = LazyPool(
         shouldReturnToPool = { it.size() < 256 * 1024 }, // Discard if it grew too large
         newInstance = { ByteBufferOutputStream(64 * 1024) })
 
-internal fun <T> byteArrayOutput(task: (ByteBufferOutputStream) -> T): ByteArray {
+fun <T> byteArrayOutput(task: (ByteBufferOutputStream) -> T): ByteArray {
     return serializeOutputStreamPool.run { underlying ->
         task(underlying)
         underlying.toByteArray() // Must happen after close, to allow ZIP footer to be written for example.
