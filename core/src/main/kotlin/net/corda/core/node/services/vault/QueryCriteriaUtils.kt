@@ -363,7 +363,9 @@ object Builder {
     @JvmStatic
     @JvmOverloads
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
-    fun <R> Field.sum(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = this.info().sum<R>(groupByColumns?.map<Field, FieldInfo> { it.info() }, orderBy)
+    fun <R> Field.sum(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null): CriteriaExpression.AggregateFunctionExpression<Any, R> {
+        return info().sum<R>(groupByColumns?.map<Field, FieldInfo> { it.info() }, orderBy)
+    }
     @JvmStatic
     @JvmOverloads
     fun <R> FieldInfo.sum(groupByColumns: List<FieldInfo>? = null, orderBy: Sort.Direction? = null) =
