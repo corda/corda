@@ -125,6 +125,7 @@ see changes to this list.
 * Micheal Hinstridge (Thoughtworks)
 * Michele Sollecito (R3)
 * Mike Hearn (R3)
+* Mike Ward (R3)
 * Mike Reichelt (US Bank)
 * Mustafa Ozturk (Natixis)
 * Nick Skinner (Northern Trust)
