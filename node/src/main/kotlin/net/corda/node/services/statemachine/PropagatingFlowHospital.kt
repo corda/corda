@@ -9,11 +9,10 @@ import net.corda.core.utilities.loggerFor
 object PropagatingFlowHospital : FlowHospital {
     private val log = loggerFor<PropagatingFlowHospital>()
 
-    override fun flowErrored(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable): Boolean {
+    override fun flowErrored(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable) {
         log.debug { "Flow ${flowFiber.id} $currentState encountered error $newError" }
         flowFiber.scheduleEvent(Event.StartErrorPropagation)
         log.warn("Flow ${flowFiber.id} is propagating", newError)
-        return true
     }
 
     override fun flowCleaned(flowFiber: FlowFiber) {

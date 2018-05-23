@@ -39,7 +39,7 @@ object StaffedFlowHospital : FlowHospital {
         override fun toString(): String = "${this.javaClass.simpleName}(records = $records)"
     }
 
-    override fun flowErrored(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable): Boolean {
+    override fun flowErrored(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable) {
         log.info("Flow ${flowFiber.id} admitted to hospital in state $currentState with", newError)
         val medicalHistory = patients.computeIfAbsent(flowFiber.id) { MedicalHistory() }
         medicalHistory.records += MedicalHistory.Record.Admitted(Instant.now(), currentState.checkpoint.numberOfSuspends)
@@ -49,12 +49,11 @@ object StaffedFlowHospital : FlowHospital {
                 flowFiber.scheduleEvent(Event.RetryFlowFromSafePoint)
                 medicalHistory.records += MedicalHistory.Record.Discharged(Instant.now(), currentState.checkpoint.numberOfSuspends, staffMember)
                 log.info("Flow ${flowFiber.id} discharged from hospital by $staffMember")
-                return false
+                return
             }
         }
         log.warn("Flow ${flowFiber.id} is propagating with history $medicalHistory", newError)
         flowFiber.scheduleEvent(Event.StartErrorPropagation)
-        return true
     }
 
     // It's okay for flows to be cleaned... we fix them now!

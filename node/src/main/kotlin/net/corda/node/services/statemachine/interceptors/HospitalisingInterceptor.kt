@@ -25,18 +25,8 @@ class HospitalisingInterceptor(
             transition: TransitionResult,
             actionExecutor: ActionExecutor
     ): Pair<FlowContinuation, StateMachineState> {
-        val skipError = if (event is Event.Error && hospitalisedFlows.putIfAbsent(fiber.id, fiber) == null) {
-            !flowHospital.flowErrored(fiber, previousState, event.exception)
-        } else {
-            false
-        }
-        val (continuation, nextState) = if (!skipError) {
-            delegate.executeTransition(fiber, previousState, event, transition, actionExecutor)
-        } else {
-            val doNotErrorTransition = TransitionResult(previousState, listOf(Action.RollbackTransaction), FlowContinuation.ProcessEvents)
-            delegate.executeTransition(fiber, previousState, event, doNotErrorTransition, actionExecutor)
-        }
-        if (!skipError) {
+        val (continuation, nextState) = delegate.executeTransition(fiber, previousState, event, transition, actionExecutor)
+
             when (nextState.checkpoint.errorState) {
                 is ErrorState.Clean -> {
                     if (hospitalisedFlows.remove(fiber.id) != null) {
@@ -45,13 +35,11 @@ class HospitalisingInterceptor(
                 }
                 is ErrorState.Errored -> {
                     val exceptionToHandle = nextState.checkpoint.errorState.errors.last().exception
-                    if (hospitalisedFlows.putIfAbsent(fiber.id, fiber) == null && !flowHospital.flowErrored(fiber, previousState, exceptionToHandle)) {
-                        val revisedState = nextState.copy(checkpoint = nextState.checkpoint.copy(errorState = ErrorState.Clean))
-                        return Pair(continuation, revisedState)
+                    if (hospitalisedFlows.putIfAbsent(fiber.id, fiber) == null) {
+                        flowHospital.flowErrored(fiber, previousState, exceptionToHandle)
                     }
                 }
             }
-        }
         if (nextState.isRemoved) {
             hospitalisedFlows.remove(fiber.id)
             flowHospital.flowRemoved(fiber)
