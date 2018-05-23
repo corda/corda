@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
+import io.netty.channel.unix.Errors
 import joptsimple.OptionException
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
@@ -113,6 +114,10 @@ open class NodeStartup(val args: Array<String>) {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
         } catch (e: Exception) {
+            if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
+                logger.error("One of the ports required by the Corda node is already in use.")
+                return false
+            }
             if (e.message?.startsWith("Unknown named curve:") == true) {
                 logger.error("Exception during node startup - ${e.message}. " +
                         "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")

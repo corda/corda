@@ -21,6 +21,7 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
+import net.corda.finance.schemas.SampleCashSchemaV2
 import net.corda.finance.schemas.SampleCashSchemaV3
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -62,6 +63,7 @@ class VaultQueryTests {
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         val ALICE get() = alice.party
         val ALICE_IDENTITY get() = alice.identity
+
         val BIG_CORP get() = bigCorp.party
         val BIG_CORP_IDENTITY get() = bigCorp.identity
         val BOB get() = bob.party
@@ -178,6 +180,34 @@ class VaultQueryTests {
 
     /** Generic Query tests
     (combining both FungibleState and LinearState contract types) */
+
+    @Test
+    fun `criteria with fiel, d from mapped superclass`() {
+        database.transaction {
+            val expression = builder {
+                SampleCashSchemaV2.PersistentCashState::quantity.sum(
+                        groupByColumns = listOf(SampleCashSchemaV2.PersistentCashState::currency),
+                        orderBy = Sort.Direction.ASC
+                )
+            }
+            val criteria = VaultCustomQueryCriteria(expression)
+            vaultService.queryBy<FungibleAsset<*>>(criteria)
+        }
+    }
+
+    @Test
+    fun `criteria with field from mapped superclass of superclass`() {
+        database.transaction {
+            val expression = builder {
+                SampleCashSchemaV2.PersistentCashState::quantity.sum(
+                        groupByColumns = listOf(SampleCashSchemaV2.PersistentCashState::currency, SampleCashSchemaV2.PersistentCashState::stateRef),
+                        orderBy = Sort.Direction.ASC
+                )
+            }
+            val criteria = VaultCustomQueryCriteria(expression)
+            vaultService.queryBy<FungibleAsset<*>>(criteria)
+        }
+    }
 
     @Test
     fun `unconsumed states simple`() {

@@ -7,6 +7,10 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work - the new methods avoid bugs that can occur when JPA schemas inherit from each other.
+
+* Node will now gracefully fail to start if one of the required ports is already in use.
+
 * Fixed incorrect exception handling in ``NodeVaultService._query()``.
 
 * Avoided a memory leak deriving from incorrect MappedSchema caching strategy.
