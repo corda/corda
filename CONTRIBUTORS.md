@@ -161,6 +161,7 @@ see changes to this list.
 * Sasmit Sahu
 * Scott James
 * Shams Asari (R3)
+* Siddhartha Sengupta (Tradewind Markets)
 * Simon Taylor (Barclays)
 * Sofus Mortensen (Digital Asset Holdings)
 * stevenroose

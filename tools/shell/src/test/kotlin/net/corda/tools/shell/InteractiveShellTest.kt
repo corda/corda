@@ -36,7 +36,7 @@ class InteractiveShellTest {
         override fun call() = a
     }
 
-    private val ids = InMemoryIdentityService(arrayOf(megaCorp.identity), DEV_ROOT_CA.certificate)
+    private val ids = InMemoryIdentityService(listOf(megaCorp.identity), DEV_ROOT_CA.certificate)
     @Suppress("DEPRECATION")
     private val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
 
