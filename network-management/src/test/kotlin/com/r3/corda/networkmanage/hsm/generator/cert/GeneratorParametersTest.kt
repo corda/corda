@@ -8,9 +8,12 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-package com.r3.corda.networkmanage.hsm.generator
+package com.r3.corda.networkmanage.hsm.generator.cert
 
 import com.r3.corda.networkmanage.common.configuration.ConfigFilePathArgsParser
+import com.r3.corda.networkmanage.hsm.generator.AuthMode
+import com.r3.corda.networkmanage.hsm.generator.certificate.GeneratorParameters
+import com.r3.corda.networkmanage.hsm.generator.certificate.parseParameters
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -23,8 +26,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
 class GeneratorParametersTest {
-    private val validConfigPath = File("generator.conf").absolutePath
-    private val invalidConfigPath = File(javaClass.getResource("/generator_fail.conf").toURI()).absolutePath
+    private val validConfigPath = File("cert-generator.conf").absolutePath
+    private val invalidConfigPath = File(javaClass.getResource("/cert-generator_fail.conf").toURI()).absolutePath
     private val validArgs = arrayOf("--config-file", validConfigPath)
 
     @Test

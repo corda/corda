@@ -19,7 +19,7 @@ import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
 import com.r3.corda.networkmanage.common.utils.initialiseSerialization
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
-import com.r3.corda.networkmanage.hsm.generator.run
+import com.r3.corda.networkmanage.hsm.generator.certificate.run
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
 import com.r3.corda.networkmanage.hsm.signer.HsmSigner

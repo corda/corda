@@ -19,12 +19,12 @@ configurations {
     runtimeArtifacts.extendsFrom runtime
 }
 
-task buildHsmCertGeneratorJAR(type: FatCapsule, dependsOn: 'jar') {
-    applicationClass 'com.r3.corda.networkmanage.hsm.generator.certificate.MainKt'
-    archiveName "hsm-cert-generator-${version}.jar"
+task buildHsmCrlGeneratorJAR(type: FatCapsule, dependsOn: 'jar') {
+    applicationClass 'com.r3.corda.networkmanage.hsm.generator.crl.MainKt'
+    archiveName "hsm-crl-generator-${version}.jar"
     capsuleManifest {
         applicationVersion = corda_release_version
-        systemProperties['visualvm.display.name'] = 'HSM Certificate Generator'
+        systemProperties['visualvm.display.name'] = 'HSM CRL Generator'
         minJavaVersion = '1.8.0'
         jvmArgs = ['-XX:+UseG1GC']
     }
@@ -35,8 +35,8 @@ task buildHsmCertGeneratorJAR(type: FatCapsule, dependsOn: 'jar') {
 }
 
 artifacts {
-    runtimeArtifacts buildHsmCertGeneratorJAR
-    publish buildHsmCertGeneratorJAR
+    runtimeArtifacts buildHsmCrlGeneratorJAR
+    publish buildHsmCrlGeneratorJAR
 }
 
 jar {
@@ -44,6 +44,6 @@ jar {
 }
 
 publish {
-    name 'hsm-cert-generator'
+    name 'hsm-crl-generator'
     disableDefaultJar = true
 }

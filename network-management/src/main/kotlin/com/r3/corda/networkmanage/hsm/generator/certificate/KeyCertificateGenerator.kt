@@ -8,7 +8,7 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-package com.r3.corda.networkmanage.hsm.generator
+package com.r3.corda.networkmanage.hsm.generator.certificate
 
 import CryptoServerCXI.CryptoServerCXI.KEY_ALGO_ECDSA
 import CryptoServerCXI.CryptoServerCXI.KeyAttributes

@@ -4,6 +4,7 @@ import com.r3.corda.networkmanage.common.persistence.CertificateRevocationListSt
 import com.r3.corda.networkmanage.common.persistence.CertificateRevocationRequestData
 import com.r3.corda.networkmanage.common.persistence.CrlIssuer
 import com.r3.corda.networkmanage.common.persistence.RequestStatus
+import com.r3.corda.networkmanage.common.utils.Revocation
 import com.r3.corda.networkmanage.common.utils.createSignedCrl
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -13,6 +14,7 @@ import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
+import java.util.*
 
 class CertificateRevocationListSigner(
         private val revocationListStorage: CertificateRevocationListStorage,
@@ -48,7 +50,10 @@ class CertificateRevocationListSigner(
         logger.trace { "Approved Certificate Revocation Requests to be included in the new Certificate Revocation List: $approvedWithTimestamp" }
         logger.debug("Retrieving revoked Certificate Revocation Requests...")
         logger.trace { "Revoked Certificate Revocation Requests to be included in the new Certificate Revocation List: $existingCRRs" }
-        val crl = createSignedCrl(issuerCertificate, endpoint, updateInterval, signer, existingCRRs + approvedWithTimestamp)
+        val revocations = (existingCRRs + approvedWithTimestamp).map {
+            Revocation(it.certificateSerialNumber, Date(it.modifiedAt.toEpochMilli()), it.reason)
+        }
+        val crl = createSignedCrl(issuerCertificate, endpoint, updateInterval, signer, revocations)
         logger.debug { "Created a new Certificate Revocation List $crl" }
         revocationListStorage.saveCertificateRevocationList(crl, CrlIssuer.DOORMAN, signedBy, revocationTime)
         logger.info("A new Certificate Revocation List has been persisted.")

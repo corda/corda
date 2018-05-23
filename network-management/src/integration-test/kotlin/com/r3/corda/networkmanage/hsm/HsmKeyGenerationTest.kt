@@ -15,10 +15,9 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.networkmanage.common.HsmBaseTest
 import com.r3.corda.networkmanage.common.utils.CORDA_NETWORK_MAP
-import com.r3.corda.networkmanage.hsm.authentication.CryptoServerProviderConfig
 import com.r3.corda.networkmanage.hsm.authentication.InputReader
 import com.r3.corda.networkmanage.hsm.generator.AutoAuthenticator
-import com.r3.corda.networkmanage.hsm.generator.run
+import com.r3.corda.networkmanage.hsm.generator.certificate.run
 import com.r3.corda.networkmanage.hsm.utils.HsmX509Utilities
 import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -92,13 +91,5 @@ class HsmKeyGenerationTest : HsmBaseTest() {
                     assertNotNull(networkMapCert)
                     assertEquals(CordaX500Name.parse(ROOT_CERT_SUBJECT).x500Principal, networkMapCert.issuerX500Principal)
                 }
-    }
-
-    private fun createProviderConfig(keyGroup: String): CryptoServerProviderConfig {
-        return CryptoServerProviderConfig(
-                Device = "${hsmSimulator.port}@${hsmSimulator.host}",
-                KeySpecifier = 1,
-                KeyGroup = keyGroup,
-                StoreKeysExternal = false)
     }
 }

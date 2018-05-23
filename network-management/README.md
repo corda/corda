@@ -48,6 +48,18 @@ The built file will appear in
 network-management/capsule-hsm-cert-generator/build/libs/hsm-cert-generator-<VERSION>.jar
 ```
 
+## HSM CRL Generator
+
+To build a fat jar containing all the hsm CRL generator code you can simply invoke
+```
+    ./gradlew network-management:capsule-hsm-crl-generator:buildHsmCrlGeneratorJAR
+```
+
+The built file will appear in
+```
+network-management/capsule-hsm-crl-generator/build/libs/hsm-crl-generator-<VERSION>.jar
+```
+
 ## Certificate Revocation Request Submission Tool
 
 To build a fat jar containing all the CRR submission tool code you can simply invoke

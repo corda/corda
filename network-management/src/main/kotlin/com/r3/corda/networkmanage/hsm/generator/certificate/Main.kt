@@ -8,15 +8,16 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-package com.r3.corda.networkmanage.hsm.generator
+package com.r3.corda.networkmanage.hsm.generator.certificate
 
 import com.r3.corda.networkmanage.common.configuration.ConfigFilePathArgsParser
 import com.r3.corda.networkmanage.hsm.authentication.CryptoServerProviderConfig
+import com.r3.corda.networkmanage.hsm.generator.AutoAuthenticator
 import com.r3.corda.networkmanage.hsm.utils.mapCryptoServerException
 import net.corda.nodeapi.internal.crypto.CertificateType.ROOT_CA
 import org.apache.logging.log4j.LogManager
 
-private val logger = LogManager.getLogger("com.r3.corda.networkmanage.hsm.generator.Main")
+private val logger = LogManager.getLogger("com.r3.corda.networkmanage.hsm.generator.certificate.Main")
 
 fun main(args: Array<String>) {
     run(parseParameters(ConfigFilePathArgsParser().parseOrExit(*args)))

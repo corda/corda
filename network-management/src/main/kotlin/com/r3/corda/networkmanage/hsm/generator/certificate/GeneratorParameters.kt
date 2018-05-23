@@ -8,29 +8,15 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-package com.r3.corda.networkmanage.hsm.generator
+package com.r3.corda.networkmanage.hsm.generator.certificate
 
+import com.r3.corda.networkmanage.hsm.generator.UserAuthenticationParameters
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.CertificateType
 import java.nio.file.Path
-
-/**
- * Holds configuration necessary for user's authentication against HSM.
- */
-data class UserAuthenticationParameters(val username: String,
-                                        val authMode: AuthMode,
-                                        val authToken: String?, // password or path to the key file, depending on the [authMode]
-                                        val keyFilePassword: String?) // used only if authMode == [AuthMode.KEY_FILE]
-
-/**
- * Supported authentication modes.
- */
-enum class AuthMode {
-    PASSWORD, CARD_READER, KEY_FILE
-}
 
 /**
  * Holds generator parameters.

@@ -1,5 +1,6 @@
 package com.r3.corda.networkmanage.tools.crr.submission
 
+import com.r3.corda.networkmanage.common.utils.SupportedCrlReasons
 import com.r3.corda.networkmanage.common.utils.initialiseSerialization
 import com.r3.corda.networkmanage.hsm.authentication.ConsoleInputReader
 import com.r3.corda.networkmanage.hsm.authentication.InputReader
@@ -55,16 +56,6 @@ private fun InputReader.getRequiredInput(attributeName: String): String {
     }
 }
 
-private enum class SupportedCrlReasons {
-    UNSPECIFIED,
-    KEY_COMPROMISE,
-    CA_COMPROMISE,
-    AFFILIATION_CHANGED,
-    SUPERSEDED,
-    CESSATION_OF_OPERATION,
-    PRIVILEGE_WITHDRAWN
-}
-
 private fun getReason(inputReader: InputReader): CRLReason {
     while (true) {
         SupportedCrlReasons.values().forEachIndexed { index, value ->
@@ -75,7 +66,7 @@ private fun getReason(inputReader: InputReader): CRLReason {
         if (input < 1 || input > SupportedCrlReasons.values().size) {
             println("Incorrect selection. Try again.")
         } else {
-            return CRLReason.valueOf(SupportedCrlReasons.values()[input -1 ].name)
+            return CRLReason.valueOf(SupportedCrlReasons.values()[input - 1].name)
         }
     }
 }

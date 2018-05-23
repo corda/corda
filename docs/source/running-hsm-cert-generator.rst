@@ -13,7 +13,7 @@ Configuration file
 At startup, the HSM Certificate Generation Tool reads a configuration file, passed with ``--config-file`` on the command line.
 
 This is an example of what a tool configuration file might look like:
-    .. literalinclude:: ../../network-management/generator.conf
+    .. literalinclude:: ../../network-management/cert-generator.conf
 
 General configuration parameters
 --------------------------------
@@ -61,9 +61,9 @@ Certificate Configuration
 
 :keyOverride: Whether to override the key if already exists or not. 1 for override and 0 for NOT override.
 
-:keySpecifier: This is an HSM specific parameter that corresponds to key name spacing. See Utimaco documentation for more details.
+:keySpecifier: This is an HSM specific parameter that corresponds to key name spacing of the generated key. See Utimaco documentation for more details.
 
-:keyGroup: This is an HSM specific parameter that corresponds to key name spacing for the generated key. See Utimaco documentation for more details.
+:keyGroup: This is an HSM specific parameter that corresponds to key name grouping of the generated key. See Utimaco documentation for more details.
 
 
 User Authentication Configuration
@@ -72,7 +72,7 @@ Allowed parameters are:
 
 :username: HSM username. This user needs to be allowed to generate keys/certificates and store them in HSM.
 
-:authMode: One of the 2 possible authentication modes:
+:authMode: One of the 3 possible authentication modes:
            PASSWORD - User's password as set-up in the HSM
            CARD_READER - Smart card reader authentication
            KEY_FILE - Key file based authentication.

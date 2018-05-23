@@ -14,11 +14,12 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.networkmanage.HsmSimulator
+import com.r3.corda.networkmanage.hsm.authentication.CryptoServerProviderConfig
 import com.r3.corda.networkmanage.hsm.authentication.InputReader
 import com.r3.corda.networkmanage.hsm.configuration.*
-import com.r3.corda.networkmanage.hsm.generator.CertificateConfiguration
-import com.r3.corda.networkmanage.hsm.generator.GeneratorParameters
 import com.r3.corda.networkmanage.hsm.generator.UserAuthenticationParameters
+import com.r3.corda.networkmanage.hsm.generator.certificate.CertificateConfiguration
+import com.r3.corda.networkmanage.hsm.generator.certificate.GeneratorParameters
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
@@ -43,9 +44,9 @@ abstract class HsmBaseTest : IntegrationTest() {
         const val ROOT_CERT_KEY_GROUP = "TEST.CORDACONNECT.ROOT"
         const val NETWORK_MAP_CERT_KEY_GROUP = "TEST.CORDACONNECT.OPS.NETMAP"
         const val DOORMAN_CERT_KEY_GROUP = "TEST.CORDACONNECT.OPS.CERT"
-        const val ROOT_CERT_SUBJECT = "CN=Corda Root CA, O=R3 Ltd, OU=Corda, L=London, C=GB"
-        const val NETWORK_MAP_CERT_SUBJECT = "CN=Corda Network Map, O=R3 Ltd, OU=Corda, L=London, C=GB"
-        const val DOORMAN_CERT_SUBJECT = "CN=Corda Doorman CA, O=R3 Ltd, OU=Corda, L=London, C=GB"
+        const val ROOT_CERT_SUBJECT = "CN=Corda Root CA, OU=Corda, O=R3 Ltd, L=London, C=GB"
+        const val NETWORK_MAP_CERT_SUBJECT = "CN=Corda Network Map, OU=Corda, O=R3 Ltd, L=London, C=GB"
+        const val DOORMAN_CERT_SUBJECT = "CN=Corda Doorman CA, OU=Corda, O=R3 Ltd, L=London, C=GB"
         const val TRUSTSTORE_PASSWORD: String = "trustpass"
         const val HSM_USERNAME = "INTEGRATION_TEST"
         const val HSM_PASSWORD = "INTEGRATION_TEST"
@@ -190,5 +191,13 @@ abstract class HsmBaseTest : IntegrationTest() {
 
     fun makeTestDatabaseProperties(): DatabaseConfig {
         return makeTestDatabaseProperties(DOORMAN_DB_NAME, configSupplier = configSupplierForSupportedDatabases())
+    }
+
+    protected fun createProviderConfig(keyGroup: String): CryptoServerProviderConfig {
+        return CryptoServerProviderConfig(
+                Device = "${hsmSimulator.port}@${hsmSimulator.host}",
+                KeySpecifier = 1,
+                KeyGroup = keyGroup,
+                StoreKeysExternal = false)
     }
 }

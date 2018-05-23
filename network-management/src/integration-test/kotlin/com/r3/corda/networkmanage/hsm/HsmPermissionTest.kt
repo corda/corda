@@ -15,7 +15,7 @@ import com.r3.corda.networkmanage.common.HsmBaseTest
 import com.r3.corda.networkmanage.hsm.authentication.Authenticator
 import com.r3.corda.networkmanage.hsm.authentication.createProvider
 import com.r3.corda.networkmanage.hsm.generator.UserAuthenticationParameters
-import com.r3.corda.networkmanage.hsm.generator.run
+import com.r3.corda.networkmanage.hsm.generator.certificate.run
 import com.r3.corda.networkmanage.hsm.persistence.ApprovedCertificateRequestData
 import com.r3.corda.networkmanage.hsm.signer.HsmCsrSigner
 import net.corda.core.crypto.Crypto.generateKeyPair
@@ -149,25 +149,25 @@ class HsmPermissionTest : HsmBaseTest() {
                                          netMapCertUserConfigs: List<UserAuthenticationParameters>) {
         // when root cert is created
         run(createGeneratorParameters(
-                keyGroup = HsmBaseTest.ROOT_CERT_KEY_GROUP,
+                keyGroup = ROOT_CERT_KEY_GROUP,
                 rootKeyGroup = null,
                 certificateType = CertificateType.ROOT_CA,
-                subject = HsmBaseTest.ROOT_CERT_SUBJECT,
+                subject = ROOT_CERT_SUBJECT,
                 hsmUserConfigs = rootCertUserConfigs))
         // when network map cert is created
         run(createGeneratorParameters(
-                keyGroup = HsmBaseTest.NETWORK_MAP_CERT_KEY_GROUP,
-                rootKeyGroup = HsmBaseTest.ROOT_CERT_KEY_GROUP,
+                keyGroup = NETWORK_MAP_CERT_KEY_GROUP,
+                rootKeyGroup = ROOT_CERT_KEY_GROUP,
                 certificateType = CertificateType.NETWORK_MAP,
-                subject = HsmBaseTest.NETWORK_MAP_CERT_SUBJECT,
+                subject = NETWORK_MAP_CERT_SUBJECT,
                 hsmUserConfigs = netMapCertUserConfigs
         ))
         // when doorman cert is created
         run(createGeneratorParameters(
-                keyGroup = HsmBaseTest.DOORMAN_CERT_KEY_GROUP,
-                rootKeyGroup = HsmBaseTest.ROOT_CERT_KEY_GROUP,
+                keyGroup = DOORMAN_CERT_KEY_GROUP,
+                rootKeyGroup = ROOT_CERT_KEY_GROUP,
                 certificateType = CertificateType.INTERMEDIATE_CA,
-                subject = HsmBaseTest.DOORMAN_CERT_SUBJECT,
+                subject = DOORMAN_CERT_SUBJECT,
                 hsmUserConfigs = doormanCertUserConfigs
         ))
     }
