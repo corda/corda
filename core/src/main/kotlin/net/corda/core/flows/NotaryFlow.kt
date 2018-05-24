@@ -7,6 +7,7 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.internal.info
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
 import net.corda.core.transactions.ContractUpgradeWireTransaction
@@ -46,7 +47,9 @@ class NotaryFlow {
         override fun call(): List<TransactionSignature> {
             val notaryParty = checkTransaction()
             progressTracker.currentStep = REQUESTING
+            logger.info(stx, "Sending transaction to notary: ${notaryParty.name}.")
             val response = notarise(notaryParty)
+            logger.info(stx, "Notary responded.")
             progressTracker.currentStep = VALIDATING
             return validateResponse(response, notaryParty)
         }

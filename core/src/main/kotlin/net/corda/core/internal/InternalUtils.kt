@@ -14,6 +14,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
@@ -459,3 +460,11 @@ val PublicKey.hash: SecureHash get() = encoded.sha256()
  * Extension method for providing a sumBy method that processes and returns a Long
  */
 fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector(it) }.sum()
+
+fun Logger.info(transaction: SignedTransaction, format: String, vararg args: Any) {
+    info("$format - {tx_id: ${transaction.id}}", *args)
+}
+
+fun Logger.warn(transaction: SignedTransaction, format: String, vararg args: Any) {
+    warn("$format - {tx_id: ${transaction.id}}", *args)
+}

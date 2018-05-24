@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
+import net.corda.core.internal.info
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -51,17 +52,22 @@ class FinalityFlow(val transaction: SignedTransaction,
         //
         // Lookup the resolved transactions and use them to map each signed transaction to the list of participants.
         // Then send to the notary if needed, record locally and distribute.
+        val commandDataTypes = transaction.tx.commands.map { it.value }.mapNotNull { it::class.qualifiedName }.distinct()
+        logger.info(transaction, "Started finalization, commands are ${commandDataTypes.joinToString(", ", "[", "]")}.")
         val parties = getPartiesToSend(verifyTx())
         val notarised = notariseAndRecord()
 
         // Each transaction has its own set of recipients, but extra recipients get them all.
         progressTracker.currentStep = BROADCASTING
-        for (party in parties) {
-            if (!serviceHub.myInfo.isLegalIdentity(party)) {
-                val session = initiateFlow(party)
-                subFlow(SendTransactionFlow(session, notarised))
-            }
+        val recipients = parties.filterNot(serviceHub.myInfo::isLegalIdentity)
+        logger.info(transaction, "Broadcasting transaction to parties ${recipients.map { it.name }.joinToString(", ", "[", "]")}.")
+        for (party in recipients) {
+            logger.info(transaction, "Sending transaction to party ${party.name}.")
+            val session = initiateFlow(party)
+            subFlow(SendTransactionFlow(session, notarised))
+            logger.info(transaction, "Party ${party.name} received the transaction.")
         }
+        logger.info(transaction, "All parties received the transaction successfully.")
 
         return notarised
     }
@@ -73,9 +79,12 @@ class FinalityFlow(val transaction: SignedTransaction,
             val notarySignatures = subFlow(NotaryFlow.Client(transaction))
             transaction + notarySignatures
         } else {
+            logger.info(transaction, "No need to notarise this transaction.")
             transaction
         }
+        logger.info(transaction, "Recording transaction locally.")
         serviceHub.recordTransactions(notarised)
+        logger.info(transaction, "Recorded transaction locally successfully.")
         return notarised
     }
 
