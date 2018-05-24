@@ -33,9 +33,9 @@ class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSess
             TransactionVerificationException::class)
     override fun call(): SignedTransaction {
         if (checkSufficientSignatures) {
-            logger.info("Receiving a transaction from ${otherSideSession.counterparty}")
+            logger.trace("Receiving a transaction from ${otherSideSession.counterparty}")
         } else {
-            logger.info("Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}")
+            logger.trace("Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}")
         }
         val stx = otherSideSession.receive<SignedTransaction>().unwrap {
             it.pushToLoggingContext()
