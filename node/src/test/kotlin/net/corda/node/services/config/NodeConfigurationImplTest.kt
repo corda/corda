@@ -1,22 +1,23 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
-import net.corda.core.internal.div
+import com.typesafe.config.ConfigParseOptions
+import com.typesafe.config.ConfigValueFactory
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.net.URI
 import java.net.URL
 import java.nio.file.Paths
-import java.util.*
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -131,6 +132,27 @@ class NodeConfigurationImplTest {
         val errors = configuration.validate()
 
         assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("compatibilityZoneURL") && error.contains("devMode") }
+    }
+
+    @Test
+    fun `errors for nested config keys contain path`() {
+        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+        val missingPropertyPath = "rpcSettings.address"
+        rawConfig = rawConfig.withoutPath(missingPropertyPath)
+
+        assertThatThrownBy { rawConfig.parseAsNodeConfiguration() }.isInstanceOfSatisfying(ConfigException.Missing::class.java) { exception ->
+            assertThat(exception.message).isNotNull()
+            assertThat(exception.message).contains(missingPropertyPath)
+        }
+    }
+
+    @Test
+    fun `rpcAddress and rpcSettings_address are equivalent`() {
+        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+        rawConfig = rawConfig.withoutPath("rpcSettings.address")
+        rawConfig = rawConfig.withValue("rpcAddress", ConfigValueFactory.fromAnyRef("localhost:4444"))
+
+        assertThatCode { rawConfig.parseAsNodeConfiguration() }.doesNotThrowAnyException()
     }
 
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfiguration {

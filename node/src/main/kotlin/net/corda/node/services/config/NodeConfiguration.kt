@@ -1,6 +1,7 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
@@ -184,7 +185,10 @@ data class NodeConfigurationImpl(
                 logger.warn("Top-level declaration of property 'rpcAddress' is deprecated. Please use 'rpcSettings.address' instead.")
                 settings.copy(address = explicitAddress)
             }
-            else -> settings
+            else -> {
+                settings.address ?: throw ConfigException.Missing("rpcSettings.address")
+                settings
+            }
         }.asOptions(fallbackSslOptions)
     }
 
@@ -256,16 +260,16 @@ data class NodeConfigurationImpl(
 }
 
 data class NodeRpcSettings(
-        val address: NetworkHostAndPort,
-        val adminAddress: NetworkHostAndPort,
+        val address: NetworkHostAndPort?,
+        val adminAddress: NetworkHostAndPort?,
         val standAloneBroker: Boolean = false,
         val useSsl: Boolean = false,
         val ssl: BrokerRpcSslOptions?
 ) {
     fun asOptions(fallbackSslOptions: BrokerRpcSslOptions): NodeRpcOptions {
         return object : NodeRpcOptions {
-            override val address = this@NodeRpcSettings.address
-            override val adminAddress = this@NodeRpcSettings.adminAddress
+            override val address = this@NodeRpcSettings.address!!
+            override val adminAddress = this@NodeRpcSettings.adminAddress!!
             override val standAloneBroker = this@NodeRpcSettings.standAloneBroker
             override val useSsl = this@NodeRpcSettings.useSsl
             override val sslConfig = this@NodeRpcSettings.ssl ?: fallbackSslOptions
