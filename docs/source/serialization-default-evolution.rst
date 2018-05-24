@@ -64,7 +64,7 @@ above. A sensible default for the missing value is provided for instantiation of
     order, see the discussion below.
 
 As before, instances of the class at version A will be able to deserialize serialized forms of example B as it
-will simply treat them as if the property has been removed (as from its perspective, they will have been.)
+will simply treat them as if the property has been removed (as from its perspective, they will have been).
 
 
 Constructor Versioning
@@ -144,7 +144,6 @@ be:
 
         // The third alteration, and how it currently exists, property e added
         data class Example3 (val a: Int, val b: Int, val c: Int, val d: Int, val: Int e) {
-            // NOTE: version number purposefully omitted from annotation for demonstration purposes
             @DeprecatedConstructorForDeserialization(1)
             constructor (a: Int, b: Int) : this(a, b, -1, -1, -1)          // alt constructor 1
             @DeprecatedConstructorForDeserialization(2)
