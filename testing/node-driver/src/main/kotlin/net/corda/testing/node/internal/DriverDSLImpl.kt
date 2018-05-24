@@ -217,8 +217,6 @@ class DriverDSLImpl(
             is SplitCompatibilityZoneParams ->
                 mapOf("networkServices.doormanURL" to compatibilityZone.doormanURL().toString(),
                         "networkServices.networkMapURL" to compatibilityZone.networkMapURL().toString())
-            else ->
-                throw ConfigurationException("Unknown compatibility zone configuration")
         }
 
         val overrides = configOf(
@@ -1069,15 +1067,18 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
 
 /**
  * Internal API to enable testing of the network map service and node registration process using the internal driver.
- * @property url The base CZ URL for registration and network map updates
+ *
  * @property publishNotaries Hook for a network map server to capture the generated [NotaryInfo] objects needed for
  * creating the network parameters. This is needed as the network map server is expected to distribute it. The callback
  * will occur on a different thread to the driver-calling thread.
  * @property rootCert If specified then the nodes will register themselves with the doorman service using [url] and expect
  * the registration response to be rooted at this cert. If not specified then no registration is performed and the dev
  * root cert is used as normal.
+ *
+ * @see SharedCompatibilityZoneParams
+ * @see SplitCompatibilityZoneParams
  */
-abstract class CompatibilityZoneParams(
+sealed class CompatibilityZoneParams(
         val publishNotaries: (List<NotaryInfo>) -> Unit,
         val rootCert: X509Certificate? = null
 ) {
@@ -1085,6 +1086,9 @@ abstract class CompatibilityZoneParams(
     abstract fun doormanURL(): URL
 }
 
+/**
+ * Represent network management services, network map and doorman, running on the same URL
+ */
 class SharedCompatibilityZoneParams(
         private val url: URL,
         publishNotaries: (List<NotaryInfo>) -> Unit,
@@ -1094,6 +1098,9 @@ class SharedCompatibilityZoneParams(
     override fun networkMapURL() = url
 }
 
+/**
+ * Represent network management services, network map and doorman, running on different URLs
+ */
 class SplitCompatibilityZoneParams(
         private val doormanURL: URL,
         private val networkMapURL: URL,

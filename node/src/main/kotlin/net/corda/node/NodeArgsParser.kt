@@ -118,7 +118,6 @@ data class CmdLineOptions(val baseDirectory: Path,
                 configFile,
                 configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
                         if (devMode) mapOf("devMode" to this.devMode) else emptyMap<String, Any>())
-
         )
         return rawConfig to Try.on {
             rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->

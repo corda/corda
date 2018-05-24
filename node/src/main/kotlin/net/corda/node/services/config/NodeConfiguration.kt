@@ -122,6 +122,13 @@ data class BFTSMaRtConfiguration(
  * services for a node to be configured as different URLs. Cannot be set at the same time as the
  * compatibilityZoneURL, and will be defaulted (if not set) to both point at the configured
  * compatibilityZoneURL.
+ *
+ * @property doormanURL The URL of the tls certificate signing service.
+ * @property networkMapURL The URL of the Network Map service.
+ * @property inferred Non user setting that indicates weather the Network Services configuration was
+ * set explicitly ([inferred] == false) or weather they have been inferred via the compatibilityZoneURL parameter
+ * ([inferred] == true) where both the network map and doorman are running on the same endpoint. Only one,
+ * compatibilityZoneURL or networkServices, can be set at any one time.
  */
 data class NetworkServicesConfig(
         val doormanURL: URL,
