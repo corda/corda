@@ -26,6 +26,7 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.*
+import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
 import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap
 
@@ -148,6 +149,6 @@ val KRYO_CHECKPOINT_CONTEXT = SerializationContextImpl(
         emptyMap(),
         true,
         SerializationContext.UseCase.Checkpoint,
-        null,
+        SNAPPY,
         AlwaysAcceptEncodingWhitelist
 )

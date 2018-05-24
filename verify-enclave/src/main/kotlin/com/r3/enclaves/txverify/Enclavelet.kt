@@ -12,9 +12,10 @@
 
 package com.r3.enclaves.txverify
 
-import com.esotericsoftware.minlog.Log
 import net.corda.core.contracts.Attachment
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import java.io.File
@@ -82,7 +83,6 @@ private fun deserialise(reqBytes: ByteArray): LedgerTransaction {
 
 // Note: This is only here for debugging purposes
 fun main(args: Array<String>) {
-    Log.TRACE()
     Class.forName("com.r3.enclaves.txverify.EnclaveletSerializationScheme")
     val reqBytes = File(args[0]).readBytes()
     verifyInEnclave(reqBytes)

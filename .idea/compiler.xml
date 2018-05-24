@@ -37,6 +37,8 @@
       <module name="capsule-crr-submission_test" target="1.8" />
       <module name="capsule-hsm-cert-generator_main" target="1.8" />
       <module name="capsule-hsm-cert-generator_test" target="1.8" />
+      <module name="capsule-hsm-crl-generator_main" target="1.8" />
+      <module name="capsule-hsm-crl-generator_test" target="1.8" />
       <module name="capsule-hsm_main" target="1.8" />
       <module name="capsule-hsm_test" target="1.8" />
       <module name="client_main" target="1.8" />
@@ -53,9 +55,6 @@
       <module name="corda-project-tools_test" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
-      <module name="corda-utils_integrationTest" target="1.8" />
-      <module name="corda-utils_main" target="1.8" />
-      <module name="corda-utils_test" target="1.8" />
       <module name="corda-utils_integrationTest" target="1.8" />
       <module name="corda-utils_main" target="1.8" />
       <module name="corda-utils_test" target="1.8" />
