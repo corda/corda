@@ -6,8 +6,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.node.services.statemachine.DataSessionMessage
-import net.corda.serialization.internal.kryo.kryoMagic
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.amqpSpecific
 import net.corda.testing.internal.kryoSpecific
