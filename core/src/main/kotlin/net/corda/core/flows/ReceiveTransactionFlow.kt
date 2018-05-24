@@ -3,7 +3,7 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.internal.ResolveTransactionsFlow
-import net.corda.core.internal.info
+import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
@@ -38,9 +38,10 @@ class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSess
             logger.info("Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}")
         }
         val stx = otherSideSession.receive<SignedTransaction>().unwrap {
-            logger.info(it, "Received transaction acknowledgement request from party ${otherSideSession.counterparty.name}.")
+            it.pushToLoggingContext()
+            logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty.name}.")
             subFlow(ResolveTransactionsFlow(it, otherSideSession))
-            logger.info(it, "Transaction dependencies resolution completed.")
+            logger.info("Transaction dependencies resolution completed.")
             try {
                 it.verify(serviceHub, checkSufficientSignatures)
                 it
@@ -52,9 +53,9 @@ class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSess
         if (checkSufficientSignatures) {
             // We should only send a transaction to the vault for processing if we did in fact fully verify it, and
             // there are no missing signatures. We don't want partly signed stuff in the vault.
-            logger.info(stx, "Successfully received fully signed tx. Sending it to the vault for processing.")
+            logger.info("Successfully received fully signed tx. Sending it to the vault for processing.")
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
-            logger.info(stx, "Successfully recorded received transaction locally.")
+            logger.info("Successfully recorded received transaction locally.")
         }
         return stx
     }
