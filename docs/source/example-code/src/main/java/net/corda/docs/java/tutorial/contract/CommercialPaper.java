@@ -56,7 +56,7 @@ public class CommercialPaper implements Contract {
                 });
             } else if (cmd.getValue() instanceof Commands.Issue) {
                 State output = outputs.get(0);
-                if (timeWindow == null) throw new IllegalArgumentException("Issuances must be timestamped");
+                if (timeWindow == null) throw new IllegalArgumentException("Issuances must have a time-window");
                 Instant time = timeWindow.getUntilTime();
                 requireThat(require -> {
                     // Don't allow people to issue commercial paper under other entities identities.
