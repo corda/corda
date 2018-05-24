@@ -23,7 +23,9 @@ import liquibase.resource.ClassLoaderResourceAccessor
 import net.corda.core.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
-import java.io.*
+import java.io.ByteArrayInputStream
+import java.io.InputStream
+import java.io.Writer
 import javax.sql.DataSource
 
 class SchemaMigration(
@@ -85,9 +87,9 @@ class SchemaMigration(
                 val resource = getMigrationResource(mappedSchema, classLoader)
                 when {
                     resource != null -> resource
-                    failOnMigrationMissing -> throw IllegalStateException("No migration defined for schema: ${mappedSchema.name} v${mappedSchema.version}")
+                    failOnMigrationMissing -> throw MissingMigrationException(mappedSchema)
                     else -> {
-                        logger.warn("No migration defined for schema: ${mappedSchema.name} v${mappedSchema.version}")
+                        logger.warn(MissingMigrationException.errorMessageFor(mappedSchema))
                         null
                     }
                 }
@@ -133,7 +135,7 @@ class SchemaMigration(
                 check && !run -> {
                     val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
                     if (unRunChanges.isNotEmpty()) {
-                        throw IllegalStateException("There are ${unRunChanges.size} outstanding database changes that need to be run. Please use the advanced migration tool. See: https://docs.corda.r3.com/database-migration.html")
+                        throw OutstandingDatabaseChangesException(unRunChanges.size)
                     }
                 }
                 (outputWriter != null) && !check && !run -> liquibase.update(Contexts(), outputWriter)
@@ -159,5 +161,21 @@ class SchemaMigration(
         val liquibaseDbImplementation = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(conn)
 
         return if (liquibaseDbImplementation is MSSQLDatabase) AzureDatabase(conn) else liquibaseDbImplementation
+    }
+}
+
+open class DatabaseMigrationException(message: String) : IllegalArgumentException(message) {
+    override val message: String = super.message!!
+}
+
+class MissingMigrationException(@Suppress("MemberVisibilityCanBePrivate") val mappedSchema: MappedSchema) : DatabaseMigrationException(errorMessageFor(mappedSchema)) {
+    internal companion object {
+        fun errorMessageFor(mappedSchema: MappedSchema): String = "No migration defined for schema: ${mappedSchema.name} v${mappedSchema.version}"
+    }
+}
+
+class OutstandingDatabaseChangesException(@Suppress("MemberVisibilityCanBePrivate") private val count: Int) : DatabaseMigrationException(errorMessageFor(count)) {
+    internal companion object {
+        fun errorMessageFor(count: Int): String = "There are $count outstanding database changes that need to be run. Please use the advanced migration tool. See: https://docs.corda.r3.com/database-migration.html"
     }
 }

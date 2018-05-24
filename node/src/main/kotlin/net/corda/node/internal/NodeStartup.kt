@@ -12,8 +12,8 @@ package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
 import io.netty.channel.unix.Errors
-import net.corda.core.crypto.Crypto
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.crypto.Crypto
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.createDirectories
@@ -35,6 +35,7 @@ import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
+import net.corda.nodeapi.internal.persistence.DatabaseMigrationException
 import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
@@ -134,6 +135,9 @@ open class NodeStartup(val args: Array<String>) {
         try {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: DatabaseMigrationException) {
+            logger.error(e.message)
+            return false
         } catch (e: Exception) {
             if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
                 logger.error("One of the ports required by the Corda node is already in use.")
