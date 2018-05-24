@@ -38,10 +38,17 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
 
+/**
+ * An identity service that stores parties and their identities to a key value tables in the database. The entries are
+ * cached for efficient lookup.
+ *
+ * @param trustRoot certificate from the zone operator for identity on the network.
+ * @param caCertificates list of additional certificates.
+ */
 // TODO There is duplicated logic between this and InMemoryIdentityService
 @ThreadSafe
 class PersistentIdentityService(override val trustRoot: X509Certificate,
-                                vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
+                                caCertificates: List<X509Certificate> = emptyList()) : SingletonSerializeAsToken(), IdentityServiceInternal {
 
     companion object {
         private val log = contextLogger()

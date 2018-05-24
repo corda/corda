@@ -11,6 +11,8 @@
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
 import net.corda.core.crypto.Crypto
 import net.corda.core.cordapp.Cordapp
@@ -19,6 +21,7 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.randomOrNull
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
 import net.corda.node.CmdLineOptions
 import net.corda.node.NodeArgsParser
@@ -91,7 +94,11 @@ open class NodeStartup(val args: Array<String>) {
         drawBanner(versionInfo)
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
         val conf = try {
-            val conf0 = loadConfigFile(cmdlineOptions)
+            val (rawConfig, conf0Result) = loadConfigFile(cmdlineOptions)
+            if (cmdlineOptions.devMode) {
+                println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
+            }
+            val conf0 = conf0Result.getOrThrow()
             if (cmdlineOptions.bootstrapRaftCluster) {
                 if (conf0 is NodeConfigurationImpl) {
                     println("Bootstrapping raft cluster (starting up as seed node).")
@@ -223,7 +230,7 @@ open class NodeStartup(val args: Array<String>) {
         NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
     }
 
-    protected open fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
+    protected open fun loadConfigFile(cmdlineOptions: CmdLineOptions): Pair<Config, Try<NodeConfiguration>> = cmdlineOptions.loadConfig()
 
     protected open fun banJavaSerialisation(conf: NodeConfiguration) {
         val isOracleDbDriver = conf.dataSourceProperties.getProperty("dataSource.url", "").startsWith("jdbc:oracle:")

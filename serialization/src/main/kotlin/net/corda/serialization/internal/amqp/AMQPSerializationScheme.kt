@@ -18,10 +18,7 @@ import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
-import net.corda.serialization.internal.CordaSerializationMagic
-import net.corda.serialization.internal.DefaultWhitelist
-import net.corda.serialization.internal.MutableClassWhitelist
-import net.corda.serialization.internal.SerializationScheme
+import net.corda.serialization.internal.*
 import java.lang.reflect.Modifier
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap

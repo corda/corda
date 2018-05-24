@@ -38,6 +38,7 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.node.services.Permissions
 import net.corda.node.services.api.NodePropertiesStore
