@@ -11,6 +11,7 @@ fun main(args: Array<String>) {
 
     val parser = OptionParser()
     MandatoryCommandLineArguments.values().forEach { argSpec -> parser.accepts(argSpec.name).withRequiredArg().withValuesConvertedBy(argSpec.valueConverter).describedAs(argSpec.description) }
+    OptionalCommandLineArguments.values().forEach { argSpec -> parser.accepts(argSpec.name).withOptionalArg().withValuesConvertedBy(argSpec.valueConverter).describedAs(argSpec.description) }
 
     val options = parser.parse(*args)
     try {
@@ -28,7 +29,13 @@ fun main(args: Array<String>) {
     }
 }
 
-enum class MandatoryCommandLineArguments(val valueConverter: ValueConverter<out Any>, val description: String) {
+interface CommandLineArguments {
+    val name: String
+    val valueConverter: ValueConverter<out Any>
+    val description: String
+}
+
+enum class MandatoryCommandLineArguments(override val valueConverter: ValueConverter<out Any>, override val description: String) : CommandLineArguments {
     haNodeRpcAddress(NetworkHostAndPortValueConverter, "High Available Node RPC address"),
     haNodeRpcUserName(StringValueConverter, "High Available Node RPC user name"),
     haNodeRpcPassword(StringValueConverter, "High Available Node RPC password"),
@@ -37,12 +44,28 @@ enum class MandatoryCommandLineArguments(val valueConverter: ValueConverter<out 
     normalNodeRpcPassword(StringValueConverter, "Normal Node RPC password"),
 }
 
+enum class OptionalCommandLineArguments(override val valueConverter: ValueConverter<out Any>, override val description: String) : CommandLineArguments{
+    iterationsCount(PositiveIntValueConverter, "Number of iteration to execute"),
+}
+
+private object PositiveIntValueConverter : ValueConverter<Int> {
+    override fun convert(value: String): Int {
+        val result = value.toInt()
+        require(result > 0) { "Positive value is expected" }
+        return result
+    }
+
+    override fun valueType(): Class<out Int> = Int::class.java
+
+    override fun valuePattern(): String = "positive_integer"
+}
+
 private object StringValueConverter : ValueConverter<String> {
     override fun convert(value: String) = value
 
     override fun valueType(): Class<out String> = String::class.java
 
-    override fun valuePattern(): String = "<free_form_text>"
+    override fun valuePattern(): String = "free_form_text"
 }
 
 private object NetworkHostAndPortValueConverter : ValueConverter<NetworkHostAndPort> {
@@ -50,5 +73,5 @@ private object NetworkHostAndPortValueConverter : ValueConverter<NetworkHostAndP
 
     override fun valueType(): Class<out NetworkHostAndPort> = NetworkHostAndPort::class.java
 
-    override fun valuePattern(): String = "<host>:<port>"
+    override fun valuePattern(): String = "host:port"
 }
