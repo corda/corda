@@ -108,7 +108,7 @@ class ObservablesTests {
 
         try {
             database.transaction {
-                val delayedSubject = source.bufferUntilDatabaseCommit(proagateRollbackAsError = true)
+                val delayedSubject = source.bufferUntilDatabaseCommit(propagateRollbackAsError = true)
                 assertThat(source).isNotEqualTo(delayedSubject)
                 delayedSubject.onNext(0)
                 source.onNext(1)

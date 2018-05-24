@@ -274,6 +274,12 @@ class InMemoryMessagingNetwork private constructor(
         return transfer
     }
 
+    /**
+     * When a new message handler is added, this implies we have started a new node.  The add handler logic uses this to
+     * push back any un-acknowledged messages for this peer onto the head of the queue (rather than the tail) to maintain message
+     * delivery order.  We push them back because their consumption was not complete and a restarted node would
+     * see them re-delivered if this was Artemis.
+     */
     @Synchronized
     private fun unPopMessages(transfers: Collection<MessageTransfer>, us: PeerHandle) {
         messageReceiveQueues.compute(us) { _, existing ->

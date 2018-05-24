@@ -183,11 +183,11 @@ class CordaPersistence(
  *
  * For examples, see the call hierarchy of this function.
  */
-fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(proagateRollbackAsError: Boolean = false): rx.Observer<T> {
+fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(propagateRollbackAsError: Boolean = false): rx.Observer<T> {
     val currentTx = contextTransaction
     val subject = UnicastSubject.create<T>()
     val databaseTxBoundary: Observable<CordaPersistence.Boundary> = currentTx.boundary.filter { it.success }
-    if (proagateRollbackAsError) {
+    if (propagateRollbackAsError) {
         currentTx.boundary.filter { !it.success }.subscribe { this.onError(DatabaseTransactionRolledBackException(it.txId)) }
     }
     subject.delaySubscription(databaseTxBoundary).subscribe(this)

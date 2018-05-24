@@ -45,9 +45,6 @@ class FlowRetryTest {
             val result = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(::InitiatorFlow, numSessions, numIterations, nodeBHandle.nodeInfo.singleIdentity()).returnValue.getOrThrow()
             }
-
-            nodeAHandle.stop()
-            nodeBHandle.stop()
             result
         }
         assertNotNull(result)
