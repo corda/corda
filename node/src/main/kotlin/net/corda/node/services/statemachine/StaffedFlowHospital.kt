@@ -83,7 +83,7 @@ object StaffedFlowHospital : FlowHospital {
      */
     object DeadlockNurse : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: MedicalHistory): Diagnosis {
-            return if (mentionsDeadlock(newError) && history.notDischargedForTheSameThingMoreThan(3, this)) {
+            return if (mentionsDeadlock(newError)) {
                 Diagnosis.DISCHARGE
             } else {
                 Diagnosis.NOT_MY_SPECIALTY

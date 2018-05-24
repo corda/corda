@@ -39,6 +39,9 @@ class RetryFlowMockTest {
         internalNodeA = mockNet.createNode()
         internalNodeB = mockNet.createNode()
         mockNet.startNodes()
+        RetryFlow.count = 0
+        SendAndRetryFlow.count = 0
+        RetryInsertFlow.count = 0
     }
 
     private fun <T> StartedNode<InternalMockNetwork.MockNode>.startFlow(logic: FlowLogic<T>): CordaFuture<T> = this.services.startFlow(logic, this.services.newContext()).getOrThrow().resultFuture
@@ -51,13 +54,15 @@ class RetryFlowMockTest {
     @Test
     fun `Single retry`() {
         assertEquals(Unit, internalNodeA.startFlow(RetryFlow(1)).get())
+        assertEquals(2, RetryFlow.count)
     }
 
     @Test
     fun `Retry forever`() {
         Assertions.assertThatThrownBy {
             internalNodeA.startFlow(RetryFlow(Int.MAX_VALUE)).getOrThrow()
-        }.isInstanceOf(RetryCausingError::class.java)
+        }.isInstanceOf(LimitedRetryCausingError::class.java)
+        assertEquals(5, RetryFlow.count)
     }
 
     @Test
@@ -73,19 +78,24 @@ class RetryFlowMockTest {
         internalNodeA.startFlow(SendAndRetryFlow(1, partyB)).get()
         assertNotNull(messagesSent.first().senderUUID)
         assertNull(messagesSent.last().senderUUID)
+        assertEquals(2, SendAndRetryFlow.count)
     }
 
     @Test
     fun `Retry duplicate insert`() {
         assertEquals(Unit, internalNodeA.startFlow(RetryInsertFlow(1)).get())
+        assertEquals(2, RetryInsertFlow.count)
     }
 
     @Test
     fun `Patient records do not leak in hospital`() {
         assertEquals(Unit, internalNodeA.startFlow(RetryFlow(1)).get())
         assertEquals(0, StaffedFlowHospital.numberOfPatients)
+        assertEquals(2, RetryFlow.count)
     }
 }
+
+class LimitedRetryCausingError : org.hibernate.exception.ConstraintViolationException("Test message", SQLException(), "Test constraint")
 
 class RetryCausingError : SQLException("deadlock")
 
@@ -96,9 +106,13 @@ class RetryFlow(val i: Int) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {
-        logger.info("Hello")
+        logger.info("Hello $count")
         if (count++ < i) {
-            throw RetryCausingError()
+            if (i == Int.MAX_VALUE) {
+                throw LimitedRetryCausingError()
+            } else {
+                throw RetryCausingError()
+            }
         }
     }
 }

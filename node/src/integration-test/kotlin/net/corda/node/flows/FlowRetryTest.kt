@@ -15,6 +15,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.node.User
+import org.junit.Before
 import org.junit.Test
 import java.lang.management.ManagementFactory
 import java.sql.SQLException
@@ -24,6 +25,12 @@ import kotlin.test.assertNotNull
 
 
 class FlowRetryTest {
+    @Before
+    fun resetCounters() {
+        InitiatorFlow.seen.clear()
+        InitiatedFlow.seen.clear()
+    }
+
     @Test
     fun `flows continue despite errors`() {
         val numSessions = 2
@@ -63,7 +70,7 @@ class InitiatorFlow(private val sessionsCount: Int, private val iterationsCount:
 
         fun tracker() = ProgressTracker(FIRST_STEP)
 
-        private val seen = Collections.synchronizedSet(HashSet<Visited>())
+        val seen = Collections.synchronizedSet(HashSet<Visited>())
 
         fun visit(sessionNum: Int, iterationNum: Int, step: Step) {
             val visited = Visited(sessionNum, iterationNum, step)
@@ -114,7 +121,7 @@ class InitiatedFlow(val session: FlowSession) : FlowLogic<Any>() {
 
         fun tracker() = ProgressTracker(FIRST_STEP)
 
-        private val seen = Collections.synchronizedSet(HashSet<Visited>())
+        val seen = Collections.synchronizedSet(HashSet<Visited>())
 
         fun visit(sessionNum: Int, iterationNum: Int, step: Step) {
             val visited = Visited(sessionNum, iterationNum, step)
