@@ -70,6 +70,7 @@ buildscript {
     ext.docker_compose_rule_version = '0.33.1'
     ext.selenium_version = '3.8.1'
     ext.ghostdriver_version = '2.1.0'
+    ext.jcabi_manifests_version = '1.1'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'

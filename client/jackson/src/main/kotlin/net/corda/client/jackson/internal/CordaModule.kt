@@ -27,12 +27,13 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.NetworkHostAndPort
 import java.security.PublicKey
+import java.security.cert.CertPath
 
 class CordaModule : SimpleModule("corda-core") {
     override fun setupModule(context: SetupContext) {
         super.setupModule(context)
 
-        context.setMixInAnnotations(PartyAndCertificate::class.java, PartyAndCertificateSerializerMixin::class.java)
+        context.setMixInAnnotations(PartyAndCertificate::class.java, PartyAndCertificateMixin::class.java)
         context.setMixInAnnotations(NetworkHostAndPort::class.java, NetworkHostAndPortMixin::class.java)
         context.setMixInAnnotations(CordaX500Name::class.java, CordaX500NameMixin::class.java)
         context.setMixInAnnotations(Amount::class.java, AmountMixin::class.java)
@@ -57,22 +58,27 @@ class CordaModule : SimpleModule("corda-core") {
 private interface NetworkHostAndPortMixin
 
 private class NetworkHostAndPortDeserializer : JsonDeserializer<NetworkHostAndPort>() {
-    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext) = NetworkHostAndPort.parse(parser.text)
+    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): NetworkHostAndPort {
+        return NetworkHostAndPort.parse(parser.text)
+    }
 }
 
 @JsonSerialize(using = PartyAndCertificateSerializer::class)
 // TODO Add deserialization which follows the same lookup logic as Party
-private interface PartyAndCertificateSerializerMixin
+private interface PartyAndCertificateMixin
 
 private class PartyAndCertificateSerializer : JsonSerializer<PartyAndCertificate>() {
     override fun serialize(value: PartyAndCertificate, gen: JsonGenerator, serializers: SerializerProvider) {
-        gen.jsonObject {
-            writeObjectField("name", value.name)
-            writeObjectField("owningKey", value.owningKey)
-            // TODO Add configurable option to output the certPath
+        val mapper = gen.codec as JacksonSupport.PartyObjectMapper
+        if (mapper.isFullParties) {
+            gen.writeObject(PartyAndCertificateWrapper(value.name, value.certPath))
+        } else {
+            gen.writeObject(value.party)
         }
     }
 }
+
+private class PartyAndCertificateWrapper(val name: CordaX500Name, val certPath: CertPath)
 
 @JsonSerialize(using = SerializedBytesSerializer::class)
 @JsonDeserialize(using = SerializedBytesDeserializer::class)
