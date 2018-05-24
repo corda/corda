@@ -3,6 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.utilities.loggerFor
 import net.corda.serialization.internal.carpenter.getTypeAsClass
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -48,9 +49,15 @@ abstract class EvolutionSerializer(
                 new[resultsIndex] = this
             }
         }
+
+        override fun toString(): String {
+            return "resultsIndex = $resultsIndex property = ${property.name}"
+        }
     }
 
     companion object {
+        val logger = loggerFor<EvolutionSerializer>()
+
         /**
          * Unlike the generic deserialization case where we need to locate the primary constructor
          * for the object (or our best guess) in the case of an object whose structure has changed
@@ -66,22 +73,37 @@ abstract class EvolutionSerializer(
 
             if (!clazz.isConcreteClass) return null
 
-            val oldArgumentSet = oldArgs.map { Pair(it.key as String?, it.value.property.resolvedType) }
-
+            val oldArgumentSet = oldArgs.map { Pair(it.key as String?, it.value.property.resolvedType.asClass()) }
             var maxConstructorVersion = Integer.MIN_VALUE
             var constructor: KFunction<Any>? = null
+
             clazz.kotlin.constructors.forEach {
                 val version = it.findAnnotation<DeprecatedConstructorForDeserialization>()?.version ?: Integer.MIN_VALUE
-                if (oldArgumentSet.containsAll(it.parameters.map { v -> Pair(v.name, v.type.javaType) }) &&
-                        version > maxConstructorVersion) {
+
+                if (version > maxConstructorVersion &&
+                        oldArgumentSet.containsAll(it.parameters.map { v -> Pair(v.name, v.type.javaType.asClass()) })
+                ) {
                     constructor = it
                     maxConstructorVersion = version
+
+                    with(logger) {
+                        info("Select annotated constructor version=$version nparams=${it.parameters.size}")
+                        debug("  params=${it.parameters}")
+                    }
+                } else if (version != Integer.MIN_VALUE){
+                    with(logger) {
+                        info("Ignore annotated constructor version=$version nparams=${it.parameters.size}")
+                        debug("  params=${it.parameters}")
+                    }
                 }
             }
 
             // if we didn't get an exact match revert to existing behaviour, if the new parameters
             // are not mandatory (i.e. nullable) things are fine
-            return constructor ?: constructorForDeserialization(type)
+            return constructor ?: run {
+                logger.info ("Failed to find annotated historic constructor")
+                constructorForDeserialization(type)
+            }
         }
 
         private fun makeWithConstructor(
