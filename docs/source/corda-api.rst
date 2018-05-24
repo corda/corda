@@ -21,6 +21,8 @@ The following are the core APIs that are used in the development of CorDapps:
 
 Before reading this page, you should be familiar with the :doc:`key concepts of Corda <key-concepts>`.
 
+.. _internal-apis-and-stability-guarantees:
+
 Internal APIs and stability guarantees
 --------------------------------------
 
