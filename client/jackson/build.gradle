@@ -6,11 +6,8 @@ apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
     compile project(':serialization')
-    testCompile project(':test-utils')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-
     // Jackson and its plugins: parsing to/from JSON and other textual formats.
     compile "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
     // Yaml is useful for parsing strings to method calls.
@@ -19,7 +16,9 @@ dependencies {
     compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
     compile "com.google.guava:guava:$guava_version"
 
+    testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 }
 

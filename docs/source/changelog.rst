@@ -34,11 +34,18 @@ Unreleased
   * ``Party`` objects can be deserialised by looking up their public key, in addition to their name
   * ``NodeInfo`` objects are serialised as an object and can be looked up using the same mechanism as ``Party``
   * ``NetworkHostAndPort`` serialised according to its ``toString()``
-  * ``PartyAndCertificate`` is serialised as an object containing the name and owning key
-  * ``SerializedBytes`` is serialised by converting the bytes into the object it represents, which is then serialised into
-    a JSON/YAML object
-  * ``CertPath`` and ``X509Certificate`` are serialised as objects and can be deserialised back
+  * ``PartyAndCertificate`` is serialised as the name
+  * ``SerializedBytes`` is serialised by materialising the bytes into the object it represents, and then serialising that
+    object into YAML/JSON
+  * ``X509Certificate`` is serialised as an object with key fields such as ``issuer``, ``publicKey``, ``serialNumber``, etc.
+    The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialise an ``X509Certificate``
+    back.
+  * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
   * ``SignedTransaction`` is serialised into its ``txBits`` and ``signatures`` and can be deserialised back
+
+* ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
+  then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``
+  the ``certPath`` is serialised.
 
 * Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used.
 
