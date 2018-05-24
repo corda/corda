@@ -70,10 +70,6 @@ dependencies {
     compile "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
     // Seems to be needed?
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
-    // Pulled in by whitelist
-    compile ("com.esotericsoftware:kryo:4.0.0") {
-        transitive = false
-    }
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"

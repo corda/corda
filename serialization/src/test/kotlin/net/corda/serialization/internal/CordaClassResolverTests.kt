@@ -24,9 +24,9 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
-import net.corda.serialization.internal.kryo.CordaClassResolver
-import net.corda.serialization.internal.kryo.CordaKryo
-import net.corda.serialization.internal.kryo.kryoMagic
+import net.corda.node.serialization.kryo.CordaClassResolver
+import net.corda.node.serialization.kryo.CordaKryo
+import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Rule

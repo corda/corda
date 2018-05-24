@@ -10,12 +10,14 @@
 
 package net.corda.node
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import joptsimple.OptionSet
 import joptsimple.util.EnumConverter
 import joptsimple.util.PathConverter
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
+import net.corda.core.utilities.Try
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
@@ -125,19 +127,22 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val bootstrapRaftCluster: Boolean,
                           val unknownConfigKeysPolicy: UnknownConfigKeysPolicy,
                           val devMode: Boolean) {
-    fun loadConfig(): NodeConfiguration {
-        val config = ConfigHelper.loadConfig(
+    fun loadConfig(): Pair<Config, Try<NodeConfiguration>> {
+        val rawConfig = ConfigHelper.loadConfig(
                 baseDirectory,
                 configFile,
                 configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
                         if (devMode) mapOf("devMode" to this.devMode) else emptyMap<String, Any>())
-        ).parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
-        if (nodeRegistrationOption != null) {
-            require(!config.devMode) { "registration cannot occur in devMode" }
-            requireNotNull(config.compatibilityZoneURL) {
-                "compatibilityZoneURL must be present in node configuration file in registration mode."
+        )
+        return rawConfig to Try.on {
+            rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also {
+                if (nodeRegistrationOption != null) {
+                    require(!it.devMode) { "registration cannot occur in devMode" }
+                    requireNotNull(it.compatibilityZoneURL) {
+                        "compatibilityZoneURL must be present in node configuration file in registration mode."
+                    }
+                }
             }
         }
-        return config
     }
 }

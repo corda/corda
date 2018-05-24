@@ -10,7 +10,6 @@
 
 package net.corda.serialization.internal
 
-import com.esotericsoftware.kryo.KryoException
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -40,7 +39,6 @@ object DefaultWhitelist : SerializationWhitelist {
                     mapOf(Unit to Unit).javaClass, // SingletonMap
                     NetworkHostAndPort::class.java,
                     SimpleString::class.java,
-                    KryoException::class.java, // TODO: Will be removed when we migrate away from Kryo
                     StringBuffer::class.java,
                     Unit::class.java,
                     java.io.ByteArrayInputStream::class.java,

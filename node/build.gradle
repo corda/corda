@@ -84,6 +84,10 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
+    // Kryo: object graph serialization.
+    compile "com.esotericsoftware:kryo:4.0.0"
+    compile "de.javakaffee:kryo-serializers:0.41"
+
     compile "com.google.guava:guava:$guava_version"
 
     // For caches rather than guava

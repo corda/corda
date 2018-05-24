@@ -16,6 +16,7 @@ import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationS
 import net.corda.core.DoNotImplement
 import net.corda.core.serialization.internal.*
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.serialization.internal.*
 import net.corda.testing.core.SerializationEnvironmentRule

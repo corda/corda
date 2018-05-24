@@ -4,10 +4,10 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
-import net.corda.nodeapi.internal.serialization.amqp.custom.RxNotificationSerializer
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
 import java.util.concurrent.ConcurrentHashMap
 
 /**

@@ -1,9 +1,9 @@
 package net.corda.node.internal.serialization.testutils
 
 import net.corda.core.serialization.SerializationContext
+import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.amqp.amqpMagic
-import net.corda.serialization.internal.AllWhitelist
 
 val serializationProperties: MutableMap<Any, Any> = mutableMapOf()
 
@@ -14,4 +14,5 @@ val serializationContext = SerializationContextImpl(
         properties = serializationProperties,
         objectReferencesEnabled = false,
         useCase = SerializationContext.UseCase.Testing,
-        encoding = null)
+        encoding = null
+)

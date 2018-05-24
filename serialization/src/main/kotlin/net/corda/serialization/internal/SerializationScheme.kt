@@ -18,7 +18,6 @@ import net.corda.core.internal.copyBytes
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.amqp.amqpMagic
-import net.corda.serialization.internal.kryo.kryoMagic
 import org.slf4j.LoggerFactory
 import java.io.NotSerializableException
 import java.util.*
@@ -108,7 +107,7 @@ open class SerializationFactoryImpl(
     constructor() : this(ConcurrentHashMap())
 
     companion object {
-        val magicSize = sequenceOf(kryoMagic, amqpMagic).map { it.size }.distinct().single()
+        val magicSize = amqpMagic.size
     }
 
     private val creator: List<StackTraceElement> = Exception().stackTrace.asList()
@@ -124,7 +123,7 @@ open class SerializationFactoryImpl(
         return schemes.computeIfAbsent(lookupKey) {
             registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
             logger.warn("Cannot find serialization scheme for: [$lookupKey, " +
-                    "${if (magic == amqpMagic) "AMQP" else if (magic == kryoMagic) "Kryo" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")
+                    "${if (magic == amqpMagic) "AMQP" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")
             throw UnsupportedOperationException("Serialization scheme $lookupKey not supported.")
         } to magic
     }
@@ -154,15 +153,12 @@ open class SerializationFactoryImpl(
         registeredSchemes += scheme
     }
 
-    val alreadyRegisteredSchemes: Collection<SerializationScheme> get() = Collections.unmodifiableCollection(registeredSchemes)
-
     override fun toString(): String {
         return "${this.javaClass.name} registeredSchemes=$registeredSchemes ${creator.joinToString("\n")}"
     }
 
     override fun equals(other: Any?): Boolean {
-        return other is SerializationFactoryImpl &&
-                other.registeredSchemes == this.registeredSchemes
+        return other is SerializationFactoryImpl && other.registeredSchemes == this.registeredSchemes
     }
 
     override fun hashCode(): Int = registeredSchemes.hashCode()

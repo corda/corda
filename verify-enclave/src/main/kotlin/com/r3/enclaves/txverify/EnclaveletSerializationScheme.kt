@@ -21,8 +21,6 @@ import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.amqpMagic
-import net.corda.serialization.internal.kryo.AbstractKryoSerializationScheme
-import net.corda.serialization.internal.kryo.kryoMagic
 
 @Suppress("UNUSED")
 private class EnclaveletSerializationScheme {
@@ -33,7 +31,6 @@ private class EnclaveletSerializationScheme {
         init {
             nodeSerializationEnv = SerializationEnvironmentImpl(
                 SerializationFactoryImpl(HashMap()).apply {
-                    registerScheme(KryoVerifierSerializationScheme)
                     registerScheme(AMQPVerifierSerializationScheme)
                 },
                 /**
@@ -48,15 +45,6 @@ private class EnclaveletSerializationScheme {
             ByteArray(0).toHexString()
         }
     }
-}
-
-private object KryoVerifierSerializationScheme : AbstractKryoSerializationScheme() {
-    override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-        return magic == kryoMagic && target == SerializationContext.UseCase.P2P
-    }
-
-    override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
-    override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
 }
 
 private object AMQPVerifierSerializationScheme : AbstractAMQPSerializationScheme(emptySet(), HashMap()) {

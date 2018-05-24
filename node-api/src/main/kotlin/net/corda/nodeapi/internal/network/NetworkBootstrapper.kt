@@ -37,19 +37,16 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
-import net.corda.serialization.internal.kryo.AbstractKryoSerializationScheme
-import net.corda.serialization.internal.kryo.kryoMagic
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
-import kotlin.streams.toList
-import kotlin.collections.HashSet
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
+import kotlin.streams.toList
 
 /**
  * Class to bootstrap a local network of Corda nodes on the same filesystem.
@@ -348,20 +345,10 @@ class NetworkBootstrapper {
     private fun initialiseSerialization() {
         _contextSerializationEnv.set(SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
-                    registerScheme(KryoParametersSerializationScheme)
                     registerScheme(AMQPParametersSerializationScheme)
                 },
                 AMQP_P2P_CONTEXT)
         )
-    }
-
-    private object KryoParametersSerializationScheme : AbstractKryoSerializationScheme() {
-        override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-            return magic == kryoMagic && target == SerializationContext.UseCase.P2P
-        }
-
-        override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
-        override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
     }
 
     private object AMQPParametersSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {

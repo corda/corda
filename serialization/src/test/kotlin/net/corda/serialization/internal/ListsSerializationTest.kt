@@ -13,11 +13,11 @@ package net.corda.serialization.internal
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import net.corda.core.serialization.*
+import net.corda.node.serialization.kryo.kryoMagic
 import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.Envelope
 import net.corda.serialization.internal.amqp.SerializerFactory
-import net.corda.serialization.internal.kryo.kryoMagic
 import net.corda.testing.internal.amqpSpecific
 import net.corda.testing.internal.kryoSpecific
 import net.corda.testing.core.SerializationEnvironmentRule
