@@ -265,7 +265,7 @@ class EvolvabilityTests {
             register(InstantSerializer(this))
         }
 
-        // Uncomment go regenrate test case
+        // Uncomment to regenerate test case
         // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(factory).serialize(
         //         NetworkParametersExample(
         //                 10,
@@ -277,11 +277,7 @@ class EvolvabilityTests {
         //                 mapOf("A" to listOf(1, 2, 3), "B" to listOf (4, 5, 6)))).bytes)
 
         val url = EvolvabilityTests::class.java.getResource(resource)
-        try {
-            DeserializationInput(factory).deserialize(SerializedBytes<NetworkParametersExample>(url.readBytes()))
-        } catch(e: Exception) {
-            throw Error ("Deserialize call in test should not throw")
-        }
+        DeserializationInput(factory).deserialize(SerializedBytes<NetworkParametersExample>(url.readBytes()))
     }
 
     @Test(expected = NotSerializableException::class)

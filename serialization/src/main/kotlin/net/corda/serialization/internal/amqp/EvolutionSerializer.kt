@@ -3,6 +3,8 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.serialization.internal.carpenter.getTypeAsClass
 import org.apache.qpid.proton.codec.Data
@@ -56,7 +58,7 @@ abstract class EvolutionSerializer(
     }
 
     companion object {
-        val logger = loggerFor<EvolutionSerializer>()
+        val logger = contextLogger()
 
         /**
          * Unlike the generic deserialization case where we need to locate the primary constructor
@@ -88,12 +90,12 @@ abstract class EvolutionSerializer(
 
                     with(logger) {
                         info("Select annotated constructor version=$version nparams=${it.parameters.size}")
-                        debug("  params=${it.parameters}")
+                        debug{"  params=${it.parameters}"}
                     }
                 } else if (version != Integer.MIN_VALUE){
                     with(logger) {
                         info("Ignore annotated constructor version=$version nparams=${it.parameters.size}")
-                        debug("  params=${it.parameters}")
+                        debug{"  params=${it.parameters}"}
                     }
                 }
             }
@@ -101,7 +103,7 @@ abstract class EvolutionSerializer(
             // if we didn't get an exact match revert to existing behaviour, if the new parameters
             // are not mandatory (i.e. nullable) things are fine
             return constructor ?: run {
-                logger.info ("Failed to find annotated historic constructor")
+                logger.info("Failed to find annotated historic constructor")
                 constructorForDeserialization(type)
             }
         }
