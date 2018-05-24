@@ -15,11 +15,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.ByteSequence
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.trace
+import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
 import net.corda.node.internal.LifecycleSupport
 import net.corda.node.internal.artemis.ReactiveArtemisConsumer
@@ -31,15 +27,12 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.ServiceAddress
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -50,12 +43,7 @@ import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient
-import org.apache.activemq.artemis.api.core.client.ClientConsumer
-import org.apache.activemq.artemis.api.core.client.ClientMessage
-import org.apache.activemq.artemis.api.core.client.ClientProducer
-import org.apache.activemq.artemis.api.core.client.ClientSession
-import org.apache.activemq.artemis.api.core.client.ServerLocator
+import org.apache.activemq.artemis.api.core.client.*
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.Subscription
@@ -173,6 +161,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private val messageRedeliveryDelaySeconds = config.p2pMessagingRetry.messageRedeliveryDelay.seconds
     private val state = ThreadBox(InnerState())
     private val knownQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    private val delayStartQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
 
@@ -332,7 +321,12 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
         val queues = session.addressQuery(SimpleString("$PEERS_PREFIX#")).queueNames
         for (queue in queues) {
-            createBridgeEntry(queue)
+            val queueQuery = session.queueQuery(queue)
+            if (!config.lazyBridgeStart || queueQuery.messageCount > 0) {
+                createBridgeEntry(queue)
+            } else {
+                delayStartQueues += queue.toString()
+            }
         }
         val startupMessage = BridgeControl.NodeToBridgeSnapshot(myIdentity.toStringShort(), inboxes, requiredBridges)
         sendBridgeControl(startupMessage)
@@ -574,19 +568,26 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     /** Attempts to create a durable queue on the broker which is bound to an address of the same name. */
     private fun createQueueIfAbsent(queueName: String, session: ClientSession) {
+        fun sendBridgeCreateMessage() {
+            val keyHash = queueName.substring(PEERS_PREFIX.length)
+            val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
+            for (node in peers) {
+                val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name })
+                val createBridgeMessage = BridgeControl.Create(myIdentity.toStringShort(), bridge)
+                sendBridgeControl(createBridgeMessage)
+            }
+        }
         if (!knownQueues.contains(queueName)) {
-            val queueQuery = session.queueQuery(SimpleString(queueName))
-            if (!queueQuery.isExists) {
-                log.info("Create fresh queue $queueName bound on same address")
-                session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
-                if (queueName.startsWith(PEERS_PREFIX)) {
-                    val keyHash = queueName.substring(PEERS_PREFIX.length)
-                    val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
-                    for (node in peers) {
-                        val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name })
-                        val createBridgeMessage = BridgeControl.Create(myIdentity.toStringShort(), bridge)
-                        sendBridgeControl(createBridgeMessage)
-                    }
+            if (delayStartQueues.contains(queueName)) {
+                log.info("Start bridge for previously empty queue $queueName")
+                sendBridgeCreateMessage()
+                delayStartQueues -= queueName
+            } else {
+                val queueQuery = session.queueQuery(SimpleString(queueName))
+                if (!queueQuery.isExists) {
+                    log.info("Create fresh queue $queueName bound on same address")
+                    session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+                    sendBridgeCreateMessage()
                 }
             }
             knownQueues += queueName

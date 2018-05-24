@@ -10,9 +10,9 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.artemis.CertificateChainCheckPolicy
 import net.corda.node.services.config.rpc.NodeRpcOptions
-import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -47,6 +47,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val messagingServerExternal: Boolean
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
+    val lazyBridgeStart: Boolean
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
@@ -158,6 +159,7 @@ data class NodeConfigurationImpl(
         override val noLocalShell: Boolean = false,
         override val devModeOptions: DevModeOptions? = null,
         override val useTestClock: Boolean = false,
+        override val lazyBridgeStart: Boolean = true,
         override val detectPublicIp: Boolean = true,
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
