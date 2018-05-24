@@ -212,14 +212,13 @@ class DriverDSLImpl(
         val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
         val czUrlConfig = when (compatibilityZone) {
             null -> emptyMap()
-            is SharedCompatabilityZoneParams ->
-                mapOf("compatibilityZoneUR" to compatibilityZone.doormanURL().toString())
-            is SplitCompatabilityZoneParams ->
-                mapOf(
-                        "networkServices.doormanURL" to compatibilityZone.doormanURL().toString(),
+            is SharedCompatibilityZoneParams ->
+                mapOf("compatibilityZoneURL" to compatibilityZone.doormanURL().toString())
+            is SplitCompatibilityZoneParams ->
+                mapOf("networkServices.doormanURL" to compatibilityZone.doormanURL().toString(),
                         "networkServices.networkMapURL" to compatibilityZone.networkMapURL().toString())
-           else ->
-               throw ConfigurationException ("Unknown compatibility zone configuration")
+            else ->
+                throw ConfigurationException("Unknown compatibility zone configuration")
         }
 
         val overrides = configOf(
@@ -514,7 +513,7 @@ class DriverDSLImpl(
     private fun startNotaries(localNetworkMap: LocalNetworkMap?, customOverrides: Map<String, Any?>): List<CordaFuture<List<NodeHandle>>> {
         return notarySpecs.map {
             when (it.cluster) {
-                null -> startSingleNotary(it, localNetworkMap, customOverrides )
+                null -> startSingleNotary(it, localNetworkMap, customOverrides)
                 is ClusterSpec.Raft,
                     // DummyCluster is used for testing the notary communication path, and it does not matter
                     // which underlying consensus algorithm is used, so we just stick to Raft
@@ -882,7 +881,8 @@ class DriverDSLImpl(
             val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
             if (index == -1) return emptyList()
-            val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
+            val callerPackage = Class.forName(stackTrace[index + 1].className).`package`
+                    ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
             return listOf(callerPackage.name)
         }
 
@@ -1078,28 +1078,28 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
  * root cert is used as normal.
  */
 abstract class CompatibilityZoneParams(
-    val publishNotaries: (List<NotaryInfo>) -> Unit,
-    val rootCert: X509Certificate?
+        val publishNotaries: (List<NotaryInfo>) -> Unit,
+        val rootCert: X509Certificate? = null
 ) {
-    abstract fun networkMapURL() : URL
-    abstract fun doormanURL() : URL
+    abstract fun networkMapURL(): URL
+    abstract fun doormanURL(): URL
 }
 
-class SharedCompatabilityZoneParams(
+class SharedCompatibilityZoneParams(
         private val url: URL,
         publishNotaries: (List<NotaryInfo>) -> Unit,
-        rootCert: X509Certificate?
-) : CompatibilityZoneParams (publishNotaries, rootCert){
+        rootCert: X509Certificate? = null
+) : CompatibilityZoneParams(publishNotaries, rootCert) {
     override fun doormanURL() = url
     override fun networkMapURL() = url
 }
 
-class SplitCompatabilityZoneParams(
+class SplitCompatibilityZoneParams(
         private val doormanURL: URL,
         private val networkMapURL: URL,
         publishNotaries: (List<NotaryInfo>) -> Unit,
-        rootCert: X509Certificate?
-) : CompatibilityZoneParams (publishNotaries, rootCert){
+        rootCert: X509Certificate? = null
+) : CompatibilityZoneParams(publishNotaries, rootCert) {
     override fun doormanURL() = doormanURL
     override fun networkMapURL() = networkMapURL
 }
