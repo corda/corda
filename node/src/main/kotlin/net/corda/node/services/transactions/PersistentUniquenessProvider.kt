@@ -31,10 +31,10 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
             @EmbeddedId
             var id: PersistentStateRef = PersistentStateRef(),
 
-            @Column(name = "consuming_transaction_id")
+            @Column(name = "consuming_transaction_id", nullable = false)
             var consumingTxHash: String = "",
 
-            @Column(name = "consuming_input_index", length = 36)
+            @Column(name = "consuming_input_index", length = 36, nullable = false)
             var consumingIndex: Int = 0,
 
             @Embedded
@@ -43,10 +43,10 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
 
     @Embeddable
     data class PersistentParty(
-            @Column(name = "requesting_party_name")
+            @Column(name = "requesting_party_name", nullable = false)
             var name: String = "",
 
-            @Column(name = "requesting_party_key", length = 255)
+            @Column(name = "requesting_party_key", length = 255, nullable = false)
             @Type(type = "corda-wrapper-binary")
             var owningKey: ByteArray = ByteArray(0)
     ) : Serializable
@@ -71,8 +71,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
                         fromPersistentEntity = {
                             //TODO null check will become obsolete after making DB/JPA columns not nullable
                             val txId = it.id.txId
-                                    ?: throw IllegalStateException("DB returned null SecureHash transactionId")
-                            val index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                            val index = it.id.index
                             Pair(StateRef(txhash = SecureHash.parse(txId), index = index),
                                     UniquenessProvider.ConsumingTx(
                                             id = SecureHash.parse(it.consumingTxHash),
