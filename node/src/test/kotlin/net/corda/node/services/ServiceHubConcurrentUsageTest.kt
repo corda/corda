@@ -1,7 +1,9 @@
-package net.corda.core.flows
+package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.internal.packageName
 import net.corda.core.node.services.queryBy
@@ -20,7 +22,7 @@ import org.junit.Test
 import rx.schedulers.Schedulers
 import java.util.concurrent.CountDownLatch
 
-class FlowExecutionTest {
+class ServiceHubConcurrentUsageTest {
 
     private val mockNet = InternalMockNetwork(listOf(Cash::class.packageName))
 
@@ -30,7 +32,7 @@ class FlowExecutionTest {
     }
 
     @Test
-    fun `can use operations requiring a transaction from another thread`() {
+    fun `operations requiring a transaction work from another thread`() {
 
         val latch = CountDownLatch(1)
         var successful = false

@@ -26,7 +26,6 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
@@ -62,11 +61,9 @@ class NetworkMapCacheImpl(
     }
 
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
-        return contextDatabase.transaction {
-            val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
-            wellKnownParty?.let {
-                getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
-            }
+        val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
+        return wellKnownParty?.let {
+            getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
         }
     }
 }
