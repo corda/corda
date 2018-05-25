@@ -233,9 +233,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     @Volatile private var _started: StartedNode<AbstractNode>? = null
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
-    open fun makeRPCOps(flowStarter: FlowStarter, database: CordaPersistence, smm: StateMachineManager): CordaRPCOps {
+    open fun makeRPCOps(flowStarter: FlowStarter, smm: StateMachineManager): CordaRPCOps {
 
-        val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, database, flowStarter, { shutdownExecutor.submit { stop() } })
+        val ops: CordaRPCOps = CordaRPCOpsImpl(services, smm, flowStarter, { shutdownExecutor.submit { stop() } })
         // Mind that order is relevant here.
         val proxies = listOf<(CordaRPCOps) -> CordaRPCOps>(::AuthenticatedRpcOpsProxy, { it -> ExceptionSerialisingRpcOpsProxy(it, true) })
         return proxies.fold(ops) { delegate, decorate -> decorate(delegate) }
@@ -339,7 +339,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             }
 
             makeVaultObservers(schedulerService, database.hibernateConfig, schemaService, flowLogicRefFactory)
-            val rpcOps = makeRPCOps(flowStarter, database, smm)
+            val rpcOps = makeRPCOps(flowStarter, smm)
             startMessagingService(rpcOps)
             installCoreFlows()
             val cordaServices = installCordaServices(flowStarter)

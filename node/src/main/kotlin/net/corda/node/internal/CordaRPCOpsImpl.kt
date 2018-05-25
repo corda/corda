@@ -46,7 +46,6 @@ import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
-import net.corda.nodeapi.internal.persistence.CordaPersistence
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
@@ -59,7 +58,6 @@ import java.time.Instant
 internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
-        private val database: CordaPersistence,
         private val flowStarter: FlowStarter,
         private val shutdownNode: () -> Unit
 ) : CordaRPCOps {
@@ -121,13 +119,11 @@ internal class CordaRPCOpsImpl(
     override fun killFlow(id: StateMachineRunId) = smm.killFlow(id)
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
-        return database.transaction {
-            val (allStateMachines, changes) = smm.track()
-            DataFeed(
-                    allStateMachines.map { stateMachineInfoFromFlowLogic(it) },
-                    changes.map { stateMachineUpdateFromStateMachineChange(it) }
-            )
-        }
+        val (allStateMachines, changes) = smm.track()
+        return DataFeed(
+                allStateMachines.map { stateMachineInfoFromFlowLogic(it) },
+                changes.map { stateMachineUpdateFromStateMachineChange(it) }
+        )
     }
 
     override fun stateMachineRecordedTransactionMappingSnapshot(): List<StateMachineTransactionMapping> {
