@@ -148,8 +148,13 @@ class NodeSchedulerService(private val clock: CordaClock,
     // Used to de-duplicate flow starts in case a flow is starting but the corresponding entry hasn't been removed yet
     // from the database
     private val startingStateRefs = ConcurrentHashSet<ScheduledStateRef>()
-
     private val mutex = ThreadBox(InnerState())
+    private val schedulerTimerExecutor = Executors.newSingleThreadExecutor()
+
+    // if there's nothing to do, check every minute if something fell through the cracks.
+    // any new state should trigger a reschedule immediately if nothing is scheduled, so I would not expect
+    // this to usually trigger anything.
+    private val idleWaitSeconds = 60.seconds
 
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
@@ -188,8 +193,6 @@ class NodeSchedulerService(private val clock: CordaClock,
         }
     }
 
-    private val idleWaitSeconds = 60.seconds
-
     private fun runLoopFunction(){
         while (mutex.locked { running }){
             val (scheduledState, ourRescheduledFuture) = mutex.locked {
@@ -216,7 +219,6 @@ class NodeSchedulerService(private val clock: CordaClock,
         }
     }
 
-    private val schedulerTimerExecutor = Executors.newSingleThreadExecutor()
     private fun rescheduleWakeUp() {
         mutex.alreadyLocked{
             rescheduled?.cancel(false)
