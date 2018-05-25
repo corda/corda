@@ -26,6 +26,7 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
@@ -61,9 +62,11 @@ class NetworkMapCacheImpl(
     }
 
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
-        val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
-        return wellKnownParty?.let {
-            getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
+        return contextDatabase.transaction {
+            val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
+            wellKnownParty?.let {
+                getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
+            }
         }
     }
 }
@@ -182,7 +185,7 @@ open class PersistentNetworkMapCache(
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
-            val allInfos = database.transaction { getAllInfos(session) }.map { it.toNodeInfo() }
+            val allInfos = database.transaction { getAllInfos(session).map { it.toNodeInfo() } }
             return DataFeed(allInfos, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }

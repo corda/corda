@@ -82,9 +82,7 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
-        return database.transaction {
-            services.networkMapCache.track()
-        }
+        return services.networkMapCache.track()
     }
 
     override fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria,
