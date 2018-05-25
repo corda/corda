@@ -23,9 +23,9 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
 
     private val networkParamsFile = baseDirectory / NETWORK_PARAMS_FILE_NAME
     private val parametersUpdateFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
-    val networkParameters by lazy { retrieveNetworkParameters().first }
-    val hash by lazy { retrieveNetworkParameters().second }
-
+    private val netParamsAndHash by lazy { retrieveNetworkParameters() }
+    val networkParameters get() = netParamsAndHash.first
+    val hash get() = netParamsAndHash.second
 
     private fun retrieveNetworkParameters(): Pair<NetworkParameters, SecureHash> {
         val advertisedParametersHash = try {
