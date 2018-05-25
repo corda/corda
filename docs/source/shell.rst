@@ -162,9 +162,9 @@ SecureHash
 ~~~~~~~~~~
 A parameter of type ``SecureHash`` can be written as a hexadecimal string: ``F69A7626ACC27042FEEAE187E6BFF4CE666E6F318DC2B32BE9FAF87DF687930C``
 
-OpaqueBytes and SerializedBytes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-A parameter of type ``OpaqueBytes`` can be provided as a string in Base64.
+OpaqueBytes
+~~~~~~~~~~~
+A parameter of type ``OpaqueBytes`` can be provided as a UTF-8 string.
 
 PublicKey and CompositeKey
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
