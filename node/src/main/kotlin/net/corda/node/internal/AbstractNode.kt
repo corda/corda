@@ -207,8 +207,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected var myNotaryIdentity: PartyAndCertificate? = null
     private lateinit var checkpointStorage: CheckpointStorage
     private lateinit var tokenizableServices: List<Any>
-    private val metrics = MetricRegistry()
-    protected val attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
+    protected lateinit var attachments: NodeAttachmentService
     protected lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
     private val _nodeReadyFuture = openFuture<Unit>()
@@ -292,10 +291,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService)
             val (keyPairs, nodeInfo) = updateNodeInfo(networkMapCache, networkMapClient, identity, identityKeyPair)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
+            val metrics = MetricRegistry()
             val transactionStorage = makeTransactionStorage(database, configuration.transactionCacheSizeBytes)
             log.debug("Transaction storage created")
-            log.debug("Attachment service started")
-            attachments.start()
+            attachments = NodeAttachmentService(metrics, configuration.attachmentContentCacheSizeBytes, configuration.attachmentCacheBound)
+            log.debug("Attachment service created")
             val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(), attachments, networkParameters.whitelistedContractImplementations)
             log.debug("Cordapp provider created")
             val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParameters, transactionStorage)
