@@ -71,6 +71,8 @@
       <module name="example-code_integrationTest" target="1.8" />
       <module name="example-code_main" target="1.8" />
       <module name="example-code_test" target="1.8" />
+      <module name="experimental-blobinspector_main" target="1.8" />
+      <module name="experimental-blobinspector_test" target="1.8" />
       <module name="experimental-kryo-hook_main" target="1.8" />
       <module name="experimental-kryo-hook_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
