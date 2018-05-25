@@ -7,6 +7,10 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Doorman and NetworkMap url's can now be configured individually rather than being assumed to be
+  the same server. Current ``compatibilityZoneURL`` configurations remain valid. See both :doc:`corda-configuration-file`
+  and :doc:`permissioning` for details.
+
 * Improved audit trail for ``FinalityFlow`` and related sub-flows.
 
 * ``NodeStartup`` will now only print node's configuration if ``devMode`` is ``true``, avoiding the risk of printing passwords in a production setup.
@@ -17,7 +21,7 @@ Unreleased
   public and was already internal for Kotlin code.
 
 * RPC Framework moved from Kryo to the Corda AMQP implementation [Corda-847]. This completes the removal
-  of ``Kryo`` from general use within Corda, remaining only for use in flow checkpointing. 
+  of ``Kryo`` from general use within Corda, remaining only for use in flow checkpointing.
 
 * Set co.paralleluniverse.fibers.verifyInstrumentation=true in devMode.
 

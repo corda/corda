@@ -14,6 +14,8 @@ import net.corda.tools.shell.SSHDConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.URI
 import java.net.URL
@@ -127,7 +129,9 @@ class NodeConfigurationImplTest {
 
     @Test
     fun `validation has error when compatibilityZoneURL is present and devMode is true`() {
-        val configuration = testConfiguration.copy(devMode = true, compatibilityZoneURL = URI.create("https://r3.com").toURL())
+        val configuration = testConfiguration.copy(
+                devMode = true,
+                compatibilityZoneURL = URL("https://r3.com"))
 
         val errors = configuration.validate()
 
@@ -147,12 +151,51 @@ class NodeConfigurationImplTest {
     }
 
     @Test
+    fun `validation has error when compatibilityZone is present and devMode is true`() {
+        val configuration = testConfiguration.copy(devMode = true, networkServices = NetworkServicesConfig(
+                URL("https://r3.com.doorman"),
+                URL("https://r3.com/nm")))
+
+        val errors = configuration.validate()
+
+        assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("networkServices") && error.contains("devMode") }
+    }
+
+    @Test
+    fun `validation has error when both compatibilityZoneURL and networkServices are configured`() {
+        val configuration = testConfiguration.copy(
+                devMode = false,
+                compatibilityZoneURL = URL("https://r3.com"),
+                networkServices = NetworkServicesConfig(
+                        URL("https://r3.com.doorman"),
+                        URL("https://r3.com/nm")))
+
+        val errors = configuration.validate()
+
+        assertThat(errors).hasOnlyOneElementSatisfying {
+            error -> error.contains("Cannot configure both compatibilityZoneUrl and networkServices simultaneously")
+        }
+    }
+
+    @Test
     fun `rpcAddress and rpcSettings_address are equivalent`() {
         var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
         rawConfig = rawConfig.withoutPath("rpcSettings.address")
         rawConfig = rawConfig.withValue("rpcAddress", ConfigValueFactory.fromAnyRef("localhost:4444"))
 
         assertThatCode { rawConfig.parseAsNodeConfiguration() }.doesNotThrowAnyException()
+    }
+
+    @Test
+    fun `compatiilityZoneURL populates NetworkServices`() {
+        val compatibilityZoneURL = URI.create("https://r3.com").toURL()
+        val configuration = testConfiguration.copy(
+                devMode = false,
+                compatibilityZoneURL = compatibilityZoneURL)
+
+        assertNotNull(configuration.networkServices)
+        assertEquals(compatibilityZoneURL, configuration.networkServices!!.doormanURL)
+        assertEquals(compatibilityZoneURL, configuration.networkServices!!.networkMapURL)
     }
 
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfiguration {
