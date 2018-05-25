@@ -17,12 +17,26 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.internal.sign
-import net.corda.core.messaging.*
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.FlowHandleImpl
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.FlowProgressHandleImpl
+import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.messaging.RPCReturnsObservables
+import net.corda.core.messaging.StateMachineInfo
+import net.corda.core.messaging.StateMachineTransactionMapping
+import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -77,9 +91,7 @@ internal class CordaRPCOpsImpl(
                                                   paging: PageSpecification,
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): Vault.Page<T> {
-        return database.transaction {
-            services.vaultService._queryBy(criteria, paging, sorting, contractStateType)
-        }
+        return services.vaultService._queryBy(criteria, paging, sorting, contractStateType)
     }
 
     @RPCReturnsObservables
@@ -87,9 +99,7 @@ internal class CordaRPCOpsImpl(
                                                   paging: PageSpecification,
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return database.transaction {
-            services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
-        }
+        return services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
     }
 
     @Suppress("OverridingDeprecatedMember")
@@ -145,15 +155,11 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
-        return database.transaction {
-            services.vaultService.addNoteToTransaction(txnId, txnNote)
-        }
+        services.vaultService.addNoteToTransaction(txnId, txnNote)
     }
 
     override fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String> {
-        return database.transaction {
-            services.vaultService.getTransactionNotes(txnId)
-        }
+        return services.vaultService.getTransactionNotes(txnId)
     }
 
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
@@ -201,7 +207,7 @@ internal class CordaRPCOpsImpl(
         }
     }
 
-    override fun uploadAttachmentWithMetadata(jar: InputStream, uploader:String, filename:String): SecureHash {
+    override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash {
         // TODO: this operation should not require an explicit transaction
         return database.transaction {
             services.attachments.importAttachment(jar, uploader, filename)
