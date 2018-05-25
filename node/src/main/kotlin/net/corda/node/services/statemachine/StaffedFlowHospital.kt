@@ -26,7 +26,7 @@ object StaffedFlowHospital : FlowHospital {
                 override fun toString() = "Admitted(at=$at, suspendCount=$suspendCount)"
             }
 
-            class Discharged(val at: Instant, suspendCount: Int, val by: Staff) : Record(suspendCount) {
+            class Discharged(val at: Instant, suspendCount: Int, val by: Staff, val error: Throwable) : Record(suspendCount) {
                 override fun toString() = "Discharged(at=$at, suspendCount=$suspendCount, by=$by)"
             }
         }
@@ -39,21 +39,33 @@ object StaffedFlowHospital : FlowHospital {
         override fun toString(): String = "${this.javaClass.simpleName}(records = $records)"
     }
 
-    override fun flowErrored(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable) {
-        log.info("Flow ${flowFiber.id} admitted to hospital in state $currentState with", newError)
+    override fun flowErrored(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>) {
+        log.info("Flow ${flowFiber.id} admitted to hospital in state $currentState")
         val medicalHistory = patients.computeIfAbsent(flowFiber.id) { MedicalHistory() }
         medicalHistory.records += MedicalHistory.Record.Admitted(Instant.now(), currentState.checkpoint.numberOfSuspends)
-        for (staffMember in staff) {
-            val diagnosis = staffMember.consult(flowFiber, currentState, newError, medicalHistory)
-            if (diagnosis == Diagnosis.DISCHARGE) {
-                flowFiber.scheduleEvent(Event.RetryFlowFromSafePoint)
-                medicalHistory.records += MedicalHistory.Record.Discharged(Instant.now(), currentState.checkpoint.numberOfSuspends, staffMember)
-                log.info("Flow ${flowFiber.id} discharged from hospital by $staffMember")
+        for ((index, error) in errors.withIndex()) {
+            log.info("Flow ${flowFiber.id} has error [$index]", error)
+            if (!errorIsDischarged(flowFiber, currentState, error, medicalHistory)) {
+                // If any error isn't discharged, then we propagate.
+                log.warn("Flow ${flowFiber.id} error was not discharged, propagating.")
+                flowFiber.scheduleEvent(Event.StartErrorPropagation)
                 return
             }
         }
-        log.warn("Flow ${flowFiber.id} is propagating with history $medicalHistory", newError)
-        flowFiber.scheduleEvent(Event.StartErrorPropagation)
+        // If all are discharged, retry.
+        flowFiber.scheduleEvent(Event.RetryFlowFromSafePoint)
+    }
+
+    private fun errorIsDischarged(flowFiber: FlowFiber, currentState: StateMachineState, error: Throwable, medicalHistory: MedicalHistory): Boolean {
+        for (staffMember in staff) {
+            val diagnosis = staffMember.consult(flowFiber, currentState, error, medicalHistory)
+            if (diagnosis == Diagnosis.DISCHARGE) {
+                medicalHistory.records += MedicalHistory.Record.Discharged(Instant.now(), currentState.checkpoint.numberOfSuspends, staffMember, error)
+                log.info("Flow ${flowFiber.id} error discharged from hospital by $staffMember")
+                return true
+            }
+        }
+        return false
     }
 
     // It's okay for flows to be cleaned... we fix them now!

@@ -34,9 +34,9 @@ class HospitalisingInterceptor(
                     }
                 }
                 is ErrorState.Errored -> {
-                    val exceptionToHandle = nextState.checkpoint.errorState.errors.last().exception
+                    val exceptionsToHandle = nextState.checkpoint.errorState.errors.map { it.exception }
                     if (hospitalisedFlows.putIfAbsent(fiber.id, fiber) == null) {
-                        flowHospital.flowErrored(fiber, previousState, exceptionToHandle)
+                        flowHospital.flowErrored(fiber, previousState, exceptionsToHandle)
                     }
                 }
             }
