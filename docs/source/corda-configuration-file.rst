@@ -195,7 +195,7 @@ absolute path to the node's base directory.
 
 :sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials and permissions as RPC subsystem. It has one required parameter.
 
-    :port: The port to start SSH server on
+    :port: The port to start SSH server on e.g. ``sshd { port = 2222 }``.
 
 :jmxMonitoringHttpPort: If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
     Default Jolokia access url is http://127.0.0.1:port/jolokia/
