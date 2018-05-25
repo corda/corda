@@ -43,7 +43,7 @@ enum class TransactionIsolationLevel {
     val jdbcValue: Int = java.sql.Connection::class.java.getField("TRANSACTION_$name").get(null) as Int
 }
 
-private val _contextDatabase = ThreadLocal<CordaPersistence>()
+private val _contextDatabase = InheritableThreadLocal<CordaPersistence>()
 var contextDatabase: CordaPersistence
     get() = _contextDatabase.get() ?: error("Was expecting to find CordaPersistence set on current thread: ${Strand.currentStrand()}")
     set(database) = _contextDatabase.set(database)
