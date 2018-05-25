@@ -19,7 +19,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.io.Serializable
 import java.time.Instant
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import javax.persistence.Column
@@ -32,8 +31,6 @@ typealias SenderHashToSeqNo = Pair<String, Long?>
  * Encapsulate the de-duplication logic.
  */
 class P2PMessageDeduplicator(private val database: CordaPersistence) {
-    val ourSenderUUID = UUID.randomUUID().toString()
-
     // A temporary in-memory set of deduplication IDs and associated high water mark details.
     // When we receive a message we don't persist the ID immediately,
     // so we store the ID here in the meantime (until the persisting db tx has committed). This is because Artemis may

@@ -15,6 +15,7 @@ import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
+import net.corda.core.utilities.loggerFor
 import net.corda.serialization.internal.*
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
@@ -39,6 +40,7 @@ data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
 class DeserializationInput @JvmOverloads constructor(private val serializerFactory: SerializerFactory,
                                                      private val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist) {
     private val objectHistory: MutableList<Any> = mutableListOf()
+    private val logger = loggerFor<DeserializationInput>()
 
     companion object {
         @VisibleForTesting
@@ -83,7 +85,6 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
     inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>, context: SerializationContext): T =
             deserialize(bytes, T::class.java, context)
 
-
     @Throws(NotSerializableException::class)
     private fun <R> des(generator: () -> R): R {
         try {
@@ -106,6 +107,9 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
     fun <T : Any> deserialize(bytes: ByteSequence, clazz: Class<T>, context: SerializationContext): T =
             des {
                 val envelope = getEnvelope(bytes, encodingWhitelist)
+
+                logger.trace("deserialize blob scheme=\"${envelope.schema.toString()}\"")
+
                 clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema),
                         clazz, context))
             }

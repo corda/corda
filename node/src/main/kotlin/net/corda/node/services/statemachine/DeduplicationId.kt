@@ -55,3 +55,9 @@ data class DeduplicationId(val toString: String) {
         }
     }
 }
+
+/**
+ * Represents the deduplication ID of a flow message, and the sender identifier for the flow doing the sending.  The identifier might be
+ * null if the flow is trying to replay messages and doesn't want an optimisation to ignore the deduplication ID.
+ */
+data class SenderDeduplicationId(val deduplicationId: DeduplicationId, val senderUUID: String?)

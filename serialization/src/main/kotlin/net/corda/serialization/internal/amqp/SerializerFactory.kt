@@ -15,6 +15,7 @@ import com.google.common.reflect.TypeResolver
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.trace
 import net.corda.serialization.internal.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
@@ -64,6 +65,7 @@ open class SerializerFactory(
              serializersByDescriptor = ConcurrentHashMap(),
              customSerializers = CopyOnWriteArrayList(),
              transformsCache = ConcurrentHashMap())
+
     constructor(whitelist: ClassWhitelist,
                 classLoader: ClassLoader,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
@@ -84,6 +86,8 @@ open class SerializerFactory(
     private fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: AMQPSerializer<Any>,
                                        schemas: SerializationSchemas) = evolutionSerializerGetter.getEvolutionSerializer(this, typeNotation, newSerializer, schemas)
 
+    private val logger = loggerFor<SerializerFactory>()
+
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
      *
@@ -92,6 +96,9 @@ open class SerializerFactory(
      */
     @Throws(NotSerializableException::class)
     fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any> {
+        // can be useful to enable but will be *extremely* chatty if you do
+        logger.trace { "Get Serializer for $actualClass ${declaredType.typeName}" }
+
         val declaredClass = declaredType.asClass() ?: throw NotSerializableException(
                 "Declared types of $declaredType are not supported.")
 
@@ -117,10 +124,15 @@ open class SerializerFactory(
                     makeMapSerializer(declaredTypeAmended)
                 }
             }
-            Enum::class.java.isAssignableFrom(actualClass
-                    ?: declaredClass) -> serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
-                whitelist.requireWhitelisted(actualType)
-                EnumSerializer(actualType, actualClass ?: declaredClass, this)
+            Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
+                logger.debug("class=[${actualClass?.simpleName} | $declaredClass] is an enumeration "
+                        + "declaredType=${declaredType.typeName} "
+                        + "isEnum=${declaredType::class.java.isEnum}")
+
+                serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
+                    whitelist.requireWhitelisted(actualType)
+                    EnumSerializer(actualType, actualClass ?: declaredClass, this)
+                }
             }
             else -> {
                 makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
@@ -208,6 +220,7 @@ open class SerializerFactory(
     @Throws(NotSerializableException::class)
     fun get(typeDescriptor: Any, schema: SerializationSchemas): AMQPSerializer<Any> {
         return serializersByDescriptor[typeDescriptor] ?: {
+            logger.trace("get Serializer descriptor=${typeDescriptor}")
             processSchema(FactorySchemaAndDescriptor(schema, typeDescriptor))
             serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException(
                     "Could not find type matching descriptor $typeDescriptor.")
@@ -242,16 +255,24 @@ open class SerializerFactory(
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
         val metaSchema = CarpenterMetaSchema.newInstance()
         for (typeNotation in schemaAndDescriptor.schemas.schema.types) {
+            logger.trace("descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=${typeNotation.name}")
             try {
                 val serialiser = processSchemaEntry(typeNotation)
                 // if we just successfully built a serializer for the type but the type fingerprint
                 // doesn't match that of the serialised object then we are dealing with  different
                 // instance of the class, as such we need to build an EvolutionSerializer
                 if (serialiser.typeDescriptor != typeNotation.descriptor.name) {
+                    logger.info("typeNotation=${typeNotation.name} action=\"requires Evolution\"")
                     getEvolutionSerializer(typeNotation, serialiser, schemaAndDescriptor.schemas)
                 }
             } catch (e: ClassNotFoundException) {
-                if (sentinel) throw e
+                if (sentinel) {
+                    logger.error("typeNotation=${typeNotation.name} error=\"after Carpentry attempt failed to load\"")
+                    throw e
+                }
+                else {
+                    logger.info("typeNotation=\"${typeNotation.name}\" action=\"carpentry required\"")
+                }
                 metaSchema.buildFor(typeNotation, classloader)
             }
         }
@@ -280,8 +301,16 @@ open class SerializerFactory(
     }
 
     private fun processSchemaEntry(typeNotation: TypeNotation) = when (typeNotation) {
-        is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
-        is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
+    // java.lang.Class (whether a class or interface)
+        is CompositeType -> {
+            logger.trace("typeNotation=${typeNotation.name} amqpType=CompositeType")
+            processCompositeType(typeNotation)
+        }
+    // Collection / Map, possibly with generics
+        is RestrictedType -> {
+            logger.trace("typeNotation=${typeNotation.name} amqpType=RestrictedType")
+            processRestrictedType(typeNotation)
+        }
     }
 
     // TODO: class loader logic, and compare the schema.
@@ -295,6 +324,7 @@ open class SerializerFactory(
     }
 
     private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> = serializersByType.computeIfAbsent(type) {
+        logger.debug("class=${clazz.simpleName}, type=$type is a composite type")
         if (clazz.isSynthetic) {
             // Explicitly ban synthetic classes, we have no way of recreating them when deserializing. This also
             // captures Lambda expressions and other anonymous functions

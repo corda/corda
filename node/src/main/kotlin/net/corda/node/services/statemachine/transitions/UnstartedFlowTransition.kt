@@ -68,7 +68,7 @@ class UnstartedFlowTransition(
                 Action.SendExisting(
                         flowStart.peerSession.counterparty,
                         sessionMessage,
-                        DeduplicationId.createForNormal(currentState.checkpoint, 0)
+                        SenderDeduplicationId(DeduplicationId.createForNormal(currentState.checkpoint, 0), currentState.senderUUID)
                 )
         )
     }

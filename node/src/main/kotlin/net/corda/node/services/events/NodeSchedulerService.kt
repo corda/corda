@@ -12,6 +12,7 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.SchedulableState
@@ -20,11 +21,9 @@ import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.join
-import net.corda.core.internal.until
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -36,8 +35,10 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.contextTransaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.mina.util.ConcurrentHashSet
 import org.slf4j.Logger
@@ -166,29 +167,31 @@ class NodeSchedulerService(private val clock: CordaClock,
 
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
-        if (!schedulerRepo.merge(action)) {
-            // Only increase the number of unfinished schedules if the state didn't already exist on the queue
-            unfinishedSchedules.countUp()
-        }
-        mutex.locked {
-            if (action.scheduledAt < nextScheduledAction?.scheduledAt ?: Instant.MAX) {
-                // We are earliest
-                rescheduleWakeUp()
-            } else if (action.ref == nextScheduledAction?.ref && action.scheduledAt != nextScheduledAction?.scheduledAt) {
-                // We were earliest but might not be any more
-                rescheduleWakeUp()
+        // Only increase the number of unfinished schedules if the state didn't already exist on the queue
+        val countUp = !schedulerRepo.merge(action)
+        contextTransaction.onCommit {
+            if (countUp) unfinishedSchedules.countUp()
+            mutex.locked {
+                if (action.scheduledAt < nextScheduledAction?.scheduledAt ?: Instant.MAX) {
+                    // We are earliest
+                    rescheduleWakeUp()
+                } else if (action.ref == nextScheduledAction?.ref && action.scheduledAt != nextScheduledAction?.scheduledAt) {
+                    // We were earliest but might not be any more
+                    rescheduleWakeUp()
+                }
             }
         }
     }
 
     override fun unscheduleStateActivity(ref: StateRef) {
         log.trace { "Unschedule $ref" }
-        if (startingStateRefs.all { it.ref != ref } && schedulerRepo.delete(ref)) {
-            unfinishedSchedules.countDown()
-        }
-        mutex.locked {
-            if (nextScheduledAction?.ref == ref) {
-                rescheduleWakeUp()
+        val countDown = startingStateRefs.all { it.ref != ref } && schedulerRepo.delete(ref)
+        contextTransaction.onCommit {
+            if (countDown) unfinishedSchedules.countDown()
+            mutex.locked {
+                if (nextScheduledAction?.ref == ref) {
+                    rescheduleWakeUp()
+                }
             }
         }
     }
@@ -237,7 +240,12 @@ class NodeSchedulerService(private val clock: CordaClock,
         schedulerTimerExecutor.join()
     }
 
-    private inner class FlowStartDeduplicationHandler(val scheduledState: ScheduledStateRef) : DeduplicationHandler {
+    private inner class FlowStartDeduplicationHandler(val scheduledState: ScheduledStateRef, override val flowLogic: FlowLogic<Any?>, override val context: InvocationContext) : DeduplicationHandler, ExternalEvent.ExternalStartFlowEvent<Any?> {
+        override val externalCause: ExternalEvent
+            get() = this
+        override val deduplicationHandler: FlowStartDeduplicationHandler
+            get() = this
+
         override fun insideDatabaseTransaction() {
             schedulerRepo.delete(scheduledState.ref)
         }
@@ -249,6 +257,18 @@ class NodeSchedulerService(private val clock: CordaClock,
         override fun toString(): String {
             return "${javaClass.simpleName}($scheduledState)"
         }
+
+        override fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<Any?>>) {
+            _future.captureLater(flowFuture)
+            val future = _future.flatMap { it.resultFuture }
+            future.then {
+                unfinishedSchedules.countDown()
+            }
+        }
+
+        private val _future = openFuture<FlowStateMachine<Any?>>()
+        override val future: CordaFuture<FlowStateMachine<Any?>>
+            get() = _future
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
@@ -260,11 +280,8 @@ class NodeSchedulerService(private val clock: CordaClock,
                     flowName = scheduledFlow.javaClass.name
                     // TODO refactor the scheduler to store and propagate the original invocation context
                     val context = InvocationContext.newInstance(InvocationOrigin.Scheduled(scheduledState))
-                    val deduplicationHandler = FlowStartDeduplicationHandler(scheduledState)
-                    val future = flowStarter.startFlow(scheduledFlow, context, deduplicationHandler).flatMap { it.resultFuture }
-                    future.then {
-                        unfinishedSchedules.countDown()
-                    }
+                    val startFlowEvent = FlowStartDeduplicationHandler(scheduledState, scheduledFlow, context)
+                    flowStarter.startFlow(startFlowEvent)
                 }
             }
         } catch (e: Exception) {

@@ -56,7 +56,7 @@ class ErrorFlowTransition(
                         sessions = newSessions
                 )
                 currentState = currentState.copy(checkpoint = newCheckpoint)
-                actions.add(Action.PropagateErrors(errorMessages, initiatedSessions))
+                actions.add(Action.PropagateErrors(errorMessages, initiatedSessions, startingState.senderUUID))
             }
 
             // If we're errored but not propagating keep processing events.

@@ -33,7 +33,6 @@ import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.Serializable
-import java.util.*
 import javax.persistence.*
 
 // cache value type to just store the immutable bits of a signed transaction plus conversion helpers
@@ -83,11 +82,11 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
         // to the memory pressure at all here.
         private const val transactionSignatureOverheadEstimate = 1024
 
-        private fun weighTx(tx: Optional<TxCacheValue>): Int {
-            if (!tx.isPresent) {
+        private fun weighTx(tx: AppendOnlyPersistentMapBase.Transactional<TxCacheValue>): Int {
+            val actTx = tx.valueWithoutIsolation
+            if (actTx == null) {
                 return 0
             }
-            val actTx = tx.get()
             return actTx.second.sumBy { it.size + transactionSignatureOverheadEstimate } + actTx.first.size
         }
     }

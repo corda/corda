@@ -54,6 +54,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     private var remoteCert: X509Certificate? = null
     private var eventProcessor: EventProcessor? = null
     private var suppressClose: Boolean = false
+    private var badCert: Boolean = false
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
@@ -86,7 +87,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         val ch = ctx.channel()
         log.info("Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}")
         if (!suppressClose) {
-            onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false)))
+            onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false, badCert)))
         }
         eventProcessor?.close()
         ctx.fireChannelInactive()
@@ -104,19 +105,22 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 val remoteX500Name = try {
                     CordaX500Name.build(remoteCert!!.subjectX500Principal)
                 } catch (ex: IllegalArgumentException) {
+                    badCert = true
                     log.error("Certificate subject not a valid CordaX500Name", ex)
                     ctx.close()
                     return
                 }
                 if (allowedRemoteLegalNames != null && remoteX500Name !in allowedRemoteLegalNames) {
+                    badCert = true
                     log.error("Provided certificate subject $remoteX500Name not in expected set $allowedRemoteLegalNames")
                     ctx.close()
                     return
                 }
                 log.info("Handshake completed with subject: $remoteX500Name")
                 createAMQPEngine(ctx)
-                onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true)))
+                onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true, false)))
             } else {
+                badCert = true
                 log.error("Handshake failure ${evt.cause().message}")
                 if (log.isTraceEnabled) {
                     log.trace("Handshake failure", evt.cause())

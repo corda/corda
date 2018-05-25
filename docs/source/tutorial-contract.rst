@@ -299,13 +299,13 @@ logic.
 
 This loop is the core logic of the contract.
 
-The first line simply gets the timestamp out of the transaction. Timestamping of transactions is optional, so a time
+The first line simply gets the time-window out of the transaction. Setting a time-window in transactions is optional, so a time
 may be missing here. We check for it being null later.
 
 .. warning:: In the Kotlin version as long as we write a comparison with the transaction time first the compiler will
    verify we didn't forget to check if it's missing. Unfortunately due to the need for smooth Java interop, this
    check won't happen if we write e.g. ``someDate > time``, it has to be ``time < someDate``. So it's good practice to
-   always write the transaction timestamp first.
+   always write the transaction time-window first.
 
 Next, we take one of three paths, depending on what the type of the command object is.
 
@@ -597,7 +597,7 @@ The time-lock contract mentioned above can be implemented very simply:
     class TestTimeLock : Contract {
         ...
         override fun verify(tx: LedgerTransaction) {
-            val time = tx.timestamp.before ?: throw IllegalStateException(...)
+            val time = tx.timeWindow?.untilTime ?: throw IllegalStateException(...)
             ...
             requireThat {
                 "the time specified in the time-lock has passed" by

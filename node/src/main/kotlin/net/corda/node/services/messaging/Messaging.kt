@@ -20,6 +20,8 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.SenderDeduplicationId
 import java.time.Instant
 import javax.annotation.concurrent.ThreadSafe
 
@@ -35,6 +37,12 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 interface MessagingService {
+    /**
+     * A unique identifier for this sender that changes whenever a node restarts.  This is used in conjunction with a sequence
+     * number for message de-duplication at the recipient.
+     */
+    val ourSenderUUID: String
+
     /**
      * The provided function will be invoked for each received message whose topic and session matches.  The callback
      * will run on the main server thread provided when the messaging service is constructed, and a database
@@ -103,11 +111,12 @@ interface MessagingService {
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.
      *
-     * @param topicSession identifier for the topic and session the message is sent to.
-     * @param additionalProperties optional additional message headers.
      * @param topic identifier for the topic the message is sent to.
+     * @param data the payload for the message.
+     * @param deduplicationId optional message deduplication ID including sender identifier.
+     * @param additionalHeaders optional additional message headers.
      */
-    fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId = DeduplicationId.createRandom(newSecureRandom()), additionalHeaders: Map<String, String> = emptyMap()): Message
+    fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), additionalHeaders: Map<String, String> = emptyMap()): Message
 
     /** Given information about either a specific node or a service returns its corresponding address */
     fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients
@@ -116,7 +125,7 @@ interface MessagingService {
     val myAddress: SingleMessageRecipient
 }
 
-fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: DeduplicationId = DeduplicationId.createRandom(newSecureRandom()), retryId: Long? = null, additionalHeaders: Map<String, String> = emptyMap()) = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId, additionalHeaders), to, retryId)
+fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), retryId: Long? = null, additionalHeaders: Map<String, String> = emptyMap()) = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId, additionalHeaders), to, retryId)
 
 interface MessageHandlerRegistration
 
@@ -162,15 +171,17 @@ object TopicStringValidator {
 }
 
 /**
- * This handler is used to implement exactly-once delivery of an event on top of a possibly duplicated one. This is done
+ * This handler is used to implement exactly-once delivery of an external event on top of an at-least-once delivery. This is done
  * using two hooks that are called from the event processor, one called from the database transaction committing the
- * side-effect caused by the event, and another one called after the transaction has committed successfully.
+ * side-effect caused by the external event, and another one called after the transaction has committed successfully.
  *
  * For example for messaging we can use [insideDatabaseTransaction] to store the message's unique ID for later
  * deduplication, and [afterDatabaseTransaction] to acknowledge the message and stop retries.
  *
  * We also use this for exactly-once start of a scheduled flow, [insideDatabaseTransaction] is used to remove the
  * to-be-scheduled state of the flow, [afterDatabaseTransaction] is used for cleanup of in-memory bookkeeping.
+ *
+ * It holds a reference back to the causing external event.
  */
 interface DeduplicationHandler {
     /**
@@ -184,6 +195,11 @@ interface DeduplicationHandler {
      * cleanup/acknowledgement/stopping of retries.
      */
     fun afterDatabaseTransaction()
+
+    /**
+     * The external event for which we are trying to reduce from at-least-once delivery to exactly-once.
+     */
+    val externalCause: ExternalEvent
 }
 
 typealias MessageHandler = (ReceivedMessage, MessageHandlerRegistration, DeduplicationHandler) -> Unit
