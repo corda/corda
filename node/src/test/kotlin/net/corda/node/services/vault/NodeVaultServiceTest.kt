@@ -4,10 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.argThat
 import com.nhaarman.mockito_kotlin.doNothing
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
@@ -686,5 +683,44 @@ class NodeVaultServiceTest {
             vaultService.notify(StatesToRecord.ALL_VISIBLE, wtx)
         }
         assertEquals(currentCashStates + 1, countCash())
+    }
+
+
+    @Test
+    fun `insert equal cash states issued by single transaction`() {
+        val nodeIdentity = MEGA_CORP
+        val coins = listOf(1.DOLLARS, 1.DOLLARS).map { it.issuedBy(nodeIdentity.ref(1)) }
+
+        //create single transaction with 2 'identical' cash outputs
+        val issuance = TransactionBuilder(null as Party?)
+        coins.map { issuance.addOutputState(TransactionState(Cash.State(it, nodeIdentity), "net.corda.finance.contracts.asset.Cash", DUMMY_NOTARY)) }
+        issuance.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+        val transaction = services.signInitialTransaction(issuance, nodeIdentity.owningKey)
+        database.transaction {
+            services.recordTransactions(transaction)
+        }
+
+        val issuedStates = coins.size
+        val recordedStates  = vaultService.queryBy<Cash.State>().states.size
+        assertThat(recordedStates).isEqualTo(issuedStates)
+    }
+
+    @Test
+    fun `insert different cash states issued by single transaction`() {
+        val nodeIdentity = MEGA_CORP
+        val coins = listOf(2.DOLLARS, 1.DOLLARS).map { it.issuedBy(nodeIdentity.ref(1)) }
+
+        //create single transaction with 2 'identical' cash outputs
+        val issuance = TransactionBuilder(null as Party?)
+        coins.map { issuance.addOutputState(TransactionState(Cash.State(it, nodeIdentity), "net.corda.finance.contracts.asset.Cash", DUMMY_NOTARY)) }
+        issuance.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+        val transaction = services.signInitialTransaction(issuance, nodeIdentity.owningKey)
+        database.transaction {
+            services.recordTransactions(transaction)
+        }
+
+        val issuedStates = coins.size
+        val recordedStates  = vaultService.queryBy<Cash.State>().states.size
+        assertThat(recordedStates).isEqualTo(issuedStates)
     }
 }
