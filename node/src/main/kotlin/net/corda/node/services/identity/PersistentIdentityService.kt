@@ -3,7 +3,11 @@ package net.corda.node.services.identity
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.hash
 import net.corda.core.node.services.UnknownAnonymousPartyException
@@ -17,11 +21,18 @@ import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.contextDatabase
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import java.io.Serializable
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
-import java.security.cert.*
+import java.security.cert.CertPathValidatorException
+import java.security.cert.CertStore
+import java.security.cert.CertificateExpiredException
+import java.security.cert.CertificateNotYetValidException
+import java.security.cert.CollectionCertStoreParameters
+import java.security.cert.TrustAnchor
+import java.security.cert.X509Certificate
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -153,12 +164,14 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         return keyToParties[parentId]
     }
 
-    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[mapToKey(owningKey)]
+    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = contextDatabase.transaction { keyToParties[mapToKey(owningKey)] }
     private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
-        val partyId = principalToParties[name]
-        return if (partyId != null) {
-            keyToParties[partyId]
-        } else null
+        return contextDatabase.transaction {
+            val partyId = principalToParties[name]
+            if (partyId != null) {
+                keyToParties[partyId]
+            } else null
+        }
     }
 
     // We give the caller a copy of the data set to avoid any locking problems
@@ -167,15 +180,17 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
-        // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
-        // into a party, and from there figure out the well known party.
-        val candidate = partyFromKey(party.owningKey)
-        // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
-        return if (candidate != null) {
-            wellKnownPartyFromX500Name(candidate.name)
-        } else {
-            null
+        return contextDatabase.transaction {
+            // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
+            // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
+            // into a party, and from there figure out the well known party.
+            val candidate = partyFromKey(party.owningKey)
+            // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
+            if (candidate != null) {
+                wellKnownPartyFromX500Name(candidate.name)
+            } else {
+                null
+            }
         }
     }
 
@@ -185,11 +200,13 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
-        val results = LinkedHashSet<Party>()
-        for ((x500name, partyId) in principalToParties.allPersisted()) {
-            partiesFromName(query, exactMatch, x500name, results, keyToParties[partyId]!!.party)
+        return contextDatabase.transaction {
+            val results = LinkedHashSet<Party>()
+            for ((x500name, partyId) in principalToParties.allPersisted()) {
+                partiesFromName(query, exactMatch, x500name, results, keyToParties[partyId]!!.party)
+            }
+            results
         }
-        return results
     }
 
     @Throws(UnknownAnonymousPartyException::class)

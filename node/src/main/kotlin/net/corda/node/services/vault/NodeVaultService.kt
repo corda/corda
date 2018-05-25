@@ -225,19 +225,23 @@ class NodeVaultService(
     }
 
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
-        val txnNoteEntity = VaultSchemaV1.VaultTxnNote(txnId.toString(), noteText)
-        currentDBSession().save(txnNoteEntity)
+        contextDatabase.transaction {
+            val txnNoteEntity = VaultSchemaV1.VaultTxnNote(txnId.toString(), noteText)
+            currentDBSession().save(txnNoteEntity)
+        }
     }
 
     override fun getTransactionNotes(txnId: SecureHash): Iterable<String> {
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultTxnNote::class.java)
-        val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultTxnNote::class.java)
-        val txIdPredicate = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultTxnNote::txId.name), txnId.toString())
-        criteriaQuery.where(txIdPredicate)
-        val results = session.createQuery(criteriaQuery).resultList
-        return results.asIterable().map { it.note }
+        return contextDatabase.transaction {
+            val session = currentDBSession()
+            val criteriaBuilder = session.criteriaBuilder
+            val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultTxnNote::class.java)
+            val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultTxnNote::class.java)
+            val txIdPredicate = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultTxnNote::txId.name), txnId.toString())
+            criteriaQuery.where(txIdPredicate)
+            val results = session.createQuery(criteriaQuery).resultList
+            results.asIterable().map { it.note }
+        }
     }
 
     @Throws(StatesNotAvailableException::class)
