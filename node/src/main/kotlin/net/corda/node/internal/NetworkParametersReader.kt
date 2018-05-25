@@ -21,13 +21,14 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         private val logger = contextLogger()
     }
 
+    private data class NetworkParamsAndHash(val networkParameters: NetworkParameters, val hash: SecureHash)
     private val networkParamsFile = baseDirectory / NETWORK_PARAMS_FILE_NAME
     private val parametersUpdateFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
     private val netParamsAndHash by lazy { retrieveNetworkParameters() }
-    val networkParameters get() = netParamsAndHash.first
-    val hash get() = netParamsAndHash.second
+    val networkParameters get() = netParamsAndHash.networkParameters
+    val hash get() = netParamsAndHash.hash
 
-    private fun retrieveNetworkParameters(): Pair<NetworkParameters, SecureHash> {
+    private fun retrieveNetworkParameters(): NetworkParamsAndHash {
         val advertisedParametersHash = try {
             networkMapClient?.getNetworkMap()?.payload?.networkParameterHash
         } catch (e: Exception) {
@@ -55,7 +56,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
             signedParametersFromFile ?: throw IllegalArgumentException("Couldn't find network parameters file and compatibility zone wasn't configured/isn't reachable")
         }
         logger.info("Loaded network parameters: $parameters")
-        return Pair(parameters.verifiedNetworkMapCert(trustRoot), parameters.raw.hash)
+        return NetworkParamsAndHash(parameters.verifiedNetworkMapCert(trustRoot), parameters.raw.hash)
     }
 
     private fun readParametersUpdate(advertisedParametersHash: SecureHash, previousParametersHash: SecureHash): SignedNetworkParameters {
