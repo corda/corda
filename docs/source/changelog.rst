@@ -15,6 +15,10 @@ Unreleased
 
 * Removed -xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
 
+* Doorman and NetworkMap url's can now be configured individually rather than being assumed to be
+  the same server. Current ``compatibilityZoneURL`` configurations remain valid. See both :doc:`corda-configuration-file`
+  and :doc:`permissioning` for details.
+
 * Node will now gracefully fail to start if one of the required ports is already in use.
 
 * Fixed incorrect exception handling in ``NodeVaultService._query()``.
