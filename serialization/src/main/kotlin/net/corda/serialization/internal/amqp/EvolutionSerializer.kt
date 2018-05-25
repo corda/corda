@@ -275,8 +275,12 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
                     // both the new and old fingerprint
                     if (newSerializer is CollectionSerializer || newSerializer is MapSerializer) {
                         newSerializer
-                    } else {
+                    } else if (newSerializer is EnumSerializer){
                         EnumEvolutionSerializer.make(typeNotation, newSerializer, factory, schemas)
+                    }
+                    else {
+                        loggerFor<SerializerFactory>().error("typeNotation=${typeNotation.name} Need to evolve unsupported type")
+                        throw NotSerializableException ("${typeNotation.name} cannot be evolved")
                     }
                 }
             }
