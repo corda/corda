@@ -685,24 +685,27 @@ class NodeVaultServiceTest {
         assertEquals(currentCashStates + 1, countCash())
     }
 
-
     @Test
     fun `insert equal cash states issued by single transaction`() {
         val nodeIdentity = MEGA_CORP
         val coins = listOf(1.DOLLARS, 1.DOLLARS).map { it.issuedBy(nodeIdentity.ref(1)) }
 
         //create single transaction with 2 'identical' cash outputs
-        val issuance = TransactionBuilder(null as Party?)
-        coins.map { issuance.addOutputState(TransactionState(Cash.State(it, nodeIdentity), "net.corda.finance.contracts.asset.Cash", DUMMY_NOTARY)) }
-        issuance.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
-        val transaction = services.signInitialTransaction(issuance, nodeIdentity.owningKey)
-        database.transaction {
-            services.recordTransactions(transaction)
-        }
+        val txb = TransactionBuilder(DUMMY_NOTARY)
+        coins.map { txb.addOutputState(TransactionState(Cash.State(it, nodeIdentity), Cash.PROGRAM_ID, DUMMY_NOTARY)) }
+        txb.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+        val issueTx = txb.toWireTransaction(services)
 
-        val issuedStates = coins.size
-        val recordedStates  = vaultService.queryBy<Cash.State>().states.size
-        assertThat(recordedStates).isEqualTo(issuedStates)
+        // ensure transaction contract state is persisted in DBStorage
+        val signedIssuedTx = services.signInitialTransaction(txb)
+        (services.validatedTransactions as WritableTransactionStorage).addTransaction(signedIssuedTx)
+
+        database.transaction { vaultService.notify(StatesToRecord.ONLY_RELEVANT, issueTx) }
+
+        val recordedStates = database.transaction {
+            vaultService.queryBy<Cash.State>().states.size
+        }
+        assertThat(recordedStates).isEqualTo(coins.size)
     }
 
     @Test
@@ -711,16 +714,20 @@ class NodeVaultServiceTest {
         val coins = listOf(2.DOLLARS, 1.DOLLARS).map { it.issuedBy(nodeIdentity.ref(1)) }
 
         //create single transaction with 2 'identical' cash outputs
-        val issuance = TransactionBuilder(null as Party?)
-        coins.map { issuance.addOutputState(TransactionState(Cash.State(it, nodeIdentity), "net.corda.finance.contracts.asset.Cash", DUMMY_NOTARY)) }
-        issuance.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
-        val transaction = services.signInitialTransaction(issuance, nodeIdentity.owningKey)
-        database.transaction {
-            services.recordTransactions(transaction)
-        }
+        val txb = TransactionBuilder(DUMMY_NOTARY)
+        coins.map { txb.addOutputState(TransactionState(Cash.State(it, nodeIdentity), Cash.PROGRAM_ID, DUMMY_NOTARY)) }
+        txb.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+        val issueTx = txb.toWireTransaction(services)
 
-        val issuedStates = coins.size
-        val recordedStates  = vaultService.queryBy<Cash.State>().states.size
-        assertThat(recordedStates).isEqualTo(issuedStates)
+        // ensure transaction contract state is persisted in DBStorage
+        val signedIssuedTx = services.signInitialTransaction(txb)
+        (services.validatedTransactions as WritableTransactionStorage).addTransaction(signedIssuedTx)
+
+        database.transaction { vaultService.notify(StatesToRecord.ONLY_RELEVANT, issueTx) }
+
+        val recordedStates = database.transaction {
+            vaultService.queryBy<Cash.State>().states.size
+        }
+        assertThat(recordedStates).isEqualTo(coins.size)
     }
 }
