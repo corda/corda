@@ -18,7 +18,12 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.trace
-import net.corda.node.services.messaging.*
+import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.messaging.Message
+import net.corda.node.services.messaging.MessageHandler
+import net.corda.node.services.messaging.MessageHandlerRegistration
+import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -35,6 +40,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.concurrent.schedule
 import kotlin.concurrent.thread
+import kotlin.jvm.Volatile
 
 /**
  * An in-memory network allows you to manufacture [InternalMockMessagingService]s for a set of participants. Each
@@ -363,10 +369,8 @@ class InMemoryMessagingNetwork private constructor(
             val (handler, transfers) = state.locked {
                 val handler = Handler(topic, callback).apply { handlers.add(this) }
                 val pending = ArrayList<MessageTransfer>()
-                database.transaction {
-                    pending.addAll(pendingRedelivery)
-                    pendingRedelivery.clear()
-                }
+                pending.addAll(pendingRedelivery)
+                pendingRedelivery.clear()
                 Pair(handler, pending)
             }
 
@@ -447,9 +451,7 @@ class InMemoryMessagingNetwork private constructor(
                         // up a handler for yet. Most unit tests don't run threaded, but we want to test true parallelism at
                         // least sometimes.
                         log.warn("Message to ${transfer.message.topic} could not be delivered")
-                        database.transaction {
-                            pendingRedelivery.add(transfer)
-                        }
+                        pendingRedelivery.add(transfer)
                         null
                     } else {
                         matchingHandlers
@@ -467,18 +469,16 @@ class InMemoryMessagingNetwork private constructor(
             val (transfer, deliverTo) = getNextQueue(q, block) ?: return null
             if (transfer.message.uniqueMessageId !in processedMessages) {
                 executor.execute {
-                    database.transaction {
-                        for (handler in deliverTo) {
-                            try {
-                                handler.callback(transfer.toReceivedMessage(), handler, DummyDeduplicationHandler())
-                            } catch (e: Exception) {
-                                log.error("Caught exception in handler for $this/${handler.topicSession}", e)
-                            }
+                    for (handler in deliverTo) {
+                        try {
+                            handler.callback(transfer.toReceivedMessage(), handler, DummyDeduplicationHandler())
+                        } catch (e: Exception) {
+                            log.error("Caught exception in handler for $this/${handler.topicSession}", e)
                         }
-                        _receivedMessages.onNext(transfer)
-                        processedMessages += transfer.message.uniqueMessageId
-                        messagesInFlight.countDown()
                     }
+                    _receivedMessages.onNext(transfer)
+                    processedMessages += transfer.message.uniqueMessageId
+                    messagesInFlight.countDown()
                 }
             } else {
                 log.info("Drop duplicate message ${transfer.message.uniqueMessageId}")
