@@ -114,7 +114,7 @@ abstract class EvolutionSerializer(
                     this.resultsIndex = it.index
                 } ?: if (!it.value.type.isMarkedNullable) {
                     throw NotSerializableException(
-                            "New parameter ${it.value.name} is mandatory, should be nullable for evolution to worK")
+                            "New parameter ${it.value.name} is mandatory, should be nullable for evolution to work")
                 }
             }
             return EvolutionSerializerViaConstructor (new.type, factory, readersAsSerialized, constructor, constructorArgs)

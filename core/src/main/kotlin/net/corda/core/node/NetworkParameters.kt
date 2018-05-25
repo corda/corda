@@ -3,6 +3,7 @@ package net.corda.core.node
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.utilities.days
 import java.time.Duration
 import java.time.Instant
@@ -23,7 +24,7 @@ import java.time.Instant
  * during this period
  */
 @CordaSerializable
-data class NetworkParameters @JvmOverloads constructor(
+data class NetworkParameters(
         val minimumPlatformVersion: Int,
         val notaries: List<NotaryInfo>,
         val maxMessageSize: Int,
@@ -31,8 +32,26 @@ data class NetworkParameters @JvmOverloads constructor(
         val modifiedTime: Instant,
         val epoch: Int,
         val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
-        val eventHorizon: Duration = Int.MAX_VALUE.days
+        val eventHorizon: Duration
 ) {
+    @DeprecatedConstructorForDeserialization(1)
+    constructor (minimumPlatformVersion: Int,
+                 notaries: List<NotaryInfo>,
+                 maxMessageSize: Int,
+                 maxTransactionSize: Int,
+                 modifiedTime: Instant,
+                 epoch: Int,
+                 whitelistedContractImplementations: Map<String, List<AttachmentId>>
+    ) : this(minimumPlatformVersion,
+            notaries,
+            maxMessageSize,
+            maxTransactionSize,
+            modifiedTime,
+            epoch,
+            whitelistedContractImplementations,
+            Int.MAX_VALUE.days
+    )
+
     init {
         require(minimumPlatformVersion > 0) { "minimumPlatformVersion must be at least 1" }
         require(notaries.distinctBy { it.identity } == notaries) { "Duplicate notary identities" }

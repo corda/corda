@@ -149,7 +149,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         // Add persisting of newest parameters from update.
         val (_, newParams) = requireNotNull(newNetworkParameters) { "Couldn't find parameters update for the hash: $parametersHash" }
         // We should check that we sign the right data structure hash.
-        val newParametersHash = newParams.verifiedNetworkMapCert(networkMapClient.trustedRoot).serialize().hash
+        val newNetParams = signedNewNetParams.verifiedNetworkMapCert(networkMapClient.trustedRoot)
+        val newParametersHash = signedNewNetParams.raw.hash
         if (parametersHash == newParametersHash) {
             // The latest parameters have priority.
             newParams.serialize()

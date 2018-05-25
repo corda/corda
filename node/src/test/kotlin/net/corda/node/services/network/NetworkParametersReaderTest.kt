@@ -6,6 +6,8 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.internal.readObject
+import net.corda.core.serialization.deserialize
+import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.NetworkParametersReader
 import net.corda.nodeapi.internal.network.*
@@ -21,6 +23,7 @@ import org.junit.Test
 import java.net.URL
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 
 class NetworkParametersReaderTest {
     @Rule
@@ -59,5 +62,25 @@ class NetworkParametersReaderTest {
                 .readObject<SignedNetworkParameters>()
                 .verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
         assertEquals(server.networkParameters, parametersFromFile)
+    }
+
+    @Test
+    fun `read network parameters from file when network map server is down`() {
+        server.close()
+        val baseDirectory = fs.getPath("/node").createDirectories()
+        val fileParameters = testNetworkParameters(epoch = 1)
+        NetworkParametersCopier(fileParameters).install(baseDirectory)
+        val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, networkMapClient, baseDirectory).networkParameters
+        assertThat(parameters).isEqualTo(fileParameters)
+    }
+
+    @Test
+    fun `serialized parameters compatibility`() {
+        // Network parameters file from before eventHorizon extension
+        val inputStream = javaClass.classLoader.getResourceAsStream("network-compatibility/network-parameters")
+        assertNotNull(inputStream)
+        val inByteArray: ByteArray = inputStream.readBytes()
+        val parameters = inByteArray.deserialize<SignedNetworkParameters>()
+        assertThat(parameters.verified().eventHorizon).isEqualTo(Int.MAX_VALUE.days)
     }
 }
