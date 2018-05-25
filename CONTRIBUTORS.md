@@ -76,7 +76,7 @@ see changes to this list.
 * George Smetana (Bradesco)
 * Giulio Katis (Westpac)
 * Giuseppe Cardone (Intesa Sanpaolo)
-* Guy Hochstetler (IBM)
+* Guy Hochstetler (R3)
 * Ian Cusden (UBS)
 * Ian Grigg (R3)
 * Igor Nitto (R3)
