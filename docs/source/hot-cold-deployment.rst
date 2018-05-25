@@ -156,7 +156,7 @@ exists, all others will shut down shortly after starting. A standard configurati
     enterpriseConfiguration = {
         mutualExclusionConfiguration = {
             on = true
-            machineName = ${UNIQUE_ID}
+            machineName = ${UNIQUE_ID} // Optional
             updateInterval = 20000
             waitInterval = 40000
         }
@@ -164,7 +164,9 @@ exists, all others will shut down shortly after starting. A standard configurati
 
 :on: Whether hot cold high availability is turned on, default is ``false``.
 
-:machineName: Unique name for node. Used when checking which node is active. Example: *corda-ha-vm1.example.com*
+:machineName: Unique name for node. It is combined with the node's base directory to create an identifier which is
+used in the mutual exclusion process (signal which corda instance is active and using the database). Default value is the
+machines host name.
 
 :updateInterval: Period(milliseconds) over which the running node updates the mutual exclusion lease.
 
@@ -206,7 +208,6 @@ file that can be used for either node:
     enterpriseConfiguration = {
         mutualExclusionConfiguration = {
             on = true
-            machineName = "${NODE_MACHINE_ID}"
             updateInterval = 20000
             waitInterval = 40000
         }
@@ -218,5 +219,4 @@ network.
 Each machine's own address is used for the RPC connection as the node's internal messaging client needs it to
 connect to the broker.
 
-The ``machineName`` value should be different for each node as it is used to ensure that only one of them can be active at any time.
 

@@ -301,7 +301,6 @@ Typical configuration for ``nodeserver1`` would be a ``node.conf`` files contain
         externalBridge = true // Ensure node doesn't run P2P AMQP bridge, instead delegate to the BridgeInner.
         mutualExclusionConfiguration = { // Enable the protective heartbeat logic so that only one node instance is ever running.
             on = true
-            machineName = "nodeserver1"
             updateInterval = 20000
             waitInterval = 40000
         }
@@ -353,7 +352,6 @@ Typical configuration for ``nodeserver2`` would be a ``node.conf`` files contain
         externalBridge = true // Ensure node doesn't run P2P AMQP bridge, instead delegate to the BridgeInner.
         mutualExclusionConfiguration = { // Enable the protective heartbeat logic so that only one node instance is ever running.
             on = true
-            machineName = "nodeserver2"
             updateInterval = 20000
             waitInterval = 40000
         }

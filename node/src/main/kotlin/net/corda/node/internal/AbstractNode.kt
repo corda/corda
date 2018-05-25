@@ -339,7 +339,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     networkParameters)
             val mutualExclusionConfiguration = configuration.enterpriseConfiguration.mutualExclusionConfiguration
             if (mutualExclusionConfiguration.on) {
-                RunOnceService(database, mutualExclusionConfiguration.machineName,
+                // Ensure uniqueness in case nodes are hosted on the same machine.
+                val extendedMachineName = "${configuration.baseDirectory}/${mutualExclusionConfiguration.machineName}"
+                RunOnceService(database, extendedMachineName,
                         ManagementFactory.getRuntimeMXBean().name.split("@")[0],
                         mutualExclusionConfiguration.updateInterval, mutualExclusionConfiguration.waitInterval).start()
             }

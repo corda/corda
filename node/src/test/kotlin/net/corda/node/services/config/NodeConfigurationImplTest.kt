@@ -13,26 +13,23 @@ package net.corda.node.services.config
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.zaxxer.hikari.HikariConfig
-import net.corda.core.internal.div
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.net.InetAddress
 import java.net.URL
 import java.net.URI
 import java.nio.file.Paths
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class NodeConfigurationImplTest {
     @Test
@@ -172,6 +169,12 @@ class NodeConfigurationImplTest {
         val errors = configuration.validate()
 
         assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("compatibilityZoneURL") && error.contains("devMode") }
+    }
+
+    @Test
+    fun `mutual exclusion machineName set to default if not explicitly set`() {
+        val config = getConfig("test-config-mutualExclusion-noMachineName.conf").parseAsNodeConfiguration(UnknownConfigKeysPolicy.IGNORE::handle)
+        assertEquals(InetAddress.getLocalHost().hostName, config.enterpriseConfiguration.mutualExclusionConfiguration.machineName)
     }
 
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfiguration {

@@ -10,8 +10,8 @@
 
 package net.corda.node.services.config
 
-import net.corda.node.services.statemachine.transitions.SessionDeliverPersistenceStrategy
 import net.corda.node.services.statemachine.transitions.StateMachineConfiguration
+import java.net.InetAddress
 
 data class EnterpriseConfiguration(
         val mutualExclusionConfiguration: MutualExclusionConfiguration,
@@ -19,7 +19,15 @@ data class EnterpriseConfiguration(
         val tuning: PerformanceTuning = PerformanceTuning.default,
         val externalBridge: Boolean? = null)
 
-data class MutualExclusionConfiguration(val on: Boolean = false, val machineName: String, val updateInterval: Long, val waitInterval: Long)
+data class MutualExclusionConfiguration(val on: Boolean = false,
+                                        val machineName: String = defaultMachineName,
+                                        val updateInterval: Long,
+                                        val waitInterval: Long
+) {
+    companion object {
+        private val defaultMachineName = InetAddress.getLocalHost().hostName
+    }
+}
 
 /**
  * @param flowThreadPoolSize Determines the size of the thread pool used by the flow framework to run flows.
