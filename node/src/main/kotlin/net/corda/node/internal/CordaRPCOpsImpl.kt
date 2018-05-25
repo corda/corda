@@ -209,29 +209,21 @@ internal class CordaRPCOpsImpl(
     override fun waitUntilNetworkReady(): CordaFuture<Void?> = services.networkMapCache.nodeReady
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        return database.transaction {
-            services.identityService.wellKnownPartyFromAnonymous(party)
-        }
+        return services.identityService.wellKnownPartyFromAnonymous(party)
     }
 
     override fun partyFromKey(key: PublicKey): Party? {
-        return database.transaction {
-            services.identityService.partyFromKey(key)
-        }
+        return services.identityService.partyFromKey(key)
     }
 
     override fun wellKnownPartyFromX500Name(x500Name: CordaX500Name): Party? {
-        return database.transaction {
-            services.identityService.wellKnownPartyFromX500Name(x500Name)
-        }
+        return services.identityService.wellKnownPartyFromX500Name(x500Name)
     }
 
     override fun notaryPartyFromX500Name(x500Name: CordaX500Name): Party? = services.networkMapCache.getNotary(x500Name)
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
-        return database.transaction {
-            services.identityService.partiesFromName(query, exactMatch)
-        }
+        return services.identityService.partiesFromName(query, exactMatch)
     }
 
     override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {

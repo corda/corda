@@ -17,6 +17,7 @@ import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.contextDatabase
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import java.io.Serializable
 import java.security.InvalidAlgorithmParameterException
@@ -110,72 +111,82 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
 
     /** Requires a database transaction. */
     fun loadIdentities(identities: Iterable<PartyAndCertificate> = emptySet(), confidentialIdentities: Iterable<PartyAndCertificate> = emptySet()) {
-        identities.forEach {
-            val key = mapToKey(it)
-            keyToParties.addWithDuplicatesAllowed(key, it, false)
-            principalToParties.addWithDuplicatesAllowed(it.name, key, false)
+        contextDatabase.transaction {
+            identities.forEach {
+                val key = mapToKey(it)
+                keyToParties.addWithDuplicatesAllowed(key, it, false)
+                principalToParties.addWithDuplicatesAllowed(it.name, key, false)
+            }
+            confidentialIdentities.forEach {
+                principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it), false)
+            }
+            log.debug("Identities loaded")
         }
-        confidentialIdentities.forEach {
-            principalToParties.addWithDuplicatesAllowed(it.name, mapToKey(it), false)
-        }
-        log.debug("Identities loaded")
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
-        // Validate the chain first, before we do anything clever with it
-        val identityCertChain = identity.certPath.x509Certificates
-        try {
-            identity.verify(trustAnchor)
-        } catch (e: CertPathValidatorException) {
-            log.warn(e.localizedMessage)
-            log.warn("Path = ")
-            identityCertChain.reversed().forEach {
-                log.warn(it.subjectX500Principal.toString())
+        return contextDatabase.transaction {
+
+            // Validate the chain first, before we do anything clever with it
+            val identityCertChain = identity.certPath.x509Certificates
+            try {
+                identity.verify(trustAnchor)
+            } catch (e: CertPathValidatorException) {
+                log.warn(e.localizedMessage)
+                log.warn("Path = ")
+                identityCertChain.reversed().forEach {
+                    log.warn(it.subjectX500Principal.toString())
+                }
+                throw e
             }
-            throw e
-        }
 
-        // Ensure we record the first identity of the same name, first
-        val wellKnownCert = identityCertChain.single { CertRole.extract(it)?.isWellKnown ?: false }
-        if (wellKnownCert != identity.certificate) {
-            val idx = identityCertChain.lastIndexOf(wellKnownCert)
-            val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
-            verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
-        }
+            // Ensure we record the first identity of the same name, first
+            val wellKnownCert = identityCertChain.single { CertRole.extract(it)?.isWellKnown ?: false }
+            if (wellKnownCert != identity.certificate) {
+                val idx = identityCertChain.lastIndexOf(wellKnownCert)
+                val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
+                verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
+            }
 
-        log.debug { "Registering identity $identity" }
-        val key = mapToKey(identity)
-        keyToParties.addWithDuplicatesAllowed(key, identity)
-        // Always keep the first party we registered, as that's the well known identity
-        principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
-        val parentId = mapToKey(identityCertChain[1].publicKey)
-        return keyToParties[parentId]
+            log.debug { "Registering identity $identity" }
+            val key = mapToKey(identity)
+            keyToParties.addWithDuplicatesAllowed(key, identity)
+            // Always keep the first party we registered, as that's the well known identity
+            principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
+            val parentId = mapToKey(identityCertChain[1].publicKey)
+            keyToParties[parentId]
+        }
     }
 
-    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = keyToParties[mapToKey(owningKey)]
+    override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = contextDatabase.transaction { keyToParties[mapToKey(owningKey)] }
+
     private fun certificateFromCordaX500Name(name: CordaX500Name): PartyAndCertificate? {
-        val partyId = principalToParties[name]
-        return if (partyId != null) {
-            keyToParties[partyId]
-        } else null
+        return contextDatabase.transaction {
+            val partyId = principalToParties[name]
+            if (partyId != null) {
+                keyToParties[partyId]
+            } else null
+        }
     }
 
     // We give the caller a copy of the data set to avoid any locking problems
-    override fun getAllIdentities(): Iterable<PartyAndCertificate> = keyToParties.allPersisted().map { it.second }.asIterable()
+    override fun getAllIdentities(): Iterable<PartyAndCertificate> = contextDatabase.transaction { keyToParties.allPersisted().map { it.second }.asIterable() }
 
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
-        // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
-        // into a party, and from there figure out the well known party.
-        val candidate = partyFromKey(party.owningKey)
-        // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
-        return if (candidate != null) {
-            wellKnownPartyFromX500Name(candidate.name)
-        } else {
-            null
+        return contextDatabase.transaction {
+            // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
+            // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
+            // into a party, and from there figure out the well known party.
+            val candidate = partyFromKey(party.owningKey)
+            // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
+            if (candidate != null) {
+                wellKnownPartyFromX500Name(candidate.name)
+            } else {
+                null
+            }
         }
     }
 
@@ -185,20 +196,23 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
-        val results = LinkedHashSet<Party>()
-        for ((x500name, partyId) in principalToParties.allPersisted()) {
-            partiesFromName(query, exactMatch, x500name, results, keyToParties[partyId]!!.party)
+        return contextDatabase.transaction {
+            val results = LinkedHashSet<Party>()
+            for ((x500name, partyId) in principalToParties.allPersisted()) {
+                partiesFromName(query, exactMatch, x500name, results, keyToParties[partyId]!!.party)
+            }
+            results
         }
-        return results
     }
 
     @Throws(UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
-        val anonymousIdentity = certificateFromKey(anonymousParty.owningKey) ?:
-        throw UnknownAnonymousPartyException("Unknown $anonymousParty")
-        val issuingCert = anonymousIdentity.certPath.certificates[1]
-        require(issuingCert.publicKey == party.owningKey) {
-            "Issuing certificate's public key must match the party key ${party.owningKey.toStringShort()}."
+        contextDatabase.transaction {
+            val anonymousIdentity = certificateFromKey(anonymousParty.owningKey) ?: throw UnknownAnonymousPartyException("Unknown $anonymousParty")
+            val issuingCert = anonymousIdentity.certPath.certificates[1]
+            require(issuingCert.publicKey == party.owningKey) {
+                "Issuing certificate's public key must match the party key ${party.owningKey.toStringShort()}."
+            }
         }
     }
 }
