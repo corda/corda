@@ -110,6 +110,7 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
 import net.corda.node.services.statemachine.StateMachineManager
