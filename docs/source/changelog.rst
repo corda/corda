@@ -1,8 +1,14 @@
 Changelog
 =========
 
-Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
-from the previous milestone release.
+.. _changelog_v3.2:
+
+Version 3.2
+-----------
+
+* Doorman and NetworkMap url's can now be configured individually rather than being assumed to be
+  the same server. Current ``compatibilityZoneURL`` configurations remain valid. See both :doc:`corda-configuration-file`
+  and :doc:`permissioning` for details.
 
 .. _changelog_v3.1:
 
