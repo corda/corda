@@ -34,7 +34,6 @@ class FlowExecutionTest {
 
         val latch = CountDownLatch(1)
         var successful = false
-
         val initiatingFlow = TestFlow(mockNet.defaultNotaryIdentity)
         val node = mockNet.createPartyNode()
 
