@@ -220,17 +220,18 @@ class NodeAttachmentService(
     )
 
     private fun loadAttachmentContent(id: SecureHash): Pair<Attachment, ByteArray>? {
-        val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
-                ?: return null
-        val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
-            val contracts = attachment.contractClassNames
-            if (contracts != null && contracts.isNotEmpty()) {
-                ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader)
-            } else {
-                it
+        return contextDatabase.transaction {
+            val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString()) ?: return@transaction null
+            val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
+                val contracts = attachment.contractClassNames
+                if (contracts != null && contracts.isNotEmpty()) {
+                    ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader)
+                } else {
+                    it
+                }
             }
+            Pair(attachmentImpl, attachment.content)
         }
-        return Pair(attachmentImpl, attachment.content)
     }
 
     private val attachmentCache = NonInvalidatingCache<SecureHash, Optional<Attachment>>(
@@ -266,32 +267,35 @@ class NodeAttachmentService(
         return import(jar, uploader, filename)
     }
 
-    override fun hasAttachment(attachmentId: AttachmentId): Boolean =
-            currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
+    override fun hasAttachment(attachmentId: AttachmentId): Boolean = contextDatabase.transaction {
+        currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
+    }
 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
-        return withContractsInJar(jar) { contractClassNames, inputStream ->
-            require(inputStream !is JarInputStream)
+        return contextDatabase.transaction {
+            withContractsInJar(jar) { contractClassNames, inputStream ->
+                require(inputStream !is JarInputStream)
 
-            // Read the file into RAM and then calculate its hash. The attachment must fit into memory.
-            // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
-            // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
-            // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
-            // set the hash field of the new attachment record.
+                // Read the file into RAM and then calculate its hash. The attachment must fit into memory.
+                // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
+                // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
+                // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
+                // set the hash field of the new attachment record.
 
-            val bytes = inputStream.readFully()
-            val id = bytes.sha256()
-            if (!hasAttachment(id)) {
-                checkIsAValidJAR(bytes.inputStream())
-                val session = currentDBSession()
-                val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename, contractClassNames = contractClassNames)
-                session.save(attachment)
-                attachmentCount.inc()
-                log.info("Stored new attachment $id")
-                id
-            } else {
-                throw DuplicateAttachmentException(id.toString())
+                val bytes = inputStream.readFully()
+                val id = bytes.sha256()
+                if (!hasAttachment(id)) {
+                    checkIsAValidJAR(bytes.inputStream())
+                    val session = currentDBSession()
+                    val attachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, uploader = uploader, filename = filename, contractClassNames = contractClassNames)
+                    session.save(attachment)
+                    attachmentCount.inc()
+                    log.info("Stored new attachment $id")
+                    id
+                } else {
+                    throw DuplicateAttachmentException(id.toString())
+                }
             }
         }
     }
@@ -305,24 +309,24 @@ class NodeAttachmentService(
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
+        return contextDatabase.transaction {
+            val session = currentDBSession()
+            val criteriaBuilder = session.criteriaBuilder
 
-        val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
-        val root = criteriaQuery.from(DBAttachment::class.java)
+            val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
+            val root = criteriaQuery.from(DBAttachment::class.java)
 
-        val criteriaParser = HibernateAttachmentQueryCriteriaParser(criteriaBuilder, criteriaQuery, root)
+            val criteriaParser = HibernateAttachmentQueryCriteriaParser(criteriaBuilder, criteriaQuery, root)
 
-        // parse criteria and build where predicates
-        criteriaParser.parse(criteria, sorting)
+            // parse criteria and build where predicates
+            criteriaParser.parse(criteria, sorting)
 
-        // prepare query for execution
-        val query = session.createQuery(criteriaQuery)
+            // prepare query for execution
+            val query = session.createQuery(criteriaQuery)
 
-        // execution
-        val results = query.resultList
-
-        return results.map { AttachmentId.parse(it.attId) }
+            // execution
+            query.resultList.map { AttachmentId.parse(it.attId) }
+        }
     }
 
 }

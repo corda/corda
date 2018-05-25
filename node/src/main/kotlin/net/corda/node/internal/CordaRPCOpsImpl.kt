@@ -185,38 +185,23 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
-        // TODO: this operation should not require an explicit transaction
-        return database.transaction {
-            services.attachments.openAttachment(id) != null
-        }
+        return services.attachments.openAttachment(id) != null
     }
 
     override fun openAttachment(id: SecureHash): InputStream {
-        // TODO: this operation should not require an explicit transaction
-        return database.transaction {
-            services.attachments.openAttachment(id)!!.open()
-        }
+        return services.attachments.openAttachment(id)!!.open()
     }
 
     override fun uploadAttachment(jar: InputStream): SecureHash {
-        // TODO: this operation should not require an explicit transaction
-        return database.transaction {
-            services.attachments.importAttachment(jar, RPC_UPLOADER, null)
-        }
+        return services.attachments.importAttachment(jar, RPC_UPLOADER, null)
     }
 
     override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash {
-        // TODO: this operation should not require an explicit transaction
-        return database.transaction {
-            services.attachments.importAttachment(jar, uploader, filename)
-        }
+        return services.attachments.importAttachment(jar, uploader, filename)
     }
 
     override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
-        // TODO: this operation should not require an explicit transaction
-        return database.transaction {
-            services.attachments.queryAttachments(query, sorting)
-        }
+        return services.attachments.queryAttachments(query, sorting)
     }
 
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
