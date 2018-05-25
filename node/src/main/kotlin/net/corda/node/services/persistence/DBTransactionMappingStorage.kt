@@ -9,6 +9,7 @@ import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import rx.subjects.PublishSubject
 import java.io.Serializable
@@ -56,11 +57,14 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
     val updates: PublishSubject<StateMachineTransactionMapping> = PublishSubject.create()
 
     override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
-        stateMachineTransactionMap.addWithDuplicatesAllowed(transactionId, stateMachineRunId)
-        updates.bufferUntilDatabaseCommit().onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
+        contextDatabase.transaction {
+            stateMachineTransactionMap.addWithDuplicatesAllowed(transactionId, stateMachineRunId)
+            updates.bufferUntilDatabaseCommit().onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
+        }
     }
 
-    override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> =
-            DataFeed(stateMachineTransactionMap.allPersisted().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
-                    updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+    override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> = contextDatabase.transaction {
+        DataFeed(stateMachineTransactionMap.allPersisted().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
+                updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+    }
 }

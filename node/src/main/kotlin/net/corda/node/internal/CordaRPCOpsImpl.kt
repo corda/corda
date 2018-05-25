@@ -137,9 +137,7 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
-        return database.transaction {
-            services.stateMachineRecordedTransactionMapping.track()
-        }
+        return services.stateMachineRecordedTransactionMapping.track()
     }
 
     override fun nodeInfo(): NodeInfo {
