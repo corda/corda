@@ -158,13 +158,13 @@ class NodeSchedulerService(private val clock: CordaClock,
 
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
-        schedulerTimerExecutor.execute{runLoopFunction()}
+        schedulerTimerExecutor.execute{ runLoopFunction() }
     }
 
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
         // Only increase the number of unfinished schedules if the state didn't already exist on the queue
-        if( !schedulerRepo.merge(action) ){
+        if(!schedulerRepo.merge(action)){
             unfinishedSchedules.countUp()
         }
         contextTransaction.onCommit {
@@ -213,7 +213,7 @@ class NodeSchedulerService(private val clock: CordaClock,
                 }
             }
             else {
-                awaitWithDeadline(clock, Instant.now() + idleWaitSeconds , ourRescheduledFuture )
+                awaitWithDeadline(clock, clock.instant() + idleWaitSeconds , ourRescheduledFuture )
             }
 
         }
