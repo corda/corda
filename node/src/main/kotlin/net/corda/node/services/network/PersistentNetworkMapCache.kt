@@ -39,7 +39,7 @@ class NetworkMapCacheImpl(
         networkMapCacheBase: NetworkMapCacheBaseInternal,
         private val identityService: IdentityService,
         private val database: CordaPersistence
-) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal {
+) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal, SingletonSerializeAsToken() {
     companion object {
         private val logger = loggerFor<NetworkMapCacheImpl>()
     }
