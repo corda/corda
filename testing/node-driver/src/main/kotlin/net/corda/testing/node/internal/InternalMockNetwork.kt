@@ -280,7 +280,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
             network = messagingServiceSpy
         }
 
-        override fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>): KeyManagementService {
+        override fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>, database: CordaPersistence): KeyManagementService {
             return E2ETestKeyManagementService(identityService, keyPairs)
         }
 

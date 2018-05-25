@@ -41,7 +41,6 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.CordaService
 import net.corda.core.node.services.IdentityService
@@ -51,7 +50,6 @@ import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
 import net.corda.core.utilities.debug
@@ -703,7 +701,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                              networkParameters: NetworkParameters): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
 
-        val keyManagementService = makeKeyManagementService(identityService, keyPairs)
+        val keyManagementService = makeKeyManagementService(identityService, keyPairs, database)
         _services = ServiceHubInternalImpl(
                 identityService,
                 keyManagementService,
@@ -795,8 +793,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    protected open fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>): KeyManagementService {
-        return PersistentKeyManagementService(identityService, keyPairs)
+    protected open fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>, database: CordaPersistence): KeyManagementService {
+        return PersistentKeyManagementService(identityService, keyPairs, database)
     }
 
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {
@@ -960,12 +958,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
         override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {
             return flowFactories[initiatingFlowClass]
-        }
-
-        override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-            database.transaction {
-                super.recordTransactions(statesToRecord, txs)
-            }
         }
 
         override fun jdbcSession(): Connection = database.createSession()

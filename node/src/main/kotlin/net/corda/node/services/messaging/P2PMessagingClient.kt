@@ -160,9 +160,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         fun sendMessage(address: String, message: ClientMessage) = producer!!.send(address, message)
     }
 
-    private val messagesToRedeliver = database.transaction {
-        createMessageToRedeliver()
-    }
+    private val messagesToRedeliver = createMessageToRedeliver()
 
     private val scheduledMessageRedeliveries = ConcurrentHashMap<Long, ScheduledFuture<*>>()
 
