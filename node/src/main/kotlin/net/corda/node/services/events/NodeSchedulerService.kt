@@ -142,6 +142,7 @@ class NodeSchedulerService(private val clock: CordaClock,
     private class InnerState {
         var rescheduled: GuavaSettableFuture<Boolean>? = null
         var nextScheduledAction: ScheduledStateRef? = null
+        var running: Boolean = true
     }
 
     // Used to de-duplicate flow starts in case a flow is starting but the corresponding entry hasn't been removed yet
@@ -149,6 +150,7 @@ class NodeSchedulerService(private val clock: CordaClock,
     private val startingStateRefs = ConcurrentHashSet<ScheduledStateRef>()
 
     private val mutex = ThreadBox(InnerState())
+
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
         schedulerTimerExecutor.execute{runLoopFunction()}
@@ -157,9 +159,10 @@ class NodeSchedulerService(private val clock: CordaClock,
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
         // Only increase the number of unfinished schedules if the state didn't already exist on the queue
-        val countUp = !schedulerRepo.merge(action)
+        if( !schedulerRepo.merge(action) ){
+            unfinishedSchedules.countUp()
+        }
         contextTransaction.onCommit {
-            if (countUp) unfinishedSchedules.countUp()
             mutex.locked {
                 if (action.scheduledAt < nextScheduledAction?.scheduledAt ?: Instant.MAX) {
                     // We are earliest
@@ -185,11 +188,10 @@ class NodeSchedulerService(private val clock: CordaClock,
         }
     }
 
-    private var running: Boolean = true
     private val idleWaitSeconds = 60.seconds
 
     private fun runLoopFunction(){
-        while (running){
+        while (mutex.locked { running }){
             val (scheduledState, ourRescheduledFuture) = mutex.locked {
                 rescheduled = GuavaSettableFuture.create()
                 //get the next scheduled action that isn't currently running
@@ -223,8 +225,10 @@ class NodeSchedulerService(private val clock: CordaClock,
 
     @VisibleForTesting
     internal fun join() {
-            running = false
-            rescheduleWakeUp()
+            mutex.locked {
+                running = false
+                rescheduleWakeUp()
+            }
             schedulerTimerExecutor.join()
     }
 
