@@ -5,6 +5,7 @@ import com.google.common.reflect.TypeResolver
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.trace
 import net.corda.serialization.internal.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
@@ -85,7 +86,9 @@ open class SerializerFactory(
      */
     @Throws(NotSerializableException::class)
     fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any> {
-        logger.info("Get Serializer for $actualClass ${declaredType.typeName}")
+        // can be useful to enable but will be *extremely* chatty if you do
+        logger.trace { "Get Serializer for $actualClass ${declaredType.typeName}" }
+
         val declaredClass = declaredType.asClass() ?: throw NotSerializableException(
                 "Declared types of $declaredType are not supported.")
 
@@ -122,7 +125,6 @@ open class SerializerFactory(
                 }
             }
             else -> {
-                logger.debug("class=[${actualClass?.simpleName} | $declaredClass] is a composite type")
                 makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
             }
         }
@@ -312,6 +314,7 @@ open class SerializerFactory(
     }
 
     private fun makeClassSerializer(clazz: Class<*>, type: Type, declaredType: Type): AMQPSerializer<Any> = serializersByType.computeIfAbsent(type) {
+        logger.debug("class=${clazz.simpleName}, type=$type is a composite type")
         if (clazz.isSynthetic) {
             // Explicitly ban synthetic classes, we have no way of recreating them when deserializing. This also
             // captures Lambda expressions and other anonymous functions
