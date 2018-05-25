@@ -1245,6 +1245,7 @@ public final class net.corda.core.crypto.Crypto extends java.lang.Object
   public static final java.security.PublicKey toSupportedPublicKey(java.security.PublicKey)
   @NotNull
   public static final java.security.PublicKey toSupportedPublicKey(org.bouncycastle.asn1.x509.SubjectPublicKeyInfo)
+  public static final boolean validatePublicKey(java.security.PublicKey)
   @NotNull
   public static final net.corda.core.crypto.SignatureScheme COMPOSITE_KEY
   @NotNull
