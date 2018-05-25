@@ -482,7 +482,7 @@ class NodeVaultService(
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
-            val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) })
+            val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) }.wrapWithDatabaseTransaction(contextDatabaseOrNull))
             DataFeed(snapshotResults, updates)
         }
     }

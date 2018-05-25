@@ -77,9 +77,7 @@ internal class CordaRPCOpsImpl(
                                                   paging: PageSpecification,
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): Vault.Page<T> {
-        return database.transaction {
-            services.vaultService._queryBy(criteria, paging, sorting, contractStateType)
-        }
+        return services.vaultService._queryBy(criteria, paging, sorting, contractStateType)
     }
 
     @RPCReturnsObservables
@@ -87,9 +85,7 @@ internal class CordaRPCOpsImpl(
                                                   paging: PageSpecification,
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return database.transaction {
-            services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
-        }
+        return services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
     }
 
     @Suppress("OverridingDeprecatedMember")
