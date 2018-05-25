@@ -48,7 +48,8 @@ class NodeVaultService(
         private val clock: Clock,
         private val keyManagementService: KeyManagementService,
         private val servicesForResolution: ServicesForResolution,
-        hibernateConfig: HibernateConfiguration
+        hibernateConfig: HibernateConfiguration,
+        private val database: CordaPersistence
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
         private val log = contextLogger()
@@ -225,14 +226,14 @@ class NodeVaultService(
     }
 
     override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
-        contextDatabase.transaction {
+        database.transaction {
             val txnNoteEntity = VaultSchemaV1.VaultTxnNote(txnId.toString(), noteText)
             currentDBSession().save(txnNoteEntity)
         }
     }
 
     override fun getTransactionNotes(txnId: SecureHash): Iterable<String> {
-        return contextDatabase.transaction {
+        return database.transaction {
             val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultTxnNote::class.java)
@@ -407,7 +408,7 @@ class NodeVaultService(
     @Throws(VaultQueryException::class)
     private fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean): Vault.Page<T> {
         log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
-        return contextDatabase.transaction {
+        return database.transaction {
             // calculate total results where a page specification has been defined
             var totalStates = -1L
             if (!skipPagingChecks && !paging.isDefault) {
@@ -484,7 +485,7 @@ class NodeVaultService(
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return contextDatabase.transaction {
+        return database.transaction {
             mutex.locked {
                 val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
                 val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) })
@@ -493,7 +494,7 @@ class NodeVaultService(
         }
     }
 
-    private fun getSession() = contextDatabase.currentOrNew().session
+    private fun getSession() = database.currentOrNew().session
     /**
      * Derive list from existing vault states and then incrementally update using vault observables
      */

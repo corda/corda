@@ -161,7 +161,6 @@ class StartedMockNode private constructor(private val node: StartedNode<Internal
      *
      * @param statement to be executed in the scope of this transaction.
      */
-    // TODO sollecitom maybe remove
     fun <T> transaction(statement: () -> T): T {
         return node.database.transaction {
             statement()

@@ -20,15 +20,19 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationToken
+import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
 import java.io.FilterInputStream
@@ -40,7 +44,16 @@ import java.time.Instant
 import java.util.*
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.*
+import javax.persistence.CollectionTable
+import javax.persistence.Column
+import javax.persistence.ElementCollection
+import javax.persistence.Entity
+import javax.persistence.ForeignKey
+import javax.persistence.Id
+import javax.persistence.Index
+import javax.persistence.JoinColumn
+import javax.persistence.Lob
+import javax.persistence.Table
 
 /**
  * Stores attachments using Hibernate to database.
@@ -49,7 +62,8 @@ import javax.persistence.*
 class NodeAttachmentService(
         metrics: MetricRegistry,
         attachmentContentCacheSize: Long = NodeConfiguration.defaultAttachmentContentCacheSize,
-        attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound
+        attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
+        private val database: CordaPersistence
 ) : AttachmentStorage, SingletonSerializeAsToken(
 ) {
 
@@ -109,7 +123,7 @@ class NodeAttachmentService(
     private val attachmentCount = metrics.counter("Attachments")
 
     fun start() {
-        contextDatabase.transaction {
+        database.transaction {
             val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
@@ -197,9 +211,7 @@ class NodeAttachmentService(
         }
 
         override fun toToken(context: SerializeAsTokenContext) = Token(id, checkOnLoad)
-
     }
-
 
     // slightly complex 2 level approach to attachment caching:
     // On the first level we cache attachment contents loaded from the DB by their key. This is a weight based
@@ -220,7 +232,7 @@ class NodeAttachmentService(
     )
 
     private fun loadAttachmentContent(id: SecureHash): Pair<Attachment, ByteArray>? {
-        return contextDatabase.transaction {
+        return database.transaction {
             val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString()) ?: return@transaction null
             val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
                 val contracts = attachment.contractClassNames
@@ -267,13 +279,13 @@ class NodeAttachmentService(
         return import(jar, uploader, filename)
     }
 
-    override fun hasAttachment(attachmentId: AttachmentId): Boolean = contextDatabase.transaction {
+    override fun hasAttachment(attachmentId: AttachmentId): Boolean = database.transaction {
         currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
     }
 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
-        return contextDatabase.transaction {
+        return database.transaction {
             withContractsInJar(jar) { contractClassNames, inputStream ->
                 require(inputStream !is JarInputStream)
 
@@ -309,7 +321,7 @@ class NodeAttachmentService(
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")
-        return contextDatabase.transaction {
+        return database.transaction {
             val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
 
@@ -328,5 +340,4 @@ class NodeAttachmentService(
             query.resultList.map { AttachmentId.parse(it.attId) }
         }
     }
-
 }

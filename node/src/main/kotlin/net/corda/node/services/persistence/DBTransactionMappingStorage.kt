@@ -7,9 +7,9 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.utilities.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import rx.subjects.PublishSubject
 import java.io.Serializable
@@ -24,7 +24,7 @@ import javax.persistence.*
  * RPC API to correlate transaction creation with flows.
  */
 @ThreadSafe
-class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorage {
+class DBTransactionMappingStorage(private val database: CordaPersistence) : StateMachineRecordedTransactionMappingStorage {
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}transaction_mappings")
@@ -57,13 +57,13 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
     val updates: PublishSubject<StateMachineTransactionMapping> = PublishSubject.create()
 
     override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
-        contextDatabase.transaction {
+        database.transaction {
             stateMachineTransactionMap.addWithDuplicatesAllowed(transactionId, stateMachineRunId)
             updates.bufferUntilDatabaseCommit().onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
         }
     }
 
-    override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> = contextDatabase.transaction {
+    override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> = database.transaction {
         DataFeed(stateMachineTransactionMap.allPersisted().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
                 updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
     }

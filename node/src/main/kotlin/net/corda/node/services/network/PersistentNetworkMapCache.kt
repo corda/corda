@@ -26,7 +26,6 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
@@ -38,7 +37,8 @@ import kotlin.collections.HashSet
 
 class NetworkMapCacheImpl(
         networkMapCacheBase: NetworkMapCacheBaseInternal,
-        private val identityService: IdentityService
+        private val identityService: IdentityService,
+        private val database: CordaPersistence
 ) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal {
     companion object {
         private val logger = loggerFor<NetworkMapCacheImpl>()
@@ -62,7 +62,7 @@ class NetworkMapCacheImpl(
     }
 
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
-        return contextDatabase.transaction {
+        return database.transaction {
             val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
             wellKnownParty?.let {
                 getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
