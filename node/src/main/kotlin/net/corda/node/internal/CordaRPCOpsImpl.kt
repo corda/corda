@@ -250,17 +250,13 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
-        return database.transaction {
-            services.networkMapCache.getNodeByLegalIdentity(party)
-        }
+        return services.networkMapCache.getNodeByLegalIdentity(party)
     }
 
     override fun registeredFlows(): List<String> = services.rpcFlows.map { it.name }.sorted()
 
     override fun clearNetworkMapCache() {
-        database.transaction {
-            services.networkMapCache.clearNetworkMapCache()
-        }
+        services.networkMapCache.clearNetworkMapCache()
     }
 
     override fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T> {
