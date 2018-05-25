@@ -23,6 +23,8 @@ import net.corda.node.internal.artemis.ReactiveArtemisConsumer.Companion.multipl
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
@@ -124,7 +126,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             )
         }
 
-        private class NodeClientMessage(override val topic: String, override val data: ByteSequence, override val uniqueMessageId: DeduplicationId, override val senderUUID: String?, override val additionalHeaders: Map<String, String>) : Message {
+        class NodeClientMessage(override val topic: String, override val data: ByteSequence, override val uniqueMessageId: DeduplicationId, override val senderUUID: String?, override val additionalHeaders: Map<String, String>) : Message {
             override val debugTimestamp: Instant = Instant.now()
             override fun toString() = "$topic#${String(data.bytes)}"
         }
@@ -158,6 +160,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
     data class HandlerRegistration(val topic: String, val callback: Any) : MessageHandlerRegistration
 
     override val myAddress: SingleMessageRecipient = NodeAddress(myIdentity, advertisedAddress)
+    override val ourSenderUUID = UUID.randomUUID().toString()
+
     private val messageRedeliveryDelaySeconds = config.p2pMessagingRetry.messageRedeliveryDelay.seconds
     private val state = ThreadBox(InnerState())
     private val knownQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
@@ -227,7 +231,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                     producer!!,
                     versionInfo,
                     this@P2PMessagingClient,
-                    ourSenderUUID = deduplicator.ourSenderUUID
+                    ourSenderUUID = ourSenderUUID
             )
 
             registerBridgeControl(bridgeSession!!, inboxes.toList())
@@ -435,18 +439,23 @@ class P2PMessagingClient(val config: NodeConfiguration,
         }
     }
 
-    inner class MessageDeduplicationHandler(val artemisMessage: ClientMessage, val cordaMessage: ReceivedMessage) : DeduplicationHandler {
+    private inner class MessageDeduplicationHandler(val artemisMessage: ClientMessage, override val receivedMessage: ReceivedMessage) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
+        override val externalCause: ExternalEvent
+            get() = this
+        override val deduplicationHandler: MessageDeduplicationHandler
+            get() = this
+
         override fun insideDatabaseTransaction() {
-            deduplicator.persistDeduplicationId(cordaMessage.uniqueMessageId)
+            deduplicator.persistDeduplicationId(receivedMessage.uniqueMessageId)
         }
 
         override fun afterDatabaseTransaction() {
-            deduplicator.signalMessageProcessFinish(cordaMessage.uniqueMessageId)
+            deduplicator.signalMessageProcessFinish(receivedMessage.uniqueMessageId)
             messagingExecutor!!.acknowledge(artemisMessage)
         }
 
         override fun toString(): String {
-            return "${javaClass.simpleName}(${cordaMessage.uniqueMessageId})"
+            return "${javaClass.simpleName}(${receivedMessage.uniqueMessageId})"
         }
     }
 
@@ -610,8 +619,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
         handlers.remove(registration.topic)
     }
 
-    override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId, additionalHeaders: Map<String, String>): Message {
-        return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId, deduplicator.ourSenderUUID, additionalHeaders)
+    override fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId, additionalHeaders: Map<String, String>): Message {
+        return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId.deduplicationId, deduplicationId.senderUUID, additionalHeaders)
     }
 
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
