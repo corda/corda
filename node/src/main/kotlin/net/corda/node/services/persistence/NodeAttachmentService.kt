@@ -28,6 +28,7 @@ import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.persistence.contextDatabase
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
 import java.io.FilterInputStream
@@ -107,13 +108,15 @@ class NodeAttachmentService(
 
     private val attachmentCount = metrics.counter("Attachments")
 
-    init {
-        val session = currentDBSession()
-        val criteriaBuilder = session.criteriaBuilder
-        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-        criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
-        val count = session.createQuery(criteriaQuery).singleResult
-        attachmentCount.inc(count)
+    fun start() {
+        contextDatabase.transaction {
+            val session = currentDBSession()
+            val criteriaBuilder = session.criteriaBuilder
+            val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+            criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(NodeAttachmentService.DBAttachment::class.java)))
+            val count = session.createQuery(criteriaQuery).singleResult
+            attachmentCount.inc(count)
+        }
     }
 
     @CordaSerializable

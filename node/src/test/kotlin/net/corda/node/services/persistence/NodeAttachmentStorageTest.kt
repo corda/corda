@@ -35,6 +35,7 @@ class NodeAttachmentStorageTest {
     // Use an in memory file system for testing attachment storage.
     private lateinit var fs: FileSystem
     private lateinit var database: CordaPersistence
+    private lateinit var storage: NodeAttachmentService
 
     @Before
     fun setUp() {
@@ -43,6 +44,7 @@ class NodeAttachmentStorageTest {
         val dataSourceProperties = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProperties, DatabaseConfig(), rigorousMock())
         fs = Jimfs.newFileSystem(Configuration.unix())
+        storage = NodeAttachmentService(MetricRegistry()).also { it.start() }
     }
 
     @After
@@ -55,7 +57,6 @@ class NodeAttachmentStorageTest {
         val (testJar,expectedHash) = makeTestJar()
 
         database.transaction {
-            val storage = NodeAttachmentService(MetricRegistry())
             val id = testJar.read { storage.importAttachment(it) }
             assertEquals(expectedHash, id)
 
@@ -83,7 +84,6 @@ class NodeAttachmentStorageTest {
         val (jarB, hashB) = makeTestJar(listOf(Pair("file", "content")))
 
         database.transaction {
-            val storage = NodeAttachmentService(MetricRegistry())
             val id = testJar.read { storage.importAttachment(it) }
             assertEquals(expectedHash, id)
 
@@ -122,8 +122,6 @@ class NodeAttachmentStorageTest {
         val (jarC, hashC) = makeTestJar(listOf(Pair("magic_file","magic_content_puff")))
 
         database.transaction {
-            val storage = NodeAttachmentService(MetricRegistry())
-
             jarA.read { storage.importAttachment(it) }
             jarB.read { storage.importAttachment(it, "uploaderB", "fileB.zip") }
             jarC.read { storage.importAttachment(it, "uploaderC", "fileC.zip") }
@@ -152,8 +150,6 @@ class NodeAttachmentStorageTest {
         fun filenameSort(direction: Sort.Direction) = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.FILENAME, direction)))
 
         database.transaction {
-            val storage = NodeAttachmentService(MetricRegistry())
-
             jarA.read { storage.importAttachment(it, "complexA", "archiveA.zip") }
             jarB.read { storage.importAttachment(it, "complexB", "archiveB.zip") }
             jarC.read { storage.importAttachment(it, "complexC", "archiveC.zip") }
@@ -197,7 +193,6 @@ class NodeAttachmentStorageTest {
     fun `duplicates not allowed`() {
         val (testJar,_) = makeTestJar()
         database.transaction {
-            val storage = NodeAttachmentService(MetricRegistry())
             testJar.read {
                 storage.importAttachment(it)
             }
@@ -213,7 +208,6 @@ class NodeAttachmentStorageTest {
     fun `corrupt entry throws exception`() {
         val (testJar,_) = makeTestJar()
         val id = database.transaction {
-            val storage = NodeAttachmentService(MetricRegistry())
             val id = testJar.read { storage.importAttachment(it) }
 
             // Corrupt the file in the store.
@@ -225,7 +219,6 @@ class NodeAttachmentStorageTest {
             id
         }
         database.transaction {
-            val storage = NodeAttachmentService(MetricRegistry())
             val e = assertFailsWith<NodeAttachmentService.HashMismatchException> {
                 storage.openAttachment(id)!!.open().readFully()
             }
@@ -242,7 +235,6 @@ class NodeAttachmentStorageTest {
     @Test
     fun `non jar rejected`() {
         database.transaction {
-            val storage = NodeAttachmentService(MetricRegistry())
             val path = fs.getPath("notajar")
             path.writeLines(listOf("Hey", "there!"))
             path.read {
