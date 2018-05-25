@@ -4339,21 +4339,19 @@ public class net.corda.core.schemas.PersistentState extends java.lang.Object imp
 @Embeddable
 public class net.corda.core.schemas.PersistentStateRef extends java.lang.Object implements java.io.Serializable
   public <init>()
-  public <init>(String, Integer)
+  public <init>(String, int)
   public <init>(net.corda.core.contracts.StateRef)
-  @Nullable
-  public final String component1()
-  @Nullable
-  public final Integer component2()
   @NotNull
-  public final net.corda.core.schemas.PersistentStateRef copy(String, Integer)
+  public final String component1()
+  public final int component2()
+  @NotNull
+  public final net.corda.core.schemas.PersistentStateRef copy(String, int)
   public boolean equals(Object)
-  @Nullable
-  public Integer getIndex()
-  @Nullable
+  public int getIndex()
+  @NotNull
   public String getTxId()
   public int hashCode()
-  public void setIndex(Integer)
+  public void setIndex(int)
   public void setTxId(String)
   public String toString()
 ##

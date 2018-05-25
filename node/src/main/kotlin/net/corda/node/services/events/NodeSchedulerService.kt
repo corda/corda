@@ -132,7 +132,7 @@ class NodeSchedulerService(private val clock: CordaClock,
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}scheduled_states")
     class PersistentScheduledState(
             @EmbeddedId
-            var output: PersistentStateRef = PersistentStateRef(),
+            var output: PersistentStateRef,
 
             @Column(name = "scheduled_at", nullable = false)
             var scheduledAt: Instant = Instant.now()

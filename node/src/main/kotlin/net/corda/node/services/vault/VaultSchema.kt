@@ -34,19 +34,19 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             // TODO: create a distinct table to hold serialized state data (once DBTransactionStore is encrypted)
 
             /** refers to the X500Name of the notary a state is attached to */
-            @Column(name = "notary_name")
+            @Column(name = "notary_name", nullable = false)
             var notary: Party,
 
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
-            @Column(name = "contract_state_class_name")
+            @Column(name = "contract_state_class_name", nullable = false)
             var contractStateClassName: String,
 
             /** state lifecycle: unconsumed, consumed */
-            @Column(name = "state_status")
+            @Column(name = "state_status", nullable = false)
             var stateStatus: Vault.StateStatus,
 
             /** refers to timestamp recorded upon entering UNCONSUMED state */
-            @Column(name = "recorded_timestamp")
+            @Column(name = "recorded_timestamp", nullable = false)
             var recordedTime: Instant,
 
             /** refers to timestamp recorded upon entering CONSUMED state */
@@ -81,7 +81,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
              */
-            @Column(name = "external_id")
+            @Column(name = "external_id", nullable = true)
             var externalId: String?,
 
             @Column(name = "uuid", nullable = false)
@@ -104,13 +104,13 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @CollectionTable(name = "vault_fungible_states_parts",
                     joinColumns = [(JoinColumn(name = "output_index", referencedColumnName = "output_index")), (JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"))],
                     foreignKey = ForeignKey(name = "FK__fung_st_parts__fung_st"))
-            @Column(name = "participants")
+            @Column(name = "participants", nullable = true)
             var participants: MutableSet<AbstractParty>? = null,
 
             /** [OwnableState] attributes */
 
             /** X500Name of owner party **/
-            @Column(name = "owner_name")
+            @Column(name = "owner_name", nullable = true)
             var owner: AbstractParty,
 
             /** [FungibleAsset] attributes
@@ -120,16 +120,16 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
              */
 
             /** Amount attributes */
-            @Column(name = "quantity")
+            @Column(name = "quantity", nullable = false)
             var quantity: Long,
 
             /** Issuer attributes */
 
             /** X500Name of issuer party **/
-            @Column(name = "issuer_name")
+            @Column(name = "issuer_name", nullable = true)
             var issuer: AbstractParty,
 
-            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
             @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray
     ) : PersistentState() {
@@ -146,13 +146,13 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     class VaultTxnNote(
             @Id
             @GeneratedValue
-            @Column(name = "seq_no")
+            @Column(name = "seq_no", nullable = false)
             var seqNo: Int,
 
-            @Column(name = "transaction_id", length = 64)
+            @Column(name = "transaction_id", length = 64, nullable = false)
             var txId: String,
 
-            @Column(name = "note")
+            @Column(name = "note", nullable = false)
             var note: String
     ) : Serializable {
         constructor(txId: String, note: String) : this(0, txId, note)

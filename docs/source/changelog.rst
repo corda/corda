@@ -96,6 +96,12 @@ Unreleased
 
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
+* API change: ``net.corda.core.schemas.PersistentStateRef`` fields (index and txId) are now non-nullable.
+  The fields were always effectively non-nullable - values were set from non-nullable fields of other objects.
+  The class is used as database Primary Key columns of other entities and databases already impose those columns as non-nullable
+  (even if JPA annotation nullable=false was absent).
+  In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
+
 .. _changelog_v3.1:
 
 Version 3.1
@@ -117,6 +123,7 @@ Version 3.1
 
 * Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
   all the needed network data, waiting in the background for network map to become available.
+
 
 .. _changelog_v3:
 
