@@ -8,6 +8,12 @@ Unreleased
 ==========
 * Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems related to database migrations before exiting with a non-zero code.
 
+* Doorman and NetworkMap url's can now be configured individually rather than being assumed to be
+  the same server. Current ``compatibilityZoneURL`` configurations remain valid. See both :doc:`corda-configuration-file`
+  and :doc:`permissioning` for details.
+
+* Improved audit trail for ``FinalityFlow`` and related sub-flows.
+
 * ``NodeStartup`` will now only print node's configuration if ``devMode`` is ``true``, avoiding the risk of printing passwords in a production setup.
 
 * SLF4J's MDC will now only be printed to the console if not empty. No more log lines ending with "{}".
@@ -18,7 +24,7 @@ Unreleased
 * RPC server will now mask internal errors to RPC clients if not in devMode. ``Throwable``s implementing ``ClientRelevantError`` will continue to be propagated to clients.
 
 * RPC Framework moved from Kryo to the Corda AMQP implementation [Corda-847]. This completes the removal
-  of ``Kryo`` from general use within Corda, remaining only for use in flow checkpointing. 
+  of ``Kryo`` from general use within Corda, remaining only for use in flow checkpointing.
 
 * Set co.paralleluniverse.fibers.verifyInstrumentation=true in devMode.
 
@@ -35,11 +41,18 @@ Unreleased
   * ``Party`` objects can be deserialised by looking up their public key, in addition to their name
   * ``NodeInfo`` objects are serialised as an object and can be looked up using the same mechanism as ``Party``
   * ``NetworkHostAndPort`` serialised according to its ``toString()``
-  * ``PartyAndCertificate`` is serialised as an object containing the name and owning key
-  * ``SerializedBytes`` is serialised by converting the bytes into the object it represents, which is then serialised into
-    a JSON/YAML object
-  * ``CertPath`` and ``X509Certificate`` are serialised as objects and can be deserialised back
+  * ``PartyAndCertificate`` is serialised as the name
+  * ``SerializedBytes`` is serialised by materialising the bytes into the object it represents, and then serialising that
+    object into YAML/JSON
+  * ``X509Certificate`` is serialised as an object with key fields such as ``issuer``, ``publicKey``, ``serialNumber``, etc.
+    The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialise an ``X509Certificate``
+    back.
+  * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
   * ``SignedTransaction`` is serialised into its ``txBits`` and ``signatures`` and can be deserialised back
+
+* ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
+  then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``
+  the ``certPath`` is serialised.
 
 * Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used.
 

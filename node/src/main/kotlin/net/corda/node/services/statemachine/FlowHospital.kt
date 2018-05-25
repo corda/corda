@@ -19,10 +19,15 @@ interface FlowHospital {
     /**
      * The flow running in [flowFiber] has errored.
      */
-    fun flowErrored(flowFiber: FlowFiber)
+    fun flowErrored(flowFiber: FlowFiber, currentState: StateMachineState, errors: List<Throwable>)
 
     /**
      * The flow running in [flowFiber] has cleaned, possibly as a result of a flow hospital resume.
      */
     fun flowCleaned(flowFiber: FlowFiber)
+
+    /**
+     * The flow has been removed from the state machine.
+     */
+    fun flowRemoved(flowFiber: FlowFiber)
 }

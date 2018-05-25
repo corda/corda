@@ -102,6 +102,12 @@ Building against the master branch
 You can test your changes against CorDapps defined in other repos by following the instructions
 :doc:`here </building-against-master>`.
 
+Running the API scanner
+^^^^^^^^^^^^^^^^^^^^^^^
+Your changes must also not break compatibility with existing public API. We have an API scanning tool which runs as part of the build
+process which can be used to flag up any accidental changes, which is detailed :doc:`here </api-scanner>`.
+
+
 Updating the docs
 -----------------
 

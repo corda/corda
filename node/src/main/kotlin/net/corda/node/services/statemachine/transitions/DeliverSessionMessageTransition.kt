@@ -56,9 +56,6 @@ class DeliverSessionMessageTransition(
                     is EndSessionMessage -> endMessageTransition()
                 }
             }
-            if (!isErrored()) {
-                persistCheckpointIfNeeded()
-            }
             // Schedule a DoRemainingWork to check whether the flow needs to be woken up.
             actions.add(Action.ScheduleEvent(Event.DoRemainingWork))
             FlowContinuation.ProcessEvents
@@ -83,7 +80,7 @@ class DeliverSessionMessageTransition(
                 // Send messages that were buffered pending confirmation of session.
                 val sendActions = sessionState.bufferedMessages.map { (deduplicationId, bufferedMessage) ->
                     val existingMessage = ExistingSessionMessage(message.initiatedSessionId, bufferedMessage)
-                    Action.SendExisting(initiatedSession.peerParty, existingMessage, deduplicationId)
+                    Action.SendExisting(initiatedSession.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID))
                 }
                 actions.addAll(sendActions)
                 currentState = currentState.copy(checkpoint = newCheckpoint)
@@ -153,24 +150,6 @@ class DeliverSessionMessageTransition(
                 }
             }
             else -> freshErrorTransition(UnexpectedEventInState())
-        }
-    }
-
-    private fun TransitionBuilder.persistCheckpointIfNeeded() {
-        // We persist the message as soon as it arrives.
-        if (context.configuration.sessionDeliverPersistenceStrategy == SessionDeliverPersistenceStrategy.OnDeliver &&
-                event.sessionMessage.payload !is EndSessionMessage) {
-            actions.addAll(arrayOf(
-                    Action.CreateTransaction,
-                    Action.PersistCheckpoint(context.id, currentState.checkpoint),
-                    Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                    Action.CommitTransaction,
-                    Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers)
-            ))
-            currentState = currentState.copy(
-                    pendingDeduplicationHandlers = emptyList(),
-                    isAnyCheckpointPersisted = true
-            )
         }
     }
 

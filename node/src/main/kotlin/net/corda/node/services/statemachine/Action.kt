@@ -34,7 +34,7 @@ sealed class Action {
     data class SendInitial(
             val party: Party,
             val initialise: InitialSessionMessage,
-            val deduplicationId: DeduplicationId
+            val deduplicationId: SenderDeduplicationId
     ) : Action()
 
     /**
@@ -43,7 +43,7 @@ sealed class Action {
     data class SendExisting(
             val peerParty: Party,
             val message: ExistingSessionMessage,
-            val deduplicationId: DeduplicationId
+            val deduplicationId: SenderDeduplicationId
     ) : Action()
 
     /**
@@ -72,7 +72,8 @@ sealed class Action {
      */
     data class PropagateErrors(
             val errorMessages: List<ErrorSessionMessage>,
-            val sessions: List<SessionState.Initiated>
+            val sessions: List<SessionState.Initiated>,
+            val senderUUID: String?
     ) : Action()
 
     /**
@@ -139,6 +140,11 @@ sealed class Action {
      * Release soft locks associated with given ID (currently the flow ID).
      */
     data class ReleaseSoftLocks(val uuid: UUID?) : Action()
+
+    /**
+     * Retry a flow from the last checkpoint, or if there is no checkpoint, restart the flow with the same invocation details.
+     */
+    data class RetryFlowFromSafePoint(val currentState: StateMachineState) : Action()
 }
 
 /**

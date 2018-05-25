@@ -226,7 +226,7 @@ class StartedFlowTransition(
             }
             val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++)
             val initialMessage = createInitialSessionMessage(sessionState.initiatingSubFlow, sourceSessionId, null)
-            actions.add(Action.SendInitial(sessionState.party, initialMessage, deduplicationId))
+            actions.add(Action.SendInitial(sessionState.party, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
             newSessions[sourceSessionId] = SessionState.Initiating(
                     bufferedMessages = emptyList(),
                     rejectionError = null
@@ -263,7 +263,7 @@ class StartedFlowTransition(
                 when (existingSessionState) {
                     is SessionState.Uninitiated -> {
                         val initialMessage = createInitialSessionMessage(existingSessionState.initiatingSubFlow, sourceSessionId, message)
-                        actions.add(Action.SendInitial(existingSessionState.party, initialMessage, deduplicationId))
+                        actions.add(Action.SendInitial(existingSessionState.party, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
                         newSessions[sourceSessionId] = SessionState.Initiating(
                                 bufferedMessages = emptyList(),
                                 rejectionError = null
@@ -280,7 +280,7 @@ class StartedFlowTransition(
                             is InitiatedSessionState.Live -> {
                                 val sinkSessionId = existingSessionState.initiatedState.peerSinkSessionId
                                 val existingMessage = ExistingSessionMessage(sinkSessionId, sessionMessage)
-                                actions.add(Action.SendExisting(existingSessionState.peerParty, existingMessage, deduplicationId))
+                                actions.add(Action.SendExisting(existingSessionState.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
                                 Unit
                             }
                             InitiatedSessionState.Ended -> {

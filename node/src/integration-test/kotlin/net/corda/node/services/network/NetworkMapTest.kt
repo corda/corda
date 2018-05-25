@@ -30,27 +30,23 @@ import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
-import net.corda.testing.node.internal.CompatibilityZoneParams
-import net.corda.testing.node.internal.internalDriver
+import net.corda.testing.node.internal.*
 import net.corda.testing.node.internal.network.NetworkMapServer
 import net.corda.testing.node.internal.startNode
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.*
 import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.net.URL
 import java.time.Instant
 
-class NetworkMapTest : IntegrationTest() {
-    companion object {
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas(
-                ALICE_NAME.toDatabaseSchemaName(),
-                BOB_NAME.toDatabaseSchemaName(),
-                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
-    }
-
+@RunWith(Parameterized::class)
+class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneParams) : IntegrationTest() {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -61,13 +57,44 @@ class NetworkMapTest : IntegrationTest() {
     private lateinit var networkMapServer: NetworkMapServer
     private lateinit var compatibilityZone: CompatibilityZoneParams
 
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(
+                ALICE_NAME.toDatabaseSchemaName(),
+                BOB_NAME.toDatabaseSchemaName(),
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
+        fun runParams() = listOf(
+                { addr: URL, nms: NetworkMapServer ->
+                    SharedCompatibilityZoneParams(
+                            addr,
+                            publishNotaries = {
+                                nms.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
+                            }
+                    )
+                },
+                { addr: URL, nms: NetworkMapServer ->
+                    SplitCompatibilityZoneParams(
+                            doormanURL = URL("http://I/Don't/Exist"),
+                            networkMapURL = addr,
+                            publishNotaries = {
+                                nms.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
+                            }
+                    )
+                }
+
+        )
+    }
+
+
     @Before
     fun start() {
         networkMapServer = NetworkMapServer(cacheTimeout, portAllocation.nextHostAndPort())
         val address = networkMapServer.start()
-        compatibilityZone = CompatibilityZoneParams(URL("http://$address"), publishNotaries = {
-            networkMapServer.networkParameters = testNetworkParameters(it, modifiedTime = Instant.ofEpochMilli(random63BitValue()), epoch = 2)
-        })
+        compatibilityZone = initFunc(URL("http://$address"), networkMapServer)
     }
 
     @After
