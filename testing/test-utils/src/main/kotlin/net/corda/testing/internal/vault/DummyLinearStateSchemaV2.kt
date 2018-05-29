@@ -34,13 +34,13 @@ object DummyLinearStateSchemaV2 : MappedSchema(schemaFamily = DummyLinearStateSc
             @CollectionTable(name = "dummy_linear_states_v2_parts", joinColumns = [(JoinColumn(name = "output_index", referencedColumnName = "output_index")), (JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"))])
             override var participants: MutableSet<AbstractParty>? = null,
 
-            @Column(name = "linear_string") var linearString: String,
+            @Column(name = "linear_string", nullable = false) var linearString: String,
 
-            @Column(name = "linear_number") var linearNumber: Long,
+            @Column(name = "linear_number", nullable = false) var linearNumber: Long,
 
-            @Column(name = "linear_timestamp") var linearTimestamp: java.time.Instant,
+            @Column(name = "linear_timestamp", nullable = false) var linearTimestamp: java.time.Instant,
 
-            @Column(name = "linear_boolean") var linearBoolean: Boolean,
+            @Column(name = "linear_boolean", nullable = false) var linearBoolean: Boolean,
 
             @Transient
             val uid: UniqueIdentifier

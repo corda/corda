@@ -254,7 +254,7 @@ class CommercialPaperTestsGeneric {
         // MegaCorp will issue some commercial paper and Alice will buy it, using cash issued to her in the name
         // of the dummy cash issuer.
 
-        val allIdentities = arrayOf(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity)
+        val allIdentities = arrayOf(megaCorp.identity, alice.identity, dummyCashIssuer.identity, dummyNotary.identity)
         val notaryServices = MockServices(dummyNotary)
         val issuerServices = MockServices(dummyCashIssuer, dummyNotary)
         val (aliceDatabase, aliceServices) = makeTestDatabaseAndMockServices(

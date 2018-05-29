@@ -38,11 +38,11 @@ class DBCheckpointStorage : CheckpointStorage {
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
     class DBCheckpoint(
             @Id
-            @Column(name = "checkpoint_id", length = 64)
+            @Column(name = "checkpoint_id", length = 64, nullable = false)
             var checkpointId: String = "",
 
             @Lob
-            @Column(name = "checkpoint_value")
+            @Column(name = "checkpoint_value", nullable = false)
             var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
     ) : Serializable
 

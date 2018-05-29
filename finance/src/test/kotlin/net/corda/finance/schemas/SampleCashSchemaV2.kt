@@ -28,7 +28,7 @@ object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
     @Table(name = "cash_states_v2", indexes = [Index(name = "ccy_code_idx2", columnList = "ccy_code")])
     class PersistentCashState(
             /** product type */
-            @Column(name = "ccy_code", length = 3)
+            @Column(name = "ccy_code", length = 3, nullable = false)
             var currency: String,
             participants: Set<AbstractParty>,
             owner: AbstractParty,
@@ -38,7 +38,7 @@ object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
     ) : CommonSchemaV1.FungibleState(participants.toMutableSet(), owner, quantity, issuerParty, issuerRef.bytes) {
 
         @ElementCollection
-        @Column(name = "participants")
+        @Column(name = "participants", nullable = true)
         @CollectionTable(name = "cash_states_v2_participants", joinColumns = [JoinColumn(name = "output_index", referencedColumnName = "output_index"), JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")])
         override var participants: MutableSet<AbstractParty>? = null
     }

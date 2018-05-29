@@ -208,7 +208,7 @@ absolute path to the node's base directory.
 
 :sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials and permissions as RPC subsystem. It has one required parameter.
 
-    :port: The port to start SSH server on
+    :port: The port to start SSH server on e.g. ``sshd { port = 2222 }``.
 
 :relay: If provided, the node will attempt to tunnel inbound connections via an external relay. The relay's address will be
     advertised to the network map service instead of the provided ``p2pAddress``.

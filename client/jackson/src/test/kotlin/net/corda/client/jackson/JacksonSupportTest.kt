@@ -49,6 +49,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets.*
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
@@ -113,12 +114,17 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test
-    fun OpaqueBytes() {
+    fun `OpaqueBytes serialization`() {
         val opaqueBytes = OpaqueBytes(secureRandomBytes(128))
         val json = mapper.valueToTree<BinaryNode>(opaqueBytes)
         assertThat(json.binaryValue()).isEqualTo(opaqueBytes.bytes)
         assertThat(json.asText()).isEqualTo(opaqueBytes.bytes.toBase64())
-        assertThat(mapper.convertValue<OpaqueBytes>(json)).isEqualTo(opaqueBytes)
+    }
+
+    @Test
+    fun `OpaqueBytes deserialization`() {
+        assertThat(mapper.convertValue<OpaqueBytes>(TextNode("1234"))).isEqualTo(OpaqueBytes("1234".toByteArray(UTF_8)))
+        assertThat(mapper.convertValue<OpaqueBytes>(BinaryNode(byteArrayOf(1, 2, 3, 4)))).isEqualTo(OpaqueBytes.of(1, 2, 3, 4))
     }
 
     @Test
