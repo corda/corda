@@ -7,6 +7,8 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.nodeapi.internal.serialization.carpenter.CarpenterMetaSchema
 import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
 import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenter
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -58,6 +60,8 @@ open class SerializerFactory(
     fun getSerializersByDescriptor() = serializersByDescriptor
 
     fun getTransformsCache() = transformsCache
+
+    private val logger by lazy { loggerFor<SerializerFactory>() }
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -216,6 +220,7 @@ open class SerializerFactory(
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
         val metaSchema = CarpenterMetaSchema.newInstance()
         for (typeNotation in schemaAndDescriptor.schemas.schema.types) {
+            logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=${typeNotation.name}" }
             try {
                 val serialiser = processSchemaEntry(typeNotation)
                 // if we just successfully built a serializer for the type but the type fingerprint
