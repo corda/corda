@@ -330,6 +330,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     drainingModePollPeriod = configuration.drainingModePollPeriod,
                     nodeProperties = nodeProperties)
 
+            runOnStop += { schedulerService.join() }
             (serverThread as? ExecutorService)?.let {
                 runOnStop += {
                     // We wait here, even though any in-flight messages should have been drained away because the
