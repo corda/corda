@@ -13,6 +13,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.Closeable
 import java.util.*
+import kotlin.test.fail
 
 class ObservablesTests {
     private fun isInDatabaseTransaction() = contextTransactionOrNull != null
@@ -55,6 +56,72 @@ class ObservablesTests {
 
         assertThat(firstEvent.get()).isEqualTo(1 to true)
         assertThat(secondEvent.get()).isEqualTo(0 to false)
+    }
+
+    class TestException : Exception("Synthetic exception for tests") {}
+
+    @Test
+    fun `bufferUntilDatabaseCommit swallows if transaction rolled back`() {
+        val database = createDatabase()
+
+        val source = PublishSubject.create<Int>()
+        val observable: Observable<Int> = source
+
+        val firstEvent = SettableFuture.create<Pair<Int, Boolean>>()
+        val secondEvent = SettableFuture.create<Pair<Int, Boolean>>()
+
+        observable.first().subscribe { firstEvent.set(it to isInDatabaseTransaction()) }
+        observable.skip(1).first().subscribe { secondEvent.set(it to isInDatabaseTransaction()) }
+
+        try {
+            database.transaction {
+                val delayedSubject = source.bufferUntilDatabaseCommit()
+                assertThat(source).isNotEqualTo(delayedSubject)
+                delayedSubject.onNext(0)
+                source.onNext(1)
+                assertThat(firstEvent.isDone).isTrue()
+                assertThat(secondEvent.isDone).isFalse()
+                throw TestException()
+            }
+            fail("Should not have successfully completed transaction")
+        } catch (e: TestException) {
+        }
+        assertThat(secondEvent.isDone).isFalse()
+
+        assertThat(firstEvent.get()).isEqualTo(1 to true)
+    }
+
+    @Test
+    fun `bufferUntilDatabaseCommit propagates error if transaction rolled back`() {
+        val database = createDatabase()
+
+        val source = PublishSubject.create<Int>()
+        val observable: Observable<Int> = source
+
+        val firstEvent = SettableFuture.create<Pair<Int, Boolean>>()
+        val secondEvent = SettableFuture.create<Pair<Int, Boolean>>()
+
+        observable.first().subscribe({ firstEvent.set(it to isInDatabaseTransaction()) }, {})
+        observable.skip(1).subscribe({ secondEvent.set(it to isInDatabaseTransaction()) }, {})
+        observable.skip(1).subscribe({}, { secondEvent.set(2 to isInDatabaseTransaction()) })
+
+        try {
+            database.transaction {
+                val delayedSubject = source.bufferUntilDatabaseCommit(propagateRollbackAsError = true)
+                assertThat(source).isNotEqualTo(delayedSubject)
+                delayedSubject.onNext(0)
+                source.onNext(1)
+                assertThat(firstEvent.isDone).isTrue()
+                assertThat(secondEvent.isDone).isFalse()
+                throw TestException()
+            }
+            fail("Should not have successfully completed transaction")
+        } catch (e: TestException) {
+        }
+        assertThat(secondEvent.isDone).isTrue()
+
+        assertThat(firstEvent.get()).isEqualTo(1 to true)
+        assertThat(secondEvent.get()).isEqualTo(2 to false)
     }
 
     @Test

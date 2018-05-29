@@ -109,6 +109,7 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.NodePropertiesPersistentStore
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
 import net.corda.node.services.statemachine.StateMachineManager
@@ -292,9 +293,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 { name -> identityServiceRef.get().wellKnownPartyFromX500Name(name) },
                 { party -> identityServiceRef.get().wellKnownPartyFromAnonymous(party) })
         val identityService = makeIdentityService(identity.certificate, database).also(identityServiceRef::set)
-        networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
-
-        val networkParameters = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory).networkParameters
+        networkMapClient = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, identityService.trustRoot) }
+        val networkParameteresReader = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory)
+        val networkParameters = networkParameteresReader.networkParameters
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
@@ -363,7 +364,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient,
-                networkParameters.serialize().hash,
+                networkParameteresReader.hash,
                 services.myInfo.serialize().hash,
                 configuration.baseDirectory,
                 configuration.extraNetworkMapKeys)
@@ -991,8 +992,37 @@ internal fun logVendorString(database: CordaPersistence, log: Logger) {
 }
 
 internal class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogicRefFactory: FlowLogicRefFactory) : FlowStarter {
-    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext, deduplicationHandler: DeduplicationHandler?): CordaFuture<FlowStateMachine<T>> {
-        return smm.startFlow(logic, context, ourIdentity = null, deduplicationHandler = deduplicationHandler)
+    override fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<FlowStateMachine<T>> {
+        smm.deliverExternalEvent(event)
+        return event.future
+    }
+
+    override fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>> {
+        val startFlowEvent = object : ExternalEvent.ExternalStartFlowEvent<T>, DeduplicationHandler {
+            override fun insideDatabaseTransaction() {}
+
+            override fun afterDatabaseTransaction() {}
+
+            override val externalCause: ExternalEvent
+                get() = this
+            override val deduplicationHandler: DeduplicationHandler
+                get() = this
+
+            override val flowLogic: FlowLogic<T>
+                get() = logic
+            override val context: InvocationContext
+                get() = context
+
+            override fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<T>>) {
+                _future.captureLater(flowFuture)
+            }
+
+            private val _future = openFuture<FlowStateMachine<T>>()
+            override val future: CordaFuture<FlowStateMachine<T>>
+                get() = _future
+
+        }
+        return startFlow(startFlowEvent)
     }
 
     override fun <T> invokeFlowAsync(

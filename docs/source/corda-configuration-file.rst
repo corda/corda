@@ -171,7 +171,16 @@ absolute path to the node's base directory.
     interfaces, and then by sending an IP discovery request to the network map service. Set to ``false`` to disable.
 
 :compatibilityZoneURL: The root address of Corda compatibility zone network management services, it is used by the Corda node to register with the network and
-    obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information.
+    obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information. Cannot be
+    set at the same time as the ``networkServices`` option.
+
+:networkServices: If the Corda compatibility zone services, both network map and registration (doorman), are not running on the same endpoint
+    and thus have different URLs then this option should be used in place of the ``compatibilityZoneURL`` setting.
+
+    :doormanURL: Root address of the network registration service.
+    :networkMapURL: Root address of the network map service.
+
+.. note:: Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.
 
 :jvmArgs: An optional list of JVM args, as strings, which replace those inherited from the command line when launching via ``corda.jar``
     only. e.g. ``jvmArgs = [ "-Xmx220m", "-Xms220m", "-XX:+UseG1GC" ]``
@@ -186,7 +195,7 @@ absolute path to the node's base directory.
 
 :sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials and permissions as RPC subsystem. It has one required parameter.
 
-    :port: The port to start SSH server on
+    :port: The port to start SSH server on e.g. ``sshd { port = 2222 }``.
 
 :jmxMonitoringHttpPort: If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
     Default Jolokia access url is http://127.0.0.1:port/jolokia/
@@ -236,7 +245,7 @@ Simple notary configuration file:
     notary : {
         validating : false
     }
-    devMode : true
+    devMode : false
     compatibilityZoneURL : "https://cz.corda.net"
 
 An example ``web-server.conf`` file is as follow:
@@ -254,6 +263,10 @@ An example ``web-server.conf`` file is as follow:
     }
     webAddress : "localhost:12347",
     rpcUsers : [{ username=user1, password=letmein, permissions=[ StartFlow.net.corda.protocols.CashProtocol ] }]
+
+Configuring a node where the Corda Comatability Zone's registration and Network Map services exist on different URLs
+
+.. literalinclude:: example-code/src/main/resources/example-node-with-networkservices.conf
 
 Fields
 ------

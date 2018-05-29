@@ -30,10 +30,10 @@ class DBTransactionMappingStorage(private val database: CordaPersistence) : Stat
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}transaction_mappings")
     class DBTransactionMapping(
             @Id
-            @Column(name = "tx_id", length = 64)
+            @Column(name = "tx_id", length = 64, nullable = false)
             var txId: String = "",
 
-            @Column(name = "state_machine_run_id", length = 36)
+            @Column(name = "state_machine_run_id", length = 36, nullable = false)
             var stateMachineRunId: String = ""
     ) : Serializable
 

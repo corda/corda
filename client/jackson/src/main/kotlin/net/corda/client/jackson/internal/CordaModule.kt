@@ -29,9 +29,10 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.constructorForDeserialization
-import net.corda.serialization.internal.amqp.createSerializerFactoryFactory
+import net.corda.serialization.internal.amqp.hasCordaSerializable
 import net.corda.serialization.internal.amqp.propertiesForSerialization
 import java.security.PublicKey
+import java.security.cert.CertPath
 
 class CordaModule : SimpleModule("corda-core") {
     override fun setupModule(context: SetupContext) {
@@ -39,7 +40,7 @@ class CordaModule : SimpleModule("corda-core") {
 
         context.addBeanSerializerModifier(CordaSerializableBeanSerializerModifier())
 
-        context.setMixInAnnotations(PartyAndCertificate::class.java, PartyAndCertificateSerializerMixin::class.java)
+        context.setMixInAnnotations(PartyAndCertificate::class.java, PartyAndCertificateMixin::class.java)
         context.setMixInAnnotations(NetworkHostAndPort::class.java, NetworkHostAndPortMixin::class.java)
         context.setMixInAnnotations(CordaX500Name::class.java, CordaX500NameMixin::class.java)
         context.setMixInAnnotations(Amount::class.java, AmountMixin::class.java)
@@ -53,7 +54,7 @@ class CordaModule : SimpleModule("corda-core") {
         context.setMixInAnnotations(DigitalSignature.WithKey::class.java, ByteSequenceWithPropertiesMixin::class.java)
         context.setMixInAnnotations(DigitalSignatureWithCert::class.java, ByteSequenceWithPropertiesMixin::class.java)
         context.setMixInAnnotations(TransactionSignature::class.java, ByteSequenceWithPropertiesMixin::class.java)
-        context.setMixInAnnotations(SignedTransaction::class.java, SignedTransactionMixin2::class.java)
+        context.setMixInAnnotations(SignedTransaction::class.java, SignedTransactionMixin::class.java)
         context.setMixInAnnotations(WireTransaction::class.java, JacksonSupport.WireTransactionMixin::class.java)
         context.setMixInAnnotations(NodeInfo::class.java, NodeInfoMixin::class.java)
     }
@@ -69,12 +70,15 @@ private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier()
     override fun changeProperties(config: SerializationConfig,
                                   beanDesc: BeanDescription,
                                   beanProperties: MutableList<BeanPropertyWriter>): MutableList<BeanPropertyWriter> {
-        // TODO We're assuming here that Jackson gives us a superset of all the properties. Either confirm this or
-        // make sure the returned beanProperties are exactly the AMQP properties
-        if (beanDesc.beanClass.isAnnotationPresent(CordaSerializable::class.java)) {
+        if (hasCordaSerializable(beanDesc.beanClass)) {
             val ctor = constructorForDeserialization(beanDesc.beanClass)
-            val amqpProperties = propertiesForSerialization(ctor, beanDesc.beanClass, serializerFactory).serializationOrder
-            beanProperties.removeIf { bean -> amqpProperties.none { amqp -> amqp.serializer.name == bean.name } }
+            val amqpProperties = propertiesForSerialization(ctor, beanDesc.beanClass, serializerFactory)
+                    .serializationOrder
+                    .map { it.serializer.name }
+            beanProperties.removeIf { it.name !in amqpProperties }
+            (amqpProperties - beanProperties.map { it.name }).let {
+                check(it.isEmpty()) { "Jackson didn't provide serialisers for $it" }
+            }
         }
         return beanProperties
     }
@@ -85,26 +89,31 @@ private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier()
 private interface NetworkHostAndPortMixin
 
 private class NetworkHostAndPortDeserializer : JsonDeserializer<NetworkHostAndPort>() {
-    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext) = NetworkHostAndPort.parse(parser.text)
+    override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): NetworkHostAndPort {
+        return NetworkHostAndPort.parse(parser.text)
+    }
 }
 
 @JsonSerialize(using = PartyAndCertificateSerializer::class)
 // TODO Add deserialization which follows the same lookup logic as Party
-private interface PartyAndCertificateSerializerMixin
+private interface PartyAndCertificateMixin
 
 private class PartyAndCertificateSerializer : JsonSerializer<PartyAndCertificate>() {
     override fun serialize(value: PartyAndCertificate, gen: JsonGenerator, serializers: SerializerProvider) {
-        gen.jsonObject {
-            writeObjectField("name", value.name)
-            writeObjectField("owningKey", value.owningKey)
-            // TODO Add configurable option to output the certPath
+        val mapper = gen.codec as JacksonSupport.PartyObjectMapper
+        if (mapper.isFullParties) {
+            gen.writeObject(PartyAndCertificateWrapper(value.name, value.certPath))
+        } else {
+            gen.writeObject(value.party)
         }
     }
 }
 
+private class PartyAndCertificateWrapper(val name: CordaX500Name, val certPath: CertPath)
+
 @JsonSerialize(using = SignedTransactionSerializer::class)
 @JsonDeserialize(using = SignedTransactionDeserializer::class)
-private interface SignedTransactionMixin2
+private interface SignedTransactionMixin
 
 private class SignedTransactionSerializer : JsonSerializer<SignedTransaction>() {
     override fun serialize(value: SignedTransaction, gen: JsonGenerator, serializers: SerializerProvider) {

@@ -4,11 +4,11 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.messaging.ReceivedMessage
 import rx.Observable
 
 /**
@@ -39,21 +39,6 @@ interface StateMachineManager {
      * next checkpoint.
      */
     fun stop(allowedUnsuspendedFiberCount: Int)
-
-    /**
-     * Starts a new flow.
-     *
-     * @param flowLogic The flow's code.
-     * @param context The context of the flow.
-     * @param ourIdentity The identity to use for the flow.
-     * @param deduplicationHandler Allows exactly-once start of the flow, see [DeduplicationHandler].
-     */
-    fun <A> startFlow(
-            flowLogic: FlowLogic<A>,
-            context: InvocationContext,
-            ourIdentity: Party?,
-            deduplicationHandler: DeduplicationHandler?
-    ): CordaFuture<FlowStateMachine<A>>
 
     /**
      * Represents an addition/removal of a state machine.
@@ -91,6 +76,12 @@ interface StateMachineManager {
      * @return whether the flow existed and was killed.
      */
     fun killFlow(id: StateMachineRunId): Boolean
+
+    /**
+     * Deliver an external event to the state machine.  Such an event might be a new P2P message, or a request to start a flow.
+     * The event may be replayed if a flow fails and attempts to retry.
+     */
+    fun deliverExternalEvent(event: ExternalEvent)
 }
 
 // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call
@@ -100,4 +91,38 @@ interface StateMachineManagerInternal {
     fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId)
     fun removeSessionBindings(sessionIds: Set<SessionId>)
     fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState)
+    fun retryFlowFromSafePoint(currentState: StateMachineState)
+}
+
+/**
+ * Represents an external event that can be injected into the state machine and that might need to be replayed if
+ * a flow retries.  They always have de-duplication handlers to assist with the at-most once logic where required.
+ */
+interface ExternalEvent {
+    val deduplicationHandler: DeduplicationHandler
+
+    /**
+     * An external P2P message event.
+     */
+    interface ExternalMessageEvent : ExternalEvent {
+        val receivedMessage: ReceivedMessage
+    }
+
+    /**
+     * An external request to start a flow, from the scheduler for example.
+     */
+    interface ExternalStartFlowEvent<T> : ExternalEvent {
+        val flowLogic: FlowLogic<T>
+        val context: InvocationContext
+
+        /**
+         * A callback for the state machine to pass back the [Future] associated with the flow start to the submitter.
+         */
+        fun wireUpFuture(flowFuture: CordaFuture<FlowStateMachine<T>>)
+
+        /**
+         * The future representing the flow start, passed back from the state machine to the submitter of this event.
+         */
+        val future: CordaFuture<FlowStateMachine<T>>
+    }
 }

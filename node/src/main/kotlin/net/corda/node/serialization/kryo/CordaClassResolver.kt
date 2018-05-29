@@ -8,13 +8,12 @@ import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
 import net.corda.core.internal.writer
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.AttachmentsClassLoader
 import net.corda.serialization.internal.MutableClassWhitelist
 import net.corda.serialization.internal.TransientClassWhiteList
-import net.corda.serialization.internal.amqp.hasAnnotationInHierarchy
+import net.corda.serialization.internal.amqp.hasCordaSerializable
 import java.io.PrintWriter
 import java.lang.reflect.Modifier
 import java.lang.reflect.Modifier.isAbstract
@@ -127,7 +126,7 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
         return (type.classLoader !is AttachmentsClassLoader)
                 && !KryoSerializable::class.java.isAssignableFrom(type)
                 && !type.isAnnotationPresent(DefaultSerializer::class.java)
-                && (type.isAnnotationPresent(CordaSerializable::class.java) || whitelist.hasAnnotationInHierarchy(type))
+                && hasCordaSerializable(type)
     }
 
     // Need to clear out class names from attachments.

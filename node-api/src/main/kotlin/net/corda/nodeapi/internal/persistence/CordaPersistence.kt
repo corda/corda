@@ -5,7 +5,6 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import rx.Observable
 import rx.Subscriber
-import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.io.Closeable
 import java.sql.Connection
@@ -67,9 +66,7 @@ class CordaPersistence(
     }
     val entityManagerFactory get() = hibernateConfig.sessionFactoryForRegisteredSchemas
 
-    data class Boundary(val txId: UUID)
-
-    internal val transactionBoundaries = PublishSubject.create<Boundary>().toSerialized()
+    data class Boundary(val txId: UUID, val success: Boolean)
 
     init {
         // Found a unit test that was forgetting to close the database transactions.  When you close() on the top level
@@ -186,14 +183,18 @@ class CordaPersistence(
  *
  * For examples, see the call hierarchy of this function.
  */
-fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(): rx.Observer<T> {
-    val currentTxId = contextTransaction.id
-    val databaseTxBoundary: Observable<CordaPersistence.Boundary> = contextDatabase.transactionBoundaries.first { it.txId == currentTxId }
+fun <T : Any> rx.Observer<T>.bufferUntilDatabaseCommit(propagateRollbackAsError: Boolean = false): rx.Observer<T> {
+    val currentTx = contextTransaction
     val subject = UnicastSubject.create<T>()
+    val databaseTxBoundary: Observable<CordaPersistence.Boundary> = currentTx.boundary.filter { it.success }
+    if (propagateRollbackAsError) {
+        currentTx.boundary.filter { !it.success }.subscribe { this.onError(DatabaseTransactionRolledBackException(it.txId)) }
+    }
     subject.delaySubscription(databaseTxBoundary).subscribe(this)
-    databaseTxBoundary.doOnCompleted { subject.onCompleted() }
     return subject
 }
+
+class DatabaseTransactionRolledBackException(txId: UUID) : Exception("Database transaction $txId was rolled back")
 
 // A subscriber that delegates to multiple others, wrapping a database transaction around the combination.
 private class DatabaseTransactionWrappingSubscriber<U>(private val db: CordaPersistence?) : Subscriber<U>() {

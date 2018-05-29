@@ -23,6 +23,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.node.NodeRegistrationOption
+import net.corda.node.internal.ConfigurationException
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
@@ -184,7 +185,7 @@ class DriverDSLImpl(
 
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
-            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.url)
+            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.doormanURL())
         } else {
             doneFuture(Unit)
         }
@@ -209,7 +210,15 @@ class DriverDSLImpl(
         val rpcAdminAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
-        val czUrlConfig = if (compatibilityZone != null) mapOf("compatibilityZoneURL" to compatibilityZone.url.toString()) else emptyMap()
+        val czUrlConfig = when (compatibilityZone) {
+            null -> emptyMap()
+            is SharedCompatibilityZoneParams ->
+                mapOf("compatibilityZoneURL" to compatibilityZone.doormanURL().toString())
+            is SplitCompatibilityZoneParams ->
+                mapOf("networkServices.doormanURL" to compatibilityZone.doormanURL().toString(),
+                        "networkServices.networkMapURL" to compatibilityZone.networkMapURL().toString())
+        }
+
         val overrides = configOf(
                 "myLegalName" to name.toString(),
                 "p2pAddress" to p2pAddress.toString(),
@@ -412,7 +421,7 @@ class DriverDSLImpl(
                 startNotaryIdentityGeneration()
             } else {
                 // With a root cert specified we delegate generation of the notary identities to the CZ.
-                startAllNotaryRegistrations(compatibilityZone.rootCert, compatibilityZone.url)
+                startAllNotaryRegistrations(compatibilityZone.rootCert, compatibilityZone.doormanURL())
             }
             notaryInfosFuture.map { notaryInfos ->
                 compatibilityZone.publishNotaries(notaryInfos)
@@ -502,7 +511,7 @@ class DriverDSLImpl(
     private fun startNotaries(localNetworkMap: LocalNetworkMap?, customOverrides: Map<String, Any?>): List<CordaFuture<List<NodeHandle>>> {
         return notarySpecs.map {
             when (it.cluster) {
-                null -> startSingleNotary(it, localNetworkMap, customOverrides )
+                null -> startSingleNotary(it, localNetworkMap, customOverrides)
                 is ClusterSpec.Raft,
                     // DummyCluster is used for testing the notary communication path, and it does not matter
                     // which underlying consensus algorithm is used, so we just stick to Raft
@@ -870,7 +879,8 @@ class DriverDSLImpl(
             val index = stackTrace.indexOfLast { it.className == "net.corda.testing.driver.Driver" }
             // In this case we're dealing with the the RPCDriver or one of it's cousins which are internal and we don't care about them
             if (index == -1) return emptyList()
-            val callerPackage = Class.forName(stackTrace[index + 1].className).`package` ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
+            val callerPackage = Class.forName(stackTrace[index + 1].className).`package`
+                    ?: throw IllegalStateException("Function instantiating driver must be defined in a package.")
             return listOf(callerPackage.name)
         }
 
@@ -1057,15 +1067,49 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
 
 /**
  * Internal API to enable testing of the network map service and node registration process using the internal driver.
- * @property url The base CZ URL for registration and network map updates
+ *
  * @property publishNotaries Hook for a network map server to capture the generated [NotaryInfo] objects needed for
  * creating the network parameters. This is needed as the network map server is expected to distribute it. The callback
  * will occur on a different thread to the driver-calling thread.
  * @property rootCert If specified then the nodes will register themselves with the doorman service using [url] and expect
  * the registration response to be rooted at this cert. If not specified then no registration is performed and the dev
  * root cert is used as normal.
+ *
+ * @see SharedCompatibilityZoneParams
+ * @see SplitCompatibilityZoneParams
  */
-data class CompatibilityZoneParams(val url: URL, val publishNotaries: (List<NotaryInfo>) -> Unit, val rootCert: X509Certificate? = null)
+sealed class CompatibilityZoneParams(
+        val publishNotaries: (List<NotaryInfo>) -> Unit,
+        val rootCert: X509Certificate? = null
+) {
+    abstract fun networkMapURL(): URL
+    abstract fun doormanURL(): URL
+}
+
+/**
+ * Represent network management services, network map and doorman, running on the same URL
+ */
+class SharedCompatibilityZoneParams(
+        private val url: URL,
+        publishNotaries: (List<NotaryInfo>) -> Unit,
+        rootCert: X509Certificate? = null
+) : CompatibilityZoneParams(publishNotaries, rootCert) {
+    override fun doormanURL() = url
+    override fun networkMapURL() = url
+}
+
+/**
+ * Represent network management services, network map and doorman, running on different URLs
+ */
+class SplitCompatibilityZoneParams(
+        private val doormanURL: URL,
+        private val networkMapURL: URL,
+        publishNotaries: (List<NotaryInfo>) -> Unit,
+        rootCert: X509Certificate? = null
+) : CompatibilityZoneParams(publishNotaries, rootCert) {
+    override fun doormanURL() = doormanURL
+    override fun networkMapURL() = networkMapURL
+}
 
 fun <A> internalDriver(
         isDebug: Boolean = DriverParameters().isDebug,

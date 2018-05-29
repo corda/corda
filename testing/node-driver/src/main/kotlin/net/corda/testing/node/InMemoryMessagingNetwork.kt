@@ -25,6 +25,8 @@ import net.corda.node.services.messaging.MessageHandlerRegistration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.node.internal.InMemoryMessage
@@ -114,7 +116,7 @@ class InMemoryMessagingNetwork private constructor(
         get() = _receivedMessages
     internal val endpoints: List<InternalMockMessagingService> @Synchronized get() = handleEndpointMap.values.toList()
     /** Get a [List] of all the [MockMessagingService] endpoints **/
-    val endpointsExternal: List<MockMessagingService> @Synchronized get() = handleEndpointMap.values.map{ MockMessagingService.createMockMessagingService(it) }.toList()
+    val endpointsExternal: List<MockMessagingService> @Synchronized get() = handleEndpointMap.values.map { MockMessagingService.createMockMessagingService(it) }.toList()
 
     /**
      * Creates a node at the given address: useful if you want to recreate a node to simulate a restart.
@@ -131,8 +133,7 @@ class InMemoryMessagingNetwork private constructor(
             id: Int,
             executor: AffinityExecutor,
             notaryService: PartyAndCertificate?,
-            description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK"),
-            database: CordaPersistence)
+            description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK"))
             : InternalMockMessagingService {
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.name] = peerHandle // Assume that the same name - the same entity in MockNetwork.
@@ -140,8 +141,11 @@ class InMemoryMessagingNetwork private constructor(
         val serviceHandles = notaryService?.let { listOf(DistributedServiceHandle(it.party)) }
                 ?: emptyList() //TODO only notary can be distributed?
         synchronized(this) {
-            val node = InMemoryMessaging(manuallyPumped, peerHandle, executor, database)
-            handleEndpointMap[peerHandle] = node
+            val node = InMemoryMessaging(manuallyPumped, peerHandle, executor)
+            val oldNode = handleEndpointMap.put(peerHandle, node)
+            if (oldNode != null) {
+                node.inheritPendingRedelivery(oldNode)
+            }
             serviceHandles.forEach {
                 serviceToPeersMapping.getOrPut(it) { LinkedHashSet() }.add(peerHandle)
             }
@@ -167,7 +171,10 @@ class InMemoryMessagingNetwork private constructor(
 
     @Synchronized
     private fun netNodeHasShutdown(peerHandle: PeerHandle) {
-        handleEndpointMap.remove(peerHandle)
+        val endpoint = handleEndpointMap[peerHandle]
+        if (!(endpoint?.hasPendingDeliveries() ?: false)) {
+            handleEndpointMap.remove(peerHandle)
+        }
     }
 
     @Synchronized
@@ -272,6 +279,30 @@ class InMemoryMessagingNetwork private constructor(
         return transfer
     }
 
+    /**
+     * When a new message handler is added, this implies we have started a new node.  The add handler logic uses this to
+     * push back any un-acknowledged messages for this peer onto the head of the queue (rather than the tail) to maintain message
+     * delivery order.  We push them back because their consumption was not complete and a restarted node would
+     * see them re-delivered if this was Artemis.
+     */
+    @Synchronized
+    private fun unPopMessages(transfers: Collection<MessageTransfer>, us: PeerHandle) {
+        messageReceiveQueues.compute(us) { _, existing ->
+            if (existing == null) {
+                LinkedBlockingQueue<MessageTransfer>().apply {
+                    addAll(transfers)
+                }
+            } else {
+                existing.apply {
+                    val drained = mutableListOf<MessageTransfer>()
+                    existing.drainTo(drained)
+                    existing.addAll(transfers)
+                    existing.addAll(drained)
+                }
+            }
+        }
+    }
+
     private fun pumpSendInternal(transfer: MessageTransfer) {
         when (transfer.recipients) {
             is PeerHandle -> getQueueForPeerHandle(transfer.recipients).add(transfer)
@@ -328,8 +359,7 @@ class InMemoryMessagingNetwork private constructor(
     @ThreadSafe
     private inner class InMemoryMessaging(private val manuallyPumped: Boolean,
                                           private val peerHandle: PeerHandle,
-                                          private val executor: AffinityExecutor,
-                                          private val database: CordaPersistence) : SingletonSerializeAsToken(), InternalMockMessagingService {
+                                          private val executor: AffinityExecutor) : SingletonSerializeAsToken(), InternalMockMessagingService {
         private inner class Handler(val topicSession: String, val callback: MessageHandler) : MessageHandlerRegistration
 
         @Volatile
@@ -344,6 +374,7 @@ class InMemoryMessagingNetwork private constructor(
         private val processedMessages: MutableSet<DeduplicationId> = Collections.synchronizedSet(HashSet<DeduplicationId>())
 
         override val myAddress: PeerHandle get() = peerHandle
+        override val ourSenderUUID: String = UUID.randomUUID().toString()
 
         private val backgroundThread = if (manuallyPumped) null else
             thread(isDaemon = true, name = "In-memory message dispatcher") {
@@ -374,8 +405,14 @@ class InMemoryMessagingNetwork private constructor(
                 Pair(handler, pending)
             }
 
-            transfers.forEach { pumpSendInternal(it) }
+            unPopMessages(transfers, peerHandle)
             return handler
+        }
+
+        fun inheritPendingRedelivery(other: InMemoryMessaging) {
+            state.locked {
+                pendingRedelivery.addAll(other.state.locked { pendingRedelivery })
+            }
         }
 
         override fun removeMessageHandler(registration: MessageHandlerRegistration) {
@@ -409,8 +446,8 @@ class InMemoryMessagingNetwork private constructor(
         override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
-        override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId, additionalHeaders: Map<String, String>): Message {
-            return InMemoryMessage(topic, OpaqueBytes(data), deduplicationId)
+        override fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId, additionalHeaders: Map<String, String>): Message {
+            return InMemoryMessage(topic, OpaqueBytes(data), deduplicationId.deduplicationId, senderUUID = deduplicationId.senderUUID)
         }
 
         /**
@@ -471,13 +508,14 @@ class InMemoryMessagingNetwork private constructor(
                 executor.execute {
                     for (handler in deliverTo) {
                         try {
-                            handler.callback(transfer.toReceivedMessage(), handler, DummyDeduplicationHandler())
+                            val receivedMessage = transfer.toReceivedMessage()
+                            state.locked { pendingRedelivery.add(transfer) }
+                            handler.callback(receivedMessage, handler, InMemoryDeduplicationHandler(receivedMessage, transfer))
                         } catch (e: Exception) {
                             log.error("Caught exception in handler for $this/${handler.topicSession}", e)
                         }
                     }
                     _receivedMessages.onNext(transfer)
-                    processedMessages += transfer.message.uniqueMessageId
                     messagesInFlight.countDown()
                 }
             } else {
@@ -493,13 +531,23 @@ class InMemoryMessagingNetwork private constructor(
                 message.uniqueMessageId,
                 message.debugTimestamp,
                 sender.name)
-    }
 
-    private class DummyDeduplicationHandler : DeduplicationHandler {
-        override fun afterDatabaseTransaction() {
+        private inner class InMemoryDeduplicationHandler(override val receivedMessage: ReceivedMessage, val transfer: MessageTransfer) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
+            override val externalCause: ExternalEvent
+                get() = this
+            override val deduplicationHandler: DeduplicationHandler
+                get() = this
+
+            override fun afterDatabaseTransaction() {
+                this@InMemoryMessaging.state.locked { pendingRedelivery.remove(transfer) }
+            }
+
+            override fun insideDatabaseTransaction() {
+                processedMessages += transfer.message.uniqueMessageId
+            }
         }
-        override fun insideDatabaseTransaction() {
-        }
+
+        fun hasPendingDeliveries(): Boolean = state.locked { pendingRedelivery.isNotEmpty() }
     }
 }
 

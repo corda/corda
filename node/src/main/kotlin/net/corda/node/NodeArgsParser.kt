@@ -120,11 +120,11 @@ data class CmdLineOptions(val baseDirectory: Path,
                         if (devMode) mapOf("devMode" to this.devMode) else emptyMap<String, Any>())
         )
         return rawConfig to Try.on {
-            rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also {
+            rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
                 if (nodeRegistrationOption != null) {
-                    require(!it.devMode) { "registration cannot occur in devMode" }
-                    requireNotNull(it.compatibilityZoneURL) {
-                        "compatibilityZoneURL must be present in node configuration file in registration mode."
+                    require(!config.devMode) { "registration cannot occur in devMode" }
+                    require(config.compatibilityZoneURL != null || config.networkServices != null) {
+                        "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
                     }
                 }
             }

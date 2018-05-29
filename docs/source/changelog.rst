@@ -9,6 +9,10 @@ Unreleased
 
 * ``ServiceHub`` and ``CordaRPCOps`` can now safely be used from multiple threads without incurring in database transaction problems.
 
+* Doorman and NetworkMap url's can now be configured individually rather than being assumed to be
+  the same server. Current ``compatibilityZoneURL`` configurations remain valid. See both :doc:`corda-configuration-file`
+  and :doc:`permissioning` for details.
+
 * Improved audit trail for ``FinalityFlow`` and related sub-flows.
 
 * ``NodeStartup`` will now only print node's configuration if ``devMode`` is ``true``, avoiding the risk of printing passwords in a production setup.
@@ -19,7 +23,7 @@ Unreleased
   public and was already internal for Kotlin code.
 
 * RPC Framework moved from Kryo to the Corda AMQP implementation [Corda-847]. This completes the removal
-  of ``Kryo`` from general use within Corda, remaining only for use in flow checkpointing. 
+  of ``Kryo`` from general use within Corda, remaining only for use in flow checkpointing.
 
 * Set co.paralleluniverse.fibers.verifyInstrumentation=true in devMode.
 
@@ -36,11 +40,18 @@ Unreleased
   * ``Party`` objects can be deserialised by looking up their public key, in addition to their name
   * ``NodeInfo`` objects are serialised as an object and can be looked up using the same mechanism as ``Party``
   * ``NetworkHostAndPort`` serialised according to its ``toString()``
-  * ``PartyAndCertificate`` is serialised as an object containing the name and owning key
-  * ``SerializedBytes`` is serialised by converting the bytes into the object it represents, which is then serialised into
-    a JSON/YAML object
-  * ``CertPath`` and ``X509Certificate`` are serialised as objects and can be deserialised back
+  * ``PartyAndCertificate`` is serialised as the name
+  * ``SerializedBytes`` is serialised by materialising the bytes into the object it represents, and then serialising that
+    object into YAML/JSON
+  * ``X509Certificate`` is serialised as an object with key fields such as ``issuer``, ``publicKey``, ``serialNumber``, etc.
+    The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialise an ``X509Certificate``
+    back.
+  * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
   * ``SignedTransaction`` is serialised into its ``txBits`` and ``signatures`` and can be deserialised back
+
+* ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
+  then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``
+  the ``certPath`` is serialised.
 
 * Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used.
 
@@ -87,6 +98,12 @@ Unreleased
 
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
 
+* API change: ``net.corda.core.schemas.PersistentStateRef`` fields (index and txId) are now non-nullable.
+  The fields were always effectively non-nullable - values were set from non-nullable fields of other objects.
+  The class is used as database Primary Key columns of other entities and databases already impose those columns as non-nullable
+  (even if JPA annotation nullable=false was absent).
+  In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
+
 .. _changelog_v3.1:
 
 Version 3.1
@@ -108,6 +125,7 @@ Version 3.1
 
 * Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
   all the needed network data, waiting in the background for network map to become available.
+
 
 .. _changelog_v3:
 

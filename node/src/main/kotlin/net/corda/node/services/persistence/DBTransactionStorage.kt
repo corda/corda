@@ -27,7 +27,6 @@ import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.Serializable
-import java.util.*
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
@@ -46,11 +45,11 @@ class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPers
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
     class DBTransaction(
             @Id
-            @Column(name = "tx_id", length = 64)
+            @Column(name = "tx_id", length = 64, nullable = false)
             var txId: String = "",
 
             @Lob
-            @Column(name = "transaction_value")
+            @Column(name = "transaction_value", nullable = false)
             var transaction: ByteArray = EMPTY_BYTE_ARRAY
     ) : Serializable
 
@@ -81,11 +80,11 @@ class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPers
         // to the memory pressure at all here.
         private const val transactionSignatureOverheadEstimate = 1024
 
-        private fun weighTx(tx: Optional<TxCacheValue>): Int {
-            if (!tx.isPresent) {
+        private fun weighTx(tx: AppendOnlyPersistentMapBase.Transactional<TxCacheValue>): Int {
+            val actTx = tx.valueWithoutIsolation
+            if (actTx == null) {
                 return 0
             }
-            val actTx = tx.get()
             return actTx.second.sumBy { it.size + transactionSignatureOverheadEstimate } + actTx.first.size
         }
     }

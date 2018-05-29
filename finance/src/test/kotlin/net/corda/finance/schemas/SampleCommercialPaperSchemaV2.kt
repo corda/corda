@@ -19,16 +19,16 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
     @Entity
     @Table(name = "cp_states_v2", indexes = [Index(name = "ccy_code_index2", columnList = "ccy_code"), Index(name = "maturity_index2", columnList = "maturity_instant")])
     class PersistentCommercialPaperState(
-            @Column(name = "maturity_instant")
+            @Column(name = "maturity_instant", nullable = false)
             var maturity: Instant,
 
-            @Column(name = "ccy_code", length = 3)
+            @Column(name = "ccy_code", length = 3, nullable = false)
             var currency: String,
 
-            @Column(name = "face_value_issuer_key_hash", length = MAX_HASH_HEX_SIZE)
+            @Column(name = "face_value_issuer_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var faceValueIssuerPartyHash: String,
 
-            @Column(name = "face_value_issuer_ref", length = MAX_ISSUER_REF_SIZE)
+            @Column(name = "face_value_issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
             @Type(type = "corda-wrapper-binary")
             var faceValueIssuerRef: ByteArray,
 

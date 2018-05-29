@@ -14,14 +14,15 @@ import net.corda.node.internal.configureDatabase
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.internal.doLookup
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.spectator
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.TestClock
+import org.junit.After
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
@@ -50,7 +51,7 @@ open class NodeSchedulerServiceTestBase {
             dedupe.insideDatabaseTransaction()
             dedupe.afterDatabaseTransaction()
             openFuture<FlowStateMachine<*>>()
-        }.whenever(it).startFlow(any<FlowLogic<*>>(), any(), any())
+        }.whenever(it).startFlow(any<ExternalEvent.ExternalStartFlowEvent<*>>())
     }
     private val flowsDraingMode = rigorousMock<NodePropertiesStore.FlowsDrainingModeOperations>().also {
         doReturn(false).whenever(it).isEnabled()
@@ -80,7 +81,7 @@ open class NodeSchedulerServiceTestBase {
 
     protected fun assertStarted(flowLogic: FlowLogic<*>) {
         // Like in assertWaitingFor, use timeout to make verify wait as we often race the call to startFlow:
-        verify(flowStarter, timeout(5000)).startFlow(same(flowLogic), any(), any())
+        verify(flowStarter, timeout(5000)).startFlow(argForWhich<ExternalEvent.ExternalStartFlowEvent<*>> { this.flowLogic == flowLogic })
     }
 
     protected fun assertStarted(event: Event) = assertStarted(event.flowLogic)
@@ -112,11 +113,11 @@ class MockScheduledFlowRepository : ScheduledFlowRepository {
 }
 
 class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
-    private val database = rigorousMock<CordaPersistence>().also {
-        doAnswer {
-            val block: DatabaseTransaction.() -> Any? = it.getArgument(0)
-            rigorousMock<DatabaseTransaction>().block()
-        }.whenever(it).transaction(any())
+    private val database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
+
+    @After
+    fun closeDatabase() {
+        database.close()
     }
 
     private val scheduler = NodeSchedulerService(
@@ -148,7 +149,9 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
             }).whenever(it).data
         }
         flows[logicRef] = flowLogic
-        scheduler.scheduleStateActivity(ssr)
+        database.transaction {
+            scheduler.scheduleStateActivity(ssr)
+        }
     }
 
     @Test
@@ -207,7 +210,9 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     fun `test activity due in the future and schedule another for same time then unschedule second`() {
         val eventA = schedule(mark + 1.days)
         val eventB = schedule(mark + 1.days)
-        scheduler.unscheduleStateActivity(eventB.stateRef)
+        database.transaction {
+            scheduler.unscheduleStateActivity(eventB.stateRef)
+        }
         assertWaitingFor(eventA)
         testClock.advanceBy(1.days)
         assertStarted(eventA)
@@ -217,7 +222,9 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     fun `test activity due in the future and schedule another for same time then unschedule original`() {
         val eventA = schedule(mark + 1.days)
         val eventB = schedule(mark + 1.days)
-        scheduler.unscheduleStateActivity(eventA.stateRef)
+        database.transaction {
+            scheduler.unscheduleStateActivity(eventA.stateRef)
+        }
         assertWaitingFor(eventB)
         testClock.advanceBy(1.days)
         assertStarted(eventB)
@@ -225,7 +232,9 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
 
     @Test
     fun `test activity due in the future then unschedule`() {
-        scheduler.unscheduleStateActivity(schedule(mark + 1.days).stateRef)
+        database.transaction {
+            scheduler.unscheduleStateActivity(schedule(mark + 1.days).stateRef)
+        }
         testClock.advanceBy(1.days)
     }
 }
