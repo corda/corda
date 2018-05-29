@@ -210,7 +210,8 @@ class NodeSchedulerService(private val clock: CordaClock,
             val (scheduledState, ourRescheduledFuture) = mutex.locked {
                 rescheduled = GuavaSettableFuture.create()
                 //get the next scheduled action that isn't currently running
-                nextScheduledAction = schedulerRepo.getLatest(startingStateRefs.size + 1).firstOrNull { !startingStateRefs.contains(it.second) }?.second
+                val deduplicate = HashSet(startingStateRefs) // Take an immutable copy to remove races with afterDatabaseCommit.
+                nextScheduledAction = schedulerRepo.getLatest(deduplicate.size + 1).firstOrNull { !deduplicate.contains(it.second) }?.second
                 Pair(nextScheduledAction, rescheduled!!)
             }
             log.trace(schedulingAsNextFormat, scheduledState)
