@@ -257,6 +257,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         initCertificate()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
+        // Wrapped in an atomic reference just to allow setting it before the closure below gets invoked.
         val identityServiceRef = AtomicReference<IdentityService>()
         val database = initialiseDatabasePersistence(schemaService, { name -> identityServiceRef.get().wellKnownPartyFromX500Name(name) }, { party -> identityServiceRef.get().wellKnownPartyFromAnonymous(party) })
         val identityService = makeIdentityService(identity.certificate, database)
@@ -285,6 +286,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
 
+        // Wrapped in an atomic reference just to allow setting it before the closure below gets invoked.
         val identityServiceRef = AtomicReference<IdentityService>()
 
         // Do all of this in a database transaction so anything that might need a connection has one.
