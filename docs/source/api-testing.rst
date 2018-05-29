@@ -252,26 +252,6 @@ The network must then be manually run before retrieving the future's value:
 Accessing ``StartedMockNode`` internals
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Creating a node database transaction
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Whenever you query a node's database (e.g. to extract information from the node's vault), you must wrap the query in
-a database transaction, as follows:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-        nodeA.database.transaction {
-            // Perform query here.
-        }
-
-   .. sourcecode:: java
-
-        node.getDatabase().transaction(tx -> {
-            // Perform query here.
-        }
-
 Querying a node's vault
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -281,15 +261,11 @@ Recorded states can be retrieved from the vault of a ``StartedMockNode`` using:
 
    .. sourcecode:: kotlin
 
-        nodeA.database.transaction {
-            val myStates = nodeA.services.vaultService.queryBy<MyStateType>().states
-        }
+        val myStates = nodeA.services.vaultService.queryBy<MyStateType>().states
 
    .. sourcecode:: java
 
-        node.getDatabase().transaction(tx -> {
-            List<MyStateType> myStates = node.getServices().getVaultService().queryBy(MyStateType.class).getStates();
-        }
+        List<MyStateType> myStates = node.getServices().getVaultService().queryBy(MyStateType.class).getStates();
 
 This allows you to check whether a given state has (or has not) been stored, and whether it has the correct attributes.
 

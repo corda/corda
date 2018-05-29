@@ -38,6 +38,7 @@ import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.services.statemachine.transitions.StateMachineConfiguration
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -174,7 +175,9 @@ class SingleThreadedStateMachineManager(
      */
     override fun track(): DataFeed<List<FlowLogic<*>>, StateMachineManager.Change> {
         return mutex.locked {
-            DataFeed(flows.values.map { it.fiber.logic }, changesPublisher.bufferUntilSubscribed())
+            database.transaction {
+                DataFeed(flows.values.map { it.fiber.logic }, changesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction(database))
+            }
         }
     }
 
@@ -471,7 +474,7 @@ class SingleThreadedStateMachineManager(
             throw SessionRejectException("${message.initiatorFlowClassName} is not a flow")
         }
         return serviceHub.getFlowFactory(initiatingFlowClass) ?:
-                throw SessionRejectException("$initiatingFlowClass is not registered")
+        throw SessionRejectException("$initiatingFlowClass is not registered")
     }
 
     private fun <A> startInitiatedFlow(

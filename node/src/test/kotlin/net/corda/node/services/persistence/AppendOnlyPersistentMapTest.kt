@@ -6,7 +6,7 @@ import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.internal.rigorousMock
+
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Assert.*
@@ -58,7 +58,7 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
 
     private val database = configureDatabase(makeTestDataSourceProperties(),
             DatabaseConfig(),
-            rigorousMock(),
+            { null }, { null },
             NodeSchemaService(setOf(MappedSchema(AppendOnlyPersistentMapTest::class.java, 1, listOf(PersistentMapEntry::class.java)))))
 
     @After

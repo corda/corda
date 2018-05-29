@@ -5,7 +5,6 @@ import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.tee
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.*
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -21,7 +20,7 @@ class ObservablesTests {
     private val toBeClosed = mutableListOf<Closeable>()
 
     private fun createDatabase(): CordaPersistence {
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
         toBeClosed += database
         return database
     }
