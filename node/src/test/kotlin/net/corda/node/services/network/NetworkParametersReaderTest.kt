@@ -16,6 +16,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.internal.network.NetworkMapServer
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -30,6 +31,7 @@ class NetworkParametersReaderTest {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
+    val fs = Jimfs.newFileSystem(Configuration.unix())
     private val cacheTimeout = 100000.seconds
 
     private lateinit var server: NetworkMapServer
@@ -45,11 +47,11 @@ class NetworkParametersReaderTest {
     @After
     fun tearDown() {
         server.close()
+        fs.close()
     }
 
     @Test
     fun `read correct set of parameters from file`() {
-        val fs = Jimfs.newFileSystem(Configuration.unix())
         val baseDirectory = fs.getPath("/node").createDirectories()
         val oldParameters = testNetworkParameters(epoch = 1)
         NetworkParametersCopier(oldParameters).install(baseDirectory)
