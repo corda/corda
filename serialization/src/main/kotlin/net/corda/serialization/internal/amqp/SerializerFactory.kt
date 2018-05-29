@@ -4,6 +4,7 @@ import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.carpenter.*
@@ -245,7 +246,7 @@ open class SerializerFactory(
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
         val metaSchema = CarpenterMetaSchema.newInstance()
         for (typeNotation in schemaAndDescriptor.schemas.schema.types) {
-            logger.trace("descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=${typeNotation.name}")
+            logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=${typeNotation.name}" }
             try {
                 val serialiser = processSchemaEntry(typeNotation)
                 // if we just successfully built a serializer for the type but the type fingerprint

@@ -1,6 +1,10 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.trace
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -11,11 +15,16 @@ import java.lang.reflect.Type
  */
 open class ArraySerializer(override val type: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     companion object {
-        fun make(type: Type, factory: SerializerFactory) = when (type) {
-            Array<Char>::class.java -> CharArraySerializer(factory)
-            else -> ArraySerializer(type, factory)
+        fun make(type: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
+            contextLogger().debug { "Making array serializer, typename=${type.typeName}" }
+            return when (type) {
+                Array<Char>::class.java -> CharArraySerializer(factory)
+                else -> ArraySerializer(type, factory)
+            }
         }
     }
+
+    private val logger = loggerFor<ArraySerializer>()
 
     // because this might be an array of array of primitives (to any recursive depth) and
     // because we care that the lowest type is unboxed we can't rely on the inbuilt type
@@ -24,17 +33,30 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
     //
     // We *need* to retain knowledge for AMQP deserialization weather that lowest primitive
     // was boxed or unboxed so just infer it recursively.
-    private fun calcTypeName(type: Type): String =
-            if (type.componentType().isArray()) {
-                val typeName = calcTypeName(type.componentType()); "$typeName[]"
+    private fun calcTypeName(type: Type, debugOffset : Int = 0): String {
+        logger.trace { "${"".padStart(debugOffset, ' ') }  calcTypeName - ${type.typeName}" }
+
+        return if (type.componentType().isArray()) {
+            // Special case handler for primitive byte arrays. This is needed because we an silently
+            // coerce a byte[] to our own binary type. Normally, if the component type was itself an
+            // array we'd keep walking down the chain but for byte[] stop here and use binary instead
+            val typeName =  if (SerializerFactory.isPrimitive(type.componentType())) {
+                SerializerFactory.nameForType(type.componentType())
             } else {
-                val arrayType = if (type.asClass()!!.componentType.isPrimitive) "[p]" else "[]"
-                "${type.componentType().typeName}$arrayType"
+                calcTypeName(type.componentType(), debugOffset + 4)
             }
+
+            "$typeName[]"
+        } else {
+            val arrayType = if (type.asClass()!!.componentType.isPrimitive) "[p]" else "[]"
+            "${type.componentType().typeName}$arrayType"
+        }
+    }
 
     override val typeDescriptor: Symbol by lazy {
         Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
     }
+
     internal val elementType: Type by lazy { type.componentType() }
     internal open val typeName by lazy { calcTypeName(type) }
 
