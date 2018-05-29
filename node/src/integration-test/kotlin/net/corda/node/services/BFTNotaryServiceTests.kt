@@ -57,6 +57,7 @@ import org.hamcrest.Matchers.instanceOf
 import org.junit.AfterClass
 import org.junit.Assert.assertThat
 import org.junit.BeforeClass
+import org.junit.ClassRule
 import org.junit.Test
 import java.nio.file.Paths
 import java.time.Duration
