@@ -10,7 +10,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
-import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import java.io.NotSerializableException
 
@@ -28,7 +27,7 @@ interface FlowMessaging {
     /**
      * Start the messaging using the [onMessage] message handler.
      */
-    fun start(onMessage: (ReceivedMessage, DeduplicationHandler) -> Unit)
+    fun start(onMessage: (DeduplicationHandler) -> Unit)
 }
 
 class NodeFlowMessagingFactory(private val serviceHub: ServiceHubInternal) : (StateMachineSerialization) -> FlowMessagingImpl {
@@ -45,9 +44,9 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal, private val serializ
         const val sessionTopic = "platform.session"
     }
 
-    override fun start(onMessage: (ReceivedMessage, DeduplicationHandler) -> Unit) {
+    override fun start(onMessage: (DeduplicationHandler) -> Unit) {
         serviceHub.networkService.addMessageHandler(sessionTopic) { receivedMessage, _, deduplicationHandler ->
-            onMessage(receivedMessage, deduplicationHandler)
+            onMessage(deduplicationHandler)
         }
     }
 

@@ -21,6 +21,7 @@ import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.testing.internal.doLookup
 import net.corda.testing.internal.participant
@@ -40,7 +41,7 @@ import kotlin.test.assertEquals
 
 open class StateMachineManagerHarness {
     private val onNodeReady = AtomicReference<(CordaFuture<Void?>) -> Any?>()
-    private val handler = AtomicReference<(ReceivedMessage, DeduplicationHandler) -> Unit>()
+    private val handler = AtomicReference<(DeduplicationHandler) -> Unit>()
     private val serviceHub = participant<ServiceHubInternal>().also {
         doReturn(spectator<NodeConfiguration>().also {
             doReturn(false).whenever(it).devMode // What we really care about is production, so false.
@@ -55,6 +56,9 @@ open class StateMachineManagerHarness {
                 doAnswer { onNodeReady.set(it.getArgument(0)) }.whenever(it).then<Any?>(any())
             }).whenever(it).nodeReady
         }).whenever(it).networkMapCache
+        doReturn(participant<MessagingService>().also {
+            doReturn(UUID.randomUUID().toString()).whenever(it).ourSenderUUID
+        }).whenever(it).networkService
     }
     private val checkpointStorage = spectator<CheckpointStorage>().also {
         doReturn(Stream.empty<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>>()).whenever(it).getAllCheckpoints() // Start idle.
@@ -117,7 +121,6 @@ open class StateMachineManagerHarness {
         verify(flowMessaging).start(handler.get())
     }
 
-    private val deduplicationHandler = spectator<DeduplicationHandler>()
     protected fun <T> FlowLogic<T>.spawn() = smm.startFlow(this, InvocationContext.newInstance(participant()), participant(), null).getOrThrow().resultFuture
     protected inner class Channel {
         private val localSession = participant<SessionId>().also { localSessions += it }
@@ -142,15 +145,20 @@ open class StateMachineManagerHarness {
             }
         }
 
-        private fun message(payload: ExistingSessionMessagePayload) = handler.get()(participant<ReceivedMessage>().also {
-            doReturn(peerName).whenever(it).peer
-            doReturn(participant<ByteSequence>().also {
-                sessionMessages[it] = participant<ExistingSessionMessage>().also {
-                    doReturn(localSession).whenever(it).recipientSessionId
-                    doReturn(payload).whenever(it).payload
-                }
-            }).whenever(it).data
-        }, deduplicationHandler)
+        private fun message(payload: ExistingSessionMessagePayload) = handler.get()(spectator<DeduplicationHandler>().also { dh ->
+            doReturn(participant<ExternalEvent.ExternalMessageEvent>().also {
+                doReturn(participant<ReceivedMessage>().also {
+                    doReturn(peerName).whenever(it).peer
+                    doReturn(participant<ByteSequence>().also {
+                        sessionMessages[it] = participant<ExistingSessionMessage>().also {
+                            doReturn(localSession).whenever(it).recipientSessionId
+                            doReturn(payload).whenever(it).payload
+                        }
+                    }).whenever(it).data
+                }).whenever(it).receivedMessage
+                doReturn(dh).whenever(it).deduplicationHandler
+            }).whenever(dh).externalCause
+        })
 
         fun handshake(predicate: (Any?) -> Boolean) {
             expect(1) {

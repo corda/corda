@@ -127,7 +127,7 @@ class SingleThreadedStateMachineManager(
         }
         serviceHub.networkMapCache.nodeReady.then {
             resumeRestoredFlows(fibers)
-            flowMessaging.start { receivedMessage, deduplicationHandler ->
+            flowMessaging.start { deduplicationHandler ->
                 executor.execute {
                     deliverExternalEvent(deduplicationHandler.externalCause)
                 }
@@ -178,7 +178,7 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun <A> startFlow(
+    internal fun <A> startFlow(
             flowLogic: FlowLogic<A>,
             context: InvocationContext,
             ourIdentity: Party?,
