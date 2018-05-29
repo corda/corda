@@ -547,7 +547,7 @@ class SingleThreadedStateMachineManager(
     }
 
     private fun <A> flowCorDappInfo(flowLogic: FlowLogic<A>, invocationContext: InvocationContext): SubFlowVersion {
-        // Find the CorDapp
+        // Find the CorDapp.
         val cordapps = serviceHub.cordappProvider.cordapps.filter { cordapp ->
             val flows = when (invocationContext.origin) {
                 is InvocationOrigin.RPC -> cordapp.rpcFlows

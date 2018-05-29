@@ -34,8 +34,8 @@ interface CheckpointStorage {
     fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>>
 
     /**
-     * verifies that all Checkpoints stored in the db can be safely loaded with the currently installed version
-     * @throws CheckpointIncompatibleException if any offending checkpoint is found
+     * Verifies that all Checkpoints stored in the db can be safely loaded with the currently installed version.
+     * @throws CheckpointIncompatibleException if any offending checkpoint is found.
      */
     fun verifyCheckpointsCompatible(currentCordapps: List<Cordapp>, platformVersion: Int)
 }

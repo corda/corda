@@ -47,7 +47,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
          */
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
 
-        // If no CorDapp found then it is a Core flow
+        // If no CorDapp found then it is a Core flow.
         internal fun createflowCorDappInfo(cordapps: List<Cordapp>, platformVersion: Int): SubFlowVersion {
             return cordapps.singleOrNull()?.let { SubFlowVersion.CorDappFlow(it.name, it.jarHash) }
                     ?: SubFlowVersion.CoreFlow(platformVersion)
@@ -260,7 +260,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun <A> flowCorDappInfo(flowLogic: FlowLogic<A>): SubFlowVersion {
-        // Find the CorDapp for flowLogic
+        // Find the CorDapp for flowLogic.
         val cordapps = serviceHub.cordappProvider.cordapps.filter { cordapp ->
             cordapp.allFlows.any { flow -> flowLogic.javaClass == flow }
         }

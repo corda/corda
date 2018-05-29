@@ -83,7 +83,7 @@ class DBCheckpointStorage : CheckpointStorage {
                 return@forEach
             }
 
-            // For each Subflow, compare the checkpointed version to the current version
+            // For each Subflow, compare the checkpointed version to the current version.
             checkpoint.subFlowStack.firstOrNull { !isFlowCompatible(it, currentCordapps, platformVersion) }?.let { throw CheckpointIncompatibleException(it.flowClass.name) }
         }
     }

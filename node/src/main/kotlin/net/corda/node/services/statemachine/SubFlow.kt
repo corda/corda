@@ -13,7 +13,7 @@ import net.corda.core.utilities.Try
 sealed class SubFlow {
     abstract val flowClass: Class<out FlowLogic<*>>
 
-    // Version of the code
+    // Version of the code.
     abstract val subFlowVersion: SubFlowVersion
 
     /**
