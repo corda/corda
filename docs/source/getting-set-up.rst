@@ -6,7 +6,7 @@ Software requirements
 Corda uses industry-standard tools:
 
 * **Oracle JDK 8 JVM** - minimum supported version **8u131**
-* **IntelliJ IDEA** - supported version **2018.1**
+* **IntelliJ IDEA** - supported versions **2017.x** and **2018.x**
 * **Git**
 
 We also use Gradle and Kotlin, but you do not need to install them. A standalone Gradle wrapper is provided, and it 
