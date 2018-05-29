@@ -6,6 +6,7 @@ evaluationDependsOn(":launcher")
 
 ext {
     outputDir = "$buildDir/corda"
+    tarballDir = "$buildDir/distribution"
 }
 
 def tmpDir = "${buildDir}/tmp/"
@@ -152,6 +153,19 @@ if (isLinux || isMac) {
             println("${outputDir}")
         }
     }
-}else{
+
+    task buildCordaTarball(type: Tar, dependsOn: [buildNode]) {
+        from outputDir
+        compression = Compression.BZIP2
+        baseName = 'corda-enterprise-distribution'
+        destinationDir = file(tarballDir)
+        extension = "tar.bz2"
+
+        doLast{
+            println("Distribution tarball available at:")
+            println("${tarballDir}/${baseName}.${extension}")
+        }
+    }
+} else {
     println("Not running on *nix, disabling distribution generation")
 }
