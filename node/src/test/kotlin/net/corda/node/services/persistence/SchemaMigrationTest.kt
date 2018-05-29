@@ -21,7 +21,6 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.apache.commons.io.FileUtils
 import org.assertj.core.api.Assertions.assertThat
@@ -44,14 +43,14 @@ class SchemaMigrationTest {
     @Test
     fun `Migration is run when runMigration is disabled, and database is H2`() {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
-        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = false), rigorousMock())
+        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = false), { null }, { null })
         checkMigrationRun(db)
     }
 
     @Test
     fun `Migration is run when runMigration is enabled`() {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
-        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true), rigorousMock())
+        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true), { null }, { null })
         checkMigrationRun(db)
     }
 
@@ -65,7 +64,7 @@ class SchemaMigrationTest {
         migration.runMigration()
 
         //start the node with "runMigration = false" and check that it started correctly
-        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = false), rigorousMock(), schemaService)
+        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = false), { null }, { null }, schemaService)
         checkMigrationRun(db)
     }
 
@@ -79,7 +78,7 @@ class SchemaMigrationTest {
         addToClassPath(tmpFolder)
 
         // run the migrations for DummyTestSchemaV1, which should pick up the migration file
-        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true), rigorousMock(), NodeSchemaService(extraSchemas = setOf(DummyTestSchemaV1)))
+        val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(DummyTestSchemaV1)))
 
         // check that the file was picked up
         val nrOfChangesOnDiscoveredFile = db.dataSource.connection.use {
