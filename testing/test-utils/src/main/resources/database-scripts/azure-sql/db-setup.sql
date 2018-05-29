@@ -48,6 +48,8 @@ DROP TABLE IF EXISTS ${schema}.cp_states_v2;
 DROP TABLE IF EXISTS ${schema}.dummy_deal_states;
 DROP TABLE IF EXISTS ${schema}.dummy_linear_states;
 DROP TABLE IF EXISTS ${schema}.dummy_linear_states_v2;
+DROP TABLE IF EXISTS ${schema}.dummy_test_states_parts;
+DROP TABLE IF EXISTS ${schema}.dummy_test_states;
 DROP TABLE IF EXISTS ${schema}.node_mutual_exclusion;
 DROP TABLE IF EXISTS ${schema}.DATABASECHANGELOG;
 DROP TABLE IF EXISTS ${schema}.DATABASECHANGELOGLOCK;

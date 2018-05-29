@@ -4,6 +4,8 @@ DROP TABLE ${schema}.cp_states_v2_participants CASCADE CONSTRAINTS
 DROP TABLE ${schema}.dummy_linear_state_parts CASCADE CONSTRAINTS
 DROP TABLE ${schema}.dummy_linear_states_v2_parts CASCADE CONSTRAINTS
 DROP TABLE ${schema}.dummy_deal_states_parts CASCADE CONSTRAINTS
+DROP TABLE ${schema}.dummy_test_states_parts CASCADE CONSTRAINTS
+DROP TABLE ${schema}.dummy_test_states CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_attchments_contracts CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_attachments CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_checkpoints CASCADE CONSTRAINTS
