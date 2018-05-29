@@ -87,6 +87,7 @@ internal class CordaRPCOpsImpl(
                                                   paging: PageSpecification,
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): Vault.Page<T> {
+        contractStateType.checkIsA<ContractState>()
         return services.vaultService._queryBy(criteria, paging, sorting, contractStateType)
     }
 
@@ -95,6 +96,7 @@ internal class CordaRPCOpsImpl(
                                                   paging: PageSpecification,
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
+        contractStateType.checkIsA<ContractState>()
         return services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
     }
 
@@ -284,14 +286,25 @@ internal class CordaRPCOpsImpl(
     }
 
     private fun InvocationContext.toFlowInitiator(): FlowInitiator {
-
         val principal = origin.principal().name
         return when (origin) {
             is InvocationOrigin.RPC -> FlowInitiator.RPC(principal)
-            is InvocationOrigin.Peer -> services.identityService.wellKnownPartyFromX500Name((origin as InvocationOrigin.Peer).party)?.let { FlowInitiator.Peer(it) } ?: throw IllegalStateException("Unknown peer with name ${(origin as InvocationOrigin.Peer).party}.")
+            is InvocationOrigin.Peer -> {
+                val wellKnownParty = services.identityService.wellKnownPartyFromX500Name((origin as InvocationOrigin.Peer).party)
+                wellKnownParty?.let { FlowInitiator.Peer(it) }
+                        ?: throw IllegalStateException("Unknown peer with name ${(origin as InvocationOrigin.Peer).party}.")
+            }
             is InvocationOrigin.Service -> FlowInitiator.Service(principal)
             InvocationOrigin.Shell -> FlowInitiator.Shell
             is InvocationOrigin.Scheduled -> FlowInitiator.Scheduled((origin as InvocationOrigin.Scheduled).scheduledState)
         }
+    }
+
+    /**
+     * RPC can be invoked from the shell where the type parameter of any [Class] parameter is lost, so we must
+     * explicitly check that the provided [Class] is the one we want.
+     */
+    private inline fun <reified TARGET> Class<*>.checkIsA() {
+        require(TARGET::class.java.isAssignableFrom(this)) { "$name is not a ${TARGET::class.java.name}" }
     }
 }

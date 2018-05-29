@@ -11,13 +11,18 @@ import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.join
+import net.corda.core.internal.until
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.trace
 import net.corda.node.CordaClock
 import net.corda.node.MutableClock
@@ -35,7 +40,15 @@ import org.slf4j.Logger
 import java.io.Serializable
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.*
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.EmbeddedId
@@ -82,7 +95,7 @@ class NodeSchedulerService(private val clock: CordaClock,
         // to wait in our code, rather than <code>Thread.sleep()</code> or other time-based pauses.
         @Suspendable
         @VisibleForTesting
-                // We specify full classpath on SettableFuture to differentiate it from the Quasar class of the same name
+        // We specify full classpath on SettableFuture to differentiate it from the Quasar class of the same name
         fun awaitWithDeadline(clock: CordaClock, deadline: Instant, future: Future<*> = GuavaSettableFuture.create<Any>()): Boolean {
             var nanos: Long
             do {
@@ -141,26 +154,32 @@ class NodeSchedulerService(private val clock: CordaClock,
     private class InnerState {
         var rescheduled: GuavaSettableFuture<Boolean>? = null
         var nextScheduledAction: ScheduledStateRef? = null
+        var running: Boolean = true
     }
 
     // Used to de-duplicate flow starts in case a flow is starting but the corresponding entry hasn't been removed yet
     // from the database
     private val startingStateRefs = ConcurrentHashSet<ScheduledStateRef>()
-
     private val mutex = ThreadBox(InnerState())
+    private val schedulerTimerExecutor = Executors.newSingleThreadExecutor()
+
+    // if there's nothing to do, check every minute if something fell through the cracks.
+    // any new state should trigger a reschedule immediately if nothing is scheduled, so I would not expect
+    // this to usually trigger anything.
+    private val idleWaitSeconds = 60.seconds
+
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
-        mutex.locked {
-            rescheduleWakeUp()
-        }
+        schedulerTimerExecutor.execute { runLoopFunction() }
     }
 
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
         // Only increase the number of unfinished schedules if the state didn't already exist on the queue
-        val countUp = !schedulerRepo.merge(action)
+        if (!schedulerRepo.merge(action)) {
+            unfinishedSchedules.countUp()
+        }
         contextTransaction.onCommit {
-            if (countUp) unfinishedSchedules.countUp()
             mutex.locked {
                 if (action.scheduledAt < nextScheduledAction?.scheduledAt ?: Instant.MAX) {
                     // We are earliest
@@ -186,41 +205,44 @@ class NodeSchedulerService(private val clock: CordaClock,
         }
     }
 
-    private val schedulerTimerExecutor = Executors.newSingleThreadExecutor()
-    /**
-     * This method first cancels the [java.util.concurrent.Future] for any pending action so that the
-     * [awaitWithDeadline] used below drops through without running the action.  We then create a new
-     * [java.util.concurrent.Future] for the new action (so it too can be cancelled), and then await the arrival of the
-     * scheduled time.  If we reach the scheduled time (the deadline) without the [java.util.concurrent.Future] being
-     * cancelled then we run the scheduled action.  Finally we remove that action from the scheduled actions and
-     * recompute the next scheduled action.
-     */
-    private fun rescheduleWakeUp() {
-        // Note, we already have the mutex but we need the scope again here
-        val (scheduledState, ourRescheduledFuture) = mutex.alreadyLocked {
-            rescheduled?.cancel(false)
-            rescheduled = GuavaSettableFuture.create()
-            //get the next scheduled action that isn't currently running
-            nextScheduledAction = schedulerRepo.getLatest(startingStateRefs.size + 1).firstOrNull { !startingStateRefs.contains(it.second) }?.second
-            Pair(nextScheduledAction, rescheduled!!)
-        }
-        if (scheduledState != null) {
-            schedulerTimerExecutor.execute {
-                log.trace(schedulingAsNextFormat, scheduledState)
-                // This will block the scheduler single thread until the scheduled time (returns false) OR
-                // the Future is cancelled due to rescheduling (returns true).
+    private fun runLoopFunction() {
+        while (mutex.locked { running }) {
+            val (scheduledState, ourRescheduledFuture) = mutex.locked {
+                rescheduled = GuavaSettableFuture.create()
+                //get the next scheduled action that isn't currently running
+                val deduplicate = HashSet(startingStateRefs) // Take an immutable copy to remove races with afterDatabaseCommit.
+                nextScheduledAction = schedulerRepo.getLatest(deduplicate.size + 1).firstOrNull { !deduplicate.contains(it.second) }?.second
+                Pair(nextScheduledAction, rescheduled!!)
+            }
+            log.trace(schedulingAsNextFormat, scheduledState)
+            // This will block the scheduler single thread until the scheduled time (returns false) OR
+            // the Future is cancelled due to rescheduling (returns true).
+            if (scheduledState != null) {
                 if (!awaitWithDeadline(clock, scheduledState.scheduledAt, ourRescheduledFuture)) {
                     log.trace { "Invoking as next $scheduledState" }
                     onTimeReached(scheduledState)
                 } else {
                     log.trace { "Rescheduled $scheduledState" }
                 }
+            } else {
+                awaitWithDeadline(clock, clock.instant() + idleWaitSeconds, ourRescheduledFuture)
             }
+
+        }
+    }
+
+    private fun rescheduleWakeUp() {
+        mutex.alreadyLocked {
+            rescheduled?.cancel(false)
         }
     }
 
     @VisibleForTesting
     internal fun join() {
+        mutex.locked {
+            running = false
+            rescheduleWakeUp()
+        }
         schedulerTimerExecutor.join()
     }
 
@@ -310,8 +332,6 @@ class NodeSchedulerService(private val clock: CordaClock,
                     }
                 }
             }
-            // and schedule the next one
-            rescheduleWakeUp()
         }
         return scheduledFlow
     }
