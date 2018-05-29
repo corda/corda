@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkMap
 import net.corda.nodeapi.internal.network.ParametersUpdate
+import net.corda.testing.common.internal.testNetworkParameters
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -39,7 +40,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
                        private val myHostNameValue: String = "test.host.name",
                        vararg additionalServices: Any) : Closeable {
     companion object {
-        private val stubNetworkParameters = NetworkParameters(1, emptyList(), 10485760, Int.MAX_VALUE, Instant.now(), 10, emptyMap())
+        private val stubNetworkParameters = testNetworkParameters(epoch = 10)
     }
 
     private val server: Server
@@ -104,7 +105,7 @@ class NetworkMapServer(private val cacheTimeout: Duration,
 
     @Path("network-map")
     inner class InMemoryNetworkMapService {
-        private val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
+        val nodeInfoMap = mutableMapOf<SecureHash, SignedNodeInfo>()
         val latestAcceptedParametersMap = mutableMapOf<PublicKey, SecureHash>()
         private val signedNetParams by lazy {
             networkParameters.signWithCert(networkMapCa.keyPair.private, networkMapCa.certificate)
