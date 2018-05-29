@@ -109,7 +109,8 @@ open class MockServices private constructor(
                         ServiceHubInternal.recordTransactions(statesToRecord, txs,
                                 validatedTransactions as WritableTransactionStorage,
                                 mockStateMachineRecordedTransactionMappingStorage,
-                                vaultService as VaultServiceInternal)
+                                vaultService as VaultServiceInternal,
+                                database)
                     }
 
                     override fun jdbcSession(): Connection = database.createSession()

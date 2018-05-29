@@ -53,9 +53,10 @@ interface ServiceHubInternal : ServiceHub {
         fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
-                               vaultService: VaultServiceInternal) {
+                               vaultService: VaultServiceInternal,
+                               database: CordaPersistence) {
 
-            contextDatabase.transaction {
+            database.transaction {
                 require(txs.any()) { "No transactions passed in for recording" }
                 val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
                 val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
@@ -128,7 +129,7 @@ interface ServiceHubInternal : ServiceHub {
     val networkMapUpdater: NetworkMapUpdater
     override val cordappProvider: CordappProviderInternal
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-        recordTransactions(statesToRecord, txs, validatedTransactions, stateMachineRecordedTransactionMapping, vaultService)
+        recordTransactions(statesToRecord, txs, validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database)
     }
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
