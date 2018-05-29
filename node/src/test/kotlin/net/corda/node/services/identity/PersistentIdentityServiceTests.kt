@@ -14,7 +14,11 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
@@ -23,6 +27,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -50,8 +55,12 @@ class PersistentIdentityServiceTests {
 
     @Before
     fun setup() {
-        identityService = PersistentIdentityService(DEV_ROOT_CA.certificate)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), identityService)
+        val identityServiceRef = AtomicReference<IdentityService>()
+        // Do all of this in a database transaction so anything that might need a connection has one.
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(),
+                { name -> identityServiceRef.get().wellKnownPartyFromX500Name(name) },
+                { party -> identityServiceRef.get().wellKnownPartyFromAnonymous(party) })
+        identityService = PersistentIdentityService(DEV_ROOT_CA.certificate, database).also(identityServiceRef::set)
     }
 
     @After
@@ -62,78 +71,55 @@ class PersistentIdentityServiceTests {
     @Test
     fun `get all identities`() {
         // Nothing registered, so empty set
-        database.transaction {
-            assertNull(identityService.getAllIdentities().firstOrNull())
-        }
+        assertNull(identityService.getAllIdentities().firstOrNull())
 
-        database.transaction {
-            identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
-        }
+        identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
         var expected = setOf(ALICE)
-        var actual = database.transaction {
-            identityService.getAllIdentities().map { it.party }.toHashSet()
-        }
+        var actual = identityService.getAllIdentities().map { it.party }.toHashSet()
+
         assertEquals(expected, actual)
 
         // Add a second party and check we get both back
-        database.transaction {
-            identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
-        }
+        identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
         expected = setOf(ALICE, BOB)
-        actual = database.transaction {
-            identityService.getAllIdentities().map { it.party }.toHashSet()
-        }
+        actual = identityService.getAllIdentities().map { it.party }.toHashSet()
         assertEquals(expected, actual)
     }
 
     @Test
     fun `get identity by key`() {
-        database.transaction {
-            assertNull(identityService.partyFromKey(ALICE_PUBKEY))
-            identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
-            assertEquals(ALICE, identityService.partyFromKey(ALICE_PUBKEY))
-            assertNull(identityService.partyFromKey(BOB_PUBKEY))
-        }
+        assertNull(identityService.partyFromKey(ALICE_PUBKEY))
+        identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        assertEquals(ALICE, identityService.partyFromKey(ALICE_PUBKEY))
+        assertNull(identityService.partyFromKey(BOB_PUBKEY))
     }
 
     @Test
     fun `get identity by name with no registered identities`() {
-        database.transaction {
-            assertNull(identityService.wellKnownPartyFromX500Name(ALICE.name))
-        }
+        assertNull(identityService.wellKnownPartyFromX500Name(ALICE.name))
     }
 
     @Test
     fun `get identity by substring match`() {
-        database.transaction {
-            identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
-            identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
-        }
+        identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
+        identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
         val alicente = getTestPartyAndCertificate(CordaX500Name(organisation = "Alicente Worldwide", locality = "London", country = "GB"), generateKeyPair().public)
-        database.transaction {
-            identityService.verifyAndRegisterIdentity(alicente)
-            assertEquals(setOf(ALICE, alicente.party), identityService.partiesFromName("Alice", false))
-            assertEquals(setOf(ALICE), identityService.partiesFromName("Alice Corp", true))
-            assertEquals(setOf(BOB), identityService.partiesFromName("Bob Plc", true))
-        }
+        identityService.verifyAndRegisterIdentity(alicente)
+        assertEquals(setOf(ALICE, alicente.party), identityService.partiesFromName("Alice", false))
+        assertEquals(setOf(ALICE), identityService.partiesFromName("Alice Corp", true))
+        assertEquals(setOf(BOB), identityService.partiesFromName("Bob Plc", true))
     }
 
     @Test
     fun `get identity by name`() {
         val identities = listOf("Organisation A", "Organisation B", "Organisation C")
                 .map { getTestPartyAndCertificate(CordaX500Name(organisation = it, locality = "London", country = "GB"), generateKeyPair().public) }
-        database.transaction {
-            assertNull(identityService.wellKnownPartyFromX500Name(identities.first().name))
+        assertNull(identityService.wellKnownPartyFromX500Name(identities.first().name))
+        identities.forEach {
+            identityService.verifyAndRegisterIdentity(it)
         }
         identities.forEach {
-            database.transaction {
-                identityService.verifyAndRegisterIdentity(it)
-            }
-        }
-        identities.forEach {
-            database.transaction {
-                assertEquals(it.party, identityService.wellKnownPartyFromX500Name(it.name))
-            }
+            assertEquals(it.party, identityService.wellKnownPartyFromX500Name(it.name))
         }
     }
 
@@ -149,9 +135,7 @@ class PersistentIdentityServiceTests {
         val txIdentity = AnonymousParty(txKey.public)
 
         assertFailsWith<UnknownAnonymousPartyException> {
-            database.transaction {
-                identityService.assertOwnership(identity, txIdentity)
-            }
+            identityService.assertOwnership(identity, txIdentity)
         }
     }
 
@@ -165,25 +149,15 @@ class PersistentIdentityServiceTests {
         val (_, bobTxIdentity) = createConfidentialIdentity(ALICE.name)
 
         // Now we have identities, construct the service and let it know about both
-        database.transaction {
-            identityService.verifyAndRegisterIdentity(alice)
-            identityService.verifyAndRegisterIdentity(aliceTxIdentity)
-        }
+        identityService.verifyAndRegisterIdentity(alice)
+        identityService.verifyAndRegisterIdentity(aliceTxIdentity)
 
-        var actual = database.transaction {
-            identityService.certificateFromKey(aliceTxIdentity.party.owningKey)
-        }
+        var actual = identityService.certificateFromKey(aliceTxIdentity.party.owningKey)
         assertEquals(aliceTxIdentity, actual!!)
 
-        database.transaction {
-            assertNull(identityService.certificateFromKey(bobTxIdentity.party.owningKey))
-        }
-        database.transaction {
-            identityService.verifyAndRegisterIdentity(bobTxIdentity)
-        }
-        actual = database.transaction {
-            identityService.certificateFromKey(bobTxIdentity.party.owningKey)
-        }
+        assertNull(identityService.certificateFromKey(bobTxIdentity.party.owningKey))
+        identityService.verifyAndRegisterIdentity(bobTxIdentity)
+        actual = identityService.certificateFromKey(bobTxIdentity.party.owningKey)
         assertEquals(bobTxIdentity, actual!!)
     }
 
@@ -196,34 +170,24 @@ class PersistentIdentityServiceTests {
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
         val (bob, anonymousBob) = createConfidentialIdentity(BOB.name)
 
-        database.transaction {
-            // Now we have identities, construct the service and let it know about both
-            identityService.verifyAndRegisterIdentity(anonymousAlice)
-            identityService.verifyAndRegisterIdentity(anonymousBob)
-        }
+        // Now we have identities, construct the service and let it know about both
+        identityService.verifyAndRegisterIdentity(anonymousAlice)
+        identityService.verifyAndRegisterIdentity(anonymousBob)
 
         // Verify that paths are verified
-        database.transaction {
-            identityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
-            identityService.assertOwnership(bob.party, anonymousBob.party.anonymise())
+        identityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
+        identityService.assertOwnership(bob.party, anonymousBob.party.anonymise())
+        assertFailsWith<IllegalArgumentException> {
+            identityService.assertOwnership(alice.party, anonymousBob.party.anonymise())
         }
         assertFailsWith<IllegalArgumentException> {
-            database.transaction {
-                identityService.assertOwnership(alice.party, anonymousBob.party.anonymise())
-            }
-        }
-        assertFailsWith<IllegalArgumentException> {
-            database.transaction {
-                identityService.assertOwnership(bob.party, anonymousAlice.party.anonymise())
-            }
+            identityService.assertOwnership(bob.party, anonymousAlice.party.anonymise())
         }
 
         assertFailsWith<IllegalArgumentException> {
             val owningKey = DEV_INTERMEDIATE_CA.certificate.publicKey
-            database.transaction {
-                val subject = CordaX500Name.build(DEV_INTERMEDIATE_CA.certificate.subjectX500Principal)
-                identityService.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
-            }
+            val subject = CordaX500Name.build(DEV_INTERMEDIATE_CA.certificate.subjectX500Principal)
+            identityService.assertOwnership(Party(subject, owningKey), anonymousAlice.party.anonymise())
         }
     }
 
@@ -232,33 +196,24 @@ class PersistentIdentityServiceTests {
         val (alice, anonymousAlice) = createConfidentialIdentity(ALICE.name)
         val (bob, anonymousBob) = createConfidentialIdentity(BOB.name)
 
-        database.transaction {
-            // Register well known identities
-            identityService.verifyAndRegisterIdentity(alice)
-            identityService.verifyAndRegisterIdentity(bob)
-            // Register an anonymous identities
-            identityService.verifyAndRegisterIdentity(anonymousAlice)
-            identityService.verifyAndRegisterIdentity(anonymousBob)
-        }
+        // Register well known identities
+        identityService.verifyAndRegisterIdentity(alice)
+        identityService.verifyAndRegisterIdentity(bob)
+        // Register an anonymous identities
+        identityService.verifyAndRegisterIdentity(anonymousAlice)
+        identityService.verifyAndRegisterIdentity(anonymousBob)
 
         // Create new identity service mounted onto same DB
-        val newPersistentIdentityService = database.transaction {
-            PersistentIdentityService(DEV_ROOT_CA.certificate)
-        }
+        val newPersistentIdentityService = PersistentIdentityService(DEV_ROOT_CA.certificate, database)
 
-        database.transaction {
-            newPersistentIdentityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
-            newPersistentIdentityService.assertOwnership(bob.party, anonymousBob.party.anonymise())
-        }
+        newPersistentIdentityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
+        newPersistentIdentityService.assertOwnership(bob.party, anonymousBob.party.anonymise())
 
-        val aliceParent = database.transaction {
-            newPersistentIdentityService.wellKnownPartyFromAnonymous(anonymousAlice.party.anonymise())
-        }
+        val aliceParent = newPersistentIdentityService.wellKnownPartyFromAnonymous(anonymousAlice.party.anonymise())
+
         assertEquals(alice.party, aliceParent!!)
 
-        val bobReload = database.transaction {
-            newPersistentIdentityService.certificateFromKey(anonymousBob.party.owningKey)
-        }
+        val bobReload = newPersistentIdentityService.certificateFromKey(anonymousBob.party.owningKey)
         assertEquals(anonymousBob, bobReload!!)
     }
 

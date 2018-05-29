@@ -94,10 +94,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val node1 = banks[i].started!!
         val node2 = banks[j].started!!
 
-        val swaps =
-                node1.database.transaction {
-                    node1.services.vaultService.queryBy<InterestRateSwap.State>().states
-                }
+        val swaps = node1.services.vaultService.queryBy<InterestRateSwap.State>().states
         val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.single()
 
         // Do we have any more days left in this deal's lifetime? If not, return.

@@ -6,7 +6,11 @@ import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotaryError
 import net.corda.core.flows.NotaryException
 import net.corda.core.flows.NotaryFlow
@@ -38,12 +42,26 @@ import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
 import org.hamcrest.Matchers.instanceOf
-import org.junit.*
+import org.junit.AfterClass
 import org.junit.Assert.assertThat
+import org.junit.BeforeClass
+import org.junit.Test
 import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ExecutionException
+import kotlin.collections.List
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.distinct
+import kotlin.collections.forEach
+import kotlin.collections.last
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapIndexedNotNull
+import kotlin.collections.plus
+import kotlin.collections.single
+import kotlin.collections.zip
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -106,9 +124,7 @@ class BFTNotaryServiceTests {
             val issueTx = signInitialTransaction(notary) {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
-            database.transaction {
-                services.recordTransactions(issueTx)
-            }
+            services.recordTransactions(issueTx)
             val spendTxs = (1..10).map {
                 signInitialTransaction(notary) {
                     addInputState(issueTx.tx.outRef<ContractState>(0))
@@ -150,9 +166,7 @@ class BFTNotaryServiceTests {
             val issueTx = signInitialTransaction(notary) {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
-            database.transaction {
-                services.recordTransactions(issueTx)
-            }
+            services.recordTransactions(issueTx)
             val spendTx = signInitialTransaction(notary) {
                 addInputState(issueTx.tx.outRef<ContractState>(0))
                 setTimeWindow(TimeWindow.fromOnly(Instant.MAX))
@@ -167,7 +181,7 @@ class BFTNotaryServiceTests {
         }
     }
 
-     @Test
+    @Test
     fun `notarise issue tx with time-window`() {
         node.run {
             val issueTx = signInitialTransaction(notary) {
@@ -188,9 +202,7 @@ class BFTNotaryServiceTests {
             val issueTx = signInitialTransaction(notary) {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
-            database.transaction {
-                services.recordTransactions(issueTx)
-            }
+            services.recordTransactions(issueTx)
             val spendTx = signInitialTransaction(notary) {
                 addInputState(issueTx.tx.outRef<ContractState>(0))
                 setTimeWindow(TimeWindow.untilOnly(Instant.now() + Duration.ofHours(1)))

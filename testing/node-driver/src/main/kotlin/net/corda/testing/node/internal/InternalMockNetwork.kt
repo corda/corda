@@ -8,6 +8,7 @@ import net.corda.core.DoNotImplement
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -272,15 +273,14 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
                     id,
                     serverThread,
                     myNotaryIdentity,
-                    configuration.myLegalName,
-                    database).also { runOnStop += it::stop }
+                    configuration.myLegalName).also { runOnStop += it::stop }
         }
 
         fun setMessagingServiceSpy(messagingServiceSpy: MessagingServiceSpy) {
             network = messagingServiceSpy
         }
 
-        override fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>): KeyManagementService {
+        override fun makeKeyManagementService(identityService: IdentityService, keyPairs: Set<KeyPair>, database: CordaPersistence): KeyManagementService {
             return E2ETestKeyManagementService(identityService, keyPairs)
         }
 
@@ -317,8 +317,10 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         override val serializationWhitelists: List<SerializationWhitelist>
             get() = _serializationWhitelists
         private var dbCloser: (() -> Any?)? = null
-        override fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
-            return super.initialiseDatabasePersistence(schemaService, identityService).also { dbCloser = it::close }
+        override fun initialiseDatabasePersistence(schemaService: SchemaService,
+                                                   wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
+                                                   wellKnownPartyFromAnonymous: (AbstractParty) -> Party?): CordaPersistence {
+            return super.initialiseDatabasePersistence(schemaService, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous).also { dbCloser = it::close }
         }
 
         fun disableDBCloseOnStop() {

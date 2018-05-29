@@ -1,4 +1,5 @@
 package net.corda.node.services.persistence
+
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -7,13 +8,18 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.utilities.AppendOnlyPersistentMapBase
 import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
@@ -21,14 +27,19 @@ import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.Serializable
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Lob
+import javax.persistence.Table
 
 // cache value type to just store the immutable bits of a signed transaction plus conversion helpers
 typealias TxCacheValue = Pair<SerializedBytes<CoreTransaction>, List<TransactionSignature>>
+
 fun TxCacheValue.toSignedTx() = SignedTransaction(this.first, this.second)
 fun SignedTransaction.toTxCacheValue() = TxCacheValue(this.txBits, this.sigs)
 
-class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, SingletonSerializeAsToken() {
+class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPersistence) : WritableTransactionStorage, SingletonSerializeAsToken() {
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
@@ -55,8 +66,7 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
                         DBTransaction().apply {
                             txId = key.toString()
-                            transaction = value.toSignedTx().
-                                    serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                            transaction = value.toSignedTx().serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
                         }
                     },
                     persistentEntityClass = DBTransaction::class.java,
@@ -81,36 +91,41 @@ class DBTransactionStorage(cacheSizeBytes: Long) : WritableTransactionStorage, S
 
     private val txStorage = ThreadBox(createTransactionsMap(cacheSizeBytes))
 
-    override fun addTransaction(transaction: SignedTransaction): Boolean =
-            txStorage.locked {
-                addWithDuplicatesAllowed(transaction.id, transaction.toTxCacheValue()).apply {
-                    updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
-                }
+    override fun addTransaction(transaction: SignedTransaction): Boolean = database.transaction {
+        txStorage.locked {
+            addWithDuplicatesAllowed(transaction.id, transaction.toTxCacheValue()).apply {
+                updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
             }
+        }
+    }
 
-    override fun getTransaction(id: SecureHash): SignedTransaction? = txStorage.content[id]?.toSignedTx()
+    override fun getTransaction(id: SecureHash): SignedTransaction? = database.transaction { txStorage.content[id]?.toSignedTx() }
 
     private val updatesPublisher = PublishSubject.create<SignedTransaction>().toSerialized()
     override val updates: Observable<SignedTransaction> = updatesPublisher.wrapWithDatabaseTransaction()
 
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
-        return txStorage.locked {
-            DataFeed(allPersisted().map { it.second.toSignedTx() }.toList(), updates.bufferUntilSubscribed())
+        return database.transaction {
+            txStorage.locked {
+                DataFeed(allPersisted().map { it.second.toSignedTx() }.toList(), updates.bufferUntilSubscribed())
+            }
         }
     }
 
     override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
-        return txStorage.locked {
-            val existingTransaction = get(id)
-            if (existingTransaction == null) {
-                updates.filter { it.id == id }.toFuture()
-            } else {
-                doneFuture(existingTransaction.toSignedTx())
+        return database.transaction {
+            txStorage.locked {
+                val existingTransaction = get(id)
+                if (existingTransaction == null) {
+                    updates.filter { it.id == id }.toFuture()
+                } else {
+                    doneFuture(existingTransaction.toSignedTx())
+                }
             }
         }
     }
 
     @VisibleForTesting
     val transactions: Iterable<SignedTransaction>
-        get() = txStorage.content.allPersisted().map { it.second.toSignedTx() }.toList()
+        get() = database.transaction { txStorage.content.allPersisted().map { it.second.toSignedTx() }.toList() }
 }
