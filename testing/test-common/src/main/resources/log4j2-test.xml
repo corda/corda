@@ -5,7 +5,22 @@
     </Properties>
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout pattern="[%-5level] %date{HH:mm:ss,SSS} [%t] (%F:%L) %c{2}.%method - %msg %equals{%X}{{}}{}%n"/>
+            <PatternLayout>
+                <ScriptPatternSelector defaultPattern="[%-5level] %date{HH:mm:ss,SSS} [%t] (%F:%L) %c{2}.%method - %msg%n">
+                    <Script name="MDCSelector" language="javascript"><![CDATA[
+                    result = null;
+                    if (!logEvent.getContextData().size() == 0) {
+                        result = "WithMDC";
+                    } else {
+                        result = null;
+                    }
+                    result;
+               ]]>
+                    </Script>
+                    <PatternMatch key="WithMDC" pattern="[%-5level] %date{HH:mm:ss,SSS} [%t] (%F:%L) %c{2}.%method - %msg %X%n"/>
+                </ScriptPatternSelector>
+            </PatternLayout>
+            <ThresholdFilter level="trace"/>
         </Console>
         <!-- Required for printBasicInfo -->
         <Console name="Console-Appender-Println" target="SYSTEM_OUT">
