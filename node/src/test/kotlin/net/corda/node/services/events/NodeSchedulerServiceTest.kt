@@ -232,7 +232,6 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     fun `test activity due in the future and schedule another for same time`() {
         val eventA = schedule(mark + 1.days)
         val eventB = schedule(mark + 1.days)
-        //assertWaitingFor(eventA)
         testClock.advanceBy(1.days)
         assertStarted(eventA)
         assertStarted(eventB)
