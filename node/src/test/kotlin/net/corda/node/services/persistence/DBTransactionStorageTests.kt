@@ -159,7 +159,7 @@ class DBTransactionStorageTests {
     }
 
     private fun newTransactionStorage(cacheSizeBytesOverride: Long? = null) {
-        transactionStorage = DBTransactionStorage(cacheSizeBytesOverride ?: NodeConfiguration.defaultTransactionCacheSize)
+        transactionStorage = DBTransactionStorage(cacheSizeBytesOverride ?: NodeConfiguration.defaultTransactionCacheSize, database)
     }
 
     private fun assertTransactionIsRetrievable(transaction: SignedTransaction) {
