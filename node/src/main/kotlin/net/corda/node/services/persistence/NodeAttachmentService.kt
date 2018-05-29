@@ -26,6 +26,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
+import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
@@ -78,24 +79,24 @@ class NodeAttachmentService(
     @Table(name = "${NODE_DATABASE_PREFIX}attachments", indexes = [Index(name = "att_id_idx", columnList = "att_id")])
     class DBAttachment(
             @Id
-            @Column(name = "att_id")
+            @Column(name = "att_id", nullable = false)
             var attId: String,
 
-            @Column(name = "content")
+            @Column(name = "content", nullable = false)
             @Lob
             var content: ByteArray,
 
             @Column(name = "insertion_date", nullable = false, updatable = false)
             var insertionDate: Instant = Instant.now(),
 
-            @Column(name = "uploader", updatable = false)
+            @Column(name = "uploader", updatable = false, nullable = true)
             var uploader: String? = null,
 
-            @Column(name = "filename", updatable = false)
+            @Column(name = "filename", updatable = false, nullable = true)
             var filename: String? = null,
 
             @ElementCollection
-            @Column(name = "contract_class_name")
+            @Column(name = "contract_class_name", nullable = false)
             @CollectionTable(name = "node_attchments_contracts", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
                     foreignKey = ForeignKey(name = "FK__ctr_class__attachments"))
             var contractClassNames: List<ContractClassName>? = null
@@ -287,7 +288,7 @@ class NodeAttachmentService(
                 log.info("Stored new attachment $id")
                 id
             } else {
-                throw java.nio.file.FileAlreadyExistsException(id.toString())
+                throw DuplicateAttachmentException(id.toString())
             }
         }
     }

@@ -2504,6 +2504,26 @@ public final class net.corda.core.identity.PartyAndCertificate extends java.lang
 @CordaSerializable
 public interface net.corda.core.messaging.AllPossibleRecipients extends net.corda.core.messaging.MessageRecipients
 ##
+public final class net.corda.core.messaging.ClientRpcSslOptions extends java.lang.Object
+  public <init>(java.nio.file.Path, String, String)
+  @NotNull
+  public final java.nio.file.Path component1()
+  @NotNull
+  public final String component2()
+  @NotNull
+  public final String component3()
+  @NotNull
+  public final net.corda.core.messaging.ClientRpcSslOptions copy(java.nio.file.Path, String, String)
+  public boolean equals(Object)
+  @NotNull
+  public final String getTrustStorePassword()
+  @NotNull
+  public final java.nio.file.Path getTrustStorePath()
+  @NotNull
+  public final String getTrustStoreProvider()
+  public int hashCode()
+  public String toString()
+##
 @DoNotImplement
 public interface net.corda.core.messaging.CordaRPCOps extends net.corda.core.messaging.RPCOps
   public abstract void acceptNewNetworkParameters(net.corda.core.crypto.SecureHash)
@@ -4319,21 +4339,19 @@ public class net.corda.core.schemas.PersistentState extends java.lang.Object imp
 @Embeddable
 public class net.corda.core.schemas.PersistentStateRef extends java.lang.Object implements java.io.Serializable
   public <init>()
-  public <init>(String, Integer)
+  public <init>(String, int)
   public <init>(net.corda.core.contracts.StateRef)
-  @Nullable
-  public final String component1()
-  @Nullable
-  public final Integer component2()
   @NotNull
-  public final net.corda.core.schemas.PersistentStateRef copy(String, Integer)
+  public final String component1()
+  public final int component2()
+  @NotNull
+  public final net.corda.core.schemas.PersistentStateRef copy(String, int)
   public boolean equals(Object)
-  @Nullable
-  public Integer getIndex()
-  @Nullable
+  public int getIndex()
+  @NotNull
   public String getTxId()
   public int hashCode()
-  public void setIndex(Integer)
+  public void setIndex(int)
   public void setTxId(String)
   public String toString()
 ##
@@ -5158,8 +5176,6 @@ public final class net.corda.core.transactions.WireTransaction extends net.corda
   public static final net.corda.core.transactions.WireTransaction$Companion Companion
 ##
 public static final class net.corda.core.transactions.WireTransaction$Companion extends java.lang.Object
-  @NotNull
-  public final java.util.List<net.corda.core.transactions.ComponentGroup> createComponentGroups(java.util.List<net.corda.core.contracts.StateRef>, java.util.List<? extends net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>>, java.util.List<? extends net.corda.core.contracts.Command<?>>, java.util.List<? extends net.corda.core.crypto.SecureHash>, net.corda.core.identity.Party, net.corda.core.contracts.TimeWindow)
 ##
 public final class net.corda.core.utilities.ByteArrays extends java.lang.Object
   @NotNull
@@ -6494,6 +6510,8 @@ public final class net.corda.testing.node.User extends java.lang.Object
   public String toString()
 ##
 public final class net.corda.client.rpc.CordaRPCClient extends java.lang.Object
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>)
+  public <init>(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, net.corda.client.rpc.CordaRPCClientConfiguration)
   public <init>(net.corda.core.utilities.NetworkHostAndPort)
   public <init>(net.corda.core.utilities.NetworkHostAndPort, net.corda.client.rpc.CordaRPCClientConfiguration)
   @NotNull
@@ -6504,6 +6522,10 @@ public final class net.corda.client.rpc.CordaRPCClient extends java.lang.Object
   public static final net.corda.client.rpc.CordaRPCClient$Companion Companion
 ##
 public static final class net.corda.client.rpc.CordaRPCClient$Companion extends java.lang.Object
+  @NotNull
+  public final net.corda.client.rpc.CordaRPCClient createWithSsl(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
+  @NotNull
+  public final net.corda.client.rpc.CordaRPCClient createWithSsl(net.corda.core.utilities.NetworkHostAndPort, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
 ##
 public interface net.corda.client.rpc.CordaRPCClientConfiguration
   public abstract int getCacheConcurrencyLevel()
@@ -6537,7 +6559,7 @@ public final class net.corda.client.rpc.CordaRPCConnection extends java.lang.Obj
   public int getServerProtocolVersion()
   public void notifyServerAndClose()
 ##
-public final class net.corda.client.rpc.PermissionException extends net.corda.core.CordaRuntimeException implements net.corda.nodeapi.exceptions.RpcSerializableError
+public final class net.corda.client.rpc.PermissionException extends net.corda.core.CordaRuntimeException implements net.corda.nodeapi.exceptions.RpcSerializableError, net.corda.core.ClientRelevantError
   public <init>(String)
 ##
 @DoNotImplement

@@ -1,11 +1,11 @@
 # List of Contributors
 
-We'd like to thank the following people for contributing to Corda, either by 
-contributing to the design of Corda during the architecture review sessions of the 
-R3 Architecture Working Group and during design reviews since Corda has been 
-open-sourced, or by contributing code via pull requests. Some people have 
-moved to a different organisation since their contribution. Please forgive any 
-omissions, and create a pull request, or email <james@r3.com>, if you wish to 
+We'd like to thank the following people for contributing to Corda, either by
+contributing to the design of Corda during the architecture review sessions of the
+R3 Architecture Working Group and during design reviews since Corda has been
+open-sourced, or by contributing code via pull requests. Some people have
+moved to a different organisation since their contribution. Please forgive any
+omissions, and create a pull request, or email <james@r3.com>, if you wish to
 see changes to this list.
 
 * acetheultimate
@@ -17,7 +17,6 @@ see changes to this list.
 * Andrius Dagys (R3)
 * Andrzej Cichocki (R3)
 * Andrzej Grzesik (R3)
-* Anthony Coates (Deutsche Bank)
 * Anthony Keenan (R3)
 * Anthony Woolley (Société Générale)
 * Anton Semenov (Commerzbank)
@@ -77,7 +76,7 @@ see changes to this list.
 * George Smetana (Bradesco)
 * Giulio Katis (Westpac)
 * Giuseppe Cardone (Intesa Sanpaolo)
-* Guy Hochstetler (IBM)
+* Guy Hochstetler (R3)
 * Ian Cusden (UBS)
 * Ian Grigg (R3)
 * Igor Nitto (R3)
@@ -126,14 +125,16 @@ see changes to this list.
 * Micheal Hinstridge (Thoughtworks)
 * Michele Sollecito (R3)
 * Mike Hearn (R3)
+* Mike Ward (R3)
 * Mike Reichelt (US Bank)
 * Mustafa Ozturk (Natixis)
 * Nick Skinner (Northern Trust)
 * Nigel King (R3)
 * Nuam Athaweth (MUFG)
 * Oscar Zibordi de Paiva (Bradesco)
+* OP Financial
 * Patrick Kuo (R3)
-* Pekka Kaipio
+* Pekka Kaipio (OP Financial)
 * Phillip Griffin
 * Piotr Piskorski (Nordea)
 * Przemyslaw Bak (R3)
@@ -161,9 +162,11 @@ see changes to this list.
 * Sasmit Sahu
 * Scott James
 * Shams Asari (R3)
+* Siddhartha Sengupta (Tradewind Markets)
 * Simon Taylor (Barclays)
 * Sofus Mortensen (Digital Asset Holdings)
 * stevenroose
+* Stanly Johnson (Servntire Global)
 * Szymon Sztuka (R3)
 * tb-pq
 * Thiago Rafael Ferreira (Scorpius IT Solutions)
@@ -171,11 +174,12 @@ see changes to this list.
 * Thomas Schroeter (R3)
 * Tim Swanson (R3)
 * Timothy Smith
+* Tittu Varghese (Servntire Global)
 * Tom Menner (R3)
 * tomconte
 * Tommy Lillehagen (R3)
 * tomtau
-* Tudor Malene (R3) 
+* Tudor Malene (R3)
 * Tushar Singh Bora
 * varunkm
 * verymahler
@@ -184,4 +188,3 @@ see changes to this list.
 * Wawrzek Niewodniczanski (R3)
 * Wei Wu Zhang (Commonwealth Bank of Australia)
 * Zabrina Smith (Northern Trust)
-* zorenmith (Northern Trust)

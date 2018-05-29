@@ -7,11 +7,11 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.nodeapi.internal.serialization.amqp.custom.RxNotificationSerializer
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
 import java.util.concurrent.ConcurrentHashMap
 
 /**

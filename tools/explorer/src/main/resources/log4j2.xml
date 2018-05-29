@@ -8,7 +8,7 @@
 
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout pattern="[%-5level] %date{HH:mm:ss,SSS} [%t] (%F:%L) %c{2}.%method - %msg %X%n" />
+            <PatternLayout pattern="[%-5level] %date{HH:mm:ss,SSS} [%t] (%F:%L) %c{2}.%method - %msg %equals{%X}{{}}{}%n" />
         </Console>
     </Appenders>
 

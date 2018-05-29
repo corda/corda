@@ -14,10 +14,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
+import net.corda.core.identity.*
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -42,6 +39,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets.*
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
@@ -106,12 +104,17 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test
-    fun OpaqueBytes() {
+    fun `OpaqueBytes serialization`() {
         val opaqueBytes = OpaqueBytes(secureRandomBytes(128))
         val json = mapper.valueToTree<BinaryNode>(opaqueBytes)
         assertThat(json.binaryValue()).isEqualTo(opaqueBytes.bytes)
         assertThat(json.asText()).isEqualTo(opaqueBytes.bytes.toBase64())
-        assertThat(mapper.convertValue<OpaqueBytes>(json)).isEqualTo(opaqueBytes)
+    }
+
+    @Test
+    fun `OpaqueBytes deserialization`() {
+        assertThat(mapper.convertValue<OpaqueBytes>(TextNode("1234"))).isEqualTo(OpaqueBytes("1234".toByteArray(UTF_8)))
+        assertThat(mapper.convertValue<OpaqueBytes>(BinaryNode(byteArrayOf(1, 2, 3, 4)))).isEqualTo(OpaqueBytes.of(1, 2, 3, 4))
     }
 
     @Test
@@ -248,9 +251,19 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test
+    fun `Party serialization with isFullParty = true`() {
+        partyObjectMapper.isFullParties = true
+        val json = mapper.valueToTree<ObjectNode>(MINI_CORP.party)
+        val (name, owningKey) = json.assertHasOnlyFields("name", "owningKey")
+        assertThat(name.valueAs<CordaX500Name>(mapper)).isEqualTo(MINI_CORP.name)
+        assertThat(owningKey.valueAs<PublicKey>(mapper)).isEqualTo(MINI_CORP.publicKey)
+    }
+
+    @Test
     fun `Party deserialization on full name`() {
         fun convertToParty() = mapper.convertValue<Party>(TextNode(MINI_CORP.name.toString()))
 
+        // Check that it fails if it can't find the party
         assertThatThrownBy { convertToParty() }
 
         partyObjectMapper.identities += MINI_CORP.party
@@ -261,6 +274,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     fun `Party deserialization on part of name`() {
         fun convertToParty() = mapper.convertValue<Party>(TextNode(MINI_CORP.name.organisation))
 
+        // Check that it fails if it can't find the party
         assertThatThrownBy { convertToParty() }
 
         partyObjectMapper.identities += MINI_CORP.party
@@ -271,10 +285,22 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     fun `Party deserialization on public key`() {
         fun convertToParty() = mapper.convertValue<Party>(TextNode(MINI_CORP.publicKey.toBase58String()))
 
+        // Check that it fails if it can't find the party
         assertThatThrownBy { convertToParty() }
 
         partyObjectMapper.identities += MINI_CORP.party
         assertThat(convertToParty()).isEqualTo(MINI_CORP.party)
+    }
+
+    @Test
+    fun `Party deserialization on name and key`() {
+        val party = mapper.convertValue<Party>(mapOf(
+                "name" to MINI_CORP.name,
+                "owningKey" to MINI_CORP.publicKey
+        ))
+        // Party.equals is only defined on the public key so we must check the name as well
+        assertThat(party.name).isEqualTo(MINI_CORP.name)
+        assertThat(party.owningKey).isEqualTo(MINI_CORP.publicKey)
     }
 
     @Test
@@ -316,15 +342,31 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test
-    fun `PartyAndCertificate serialisation`() {
-        val json = mapper.valueToTree<ObjectNode>(MINI_CORP.identity)
-        val (name, owningKey) = json.assertHasOnlyFields("name", "owningKey")
-        assertThat(name.valueAs<CordaX500Name>(mapper)).isEqualTo(MINI_CORP.name)
-        assertThat(owningKey.valueAs<PublicKey>(mapper)).isEqualTo(MINI_CORP.publicKey)
+    fun `PartyAndCertificate serialization`() {
+        val json = mapper.valueToTree<TextNode>(MINI_CORP.identity)
+        assertThat(json.textValue()).isEqualTo(MINI_CORP.name.toString())
     }
 
     @Test
-    fun `NodeInfo serialisation`() {
+    fun `PartyAndCertificate serialization with isFullParty = true`() {
+        partyObjectMapper.isFullParties = true
+        val json = mapper.valueToTree<ObjectNode>(MINI_CORP.identity)
+        println(mapper.writeValueAsString(json))
+        val (name, certPath) = json.assertHasOnlyFields("name", "certPath")
+        assertThat(name.valueAs<CordaX500Name>(mapper)).isEqualTo(MINI_CORP.name)
+        assertThat(certPath.valueAs<CertPath>(mapper)).isEqualTo(MINI_CORP.identity.certPath)
+    }
+
+    @Test
+    fun `PartyAndCertificate deserialization on cert path`() {
+        val certPathJson = mapper.valueToTree<JsonNode>(MINI_CORP.identity.certPath)
+        val partyAndCert = mapper.convertValue<PartyAndCertificate>(mapOf("certPath" to certPathJson))
+        // PartyAndCertificate.equals is defined on the Party so we must check the certPath directly
+        assertThat(partyAndCert.certPath).isEqualTo(MINI_CORP.identity.certPath)
+    }
+
+    @Test
+    fun `NodeInfo serialization`() {
         val (nodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
         val json = mapper.valueToTree<ObjectNode>(nodeInfo)
         val (addresses, legalIdentitiesAndCerts, platformVersion, serial) = json.assertHasOnlyFields(
@@ -339,14 +381,14 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         }
         legalIdentitiesAndCerts.run {
             assertThat(this).hasSize(1)
-            assertThat(this[0]["name"].valueAs<CordaX500Name>(mapper)).isEqualTo(ALICE_NAME)
+            assertThat(this[0].valueAs<CordaX500Name>(mapper)).isEqualTo(ALICE_NAME)
         }
         assertThat(platformVersion.intValue()).isEqualTo(nodeInfo.platformVersion)
         assertThat(serial.longValue()).isEqualTo(nodeInfo.serial)
     }
 
     @Test
-    fun `NodeInfo deserialisation on name`() {
+    fun `NodeInfo deserialization on name`() {
         val (nodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
 
         fun convertToNodeInfo() = mapper.convertValue<NodeInfo>(TextNode(ALICE_NAME.toString()))
@@ -359,7 +401,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test
-    fun `NodeInfo deserialisation on public key`() {
+    fun `NodeInfo deserialization on public key`() {
         val (nodeInfo) = createNodeInfoAndSigned(ALICE_NAME)
 
         fun convertToNodeInfo() = mapper.convertValue<NodeInfo>(TextNode(nodeInfo.legalIdentities[0].owningKey.toBase58String()))
@@ -386,7 +428,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     @Test
-    fun X509Certificate() {
+    fun `X509Certificate serialization`() {
         val cert: X509Certificate = MINI_CORP.identity.certificate
         val json = mapper.valueToTree<ObjectNode>(cert)
         println(mapper.writeValueAsString(json))
@@ -397,7 +439,13 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(json["notAfter"].valueAs<Date>(mapper)).isEqualTo(cert.notAfter)
         assertThat(json["notBefore"].valueAs<Date>(mapper)).isEqualTo(cert.notBefore)
         assertThat(json["encoded"].binaryValue()).isEqualTo(cert.encoded)
-        assertThat(mapper.convertValue<X509Certificate>(json).encoded).isEqualTo(cert.encoded)
+    }
+
+    @Test
+    fun `X509Certificate deserialization`() {
+        val cert: X509Certificate = MINI_CORP.identity.certificate
+        assertThat(mapper.convertValue<X509Certificate>(mapOf("encoded" to cert.encoded))).isEqualTo(cert)
+        assertThat(mapper.convertValue<X509Certificate>(BinaryNode(cert.encoded))).isEqualTo(cert)
     }
 
     @Test
@@ -448,6 +496,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
     }
 
     private class TestPartyObjectMapper : JacksonSupport.PartyObjectMapper {
+        override var isFullParties: Boolean = false
         val identities = ArrayList<Party>()
         val nodes = ArrayList<NodeInfo>()
         override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? {

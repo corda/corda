@@ -24,12 +24,15 @@ Certificate hierarchy
 
 A Corda network has 8 types of keys and a regular node requires 4 of them:
 
+**Network Keys**
+
 * The **root network CA** key
 * The **doorman CA** key
 * The **network map** key
-* The **service identity** key(s) (per service, such as a notary cluster; it can be a Composite Key)
+* The **service identity** key(s) (per service, such as a notary cluster; it can be a Composite key)
 
--- **Node Keys** --
+**Node Keys**
+
 * The **node CA** key(s) (one per node)
 * The **legal identity** key(s) (one per node)
 * The **tls** key(s) (per node)

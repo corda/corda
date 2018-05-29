@@ -21,6 +21,12 @@ interface CheckpointStorage {
     fun removeCheckpoint(id: StateMachineRunId): Boolean
 
     /**
+     * Load an existing checkpoint from the store.
+     * @return the checkpoint, still in serialized form, or null if not found.
+     */
+    fun getCheckpoint(id: StateMachineRunId): SerializedBytes<Checkpoint>?
+
+    /**
      * Stream all checkpoints from the store. If this is backed by a database the stream will be valid until the
      * underlying database connection is closed, so any processing should happen before it is closed.
      */

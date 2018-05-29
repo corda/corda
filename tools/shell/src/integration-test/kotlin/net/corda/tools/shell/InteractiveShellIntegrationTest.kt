@@ -3,29 +3,40 @@ package net.corda.tools.shell
 import com.google.common.io.Files
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.JSch
-import net.corda.core.identity.CordaX500Name
+import net.corda.client.rpc.RPCException
+import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
 import net.corda.node.services.Permissions.Companion.all
-import net.corda.testing.common.internal.withCertificates
-import net.corda.testing.common.internal.withKeyStores
+import net.corda.node.services.config.shell.toShellConfig
+import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.RandomFree
+import net.corda.testing.internal.createKeyPairAndSelfSignedCertificate
+import net.corda.testing.internal.saveToKeyStore
+import net.corda.testing.internal.saveToTrustStore
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
-import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.util.io.Streams
 import org.junit.Ignore
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import kotlin.test.assertTrue
 
 class InteractiveShellIntegrationTest {
+
+    @Rule
+    @JvmField
+    val tempFolder = TemporaryFolder()
 
     @Test
     fun `shell should not log in with invalid credentials`() {
@@ -44,7 +55,7 @@ class InteractiveShellIntegrationTest {
     }
 
     @Test
-    fun `shell should log in with valid crentials`() {
+    fun `shell should log in with valid credentials`() {
         val user = User("u", "p", setOf())
         driver {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
@@ -62,72 +73,65 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `shell should log in with ssl`() {
         val user = User("mark", "dadada", setOf(all()))
-        withCertificates { server, client, createSelfSigned, createSignedBy ->
-            val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
-            val markCertificate = createSignedBy(CordaX500Name("shell", "IT", "R3 London", "London", "London", "GB"), rootCertificate)
+        var successful = false
 
-            // truststore needs to contain root CA for how the driver works...
-            server.keyStore["cordaclienttls"] = rootCertificate
-            server.trustStore["cordaclienttls"] = rootCertificate
-            server.trustStore["shell"] = markCertificate
+        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
+        val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
 
-            client.keyStore["shell"] = markCertificate
-            client.trustStore["cordaclienttls"] = rootCertificate
+        val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
+        val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-            withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
-                var successful = false
-                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-                    startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+            startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-                        val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
-                        val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
-                                user = user.username, password = user.password,
-                                hostAndPort = node.rpcAddress,
-                                ssl = sslConfiguration)
+                val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                        user = user.username, password = user.password,
+                        hostAndPort = node.rpcAddress,
+                        ssl = clientSslOptions)
 
-                        InteractiveShell.startShell(conf)
+                InteractiveShell.startShell(conf)
 
-                        InteractiveShell.nodeInfo()
-                        successful = true
-                    }
-                }
-                assertThat(successful).isTrue()
+                InteractiveShell.nodeInfo()
+                successful = true
+            }
+        }
+        assertThat(successful).isTrue()
+    }
+
+    @Test
+    fun `shell shoud not log in with invalid truststore`() {
+        val user = User("mark", "dadada", setOf("ALL"))
+        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
+        val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
+
+        val (_, cert1) = createKeyPairAndSelfSignedCertificate()
+        val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert1)
+        val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
+
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+            startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
+
+                val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                        user = user.username, password = user.password,
+                        hostAndPort = node.rpcAddress,
+                        ssl = clientSslOptions)
+
+                InteractiveShell.startShell(conf)
+
+                assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(RPCException::class.java)
             }
         }
     }
 
     @Test
-    fun `shell shoud not log in without ssl keystore`() {
-        val user = User("mark", "dadada", setOf("ALL"))
-        withCertificates { server, client, createSelfSigned, createSignedBy ->
-            val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
-            val markCertificate = createSignedBy(CordaX500Name("shell", "IT", "R3 London", "London", "London", "GB"), rootCertificate)
-
-            // truststore needs to contain root CA for how the driver works...
-            server.keyStore["cordaclienttls"] = rootCertificate
-            server.trustStore["cordaclienttls"] = rootCertificate
-            server.trustStore["shell"] = markCertificate
-
-            //client key store doesn't have "mark" certificate
-            client.trustStore["cordaclienttls"] = rootCertificate
-
-            withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
-                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-                    startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
-
-                        val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
-                        val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
-                                user = user.username, password = user.password,
-                                hostAndPort = node.rpcAddress,
-                                ssl = sslConfiguration)
-
-                        InteractiveShell.startShell(conf)
-
-                        assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQNotConnectedException::class.java)
-                    }
-                }
+    fun `internal shell user should not be able to connect if node started with devMode=false`() {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+            startNode().getOrThrow().use { node ->
+                val conf = (node as NodeHandleInternal).configuration.toShellConfig()
+                InteractiveShell.startShellInternal(conf)
+                assertThatThrownBy { InteractiveShell.nodeInfo() }.isInstanceOf(ActiveMQSecurityException::class.java)
             }
         }
     }
@@ -181,62 +185,54 @@ class InteractiveShellIntegrationTest {
         val user = User("mark", "dadada", setOf(Permissions.startFlow<SSHServerTest.FlowICanRun>(),
                 Permissions.invokeRpc(CordaRPCOps::registeredFlows),
                 Permissions.invokeRpc(CordaRPCOps::nodeInfo)/*all()*/))
-        withCertificates { server, client, createSelfSigned, createSignedBy ->
-            val rootCertificate = createSelfSigned(CordaX500Name("SystemUsers/Node", "IT", "R3 London", "London", "London", "GB"))
-            val markCertificate = createSignedBy(CordaX500Name("shell", "IT", "R3 London", "London", "London", "GB"), rootCertificate)
 
-            // truststore needs to contain root CA for how the driver works...
-            server.keyStore["cordaclienttls"] = rootCertificate
-            server.trustStore["cordaclienttls"] = rootCertificate
-            server.trustStore["shell"] = markCertificate
+        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
+        val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
+        val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
+        val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-            client.keyStore["shell"] = markCertificate
-            client.trustStore["cordaclienttls"] = rootCertificate
+        var successful = false
+        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+            startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
 
-            withKeyStores(server, client) { nodeSslOptions, clientSslOptions ->
-                var successful = false
-                driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
-                    startNode(rpcUsers = listOf(user), customOverrides = nodeSslOptions.useSslRpcOverrides()).getOrThrow().use { node ->
+                val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
+                        user = user.username, password = user.password,
+                        hostAndPort = node.rpcAddress,
+                        ssl = clientSslOptions,
+                        sshdPort = 2223)
 
-                        val sslConfiguration = ShellSslOptions(clientSslOptions.sslKeystore, clientSslOptions.keyStorePassword,
-                                clientSslOptions.trustStoreFile, clientSslOptions.trustStorePassword, clientSslOptions.crlCheckSoftFail)
-                        val conf = ShellConfiguration(commandsDirectory = Files.createTempDir().toPath(),
-                                user = user.username, password = user.password,
-                                hostAndPort = node.rpcAddress,
-                                ssl = sslConfiguration,
-                                sshdPort = 2223)
+                InteractiveShell.startShell(conf)
+                InteractiveShell.nodeInfo()
 
-                        InteractiveShell.startShell(conf)
-                        InteractiveShell.nodeInfo()
+                val session = JSch().getSession("mark", "localhost", 2223)
+                session.setConfig("StrictHostKeyChecking", "no")
+                session.setPassword("dadada")
+                session.connect()
 
-                        val session = JSch().getSession("mark", "localhost", 2223)
-                        session.setConfig("StrictHostKeyChecking", "no")
-                        session.setPassword("dadada")
-                        session.connect()
+                assertTrue(session.isConnected)
 
-                        assertTrue(session.isConnected)
+                val channel = session.openChannel("exec") as ChannelExec
+                channel.setCommand("start FlowICanRun")
+                channel.connect(5000)
 
-                        val channel = session.openChannel("exec") as ChannelExec
-                        channel.setCommand("start FlowICanRun")
-                        channel.connect(5000)
+                assertTrue(channel.isConnected)
 
-                        assertTrue(channel.isConnected)
+                val response = String(Streams.readAll(channel.inputStream))
 
-                        val response = String(Streams.readAll(channel.inputStream))
+                val linesWithDoneCount = response.lines().filter { line -> line.contains("Done") }
 
-                        val linesWithDoneCount = response.lines().filter { line -> line.contains("Done") }
+                channel.disconnect()
+                session.disconnect() // TODO Simon make sure to close them
 
-                        channel.disconnect()
-                        session.disconnect() // TODO Simon make sure to close them
+                // There are ANSI control characters involved, so we want to avoid direct byte to byte matching.
+                assertThat(linesWithDoneCount).hasSize(1)
 
-                        // There are ANSI control characters involved, so we want to avoid direct byte to byte matching.
-                        assertThat(linesWithDoneCount).hasSize(1)
-
-                        successful = true
-                    }
-                }
-                assertThat(successful).isTrue()
+                successful = true
             }
+
+            assertThat(successful).isTrue()
+
         }
     }
 }

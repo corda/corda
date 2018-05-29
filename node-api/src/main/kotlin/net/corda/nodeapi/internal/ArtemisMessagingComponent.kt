@@ -22,8 +22,12 @@ class ArtemisMessagingComponent {
 
         // System users must contain an invalid RPC username character to prevent any chance of name clash which in this
         // case is a forward slash
-        const val NODE_USER = "SystemUsers/Node"
+        const val NODE_P2P_USER = "SystemUsers/Node"
+        const val NODE_RPC_USER = "SystemUsers/NodeRPC"
         const val PEER_USER = "SystemUsers/Peer"
+        // User used only in devMode when nodes have a shell attached by default.
+        const val INTERNAL_SHELL_USER = "internalShell"
+
         const val INTERNAL_PREFIX = "internal."
         const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers." //TODO Come up with better name for common peers/services queue
         const val P2P_PREFIX = "p2p.inbound."

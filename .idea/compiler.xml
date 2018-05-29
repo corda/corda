@@ -34,12 +34,23 @@
       <module name="corda-finance_integrationTest" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
+      <module name="corda-smoke-test-utils_main" target="1.8" />
+      <module name="corda-smoke-test-utils_test" target="1.8" />
+      <module name="corda-test-common_main" target="1.8" />
+      <module name="corda-test-common_test" target="1.8" />
+      <module name="corda-test-utils_main" target="1.8" />
+      <module name="corda-test-utils_test" target="1.8" />
+      <module name="corda-utils_integrationTest" target="1.8" />
+      <module name="corda-utils_main" target="1.8" />
+      <module name="corda-utils_test" target="1.8" />
       <module name="corda-webserver_integrationTest" target="1.8" />
       <module name="corda-webserver_main" target="1.8" />
       <module name="corda-webserver_test" target="1.8" />
       <module name="cordapp-configuration_main" target="1.8" />
       <module name="cordapp-configuration_test" target="1.8" />
       <module name="cordapp_integrationTest" target="1.8" />
+      <module name="cordapp_main" target="1.8" />
+      <module name="cordapp_test" target="1.8" />
       <module name="cordform-common_main" target="1.8" />
       <module name="cordform-common_test" target="1.8" />
       <module name="cordformation_main" target="1.8" />
@@ -111,6 +122,8 @@
       <module name="node-driver_integrationTest" target="1.8" />
       <module name="node-driver_main" target="1.8" />
       <module name="node-driver_test" target="1.8" />
+      <module name="node-schemas_main" target="1.8" />
+      <module name="node-schemas_test" target="1.8" />
       <module name="node_integrationTest" target="1.8" />
       <module name="node_main" target="1.8" />
       <module name="node_smokeTest" target="1.8" />
@@ -158,6 +171,8 @@
       <module name="testing-test-common_test" target="1.8" />
       <module name="testing-test-utils_main" target="1.8" />
       <module name="testing-test-utils_test" target="1.8" />
+      <module name="tools-blobinspector_main" target="1.8" />
+      <module name="tools-blobinspector_test" target="1.8" />
       <module name="tools_main" target="1.8" />
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />

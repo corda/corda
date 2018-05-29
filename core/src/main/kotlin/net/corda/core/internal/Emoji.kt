@@ -49,6 +49,8 @@ object Emoji {
     val CODE_DEVELOPER: String = codePointsString(0x1F469, 0x200D, 0x1F4BB)
     @JvmStatic
     val CODE_WARNING_SIGN: String = codePointsString(0x26A0, 0xFE0F)
+    @JvmStatic
+    val CROSS_MARK_BUTTON: String = codePointsString(0x274E)
 
     /**
      * When non-null, toString() methods are allowed to use emoji in the output as we're going to render them to a
@@ -76,6 +78,7 @@ object Emoji {
     val rightArrow: String get() = if (emojiMode.get() != null) "$CODE_RIGHT_ARROW  " else "▶︎"
     val skullAndCrossbones: String get() = if (emojiMode.get() != null) "$CODE_SKULL_AND_CROSSBONES  " else "☂"
     val noEntry: String get() = if (emojiMode.get() != null) "$CODE_NO_ENTRY  " else "✘"
+    val notRun: String get() = if (emojiMode.get() != null) "$CROSS_MARK_BUTTON  " else "-"
 
     inline fun <T> renderIfSupported(body: () -> T): T {
         if (hasEmojiTerminal)

@@ -3,13 +3,13 @@ package net.corda.node.services.config
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
-import com.typesafe.config.ConfigRenderOptions
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.config.SSLConfiguration
+import net.corda.nodeapi.internal.config.toProperties
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.crypto.save
@@ -20,6 +20,9 @@ fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
 
 object ConfigHelper {
+
+    private const val CORDA_PROPERTY_PREFIX = "corda."
+
     private val log = LoggerFactory.getLogger(javaClass)
     fun loadConfig(baseDirectory: Path,
                    configFile: Path = baseDirectory / "node.conf",
@@ -33,17 +36,18 @@ object ConfigHelper {
         val smartDevMode = CordaSystemUtils.isOsMac() || (CordaSystemUtils.isOsWindows() && !CordaSystemUtils.getOsName().toLowerCase().contains("server"))
         val devModeConfig = ConfigFactory.parseMap(mapOf("devMode" to smartDevMode))
 
+        val systemOverrides = ConfigFactory.systemProperties().cordaEntriesOnly()
+        val environmentOverrides = ConfigFactory.systemEnvironment().cordaEntriesOnly()
         val finalConfig = configOf(
                 // Add substitution values here
                 "baseDirectory" to baseDirectory.toString())
                 .withFallback(configOverrides)
+                .withFallback(systemOverrides)
+                .withFallback(environmentOverrides)
                 .withFallback(appConfig)
                 .withFallback(devModeConfig) // this needs to be after the appConfig, so it doesn't override the configured devMode
                 .withFallback(defaultConfig)
                 .resolve()
-
-
-        log.info("Config:\n${finalConfig.root().render(ConfigRenderOptions.defaults())}")
 
         val entrySet = finalConfig.entrySet().filter { entry -> entry.key.contains("\"") }
         for ((key) in entrySet) {
@@ -51,6 +55,11 @@ object ConfigHelper {
         }
 
         return finalConfig
+    }
+
+    private fun Config.cordaEntriesOnly(): Config {
+
+        return ConfigFactory.parseMap(toProperties().filterKeys { (it as String).startsWith(CORDA_PROPERTY_PREFIX) }.mapKeys { (it.key as String).removePrefix(CORDA_PROPERTY_PREFIX) })
     }
 }
 

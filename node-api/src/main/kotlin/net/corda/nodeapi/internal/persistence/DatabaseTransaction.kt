@@ -3,6 +3,7 @@ package net.corda.nodeapi.internal.persistence
 import co.paralleluniverse.strands.Strand
 import org.hibernate.Session
 import org.hibernate.Transaction
+import rx.subjects.PublishSubject
 import java.sql.Connection
 import java.util.*
 
@@ -35,11 +36,16 @@ class DatabaseTransaction(
 
     val session: Session by sessionDelegate
     private lateinit var hibernateTransaction: Transaction
+
+    internal val boundary = PublishSubject.create<CordaPersistence.Boundary>()
+    private var committed = false
+
     fun commit() {
         if (sessionDelegate.isInitialized()) {
             hibernateTransaction.commit()
         }
         connection.commit()
+        committed = true
     }
 
     fun rollback() {
@@ -58,7 +64,15 @@ class DatabaseTransaction(
         connection.close()
         contextTransactionOrNull = outerTransaction
         if (outerTransaction == null) {
-            database.transactionBoundaries.onNext(CordaPersistence.Boundary(id))
+            boundary.onNext(CordaPersistence.Boundary(id, committed))
         }
+    }
+
+    fun onCommit(callback: () -> Unit) {
+        boundary.filter { it.success }.subscribe { callback() }
+    }
+
+    fun onRollback(callback: () -> Unit) {
+        boundary.filter { !it.success }.subscribe { callback() }
     }
 }

@@ -79,6 +79,7 @@ buildscript {
     ext.protonj_version = '0.27.1'
     ext.snappy_version = '0.4'
     ext.fast_classpath_scanner_version = '2.12.3'
+    ext.jcabi_manifests_version = '1.1'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'
@@ -173,6 +174,7 @@ allprojects {
             apiVersion = "1.2"
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
+            freeCompilerArgs = ['-Xenable-jvm-default']
         }
     }
 

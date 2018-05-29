@@ -28,10 +28,17 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Lob
 
+/**
+ * An identity service that stores parties and their identities to a key value tables in the database. The entries are
+ * cached for efficient lookup.
+ *
+ * @param trustRoot certificate from the zone operator for identity on the network.
+ * @param caCertificates list of additional certificates.
+ */
 // TODO There is duplicated logic between this and InMemoryIdentityService
 @ThreadSafe
 class PersistentIdentityService(override val trustRoot: X509Certificate,
-                                vararg caCertificates: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
+                                caCertificates: List<X509Certificate> = emptyList()) : SingletonSerializeAsToken(), IdentityServiceInternal {
 
     companion object {
         private val log = contextLogger()
@@ -71,11 +78,11 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities")
     class PersistentIdentity(
             @Id
-            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE)
+            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = "",
 
             @Lob
-            @Column(name = "identity_value")
+            @Column(name = "identity_value", nullable = false)
             var identity: ByteArray = EMPTY_BYTE_ARRAY
     ) : Serializable
 
@@ -83,10 +90,10 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}named_identities")
     class PersistentIdentityNames(
             @Id
-            @Column(name = "name", length = 128)
+            @Column(name = "name", length = 128, nullable = false)
             var name: String = "",
 
-            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE)
+            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = ""
     ) : Serializable
 
