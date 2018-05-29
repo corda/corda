@@ -111,16 +111,17 @@ open class MockServices private constructor(
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties(initialIdentity.name.organisation, SecureHash.randomSHA256().toString())
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
-            val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(initialIdentity.name.organisation), identityService, schemaService)
+            val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(initialIdentity.name.organisation), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
-                    override val vaultService: VaultService = makeVaultService(database.hibernateConfig, schemaService)
+                    override val vaultService: VaultService = makeVaultService(database.hibernateConfig, schemaService, database)
 
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         ServiceHubInternal.recordTransactions(statesToRecord, txs,
                                 validatedTransactions as WritableTransactionStorage,
                                 mockStateMachineRecordedTransactionMappingStorage,
-                                vaultService as VaultServiceInternal)
+                                vaultService as VaultServiceInternal,
+                                database)
                     }
 
                     override fun jdbcSession(): Connection = database.createSession()
@@ -251,8 +252,8 @@ open class MockServices private constructor(
 
     protected val servicesForResolution: ServicesForResolution get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParameters, validatedTransactions)
 
-    internal fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService): VaultServiceInternal {
-        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, hibernateConfig)
+    internal fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService, database: CordaPersistence): VaultServiceInternal {
+        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, hibernateConfig, database)
         HibernateObserver.install(vaultService.rawUpdates, hibernateConfig, schemaService)
         return vaultService
     }

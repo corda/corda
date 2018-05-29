@@ -10,10 +10,7 @@
 
 package net.corda.serialization.internal.amqp
 
-import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
-import net.corda.serialization.internal.amqp.testutils.deserialize
-import net.corda.serialization.internal.amqp.testutils.serialize
-import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
+import net.corda.serialization.internal.amqp.testutils.*
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -263,6 +260,14 @@ class DeserializeSimpleTypesTests {
         assertEquals(c.c[0], deserializedC.c[0])
         assertEquals(c.c[1], deserializedC.c[1])
         assertEquals(c.c[2], deserializedC.c[2])
+
+        val di = DeserializationInput(sf2)
+        val deserializedC2 = di.deserialize(serialisedC)
+
+        assertEquals(c.c.size, deserializedC2.c.size)
+        assertEquals(c.c[0], deserializedC2.c[0])
+        assertEquals(c.c[1], deserializedC2.c[1])
+        assertEquals(c.c[2], deserializedC2.c[2])
     }
 
     @Test
@@ -504,7 +509,33 @@ class DeserializeSimpleTypesTests {
         assertEquals(3, da2.a?.a?.b)
         assertEquals(2, da2.a?.a?.a?.b)
         assertEquals(1, da2.a?.a?.a?.a?.b)
-
     }
+
+    // Replicates CORDA-1545
+    @Test
+    fun arrayOfByteArray() {
+        class A(val a : Array<ByteArray>)
+
+        val ba1 = ByteArray(3)
+        ba1[0] = 0b0001; ba1[1] = 0b0101; ba1[2] = 0b1111
+
+        val ba2 = ByteArray(3)
+        ba2[0] = 0b1000; ba2[1] = 0b1100; ba2[2] = 0b1110
+
+        val a = A(arrayOf(ba1, ba2))
+
+        val serializedA = TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(a)
+
+        serializedA.schema.types.forEach {
+            println(it)
+        }
+
+        // This not throwing is the point of the test
+        DeserializationInput(sf1).deserialize(serializedA.obj)
+
+        // This not throwing is the point of the test
+        DeserializationInput(sf2).deserialize(serializedA.obj)
+    }
+
 }
 

@@ -73,9 +73,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
             registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
-                database.transaction {
-                    services.cordaService(NodeInterestRates.Oracle::class.java).uploadFixes(it.reader().readText())
-                }
+                services.cordaService(NodeInterestRates.Oracle::class.java).uploadFixes(it.reader().readText())
             }
         }
     }

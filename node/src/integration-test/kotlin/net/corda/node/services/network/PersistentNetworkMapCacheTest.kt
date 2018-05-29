@@ -19,7 +19,13 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.getTestPartyAndCertificate
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -58,12 +64,10 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     fun `unknown legal name`() {
         val alice = startNodesWithPort(listOf(ALICE))[0]
         val netMapCache = alice.services.networkMapCache
-        alice.database.transaction {
-            assertThat(netMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).isEmpty()
-            assertThat(netMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME)).isNull()
-            assertThat(netMapCache.getPeerByLegalName(DUMMY_NOTARY_NAME)).isNull()
-            assertThat(netMapCache.getPeerCertificateByLegalName(DUMMY_NOTARY_NAME)).isNull()
-        }
+        assertThat(netMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).isEmpty()
+        assertThat(netMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME)).isNull()
+        assertThat(netMapCache.getPeerByLegalName(DUMMY_NOTARY_NAME)).isNull()
+        assertThat(netMapCache.getPeerCertificateByLegalName(DUMMY_NOTARY_NAME)).isNull()
     }
 
     @Test
@@ -71,48 +75,40 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val alice = startNodesWithPort(listOf(ALICE))[0]
         val netMapCache = alice.services.networkMapCache
 
-        val distServiceNodeInfos = alice.database.transaction {
-            val distributedIdentity = TestIdentity(DUMMY_NOTARY_NAME).identity
-            (1..2).map {
-                val nodeInfo = NodeInfo(
-                        addresses = listOf(NetworkHostAndPort("localhost", 1000 + it)),
-                        legalIdentitiesAndCerts = listOf(TestIdentity.fresh("Org-$it").identity, distributedIdentity),
-                        platformVersion = 3,
-                        serial = 1
-                )
-                netMapCache.addNode(nodeInfo)
-                nodeInfo
-            }
+        val distributedIdentity = TestIdentity(DUMMY_NOTARY_NAME).identity
+        val distServiceNodeInfos = (1..2).map {
+            val nodeInfo = NodeInfo(
+                    addresses = listOf(NetworkHostAndPort("localhost", 1000 + it)),
+                    legalIdentitiesAndCerts = listOf(TestIdentity.fresh("Org-$it").identity, distributedIdentity),
+                    platformVersion = 3,
+                    serial = 1
+            )
+            netMapCache.addNode(nodeInfo)
+            nodeInfo
         }
 
-        alice.database.transaction {
-            assertThat(netMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).containsOnlyElementsOf(distServiceNodeInfos)
-            assertThatExceptionOfType(IllegalArgumentException::class.java)
-                    .isThrownBy { netMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME) }
-                    .withMessageContaining(DUMMY_NOTARY_NAME.toString())
-        }
+        assertThat(netMapCache.getNodesByLegalName(DUMMY_NOTARY_NAME)).containsOnlyElementsOf(distServiceNodeInfos)
+        assertThatExceptionOfType(IllegalArgumentException::class.java)
+                .isThrownBy { netMapCache.getNodeByLegalName(DUMMY_NOTARY_NAME) }
+                .withMessageContaining(DUMMY_NOTARY_NAME.toString())
     }
 
     @Test
     fun `get nodes by owning key and by name`() {
         val alice = startNodesWithPort(listOf(ALICE))[0]
         val netCache = alice.services.networkMapCache
-        alice.database.transaction {
-            val res = netCache.getNodeByLegalIdentity(alice.info.singleIdentity())
-            assertEquals(alice.info, res)
-            val res2 = netCache.getNodeByLegalName(DUMMY_REGULATOR.name)
-            assertEquals(infos.singleOrNull { DUMMY_REGULATOR.name in it.legalIdentities.map { it.name } }, res2)
-        }
+        val res = netCache.getNodeByLegalIdentity(alice.info.singleIdentity())
+        assertEquals(alice.info, res)
+        val res2 = netCache.getNodeByLegalName(DUMMY_REGULATOR.name)
+        assertEquals(infos.singleOrNull { DUMMY_REGULATOR.name in it.legalIdentities.map { it.name } }, res2)
     }
 
     @Test
     fun `get nodes by address`() {
         val alice = startNodesWithPort(listOf(ALICE))[0]
         val netCache = alice.services.networkMapCache
-        alice.database.transaction {
-            val res = netCache.getNodeByAddress(alice.info.addresses[0])
-            assertEquals(alice.info, res)
-        }
+        val res = netCache.getNodeByAddress(alice.info.addresses[0])
+        assertEquals(alice.info, res)
     }
 
     // This test has to be done as normal node not mock, because MockNodes don't have addresses.
@@ -122,9 +118,7 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
         val charliePartyCert = getTestPartyAndCertificate(CHARLIE_NAME, generateKeyPair().public)
         val aliceCache = aliceNode.services.networkMapCache
         aliceCache.addNode(aliceNode.info.copy(legalIdentitiesAndCerts = listOf(charliePartyCert)))
-        val res = aliceNode.database.transaction {
-            aliceCache.allNodes.filter { aliceNode.info.addresses[0] in it.addresses }
-        }
+        val res = aliceCache.allNodes.filter { aliceNode.info.addresses[0] in it.addresses }
         assertEquals(2, res.size)
     }
 

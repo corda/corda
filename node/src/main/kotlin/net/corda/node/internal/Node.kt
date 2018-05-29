@@ -13,7 +13,9 @@ package net.corda.node.internal
 import com.codahale.metrics.JmxReporter
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
@@ -23,7 +25,6 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -343,7 +344,9 @@ open class Node(configuration: NodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
+    override fun initialiseDatabasePersistence(schemaService: SchemaService,
+                                               wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
+                                               wellKnownPartyFromAnonymous: (AbstractParty) -> Party?): CordaPersistence {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
@@ -363,7 +366,7 @@ open class Node(configuration: NodeConfiguration,
         else if (databaseUrl != null) {
             printBasicNodeInfo("Database connection url is", databaseUrl)
         }
-        return super.initialiseDatabasePersistence(schemaService, identityService)
+        return super.initialiseDatabasePersistence(schemaService, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous)
     }
 
     private val _startupComplete = openFuture<Unit>()
