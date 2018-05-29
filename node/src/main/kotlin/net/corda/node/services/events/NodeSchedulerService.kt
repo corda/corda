@@ -11,9 +11,13 @@ import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.join
+import net.corda.core.internal.until
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -36,7 +40,15 @@ import org.slf4j.Logger
 import java.io.Serializable
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.*
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.EmbeddedId
@@ -83,7 +95,7 @@ class NodeSchedulerService(private val clock: CordaClock,
         // to wait in our code, rather than <code>Thread.sleep()</code> or other time-based pauses.
         @Suspendable
         @VisibleForTesting
-                // We specify full classpath on SettableFuture to differentiate it from the Quasar class of the same name
+        // We specify full classpath on SettableFuture to differentiate it from the Quasar class of the same name
         fun awaitWithDeadline(clock: CordaClock, deadline: Instant, future: Future<*> = GuavaSettableFuture.create<Any>()): Boolean {
             var nanos: Long
             do {
@@ -158,13 +170,13 @@ class NodeSchedulerService(private val clock: CordaClock,
 
     // We need the [StateMachineManager] to be constructed before this is called in case it schedules a flow.
     fun start() {
-        schedulerTimerExecutor.execute{ runLoopFunction() }
+        schedulerTimerExecutor.execute { runLoopFunction() }
     }
 
     override fun scheduleStateActivity(action: ScheduledStateRef) {
         log.trace { "Schedule $action" }
         // Only increase the number of unfinished schedules if the state didn't already exist on the queue
-        if(!schedulerRepo.merge(action)){
+        if (!schedulerRepo.merge(action)) {
             unfinishedSchedules.countUp()
         }
         contextTransaction.onCommit {
@@ -193,8 +205,8 @@ class NodeSchedulerService(private val clock: CordaClock,
         }
     }
 
-    private fun runLoopFunction(){
-        while (mutex.locked { running }){
+    private fun runLoopFunction() {
+        while (mutex.locked { running }) {
             val (scheduledState, ourRescheduledFuture) = mutex.locked {
                 rescheduled = GuavaSettableFuture.create()
                 //get the next scheduled action that isn't currently running
@@ -211,27 +223,26 @@ class NodeSchedulerService(private val clock: CordaClock,
                 } else {
                     log.trace { "Rescheduled $scheduledState" }
                 }
-            }
-            else {
-                awaitWithDeadline(clock, clock.instant() + idleWaitSeconds , ourRescheduledFuture )
+            } else {
+                awaitWithDeadline(clock, clock.instant() + idleWaitSeconds, ourRescheduledFuture)
             }
 
         }
     }
 
     private fun rescheduleWakeUp() {
-        mutex.alreadyLocked{
+        mutex.alreadyLocked {
             rescheduled?.cancel(false)
         }
     }
 
     @VisibleForTesting
     internal fun join() {
-            mutex.locked {
-                running = false
-                rescheduleWakeUp()
-            }
-            schedulerTimerExecutor.join()
+        mutex.locked {
+            running = false
+            rescheduleWakeUp()
+        }
+        schedulerTimerExecutor.join()
     }
 
     @VisibleForTesting
