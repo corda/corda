@@ -8,6 +8,7 @@ import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.channels.Channel
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -45,6 +46,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
          * Return the current [FlowStateMachineImpl] or null if executing outside of one.
          */
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
+
+        // If no CorDapp found then it is a Core flow
+        internal fun createflowCorDappInfo(cordapps: List<Cordapp>, platformVersion: Int): SubFlowVersion {
+            return cordapps.singleOrNull()?.let { SubFlowVersion.CorDappFlow(it.name, it.jarHash) }
+                    ?: SubFlowVersion.CoreFlow(platformVersion)
+        }
 
         private val log: Logger = LoggerFactory.getLogger("net.corda.flow")
 
@@ -237,7 +244,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     override fun <R> subFlow(subFlow: FlowLogic<R>): R {
         processEventImmediately(
-                Event.EnterSubFlow(subFlow.javaClass),
+                Event.EnterSubFlow(subFlow.javaClass, flowCorDappInfo(subFlow)),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         )
@@ -250,6 +257,15 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnExit = true
             )
         }
+    }
+
+    private fun <A> flowCorDappInfo(flowLogic: FlowLogic<A>): SubFlowVersion {
+        // Find the CorDapp for flowLogic
+        val cordapps = serviceHub.cordappProvider.cordapps.filter { cordapp ->
+            cordapp.allFlows.any { flow -> flowLogic.javaClass == flow }
+        }
+
+        return createflowCorDappInfo(cordapps, serviceHub.myInfo.platformVersion)
     }
 
     @Suspendable

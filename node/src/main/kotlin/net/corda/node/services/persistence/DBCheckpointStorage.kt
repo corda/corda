@@ -1,10 +1,16 @@
 package net.corda.node.services.persistence
 
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.debug
+import net.corda.node.services.api.CheckpointIncompatibleException
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
+import net.corda.node.services.statemachine.SubFlow
+import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
@@ -65,6 +71,35 @@ class DBCheckpointStorage : CheckpointStorage {
         criteriaQuery.select(root)
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.checkpointId)) to SerializedBytes<Checkpoint>(it.checkpoint)
+        }
+    }
+
+    override fun verifyCheckpointsCompatible(currentCordapps: List<Cordapp>, platformVersion: Int) {
+        getAllCheckpoints().forEach { (_, serializedCheckpoint) ->
+            val checkpoint = try {
+                serializedCheckpoint.deserialize(context = SerializationDefaults.CHECKPOINT_CONTEXT)
+            } catch (e: Exception) {
+                // Do nothing when deserialisation failed as this will be handled at a different time.
+                return@forEach
+            }
+
+            // For each Subflow, compare the checkpointed version to the current version
+            checkpoint.subFlowStack.firstOrNull { !isFlowCompatible(it, currentCordapps, platformVersion) }?.let { throw CheckpointIncompatibleException(it.flowClass.name) }
+        }
+    }
+
+    private fun isFlowCompatible(subFlow: SubFlow, currentCordapps: List<Cordapp>, platformVersion: Int): Boolean {
+        val corDappInfo = subFlow.subFlowVersion
+        return when (corDappInfo) {
+            is SubFlowVersion.CorDappFlow -> {
+                val installedCordapps = currentCordapps.filter { it.name == corDappInfo.corDappName }
+                if (installedCordapps.isEmpty() || installedCordapps.size > 1) {
+                    false
+                } else {
+                    corDappInfo.corDappHash == installedCordapps.first().jarHash
+                }
+            }
+            is SubFlowVersion.CoreFlow -> corDappInfo.platformVersion == platformVersion
         }
     }
 }

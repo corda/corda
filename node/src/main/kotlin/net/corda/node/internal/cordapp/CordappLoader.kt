@@ -4,6 +4,8 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
@@ -186,7 +188,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                 serializationWhitelists = listOf(),
                 serializationCustomSerializers = listOf(),
                 customSchemas = setOf(),
-                jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location // Core JAR location
+                allFlows = listOf(),
+                jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location, // Core JAR location
+                jarHash = SecureHash.allOnesHash
         )
     }
 
@@ -202,9 +206,14 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     findPlugins(it),
                     findSerializers(scanResult),
                     findCustomSchemas(scanResult),
-                    it.url)
+                    findAllFlows(scanResult),
+                    it.url,
+                    getJarHash(it.url)
+            )
         }
     }
+
+    private fun getJarHash(url: URL): SecureHash.SHA256 = url.openStream().readFully().sha256()
 
     private fun findServices(scanResult: RestrictedScanResult): List<Class<out SerializeAsToken>> {
         return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
@@ -239,6 +248,10 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
     private fun findSchedulableFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, SchedulableFlow::class)
+    }
+
+    private fun findAllFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
+        return scanResult.getConcreteClassesOfType(FlowLogic::class)
     }
 
     private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
@@ -320,6 +333,13 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
         fun <T : Any> getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
             return scanResult.getNamesOfClassesWithAnnotation(annotation.java)
+                    .filter { it.startsWith(qualifiedNamePrefix) }
+                    .mapNotNull { loadClass(it, type) }
+                    .filterNot { Modifier.isAbstract(it.modifiers) }
+        }
+
+        fun <T : Any> getConcreteClassesOfType(type: KClass<T>): List<Class<out T>> {
+            return scanResult.getNamesOfSubclassesOf(type.java)
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
                     .filterNot { Modifier.isAbstract(it.modifiers) }

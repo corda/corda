@@ -18,6 +18,7 @@ import net.corda.node.NodeRegistrationOption
 import net.corda.node.SerialFilter
 import net.corda.node.VersionInfo
 import net.corda.node.defaultSerialFilter
+import net.corda.node.services.api.CheckpointIncompatibleException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
@@ -129,6 +130,9 @@ open class NodeStartup(val args: Array<String>) {
         try {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: CheckpointIncompatibleException) {
+            logger.error("Found checkpoint for flow: ${e.flowClass} that is incompatible with the current installed version. Please reinstall the previous version of the flow, drain your node, and try again.")
+            return false
         } catch (e: Exception) {
             if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
                 logger.error("One of the ports required by the Corda node is already in use.")
