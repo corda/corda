@@ -88,11 +88,11 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}identities")
     class PersistentIdentity(
             @Id
-            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE)
-            var publicKeyHash: String,
+            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
+            var publicKeyHash: String = "",
 
             @Lob
-            @Column(name = "identity_value")
+            @Column(name = "identity_value", nullable = false)
             var identity: ByteArray = EMPTY_BYTE_ARRAY
     ) : Serializable
 
@@ -100,10 +100,10 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}named_identities")
     class PersistentIdentityNames(
             @Id
-            @Column(name = "name", length = 128)
+            @Column(name = "name", length = 128, nullable = false)
             var name: String = "",
 
-            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE)
+            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String = ""
     ) : Serializable
 

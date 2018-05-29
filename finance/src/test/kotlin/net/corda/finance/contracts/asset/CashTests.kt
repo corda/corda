@@ -92,10 +92,11 @@ class CashTests {
         LogHelper.setLevel(NodeVaultService::class)
         megaCorpServices = MockServices(megaCorp)
         miniCorpServices = MockServices(miniCorp)
+        val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"),
-                makeTestIdentityService(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity),
-                TestIdentity(CordaX500Name("Me", "London", "GB"))
+                makeTestIdentityService(megaCorp.identity, miniCorp.identity, dummyCashIssuer.identity, dummyNotary.identity, myself.identity),
+                myself
         )
         database = databaseAndServices.first
         ourServices = databaseAndServices.second

@@ -49,6 +49,7 @@ import net.corda.core.utilities.toBase58String
 import org.bouncycastle.asn1.x509.KeyPurposeId
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
+import java.nio.charset.StandardCharsets.UTF_8
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
@@ -426,7 +427,7 @@ object JacksonSupport {
     @Deprecated("This is an internal class, do not use")
     object OpaqueBytesDeserializer : JsonDeserializer<OpaqueBytes>() {
         override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): OpaqueBytes {
-            return OpaqueBytes(parser.binaryValue)
+            return OpaqueBytes(parser.text?.toByteArray(UTF_8) ?: parser.binaryValue)
         }
     }
 

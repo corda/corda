@@ -97,6 +97,12 @@ Unreleased
   reference to the outer class) as per the Java documentation `here <https://docs.oracle.com/javase/tutorial/java/javaOO/nested.html>`_
   we are disallowing this as the paradigm in general makes little sense for contract states.
 
+* API change: ``net.corda.core.schemas.PersistentStateRef`` fields (index and txId) are now non-nullable.
+  The fields were always effectively non-nullable - values were set from non-nullable fields of other objects.
+  The class is used as database Primary Key columns of other entities and databases already impose those columns as non-nullable
+  (even if JPA annotation nullable=false was absent).
+  In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
+
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
 * Added `database.hibernateDialect` node configuration option

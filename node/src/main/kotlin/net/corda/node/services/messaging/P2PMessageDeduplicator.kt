@@ -150,16 +150,16 @@ class P2PMessageDeduplicator(private val database: CordaPersistence) {
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_ids")
     class ProcessedMessage(
             @Id
-            @Column(name = "message_id", length = 64)
+            @Column(name = "message_id", length = 64, nullable = false)
             var id: String = "",
 
-            @Column(name = "insertion_time")
+            @Column(name = "insertion_time", nullable = false)
             var insertionTime: Instant = Instant.now(),
 
-            @Column(name = "sender", length = 64)
+            @Column(name = "sender", length = 64, nullable = true)
             var hash: String? = "",
 
-            @Column(name = "sequence_number")
+            @Column(name = "sequence_number", nullable = true)
             var seqNo: Long? = null
     ) : Serializable
 
