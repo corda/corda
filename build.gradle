@@ -304,6 +304,31 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
     }
 }
 
+// Since the Corda serialization framework depends on the -parameters flag being
+// used we set it for convenience by default within IntelliJ
+task writeIntellijCompilerXml() {
+    dependsOn = tasks.withType(AbstractCompile)
+
+    def ideaFolder = new File(".idea")
+    if (!ideaFolder.exists()) {
+    	ideaFolder.mkdirs()
+    }
+
+    def compilerXml = new File(".idea/compiler.xml")
+    if (!compilerXml.exists()) {
+        println("Generating compiler xml for IntelliJ")
+
+    	compilerXml.text ="""<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_STRING" value="-parameters" />
+  </component>
+</project>"""
+    }
+
+    
+}
+
 tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
