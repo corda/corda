@@ -46,7 +46,7 @@ class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retryS
             WITH row(transaction_id, output_index, pennies, total, lock_id) AS
             (
             SELECT vs.transaction_id, vs.output_index, ccs.pennies,
-            SUM(ccs.pennies) OVER (ORDER BY ccs.transaction_id RANGE UNBOUNDED PRECEDING), vs.lock_id
+            SUM(ccs.pennies) OVER (ORDER BY ccs.transaction_id, ccs.output_index RANGE UNBOUNDED PRECEDING), vs.lock_id
             FROM contract_cash_states AS ccs, vault_states AS vs
             WHERE vs.transaction_id = ccs.transaction_id AND vs.output_index = ccs.output_index
                 AND vs.state_status = 0
