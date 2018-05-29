@@ -1,6 +1,7 @@
 package net.corda.core.internal
 
-import org.assertj.core.api.Assertions
+import net.corda.core.contracts.TimeWindow
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import java.util.stream.IntStream
@@ -8,29 +9,29 @@ import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class InternalUtilsTest {
+open class InternalUtilsTest {
     @Test
     fun `noneOrSingle on an empty collection`() {
         val collection = emptyList<Int>()
-        Assertions.assertThat(collection.noneOrSingle()).isNull()
-        Assertions.assertThat(collection.noneOrSingle { it == 1 }).isNull()
+        assertThat(collection.noneOrSingle()).isNull()
+        assertThat(collection.noneOrSingle { it == 1 }).isNull()
     }
 
     @Test
     fun `noneOrSingle on a singleton collection`() {
         val collection = listOf(1)
-        Assertions.assertThat(collection.noneOrSingle()).isEqualTo(1)
-        Assertions.assertThat(collection.noneOrSingle { it == 1 }).isEqualTo(1)
-        Assertions.assertThat(collection.noneOrSingle { it == 2 }).isNull()
+        assertThat(collection.noneOrSingle()).isEqualTo(1)
+        assertThat(collection.noneOrSingle { it == 1 }).isEqualTo(1)
+        assertThat(collection.noneOrSingle { it == 2 }).isNull()
     }
 
     @Test
     fun `noneOrSingle on a collection with two items`() {
         val collection = listOf(1, 2)
         assertFailsWith<IllegalArgumentException> { collection.noneOrSingle() }
-        Assertions.assertThat(collection.noneOrSingle { it == 1 }).isEqualTo(1)
-        Assertions.assertThat(collection.noneOrSingle { it == 2 }).isEqualTo(2)
-        Assertions.assertThat(collection.noneOrSingle { it == 3 }).isNull()
+        assertThat(collection.noneOrSingle { it == 1 }).isEqualTo(1)
+        assertThat(collection.noneOrSingle { it == 2 }).isEqualTo(2)
+        assertThat(collection.noneOrSingle { it == 3 }).isNull()
         assertFailsWith<IllegalArgumentException> { collection.noneOrSingle { it > 0 } }
     }
 
@@ -39,7 +40,7 @@ class InternalUtilsTest {
         val collection = listOf(1, 2, 1)
         assertFailsWith<IllegalArgumentException> { collection.noneOrSingle() }
         assertFailsWith<IllegalArgumentException> { collection.noneOrSingle { it == 1 } }
-        Assertions.assertThat(collection.noneOrSingle { it == 2 }).isEqualTo(2)
+        assertThat(collection.noneOrSingle { it == 2 }).isEqualTo(2)
     }
 
     @Test
@@ -88,4 +89,19 @@ class InternalUtilsTest {
         assertEquals(Array<String?>::class.java, b.javaClass)
         assertArrayEquals(arrayOf("one", "two", null), b)
     }
+
+    @Test
+    fun kotlinObjectInstance() {
+        assertThat(PublicObject::class.java.kotlinObjectInstance).isSameAs(PublicObject)
+        assertThat(PrivateObject::class.java.kotlinObjectInstance).isSameAs(PrivateObject)
+        assertThat(ProtectedObject::class.java.kotlinObjectInstance).isSameAs(ProtectedObject)
+        assertThat(TimeWindow::class.java.kotlinObjectInstance).isNull()
+        assertThat(PrivateClass::class.java.kotlinObjectInstance).isNull()
+    }
+
+    object PublicObject
+    private object PrivateObject
+    protected object ProtectedObject
+
+    private class PrivateClass
 }

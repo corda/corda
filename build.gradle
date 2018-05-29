@@ -37,7 +37,7 @@ buildscript {
      * https://issues.apache.org/jira/browse/ARTEMIS-1559
      */
     ext.artemis_version = '2.5.0'
-    ext.jackson_version = '2.9.3'
+    ext.jackson_version = '2.9.5'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
     ext.assertj_version = '3.8.0'
