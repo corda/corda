@@ -31,13 +31,13 @@ open class ArraySerializer(override val type: Type, factory: SerializerFactory) 
     // id to generate it properly (it will always return [[[Ljava.lang.type -> type[][][]
     // for example).
     //
-    // We *need* to retain knowledge for AMQP deserialization weather that lowest primitive
+    // We *need* to retain knowledge for AMQP deserialization whether that lowest primitive
     // was boxed or unboxed so just infer it recursively.
     private fun calcTypeName(type: Type, debugOffset : Int = 0): String {
         logger.trace { "${"".padStart(debugOffset, ' ') }  calcTypeName - ${type.typeName}" }
 
         return if (type.componentType().isArray()) {
-            // Special case handler for primitive byte arrays. This is needed because we an silently
+            // Special case handler for primitive byte arrays. This is needed because we can silently
             // coerce a byte[] to our own binary type. Normally, if the component type was itself an
             // array we'd keep walking down the chain but for byte[] stop here and use binary instead
             val typeName =  if (SerializerFactory.isPrimitive(type.componentType())) {
