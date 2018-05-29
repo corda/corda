@@ -19,7 +19,6 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Before
@@ -46,7 +45,7 @@ class NodeAttachmentStorageTest {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
 
         val dataSourceProperties = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProperties, DatabaseConfig(), rigorousMock())
+        database = configureDatabase(dataSourceProperties, DatabaseConfig(), { null }, { null })
         fs = Jimfs.newFileSystem(Configuration.unix())
         storage = NodeAttachmentService(MetricRegistry(), database = database).also { it.start() }
     }

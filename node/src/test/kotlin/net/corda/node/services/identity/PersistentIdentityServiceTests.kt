@@ -27,6 +27,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -54,8 +55,12 @@ class PersistentIdentityServiceTests {
 
     @Before
     fun setup() {
-        identityService = PersistentIdentityService(DEV_ROOT_CA.certificate)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), identityService)
+        val identityServiceRef = AtomicReference<IdentityService>()
+        // Do all of this in a database transaction so anything that might need a connection has one.
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(),
+                { name -> identityServiceRef.get().wellKnownPartyFromX500Name(name) },
+                { party -> identityServiceRef.get().wellKnownPartyFromAnonymous(party) })
+        identityService = PersistentIdentityService(DEV_ROOT_CA.certificate, database).also(identityServiceRef::set)
     }
 
     @After
@@ -199,7 +204,7 @@ class PersistentIdentityServiceTests {
         identityService.verifyAndRegisterIdentity(anonymousBob)
 
         // Create new identity service mounted onto same DB
-        val newPersistentIdentityService = PersistentIdentityService(DEV_ROOT_CA.certificate)
+        val newPersistentIdentityService = PersistentIdentityService(DEV_ROOT_CA.certificate, database)
 
         newPersistentIdentityService.assertOwnership(alice.party, anonymousAlice.party.anonymise())
         newPersistentIdentityService.assertOwnership(bob.party, anonymousBob.party.anonymise())

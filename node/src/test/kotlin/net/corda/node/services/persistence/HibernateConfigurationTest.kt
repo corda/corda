@@ -111,7 +111,7 @@ class HibernateConfigurationTest {
             }
         }
         val schemaService = NodeSchemaService()
-        database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService, schemaService)
+        database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
         database.transaction {
             hibernateConfig = database.hibernateConfig
 

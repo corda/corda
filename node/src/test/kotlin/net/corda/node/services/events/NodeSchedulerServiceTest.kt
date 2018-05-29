@@ -256,7 +256,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
     @Test
     fun `test that correct item is returned`() {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
-        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
+        val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
             val stateRef = StateRef(SecureHash.randomSHA256(), 0)
@@ -275,7 +275,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         val timeInTheFuture = mark + 1.days
         val stateRef = StateRef(SecureHash.zeroHash, 0)
 
-        configureDatabase(dataSourceProps, databaseConfig, rigorousMock()).use { database ->
+        configureDatabase(dataSourceProps, databaseConfig, { null }, { null }).use { database ->
             val scheduler = database.transaction {
                 createScheduler(database)
             }
@@ -297,7 +297,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         transactionStates[stateRef] = transactionStateMock(logicRef, timeInTheFuture)
         flows[logicRef] = flowLogic
 
-        configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock()).use { database ->
+        configureDatabase(dataSourceProps, DatabaseConfig(), { null }, { null }).use { database ->
             val newScheduler = database.transaction {
                 createScheduler(database)
             }
@@ -320,7 +320,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
         val logicRef = rigorousMock<FlowLogicRef>()
         val flowLogic = rigorousMock<FlowLogic<*>>()
 
-        configureDatabase(dataSourceProps, databaseConfig, rigorousMock()).use { database ->
+        configureDatabase(dataSourceProps, databaseConfig, { null }, { null }).use { database ->
             val scheduler = database.transaction {
                 createScheduler(database)
             }

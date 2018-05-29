@@ -19,7 +19,6 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -45,7 +44,7 @@ class DBTransactionStorageTests {
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceProps = makeTestDataSourceProperties()
-        database = configureDatabase(dataSourceProps, DatabaseConfig(), rigorousMock())
+        database = configureDatabase(dataSourceProps, DatabaseConfig(), { null }, { null })
         newTransactionStorage()
     }
 

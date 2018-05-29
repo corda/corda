@@ -20,6 +20,7 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.StartableByService
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -157,6 +158,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.collections.set
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
@@ -254,7 +256,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         initCertificate()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
-        return initialiseDatabasePersistence(schemaService, makeIdentityService(identity.certificate)).use {
+        val identityServiceRef = AtomicReference<IdentityService>()
+        val database = initialiseDatabasePersistence(schemaService, { name -> identityServiceRef.get().wellKnownPartyFromX500Name(name) }, { party -> identityServiceRef.get().wellKnownPartyFromAnonymous(party) })
+        val identityService = makeIdentityService(identity.certificate, database)
+        identityServiceRef.set(identityService)
+        return database.use {
             it.transaction {
                 // TODO The fact that we need to specify an empty list of notaries just to generate our node info looks
                 // like a design smell.
@@ -277,8 +283,15 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         initialiseJVMAgents()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null)
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
-        val identityService = makeIdentityService(identity.certificate)
 
+        val identityServiceRef = AtomicReference<IdentityService>()
+
+        // Do all of this in a database transaction so anything that might need a connection has one.
+        val database = initialiseDatabasePersistence(
+                schemaService,
+                { name -> identityServiceRef.get().wellKnownPartyFromX500Name(name) },
+                { party -> identityServiceRef.get().wellKnownPartyFromAnonymous(party) })
+        val identityService = makeIdentityService(identity.certificate, database).also(identityServiceRef::set)
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
 
         val networkParameters = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory).networkParameters
@@ -286,8 +299,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
 
-        // Do all of this in a database transaction so anything that might need a connection has one.
-        val (startedImpl, schedulerService) = initialiseDatabasePersistence(schemaService, identityService).transaction {
+        val (startedImpl, schedulerService) = database.transaction {
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService, database)
             val (keyPairs, nodeInfo) = updateNodeInfo(networkMapCache, networkMapClient, identity, identityKeyPair)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
@@ -764,10 +776,12 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     // Specific class so that MockNode can catch it.
     class DatabaseConfigurationException(msg: String) : CordaException(msg)
 
-    protected open fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
+    protected open fun initialiseDatabasePersistence(schemaService: SchemaService,
+                                                     wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
+                                                     wellKnownPartyFromAnonymous: (AbstractParty) -> Party?): CordaPersistence {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        val database = configureDatabase(props, configuration.database, identityService, schemaService)
+        val database = configureDatabase(props, configuration.database, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
         runOnStop += database::close
@@ -822,10 +836,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeIdentityService(identityCert: X509Certificate): PersistentIdentityService {
+    private fun makeIdentityService(identityCert: X509Certificate, database: CordaPersistence): PersistentIdentityService {
         val trustRoot = configuration.loadTrustStore().getCertificate(X509Utilities.CORDA_ROOT_CA)
         val nodeCa = configuration.loadNodeKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_CA)
-        return PersistentIdentityService(trustRoot, listOf(identityCert, nodeCa))
+        return PersistentIdentityService(trustRoot, database, listOf(identityCert, nodeCa))
     }
 
     protected abstract fun makeTransactionVerifierService(): TransactionVerifierService
@@ -1000,14 +1014,15 @@ internal class NetworkMapCacheEmptyException : Exception()
 
 fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
-                      identityService: IdentityService,
+                      wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
+                      wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService()): CordaPersistence {
     // Register the AbstractPartyDescriptor so Hibernate doesn't warn when encountering AbstractParty. Unfortunately
     // Hibernate warns about not being able to find a descriptor if we don't provide one, but won't use it by default
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
     // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
-    JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(identityService))
+    JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     val dataSource = DataSourceFactory.createDataSource(hikariProperties)
-    val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(identityService))
+    val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
     return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
 }
