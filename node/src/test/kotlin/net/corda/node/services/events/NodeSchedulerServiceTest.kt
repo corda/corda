@@ -10,8 +10,22 @@
 
 package net.corda.node.services.events
 
-import com.nhaarman.mockito_kotlin.*
-import net.corda.core.contracts.*
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.argForWhich
+import com.nhaarman.mockito_kotlin.doAnswer
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.eq
+import com.nhaarman.mockito_kotlin.same
+import com.nhaarman.mockito_kotlin.timeout
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.verifyNoMoreInteractions
+import com.nhaarman.mockito_kotlin.whenever
+import junit.framework.Assert.fail
+import net.corda.core.contracts.SchedulableState
+import net.corda.core.contracts.ScheduledActivity
+import net.corda.core.contracts.ScheduledStateRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
@@ -33,6 +47,7 @@ import net.corda.testing.internal.spectator
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.TestClock
 import org.junit.After
+import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
@@ -42,6 +57,9 @@ import org.slf4j.Logger
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 open class NodeSchedulerServiceTestBase {
@@ -78,16 +96,30 @@ open class NodeSchedulerServiceTestBase {
     protected val servicesForResolution = rigorousMock<ServicesForResolution>().also {
         doLookup(transactionStates).whenever(it).loadState(any())
     }
+
+    protected val traces = Collections.synchronizedList(mutableListOf<ScheduledStateRef>())
+
+    @Before
+    fun resetTraces() {
+        traces.clear()
+    }
+
     protected val log = spectator<Logger>().also {
         doReturn(false).whenever(it).isTraceEnabled
+        doAnswer {
+            traces += it.getArgument<ScheduledStateRef>(1)
+        }.whenever(it).trace(eq(NodeSchedulerService.schedulingAsNextFormat), any<Object>())
     }
 
-    protected fun assertWaitingFor(ssr: ScheduledStateRef, total: Int = 1) {
-        // The timeout is to make verify wait, which is necessary as we're racing the NSS thread i.e. we often get here just before the trace:
-        verify(log, timeout(5000).times(total)).trace(NodeSchedulerService.schedulingAsNextFormat, ssr)
+    protected fun assertWaitingFor(ssr: ScheduledStateRef) {
+        val endTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(5)
+        while (System.currentTimeMillis() < endTime) {
+            if (traces.lastOrNull() == ssr) return
+        }
+        fail("Was expecting to by waiting for $ssr")
     }
 
-    protected fun assertWaitingFor(event: Event, total: Int = 1) = assertWaitingFor(event.ssr, total)
+    protected fun assertWaitingFor(event: Event) = assertWaitingFor(event.ssr)
 
     protected fun assertStarted(flowLogic: FlowLogic<*>) {
         // Like in assertWaitingFor, use timeout to make verify wait as we often race the call to startFlow:
@@ -98,7 +130,7 @@ open class NodeSchedulerServiceTestBase {
 }
 
 class MockScheduledFlowRepository : ScheduledFlowRepository {
-    private val map = HashMap<StateRef, ScheduledStateRef>()
+    private val map = ConcurrentHashMap<StateRef, ScheduledStateRef>()
 
     override fun getLatest(lookahead: Int): List<Pair<StateRef, ScheduledStateRef>> {
         return map.values.sortedBy { it.scheduledAt }.map { Pair(it.ref, it) }
@@ -189,7 +221,7 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
         assertWaitingFor(event1)
         testClock.advanceBy(1.days)
         assertStarted(event1)
-        assertWaitingFor(event2, 2)
+        assertWaitingFor(event2)
         testClock.advanceBy(1.days)
         assertStarted(event2)
     }
@@ -210,7 +242,6 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
     fun `test activity due in the future and schedule another for same time`() {
         val eventA = schedule(mark + 1.days)
         val eventB = schedule(mark + 1.days)
-        assertWaitingFor(eventA)
         testClock.advanceBy(1.days)
         assertStarted(eventA)
         assertStarted(eventB)
