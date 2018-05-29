@@ -44,7 +44,7 @@ class SimpleMessageFilterService(val conf: BridgeConfiguration,
     }
 
     override fun start() {
-        statusSubscriber = statusFollower.activeChange.subscribe {
+        statusSubscriber = statusFollower.activeChange.subscribe({
             if (it) {
                 inboundSession = artemisConnectionService.started!!.sessionFactory.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
                 inboundProducer = inboundSession!!.createProducer()
@@ -55,7 +55,7 @@ class SimpleMessageFilterService(val conf: BridgeConfiguration,
                 inboundSession = null
             }
             stateHelper.active = it
-        }
+        }, { log.error("Error in state change", it) })
     }
 
     override fun stop() {

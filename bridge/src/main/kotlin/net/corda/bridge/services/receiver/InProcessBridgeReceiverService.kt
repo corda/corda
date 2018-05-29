@@ -40,7 +40,7 @@ class InProcessBridgeReceiverService(val conf: BridgeConfiguration,
     }
 
     override fun start() {
-        statusSubscriber = statusFollower.activeChange.subscribe {
+        statusSubscriber = statusFollower.activeChange.subscribe({
             if (it) {
                 val keyStoreBytes = sslConfiguration.sslKeystore.readAll()
                 val trustStoreBytes = sslConfiguration.trustStoreFile.readAll()
@@ -55,10 +55,10 @@ class InProcessBridgeReceiverService(val conf: BridgeConfiguration,
                 }
             }
             stateHelper.active = it
-        }
-        receiveSubscriber = amqpListenerService.onReceive.subscribe {
+        }, { log.error("Error in state change", it) })
+        receiveSubscriber = amqpListenerService.onReceive.subscribe({
             processMessage(it)
-        }
+        }, { log.error("Error in state change", it) })
     }
 
     private fun processMessage(receivedMessage: ReceivedMessage) {

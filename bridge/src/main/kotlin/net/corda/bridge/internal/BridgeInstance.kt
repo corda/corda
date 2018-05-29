@@ -151,9 +151,9 @@ class BridgeInstance(val conf: BridgeConfiguration,
             }
         }
         statusFollower = ServiceStateCombiner(listOf(bridgeAuditService, floatSupervisorService, bridgeSupervisorService).filterNotNull())
-        statusSubscriber = statusFollower!!.activeChange.subscribe {
+        statusSubscriber = statusFollower!!.activeChange.subscribe({
             stateHelper.active = it
-        }
+        }, { log.error("Error in state change", it) })
     }
 
     private fun startServices() {

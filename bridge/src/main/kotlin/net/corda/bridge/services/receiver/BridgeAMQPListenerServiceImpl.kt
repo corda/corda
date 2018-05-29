@@ -72,7 +72,7 @@ class BridgeAMQPListenerServiceImpl(val conf: BridgeConfiguration,
                 maxMessageSize,
                 conf.enableAMQPPacketTrace)
         onConnectSubscription = server.onConnection.subscribe(_onConnection)
-        onConnectAuditSubscription = server.onConnection.subscribe {
+        onConnectAuditSubscription = server.onConnection.subscribe({
             if (it.connected) {
                 auditService.successfulConnectionEvent(true, it.remoteAddress, it.remoteCert?.subjectDN?.name
                         ?: "", "Successful AMQP inbound connection")
@@ -80,7 +80,7 @@ class BridgeAMQPListenerServiceImpl(val conf: BridgeConfiguration,
                 auditService.failedConnectionEvent(true, it.remoteAddress, it.remoteCert?.subjectDN?.name
                         ?: "", "Failed AMQP inbound connection")
             }
-        }
+        }, { log.error("Connection event error", it) })
         onReceiveSubscription = server.onReceive.subscribe(_onReceive)
         amqpServer = server
         server.start()
@@ -122,9 +122,9 @@ class BridgeAMQPListenerServiceImpl(val conf: BridgeConfiguration,
     }
 
     override fun start() {
-        statusSubscriber = statusFollower.activeChange.subscribe {
+        statusSubscriber = statusFollower.activeChange.subscribe({
             stateHelper.active = it
-        }
+        }, { log.error("Error in state change", it) })
     }
 
     override fun stop() {

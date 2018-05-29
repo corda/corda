@@ -32,7 +32,6 @@ class DirectBridgeSenderService(val conf: BridgeConfiguration,
 
     private val statusFollower: ServiceStateCombiner
     private var statusSubscriber: Subscription? = null
-    private var connectionSubscriber: Subscription? = null
     private var listenerActiveSubscriber: Subscription? = null
     private var bridgeControlListener: BridgeControlListener = BridgeControlListener(conf, conf.outboundConfig!!.socksProxyConfig, maxMessageSize, { ForwardingArtemisMessageClient(artemisConnectionService) })
 
@@ -56,11 +55,11 @@ class DirectBridgeSenderService(val conf: BridgeConfiguration,
     }
 
     override fun start() {
-        statusSubscriber = statusFollower.activeChange.subscribe { ready ->
+        statusSubscriber = statusFollower.activeChange.subscribe({ ready ->
             if (ready) {
-                listenerActiveSubscriber = bridgeControlListener.activeChange.subscribe {
+                listenerActiveSubscriber = bridgeControlListener.activeChange.subscribe({
                     stateHelper.active = it
-                }
+                }, { log.error("Bridge event error", it) })
                 bridgeControlListener.start()
                 auditService.statusChangeEvent("Waiting for activation by at least one bridge control inbox registration")
             } else {
@@ -69,7 +68,7 @@ class DirectBridgeSenderService(val conf: BridgeConfiguration,
                 listenerActiveSubscriber = null
                 bridgeControlListener.stop()
             }
-        }
+        }, { log.error("Error in state change", it) })
     }
 
     override fun stop() {
@@ -77,8 +76,6 @@ class DirectBridgeSenderService(val conf: BridgeConfiguration,
         listenerActiveSubscriber?.unsubscribe()
         listenerActiveSubscriber = null
         bridgeControlListener.stop()
-        connectionSubscriber?.unsubscribe()
-        connectionSubscriber = null
         statusSubscriber?.unsubscribe()
         statusSubscriber = null
     }

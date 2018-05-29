@@ -42,15 +42,15 @@ class FloatSupervisorServiceImpl(val conf: BridgeConfiguration,
             null
         }
         statusFollower = ServiceStateCombiner(listOf(amqpListenerService, floatControlService).filterNotNull())
-        activeChange.subscribe {
+        activeChange.subscribe({
             consoleLogger.info("FloatSupervisorService: active = $it")
-        }
+        }, { log.error("Error in state change", it) })
     }
 
     override fun start() {
-        statusSubscriber = statusFollower.activeChange.subscribe {
+        statusSubscriber = statusFollower.activeChange.subscribe({
             stateHelper.active = it
-        }
+        }, { log.error("Error in state change", it) })
         amqpListenerService.start()
         floatControlService?.start()
     }
