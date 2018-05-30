@@ -50,4 +50,7 @@ abstract class AbstractCashFlow<out T>(override val progressTracker: ProgressTra
     abstract class AbstractRequest(val amount: Amount<Currency>)
 }
 
-class CashException(message: String, cause: Throwable) : FlowException(message, cause)
+// The internal constructor here allows the ThrowableSerializer to find a suitable constructor even if the `cause` field is removed using reflection by the RPC proxies.
+class CashException internal constructor(cause: Throwable?, message: String) : FlowException(message, cause) {
+    constructor(message: String, cause: Throwable) : this(cause, message)
+}
