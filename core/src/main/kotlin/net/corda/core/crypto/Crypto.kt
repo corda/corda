@@ -907,6 +907,13 @@ object Crypto {
         return signatureScheme.schemeCodeName in signatureSchemeMap
     }
 
+    /**
+     * Check if a public key satisfies algorithm specs.
+     * For instance, an ECC key should lie on the curve and not being point-at-infinity.
+     */
+    @JvmStatic
+    fun validatePublicKey(key: PublicKey): Boolean = validatePublicKey(findSignatureScheme(key), key)
+
     // Validate a key, by checking its algorithmic params.
     private fun validateKey(signatureScheme: SignatureScheme, key: Key): Boolean {
         return when (key) {
@@ -920,7 +927,8 @@ object Crypto {
     private fun validatePublicKey(signatureScheme: SignatureScheme, key: PublicKey): Boolean {
         return when (key) {
             is BCECPublicKey, is EdDSAPublicKey -> publicKeyOnCurve(signatureScheme, key)
-            is BCRSAPublicKey, is BCSphincs256PublicKey -> true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
+            is BCRSAPublicKey -> key.modulus.bitLength() >= 2048 // Although the recommended RSA key size is 3072, we accept any key >= 2048bits.
+            is BCSphincs256PublicKey -> true
             else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
         }
     }
