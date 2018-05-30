@@ -55,6 +55,7 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
     private val justGenerateNodeInfoArg = optionParser.accepts("just-generate-node-info",
             "Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit")
     private val bootstrapRaftClusterArg = optionParser.accepts("bootstrap-raft-cluster", "Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster.")
+    private val clearNetworkMapCache = optionParser.accepts("clear-network-map-cache", "Clears local copy of network map, on node startup it will be restored from server or file system.")
 
     override fun doParse(optionSet: OptionSet): CmdLineOptions {
         require(!optionSet.has(baseDirectoryArg) || !optionSet.has(configFileArg)) {
@@ -74,6 +75,7 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
         val networkRootTrustStorePassword = optionSet.valueOf(networkRootTrustStorePasswordArg)
         val unknownConfigKeysPolicy = optionSet.valueOf(unknownConfigKeysPolicy)
         val devMode = optionSet.has(devModeArg)
+        val clearNetworkMapCache = optionSet.has(clearNetworkMapCache)
 
         val registrationConfig = if (isRegistration) {
             requireNotNull(networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
@@ -94,7 +96,8 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
                 justGenerateNodeInfo,
                 bootstrapRaftCluster,
                 unknownConfigKeysPolicy,
-                devMode)
+                devMode,
+                clearNetworkMapCache)
     }
 }
 
@@ -111,7 +114,8 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val justGenerateNodeInfo: Boolean,
                           val bootstrapRaftCluster: Boolean,
                           val unknownConfigKeysPolicy: UnknownConfigKeysPolicy,
-                          val devMode: Boolean) {
+                          val devMode: Boolean,
+                          val clearNetworkMapCache: Boolean) {
     fun loadConfig(): Pair<Config, Try<NodeConfiguration>> {
         val rawConfig = ConfigHelper.loadConfig(
                 baseDirectory,
