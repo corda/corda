@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Add check at startup that all persisted Checkpoints are compatible with the current version of the code.
+
 * ``ServiceHub`` and ``CordaRPCOps`` can now safely be used from multiple threads without incurring in database transaction problems.
 
 * Doorman and NetworkMap url's can now be configured individually rather than being assumed to be
