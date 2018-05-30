@@ -21,6 +21,7 @@ import org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor
 import org.hibernate.type.descriptor.sql.BlobTypeDescriptor
 import org.hibernate.type.descriptor.sql.VarbinaryTypeDescriptor
 import java.lang.management.ManagementFactory
+import java.lang.reflect.Field
 import java.sql.Connection
 import javax.management.ObjectName
 import javax.persistence.AttributeConverter
@@ -58,6 +59,9 @@ class HibernateConfiguration(
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
 
         schemas.forEach { schema ->
+            schema.fieldFromOtherMappedSchema().forEach {
+                logger.warn("Cross reference from mapped schema '${schema.javaClass}' to mapped schema '${it.type.enclosingClass}' by field '$it' type '${it.type}'")
+            }
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
@@ -181,4 +185,22 @@ class HibernateConfiguration(
             return "corda-wrapper-binary"
         }
     }
+}
+
+internal fun MappedSchema.fieldFromOtherMappedSchema() : Set<Field> {
+    val fieldsFromOtherMappedSchema = mutableSetOf<Field>()
+    mappedTypes.forEach { mappedType ->
+        for (field in mappedType.declaredFields) {
+            val type = field.type
+            if (type.enclosingClass != null
+                    && MappedSchema::class.java.isAssignableFrom(type.enclosingClass)
+                    && type.enclosingClass != javaClass
+                    && field.declaredAnnotations.filter {
+                        x -> x.toString().startsWith("@javax.persistence.") && x !is javax.persistence.Transient
+                    }.isNotEmpty()) {
+                fieldsFromOtherMappedSchema.add(field)
+            }
+        }
+    }
+    return fieldsFromOtherMappedSchema
 }
