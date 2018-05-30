@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Removed -xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
+
 * Shell now kills an ongoing flow when CTRL+C is pressed in the terminal.
 
 * ``ServiceHub`` and ``CordaRPCOps`` can now safely be used from multiple threads without incurring in database transaction problems.
