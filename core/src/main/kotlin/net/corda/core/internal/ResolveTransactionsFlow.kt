@@ -1,6 +1,7 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.NonDeterministic
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -22,6 +23,7 @@ import kotlin.math.min
  *
  * @return a list of verified [SignedTransaction] objects, in a depth-first order.
  */
+@NonDeterministic
 class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
                               private val otherSide: FlowSession) : FlowLogic<Unit>() {
 
@@ -38,6 +40,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
         this.signedTransaction = signedTransaction
     }
 
+    @NonDeterministic
     companion object {
         private fun dependencyIDs(stx: SignedTransaction) = stx.inputs.map { it.txhash }.toSet()
 

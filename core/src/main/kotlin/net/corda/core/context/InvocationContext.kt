@@ -1,5 +1,7 @@
 package net.corda.core.context
 
+import net.corda.core.Deterministic
+import net.corda.core.NonDeterministic
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
@@ -21,36 +23,42 @@ data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val
         /**
          * Creates an [InvocationContext] with a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.
          */
+        @NonDeterministic
         @JvmStatic
         fun newInstance(origin: InvocationOrigin, trace: Trace = Trace.newInstance(), actor: Actor? = null, externalTrace: Trace? = null, impersonatedActor: Actor? = null) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.RPC] origin.
          */
+        @NonDeterministic
         @JvmStatic
         fun rpc(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Peer] origin.
          */
+        @NonDeterministic
         @JvmStatic
         fun peer(party: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(InvocationOrigin.Peer(party), trace, null, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Service] origin.
          */
+        @NonDeterministic
         @JvmStatic
         fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(InvocationOrigin.Service(serviceClassName, owningLegalIdentity), trace, null, externalTrace)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Scheduled] origin.
          */
+        @NonDeterministic
         @JvmStatic
         fun scheduled(scheduledState: ScheduledStateRef, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(InvocationOrigin.Scheduled(scheduledState), trace, null, externalTrace)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Shell] origin.
          */
+        @NonDeterministic
         @JvmStatic
         fun shell(trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(InvocationOrigin.Shell, trace, null, externalTrace)
     }
@@ -64,6 +72,7 @@ data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val
 /**
  * Models an initiator in Corda, can be a user, a service, etc.
  */
+@Deterministic
 @CordaSerializable
 data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdentity: CordaX500Name) {
 
@@ -75,6 +84,7 @@ data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdenti
     /**
      * Actor id.
      */
+    @Deterministic
     @CordaSerializable
     data class Id(val value: String)
 }
@@ -92,6 +102,7 @@ sealed class InvocationOrigin {
     /**
      * Origin was an RPC call.
      */
+    @Deterministic
     data class RPC(private val actor: Actor) : InvocationOrigin() {
         override fun principal() = Principal { actor.id.value }
     }
@@ -99,6 +110,7 @@ sealed class InvocationOrigin {
     /**
      * Origin was a message sent by a [Peer].
      */
+    @Deterministic
     data class Peer(val party: CordaX500Name) : InvocationOrigin() {
         override fun principal() = Principal { party.toString() }
     }
@@ -106,6 +118,7 @@ sealed class InvocationOrigin {
     /**
      * Origin was a Corda Service.
      */
+    @Deterministic
     data class Service(val serviceClassName: String, val owningLegalIdentity: CordaX500Name) : InvocationOrigin() {
         override fun principal() = Principal { serviceClassName }
     }
@@ -113,6 +126,7 @@ sealed class InvocationOrigin {
     /**
      * Origin was a scheduled activity.
      */
+    @Deterministic
     data class Scheduled(val scheduledState: ScheduledStateRef) : InvocationOrigin() {
         override fun principal() = Principal { "Scheduler" }
     }
@@ -121,6 +135,7 @@ sealed class InvocationOrigin {
     /**
      * Origin was the Shell.
      */
+    @Deterministic
     object Shell : InvocationOrigin() {
         override fun principal() = Principal { "Shell User" }
     }
@@ -129,5 +144,6 @@ sealed class InvocationOrigin {
 /**
  * Authentication / Authorisation Service ID.
  */
+@Deterministic
 @CordaSerializable
 data class AuthServiceId(val value: String)

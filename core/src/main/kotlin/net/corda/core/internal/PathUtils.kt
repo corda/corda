@@ -1,5 +1,7 @@
+@file:NonDeterministic
 package net.corda.core.internal
 
+import net.corda.core.NonDeterministic
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.deserialize
 import java.io.*

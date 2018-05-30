@@ -2,12 +2,14 @@
 
 package net.corda.serialization.internal.carpenter
 
+import net.corda.core.NonDeterministic
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.amqp.CompositeType
 import net.corda.serialization.internal.amqp.RestrictedType
 import net.corda.serialization.internal.amqp.Field as AMQPField
 import net.corda.serialization.internal.amqp.Schema as AMQPSchema
 
+@NonDeterministic
 fun AMQPSchema.carpenterSchema(classloader: ClassLoader): CarpenterMetaSchema {
     val rtn = CarpenterMetaSchema.newInstance()
 
@@ -41,6 +43,7 @@ fun AMQPField.typeAsString() = if (type == "*") requires[0] else type
  *  @param force by default a schema is not added to [carpenterSchemas] if it already exists
  *  on the class path. For testing purposes schema generation can be forced
  */
+@NonDeterministic
 fun CompositeType.carpenterSchema(classloader: ClassLoader,
                                   carpenterSchemas: CarpenterMetaSchema,
                                   force: Boolean = false) {
@@ -91,6 +94,7 @@ fun CompositeType.carpenterSchema(classloader: ClassLoader,
 // carpenting for, an enum, but actually trying to split out RestrictedType into something
 // more polymorphic is hard. Additionally, to conform to AMQP we're really serialising
 // this as a list so...
+@NonDeterministic
 fun RestrictedType.carpenterSchema(carpenterSchemas: CarpenterMetaSchema) {
     val m: MutableMap<String, Field> = mutableMapOf()
 

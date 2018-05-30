@@ -1,10 +1,12 @@
 package net.corda.core.internal
 
+import net.corda.core.NonDeterministic
 import net.corda.core.contracts.*
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 
+@NonDeterministic
 object ContractUpgradeUtils {
     fun <OldState : ContractState, NewState : ContractState> assembleUpgradeTx(
             stateAndRef: StateAndRef<OldState>,

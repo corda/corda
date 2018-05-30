@@ -1,5 +1,7 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.Deterministic
+import net.corda.core.NonDeterministicStub
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.amqp.Symbol
@@ -15,6 +17,7 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
 /**
  * Serialization / deserialization of certain supported [Map] types.
  */
+@Deterministic
 class MapSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = (declaredType as? DeserializedParameterizedType)
             ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType), factory.classloader)
@@ -130,6 +133,7 @@ private fun Class<*>.checkHashMap() {
  * The [WeakHashMap] class does not exist within the DJVM, and so we need
  * to isolate this reference.
  */
+@NonDeterministicStub
 private fun Class<*>.checkWeakHashMap() {
     if (WeakHashMap::class.java.isAssignableFrom(this)) {
         throw IllegalArgumentException("Weak references with map types not supported. Suggested fix: "

@@ -1,5 +1,8 @@
+@file:Deterministic
 package net.corda.core.utilities
 
+import net.corda.core.Deterministic
+import net.corda.core.NonDeterministic
 import net.corda.core.internal.concurrent.get
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
@@ -125,6 +128,7 @@ private class TransientProperty<out T> internal constructor(private val initiali
 fun <T> Collection<T>.toNonEmptySet(): NonEmptySet<T> = NonEmptySet.copyOf(this)
 
 /** Same as [Future.get] except that the [ExecutionException] is unwrapped. */
+@NonDeterministic
 fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
     get(timeout)
 } catch (e: ExecutionException) {

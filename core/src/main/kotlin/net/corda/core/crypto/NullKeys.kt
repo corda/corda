@@ -1,9 +1,11 @@
 package net.corda.core.crypto
 
+import net.corda.core.Deterministic
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 
+@Deterministic
 object NullKeys {
     @CordaSerializable
     object NullPublicKey : PublicKey, Comparable<PublicKey> {

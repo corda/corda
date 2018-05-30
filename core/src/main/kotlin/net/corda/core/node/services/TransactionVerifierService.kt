@@ -1,6 +1,7 @@
 package net.corda.core.node.services
 
 import net.corda.core.DoNotImplement
+import net.corda.core.NonDeterministic
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.transactions.LedgerTransaction
 
@@ -9,6 +10,7 @@ import net.corda.core.transactions.LedgerTransaction
  * @suppress
  */
 @DoNotImplement
+@NonDeterministic
 interface TransactionVerifierService {
     /**
      * @param transaction The transaction to be verified.

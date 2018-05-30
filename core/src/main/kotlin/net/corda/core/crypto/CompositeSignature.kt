@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.Deterministic
 import net.corda.core.serialization.deserialize
 import java.io.ByteArrayOutputStream
 import java.security.*
@@ -8,6 +9,7 @@ import java.security.spec.AlgorithmParameterSpec
 /**
  * Dedicated class for storing a set of signatures that comprise [CompositeKey].
  */
+@Deterministic
 class CompositeSignature : Signature(SIGNATURE_ALGORITHM) {
     companion object {
         const val SIGNATURE_ALGORITHM = "COMPOSITESIG"

@@ -1,5 +1,8 @@
+@file:Deterministic
 package net.corda.core.internal
 
+import net.corda.core.Deterministic
+import net.corda.core.NonDeterministic
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
@@ -23,8 +26,10 @@ const val UNKNOWN_UPLOADER = "unknown"
 fun isUploaderTrusted(uploader: String?) =
         uploader?.let { it in listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER, TEST_UPLOADER) } ?: false
 
+@Deterministic
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     companion object {
+        @NonDeterministic
         fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
             return {
                 val a = serviceHub.attachments.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))

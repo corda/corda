@@ -1,9 +1,11 @@
 @file:JvmName("InternalUtils")
-
+@file:Deterministic
 package net.corda.core.internal
 
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
+import net.corda.core.Deterministic
+import net.corda.core.NonDeterministic
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
@@ -108,6 +110,7 @@ fun <T> List<T>.noneOrSingle(): T? {
 }
 
 /** Returns a random element in the list, or `null` if empty */
+@NonDeterministic
 fun <T> List<T>.randomOrNull(): T? {
     return when (size) {
         0 -> null
@@ -123,7 +126,7 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
     return i
 }
 
-fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
+@NonDeterministic fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
 /** Same as [InputStream.readBytes] but also closes the stream. */
 fun InputStream.readFully(): ByteArray = use { it.readBytes() }
@@ -154,6 +157,7 @@ fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a +
  * Returns an Observable that buffers events until subscribed.
  * @see UnicastSubject
  */
+@NonDeterministic
 fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
     val subject = UnicastSubject.create<T>()
     val subscription = subscribe(subject)
@@ -161,6 +165,7 @@ fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
 }
 
 /** Copy an [Observer] to multiple other [Observer]s. */
+@NonDeterministic
 fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
     val subject = PublishSubject.create<T>()
     subject.subscribe(this)
@@ -169,6 +174,7 @@ fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
 }
 
 /** Executes the given code block and returns a [Duration] of how long it took to execute in nanosecond precision. */
+@NonDeterministic
 inline fun elapsedTime(block: () -> Unit): Duration {
     val start = System.nanoTime()
     block()
@@ -181,6 +187,7 @@ fun <T> Logger.logElapsedTime(label: String, body: () -> T): T = logElapsedTime(
 
 // TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
 // returns in the IRSSimulationTest. If not, commit the inline back.
+@NonDeterministic
 fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
     // Use nanoTime as it's monotonic.
     val now = System.nanoTime()
@@ -208,6 +215,7 @@ fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {
     return InputStreamAndHash(bytes.inputStream(), bytes.sha256())
 }
 
+@Deterministic
 data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHash.SHA256) {
     companion object {
         /**
@@ -215,6 +223,7 @@ data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHa
          * called "z" that contains the given content byte repeated the given number of times.
          * Note that a slightly bigger than numOfExpectedBytes size is expected.
          */
+        @NonDeterministic
         fun createInMemoryTestZip(numOfExpectedBytes: Int, content: Byte): InputStreamAndHash {
             require(numOfExpectedBytes > 0)
             val baos = ByteArrayOutputStream()
@@ -370,12 +379,12 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+@NonDeterministic fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
     return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
+@NonDeterministic fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
 
 /** Convenience method to get the package name of a class literal. */
 val KClass<*>.packageName: String get() = java.packageName
@@ -391,12 +400,14 @@ inline val Member.isStatic: Boolean get() = Modifier.isStatic(modifiers)
 
 inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
 
-fun URI.toPath(): Path = Paths.get(this)
+@NonDeterministic fun URI.toPath(): Path = Paths.get(this)
 
-fun URL.toPath(): Path = toURI().toPath()
+@NonDeterministic fun URL.toPath(): Path = toURI().toPath()
 
+@NonDeterministic
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 
+@NonDeterministic
 fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String>): ByteArray {
     return openHttpConnection().run {
         doOutput = true
@@ -409,20 +420,24 @@ fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String
     }
 }
 
+@NonDeterministic
 fun HttpURLConnection.checkOkResponse() {
     if (responseCode != HTTP_OK) {
         throw IOException("Response Code $responseCode: $errorMessage")
     }
 }
 
+@get:NonDeterministic
 val HttpURLConnection.errorMessage: String? get() = errorStream?.let { it.use { it.reader().readText() } }
 
+@NonDeterministic
 inline fun <reified T : Any> HttpURLConnection.responseAs(): T {
     checkOkResponse()
     return inputStream.readObject()
 }
 
 /** Analogous to [Thread.join]. */
+@NonDeterministic
 fun ExecutorService.join() {
     shutdown() // Do not change to shutdownNow, tests use this method to assert the executor has no more tasks.
     while (!awaitTermination(1, TimeUnit.SECONDS)) {

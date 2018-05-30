@@ -1,6 +1,7 @@
 package net.corda.core.identity
 
 import com.google.common.collect.ImmutableSet
+import net.corda.core.Deterministic
 import net.corda.core.internal.LegalNameValidator
 import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.internal.x500Name
@@ -30,6 +31,7 @@ import javax.security.auth.x500.X500Principal
  * attribute type.
  */
 @CordaSerializable
+@Deterministic
 data class CordaX500Name(val commonName: String?,
                          val organisationUnit: String?,
                          val organisation: String,

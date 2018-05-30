@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp.custom
 
+import net.corda.core.Deterministic
 import net.corda.core.internal.uncheckedCast
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.MapSerializer
@@ -30,5 +31,6 @@ class EnumSetSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Enu
         }
     }
 
+    @Deterministic
     data class EnumSetProxy(val clazz: Class<*>, val elements: List<Any>)
 }

@@ -1,5 +1,6 @@
 package net.corda.core.utilities
 
+import net.corda.core.Deterministic
 import java.util.*
 import java.util.function.Consumer
 import java.util.stream.Stream
@@ -7,6 +8,7 @@ import java.util.stream.Stream
 /**
  * An immutable ordered non-empty set.
  */
+@Deterministic
 class NonEmptySet<T> private constructor(private val elements: Set<T>) : Set<T> by elements {
     companion object {
         /**

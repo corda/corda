@@ -1,7 +1,9 @@
 @file:JvmName("EncodingUtils")
+@file:Deterministic
 
 package net.corda.core.utilities
 
+import net.corda.core.Deterministic
 import net.corda.core.crypto.Base58
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.hash

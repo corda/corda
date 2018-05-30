@@ -1,6 +1,7 @@
 package net.corda.core.node
 
 import net.corda.core.DoNotImplement
+import net.corda.core.NonDeterministic
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
@@ -22,6 +23,7 @@ import java.time.Clock
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
  * forms ready for verification.
  */
+@NonDeterministic
 @DoNotImplement
 interface ServicesForResolution {
     /**
@@ -93,6 +95,7 @@ enum class StatesToRecord {
  *
  * In unit test environments, some of those services may be missing or mocked out.
  */
+@NonDeterministic
 interface ServiceHub : ServicesForResolution {
     // NOTE: Any services exposed to flows (public view) need to implement [SerializeAsToken] or similar to avoid
     // their internal state from being serialized in checkpoints.

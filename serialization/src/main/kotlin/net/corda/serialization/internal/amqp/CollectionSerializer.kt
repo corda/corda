@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.Deterministic
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.NonEmptySet
@@ -14,6 +15,7 @@ import kotlin.collections.LinkedHashSet
 /**
  * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
  */
+@Deterministic
 class CollectionSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType
             ?: DeserializedParameterizedType.make(SerializerFactory.nameForType(declaredType))

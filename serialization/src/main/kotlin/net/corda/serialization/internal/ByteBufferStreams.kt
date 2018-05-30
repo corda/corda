@@ -1,7 +1,9 @@
 @file:JvmName("ByteBufferStreams")
-
+@file:NonDeterministic
 package net.corda.serialization.internal
 
+import net.corda.core.Deterministic
+import net.corda.core.NonDeterministic
 import net.corda.core.internal.LazyPool
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -22,6 +24,7 @@ fun <T> byteArrayOutput(task: (ByteBufferOutputStream) -> T): ByteArray {
     }
 }
 
+@Deterministic
 class ByteBufferInputStream(val byteBuffer: ByteBuffer) : InputStream() {
     @Throws(IOException::class)
     override fun read(): Int {
@@ -43,6 +46,7 @@ class ByteBufferInputStream(val byteBuffer: ByteBuffer) : InputStream() {
     }
 }
 
+@Deterministic
 class ByteBufferOutputStream(size: Int) : ByteArrayOutputStream(size) {
     companion object {
         private val ensureCapacity = ByteArrayOutputStream::class.java.getDeclaredMethod("ensureCapacity", Int::class.java).apply {

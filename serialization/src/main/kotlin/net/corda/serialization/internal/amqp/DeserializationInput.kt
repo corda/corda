@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.Deterministic
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.EncodingWhitelist
 import net.corda.core.serialization.SerializationContext
@@ -27,6 +28,7 @@ data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
  * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
+@Deterministic
 class DeserializationInput @JvmOverloads constructor(private val serializerFactory: SerializerFactory,
                                                      private val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist) {
     private val objectHistory: MutableList<Any> = mutableListOf()

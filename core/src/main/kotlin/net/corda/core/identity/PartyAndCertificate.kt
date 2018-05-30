@@ -1,5 +1,6 @@
 package net.corda.core.identity
 
+import net.corda.core.Deterministic
 import net.corda.core.internal.CertRole
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.internal.validate
@@ -13,6 +14,7 @@ import java.security.cert.*
  * not part of the identifier themselves.
  */
 @CordaSerializable
+@Deterministic
 class PartyAndCertificate(val certPath: CertPath) {
     @Transient
     val certificate: X509Certificate

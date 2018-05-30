@@ -1,6 +1,8 @@
 package net.corda.core.transactions
 
 import net.corda.core.CordaInternal
+import net.corda.core.Deterministic
+import net.corda.core.NonDeterministic
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
@@ -41,9 +43,13 @@ import java.util.function.Predicate
  * </ul></p>
  */
 @CordaSerializable
-class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt = PrivacySalt()) : TraversableTransaction(componentGroups) {
+@Deterministic
+class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt) : TraversableTransaction(componentGroups) {
+    @NonDeterministic
+    constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.", ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
+    @NonDeterministic
     constructor(inputs: List<StateRef>,
                 attachments: List<SecureHash>,
                 outputs: List<TransactionState<ContractState>>,
@@ -85,6 +91,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    @NonDeterministic
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
         return toLedgerTransactionInternal(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
@@ -254,6 +261,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
     }
 
+    @NonDeterministic
     override fun toString(): String {
         val buf = StringBuilder()
         buf.appendln("Transaction:")

@@ -1,0 +1,46 @@
+plugins {
+    id 'java-gradle-plugin'
+    id 'jacoco'
+}
+apply plugin: 'kotlin'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+}
+
+gradlePlugin {
+    plugins {
+        jarFilterPlugin {
+            id = 'net.corda.gradle.jar-filter'
+            implementationClass = 'net.corda.gradle.jarfilter.JarFilterPlugin'
+        }
+    }
+}
+
+configurations {
+    jacocoRuntime
+}
+
+processTestResources {
+    filesMatching('**/build.gradle') {
+        expand(['kotlin_version': kotlin_version])
+    }
+    filesMatching('gradle.properties') {
+        expand(['jacocoAgent': configurations.jacocoRuntime.asPath.replace('\\', '/'),
+                'buildDir': buildDir])
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation project(':jarfilter:kotlin-metadata')
+    implementation "org.ow2.asm:asm:$asm_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit"
+    testImplementation "org.jetbrains.kotlin:kotlin-reflect"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "junit:junit:$junit_version"
+    testImplementation project(':jarfilter:unwanteds')
+    jacocoRuntime "org.jacoco:org.jacoco.agent:${jacoco.toolVersion}:runtime"
+}

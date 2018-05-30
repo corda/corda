@@ -1,5 +1,7 @@
 package net.corda.core.crypto
 
+import net.corda.core.Deterministic
+import net.corda.core.NonDeterministic
 import net.corda.core.crypto.internal.*
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
@@ -58,6 +60,7 @@ import javax.crypto.spec.SecretKeySpec
  * <li>SPHINCS256_SHA512 (SPHINCS-256 hash-based signature scheme using SHA512 as hash algorithm).
  * </ul>
  */
+@Deterministic
 object Crypto {
     /**
      * RSA PKCS#1 signature scheme using SHA256 for message hashing.
@@ -613,6 +616,7 @@ object Crypto {
      * @return a KeyPair for the requested signature scheme code name.
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
+    @NonDeterministic
     @JvmStatic
     fun generateKeyPair(schemeCodeName: String): KeyPair = generateKeyPair(findSignatureScheme(schemeCodeName))
 
@@ -623,6 +627,7 @@ object Crypto {
      * @return a new [KeyPair] for the requested [SignatureScheme].
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
+    @NonDeterministic
     @JvmOverloads
     @JvmStatic
     fun generateKeyPair(signatureScheme: SignatureScheme = DEFAULT_SIGNATURE_SCHEME): KeyPair {
@@ -789,6 +794,7 @@ object Crypto {
      * @return a new [KeyPair] from an entropy input.
      * @throws IllegalArgumentException if the requested signature scheme is not supported for KeyPair generation using an entropy input.
      */
+    @NonDeterministic
     @JvmStatic
     fun deriveKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
         return when (signatureScheme) {
@@ -804,6 +810,7 @@ object Crypto {
      * @param entropy a [BigInteger] value.
      * @return a new [KeyPair] from an entropy input.
      */
+    @NonDeterministic
     @JvmStatic
     fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 

@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.core.Deterministic
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.TransactionSignature
@@ -12,6 +13,7 @@ import java.security.SignatureException
 import java.util.*
 
 /** An interface for transactions containing signatures, with logic for signature verification. */
+@Deterministic
 @DoNotImplement
 interface TransactionWithSignatures : NamedByHash {
     /**

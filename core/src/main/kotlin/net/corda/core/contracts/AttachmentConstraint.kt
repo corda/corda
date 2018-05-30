@@ -1,5 +1,6 @@
 package net.corda.core.contracts
 
+import net.corda.core.Deterministic
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
 import net.corda.core.crypto.SecureHash
@@ -16,6 +17,7 @@ interface AttachmentConstraint {
 }
 
 /** An [AttachmentConstraint] where [isSatisfiedBy] always returns true. */
+@Deterministic
 object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment) = true
 }
@@ -25,6 +27,7 @@ object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
  * The state protected by this constraint can only be used in a transaction created with that version of the jar.
  * And a receiving node will only accept it if a cordapp with that hash has (is) been deployed on the node.
  */
+@Deterministic
 data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
@@ -38,6 +41,7 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
  * See: [net.corda.core.node.NetworkParameters.whitelistedContractImplementations]
  * It allows for centralized control over the cordapps that can be used.
  */
+@Deterministic
 object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
@@ -57,6 +61,7 @@ object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
  * intent of this class is that it should be replaced by a correct [HashAttachmentConstraint] and verify against an
  * actual [Attachment].
  */
+@Deterministic
 object AutomaticHashConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         throw UnsupportedOperationException("Contracts cannot be satisfied by an AutomaticHashConstraint placeholder")

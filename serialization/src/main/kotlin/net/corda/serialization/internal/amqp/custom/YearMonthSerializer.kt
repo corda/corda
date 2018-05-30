@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp.custom
 
+import net.corda.core.Deterministic
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.YearMonth
@@ -12,5 +13,6 @@ class YearMonthSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Y
 
     override fun fromProxy(proxy: YearMonthProxy): YearMonth = YearMonth.of(proxy.year, proxy.month.toInt())
 
+    @Deterministic
     data class YearMonthProxy(val year: Int, val month: Byte)
 }

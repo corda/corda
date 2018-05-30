@@ -1,6 +1,7 @@
 package net.corda.core.cordapp
 
 import net.corda.core.DoNotImplement
+import net.corda.core.NonDeterministic
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.schemas.MappedSchema
@@ -31,6 +32,7 @@ import java.net.URL
  * @property jarHash Hash of the jar
  */
 @DoNotImplement
+@NonDeterministic
 interface Cordapp {
     val name: String
     val contractClassNames: List<String>

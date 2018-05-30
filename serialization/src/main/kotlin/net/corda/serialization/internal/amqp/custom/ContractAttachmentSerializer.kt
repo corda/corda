@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp.custom
 
+import net.corda.core.Deterministic
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
@@ -29,5 +30,6 @@ class ContractAttachmentSerializer(factory: SerializerFactory) : CustomSerialize
         return ContractAttachment(proxy.attachment, proxy.contract, proxy.contracts, proxy.uploader)
     }
 
+    @Deterministic
     data class ContractAttachmentProxy(val attachment: Attachment, val contract: ContractClassName, val contracts: Set<ContractClassName>, val uploader: String?)
 }

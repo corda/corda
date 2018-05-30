@@ -1,0 +1,37 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '$kotlin_version'
+    id 'net.corda.gradle.jar-filter'
+}
+
+sourceSets {
+    main {
+        kotlin {
+            srcDir files(
+                '../resources/test/delete-static-function/kotlin',
+                '../resources/test/annotations/kotlin'
+            )
+        }
+    }
+}
+
+repositories {
+    mavenLocal()
+    jcenter()
+}
+
+dependencies {
+    compile 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    compileOnly files('../../unwanteds/build/libs/unwanteds.jar')
+}
+
+jar {
+    baseName = 'delete-static-function'
+}
+
+import net.corda.gradle.jarfilter.JarFilterTask
+task jarFilter(type: JarFilterTask) {
+    jars jar
+    annotations {
+        forDelete = ["net.corda.gradle.jarfilter.DeleteMe"]
+    }
+}

@@ -1,16 +1,20 @@
 package net.corda.serialization.internal
 
+import net.corda.core.Deterministic
 import net.corda.core.serialization.ClassWhitelist
 import java.util.*
 
+@Deterministic
 interface MutableClassWhitelist : ClassWhitelist {
     fun add(entry: Class<*>)
 }
 
+@Deterministic
 object AllWhitelist : ClassWhitelist {
     override fun hasListed(type: Class<*>): Boolean = true
 }
 
+@Deterministic
 class BuiltInExceptionsWhitelist : ClassWhitelist {
     companion object {
         private val packageName = "^(?:java|kotlin)(?:[.]|$)".toRegex()
@@ -43,6 +47,7 @@ sealed class AbstractMutableClassWhitelist(private val whitelist: MutableSet<Str
 class TransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWhitelist(Collections.synchronizedSet(mutableSetOf()), delegate)
 
 // TODO: Need some concept of from which class loader
+@Deterministic
 class GlobalTransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWhitelist(whitelist, delegate) {
     companion object {
         private val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())

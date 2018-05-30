@@ -1,0 +1,21 @@
+apply plugin: 'kotlin'
+
+evaluationDependsOn(':jdk8u-deterministic')
+def jdkTask = project(':jdk8u-deterministic').assemble
+def deterministic_jdk_home = project(':jdk8u-deterministic').jdk_home
+
+tasks.withType(JavaCompile) {
+    dependsOn jdkTask
+    options.compilerArgs << '-bootclasspath' << "$deterministic_jdk_home/jre/lib/rt.jar".toString()
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+    dependsOn jdkTask
+    kotlinOptions.jdkHome = deterministic_jdk_home
+}
+
+dependencies {
+    compileOnly project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
+    compileOnly project(path: ':serialization-deterministic', configuration: 'runtimeArtifacts')
+    compileOnly "junit:junit:$junit_version"
+}

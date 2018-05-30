@@ -2,6 +2,7 @@ package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeToken
+import net.corda.core.Deterministic
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.isPublic
 import net.corda.core.serialization.ClassWhitelist
@@ -87,6 +88,7 @@ fun <T : Any> propertiesForSerialization(
  * @property getter the method of a class that returns a fields value. Determined by
  * locating a function named getXyz for the property named in field as xyz.
  */
+@Deterministic
 data class PropertyDescriptor(var field: Field?, var setter: Method?, var getter: Method?, var iser: Method?) {
     override fun toString() = StringBuilder("").apply {
         appendln("Property - ${field?.name ?: "null field"}\n")

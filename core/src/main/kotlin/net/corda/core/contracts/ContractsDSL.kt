@@ -1,7 +1,8 @@
 @file:JvmName("ContractsDSL")
-
+@file:Deterministic
 package net.corda.core.contracts
 
+import net.corda.core.Deterministic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast

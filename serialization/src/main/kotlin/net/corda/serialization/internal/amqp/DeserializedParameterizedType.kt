@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
+import net.corda.core.Deterministic
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -11,6 +12,7 @@ import java.util.*
  * Implementation of [ParameterizedType] that we can actually construct, and a parser from the string representation
  * of the JDK implementation which we use as the textual format in the AMQP schema.
  */
+@Deterministic
 class DeserializedParameterizedType(private val rawType: Class<*>, private val params: Array<out Type>, private val ownerType: Type? = null) : ParameterizedType {
     init {
         if (params.isEmpty()) {

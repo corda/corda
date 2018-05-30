@@ -2,6 +2,7 @@ package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
+import net.corda.core.NonDeterministic
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -177,6 +178,7 @@ interface VaultService {
     /**
      * Provide a [CordaFuture] for when a [StateRef] is consumed, which can be very useful in building tests.
      */
+    @NonDeterministic
     fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update<ContractState>> {
         return updates.filter { it.consumed.any { it.ref == ref } }.toFuture()
     }
