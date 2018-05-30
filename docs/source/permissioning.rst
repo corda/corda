@@ -75,6 +75,8 @@ certificates must obey the following restrictions:
 
     * ECDSA using the NIST P-256 curve (secp256r1)
 
+    * ECDSA using the Koblitz k1 curve (secp256k1)
+
     * RSA with 3072-bit key size
 
 .. note:: Corda's ``X509Utilities`` show how to generate the required public/private keypairs and certificates using
