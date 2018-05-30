@@ -51,7 +51,10 @@ Unreleased
     The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialise an ``X509Certificate``
     back.
   * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
-  * ``SignedTransaction`` is serialised into its ``txBits`` and ``signatures`` and can be deserialised back
+  * ``WireTransaction`` now nicely outputs into its components: ``id``, ``notary``, ``inputs``, ``attachments``, ``outputs``,
+    ``commands``, ``timeWindow`` and ``privacySalt``. This can be deserialised back.
+  * ``SignedTransaction`` is serialised into ``wire`` (i.e. currently only ``WireTransaction`` tested) and ``signatures``,
+    and can be deserialised back.
 
 * ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
   then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``

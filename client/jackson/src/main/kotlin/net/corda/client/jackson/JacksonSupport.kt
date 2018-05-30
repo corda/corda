@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.*
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
@@ -22,9 +23,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.identity.*
-import net.corda.core.internal.CertRole
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.*
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
@@ -37,7 +36,6 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parsePublicKeyBase58
 import net.corda.core.utilities.toBase58String
 import org.bouncycastle.asn1.x509.KeyPurposeId
-import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.nio.charset.StandardCharsets.UTF_8
 import java.security.PublicKey
@@ -169,13 +167,28 @@ object JacksonSupport {
                 addSerializer(Date::class.java, DateSerializer)
             })
             registerModule(CordaModule())
-            registerModule(KotlinModule())
+            registerModule(KotlinModule().apply {
+                setDeserializerModifier(KotlinObjectDeserializerModifier)
+            })
 
             addMixIn(BigDecimal::class.java, BigDecimalMixin::class.java)
             addMixIn(X500Principal::class.java, X500PrincipalMixin::class.java)
             addMixIn(X509Certificate::class.java, X509CertificateMixin::class.java)
             addMixIn(CertPath::class.java, CertPathMixin::class.java)
         }
+    }
+
+    private object KotlinObjectDeserializerModifier : BeanDeserializerModifier() {
+        override fun modifyDeserializer(config: DeserializationConfig,
+                                        beanDesc: BeanDescription,
+                                        deserializer: JsonDeserializer<*>): JsonDeserializer<*> {
+            val objectInstance = beanDesc.beanClass.kotlinObjectInstance
+            return if (objectInstance != null) KotlinObjectDeserializer(objectInstance) else deserializer
+        }
+    }
+
+    private class KotlinObjectDeserializer<T>(private val objectInstance: T) : JsonDeserializer<T>() {
+        override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): T = objectInstance
     }
 
     @ToStringSerialize
@@ -210,7 +223,7 @@ object JacksonSupport {
 
         val keyPurposeIds = KeyPurposeId::class.java
                 .fields
-                .filter { Modifier.isStatic(it.modifiers) && it.type == KeyPurposeId::class.java }
+                .filter { it.isStatic && it.type == KeyPurposeId::class.java }
                 .associateBy({ (it.get(null) as KeyPurposeId).id }, { it.name })
 
         val knownExtensions = setOf(
@@ -235,7 +248,7 @@ object JacksonSupport {
                 writeObjectField("issuerUniqueID", value.issuerUniqueID)
                 writeObjectField("subjectUniqueID", value.subjectUniqueID)
                 writeObjectField("keyUsage", value.keyUsage?.asList()?.mapIndexedNotNull { i, flag -> if (flag) keyUsages[i] else null })
-                writeObjectField("extendedKeyUsage", value.extendedKeyUsage.map { keyPurposeIds.getOrDefault(it, it) })
+                writeObjectField("extendedKeyUsage", value.extendedKeyUsage.map { keyPurposeIds[it] ?: it })
                 jsonObject("basicConstraints") {
                     val isCa = value.basicConstraints != -1
                     writeBooleanField("isCA", isCa)
