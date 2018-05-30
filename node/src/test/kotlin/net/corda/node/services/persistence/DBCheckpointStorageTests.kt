@@ -6,8 +6,9 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
+import net.corda.node.internal.CheckpointIncompatibleException
+import net.corda.node.internal.CheckpointVerifier
 import net.corda.node.internal.configureDatabase
-import net.corda.node.services.api.CheckpointIncompatibleException
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.node.services.statemachine.SubFlowVersion
@@ -160,7 +161,7 @@ class DBCheckpointStorageTests {
         }
 
         database.transaction {
-            checkpointStorage.verifyCheckpointsCompatible(emptyList(), 1)
+            CheckpointVerifier.verifyCheckpointsCompatible(checkpointStorage, emptyList(), 1)
         }
 
         database.transaction {
@@ -170,7 +171,7 @@ class DBCheckpointStorageTests {
 
         Assertions.assertThatThrownBy {
             database.transaction {
-                checkpointStorage.verifyCheckpointsCompatible(emptyList(), 1)
+                CheckpointVerifier.verifyCheckpointsCompatible(checkpointStorage, emptyList(), 1)
             }
         }.isInstanceOf(CheckpointIncompatibleException::class.java)
     }

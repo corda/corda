@@ -32,15 +32,4 @@ interface CheckpointStorage {
      * underlying database connection is closed, so any processing should happen before it is closed.
      */
     fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>>
-
-    /**
-     * Verifies that all Checkpoints stored in the db can be safely loaded with the currently installed version.
-     * @throws CheckpointIncompatibleException if any offending checkpoint is found.
-     */
-    fun verifyCheckpointsCompatible(currentCordapps: List<Cordapp>, platformVersion: Int)
 }
-
-/**
- * Thrown at startup, if a checkpoint is found that has a different version than the currently installed version
- */
-class CheckpointIncompatibleException(val flowClass: String) : Exception(flowClass)

@@ -48,8 +48,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
 
         // If no CorDapp found then it is a Core flow.
-        internal fun createflowCorDappInfo(cordapps: List<Cordapp>, platformVersion: Int): SubFlowVersion {
-            return cordapps.singleOrNull()?.let { SubFlowVersion.CorDappFlow(it.name, it.jarHash) }
+        internal fun createSubFlowVersion(cordapp: Cordapp?, platformVersion: Int): SubFlowVersion {
+            return cordapp?.let { SubFlowVersion.CorDappFlow(platformVersion, it.name, it.jarHash) }
                     ?: SubFlowVersion.CoreFlow(platformVersion)
         }
 
@@ -106,7 +106,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if (value) field = value else throw IllegalArgumentException("Can only set to true")
         }
 
-    /**
+     /**
      * Processes an event by creating the associated transition and executing it using the given executor.
      * Try to avoid using this directly, instead use [processEventsUntilFlowIsResumed] or [processEventImmediately]
      * instead.
@@ -244,7 +244,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     override fun <R> subFlow(subFlow: FlowLogic<R>): R {
         processEventImmediately(
-                Event.EnterSubFlow(subFlow.javaClass, flowCorDappInfo(subFlow)),
+                Event.EnterSubFlow(subFlow.javaClass,
+                        createSubFlowVersion(
+                               serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion)),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         )
@@ -257,15 +259,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnExit = true
             )
         }
-    }
-
-    private fun <A> flowCorDappInfo(flowLogic: FlowLogic<A>): SubFlowVersion {
-        // Find the CorDapp for flowLogic.
-        val cordapps = serviceHub.cordappProvider.cordapps.filter { cordapp ->
-            cordapp.allFlows.any { flow -> flowLogic.javaClass == flow }
-        }
-
-        return createflowCorDappInfo(cordapps, serviceHub.myInfo.platformVersion)
     }
 
     @Suspendable

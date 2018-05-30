@@ -44,6 +44,17 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
     val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
     val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
 
+    // Create a map of the CorDapps that provide a Flow. If a flow is not in this map it is a Core flow.
+    // It also checks that there is only one CorDapp containing that flow class
+    val flowCordappMap: Map<Class<out FlowLogic<*>>, Cordapp> by lazy {
+        cordapps.flatMap { corDapp -> corDapp.allFlows.map { flow -> flow to corDapp } }
+                .groupBy { it.first }
+                .mapValues {
+                    require(it.value.size == 1) { "There are multiple CorDapp jars on the classpath for flow ${it.value.first().first.name}: ${it.value.map { it.second.name }.joinToString()}." }
+                    it.value.single().second
+                }
+    }
+
     init {
         if (cordappJarPaths.isEmpty()) {
             logger.info("No CorDapp paths provided")
@@ -144,16 +155,18 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                 logger.info("Generating a test-only CorDapp of classes discovered for package $scanPackage in $url: $cordappJar")
                 JarOutputStream(cordappJar.outputStream()).use { jos ->
                     val scanDir = url.toPath()
-                    scanDir.walk { it.forEach {
-                        val entryPath = "$resource/${scanDir.relativize(it).toString().replace('\\', '/')}"
-                        val time = FileTime.from(Instant.EPOCH)
-                        val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-                        jos.putNextEntry(entry)
-                        if (it.isRegularFile()) {
-                            it.copyTo(jos)
+                    scanDir.walk {
+                        it.forEach {
+                            val entryPath = "$resource/${scanDir.relativize(it).toString().replace('\\', '/')}"
+                            val time = FileTime.from(Instant.EPOCH)
+                            val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
+                            jos.putNextEntry(entry)
+                            if (it.isRegularFile()) {
+                                it.copyTo(jos)
+                            }
+                            jos.closeEntry()
                         }
-                        jos.closeEntry()
-                    } }
+                    }
                 }
                 cordappJar
             }

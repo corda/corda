@@ -238,6 +238,7 @@ sealed class ErrorState {
  * Stored per [SubFlow]. Contains metadata around the version of the code at the Checkpointing moment.
  */
 sealed class SubFlowVersion {
-    data class CoreFlow(val platformVersion: Int) : SubFlowVersion()
-    data class CorDappFlow(val corDappName: String, val corDappHash: SecureHash) : SubFlowVersion()
+    abstract val platformVersion: Int
+    data class CoreFlow(override val platformVersion: Int) : SubFlowVersion()
+    data class CorDappFlow(override val platformVersion: Int, val corDappName: String, val corDappHash: SecureHash) : SubFlowVersion()
 }

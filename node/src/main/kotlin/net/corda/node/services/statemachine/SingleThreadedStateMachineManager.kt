@@ -33,7 +33,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
-import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createflowCorDappInfo
+import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
 import net.corda.node.services.statemachine.interceptors.*
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.services.statemachine.transitions.StateMachineConfiguration
@@ -522,9 +522,9 @@ class SingleThreadedStateMachineManager(
         flowLogic.stateMachine = flowStateMachineImpl
         val frozenFlowLogic = (flowLogic as FlowLogic<*>).serialize(context = checkpointSerializationContext!!)
 
-        val flowCorDappInfo = flowCorDappInfo(flowLogic, invocationContext)
+        val flowCorDappVersion= createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
 
-        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, deduplicationSeed, flowCorDappInfo).getOrThrow()
+        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, deduplicationSeed, flowCorDappVersion).getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
                 checkpoint = initialCheckpoint,
@@ -544,22 +544,6 @@ class SingleThreadedStateMachineManager(
         totalStartedFlows.inc()
         addAndStartFlow(flowId, Flow(flowStateMachineImpl, resultFuture))
         return startedFuture.map { flowStateMachineImpl as FlowStateMachine<A> }
-    }
-
-    private fun <A> flowCorDappInfo(flowLogic: FlowLogic<A>, invocationContext: InvocationContext): SubFlowVersion {
-        // Find the CorDapp.
-        val cordapps = serviceHub.cordappProvider.cordapps.filter { cordapp ->
-            val flows = when (invocationContext.origin) {
-                is InvocationOrigin.RPC -> cordapp.rpcFlows
-                is InvocationOrigin.Peer -> cordapp.initiatedFlows
-                is InvocationOrigin.Scheduled -> cordapp.schedulableFlows
-                is InvocationOrigin.Service -> cordapp.serviceFlows
-                is InvocationOrigin.Shell -> cordapp.rpcFlows
-            }
-            flows.any { flow -> flowLogic.javaClass == flow }
-        }
-
-        return createflowCorDappInfo(cordapps, serviceHub.myInfo.platformVersion)
     }
 
     private fun deserializeCheckpoint(serializedCheckpoint: SerializedBytes<Checkpoint>): Checkpoint? {
