@@ -70,7 +70,7 @@ class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retryS
                 } else { "" }) +
                 """)
             SELECT row.transaction_id, row.output_index, row.pennies, row.total, row.lock_id
-            FROM row where row.total <= ? + row.pennies"""
+            FROM row where row.total < ? + row.pennies"""
 
         // Use prepared statement for protection against SQL Injection
         connection.prepareStatement(selectJoin).use { statement ->

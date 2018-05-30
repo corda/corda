@@ -8,6 +8,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.issuedBy
 import net.corda.testing.core.*
@@ -48,6 +49,39 @@ class CashSelectionTest : IntegrationTest() {
             val availableBalanceAfterExit = node.rpc.getCashBalance(issuedAmount.token)
 
             assertThat(availableBalanceAfterExit).isEqualTo(issuedAmount - exitedAmount)
+        }
+    }
+
+    @Test
+    fun `dont return extra coins if the selected amount has been reached`() {
+        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+            val node = startNode().getOrThrow() as InProcessImpl
+            val nodeIdentity = node.services.myInfo.singleIdentity()
+
+            //issue $1 coin twice
+            val issuer = nodeIdentity.ref(1)
+            repeat(2, {
+                val coin = 1.DOLLARS.issuedBy(issuer)
+                val issuance = TransactionBuilder(null as Party?)
+                issuance.addOutputState(TransactionState(Cash.State(coin, nodeIdentity), Cash.PROGRAM_ID, defaultNotaryIdentity))
+                issuance.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+
+                val transaction = node.services.signInitialTransaction(issuance, nodeIdentity.owningKey)
+                node.database.transaction {
+                    node.services.recordTransactions(transaction)
+                }
+            })
+
+            val exitedAmount = 1.DOLLARS
+
+            val builder = TransactionBuilder(notary = null)
+            val exitStates = node.database.transaction {
+                AbstractCashSelection
+                        .getInstance { node.services.jdbcSession().metaData }
+                        .unconsumedCashStatesForSpending(node.services, exitedAmount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
+            }
+            val returnedCoinsNumber = 1
+            assertThat(exitStates.size).isEqualTo(returnedCoinsNumber)
         }
     }
 

@@ -63,7 +63,7 @@ class CashSelectionOracleImpl : AbstractCashSelection(maxRetries = 16, retrySlee
                  } else { "" }) +
                 """)
             SELECT transaction_id, output_index, pennies, total, lock_id
-            FROM entry where total <= ? + pennies"""
+            FROM entry where total < ? + pennies"""
 
         // Use prepared statement for protection against SQL Injection (http://www.h2database.com/html/advanced.html#sql_injection)
         connection.prepareStatement(selectJoin).use { statement ->
