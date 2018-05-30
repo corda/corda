@@ -1,6 +1,17 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+
 package net.corda.finance.flows
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.withoutIssuer
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.TransactionBuilder
@@ -53,29 +64,56 @@ class CashSelectionTest : IntegrationTest() {
     }
 
     @Test
+    fun `cash selection sees states added in the same transaction`() {
+        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+            val node = startNode().getOrThrow() as InProcessImpl
+            val nodeIdentity = node.services.myInfo.singleIdentity()
+            val issuer = nodeIdentity.ref(1)
+            val coin = 1.DOLLARS.issuedBy(issuer)
+            val exitedAmount = 1.DOLLARS
+            val issuance = TransactionBuilder(null as Party?)
+            issuance.addOutputState(TransactionState(Cash.State(coin, nodeIdentity), Cash.PROGRAM_ID, defaultNotaryIdentity))
+            issuance.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+
+            //insert ans select in the same transaction
+            val exitStates = node.database.transaction {
+
+                val transaction = node.services.signInitialTransaction(issuance, nodeIdentity.owningKey)
+                node.services.recordTransactions(transaction)
+
+                val builder = TransactionBuilder(notary = null)
+                AbstractCashSelection
+                        .getInstance { node.services.jdbcSession().metaData }
+                        .unconsumedCashStatesForSpending(node.services, exitedAmount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
+            }
+            val returnedCoinsNumber = 1
+            assertThat(exitStates.size).isEqualTo(returnedCoinsNumber)
+        }
+    }
+
+    @Test
     fun `dont return extra coins if the selected amount has been reached`() {
         driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val node = startNode().getOrThrow() as InProcessImpl
             val nodeIdentity = node.services.myInfo.singleIdentity()
 
-            //issue $1 coin twice
             val issuer = nodeIdentity.ref(1)
-            repeat(2, {
-                val coin = 1.DOLLARS.issuedBy(issuer)
-                val issuance = TransactionBuilder(null as Party?)
-                issuance.addOutputState(TransactionState(Cash.State(coin, nodeIdentity), Cash.PROGRAM_ID, defaultNotaryIdentity))
-                issuance.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
 
-                val transaction = node.services.signInitialTransaction(issuance, nodeIdentity.owningKey)
-                node.database.transaction {
-                    node.services.recordTransactions(transaction)
-                }
-            })
-
-            val exitedAmount = 1.DOLLARS
-
-            val builder = TransactionBuilder(notary = null)
             val exitStates = node.database.transaction {
+                //issue $1 coin twice
+                repeat(2, {
+                    val coin = 1.DOLLARS.issuedBy(issuer)
+                    val issuance = TransactionBuilder(null as Party?)
+                    issuance.addOutputState(TransactionState(Cash.State(coin, nodeIdentity), Cash.PROGRAM_ID, defaultNotaryIdentity))
+                    issuance.addCommand(Cash.Commands.Issue(), nodeIdentity.owningKey)
+
+                    val transaction = node.services.signInitialTransaction(issuance, nodeIdentity.owningKey)
+
+                    node.services.recordTransactions(transaction)
+                })
+
+                val exitedAmount = 1.DOLLARS
+                val builder = TransactionBuilder(notary = null)
                 AbstractCashSelection
                         .getInstance { node.services.jdbcSession().metaData }
                         .unconsumedCashStatesForSpending(node.services, exitedAmount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
@@ -105,12 +143,12 @@ class CashSelectionTest : IntegrationTest() {
 
             val issuedAmount = coins.reduce { sum, element -> sum + element }.withoutIssuer()
 
-            val availableBalance = node.rpc.getCashBalance(issuedAmount.token)
+                val availableBalance = node.rpc.getCashBalance(issuedAmount.token)
 
-            assertThat(availableBalance).isEqualTo(issuedAmount)
+                assertThat(availableBalance).isEqualTo(issuedAmount)
 
             val exitedAmount = 3.01.DOLLARS
-            node.rpc.startFlow(::CashExitFlow, exitedAmount, OpaqueBytes.of(1)).returnValue.getOrThrow()
+                node.rpc.startFlow(::CashExitFlow, exitedAmount, OpaqueBytes.of(1)).returnValue.getOrThrow()
 
             val availableBalanceAfterExit = node.rpc.getCashBalance(issuedAmount.token)
 

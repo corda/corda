@@ -123,6 +123,7 @@ class CordaPersistence(
     fun createSession(): Connection {
         // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
         _contextDatabase.set(this)
+        currentDBSession().flush()
         return contextTransaction.connection
     }
 
