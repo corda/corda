@@ -250,7 +250,7 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
             catch (e: NotSerializableException ) {
                 val message = "Error running transforms for $type: ${e.message}"
                 logger.error(message)
-                logger.trace(e.toString())
+                logger.trace(e)
                 throw NotSerializableException(message)
             }
         }
