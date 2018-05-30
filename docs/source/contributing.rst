@@ -130,16 +130,20 @@ Merging the changes back into Corda
 
 1. Create a pull request from your fork to the ``master`` branch of the Corda repo
 
-2. In the PR comments box, complete the pull-request checklist:
+2. In the PR comments box:
 
-  * [ ] Have you run the unit, integration and smoke tests as described here? https://docs.corda.net/head/testing.html
-  * [ ] If you added/changed public APIs, did you write/update the JavaDocs?
-  * [ ] If the changes are of interest to application developers, have you added them to the changelog, and potentially
-    release notes?
-  * [ ] If you are contributing for the first time, please read the agreement in CONTRIBUTING.md now and add to this
-    Pull Request that you agree to it.
+  * Complete the pull-request checklist:
 
-3. In the PR comments box, also add a clear description of the purpose for the PR
+    * [ ] Have you run the unit, integration and smoke tests as described here? https://docs.corda.net/head/testing.html
+    * [ ] If you added/changed public APIs, did you write/update the JavaDocs?
+    * [ ] If the changes are of interest to application developers, have you added them to the changelog, and potentially
+      release notes?
+    * [ ] If you are contributing for the first time, please read the agreement in CONTRIBUTING.md now and add to this
+      Pull Request that you agree to it.
+
+  * Add a clear description of the purpose of the PR
+  
+  * Add the following statement to confirm that your contribution is your own original work: "I hereby certify that my contribution is in accordance with the Developer Certificate of Origin (https://github.com/corda/corda/blob/master/CONTRIBUTING.md#developer-certificate-of-origin)."
 
 4. Request a review from a member of the Corda platform team via the `#design channel <http://slack.corda.net/>`_
 
