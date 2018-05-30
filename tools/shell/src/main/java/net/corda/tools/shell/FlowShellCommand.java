@@ -10,9 +10,12 @@ import org.crsh.cli.*;
 import org.crsh.command.*;
 import org.crsh.text.*;
 import org.crsh.text.ui.TableElement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+import static java.util.stream.Collectors.joining;
 import static net.corda.tools.shell.InteractiveShell.runFlowByNameFragment;
 import static net.corda.tools.shell.InteractiveShell.runStateMachinesView;
 
@@ -24,12 +27,16 @@ import static net.corda.tools.shell.InteractiveShell.runStateMachinesView;
                 "flow constructors (the right one is picked automatically) are then specified using the same syntax as for the run command."
 )
 public class FlowShellCommand extends InteractiveShellCommand {
+
+    private static Logger logger = LoggerFactory.getLogger(FlowShellCommand.class);
+
     @Command
     @Usage("Start a (work)flow on the node. This is how you can change the ledger.")
     public void start(
             @Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name,
             @Usage("The data to pass as input") @Argument(unquote = false) List<String> input
     ) {
+        logger.info("Executing command \"flow start {} {}\",", name, input.stream().collect(joining(" ")));
         startFlow(name, input, out, ops(), ansiProgressRenderer(), objectMapper());
     }
 
@@ -37,6 +44,7 @@ public class FlowShellCommand extends InteractiveShellCommand {
     @Command
     @Usage("watch information about state machines running on the node with result information")
     public void watch(InvocationContext<TableElement> context) throws Exception {
+        logger.info("Executing command \"flow watch\".");
         runStateMachinesView(out, ops());
     }
 
@@ -57,6 +65,7 @@ public class FlowShellCommand extends InteractiveShellCommand {
     @Command
     @Usage("list flows that user can start")
     public void list(InvocationContext<String> context) throws Exception {
+        logger.info("Executing command \"flow list\".");
         for (String name : ops().registeredFlows()) {
             context.provide(name + System.lineSeparator());
         }

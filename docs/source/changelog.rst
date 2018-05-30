@@ -7,6 +7,12 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Fixed an issue with ``CashException`` not being able to deserialise after the introduction of AMQP for RPC.
+
+* Removed -xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
+
+* Shell now kills an ongoing flow when CTRL+C is pressed in the terminal.
+
 * Add check at startup that all persisted Checkpoints are compatible with the current version of the code.
 
 * ``ServiceHub`` and ``CordaRPCOps`` can now safely be used from multiple threads without incurring in database transaction problems.
@@ -49,7 +55,10 @@ Unreleased
     The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialise an ``X509Certificate``
     back.
   * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
-  * ``SignedTransaction`` is serialised into its ``txBits`` and ``signatures`` and can be deserialised back
+  * ``WireTransaction`` now nicely outputs into its components: ``id``, ``notary``, ``inputs``, ``attachments``, ``outputs``,
+    ``commands``, ``timeWindow`` and ``privacySalt``. This can be deserialised back.
+  * ``SignedTransaction`` is serialised into ``wire`` (i.e. currently only ``WireTransaction`` tested) and ``signatures``,
+    and can be deserialised back.
 
 * ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
   then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``
@@ -106,6 +115,10 @@ Unreleased
   (even if JPA annotation nullable=false was absent).
   In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
 
+* Adding a public method to check if a public key satisfies Corda recommended algorithm specs, `Crypto.validatePublicKey(java.security.PublicKey)`.
+  For instance, this method will check if an ECC key lies on a valid curve or if an RSA key is >= 2048bits. This might
+  be required for extra key validation checks, e.g., for Doorman to check that a CSR key meets the minimum security requirements.
+
 .. _changelog_v3.1:
 
 Version 3.1
@@ -127,7 +140,6 @@ Version 3.1
 
 * Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
   all the needed network data, waiting in the background for network map to become available.
-
 
 .. _changelog_v3:
 

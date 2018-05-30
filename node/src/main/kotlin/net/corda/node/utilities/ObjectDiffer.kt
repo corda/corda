@@ -1,7 +1,7 @@
 package net.corda.node.utilities
 
+import net.corda.core.internal.isStatic
 import java.lang.reflect.Method
-import java.lang.reflect.Modifier
 import java.lang.reflect.Type
 import java.time.Instant
 
@@ -131,7 +131,7 @@ object ObjectDiffer {
     private fun getFieldFoci(obj: Any) : List<FieldFocus> {
         val foci = ArrayList<FieldFocus>()
         for (method in obj.javaClass.declaredMethods) {
-            if (Modifier.isStatic(method.modifiers)) {
+            if (method.isStatic) {
                 continue
             }
             if (method.name.startsWith("get") && method.name.length > 3 && method.parameterCount == 0) {

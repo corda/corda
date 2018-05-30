@@ -40,11 +40,9 @@ task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').co
         caplets = ['ExplorerCaplet']
 
         // JVM configuration:
-        // - Constrain to small heap sizes to ease development on low end devices.
         // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
         //
-        // If you change these flags, please also update Driver.kt
-        jvmArgs = ['-Xmx512m', '-XX:+UseG1GC']
+        jvmArgs = ['-XX:+UseG1GC']
     }
 }
 
