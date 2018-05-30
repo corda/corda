@@ -179,7 +179,7 @@ internal class CordaRPCOpsImpl(
         try {
             return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
         } catch (e: IllegalArgumentException) {
-            throw RejectedCommandException("Node is shutting down. Cannot start new flows throw RPC.")
+            throw RejectedCommandException("Node is shutting down. Cannot start new flows through RPC.")
         }
     }
 
