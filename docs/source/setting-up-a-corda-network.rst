@@ -44,6 +44,7 @@ The most important fields regarding network configuration are:
 * ``rpcAddress``: The address to which Artemis will bind for RPC calls.
 * ``webAddress``: The address the webserver should bind. Note that the port must be distinct from that of ``p2pAddress``
   and ``rpcAddress`` if they are on the same machine.
+* ``notary.serviceLegalName``: The name of the notary service, required to setup distributed notaries with the network-bootstrapper.
 
 Bootstrapping the network
 ~~~~~~~~~~~~~~~~~~~~~~~~~

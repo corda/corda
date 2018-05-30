@@ -125,6 +125,9 @@ absolute path to the node's base directory.
 
     :validating: Boolean to determine whether the notary is a validating or non-validating one.
 
+    :serviceLegalName: If the node is part of a distributed cluster, specify the legal name of the cluster. At runtime, Corda
+    checks whether this name matches the name of the certificate of the notary cluster.
+
     :raft: If part of a distributed Raft cluster specify this config object, with the following settings:
 
         :nodeAddress: The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
