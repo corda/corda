@@ -21,7 +21,6 @@ import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.EnterpriseConfiguration
 import net.corda.node.services.config.MutualExclusionConfiguration
 import net.corda.node.services.config.NodeConfiguration
@@ -30,7 +29,9 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.bridging.BridgeControl
+import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.zookeeper.ZkClient
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -40,8 +41,7 @@ import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.curator.test.TestingServer
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -273,6 +273,7 @@ class BridgeIntegrationTest {
         config.createBridgeKeyStores(DUMMY_BANK_A_NAME)
         val (artemisServer, artemisClient) = createArtemis()
         val (artemisServer2, artemisClient2) = createArtemis2()
+        val (artemisServer3, artemisClient3) = createDummyPeerArtemis()
         try {
             artemisServer2.start()
             artemisClient2.start()
@@ -286,6 +287,12 @@ class BridgeIntegrationTest {
             assertEquals(true, stateFollower.next())
             assertEquals(true, bridge.active)
             assertEquals(true, serverListening("localhost", 10005))
+            var bridgeTimeout = 0
+            while (artemisServer3.serverControl.connectionCount < 2 && bridgeTimeout < 10) { // wait for outgoing bridge to start
+                ++bridgeTimeout
+                Thread.sleep(1000L)
+            }
+            assertTrue(bridgeTimeout < 10)
             artemisClient.stop() // Stop artemis to force failover to second choice
             artemisServer.stop()
             assertEquals(false, stateFollower.next())
@@ -301,6 +308,8 @@ class BridgeIntegrationTest {
             artemisServer.stop()
             artemisClient2.stop()
             artemisServer2.stop()
+            artemisClient3.stop()
+            artemisServer3.stop()
         }
     }
 
@@ -323,6 +332,7 @@ class BridgeIntegrationTest {
         assertEquals(NetworkHostAndPort("0.0.0.0", 10005), floatConfig.inboundConfig!!.listeningAddress)
         val (artemisServer, artemisClient) = createArtemis()
         val (artemisServer2, artemisClient2) = createArtemis2()
+        val (artemisServer3, artemisClient3) = createDummyPeerArtemis()
         try {
             installBridgeControlResponder(artemisClient)
             val bridge = BridgeInstance(bridgeConfig, BridgeVersionInfo(1, "1.1", "Dummy", "Test"))
@@ -340,6 +350,12 @@ class BridgeIntegrationTest {
             assertEquals(true, bridge.active)
             assertEquals(true, float.active)
             assertEquals(true, serverListening("localhost", 10005)) // now activated
+            var bridgeTimeout = 0
+            while (artemisServer3.serverControl.connectionCount < 2 && bridgeTimeout < 10) { // wait for outgoing bridge to start
+                ++bridgeTimeout
+                Thread.sleep(1000L)
+            }
+            assertTrue(bridgeTimeout < 10)
             artemisClient.stop() // Stop artemis to force failover to second choice
             artemisServer.stop()
             assertEquals(false, bridgeStateFollower.next())
@@ -372,7 +388,10 @@ class BridgeIntegrationTest {
         } finally {
             artemisClient.stop()
             artemisServer.stop()
+            artemisClient2.stop()
             artemisServer2.stop()
+            artemisClient3.stop()
+            artemisServer3.stop()
         }
     }
 
@@ -385,7 +404,6 @@ class BridgeIntegrationTest {
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(NetworkHostAndPort("localhost", 11005)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
-            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration
         }
         val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 11005), MAX_MESSAGE_SIZE)
@@ -409,7 +427,6 @@ class BridgeIntegrationTest {
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(NetworkHostAndPort("localhost", 12005)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
-            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration
         }
         val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 12005), MAX_MESSAGE_SIZE)
@@ -417,14 +434,41 @@ class BridgeIntegrationTest {
         return Pair(artemisServer, artemisClient)
     }
 
+    private fun createDummyPeerArtemis(): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
+        val originalCertsFolderPath = tempFolder.root.toPath() / "certificates"
+        val folderPath = tempFolder.root.toPath() / "artemis3"
+        val newCertsFolderPath = folderPath / "certificates"
+        newCertsFolderPath.createDirectories()
+        (originalCertsFolderPath / "truststore.jks").copyToDirectory(newCertsFolderPath)
+        (originalCertsFolderPath / "sslkeystore.jks").copyToDirectory(newCertsFolderPath)
+        val artemisConfig = rigorousMock<AbstractNodeConfiguration>().also {
+            doReturn(folderPath).whenever(it).baseDirectory
+            doReturn(DUMMY_BANK_A_NAME).whenever(it).myLegalName
+            doReturn("trustpass").whenever(it).trustStorePassword
+            doReturn("cordacadevpass").whenever(it).keyStorePassword
+            doReturn(NetworkHostAndPort("localhost", 7890)).whenever(it).p2pAddress
+            doReturn(null).whenever(it).jmxMonitoringHttpPort
+            doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration
+        }
+        val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 7890), MAX_MESSAGE_SIZE)
+        val artemisClient = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", 7890), MAX_MESSAGE_SIZE)
+        artemisServer.start()
+        artemisClient.start()
+        artemisClient.started!!.session.createQueue(SimpleString("${P2P_PREFIX}12345"), RoutingType.ANYCAST, SimpleString("${P2P_PREFIX}12345"), true)
+        return Pair(artemisServer, artemisClient)
+    }
+
     private fun installBridgeControlResponder(artemisClient: ArtemisMessagingClient) {
         val artemis = artemisClient.started!!
         val inboxAddress = SimpleString("${P2P_PREFIX}Test")
+        val dummyOutQueue = SimpleString("${PEERS_PREFIX}12345")
         artemis.session.createQueue(inboxAddress, RoutingType.ANYCAST, inboxAddress, true)
+        artemis.session.createQueue(dummyOutQueue, RoutingType.ANYCAST, dummyOutQueue, true)
         artemis.session.createQueue(BRIDGE_NOTIFY, RoutingType.ANYCAST, BRIDGE_NOTIFY, false)
         val controlConsumer = artemis.session.createConsumer(BRIDGE_NOTIFY)
         controlConsumer.setMessageHandler { msg ->
-            val bridgeControl = BridgeControl.NodeToBridgeSnapshot("Test", listOf(inboxAddress.toString()), emptyList())
+            val outEntry = listOf(BridgeEntry(dummyOutQueue.toString(), listOf(NetworkHostAndPort("localhost", 7890)), listOf(DUMMY_BANK_A_NAME)))
+            val bridgeControl = BridgeControl.NodeToBridgeSnapshot("Test", listOf(inboxAddress.toString()), outEntry)
             val controlPacket = bridgeControl.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
             val artemisMessage = artemis.session.createMessage(false)
             artemisMessage.writeBodyBufferBytes(controlPacket)

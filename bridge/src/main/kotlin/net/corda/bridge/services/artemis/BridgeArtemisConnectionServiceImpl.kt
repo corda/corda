@@ -54,13 +54,13 @@ class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
     }
 
     override fun start() {
-        statusSubscriber = statusFollower.activeChange.subscribe {
+        statusSubscriber = statusFollower.activeChange.subscribe({
             if (it) {
                 startArtemisConnection()
             } else {
                 stopArtemisConnection()
             }
-        }
+        }, { log.error("Error in state change", it) })
     }
 
     private fun startArtemisConnection() {

@@ -68,17 +68,17 @@ class FloatControlListenerService(val conf: BridgeConfiguration,
 
 
     override fun start() {
-        statusSubscriber = statusFollower.activeChange.subscribe {
+        statusSubscriber = statusFollower.activeChange.subscribe({
             if (it) {
                 startControlListener()
             } else {
                 stopControlListener()
             }
             stateHelper.active = it
-        }
-        incomingMessageSubscriber = amqpListener.onReceive.subscribe {
+        }, { log.error("Error in state change", it) })
+        incomingMessageSubscriber = amqpListener.onReceive.subscribe({
             forwardReceivedMessage(it)
-        }
+        }, { log.error("Error in state change", it) })
     }
 
     private fun startControlListener() {
@@ -93,8 +93,8 @@ class FloatControlListenerService(val conf: BridgeConfiguration,
                     conf.crlCheckSoftFail,
                     maxMessageSize,
                     conf.enableAMQPPacketTrace)
-            connectSubscriber = controlServer.onConnection.subscribe { onConnectToControl(it) }
-            receiveSubscriber = controlServer.onReceive.subscribe { onControlMessage(it) }
+            connectSubscriber = controlServer.onConnection.subscribe({ onConnectToControl(it) }, { log.error("Connection event error", it) })
+            receiveSubscriber = controlServer.onReceive.subscribe({ onControlMessage(it) }, { log.error("Receive event error", it) })
             amqpControlServer = controlServer
             controlServer.start()
         }

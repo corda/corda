@@ -58,15 +58,15 @@ class BridgeSupervisorServiceImpl(val conf: BridgeConfiguration,
             TunnelingBridgeReceiverService(conf, maxMessageSize, auditService, haService, filterService)
         }
         statusFollower = ServiceStateCombiner(listOf(haService, senderService, receiverService, filterService))
-        activeChange.subscribe {
+        activeChange.subscribe({
             consoleLogger.info("BridgeSupervisorService: active = $it")
-        }
+        }, { log.error("Error in state change", it) })
     }
 
     override fun start() {
-        statusSubscriber = statusFollower.activeChange.subscribe {
+        statusSubscriber = statusFollower.activeChange.subscribe({
             stateHelper.active = it
-        }
+        }, { log.error("Error in state change", it) })
         artemisService.start()
         senderService.start()
         receiverService.start()

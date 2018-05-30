@@ -70,7 +70,7 @@ class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
 
 
     override fun start() {
-        statusSubscriber = statusFollower.activeChange.subscribe {
+        statusSubscriber = statusFollower.activeChange.subscribe({
             if (it) {
                 val floatAddresses = conf.bridgeInnerConfig!!.floatAddresses
                 val controlClient = AMQPClient(floatAddresses,
@@ -83,15 +83,15 @@ class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
                         conf.crlCheckSoftFail,
                         maxMessageSize,
                         conf.enableAMQPPacketTrace)
-                connectSubscriber = controlClient.onConnection.subscribe { onConnectToControl(it) }
-                receiveSubscriber = controlClient.onReceive.subscribe { onFloatMessage(it) }
+                connectSubscriber = controlClient.onConnection.subscribe({ onConnectToControl(it) }, { log.error("Connection event error", it) })
+                receiveSubscriber = controlClient.onReceive.subscribe({ onFloatMessage(it) }, { log.error("Receive event error", it) })
                 amqpControlClient = controlClient
                 controlClient.start()
             } else {
                 stateHelper.active = false
                 closeAMQPClient()
             }
-        }
+        }, { log.error("Error in state change", it) })
     }
 
     private fun closeAMQPClient() {

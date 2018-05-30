@@ -110,9 +110,17 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
             log.info("Stopping AMQP bridge")
             lock.withLock {
                 synchronized(artemis) {
-                    consumer?.close()
+                    consumer?.apply {
+                        if (!isClosed) {
+                            close()
+                        }
+                    }
                     consumer = null
-                    session?.stop()
+                    session?.apply {
+                        if (!isClosed) {
+                            stop()
+                        }
+                    }
                     session = null
                 }
             }
@@ -135,9 +143,17 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
                         session.start()
                     } else {
                         log.info("Bridge Disconnected")
-                        consumer?.close()
+                        consumer?.apply {
+                            if (!isClosed) {
+                                close()
+                            }
+                        }
                         consumer = null
-                        session?.stop()
+                        session?.apply {
+                            if (!isClosed) {
+                                stop()
+                            }
+                        }
                         session = null
                     }
                 }
