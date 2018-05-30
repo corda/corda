@@ -23,7 +23,22 @@
 
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout pattern="%highlight{%level{length=1} %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %equals{%X}{{}}{}%n}{INFO=white,WARN=red,FATAL=bright red}" />
+            <PatternLayout>
+                <ScriptPatternSelector defaultPattern="%highlight{%level{length=1} %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n}{INFO=white,WARN=red,FATAL=bright red}">
+                    <Script name="MDCSelector" language="javascript"><![CDATA[
+                    result = null;
+                    if (!logEvent.getContextData().size() == 0) {
+                        result = "WithMDC";
+                    } else {
+                        result = null;
+                    }
+                    result;
+               ]]>
+                    </Script>
+                    <PatternMatch key="WithMDC" pattern="%highlight{%level{length=1} %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n}{INFO=white,WARN=red,FATAL=bright red}"/>
+                </ScriptPatternSelector>
+            </PatternLayout>
+            <ThresholdFilter level="trace"/>
         </Console>
 
         <!-- Required for printBasicInfo -->

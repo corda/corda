@@ -29,7 +29,6 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import net.corda.testing.internal.rigorousMock
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -78,7 +77,7 @@ class HibernateObserverTests {
                 return parent
             }
         }
-        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), rigorousMock(), schemaService)
+        val database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null }, schemaService)
         HibernateObserver.install(rawUpdatesPublisher, database.hibernateConfig, schemaService)
         database.transaction {
             val MEGA_CORP = TestIdentity(CordaX500Name("MegaCorp", "London", "GB")).party

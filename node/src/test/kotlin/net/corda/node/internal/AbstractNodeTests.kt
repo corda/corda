@@ -42,7 +42,7 @@ class AbstractNodeTests {
     @Test
     fun `logVendorString does not leak connection`() {
         // Note this test also covers a transaction that CordaPersistence does while it's instantiating:
-        val database = configureDatabase(hikariProperties(freshURL()), DatabaseConfig(), rigorousMock())
+        val database = configureDatabase(hikariProperties(freshURL()), DatabaseConfig(), { null }, { null })
         val log = mock<Logger>() // Don't care what happens here.
         // Actually 10 is enough to reproduce old code hang, as pool size is 10 and we leaked 9 connections and 1 is in flight:
         repeat(100) {

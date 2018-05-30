@@ -79,7 +79,7 @@ class NodeTest {
             doReturn("tsp").whenever(it).trustStorePassword
             doReturn("ksp").whenever(it).keyStorePassword
         }
-        configureDatabase(dataSourceProperties, databaseConfig, rigorousMock()).use { _ ->
+        configureDatabase(dataSourceProperties, databaseConfig, { null }, { null }).use { _ ->
             val node = Node(configuration, info, initialiseSerialization = false)
             assertEquals(node.generateNodeInfo(), node.generateNodeInfo())  // Node info doesn't change (including the serial)
         }

@@ -4,14 +4,13 @@ import net.corda.core.crypto.SecureHash
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class PersistentMapTests {
     private val databaseConfig = DatabaseConfig()
-    private val database get() = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
+    private val database get() = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
     private val dataSourceProps = MockServices.makeTestDataSourceProperties()
 
     //create a test map using an existing db table

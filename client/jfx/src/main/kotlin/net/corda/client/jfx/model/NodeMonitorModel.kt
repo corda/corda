@@ -31,7 +31,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
-import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import org.apache.activemq.artemis.api.core.ActiveMQException
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
@@ -202,8 +202,11 @@ class NodeMonitorModel {
                 val nodeInfo = _connection.proxy.nodeInfo()
                 require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
                 _connection
-            } catch(secEx: ActiveMQSecurityException) {
-                // Happens when incorrect credentials provided - no point to retry connecting.
+            } catch(secEx: ActiveMQException) {
+                // Happens when:
+                // * incorrect credentials provided;
+                // * incorrect endpoint specified;
+                // - no point to retry connecting.
                 throw secEx
             }
             catch(th: Throwable) {

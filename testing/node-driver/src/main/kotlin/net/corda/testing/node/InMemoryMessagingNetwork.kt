@@ -28,7 +28,12 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.trace
-import net.corda.node.services.messaging.*
+import net.corda.node.services.messaging.DeduplicationHandler
+import net.corda.node.services.messaging.Message
+import net.corda.node.services.messaging.MessageHandler
+import net.corda.node.services.messaging.MessageHandlerRegistration
+import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.SenderDeduplicationId
@@ -47,6 +52,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.concurrent.schedule
 import kotlin.concurrent.thread
+import kotlin.jvm.Volatile
 
 /**
  * An in-memory network allows you to manufacture [InternalMockMessagingService]s for a set of participants. Each
@@ -137,8 +143,7 @@ class InMemoryMessagingNetwork private constructor(
             id: Int,
             executor: AffinityExecutor,
             notaryService: PartyAndCertificate?,
-            description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK"),
-            database: CordaPersistence)
+            description: CordaX500Name = CordaX500Name(organisation = "In memory node $id", locality = "London", country = "UK"))
             : InternalMockMessagingService {
         val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.name] = peerHandle // Assume that the same name - the same entity in MockNetwork.
@@ -146,7 +151,7 @@ class InMemoryMessagingNetwork private constructor(
         val serviceHandles = notaryService?.let { listOf(DistributedServiceHandle(it.party)) }
                 ?: emptyList() //TODO only notary can be distributed?
         synchronized(this) {
-            val node = InMemoryMessaging(manuallyPumped, peerHandle, executor, database)
+            val node = InMemoryMessaging(manuallyPumped, peerHandle, executor)
             val oldNode = handleEndpointMap.put(peerHandle, node)
             if (oldNode != null) {
                 node.inheritPendingRedelivery(oldNode)
@@ -364,8 +369,7 @@ class InMemoryMessagingNetwork private constructor(
     @ThreadSafe
     private inner class InMemoryMessaging(private val manuallyPumped: Boolean,
                                           private val peerHandle: PeerHandle,
-                                          private val executor: AffinityExecutor,
-                                          private val database: CordaPersistence) : SingletonSerializeAsToken(), InternalMockMessagingService {
+                                          private val executor: AffinityExecutor) : SingletonSerializeAsToken(), InternalMockMessagingService {
         private inner class Handler(val topicSession: String, val callback: MessageHandler) : MessageHandlerRegistration
 
         @Volatile
@@ -406,10 +410,8 @@ class InMemoryMessagingNetwork private constructor(
             val (handler, transfers) = state.locked {
                 val handler = Handler(topic, callback).apply { handlers.add(this) }
                 val pending = ArrayList<MessageTransfer>()
-                database.transaction {
-                    pending.addAll(pendingRedelivery)
-                    pendingRedelivery.clear()
-                }
+                pending.addAll(pendingRedelivery)
+                pendingRedelivery.clear()
                 Pair(handler, pending)
             }
 
@@ -496,9 +498,7 @@ class InMemoryMessagingNetwork private constructor(
                         // up a handler for yet. Most unit tests don't run threaded, but we want to test true parallelism at
                         // least sometimes.
                         log.warn("Message to ${transfer.message.topic} could not be delivered")
-                        database.transaction {
-                            pendingRedelivery.add(transfer)
-                        }
+                        pendingRedelivery.add(transfer)
                         null
                     } else {
                         matchingHandlers
@@ -516,19 +516,17 @@ class InMemoryMessagingNetwork private constructor(
             val (transfer, deliverTo) = getNextQueue(q, block) ?: return null
             if (transfer.message.uniqueMessageId !in processedMessages) {
                 executor.execute {
-                    database.transaction {
-                        for (handler in deliverTo) {
-                            try {
-                                val receivedMessage = transfer.toReceivedMessage()
-                                state.locked { pendingRedelivery.add(transfer) }
-                                handler.callback(receivedMessage, handler, InMemoryDeduplicationHandler(receivedMessage, transfer))
-                            } catch (e: Exception) {
-                                log.error("Caught exception in handler for $this/${handler.topicSession}", e)
-                            }
+                    for (handler in deliverTo) {
+                        try {
+                            val receivedMessage = transfer.toReceivedMessage()
+                            state.locked { pendingRedelivery.add(transfer) }
+                            handler.callback(receivedMessage, handler, InMemoryDeduplicationHandler(receivedMessage, transfer))
+                        } catch (e: Exception) {
+                            log.error("Caught exception in handler for $this/${handler.topicSession}", e)
                         }
-                        _receivedMessages.onNext(transfer)
-                        messagesInFlight.countDown()
                     }
+                    _receivedMessages.onNext(transfer)
+                    messagesInFlight.countDown()
                 }
             } else {
                 log.info("Drop duplicate message ${transfer.message.uniqueMessageId}")

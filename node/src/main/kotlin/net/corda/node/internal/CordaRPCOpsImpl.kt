@@ -27,12 +27,26 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.STRUCTURAL_STEP_PREFIX
 import net.corda.core.internal.sign
-import net.corda.core.messaging.*
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.FlowHandleImpl
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.FlowProgressHandleImpl
+import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.messaging.RPCReturnsObservables
+import net.corda.core.messaging.StateMachineInfo
+import net.corda.core.messaging.StateMachineTransactionMapping
+import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -42,7 +56,6 @@ import net.corda.node.services.messaging.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
-import net.corda.nodeapi.internal.persistence.CordaPersistence
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
@@ -55,7 +68,6 @@ import java.time.Instant
 internal class CordaRPCOpsImpl(
         private val services: ServiceHubInternal,
         private val smm: StateMachineManager,
-        private val database: CordaPersistence,
         private val flowStarter: FlowStarter,
         private val shutdownNode: () -> Unit
 ) : CordaRPCOps {
@@ -78,18 +90,15 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
-        return database.transaction {
-            services.networkMapCache.track()
-        }
+        return services.networkMapCache.track()
     }
 
     override fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria,
                                                   paging: PageSpecification,
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): Vault.Page<T> {
-        return database.transaction {
-            services.vaultService._queryBy(criteria, paging, sorting, contractStateType)
-        }
+        contractStateType.checkIsA<ContractState>()
+        return services.vaultService._queryBy(criteria, paging, sorting, contractStateType)
     }
 
     @RPCReturnsObservables
@@ -97,9 +106,8 @@ internal class CordaRPCOpsImpl(
                                                   paging: PageSpecification,
                                                   sorting: Sort,
                                                   contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
-        return database.transaction {
-            services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
-        }
+        contractStateType.checkIsA<ContractState>()
+        return services.vaultService._trackBy(criteria, paging, sorting, contractStateType)
     }
 
     @Suppress("OverridingDeprecatedMember")
@@ -111,9 +119,7 @@ internal class CordaRPCOpsImpl(
 
     @Suppress("OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
-        return database.transaction {
-            services.validatedTransactions.track()
-        }
+        return services.validatedTransactions.track()
     }
 
     override fun stateMachinesSnapshot(): List<StateMachineInfo> {
@@ -125,13 +131,11 @@ internal class CordaRPCOpsImpl(
     override fun killFlow(id: StateMachineRunId) = smm.killFlow(id)
 
     override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
-        return database.transaction {
-            val (allStateMachines, changes) = smm.track()
-            DataFeed(
-                    allStateMachines.map { stateMachineInfoFromFlowLogic(it) },
-                    changes.map { stateMachineUpdateFromStateMachineChange(it) }
-            )
-        }
+        val (allStateMachines, changes) = smm.track()
+        return DataFeed(
+                allStateMachines.map { stateMachineInfoFromFlowLogic(it) },
+                changes.map { stateMachineUpdateFromStateMachineChange(it) }
+        )
     }
 
     override fun stateMachineRecordedTransactionMappingSnapshot(): List<StateMachineTransactionMapping> {
@@ -141,9 +145,7 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
-        return database.transaction {
-            services.stateMachineRecordedTransactionMapping.track()
-        }
+        return services.stateMachineRecordedTransactionMapping.track()
     }
 
     override fun nodeInfo(): NodeInfo {
@@ -155,15 +157,11 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun addVaultTransactionNote(txnId: SecureHash, txnNote: String) {
-        return database.transaction {
-            services.vaultService.addNoteToTransaction(txnId, txnNote)
-        }
+        services.vaultService.addNoteToTransaction(txnId, txnNote)
     }
 
     override fun getVaultTransactionNotes(txnId: SecureHash): Iterable<String> {
-        return database.transaction {
-            services.vaultService.getTransactionNotes(txnId)
-        }
+        return services.vaultService.getTransactionNotes(txnId)
     }
 
     override fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
@@ -191,38 +189,23 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
-        // TODO: this operation should not require an explicit transaction
-        return database.transaction {
-            services.attachments.openAttachment(id) != null
-        }
+        return services.attachments.openAttachment(id) != null
     }
 
     override fun openAttachment(id: SecureHash): InputStream {
-        // TODO: this operation should not require an explicit transaction
-        return database.transaction {
-            services.attachments.openAttachment(id)!!.open()
-        }
+        return services.attachments.openAttachment(id)!!.open()
     }
 
     override fun uploadAttachment(jar: InputStream): SecureHash {
-        // TODO: this operation should not require an explicit transaction
-        return database.transaction {
-            services.attachments.importAttachment(jar, RPC_UPLOADER, null)
-        }
+        return services.attachments.importAttachment(jar, RPC_UPLOADER, null)
     }
 
-    override fun uploadAttachmentWithMetadata(jar: InputStream, uploader:String, filename:String): SecureHash {
-        // TODO: this operation should not require an explicit transaction
-        return database.transaction {
-            services.attachments.importAttachment(jar, uploader, filename)
-        }
+    override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash {
+        return services.attachments.importAttachment(jar, uploader, filename)
     }
 
     override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
-        // TODO: this operation should not require an explicit transaction
-        return database.transaction {
-                services.attachments.queryAttachments(query, sorting)
-        }
+        return services.attachments.queryAttachments(query, sorting)
     }
 
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
@@ -230,43 +213,31 @@ internal class CordaRPCOpsImpl(
     override fun waitUntilNetworkReady(): CordaFuture<Void?> = services.networkMapCache.nodeReady
 
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        return database.transaction {
-            services.identityService.wellKnownPartyFromAnonymous(party)
-        }
+        return services.identityService.wellKnownPartyFromAnonymous(party)
     }
 
     override fun partyFromKey(key: PublicKey): Party? {
-        return database.transaction {
-            services.identityService.partyFromKey(key)
-        }
+        return services.identityService.partyFromKey(key)
     }
 
     override fun wellKnownPartyFromX500Name(x500Name: CordaX500Name): Party? {
-        return database.transaction {
-            services.identityService.wellKnownPartyFromX500Name(x500Name)
-        }
+        return services.identityService.wellKnownPartyFromX500Name(x500Name)
     }
 
     override fun notaryPartyFromX500Name(x500Name: CordaX500Name): Party? = services.networkMapCache.getNotary(x500Name)
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
-        return database.transaction {
-            services.identityService.partiesFromName(query, exactMatch)
-        }
+        return services.identityService.partiesFromName(query, exactMatch)
     }
 
     override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? {
-        return database.transaction {
-            services.networkMapCache.getNodeByLegalIdentity(party)
-        }
+        return services.networkMapCache.getNodeByLegalIdentity(party)
     }
 
     override fun registeredFlows(): List<String> = services.rpcFlows.map { it.name }.sorted()
 
     override fun clearNetworkMapCache() {
-        database.transaction {
-            services.networkMapCache.clearNetworkMapCache()
-        }
+        services.networkMapCache.clearNetworkMapCache()
     }
 
     override fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T> {
@@ -325,14 +296,25 @@ internal class CordaRPCOpsImpl(
     }
 
     private fun InvocationContext.toFlowInitiator(): FlowInitiator {
-
         val principal = origin.principal().name
         return when (origin) {
             is InvocationOrigin.RPC -> FlowInitiator.RPC(principal)
-            is InvocationOrigin.Peer -> services.identityService.wellKnownPartyFromX500Name((origin as InvocationOrigin.Peer).party)?.let { FlowInitiator.Peer(it) } ?: throw IllegalStateException("Unknown peer with name ${(origin as InvocationOrigin.Peer).party}.")
+            is InvocationOrigin.Peer -> {
+                val wellKnownParty = services.identityService.wellKnownPartyFromX500Name((origin as InvocationOrigin.Peer).party)
+                wellKnownParty?.let { FlowInitiator.Peer(it) }
+                        ?: throw IllegalStateException("Unknown peer with name ${(origin as InvocationOrigin.Peer).party}.")
+            }
             is InvocationOrigin.Service -> FlowInitiator.Service(principal)
             InvocationOrigin.Shell -> FlowInitiator.Shell
             is InvocationOrigin.Scheduled -> FlowInitiator.Scheduled((origin as InvocationOrigin.Scheduled).scheduledState)
         }
+    }
+
+    /**
+     * RPC can be invoked from the shell where the type parameter of any [Class] parameter is lost, so we must
+     * explicitly check that the provided [Class] is the one we want.
+     */
+    private inline fun <reified TARGET> Class<*>.checkIsA() {
+        require(TARGET::class.java.isAssignableFrom(this)) { "$name is not a ${TARGET::class.java.name}" }
     }
 }

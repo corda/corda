@@ -24,11 +24,8 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.messaging.startFlow
-import net.corda.core.messaging.vaultQueryBy
-import net.corda.core.messaging.vaultTrackBy
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.*
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
@@ -58,8 +55,7 @@ import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.testActor
 import org.apache.commons.io.IOUtils
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.assertj.core.api.Assertions.*
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Before
@@ -115,9 +111,12 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `cash issue accepted`() {
-
-        withPermissions(invokeRpc("vaultTrackBy"), invokeRpc("vaultQueryBy"), invokeRpc(CordaRPCOps::stateMachinesFeed), startFlow<CashIssueFlow>()) {
-
+        withPermissions(
+                invokeRpc("vaultTrackBy"),
+                invokeRpc("vaultQueryBy"),
+                invokeRpc(CordaRPCOps::stateMachinesFeed),
+                startFlow<CashIssueFlow>()
+        ) {
             aliceNode.database.transaction {
                 stateMachineUpdates = rpc.stateMachinesFeed().updates
                 vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
@@ -168,7 +167,6 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `issue and move`() {
-
         withPermissions(invokeRpc(CordaRPCOps::stateMachinesFeed),
                 invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
                 invokeRpc("vaultTrackBy"),
@@ -278,9 +276,9 @@ class CordaRPCOpsImplTest {
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachment), invokeRpc(CordaRPCOps::attachmentExists)) {
             val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
-            val secureHash1 = rpc.uploadAttachment(inputJar1)
+            rpc.uploadAttachment(inputJar1)
             assertThatExceptionOfType(java.nio.file.FileAlreadyExistsException::class.java).isThrownBy {
-                val secureHash2 = rpc.uploadAttachment(inputJar2)
+                rpc.uploadAttachment(inputJar2)
             }
         }
     }
@@ -311,13 +309,14 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `kill a stuck flow through RPC`() {
-
-        withPermissions(startFlow<NewJoinerFlow>(), invokeRpc(CordaRPCOps::killFlow), invokeRpc(CordaRPCOps::stateMachinesFeed), invokeRpc(CordaRPCOps::stateMachinesSnapshot)) {
-
+        withPermissions(
+                startFlow<NewJoinerFlow>(),
+                invokeRpc(CordaRPCOps::killFlow),
+                invokeRpc(CordaRPCOps::stateMachinesFeed),
+                invokeRpc(CordaRPCOps::stateMachinesSnapshot)
+        ) {
             val flow = rpc.startFlow(::NewJoinerFlow)
-
             val killed = rpc.killFlow(flow.id)
-
             assertThat(killed).isTrue()
             assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
         }
@@ -325,13 +324,14 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `kill a waiting flow through RPC`() {
-
-        withPermissions(startFlow<HopefulFlow>(), invokeRpc(CordaRPCOps::killFlow), invokeRpc(CordaRPCOps::stateMachinesFeed), invokeRpc(CordaRPCOps::stateMachinesSnapshot)) {
-
+        withPermissions(
+                startFlow<HopefulFlow>(),
+                invokeRpc(CordaRPCOps::killFlow),
+                invokeRpc(CordaRPCOps::stateMachinesFeed),
+                invokeRpc(CordaRPCOps::stateMachinesSnapshot)
+        ) {
             val flow = rpc.startFlow(::HopefulFlow, alice)
-
             val killed = rpc.killFlow(flow.id)
-
             assertThat(killed).isTrue()
             assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
         }
@@ -339,23 +339,26 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `kill a nonexistent flow through RPC`() {
-
         withPermissions(invokeRpc(CordaRPCOps::killFlow)) {
-
             val nonexistentFlowId = StateMachineRunId.createRandom()
-
             val killed = rpc.killFlow(nonexistentFlowId)
-
             assertThat(killed).isFalse()
+        }
+    }
+
+    @Test
+    fun `non-ContractState class for the contractStateType param in vault queries`() {
+        val nonContractStateClass: Class<out ContractState> = uncheckedCast(Cash::class.java)
+        withPermissions(invokeRpc("vaultTrack"), invokeRpc("vaultQuery")) {
+            assertThatThrownBy { rpc.vaultQuery(nonContractStateClass) }.hasMessageContaining(Cash::class.java.name)
+            assertThatThrownBy { rpc.vaultTrack(nonContractStateClass) }.hasMessageContaining(Cash::class.java.name)
         }
     }
 
     @StartableByRPC
     class NewJoinerFlow : FlowLogic<String>() {
-
         @Suspendable
         override fun call(): String {
-
             logger.info("When can I join you say? Almost there buddy...")
             Fiber.currentFiber().join()
             return "You'll never get me!"
@@ -364,13 +367,10 @@ class CordaRPCOpsImplTest {
 
     @StartableByRPC
     class HopefulFlow(private val party: Party) : FlowLogic<String>() {
-
         @Suspendable
         override fun call(): String {
-
             logger.info("Waiting for a miracle...")
-            val miracle = initiateFlow(party).receive<String>().unwrap { it }
-            return miracle
+            return initiateFlow(party).receive<String>().unwrap { it }
         }
     }
 
@@ -394,17 +394,15 @@ class CordaRPCOpsImplTest {
         override fun call(): Void? = null
     }
 
-    private fun withPermissions(vararg permissions: String, action: () -> Unit) {
-
+    private inline fun withPermissions(vararg permissions: String, action: () -> Unit) {
         val previous = CURRENT_RPC_CONTEXT.get()
         try {
-            CURRENT_RPC_CONTEXT.set(previous.copy(authorizer =
-            buildSubject(previous.principal, permissions.toSet())))
+            CURRENT_RPC_CONTEXT.set(previous.copy(authorizer = buildSubject(previous.principal, permissions.toSet())))
             action.invoke()
         } finally {
             CURRENT_RPC_CONTEXT.set(previous)
         }
     }
 
-    private fun withoutAnyPermissions(action: () -> Unit) = withPermissions(action = action)
+    private inline fun withoutAnyPermissions(action: () -> Unit) = withPermissions(action = action)
 }

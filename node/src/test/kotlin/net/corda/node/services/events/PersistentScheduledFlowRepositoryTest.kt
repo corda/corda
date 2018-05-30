@@ -21,7 +21,7 @@ class PersistentScheduledFlowRepositoryTest {
     fun `test that earliest item is returned`() {
         val laterTime = mark + 1.days
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
-        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
+        val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
 
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
@@ -43,7 +43,7 @@ class PersistentScheduledFlowRepositoryTest {
     fun `test that item is rescheduled`() {
         val laterTime = mark + 1.days
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
-        val database = configureDatabase(dataSourceProps, databaseConfig, rigorousMock())
+        val database = configureDatabase(dataSourceProps, databaseConfig, { null }, { null })
         database.transaction {
             val repo = PersistentScheduledFlowRepository(database)
             val stateRef = StateRef(SecureHash.randomSHA256(), 0)

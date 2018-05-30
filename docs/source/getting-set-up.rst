@@ -6,7 +6,7 @@ Software requirements
 Corda uses industry-standard tools:
 
 * **Oracle JDK 8 JVM** - minimum supported version **8u131**
-* **IntelliJ IDEA** - supported versions **2017.1**, **2017.2** and **2017.3**
+* **IntelliJ IDEA** - supported versions **2017.x** and **2018.x**
 * **Git**
 
 We also use Gradle and Kotlin, but you do not need to install them. A standalone Gradle wrapper is provided, and it 
@@ -80,7 +80,7 @@ Download a sample project
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 1. Open a command prompt
 2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
-3. Move into the cordapp-example folder by running ``cd cordapp-example``
+3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
 
 Run from the command prompt
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -92,16 +92,22 @@ Run from the command prompt
 Run from IntelliJ
 ^^^^^^^^^^^^^^^^^
 1. Open IntelliJ Community Edition
-2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-example folder
+2. On the splash screen, click ``Open`` (do **not** click ``Import Project``) and select the ``cordapp-example`` folder
 
-.. warning:: If you click "Import Project" instead of "Open", the project's run configurations will be erased!
+.. warning:: If you click ``Import Project`` instead of ``Open``, the project's run configurations will be erased!
 
-3. Once the project is open, click "File > Project Structure". Under "Project SDK:", set the project SDK by clicking "New...", clicking "JDK", and navigating to C:\\Program Files\\Java\\jdk1.8.0_XXX (where "XXX" is the latest minor version number). Click "OK".
-4. Click "View > Tool Windows > Event Log", and click "Import Gradle project", then "OK". Wait, and click "OK" again when the "Gradle Project Data To Import" window appears
-5. Wait for indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing is complete)
-6. At the top-right of the screen, to the left of the green "play" arrow, you should see a dropdown. In that dropdown, select "Run Example Cordapp - Kotlin" and click the green "play" arrow.
-7. Wait until the run windows displays the message "Webserver started up in XX.X sec"
-8. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
+3. Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
+   clicking ``New...``, clicking ``JDK``, and navigating to ``C:\\Program Files\\Java\\jdk1.8.0_XXX`` (where ``XXX`` is
+   the latest minor version number). Click "OK"
+4. Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
+   the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
+   ``Gradle``, click ``Next`` then ``Finish`` (leaving the defaults) and ``OK``
+5. Wait for the indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing
+   is complete)
+6. At the top-right of the screen, to the left of the green ``play`` arrow, you should see a dropdown. In that
+   dropdown, select ``Run Example Cordapp - Kotlin`` and click the green ``play`` arrow.
+7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
+8. Test the CorDapp is running correctly by visiting the front end at `http://localhost:10007/web/example/
 
 .. _mac-label:
 
@@ -128,7 +134,7 @@ Download a sample project
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 1. Open a terminal
 2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
-3. Move into the cordapp-example folder by running ``cd cordapp-example``
+3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
 
 Run from the terminal
 ^^^^^^^^^^^^^^^^^^^^^
@@ -140,13 +146,22 @@ Run from the terminal
 Run from IntelliJ
 ^^^^^^^^^^^^^^^^^
 1. Open IntelliJ Community Edition
-2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-example folder
-3. Once the project is open, click "File > Project Structure". Under "Project SDK:", set the project SDK by clicking "New...", clicking "JDK", and navigating to /Library/Java/JavaVirtualMachines/jdk1.8.0_XXX (where "XXX" is the latest minor version number). Click "OK".
-4. Click "View > Tool Windows > Event Log", and click "Import Gradle project", then "OK". Wait, and click "OK" again when the "Gradle Project Data To Import" window appears
-5. Wait for indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing is complete)
-6. At the top-right of the screen, to the left of the green "play" arrow, you should see a dropdown. In that dropdown, select "Run Example Cordapp - Kotlin" and click the green "play" arrow.
-7. Wait until the run windows displays the message "Webserver started up in XX.X sec"
-8. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
+2. On the splash screen, click ``Open`` (do **not** click ``Import Project``) and select the ``cordapp-example`` folder
+
+.. warning:: If you click ``Import Project`` instead of ``Open``, the project's run configurations will be erased!
+
+3. Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
+   clicking ``New...``, clicking ``JDK``, and navigating to ``C:\\Program Files\\Java\\jdk1.8.0_XXX`` (where ``XXX`` is
+   the latest minor version number). Click "OK"
+4. Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
+   the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
+   ``Gradle``, click ``Next`` then ``Finish`` (leaving the defaults) and ``OK``
+5. Wait for the indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing
+   is complete)
+6. At the top-right of the screen, to the left of the green ``play`` arrow, you should see a dropdown. In that
+   dropdown, select ``Run Example Cordapp - Kotlin`` and click the green ``play`` arrow.
+7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
+8. Test the CorDapp is running correctly by visiting the front end at `http://localhost:10007/web/example/
 
 Corda source code
 -----------------

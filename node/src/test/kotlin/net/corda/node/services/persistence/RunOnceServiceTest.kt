@@ -16,7 +16,6 @@ import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.node.internal.configureDatabase
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.makeTestDatabaseProperties
 import org.junit.After
@@ -49,7 +48,7 @@ class RunOnceServiceTest {
 
     @Before
     fun setup() {
-        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), rigorousMock())
+        database = configureDatabase(makeTestDataSourceProperties(), makeTestDatabaseProperties(), { null }, { null })
         runOnceServiceMachine1 = RunOnceService(database, "machine1", "123", 1, 2, mockUpdateExecutor)
         runOnceServiceMachine2 = RunOnceService(database, "machine2", "789", 1, 2, mockUpdateExecutor)
     }
