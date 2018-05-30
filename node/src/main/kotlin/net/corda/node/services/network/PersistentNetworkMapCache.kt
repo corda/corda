@@ -344,7 +344,7 @@ open class PersistentNetworkMapCache(
         invalidateCaches()
         database.transaction {
             val result = getAllInfos(session)
-            logger.debug { "All node infos to be cleared: $result" }
+            logger.debug { "Number of node infos to be cleared: ${result.size}" }
             for (nodeInfo in result) session.remove(nodeInfo)
         }
     }
