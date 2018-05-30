@@ -91,8 +91,15 @@ absolute path to the node's base directory.
                        the correct value
 
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
-    Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
-    the only configuration that has been tested, although in the future full support for other storage layers will be validated.
+    By default the node starts with an embedded H2 database instance.
+    The configuration defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example.
+    :ref:`Node database <standalone_database_config_examples_ref>` contains example configurations for other Database Providers.
+    To add additional data source properties (for a specific JDBC driver settings) use ``dataSource.`` prefix with property name (e.g. `dataSource.customProperty = value`).
+
+    :dataSourceClassName: JDBC Data Source class name.
+    :dataSource.url:      JDBC database URL.
+    :dataSource.user:     Database user.
+    :dataSource.password: Database password.
 
 :h2port: A number that's used to pick the H2 JDBC server port. If not set a randomly chosen port will be used. For production
     use you will typically be using a different, non-H2 database backend (e.g. Oracle, SQL Server, Postgres) so this option

@@ -25,6 +25,8 @@ stored states, transactions and attachments as follows:
 You will be presented with a web interface that shows the contents of your node's storage and vault, and provides an
 interface for you to query them using SQL.
 
+.. _standalone_database_config_examples_ref:
+
 Standalone database
 -------------------
 
@@ -37,13 +39,19 @@ Corda will search for valid JDBC drivers either under the ``./drivers`` subdirec
 of the paths specified by the ``jarDirs`` field of the node configuration. Please make sure a ``jar`` file containing drivers
 supporting the database in use is present in one of these locations.
 
+Example configuration for supported standalone databases are shown below.
+In each configuration replace placeholders `[USER]`, `[PASSWORD]`, `[SCHEMA]` (optionally), `path_to_jdbc_driver_dir` and
+others from ``dataSource.url`` with the appropriate values.
+The string `path_to_jdbc_driver_dir` needs to be wrapped by single quotes e.g. `jarDirs = [ '/lib/jdbc/driver' ]`.
+
+
 SQL Azure and SQL Server
 ````````````````````````
 Corda has been tested with SQL Server 2017 (14.0.3006.16) and Azure SQL (12.0.2000.8), using Microsoft JDBC Driver 6.2.
 
 Example node configuration for SQL Azure:
 
-.. sourcecode:: groovy
+.. sourcecode:: none
 
     dataSourceProperties = {
         dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
@@ -56,14 +64,15 @@ Example node configuration for SQL Azure:
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
     }
-    jarDirs = [PATH_TO_JDBC_DRIVER_DIR]
+    jarDirs = ['path_to_jdbc_driver_dir']
 
 Note that:
 
 * The ``database.schema`` property is optional
 * The minimum transaction isolation level ``database.transactionIsolationLevel`` is `READ_COMMITTED`
-* The JDBC driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-  extract the archive and ensure the directory ``jarDirs`` contains only one driver `mssql-jdbc-6.2.2.jre8.jar` as the archive comes with two jar versions
+* ``jarDirs`` specifies a path to the directory with Microsoft JDBC driver,
+  the driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
+  extract the archive and ensure the directory denoted by ``jarDirs`` contains only a single driver `mssql-jdbc-6.2.2.jre8.jar` as the archive comes with two jar versions
 
 Oracle
 ````````````````````````
@@ -83,12 +92,13 @@ Example node configuration for Oracle:
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
     }
-    jarDirs = [PATH_TO_JDBC_DRIVER_DIR]
+    jarDirs = ['path_to_jdbc_driver_dir']
 
 Note that:
 
 * The ``database.schema`` property is optional
 * The minimum transaction isolation level ``database.transactionIsolationLevel`` is `READ_COMMITTED`
+* ``jarDirs`` specifies a path to the directory with the relevant Oracle JDBC driver
 
 .. _postgres_ref:
 
@@ -98,7 +108,7 @@ Corda has been tested on PostgreSQL 9.6 database, using PostgreSQL JDBC Driver 4
 
 Here is an example node configuration for PostgreSQL:
 
-.. sourcecode:: groovy
+.. sourcecode:: none
 
     dataSourceProperties = {
         dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
@@ -110,7 +120,7 @@ Here is an example node configuration for PostgreSQL:
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
     }
-    jarDirs = [PATH_TO_JDBC_DRIVER_DIR]
+    jarDirs = ['path_to_jdbc_driver_dir']
 
 Note that:
 
@@ -118,3 +128,4 @@ Note that:
 * The value of ``database.schema`` is automatically wrapped in double quotes to preserve case-sensitivity
   (e.g. `AliceCorp` becomes `"AliceCorp"`, without quotes PostgresSQL would treat the value as `alicecorp`),
   this behaviour differs from Corda Open Source where the value is not wrapped in double quotes
+* ``jarDirs`` specifies a path to the directory with the PostgreSQL JDBC driver
