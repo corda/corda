@@ -281,7 +281,6 @@ object InteractiveShell {
             while (!Thread.currentThread().isInterrupted) {
                 try {
                     latch.await()
-//                    Thread.sleep(1000)
                 } catch (e: InterruptedException) {
                     // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
                     Thread.currentThread().interrupt()
