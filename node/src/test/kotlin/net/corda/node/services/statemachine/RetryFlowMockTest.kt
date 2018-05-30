@@ -70,9 +70,9 @@ class RetryFlowMockTest {
         val messagesSent = mutableListOf<Message>()
         val partyB = internalNodeB.info.legalIdentities.first()
         internalNodeA.setMessagingServiceSpy(object : MessagingServiceSpy(internalNodeA.network) {
-            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
+            override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
                 messagesSent.add(message)
-                messagingService.send(message, target, retryId)
+                messagingService.send(message, target)
             }
         })
         internalNodeA.startFlow(SendAndRetryFlow(1, partyB)).get()
