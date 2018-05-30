@@ -1,7 +1,7 @@
 Corda API
 =========
 
-The following are the core APIs that are used in the development of CorDapps:
+The following are the bore APIs that are used in the development of CorDapps:
 
 .. toctree::
    :maxdepth: 1
