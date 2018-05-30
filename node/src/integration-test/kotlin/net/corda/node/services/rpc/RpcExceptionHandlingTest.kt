@@ -15,11 +15,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.exceptions.InternalNodeException
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
@@ -41,7 +37,7 @@ class RpcExceptionHandlingTest : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
+        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
                 .map { it.toDatabaseSchemaName() }.toTypedArray())
     }
 
@@ -68,7 +64,7 @@ class RpcExceptionHandlingTest : IntegrationTest() {
 
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val devModeNode = startNode(params).getOrThrow()
-            val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
+            val node = startNode(DUMMY_BANK_B_NAME, devMode = false, parameters = params).getOrThrow()
 
             assertThatThrownExceptionIsReceivedUnwrapped(devModeNode)
             assertThatThrownExceptionIsReceivedUnwrapped(node)
@@ -87,7 +83,7 @@ class RpcExceptionHandlingTest : IntegrationTest() {
 
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val devModeNode = startNode(params).getOrThrow()
-            val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
+            val node = startNode(DUMMY_BANK_B_NAME, devMode = false, parameters = params).getOrThrow()
 
             assertThatThrownBy { devModeNode.throwExceptionFromFlow() }.isInstanceOfSatisfying(FlowException::class.java) { exception ->
 

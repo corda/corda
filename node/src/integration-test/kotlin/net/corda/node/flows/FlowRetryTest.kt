@@ -10,12 +10,16 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import org.junit.Before
+import org.junit.ClassRule
 import org.junit.Test
 import java.lang.management.ManagementFactory
 import java.sql.SQLException
@@ -24,7 +28,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 
-class FlowRetryTest {
+class FlowRetryTest : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
+
     @Before
     fun resetCounters() {
         InitiatorFlow.seen.clear()
@@ -39,8 +49,8 @@ class FlowRetryTest {
         val result: Any? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(),
                 portAllocation = RandomFree)) {
 
-            val nodeAHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
-            val nodeBHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
+            val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
+            val nodeBHandle = startNode(providedName = BOB_NAME, rpcUsers = listOf(user)).getOrThrow()
 
             val result = CordaRPCClient(nodeAHandle.rpcAddress).start(user.username, user.password).use {
                 it.proxy.startFlow(::InitiatorFlow, numSessions, numIterations, nodeBHandle.nodeInfo.singleIdentity()).returnValue.getOrThrow()
