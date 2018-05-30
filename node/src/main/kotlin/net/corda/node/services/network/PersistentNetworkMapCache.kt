@@ -19,6 +19,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
@@ -339,9 +340,11 @@ open class PersistentNetworkMapCache(
     }
 
     override fun clearNetworkMapCache() {
+        logger.info("Clearing Network Map Cache entries")
         invalidateCaches()
         database.transaction {
             val result = getAllInfos(session)
+            logger.debug { "All node infos to be cleared: $result" }
             for (nodeInfo in result) session.remove(nodeInfo)
         }
     }
