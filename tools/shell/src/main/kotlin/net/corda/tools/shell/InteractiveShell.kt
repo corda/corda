@@ -282,9 +282,12 @@ object InteractiveShell {
                 try {
                     latch.await()
                 } catch (e: InterruptedException) {
-                    // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
-                    Thread.currentThread().interrupt()
-                    break
+                    try {
+                        rpcOps.killFlow(stateObservable.id)
+                    } finally {
+                        Thread.currentThread().interrupt()
+                        break
+                    }
                 }
             }
             stateObservable.returnValue.get()?.apply {
