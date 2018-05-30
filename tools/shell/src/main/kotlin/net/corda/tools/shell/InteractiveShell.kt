@@ -15,10 +15,18 @@ import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.*
+import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.messaging.*
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.rootCause
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.pendingFlowsCount
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -268,12 +276,17 @@ object InteractiveShell {
 
             val latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, { latch.countDown() })
-            try {
-                // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
-                // the tracker is done with the screen.
-                latch.await()
-            } catch (e: InterruptedException) {
-                // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
+            // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
+            // the tracker is done with the screen.
+            while (!Thread.currentThread().isInterrupted) {
+                try {
+                    latch.await()
+//                    Thread.sleep(1000)
+                } catch (e: InterruptedException) {
+                    // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
+                    Thread.currentThread().interrupt()
+                    break
+                }
             }
             stateObservable.returnValue.get()?.apply {
                 if (this !is Throwable) {
