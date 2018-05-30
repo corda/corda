@@ -40,10 +40,10 @@ object MessageSchemaV1 : MappedSchema(
     @Entity
     @Table(name = "messages")
     class PersistentMessage(
-            @Column(name = "message_by")
+            @Column(name = "message_by", nullable = false)
             var by: String,
 
-            @Column(name = "message_value")
+            @Column(name = "message_value", nullable = false)
             var value: String
     ) : PersistentState()
 }

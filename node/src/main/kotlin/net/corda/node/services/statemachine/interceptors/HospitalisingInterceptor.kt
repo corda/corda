@@ -26,20 +26,23 @@ class HospitalisingInterceptor(
             actionExecutor: ActionExecutor
     ): Pair<FlowContinuation, StateMachineState> {
         val (continuation, nextState) = delegate.executeTransition(fiber, previousState, event, transition, actionExecutor)
-        when (nextState.checkpoint.errorState) {
-            ErrorState.Clean -> {
-                if (hospitalisedFlows.remove(fiber.id) != null) {
-                    flowHospital.flowCleaned(fiber)
+
+            when (nextState.checkpoint.errorState) {
+                is ErrorState.Clean -> {
+                    if (hospitalisedFlows.remove(fiber.id) != null) {
+                        flowHospital.flowCleaned(fiber)
+                    }
+                }
+                is ErrorState.Errored -> {
+                    val exceptionsToHandle = nextState.checkpoint.errorState.errors.map { it.exception }
+                    if (hospitalisedFlows.putIfAbsent(fiber.id, fiber) == null) {
+                        flowHospital.flowErrored(fiber, previousState, exceptionsToHandle)
+                    }
                 }
             }
-            is ErrorState.Errored -> {
-                if (hospitalisedFlows.putIfAbsent(fiber.id, fiber) == null) {
-                    flowHospital.flowErrored(fiber)
-                }
-            }
-        }
         if (nextState.isRemoved) {
             hospitalisedFlows.remove(fiber.id)
+            flowHospital.flowRemoved(fiber)
         }
         return Pair(continuation, nextState)
     }

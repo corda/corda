@@ -40,6 +40,9 @@
       <module name="corda-test-common_test" target="1.8" />
       <module name="corda-test-utils_main" target="1.8" />
       <module name="corda-test-utils_test" target="1.8" />
+      <module name="corda-utils_integrationTest" target="1.8" />
+      <module name="corda-utils_main" target="1.8" />
+      <module name="corda-utils_test" target="1.8" />
       <module name="corda-webserver_integrationTest" target="1.8" />
       <module name="corda-webserver_main" target="1.8" />
       <module name="corda-webserver_test" target="1.8" />
@@ -168,6 +171,8 @@
       <module name="testing-test-common_test" target="1.8" />
       <module name="testing-test-utils_main" target="1.8" />
       <module name="testing-test-utils_test" target="1.8" />
+      <module name="tools-blobinspector_main" target="1.8" />
+      <module name="tools-blobinspector_test" target="1.8" />
       <module name="tools_main" target="1.8" />
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />

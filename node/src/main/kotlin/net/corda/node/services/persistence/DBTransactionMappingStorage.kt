@@ -7,6 +7,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.utilities.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
@@ -23,16 +24,16 @@ import javax.persistence.*
  * RPC API to correlate transaction creation with flows.
  */
 @ThreadSafe
-class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorage {
+class DBTransactionMappingStorage(private val database: CordaPersistence) : StateMachineRecordedTransactionMappingStorage {
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}transaction_mappings")
     class DBTransactionMapping(
             @Id
-            @Column(name = "tx_id", length = 64)
+            @Column(name = "tx_id", length = 64, nullable = false)
             var txId: String = "",
 
-            @Column(name = "state_machine_run_id", length = 36)
+            @Column(name = "state_machine_run_id", length = 36, nullable = false)
             var stateMachineRunId: String = ""
     ) : Serializable
 
@@ -56,11 +57,14 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
     val updates: PublishSubject<StateMachineTransactionMapping> = PublishSubject.create()
 
     override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
-        stateMachineTransactionMap.addWithDuplicatesAllowed(transactionId, stateMachineRunId)
-        updates.bufferUntilDatabaseCommit().onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
+        database.transaction {
+            stateMachineTransactionMap.addWithDuplicatesAllowed(transactionId, stateMachineRunId)
+            updates.bufferUntilDatabaseCommit().onNext(StateMachineTransactionMapping(stateMachineRunId, transactionId))
+        }
     }
 
-    override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> =
-            DataFeed(stateMachineTransactionMap.allPersisted().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
-                    updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+    override fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> = database.transaction {
+        DataFeed(stateMachineTransactionMap.allPersisted().map { StateMachineTransactionMapping(it.second, it.first) }.toList(),
+                updates.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+    }
 }

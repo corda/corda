@@ -3,7 +3,6 @@ package net.corda.node.services.config
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
-import com.typesafe.config.ConfigRenderOptions
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
@@ -49,9 +48,6 @@ object ConfigHelper {
                 .withFallback(devModeConfig) // this needs to be after the appConfig, so it doesn't override the configured devMode
                 .withFallback(defaultConfig)
                 .resolve()
-
-
-        log.info("Config:\n${finalConfig.root().render(ConfigRenderOptions.defaults())}")
 
         val entrySet = finalConfig.entrySet().filter { entry -> entry.key.contains("\"") }
         for ((key) in entrySet) {

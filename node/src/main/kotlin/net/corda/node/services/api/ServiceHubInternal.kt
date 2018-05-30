@@ -19,11 +19,12 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.internal.cordapp.CordappProviderInternal
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapUpdater
+import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.contextDatabase
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
 interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
@@ -52,55 +53,58 @@ interface ServiceHubInternal : ServiceHub {
         fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>,
                                validatedTransactions: WritableTransactionStorage,
                                stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage,
-                               vaultService: VaultServiceInternal) {
+                               vaultService: VaultServiceInternal,
+                               database: CordaPersistence) {
 
-            require(txs.any()) { "No transactions passed in for recording" }
-            val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
-            val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
-            if (stateMachineRunId != null) {
-                recordedTransactions.forEach {
-                    stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
+            database.transaction {
+                require(txs.any()) { "No transactions passed in for recording" }
+                val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
+                val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
+                if (stateMachineRunId != null) {
+                    recordedTransactions.forEach {
+                        stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
+                    }
+                } else {
+                    log.warn("Transactions recorded from outside of a state machine")
                 }
-            } else {
-                log.warn("Transactions recorded from outside of a state machine")
-            }
 
-            if (statesToRecord != StatesToRecord.NONE) {
-                // When the user has requested StatesToRecord.ALL we may end up recording and relationally mapping states
-                // that do not involve us and that we cannot sign for. This will break coin selection and thus a warning
-                // is present in the documentation for this feature (see the "Observer nodes" tutorial on docs.corda.net).
-                //
-                // The reason for this is three-fold:
-                //
-                // 1) We are putting in place the observer mode feature relatively quickly to meet specific customer
-                //    launch target dates.
-                //
-                // 2) The right design for vaults which mix observations and relevant states isn't entirely clear yet.
-                //
-                // 3) If we get the design wrong it could create security problems and business confusions.
-                //
-                // Back in the bitcoinj days I did add support for "watching addresses" to the wallet code, which is the
-                // Bitcoin equivalent of observer nodes:
-                //
-                //   https://bitcoinj.github.io/working-with-the-wallet#watching-wallets
-                //
-                // The ability to have a wallet containing both irrelevant and relevant states complicated everything quite
-                // dramatically, even methods as basic as the getBalance() API which required additional modes to let you
-                // query "balance I can spend" vs "balance I am observing". In the end it might have been better to just
-                // require the user to create an entirely separate wallet for observing with.
-                //
-                // In Corda we don't support a single node having multiple vaults (at the time of writing), and it's not
-                // clear that's the right way to go: perhaps adding an "origin" column to the VAULT_STATES table is a better
-                // solution. Then you could select subsets of states depending on where the report came from.
-                //
-                // The risk of doing this is that apps/developers may use 'canned SQL queries' not written by us that forget
-                // to add a WHERE clause for the origin column. Those queries will seem to work most of the time until
-                // they're run on an observer node and mix in irrelevant data. In the worst case this may result in
-                // erroneous data being reported to the user, which could cause security problems.
-                //
-                // Because the primary use case for recording irrelevant states is observer/regulator nodes, who are unlikely
-                // to make writes to the ledger very often or at all, we choose to punt this issue for the time being.
-                vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction })
+                if (statesToRecord != StatesToRecord.NONE) {
+                    // When the user has requested StatesToRecord.ALL we may end up recording and relationally mapping states
+                    // that do not involve us and that we cannot sign for. This will break coin selection and thus a warning
+                    // is present in the documentation for this feature (see the "Observer nodes" tutorial on docs.corda.net).
+                    //
+                    // The reason for this is three-fold:
+                    //
+                    // 1) We are putting in place the observer mode feature relatively quickly to meet specific customer
+                    //    launch target dates.
+                    //
+                    // 2) The right design for vaults which mix observations and relevant states isn't entirely clear yet.
+                    //
+                    // 3) If we get the design wrong it could create security problems and business confusions.
+                    //
+                    // Back in the bitcoinj days I did add support for "watching addresses" to the wallet code, which is the
+                    // Bitcoin equivalent of observer nodes:
+                    //
+                    //   https://bitcoinj.github.io/working-with-the-wallet#watching-wallets
+                    //
+                    // The ability to have a wallet containing both irrelevant and relevant states complicated everything quite
+                    // dramatically, even methods as basic as the getBalance() API which required additional modes to let you
+                    // query "balance I can spend" vs "balance I am observing". In the end it might have been better to just
+                    // require the user to create an entirely separate wallet for observing with.
+                    //
+                    // In Corda we don't support a single node having multiple vaults (at the time of writing), and it's not
+                    // clear that's the right way to go: perhaps adding an "origin" column to the VAULT_STATES table is a better
+                    // solution. Then you could select subsets of states depending on where the report came from.
+                    //
+                    // The risk of doing this is that apps/developers may use 'canned SQL queries' not written by us that forget
+                    // to add a WHERE clause for the origin column. Those queries will seem to work most of the time until
+                    // they're run on an observer node and mix in irrelevant data. In the worst case this may result in
+                    // erroneous data being reported to the user, which could cause security problems.
+                    //
+                    // Because the primary use case for recording irrelevant states is observer/regulator nodes, who are unlikely
+                    // to make writes to the ledger very often or at all, we choose to punt this issue for the time being.
+                    vaultService.notifyAll(statesToRecord, recordedTransactions.map { it.coreTransaction })
+                }
             }
         }
     }
@@ -125,7 +129,7 @@ interface ServiceHubInternal : ServiceHub {
     val networkMapUpdater: NetworkMapUpdater
     override val cordappProvider: CordappProviderInternal
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-        recordTransactions(statesToRecord, txs, validatedTransactions, stateMachineRecordedTransactionMapping, vaultService)
+        recordTransactions(statesToRecord, txs, validatedTransactions, stateMachineRecordedTransactionMapping, vaultService, database)
     }
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
@@ -134,11 +138,17 @@ interface ServiceHubInternal : ServiceHub {
 interface FlowStarter {
 
     /**
-     * Starts an already constructed flow. Note that you must be on the server thread to call this method.
+     * Starts an already constructed flow. Note that you must be on the server thread to call this method. This method
+     * just synthesizes an [ExternalEvent.ExternalStartFlowEvent] and calls the method below.
      * @param context indicates who started the flow, see: [InvocationContext].
-     * @param deduplicationHandler allows exactly-once start of the flow, see [DeduplicationHandler]
      */
-    fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext, deduplicationHandler: DeduplicationHandler? = null): CordaFuture<FlowStateMachine<T>>
+    fun <T> startFlow(logic: FlowLogic<T>, context: InvocationContext): CordaFuture<FlowStateMachine<T>>
+
+    /**
+     * Starts a flow as described by an [ExternalEvent.ExternalStartFlowEvent].  If a transient error
+     * occurs during invocation, it will re-attempt to start the flow.
+     */
+    fun <T> startFlow(event: ExternalEvent.ExternalStartFlowEvent<T>): CordaFuture<FlowStateMachine<T>>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.

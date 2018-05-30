@@ -5,9 +5,6 @@ package net.corda.serialization.internal
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.serialization.internal.amqp.amqpMagic
-import net.corda.serialization.internal.kryo.BuiltInExceptionsWhitelist
-import net.corda.serialization.internal.kryo.GlobalTransientClassWhiteList
-import net.corda.serialization.internal.kryo.kryoMagic
 
 /*
  * Serialisation contexts for the server.
@@ -20,19 +17,23 @@ import net.corda.serialization.internal.kryo.kryoMagic
  */
 
 
-val AMQP_STORAGE_CONTEXT = SerializationContextImpl(amqpMagic,
+val AMQP_STORAGE_CONTEXT = SerializationContextImpl(
+        amqpMagic,
         SerializationDefaults.javaClass.classLoader,
         AllButBlacklisted,
         emptyMap(),
         true,
         SerializationContext.UseCase.Storage,
         null,
-        AlwaysAcceptEncodingWhitelist)
+        AlwaysAcceptEncodingWhitelist
+)
 
-val AMQP_RPC_SERVER_CONTEXT = SerializationContextImpl(amqpMagic,
+val AMQP_RPC_SERVER_CONTEXT = SerializationContextImpl(
+        amqpMagic,
         SerializationDefaults.javaClass.classLoader,
         GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()),
         emptyMap(),
         true,
         SerializationContext.UseCase.RPCServer,
-        null)
+        null
+)

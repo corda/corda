@@ -6,7 +6,7 @@ Default in-memory database
 By default, nodes store their data in an H2 database. You can connect directly to a running node's database to see its
 stored states, transactions and attachments as follows:
 
-* Download the `h2 platform-independent zip <http://www.h2database.com/html/download.html>`_, unzip the zip, and
+* Download the **last stable** `h2 platform-independent zip <http://www.h2database.com/html/download.html>`_, unzip the zip, and
   navigate in a terminal window to the unzipped folder
 * Change directories to the bin folder: ``cd h2/bin``
 

@@ -33,6 +33,40 @@ UNRELEASED
 
 <<< Fill this in >>>
 
+* API change: ``net.corda.core.schemas.PersistentStateRef`` fields (``index`` and ``txId``) incorrectly marked as nullable are now non-nullable,
+  :doc:`changelog` contains the explanation.
+
+  H2 database upgrade action:
+
+  For Cordapps persisting custom entities with ``PersistentStateRef`` used as non Primary Key column, the backing table needs to be updated,
+  In SQL replace ``your_transaction_id``/``your_output_index`` column names with your custom names, if entity didn't used JPA ``@AttributeOverrides``
+  then default names are ``transaction_id`` and ``output_index``.
+
+  .. sourcecode:: sql
+
+       SELECT count(*) FROM [YOUR_PersistentState_TABLE_NAME] WHERE your_transaction_id IS NULL OR your_output_index IS NULL;
+
+  In case your table already contains rows with NULL columns, and the logic doesn't distinguish between NULL and an empty string,
+  all NULL column occurrences can be changed to an empty string:
+
+  .. sourcecode:: sql
+
+       UPDATE [YOUR_PersistentState_TABLE_NAME] SET your_transaction_id="" WHERE your_transaction_id IS NULL;
+       UPDATE [YOUR_PersistentState_TABLE_NAME] SET your_output_index="" WHERE your_output_index IS NULL;
+
+  If all rows have NON NULL ``transaction_ids`` and ``output_idx`` or you have assigned empty string values, then it's safe to update the table:
+
+  .. sourcecode:: sql
+
+       ALTER TABLE [YOUR_PersistentState_TABLE_NAME] ALTER COLUMN your_transaction_id SET NOT NULL;
+       ALTER TABLE [YOUR_PersistentState_TABLE_NAME] ALTER COLUMN your_output_index SET NOT NULL;
+
+  If the table already contains rows with NULL values, and the logic caters differently between NULL and an empty string,
+  and the logic has to be preserved you would need to create copy of ``PersistentStateRef`` class with different name and use the new class in your entity.
+
+  No action is needed for default node tables as ``PersistentStateRef`` is used as Primary Key only and the backing columns are automatically not nullable
+  or custom Cordapp entities using ``PersistentStateRef`` as Primary Key.
+
 v3.0 to v3.1
 ------------
 

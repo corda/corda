@@ -24,7 +24,7 @@ interface FlowMessaging {
      * listen on the send acknowledgement.
      */
     @Suspendable
-    fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId)
+    fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: SenderDeduplicationId)
 
     /**
      * Start the messaging using the [onMessage] message handler.
@@ -49,7 +49,7 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
     }
 
     @Suspendable
-    override fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: DeduplicationId) {
+    override fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: SenderDeduplicationId) {
         log.trace { "Sending message $deduplicationId $message to party $party" }
         val networkMessage = serviceHub.networkService.createMessage(sessionTopic, serializeSessionMessage(message).bytes, deduplicationId, message.additionalHeaders(party))
         val partyInfo = serviceHub.networkMapCache.getPartyInfo(party) ?: throw IllegalArgumentException("Don't know about $party")

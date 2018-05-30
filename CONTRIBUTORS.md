@@ -76,7 +76,7 @@ see changes to this list.
 * George Smetana (Bradesco)
 * Giulio Katis (Westpac)
 * Giuseppe Cardone (Intesa Sanpaolo)
-* Guy Hochstetler (IBM)
+* Guy Hochstetler (R3)
 * Ian Cusden (UBS)
 * Ian Grigg (R3)
 * Igor Nitto (R3)
@@ -125,6 +125,7 @@ see changes to this list.
 * Micheal Hinstridge (Thoughtworks)
 * Michele Sollecito (R3)
 * Mike Hearn (R3)
+* Mike Ward (R3)
 * Mike Reichelt (US Bank)
 * Mustafa Ozturk (Natixis)
 * Nick Skinner (Northern Trust)
@@ -161,6 +162,7 @@ see changes to this list.
 * Sasmit Sahu
 * Scott James
 * Shams Asari (R3)
+* Siddhartha Sengupta (Tradewind Markets)
 * Simon Taylor (Barclays)
 * Sofus Mortensen (Digital Asset Holdings)
 * stevenroose

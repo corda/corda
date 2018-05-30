@@ -10,9 +10,9 @@ import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.Serializable
 import java.util.*
 import java.util.stream.Stream
-import java.io.Serializable
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
@@ -28,11 +28,11 @@ class DBCheckpointStorage : CheckpointStorage {
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}checkpoints")
     class DBCheckpoint(
             @Id
-            @Column(name = "checkpoint_id", length = 64)
+            @Column(name = "checkpoint_id", length = 64, nullable = false)
             var checkpointId: String = "",
 
             @Lob
-            @Column(name = "checkpoint_value")
+            @Column(name = "checkpoint_value", nullable = false)
             var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
     ) : Serializable
 
@@ -51,6 +51,11 @@ class DBCheckpointStorage : CheckpointStorage {
         val root = delete.from(DBCheckpoint::class.java)
         delete.where(criteriaBuilder.equal(root.get<String>(DBCheckpoint::checkpointId.name), id.uuid.toString()))
         return session.createQuery(delete).executeUpdate() > 0
+    }
+
+    override fun getCheckpoint(id: StateMachineRunId): SerializedBytes<Checkpoint>? {
+        val bytes = currentDBSession().get(DBCheckpoint::class.java, id.uuid.toString())?.checkpoint ?: return null
+        return SerializedBytes<Checkpoint>(bytes)
     }
 
     override fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>> {

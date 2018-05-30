@@ -68,7 +68,7 @@ class NodeTest {
             doReturn("tsp").whenever(it).trustStorePassword
             doReturn("ksp").whenever(it).keyStorePassword
         }
-        configureDatabase(dataSourceProperties, databaseConfig, rigorousMock()).use { database ->
+        configureDatabase(dataSourceProperties, databaseConfig, { null }, { null }).use { database ->
             val node = Node(configuration, rigorousMock<VersionInfo>().also {
                 doReturn(platformVersion).whenever(it).platformVersion
             }, initialiseSerialization = false)

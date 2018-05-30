@@ -32,7 +32,7 @@ class InMemoryIdentityServiceTests {
         val BOB get() = bob.party
         val BOB_IDENTITY get() = bob.identity
         val BOB_PUBKEY get() = bob.publicKey
-        fun createService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities, DEV_ROOT_CA.certificate)
+        fun createService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities.toList(), DEV_ROOT_CA.certificate)
     }
 
     @Rule

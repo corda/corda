@@ -1,6 +1,7 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
@@ -9,9 +10,9 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.artemis.CertificateChainCheckPolicy
 import net.corda.node.services.config.rpc.NodeRpcOptions
-import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
+import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -35,6 +36,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val devMode: Boolean
     val devModeOptions: DevModeOptions?
     val compatibilityZoneURL: URL?
+    val networkServices: NetworkServicesConfig?
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
     val p2pMessagingRetry: P2PMessagingRetryConfiguration
@@ -46,6 +48,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val messagingServerExternal: Boolean
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
+    val lazyBridgeStart: Boolean
     val detectPublicIp: Boolean get() = true
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
@@ -115,6 +118,25 @@ data class BFTSMaRtConfiguration(
 }
 
 /**
+ * Used as an alternative to the older compatibilityZoneURL to allow the doorman and network map
+ * services for a node to be configured as different URLs. Cannot be set at the same time as the
+ * compatibilityZoneURL, and will be defaulted (if not set) to both point at the configured
+ * compatibilityZoneURL.
+ *
+ * @property doormanURL The URL of the tls certificate signing service.
+ * @property networkMapURL The URL of the Network Map service.
+ * @property inferred Non user setting that indicates weather the Network Services configuration was
+ * set explicitly ([inferred] == false) or weather they have been inferred via the compatibilityZoneURL parameter
+ * ([inferred] == true) where both the network map and doorman are running on the same endpoint. Only one,
+ * compatibilityZoneURL or networkServices, can be set at any one time.
+ */
+data class NetworkServicesConfig(
+        val doormanURL: URL,
+        val networkMapURL: URL,
+        val inferred : Boolean = false
+)
+
+/**
  * Currently only used for notarisation requests.
  *
  * When the response doesn't arrive in time, the message is resent to a different notary-replica round-robin
@@ -139,6 +161,7 @@ data class NodeConfigurationImpl(
         override val crlCheckSoftFail: Boolean,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = null,
+        override var networkServices: NetworkServicesConfig? = null,
         override val tlsCertCrlDistPoint: URL? = null,
         override val tlsCertCrlIssuer: String? = null,
         override val rpcUsers: List<User>,
@@ -157,6 +180,7 @@ data class NodeConfigurationImpl(
         override val noLocalShell: Boolean = false,
         override val devModeOptions: DevModeOptions? = null,
         override val useTestClock: Boolean = false,
+        override val lazyBridgeStart: Boolean = true,
         override val detectPublicIp: Boolean = true,
         // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
         override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
@@ -182,9 +206,13 @@ data class NodeConfigurationImpl(
             explicitAddress != null -> {
                 require(settings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
                 logger.warn("Top-level declaration of property 'rpcAddress' is deprecated. Please use 'rpcSettings.address' instead.")
+
                 settings.copy(address = explicitAddress)
             }
-            else -> settings
+            else -> {
+                settings.address ?: throw ConfigException.Missing("rpcSettings.address")
+                settings
+            }
         }.asOptions(fallbackSslOptions)
     }
 
@@ -211,6 +239,7 @@ data class NodeConfigurationImpl(
         errors += validateDevModeOptions()
         errors += validateRpcOptions(rpcOptions)
         errors += validateTlsCertCrlConfig()
+        errors += validateNetworkServices()
         return errors
     }
 
@@ -225,12 +254,28 @@ data class NodeConfigurationImpl(
     }
 
     private fun validateDevModeOptions(): List<String> {
-        val errors = mutableListOf<String>()
         if (devMode) {
             compatibilityZoneURL?.let {
-                errors += "'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true."
+                return listOf("'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true.")
+            }
+
+            // if compatibiliZoneURL is set then it will be copied into the networkServices field and thus skipping
+            // this check by returning above is fine.
+            networkServices?.let {
+                return listOf("'networkServices': present. Property cannot be set when 'devMode' is true.")
             }
         }
+
+        return emptyList()
+    }
+
+    private fun validateNetworkServices(): List<String> {
+        val errors = mutableListOf<String>()
+
+        if (compatibilityZoneURL != null && networkServices != null && !(networkServices!!.inferred)) {
+            errors += "Cannot configure both compatibilityZoneUrl and networkServices simultaneously"
+        }
+
         return errors
     }
 
@@ -252,20 +297,24 @@ data class NodeConfigurationImpl(
                 |Please contact the R3 team on the public slack to discuss your use case.
             """.trimMargin())
         }
+
+        if (compatibilityZoneURL != null && networkServices == null) {
+            networkServices = NetworkServicesConfig(compatibilityZoneURL, compatibilityZoneURL, true)
+        }
     }
 }
 
 data class NodeRpcSettings(
-        val address: NetworkHostAndPort,
-        val adminAddress: NetworkHostAndPort,
+        val address: NetworkHostAndPort?,
+        val adminAddress: NetworkHostAndPort?,
         val standAloneBroker: Boolean = false,
         val useSsl: Boolean = false,
         val ssl: BrokerRpcSslOptions?
 ) {
     fun asOptions(fallbackSslOptions: BrokerRpcSslOptions): NodeRpcOptions {
         return object : NodeRpcOptions {
-            override val address = this@NodeRpcSettings.address
-            override val adminAddress = this@NodeRpcSettings.adminAddress
+            override val address = this@NodeRpcSettings.address!!
+            override val adminAddress = this@NodeRpcSettings.adminAddress!!
             override val standAloneBroker = this@NodeRpcSettings.standAloneBroker
             override val useSsl = this@NodeRpcSettings.useSsl
             override val sslConfig = this@NodeRpcSettings.ssl ?: fallbackSslOptions

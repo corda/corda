@@ -28,7 +28,10 @@ import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.*
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.vault.*
+import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
+import net.corda.testing.internal.vault.DummyLinearContract
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
+import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
@@ -171,16 +174,10 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     @JvmField
     val expectedEx: ExpectedException = ExpectedException.none()
 
-    @Suppress("LeakingThis")
-    @Rule
-    @JvmField
-    val transactionRule = VaultQueryRollbackRule(this)
-
     companion object {
         @ClassRule @JvmField
         val testSerialization = SerializationEnvironmentRule()
     }
-
 
     /**
      * Helper method for generating a Persistent H2 test database
@@ -188,13 +185,13 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     @Ignore
     @Test
     fun createPersistentTestDb() {
-        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), identitySvc)
+        val database = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), identitySvc::wellKnownPartyFromX500Name, identitySvc::wellKnownPartyFromAnonymous)
         setUpDb(database, 5000)
 
         database.close()
     }
 
-    private fun consumeCash(amount: Amount<Currency>) = vaultFiller.consumeCash(amount, CHARLIE)
+    protected fun consumeCash(amount: Amount<Currency>) = vaultFiller.consumeCash(amount, CHARLIE)
     private fun setUpDb(_database: CordaPersistence, delay: Long = 0) {
         _database.transaction {
             // create new states
@@ -1988,239 +1985,6 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
     }
 
-    /**
-     * Dynamic trackBy() tests
-     */
-
-    @Test
-    fun trackCashStates_unconsumed() {
-        val updates = database.transaction {
-            val updates =
-            // DOCSTART VaultQueryExample15
-            vaultService.trackBy<Cash.State>().updates     // UNCONSUMED default
-            // DOCEND VaultQueryExample15
-
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 5, DUMMY_CASH_ISSUER)
-            val linearStates = vaultFiller.fillWithSomeTestLinearStates(10).states
-            val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789")).states
-            // add more cash
-            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
-            // add another deal
-            vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
-            this.session.flush()
-
-            // consume stuff
-            consumeCash(100.DOLLARS)
-            vaultFiller.consumeDeals(dealStates.toList())
-            vaultFiller.consumeLinearStates(linearStates.toList())
-
-            close() // transaction needs to be closed to trigger events
-            updates
-        }
-
-        updates.expectEvents {
-            sequence(
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.isEmpty()) {}
-                        require(produced.size == 5) {}
-                    },
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.isEmpty()) {}
-                        require(produced.size == 1) {}
-                    }
-            )
-        }
-    }
-
-    @Test
-    fun trackCashStates_consumed() {
-
-        val updates = database.transaction {
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
-            val updates = vaultService.trackBy<Cash.State>(criteria).updates
-
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 5, DUMMY_CASH_ISSUER)
-            val linearStates = vaultFiller.fillWithSomeTestLinearStates(10).states
-            val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789")).states
-            // add more cash
-            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
-            // add another deal
-            vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
-            this.session.flush()
-
-            consumeCash(100.POUNDS)
-
-            // consume more stuff
-            consumeCash(100.DOLLARS)
-            vaultFiller.consumeDeals(dealStates.toList())
-            vaultFiller.consumeLinearStates(linearStates.toList())
-
-            close() // transaction needs to be closed to trigger events
-            updates
-        }
-
-        updates.expectEvents {
-            sequence(
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.size == 1) {}
-                        require(produced.isEmpty()) {}
-                    },
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.size == 5) {}
-                        require(produced.isEmpty()) {}
-                    }
-            )
-        }
-    }
-
-    @Test
-    fun trackCashStates_all() {
-        val updates = database.transaction {
-            val updates =
-                    database.transaction {
-                        val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-                        vaultService.trackBy<Cash.State>(criteria).updates
-                    }
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 5, DUMMY_CASH_ISSUER)
-            val linearStates = vaultFiller.fillWithSomeTestLinearStates(10).states
-            val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789")).states
-            // add more cash
-            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
-            // add another deal
-            vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
-            this.session.flush()
-
-//             consume stuff
-            consumeCash(99.POUNDS)
-
-            consumeCash(100.DOLLARS)
-            vaultFiller.consumeDeals(dealStates.toList())
-            vaultFiller.consumeLinearStates(linearStates.toList())
-
-            close() // transaction needs to be closed to trigger events
-            updates
-        }
-
-        updates.expectEvents {
-            sequence(
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.isEmpty()) {}
-                        require(produced.size == 5) {}
-                    },
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.isEmpty()) {}
-                        require(produced.size == 1) {}
-                    },
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.size == 1) {}
-                        require(produced.size == 1) {}
-                    },
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.size == 5) {}
-                        require(produced.isEmpty()) {}
-                    }
-            )
-        }
-    }
-
-    @Test
-    fun trackLinearStates() {
-
-        val updates = database.transaction {
-            // DOCSTART VaultQueryExample16
-            val (snapshot, updates) = vaultService.trackBy<LinearState>()
-            // DOCEND VaultQueryExample16
-            assertThat(snapshot.states).hasSize(0)
-
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
-            val linearStates = vaultFiller.fillWithSomeTestLinearStates(10).states
-            val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789")).states
-            // add more cash
-            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
-            // add another deal
-            vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
-            this.session.flush()
-
-            // consume stuff
-            consumeCash(100.DOLLARS)
-            vaultFiller.consumeDeals(dealStates.toList())
-            vaultFiller.consumeLinearStates(linearStates.toList())
-
-            close() // transaction needs to be closed to trigger events
-            updates
-        }
-
-        updates.expectEvents {
-            sequence(
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.isEmpty()) {}
-                        require(produced.size == 10) {}
-                    },
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.isEmpty()) {}
-                        require(produced.size == 3) {}
-                    },
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.isEmpty()) {}
-                        require(produced.size == 1) {}
-                    }
-            )
-        }
-    }
-
-    @Test
-    fun trackDealStates() {
-        val updates = database.transaction {
-            // DOCSTART VaultQueryExample17
-            val (snapshot, updates) = vaultService.trackBy<DealState>()
-            // DOCEND VaultQueryExample17
-            assertThat(snapshot.states).hasSize(0)
-
-            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
-            val linearStates = vaultFiller.fillWithSomeTestLinearStates(10).states
-            val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789")).states
-            // add more cash
-            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
-            // add another deal
-            vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
-            this.session.flush()
-
-            // consume stuff
-            consumeCash(100.DOLLARS)
-            vaultFiller.consumeDeals(dealStates.toList())
-            vaultFiller.consumeLinearStates(linearStates.toList())
-
-            close()
-            updates
-        }
-
-        updates.expectEvents {
-            sequence(
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.isEmpty()) {}
-                        require(produced.size == 3) {}
-                    },
-                    expect { (consumed, produced, flowId) ->
-                        require(flowId == null) {}
-                        require(consumed.isEmpty()) {}
-                        require(produced.size == 1) {}
-                    }
-            )
-        }
-    }
-
     @Test
     fun unconsumedCashStatesForSpending_single_issuer_reference() {
         database.transaction {
@@ -2281,10 +2045,241 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
      */
 }
 
-class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by vaultQueryTestRule {
+class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
 
     companion object {
-        @ClassRule @JvmField
-        val vaultQueryTestRule = VaultQueryTestRule()
+        val delegate = VaultQueryTestRule()
+    }
+
+    @Rule
+    @JvmField
+    val vaultQueryTestRule = delegate
+
+    /**
+     * Dynamic trackBy() tests are H2 only, since rollback stops events being emitted.
+     */
+
+    @Test
+    fun trackCashStates_unconsumed() {
+        val updates = database.transaction {
+            val updates =
+            // DOCSTART VaultQueryExample15
+                    vaultService.trackBy<Cash.State>().updates     // UNCONSUMED default
+            // DOCEND VaultQueryExample15
+
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 5, DUMMY_CASH_ISSUER)
+            val linearStates = vaultFiller.fillWithSomeTestLinearStates(10).states
+            val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789")).states
+            // add more cash
+            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
+            // add another deal
+            vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
+            this.session.flush()
+
+            // consume stuff
+            consumeCash(100.DOLLARS)
+            vaultFiller.consumeDeals(dealStates.toList())
+            vaultFiller.consumeLinearStates(linearStates.toList())
+
+            updates
+        }
+
+        updates.expectEvents {
+            sequence(
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 5) {}
+                    },
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 1) {}
+                    }
+            )
+        }
+    }
+
+    @Test
+    fun trackCashStates_consumed() {
+
+        val updates = database.transaction {
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
+            val updates = vaultService.trackBy<Cash.State>(criteria).updates
+
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 5, DUMMY_CASH_ISSUER)
+            val linearStates = vaultFiller.fillWithSomeTestLinearStates(10).states
+            val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789")).states
+            // add more cash
+            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
+            // add another deal
+            vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
+            this.session.flush()
+
+            consumeCash(100.POUNDS)
+
+            // consume more stuff
+            consumeCash(100.DOLLARS)
+            vaultFiller.consumeDeals(dealStates.toList())
+            vaultFiller.consumeLinearStates(linearStates.toList())
+
+            updates
+        }
+
+        updates.expectEvents {
+            sequence(
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.size == 1) {}
+                        require(produced.isEmpty()) {}
+                    },
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.size == 5) {}
+                        require(produced.isEmpty()) {}
+                    }
+            )
+        }
+    }
+
+    @Test
+    fun trackCashStates_all() {
+        val updates = database.transaction {
+            val updates =
+                    database.transaction {
+                        val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+                        vaultService.trackBy<Cash.State>(criteria).updates
+                    }
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 5, DUMMY_CASH_ISSUER)
+            val linearStates = vaultFiller.fillWithSomeTestLinearStates(10).states
+            val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789")).states
+            // add more cash
+            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
+            // add another deal
+            vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
+            this.session.flush()
+
+            // consume stuff
+            consumeCash(99.POUNDS)
+
+            consumeCash(100.DOLLARS)
+            vaultFiller.consumeDeals(dealStates.toList())
+            vaultFiller.consumeLinearStates(linearStates.toList())
+
+            updates
+        }
+
+        updates.expectEvents {
+            sequence(
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 5) {}
+                    },
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 1) {}
+                    },
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.size == 1) {}
+                        require(produced.size == 1) {}
+                    },
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.size == 5) {}
+                        require(produced.isEmpty()) {}
+                    }
+            )
+        }
+    }
+
+    @Test
+    fun trackLinearStates() {
+
+        val updates = database.transaction {
+            // DOCSTART VaultQueryExample16
+            val (snapshot, updates) = vaultService.trackBy<LinearState>()
+            // DOCEND VaultQueryExample16
+            assertThat(snapshot.states).hasSize(0)
+
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
+            val linearStates = vaultFiller.fillWithSomeTestLinearStates(10).states
+            val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789")).states
+            // add more cash
+            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
+            // add another deal
+            vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
+            this.session.flush()
+
+            // consume stuff
+            consumeCash(100.DOLLARS)
+            vaultFiller.consumeDeals(dealStates.toList())
+            vaultFiller.consumeLinearStates(linearStates.toList())
+
+            updates
+        }
+
+        updates.expectEvents {
+            sequence(
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 10) {}
+                    },
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 3) {}
+                    },
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 1) {}
+                    }
+            )
+        }
+    }
+
+    @Test
+    fun trackDealStates() {
+        val updates = database.transaction {
+            // DOCSTART VaultQueryExample17
+            val (snapshot, updates) = vaultService.trackBy<DealState>()
+            // DOCEND VaultQueryExample17
+            assertThat(snapshot.states).hasSize(0)
+
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, notaryServices, 3, DUMMY_CASH_ISSUER)
+            val linearStates = vaultFiller.fillWithSomeTestLinearStates(10).states
+            val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789")).states
+            // add more cash
+            vaultFiller.fillWithSomeTestCash(100.POUNDS, notaryServices, 1, DUMMY_CASH_ISSUER)
+            // add another deal
+            vaultFiller.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
+            this.session.flush()
+
+            // consume stuff
+            consumeCash(100.DOLLARS)
+            vaultFiller.consumeDeals(dealStates.toList())
+            vaultFiller.consumeLinearStates(linearStates.toList())
+
+            updates
+        }
+
+        updates.expectEvents {
+            sequence(
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 3) {}
+                    },
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 1) {}
+                    }
+            )
+        }
     }
 }

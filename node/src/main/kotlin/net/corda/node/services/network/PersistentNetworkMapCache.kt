@@ -37,8 +37,9 @@ import kotlin.collections.HashSet
 
 class NetworkMapCacheImpl(
         networkMapCacheBase: NetworkMapCacheBaseInternal,
-        private val identityService: IdentityService
-) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal {
+        private val identityService: IdentityService,
+        private val database: CordaPersistence
+) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal, SingletonSerializeAsToken() {
     companion object {
         private val logger = loggerFor<NetworkMapCacheImpl>()
     }
@@ -61,9 +62,11 @@ class NetworkMapCacheImpl(
     }
 
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
-        val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
-        return wellKnownParty?.let {
-            getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
+        return database.transaction {
+            val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
+            wellKnownParty?.let {
+                getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
+            }
         }
     }
 }
@@ -182,7 +185,7 @@ open class PersistentNetworkMapCache(
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
-            val allInfos = database.transaction { getAllInfos(session) }.map { it.toNodeInfo() }
+            val allInfos = database.transaction { getAllInfos(session).map { it.toNodeInfo() } }
             return DataFeed(allInfos, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
