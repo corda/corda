@@ -133,8 +133,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         private fun getPackageURLs(scanPackage: String): List<RestrictedURL> {
             val resource = scanPackage.replace('.', '/')
             return this::class.java.classLoader.getResources(resource)
-                    .asSequence()
-                    .map { url ->
+                    .asSequence().filterNot {
+                        it.toString().contains("/main/$resource") || it.toString().contains("/production/$resource")
+                    }.map { url ->
                         if (url.protocol == "jar") {
                             // When running tests from gradle this may be a corda module jar, so restrict to scanPackage:
                             RestrictedURL((url.openConnection() as JarURLConnection).jarFileURL, scanPackage)
