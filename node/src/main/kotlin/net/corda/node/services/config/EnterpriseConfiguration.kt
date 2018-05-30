@@ -10,7 +10,6 @@
 
 package net.corda.node.services.config
 
-import net.corda.node.services.statemachine.transitions.StateMachineConfiguration
 import java.net.InetAddress
 
 data class EnterpriseConfiguration(
@@ -46,8 +45,7 @@ data class PerformanceTuning(
         val maximumMessagingBatchSize: Int,
         val rpcThreadPoolSize: Int,
         val p2pConfirmationWindowSize: Int,
-        val brokerConnectionTtlCheckIntervalMs: Long,
-        val stateMachine: StateMachineConfiguration
+        val brokerConnectionTtlCheckIntervalMs: Long
 ) {
     companion object {
         val default = PerformanceTuning(
@@ -55,8 +53,7 @@ data class PerformanceTuning(
                 maximumMessagingBatchSize = 256,
                 rpcThreadPoolSize = 4,
                 p2pConfirmationWindowSize = 1048576,
-                brokerConnectionTtlCheckIntervalMs = 20,
-                stateMachine = StateMachineConfiguration.default
+                brokerConnectionTtlCheckIntervalMs = 20
         )
     }
 }
