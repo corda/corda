@@ -104,6 +104,10 @@ Unreleased
   (even if JPA annotation nullable=false was absent).
   In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
 
+* Adding a public method to check if a public key satisfies Corda recommended algorithm specs, `Crypto.validatePublicKey(java.security.PublicKey)`.
+  For instance, this method will check if an ECC key lies on a valid curve or if an RSA key is >= 2048bits. This might
+  be required for extra key validation checks, e.g., for Doorman to check that a CSR key meets the minimum security requirements.
+
 .. _changelog_v3.1:
 
 Version 3.1
@@ -125,7 +129,6 @@ Version 3.1
 
 * Fixed node's behaviour on startup when there is no connectivity to network map. Node continues to work normally if it has
   all the needed network data, waiting in the background for network map to become available.
-
 
 .. _changelog_v3:
 
