@@ -1,4 +1,5 @@
 @file:JvmName("Main")
+
 package net.corda.bootstrapper
 
 import net.corda.bootstrapper.backends.Backend
@@ -18,9 +19,14 @@ fun main(args: Array<String>) {
     val entryPointArgs = GuiSwitch();
     CommandLine(entryPointArgs).parse(*args)
 
+    if (entryPointArgs.usageHelpRequested) {
+        CommandLine.usage(AzureParser(), System.out)
+        return
+    }
+
+
     if (entryPointArgs.gui) {
         Gui.main(args)
-        System.exit(0)
     } else {
         val baseArgs = CliParser()
         CommandLine(baseArgs).parse(*args)

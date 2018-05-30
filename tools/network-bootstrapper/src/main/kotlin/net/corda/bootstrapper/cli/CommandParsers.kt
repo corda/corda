@@ -7,7 +7,11 @@ import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.io.File
 
-class GuiSwitch {
+open class GuiSwitch {
+
+    @Option(names = ["-h", "--help"], usageHelp = true, description = ["display this help message"])
+    var usageHelpRequested: Boolean = false
+
     @Option(names = ["-g", "--gui"], description = ["Run in Gui Mode"])
     var gui = false
 
@@ -15,7 +19,7 @@ class GuiSwitch {
     var unmatched = arrayListOf<String>()
 }
 
-open class CliParser {
+open class CliParser : GuiSwitch() {
 
     @Option(names = ["-n", "--network-name"], description = ["The resource grouping to use"], required = true)
     lateinit var name: String
@@ -26,14 +30,11 @@ open class CliParser {
     @Option(names = ["-b", "--backend"], description = ["The backend to use when instantiating nodes"])
     var backendType: Backend.BackendType = Backend.BackendType.LOCAL_DOCKER
 
-    @Option(names = ["-nodes"], split = ":")
+    @Option(names = ["-nodes"], split = ":", description = ["The number of each node to create NodeX:2 will create two instances of NodeX"])
     var nodes: MutableMap<String, Int> = hashMapOf()
 
     @Option(names = ["--add", "-a"])
     var nodesToAdd: MutableList<String> = arrayListOf()
-
-    @CommandLine.Unmatched
-    var unmatched = arrayListOf<String>()
 
     fun isNew(): Boolean {
         return nodesToAdd.isEmpty()
@@ -46,6 +47,7 @@ open class CliParser {
 }
 
 class AzureParser : CliParser() {
+
     companion object {
         val regions = Region.values().map { it.name() to it }.toMap()
     }
@@ -63,16 +65,4 @@ class AzureParser : CliParser() {
         return mapOf(Constants.REGION_ARG_NAME to region.name())
     }
 
-}
-
-
-fun main(badArgs: Array<String>) {
-    val example = AzureParser()
-    try {
-        CommandLine(example).parseArgs("-n", "test-network", "--add", "b3i", "--add", "cedent")
-    } catch (exception: Exception) {
-        System.err.println("Failed to read arguments due to: ${exception.message}")
-        CommandLine(example).usage(System.err)
-    }
-    println()
 }
