@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Shell now kills an ongoing flow when CTRL+C is pressed in the terminal.
+
 * ``ServiceHub`` and ``CordaRPCOps`` can now safely be used from multiple threads without incurring in database transaction problems.
 
 * Doorman and NetworkMap url's can now be configured individually rather than being assumed to be
