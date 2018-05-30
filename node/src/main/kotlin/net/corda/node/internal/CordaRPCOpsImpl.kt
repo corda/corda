@@ -175,7 +175,12 @@ internal class CordaRPCOpsImpl(
         if (isFlowsDrainingModeEnabled()) {
             throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
         }
-        return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
+        // It is possible that a flow is started during node shutdown process (after SMM but before RPC)
+        try {
+            return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
+        } catch (e: IllegalArgumentException) {
+            throw RejectedCommandException("Node is shutting down. Cannot start new flows through RPC.")
+        }
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
