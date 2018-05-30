@@ -16,6 +16,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
+import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.internal.writer
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
@@ -25,7 +26,6 @@ import net.corda.serialization.internal.MutableClassWhitelist
 import net.corda.serialization.internal.TransientClassWhiteList
 import net.corda.serialization.internal.amqp.hasCordaSerializable
 import java.io.PrintWriter
-import java.lang.reflect.Modifier
 import java.lang.reflect.Modifier.isAbstract
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Paths
@@ -85,22 +85,7 @@ class CordaClassResolver(serializationContext: SerializationContext) : DefaultCl
 
     override fun registerImplicit(type: Class<*>): Registration {
         val targetType = typeForSerializationOf(type)
-        // Is this a Kotlin object? We use our own reflection here rather than .kotlin.objectInstance because Kotlin
-        // reflection won't work for private objects, and can throw exceptions in other circumstances as well.
-        val objectInstance = try {
-            targetType.declaredFields.singleOrNull {
-                it.name == "INSTANCE" &&
-                        it.type == type &&
-                        Modifier.isStatic(it.modifiers) &&
-                        Modifier.isFinal(it.modifiers) &&
-                        Modifier.isPublic(it.modifiers)
-            }?.let {
-                it.isAccessible = true
-                type.cast(it.get(null)!!)
-            }
-        } catch (t: Throwable) {
-            null
-        }
+        val objectInstance = targetType.kotlinObjectInstance
 
         // We have to set reference to true, since the flag influences how String fields are treated and we want it to be consistent.
         val references = kryo.references

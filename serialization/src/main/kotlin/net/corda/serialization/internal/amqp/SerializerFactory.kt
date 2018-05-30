@@ -12,6 +12,7 @@ package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
+import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.debug
@@ -339,7 +340,7 @@ open class SerializerFactory(
                     if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
                     else ArraySerializer.make(type, this)
                 } else {
-                    val singleton = clazz.objectInstance()
+                    val singleton = clazz.kotlinObjectInstance
                     if (singleton != null) {
                         whitelist.requireWhitelisted(clazz)
                         SingletonSerializer(clazz, singleton, this)

@@ -38,6 +38,5 @@ interface Transition {
 
 class TransitionContext(
         val id: StateMachineRunId,
-        val configuration: StateMachineConfiguration,
         val secureRandom: SecureRandom
 )

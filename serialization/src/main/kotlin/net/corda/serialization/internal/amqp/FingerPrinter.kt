@@ -12,6 +12,7 @@ package net.corda.serialization.internal.amqp
 
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
+import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toBase64
 import java.io.NotSerializableException
@@ -163,7 +164,7 @@ class SerializerFingerPrinter : FingerPrinter {
                             }.putUnencodedChars(type.name).putUnencodedChars(ENUM_HASH)
                         } else {
                             hasher.fingerprintWithCustomSerializerOrElse(factory!!, type, type) {
-                                if (type.objectInstance() != null) {
+                                if (type.kotlinObjectInstance != null) {
                                     // TODO: name collision is too likely for kotlin objects, we need to introduce some reference
                                     // to the CorDapp but maybe reference to the JAR in the short term.
                                     hasher.putUnencodedChars(type.name)
