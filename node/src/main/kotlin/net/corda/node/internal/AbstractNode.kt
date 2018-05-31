@@ -26,9 +26,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.*
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.classloading.requireAnnotation
@@ -83,6 +81,7 @@ import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.time.Clock
 import java.time.Duration
+import java.time.format.DateTimeParseException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -198,8 +197,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val identityService = makeIdentityService(identity.certificate)
 
         networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
-
-        val networkParameters = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory).networkParameters
+        val networkParameteresReader = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory)
+        val networkParameters = networkParameteresReader.networkParameters
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
@@ -267,7 +266,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient,
-                networkParameters.serialize().hash,
+                networkParameteresReader.hash,
                 configuration.baseDirectory)
         runOnStop += networkMapUpdater::close
 
@@ -343,6 +342,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         // Write the node-info file even if nothing's changed, just in case the file has been deleted.
         NodeInfoWatcher.saveToFile(configuration.baseDirectory, nodeInfoAndSigned)
 
+        // Always republish on startup, it's treated by network map server as a heartbeat.
         if (networkMapClient != null) {
             tryPublishNodeInfoAsync(nodeInfoAndSigned.signed, networkMapClient)
         }
@@ -350,18 +350,31 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         return Pair(keyPairs, nodeInfo)
     }
 
+    // Publish node info on startup and start task that sends every day a heartbeat - republishes node info.
     private fun tryPublishNodeInfoAsync(signedNodeInfo: SignedNodeInfo, networkMapClient: NetworkMapClient) {
+        // By default heartbeat interval should be set to 1 day, but for testing we may change it.
+        val republishProperty = System.getProperty("net.corda.node.internal.nodeinfo.publish.interval")
+        val heartbeatInterval = if (republishProperty != null) {
+            try {
+                Duration.parse(republishProperty)
+            } catch (e: DateTimeParseException) {
+                1.days
+            }
+        } else {
+            1.days
+        }
         val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater", Executors.defaultThreadFactory()))
-
         executor.submit(object : Runnable {
             override fun run() {
-                try {
+                val republishInterval = try {
                     networkMapClient.publish(signedNodeInfo)
+                    heartbeatInterval
                 } catch (t: Throwable) {
                     log.warn("Error encountered while publishing node info, will retry again", t)
-                    // TODO: Exponential backoff?
-                    executor.schedule(this, 1, TimeUnit.MINUTES)
+                    // TODO: Exponential backoff? It should reach max interval of eventHorizon/2.
+                    1.minutes
                 }
+                executor.schedule(this, republishInterval.toMinutes(), TimeUnit.MINUTES)
             }
         })
     }
