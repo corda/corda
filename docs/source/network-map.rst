@@ -179,13 +179,13 @@ Cleaning the network map cache
 
 Sometimes it may happen that the node ends up with an inconsistent view of the network. This can occur due to changes in deployment
 leading to stale data in the database, different data distribution time and mistakes in configuration. For these unlikely
-events both RPC method and command line option for clearing local network map cache database were added. To use them
+events both RPC method and command line option for clearing local network map cache database exist. To use them
 you either need to run from the command line:
 
 .. code-block:: shell
 
     java -jar corda.jar --clear-network-map-cache
 
-or call RPC method `clearNetworkMapCache` (it can be invoked through node's shell as `run clearNetworkMapCache`, for more information on
+or call RPC method `clearNetworkMapCache` (it can be invoked through the node's shell as `run clearNetworkMapCache`, for more information on
 how to log into node's shell see :doc:`shell`). As we are testing and hardening the implementation this step shouldn't be required.
-After cleaning up network map data is restored on the next poll from the server or filesystem.
+After cleaning the cache, network map data is restored on the next poll from the server or filesystem.

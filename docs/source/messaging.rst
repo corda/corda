@@ -26,7 +26,7 @@ Supporting the messaging layer is a network map service, which is responsible fo
 
 Nodes have an internal component, the network map cache, which contains a copy of the network map (which is backed up in the database
 to persist that information across the restarts in case the network map server is down). When a node starts up its cache
-fetches a copy of the full network map (from the server or from filesystem for quick deployments), after that polls on
+fetches a copy of the full network map (from the server or from filesystem for development mode). After that it polls on
 regular time interval for network map and applies any related changes locally.
 Nodes do not automatically deregister themselves, so (for example) nodes going offline briefly for maintenance are retained
 in the network map, and messages for them will be queued, minimising disruption.
