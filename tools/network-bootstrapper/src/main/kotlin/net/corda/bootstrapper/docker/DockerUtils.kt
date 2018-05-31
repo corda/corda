@@ -4,6 +4,7 @@ import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientBuilder
 import com.github.dockerjava.core.DockerClientConfig
+import org.apache.commons.lang3.SystemUtils
 
 object DockerUtils {
 
@@ -14,7 +15,11 @@ object DockerUtils {
     }
 
     fun createLocalDockerClient(): DockerClient {
-        return DockerClientBuilder.getInstance().build()
+        return if (SystemUtils.IS_OS_WINDOWS) {
+            DockerClientBuilder.getInstance("tcp://127.0.0.1:2375").build()
+        } else {
+            DockerClientBuilder.getInstance().build()
+        }
     }
 
     private fun createDockerClientConfig(registryServerUrl: String, username: String, password: String): DockerClientConfig {

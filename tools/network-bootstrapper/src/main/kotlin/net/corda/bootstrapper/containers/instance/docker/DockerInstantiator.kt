@@ -21,7 +21,7 @@ class DockerInstantiator(private val volume: LocalVolume,
                                       env: Map<String, String>?): CompletableFuture<Pair<String, Map<Int, Int>>> {
 
         val localClient = DockerUtils.createLocalDockerClient()
-        val convertedEnv = (env ?: emptyMap()).entries.map { (key, value) -> "$key=$value" }.toList()
+        val convertedEnv = buildDockerEnv(env)
         val nodeInfosVolume = Volume(Instantiator.ADDITIONAL_NODE_INFOS_PATH)
         val existingContainers = localClient.listContainersCmd().withShowAll(true).exec()
                 .map { it.names.first() to it }
@@ -68,6 +68,9 @@ class DockerInstantiator(private val volume: LocalVolume,
 
         return CompletableFuture.completedFuture(("localhost") to portMappings)
     }
+
+    private fun buildDockerEnv(env: Map<String, String>?) =
+            (env ?: emptyMap()).entries.map { (key, value) -> "$key=$value" }.toList()
 
     override fun getExpectedFQDN(instanceName: String): String {
         return instanceName

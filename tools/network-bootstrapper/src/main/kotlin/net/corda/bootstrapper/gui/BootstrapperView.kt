@@ -242,11 +242,9 @@ class State : Controller() {
     val networkContext = SimpleObjectProperty<Context>(null)
 
     fun clear() {
-        foundNodes.clear()
         builtNodes.clear()
         pushedNodes.clear()
         backingUnsortedInstances.clear()
-        foundNotaries.clear()
         networkContext.set(null)
     }
 
