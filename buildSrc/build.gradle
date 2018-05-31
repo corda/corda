@@ -8,7 +8,7 @@ buildscript {
         proguard_version = constants.getProperty("proguardVersion")
         assertj_version = '3.9.1'
         junit_version = '4.12'
-        asm_version = '6.1.1'
+        asm_version = '6.2'
     }
 
     repositories {
