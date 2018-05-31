@@ -182,8 +182,6 @@ Currently it has these features:
        using this tool, the CorDapp can be "lifted" (`--create-migration-sql-for-cordapp`).
        The reason this is needed is because those CorDapps don't handle this enterprise level concern.
        See below for details.
-    5. The tool is intended to be used to run database migrations on "Doorman" instances. There is no difference from running over a normal node.
-
 
 It has the following command line options:
 
@@ -192,11 +190,11 @@ It has the following command line options:
    ====================================  =======================================================================
      Option                               Description
    ====================================  =======================================================================
-    --help                               Print help message.
-    --mode                               Either 'NODE' or 'DOORMAN'. By default 'NODE'.
-    --base-directory(*)                  The node or doorman directory.
-    --config-file                        The name of the config file. By default 'node.conf' for a simple node and 'network-management.conf' for a doorman.
-    --doorman-jar-path                   The path to the doorman fat jar.
+    --help                               Print help message
+    --mode                               Either 'NODE' or 'DOORMAN'. By default 'NODE'
+    --base-directory(*)                  The node directory
+    --config-file                        The name of the config file, by default 'node.conf'
+    --doorman-jar-path                   For internal use only
     --create-migration-sql-for-cordapp   Create migration files for a CorDapp. You can specify the fully qualified name of the `MappedSchema` class. If not specified it will generate the migration for all schemas that don't have migrations. The output directory is the base-directory, where a `migration` folder is created.
     --dry-run                            Output the database migration to the specified output file. The output directory is the base-directory. You can specify a file name or 'CONSOLE' if you want to send the output to the console.
     --execute-migration                  This option will run the db migration on the configured database. This is the only command that will actually write to the database.
