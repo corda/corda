@@ -297,6 +297,15 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
     }
 
+    fun clearNetworkMapCache() {
+        Node.printBasicNodeInfo("Clearing network map cache entries")
+        log.info("Starting clearing of network map cache entries...")
+        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
+            val networkMapCache = PersistentNetworkMapCache(it, emptyList())
+            networkMapCache.clearNetworkMapCache()
+        }
+    }
+    
     open fun start(): StartedNode<AbstractNode> {
         check(started == null) { "Node has already been started" }
         if (configuration.devMode) {
