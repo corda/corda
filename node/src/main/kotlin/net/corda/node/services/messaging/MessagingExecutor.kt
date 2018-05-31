@@ -20,6 +20,7 @@ import net.corda.node.VersionInfo
 import net.corda.node.services.statemachine.FlowMessagingImpl
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import org.apache.activemq.artemis.api.core.ActiveMQDuplicateIdException
+import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -128,6 +129,12 @@ class MessagingExecutor(
                             break@eventLoop
                         }
                     }
+                } catch (exception: ActiveMQObjectClosedException) {
+                    log.error("Messaging client connection closed", exception)
+                    if (job is Job.Send) {
+                        job.sentFuture.setException(exception)
+                    }
+                    System.exit(1)
                 } catch (exception: Throwable) {
                     log.error("Exception while handling job $job, disregarding", exception)
                     if (job is Job.Send) {
