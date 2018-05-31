@@ -50,7 +50,6 @@ dependencies {
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
     compile "no.tornado:tornadofx:$tornadofx_version"
 
-    // Controls FX: more java FX components http://fxexperience.com/controlsfx/
     compile "org.controlsfx:controlsfx:$controlsfx_version"
 
 }
@@ -63,5 +62,10 @@ shadowJar {
     mainClassName = 'net.corda.bootstrapper.Main'
 }
 
-task buildNetworkBootstrapper(dependsOn: shadowJar){
+task buildNetworkBootstrapper(dependsOn: shadowJar) {
+}
+
+configurations {
+    compile.exclude group: "log4j", module: "log4j"
+    compile.exclude group: "org.apache.logging.log4j"
 }

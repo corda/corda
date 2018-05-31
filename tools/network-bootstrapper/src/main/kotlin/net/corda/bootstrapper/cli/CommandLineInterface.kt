@@ -27,7 +27,11 @@ class CommandLineInterface {
                     .withNodeCounts(parsedArgs.nodes)
                     .onNodeBuild { builtNode -> println("Built node: ${builtNode.name} to image: ${builtNode.localImageId}") }
                     .onNodePushed { pushedNode -> println("Pushed node: ${pushedNode.name} to: ${pushedNode.remoteImageName}") }
-                    .onNodeInstance { instance -> println("Instance of ${instance.name} with id: ${instance.nodeInstanceName} on address: ${instance.reachableAddress}") }
+                    .onNodeInstance { instance ->
+                        println("Instance of ${instance.name} with id: ${instance.nodeInstanceName} on address: " +
+                                "${instance.reachableAddress} {ssh:${instance.portMapping[Constants.NODE_SSHD_PORT]}, " +
+                                "p2p:${instance.portMapping[Constants.NODE_P2P_PORT]}}")
+                    }
                     .withBackend(parsedArgs.backendType)
                     .withBackendOptions(parsedArgs.backendOptions())
                     .build().getOrThrow()
