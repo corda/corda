@@ -7,6 +7,8 @@ import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
+import net.corda.core.schemas.*
+import net.corda.core.schemas.MappedSchemaValidator.crossReferencesToOtherMappedSchema
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.SchemaService
@@ -91,4 +93,9 @@ class NodeSchemaService(extraSchemas: Set<MappedSchema> = emptySet(), includeNot
             return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference, state.participants)
         return (state as QueryableState).generateMappedObject(schema)
     }
+
+    /** Returns list of [MappedSchemaValidator.SchemaCrossReferenceReport] violations. */
+    fun mappedSchemasWarnings(): List<MappedSchemaValidator.SchemaCrossReferenceReport> =
+            schemaOptions.keys.map { schema -> crossReferencesToOtherMappedSchema(schema) }.flatMap { it.toList() }
+
 }

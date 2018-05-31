@@ -91,3 +91,46 @@ data class PersistentStateRef(
  * Marker interface to denote a persistable Corda state entity that will always have a transaction id and index
  */
 interface StatePersistable : Serializable
+
+
+object MappedSchemaValidator {
+    fun fieldsFromOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
+            schema.mappedTypes.map { entity ->
+                entity.declaredFields.filter { field ->
+                    field.type.enclosingClass != null
+                            && MappedSchema::class.java.isAssignableFrom(field.type.enclosingClass)
+                            && hasJpaAnnotation(field.declaredAnnotations)
+                            && field.type.enclosingClass != schema.javaClass
+                }.map { field -> SchemaCrossReferenceReport(schema.javaClass.name, entity.simpleName, field.type.enclosingClass.name, field.name, field.type.simpleName)}
+            }.flatMap { it.toSet() }
+
+
+    fun methodsFromOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
+            schema.mappedTypes.map { entity ->
+                entity.declaredMethods.filter { method ->
+                    method.returnType.enclosingClass != null
+                            && MappedSchema::class.java.isAssignableFrom(method.returnType.enclosingClass)
+                            && method.returnType.enclosingClass != schema.javaClass
+                            && hasJpaAnnotation(method.declaredAnnotations)
+                }.map { method -> SchemaCrossReferenceReport(schema.javaClass.name, entity.simpleName, method.returnType.enclosingClass.name, method.name, method.returnType.simpleName)}
+            }.flatMap { it.toSet() }
+
+    fun crossReferencesToOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
+         fieldsFromOtherMappedSchema(schema) + methodsFromOtherMappedSchema(schema)
+
+    /** Returns true if [javax.persistence] annotation expect [javax.persistence.Transient] is found. */
+    private inline fun hasJpaAnnotation(annotations: Array<Annotation>) =
+            annotations.any { annotation -> annotation.toString().startsWith("@javax.persistence.") && annotation !is javax.persistence.Transient }
+
+
+    class SchemaCrossReferenceReport(private val schema: String, private val entity: String, private val referencedSchema: String,
+                                     private val fieldOrMethod: String, private val fieldOrMethodType: String) {
+
+        override fun toString() = "Cross-reference between MappedSchemas '$schema' and '$referencedSchema'. " +
+                "MappedSchema '${schema.substringAfterLast(".")}' entity '$entity' field '$fieldOrMethod' is of type '$fieldOrMethodType' " +
+                "defined in the other MappedSchema '${referencedSchema.substringAfterLast(".")}'."
+
+        fun toWarning() = toString() + " This may cause issues when evolving MappedSchema or migrating it's data, " +
+                "ensure JPA entity reference entities defined within the same enclosing MappedSchema."
+    }
+}
