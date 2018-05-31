@@ -24,21 +24,17 @@ Network Map Service
 
 Supporting the messaging layer is a network map service, which is responsible for tracking public nodes on the network.
 
-Nodes have an internal component, the network map cache, which contains a copy of the network map (which is just a
-document). When a node starts up its cache fetches a copy of the full network map, and requests to be notified of
-changes. The node then registers itself with the network map service, and the service notifies subscribers that a new
-node has joined the network. Nodes do not automatically deregister themselves, so (for example) nodes going offline
-briefly for maintenance are retained in the network map, and messages for them will be queued, minimising disruption.
+Nodes have an internal component, the network map cache, which contains a copy of the network map (which is backed up in the database
+to persist that information across the restarts in case of network map server is down). When a node starts up its cache
+fetches a copy of the full network map (from the server or from filesystem for quick deployments), after that polls on
+regular time interval for network map and applies any related changes locally.
+Nodes do not automatically deregister themselves, so (for example) nodes going offline briefly for maintenance are retained
+in the network map, and messages for them will be queued, minimising disruption.
 
-Nodes submit signed changes to the map service, which then forwards update notifications on to nodes which have
-requested to be notified of changes.
-
-The network map currently supports:
-
-* Looking up nodes by service
-* Looking up node for a party
-* Suggesting a node providing a specific service, based on suitability for a contract and parties, for example suggesting
-  an appropriate interest rates oracle for an interest rate swap contract. Currently no recommendation logic is in place.
+Additionally, on every restart and on daily basis nodes submit signed `NodeInfo`s to the map service. When network map gets
+signed, these changes are distributed as new network data. `NodeInfo` republishing is treated as a heartbeat from the node,
+based on that network map service is able to figure out which nodes can be considered as stale and removed from the network
+map document after `eventHorizon` time.
 
 Message queues
 --------------
