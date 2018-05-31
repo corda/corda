@@ -61,7 +61,7 @@ class NetworkBootstrapper {
             // TODO: Use Picocli once the bootstrapper has moved into the tools package.
             val baseNodeDirectory = requireNotNull(args.firstOrNull()) { "Expecting first argument which is the nodes' parent directory" }
             val cordappJars = if (args.size > 1) args.asList().drop(1).map { Paths.get(it) } else emptyList()
-            NetworkBootstrapper().bootstrap(Paths.get(baseNodeDirectory).toAbsolutePath().normalize(), cordappJars, 4)
+            NetworkBootstrapper().bootstrap(Paths.get(baseNodeDirectory).toAbsolutePath().normalize(), cordappJars, Runtime.getRuntime().availableProcessors())
         }
     }
 
@@ -153,11 +153,9 @@ class NetworkBootstrapper {
                 .start()
         if (!process.waitFor(60, TimeUnit.SECONDS)) {
             process.destroyForcibly()
-            throw Error("Error while generating node info file. Please check the logs in $logsDir.")
+            throw IllegalStateException("Error while generating node info file. Please check the logs in $logsDir.")
         }
-        if (process.exitValue() != 0) {
-            throw Error("Error while generating node info file. Please check the logs in $logsDir.")
-        }
+        check(process.exitValue() == 0) {  "Error while generating node info file. Please check the logs in $logsDir." }
         return nodeDir.list { paths -> paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get() }
     }
 
