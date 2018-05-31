@@ -25,7 +25,7 @@ Network Map Service
 Supporting the messaging layer is a network map service, which is responsible for tracking public nodes on the network.
 
 Nodes have an internal component, the network map cache, which contains a copy of the network map (which is backed up in the database
-to persist that information across the restarts in case of network map server is down). When a node starts up its cache
+to persist that information across the restarts in case the network map server is down). When a node starts up its cache
 fetches a copy of the full network map (from the server or from filesystem for quick deployments), after that polls on
 regular time interval for network map and applies any related changes locally.
 Nodes do not automatically deregister themselves, so (for example) nodes going offline briefly for maintenance are retained

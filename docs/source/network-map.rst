@@ -177,7 +177,7 @@ At this point the node will automatically shutdown and will require the node ope
 Cleaning the network map cache
 ------------------------------
 
-Sometimes it may happen that the node ends up with inconsistent view of the network, because of changes in deployment
+Sometimes it may happen that the node ends up with an inconsistent view of the network. This can occur due to changes in deployment
 leading to stale data in the database, different data distribution time and mistakes in configuration. For these unlikely
 events both RPC method and command line option for clearing local network map cache database were added. To use them
 you either need to run from the command line:
