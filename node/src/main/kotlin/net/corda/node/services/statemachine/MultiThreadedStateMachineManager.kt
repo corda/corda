@@ -23,20 +23,12 @@ import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.ConcurrentBox
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.LifeCycle
-import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -47,12 +39,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
-import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
-import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
-import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
-import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
-import net.corda.node.services.statemachine.interceptors.MetricInterceptor
-import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
+import net.corda.node.services.statemachine.interceptors.*
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -298,8 +285,6 @@ class MultiThreadedStateMachineManager(
             }
         }
     }
-
-    private val stateMachineConfiguration = serviceHub.configuration.enterpriseConfiguration.tuning.stateMachine
 
     private fun checkQuasarJavaAgentPresence() {
         check(SuspendableHelper.isJavaAgentActive(), {
@@ -593,7 +578,7 @@ class MultiThreadedStateMachineManager(
                 database = database,
                 transitionExecutor = transitionExecutor,
                 actionExecutor = actionExecutor!!,
-                stateMachine = StateMachine(id, stateMachineConfiguration, secureRandom),
+                stateMachine = StateMachine(id, secureRandom),
                 serviceHub = serviceHub,
                 checkpointSerializationContext = checkpointSerializationContext!!
         )
