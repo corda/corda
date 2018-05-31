@@ -4,6 +4,7 @@ import joptsimple.OptionParser
 import joptsimple.ValueConverter
 import net.corda.core.utilities.NetworkHostAndPort
 import org.slf4j.LoggerFactory
+import java.util.concurrent.Callable
 
 fun main(args: Array<String>) {
 
@@ -20,8 +21,15 @@ fun main(args: Array<String>) {
         parser.printHelpOn(System.err)
         throw th
     }
+    val scenarioType = ScenarioType.valueOf(options.valueOf(MandatoryCommandLineArguments.scenarioType.name) as String)
+
+    val scenarioRunner: Callable<Boolean> = when(scenarioType) {
+        ScenarioType.Cash -> CashScenarioRunner(options)
+        ScenarioType.LinearState -> LinearStateScenarioRunner(options)
+    }
+
     try {
-        require(ScenarioRunner(options).call()) { "Scenario should pass" }
+        require(scenarioRunner.call()) { "Scenario should pass" }
         System.exit(0)
     } catch (th: Throwable) {
         logger.error("Exception in main()", th)
@@ -42,10 +50,16 @@ enum class MandatoryCommandLineArguments(override val valueConverter: ValueConve
     normalNodeRpcAddress(NetworkHostAndPortValueConverter, "Normal Node RPC address"),
     normalNodeRpcUserName(StringValueConverter, "Normal Node RPC user name"),
     normalNodeRpcPassword(StringValueConverter, "Normal Node RPC password"),
+    scenarioType(StringValueConverter, "Type of scenario to run"),
 }
 
 enum class OptionalCommandLineArguments(override val valueConverter: ValueConverter<out Any>, override val description: String) : CommandLineArguments{
     iterationsCount(PositiveIntValueConverter, "Number of iteration to execute"),
+}
+
+private enum class ScenarioType {
+    Cash,
+    LinearState,
 }
 
 private object PositiveIntValueConverter : ValueConverter<Int> {

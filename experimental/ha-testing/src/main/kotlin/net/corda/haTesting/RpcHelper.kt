@@ -35,6 +35,24 @@ inline fun <T, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithRetry
 
 }
 
+inline fun <T, A, B, C, D, E, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithRetryAndGet(
+        @Suppress("UNUSED_PARAMETER") crossinline
+        flowConstructor: (A, B, C, D, E) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E,
+        retryInterval: Duration = 5.seconds,
+        giveUpInterval: Duration = 5.minutes
+): T {
+
+    return arithmeticBackoff(retryInterval, giveUpInterval, "startFlowWithRetryAndGet") {
+        this.startFlow(flowConstructor, arg0, arg1, arg2, arg3, arg4).returnValue.getOrThrow()
+    }
+
+}
+
 fun <T> arithmeticBackoff(retryInterval: Duration, giveUpInterval: Duration, meaningfulDescription: String, op: () -> T): T {
     val start = System.currentTimeMillis()
     var iterCount = 0

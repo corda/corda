@@ -38,4 +38,5 @@ Main method has the following parameters:
 | --haNodeRpcAddress <<host:port>>         | High Available Node RPC address |
 | --haNodeRpcUserName <free_form_text>     | High Available Node RPC user name |  
 | --haNodeRpcPassword <free_form_text>     | High Available Node RPC password |             
+| --scenarioType <free_form_text>          | Type of scenario to run. Currently supported values: `Cash`, `LinearState` |
 | --iterationsCount [positive_integer]     | Number of iteration to execute |
