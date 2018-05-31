@@ -281,6 +281,7 @@ object InteractiveShell {
             while (!Thread.currentThread().isInterrupted) {
                 try {
                     latch.await()
+                    break
                 } catch (e: InterruptedException) {
                     try {
                         rpcOps.killFlow(stateObservable.id)
