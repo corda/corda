@@ -54,7 +54,8 @@ class NodeArgsParserTest {
                 justGenerateNodeInfo = false,
                 bootstrapRaftCluster = false,
                 unknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL,
-                devMode = false))
+                devMode = false,
+                clearNetworkMapCache = false))
     }
 
     @Test
@@ -166,6 +167,12 @@ class NodeArgsParserTest {
     fun `generate node infos`() {
         val cmdLineOptions = parser.parse("--just-generate-node-info")
         assertThat(cmdLineOptions.justGenerateNodeInfo).isTrue()
+    }
+
+    @Test
+    fun `clear network map cache`() {
+        val cmdLineOptions = parser.parse("--clear-network-map-cache")
+        assertThat(cmdLineOptions.clearNetworkMapCache).isTrue()
     }
 
     @Test
