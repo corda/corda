@@ -46,7 +46,7 @@ object CheckpointVerifier {
                         throw CheckpointIncompatibleException.FlowVersionIncompatibleException(subFlow.flowClass, currenCordapp, corDappInfo.corDappHash)
                     }
                 }
-                2 -> throw IllegalStateException("Multiple Cordapps with name ${corDappInfo.corDappName} installed.") // This should not happen
+                else -> throw IllegalStateException("Multiple Cordapps with name ${corDappInfo.corDappName} installed.") // This should not happen
             }
         }
     }
@@ -57,15 +57,15 @@ object CheckpointVerifier {
  */
 sealed class CheckpointIncompatibleException(override val message: String) : Exception() {
     class CannotBeDeserialisedException(val e: Exception) : CheckpointIncompatibleException(
-            "Found checkpoint that cannot be deserialised using the current Corda version. Please revert to the previous version of Corda, drain your node, and try again. Cause: ${e.message}")
+            "Found checkpoint that cannot be deserialised using the current Corda version. Please revert to the previous version of Corda, drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again. Cause: ${e.message}")
 
     class SubFlowCoreVersionIncompatibleException(val flowClass: Class<out FlowLogic<*>>, oldVersion: Int) : CheckpointIncompatibleException(
-            "Found checkpoint for flow: ${flowClass} that is incompatible with the current Corda platform. Please revert to the previous version of Corda (v = ${oldVersion}), drain your node, and try again.")
+            "Found checkpoint for flow: ${flowClass} that is incompatible with the current Corda platform. Please revert to the previous version of Corda (version ${oldVersion}), drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
 
     class FlowVersionIncompatibleException(val flowClass: Class<out FlowLogic<*>>, val cordapp: Cordapp, oldHash: SecureHash) : CheckpointIncompatibleException(
-            "Found checkpoint for flow: ${flowClass} that is incompatible with the current installed version of ${cordapp.name}. Please reinstall the previous version of the CorDapp (with hash: ${oldHash}), drain your node, and try again.")
+            "Found checkpoint for flow: ${flowClass} that is incompatible with the current installed version of ${cordapp.name}. Please reinstall the previous version of the CorDapp (with hash: ${oldHash}), drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
 
     class FlowNotInstalledException(val flowClass: Class<out FlowLogic<*>>) : CheckpointIncompatibleException(
-            "Found checkpoint for flow: ${flowClass} that is no longer installed. Please install the missing CorDapp, drain your node, and try again.")
+            "Found checkpoint for flow: ${flowClass} that is no longer installed. Please install the missing CorDapp, drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
 }
 
