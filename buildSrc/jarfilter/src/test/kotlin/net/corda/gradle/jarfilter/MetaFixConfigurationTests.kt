@@ -58,9 +58,7 @@ task metafix(type: MetaFixerTask) {
 
         assertThat(output).containsSubsequence(
             "Caused by: org.gradle.api.GradleException:",
-            "(No such file or directory)",
-            "Caused by: java.io.FileNotFoundException:",
-            "(No such file or directory)"
+            "Caused by: java.io.FileNotFoundException:"
         )
 
         val metafix = result.forTask("metafix")

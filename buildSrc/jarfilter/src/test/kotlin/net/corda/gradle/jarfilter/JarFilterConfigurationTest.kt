@@ -69,9 +69,7 @@ task jarFilter(type: JarFilterTask) {
 
         assertThat(output).containsSubsequence(
             "Caused by: org.gradle.api.GradleException:",
-            "(No such file or directory)",
-            "Caused by: java.io.FileNotFoundException:",
-            "(No such file or directory)"
+            "Caused by: java.io.FileNotFoundException:"
         )
 
         val jarFilter = result.forTask("jarFilter")

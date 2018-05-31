@@ -50,7 +50,7 @@ plugins {
 
 import net.corda.gradle.jarfilter.MetaFixerTask
 task metafix(type: MetaFixerTask) {
-    jars file("${sourceJar.path}")
+    jars file("${sourceJar.path.toUri()}")
     preserveTimestamps = false
 }
 """)

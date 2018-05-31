@@ -49,7 +49,7 @@ plugins {
 
 import net.corda.gradle.jarfilter.JarFilterTask
 task jarFilter(type: JarFilterTask) {
-    jars file("${sourceJar.path}")
+    jars file("${sourceJar.path.toUri()}")
     preserveTimestamps = false
 }
 """)
