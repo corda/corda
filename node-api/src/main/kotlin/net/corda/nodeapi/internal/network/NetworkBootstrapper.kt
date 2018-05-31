@@ -19,7 +19,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
@@ -32,12 +31,13 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
+import kotlin.concurrent.schedule
 import kotlin.streams.toList
 
 /**
@@ -102,7 +102,7 @@ class NetworkBootstrapper {
         }
     }
 
-    fun bootstrap(directory: Path, cordappJars: List<Path>, numConcurrentProcesses: Int) {
+    fun bootstrap(directory: Path, cordappJars: List<Path>, numParallelProcesses: Int) {
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
         generateDirectoriesIfNeeded(directory, cordappJars)
@@ -114,7 +114,7 @@ class NetworkBootstrapper {
         initialiseSerialization()
         try {
             println("Waiting for all nodes to generate their node-info files...")
-            val nodeInfoFiles = generateNodeInfos(nodeDirs, numConcurrentProcesses)
+            val nodeInfoFiles = generateNodeInfos(nodeDirs, numParallelProcesses)
             println("Checking for duplicate nodes")
             checkForDuplicateLegalNames(nodeInfoFiles)
             println("Distributing all node-info files to all nodes")
@@ -134,11 +134,15 @@ class NetworkBootstrapper {
         }
     }
 
-    private fun generateNodeInfos(nodeDirs: List<Path>, numConcurrentProcesses: Int): List<Path> {
-        val executor = Executors.newFixedThreadPool(numConcurrentProcesses)
+    private fun generateNodeInfos(nodeDirs: List<Path>, numParallelProcesses: Int): List<Path> {
+        val timePerNode = 40.seconds // On the test machine, generating the node info takes 7 seconds for a single node.
+        val tExpected = maxOf(timePerNode, timePerNode * nodeDirs.size.toLong() / numParallelProcesses.toLong())
+        val warningTimer = Timer("WarnOnSlowMachines", false).schedule(tExpected.toMillis()) { println("...still waiting. If this is taking longer than usual, check the node logs.")  }
+        val executor = Executors.newFixedThreadPool(numParallelProcesses)
         return try {
             nodeDirs.map { executor.fork { generateNodeInfo(it) } }.transpose().get()
         } finally {
+            warningTimer.cancel()
             executor.shutdownNow()
         }
     }
