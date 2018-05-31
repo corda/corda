@@ -14,7 +14,7 @@ class TransactionSignatureTest {
         private const val KEYSTORE_PASSWORD = "deterministic"
         private val testBytes = "12345678901234567890123456789012".toByteArray()
 
-        private val keyStoreProvider = KeyStoreProvider("txsignature.pfx", KEYSTORE_PASSWORD)
+        private val keyStoreProvider = KeyStoreProvider("keystore/txsignature.pfx", KEYSTORE_PASSWORD)
         private lateinit var keyPair: KeyPair
 
         @ClassRule

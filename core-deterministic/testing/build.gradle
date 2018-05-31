@@ -1,7 +1,5 @@
 apply plugin: 'kotlin'
 
-def keyStoreDir = "$buildDir/keystore"
-
 dependencies {
     testCompile project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
     testCompile project(path: ':serialization-deterministic', configuration: 'runtimeArtifacts')
@@ -15,21 +13,4 @@ dependencies {
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile "junit:junit:$junit_version"
-}
-
-// Generate a fresh keystore, if we're on a platform that supports OpenSSL.
-// Other platforms will need to use the keystore we generated earlier.
-task createKeyStores(type: Exec) {
-    inputs.dir "$projectDir/src/scripts"
-    outputs.files "$keyStoreDir/txsignature.pfx"
-    workingDir keyStoreDir
-    commandLine "$projectDir/src/scripts/generate-keystores.sh"
-
-    // This task cannot run on Windows.
-    ignoreExitValue = true
-}
-
-processTestResources {
-    dependsOn createKeyStores
-    from keyStoreDir
 }

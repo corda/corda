@@ -20,10 +20,10 @@ jar.enabled = false
 test {
     filter {
         // Running this class is the whole point, so include it explicitly.
-        includeTestsMatching "net.corda.deterministic.txverify.GenerateTransactionData"
+        includeTestsMatching "net.corda.deterministic.data.GenerateData"
     }
 }
 
 artifacts {
-    testData file: file("$buildDir/txverify-data.jar"), type: 'jar', builtBy: test
+    testData file: file("$buildDir/test-data.jar"), type: 'jar', builtBy: test
 }
