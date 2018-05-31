@@ -12,7 +12,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
-import net.corda.core.utilities.checkPayloadIs
+import net.corda.core.internal.checkPayloadIs
 
 class FlowSessionImpl(
         override val counterparty: Party,
