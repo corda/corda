@@ -76,6 +76,10 @@ class LinearStateBatchNotariseFlow(private val notary: Party,
                 measurements += second
             }
         }
+        val totalTime = Duration.between(iterationStartTime, serviceHub.clock.instant()).toMillis()
+        val txDurations = measurements.map { Duration.between(it.start, it.end).toMillis() }.sortedDescending()
+        val p95Index = Math.floor(x * 0.05).toInt()
+        logger.info("Notarised $x transactions ($n states/tx) in ${totalTime}ms (avg ${totalTime / x.toDouble()}ms/tx, slowest ${txDurations[0]}ms; 95% < ${txDurations[p95Index]}ms)")
         progressTracker.currentStep = SENDING_RESULTS
         return Result(measurements)
     }
