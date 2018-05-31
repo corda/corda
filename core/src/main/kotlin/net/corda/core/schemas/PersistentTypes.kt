@@ -92,7 +92,6 @@ data class PersistentStateRef(
  */
 interface StatePersistable : Serializable
 
-
 object MappedSchemaValidator {
     fun fieldsFromOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
             schema.mappedTypes.map { entity ->
@@ -103,7 +102,6 @@ object MappedSchemaValidator {
                             && field.type.enclosingClass != schema.javaClass
                 }.map { field -> SchemaCrossReferenceReport(schema.javaClass.name, entity.simpleName, field.type.enclosingClass.name, field.name, field.type.simpleName)}
             }.flatMap { it.toSet() }
-
 
     fun methodsFromOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
             schema.mappedTypes.map { entity ->
@@ -121,7 +119,6 @@ object MappedSchemaValidator {
     /** Returns true if [javax.persistence] annotation expect [javax.persistence.Transient] is found. */
     private inline fun hasJpaAnnotation(annotations: Array<Annotation>) =
             annotations.any { annotation -> annotation.toString().startsWith("@javax.persistence.") && annotation !is javax.persistence.Transient }
-
 
     class SchemaCrossReferenceReport(private val schema: String, private val entity: String, private val referencedSchema: String,
                                      private val fieldOrMethod: String, private val fieldOrMethodType: String) {
