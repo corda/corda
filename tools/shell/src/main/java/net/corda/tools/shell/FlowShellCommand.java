@@ -46,7 +46,7 @@ public class FlowShellCommand extends InteractiveShellCommand {
             @Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name,
             @Usage("The data to pass as input") @Argument(unquote = false) List<String> input
     ) {
-        logger.info("Executing command \"flow start {} {}\",", name, input.stream().collect(joining(" ")));
+        logger.info("Executing command \"flow start {} {}\",", name, (input != null) ? input.stream().collect(joining(" ")) : "<no arguments>");
         startFlow(name, input, out, ops(), ansiProgressRenderer(), objectMapper());
     }
 

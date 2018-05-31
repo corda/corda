@@ -191,3 +191,19 @@ Then node can be started as usual. At some point in time, nodes will gradually j
 information on business relations with operators. Private networks are not separate networks, nodes are still part of bigger
 compatibility zone, only hidden. We reuse all the infrastructure of the compatibility zone like notaries, permissioning service,
 so the interoperability between nodes is kept.
+
+Cleaning the network map cache
+------------------------------
+
+Sometimes it may happen that the node ends up with an inconsistent view of the network. This can occur due to changes in deployment
+leading to stale data in the database, different data distribution time and mistakes in configuration. For these unlikely
+events both RPC method and command line option for clearing local network map cache database exist. To use them
+you either need to run from the command line:
+
+.. code-block:: shell
+
+    java -jar corda.jar --clear-network-map-cache
+
+or call RPC method `clearNetworkMapCache` (it can be invoked through the node's shell as `run clearNetworkMapCache`, for more information on
+how to log into node's shell see :doc:`shell`). As we are testing and hardening the implementation this step shouldn't be required.
+After cleaning the cache, network map data is restored on the next poll from the server or filesystem.
