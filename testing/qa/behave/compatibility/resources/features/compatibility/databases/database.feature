@@ -1,8 +1,8 @@
 @compatibility @node @database
 Feature: Compatibility - Database providers
-  To support an interoperable Corda network, a Corda (OS) node must have the ability to transact with an R3 Corda (Enterprise) node using different database providers.
+  To support an interoperable Corda network, a Corda (OS) node must have the ability to transact with a Corda Enterprise node using different database providers.
 
-  Scenario Outline: QA: Corda (OS) Node using H2 can transact with R3 Corda (Enterprise) node using SQL Server, in an R3 Corda configured network.
+  Scenario Outline: QA: Corda (OS) Node using H2 can transact with Corda Enterprise node using SQL Server, in a Corda Enterprise configured network.
     Given a node PartyA of version <R3-Corda-Node-Version> with proxy
     And node PartyA uses database of type <Database-Type>
     And node PartyA has the finance app installed
@@ -17,7 +17,7 @@ Feature: Compatibility - Database providers
       | Corda-Node-Version | R3-Corda-Node-Version   | Currency | Database-Type     |
       | corda-master       | r3-master               | GBP      | SQL Server        |
 
-  Scenario Outline: QA: Corda (OS) Node using H2 can transact with R3 Corda (Enterprise) node using Postgres, in an R3 Corda configured network.
+  Scenario Outline: QA: Corda (OS) Node using H2 can transact with Corda Enterprise node using Postgres, in a Corda Enterprise configured network.
     Given a node PartyA of version <R3-Corda-Node-Version> with proxy
     And node PartyA uses database of type <Database-Type>
     And node PartyA has the finance app installed

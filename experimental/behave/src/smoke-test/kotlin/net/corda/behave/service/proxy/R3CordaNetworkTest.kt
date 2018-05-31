@@ -2,7 +2,7 @@ package net.corda.behave.service.proxy
 
 import net.corda.behave.network.Network
 import net.corda.behave.node.Distribution.Companion.R3_MASTER
-import net.corda.behave.node.Distribution.Type.R3_CORDA
+import net.corda.behave.node.Distribution.Type.CORDA_ENTERPRISE
 import net.corda.behave.node.configuration.NotaryType
 import org.junit.AfterClass
 import org.junit.BeforeClass
@@ -23,7 +23,7 @@ class R3CordaNetworkTest : CordaRPCProxyClientTest() {
 
         @BeforeClass
         @JvmStatic fun setUp() {
-            network = Network.new(R3_CORDA).addNode(distribution = R3_MASTER, name = "Notary", notaryType = NotaryType.NON_VALIDATING, withRPCProxy = true).generate()
+            network = Network.new(CORDA_ENTERPRISE).addNode(distribution = R3_MASTER, name = "Notary", notaryType = NotaryType.NON_VALIDATING, withRPCProxy = true).generate()
             network.start()
             network.waitUntilRunning()
         }

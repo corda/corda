@@ -1,17 +1,22 @@
 Release notes
 =============
 
-R3 Corda 3.0 Developer Preview
-------------------------------
-This release is an early access preview of R3 Corda 3.0 - a commercial distribution of Corda blockchain platform designed for mission critical enterprise deployments.
+.. note::
 
-R3 Corda 3.0 Developer Preview adds enterprise features to Corda 3.0 while remaining operationally compatible with it. Please refer to the release notes for Corda 3.0 if upgrading from an earlier version.
+    There have been three developer previews, namely Developer Preview 1 through 3. In this section we are discussing the developer preview releases in general unless explicitly
+    stated otherwise (e.g., where referencing Developer Preview 3).
+
+Corda Enterprise 3.0 Developer Preview
+--------------------------------------
+This release is an early access preview of Corda Enterprise 3.0 - a commercial distribution of the Corda blockchain platform designed for mission critical enterprise deployments.
+
+Corda Enterprise 3.0 Developer Preview 3 adds enterprise features to Open Source Corda 3.0 while remaining operationally compatible with it. Please refer to the release notes for Corda 3.0 if upgrading from an earlier version.
 
 Key new features and components
 *******************************
 
 * **High Availability**:
-  This release introduces the Hot-Cold High Availability configuration for R3 Corda nodes, which addresses the following requirements:
+  This release introduces the Hot-Cold High Availability configuration for Corda Enterprise nodes, which addresses the following requirements:
 
   - A logical Corda node continues to be available as long as at least one of the clustered physical nodes is available.
   - No loss, corruption or duplication of data on the ledger due to component outages.
@@ -26,8 +31,8 @@ Key new features and components
   See :doc:`node-database` for further details.
 
 * **Database Migration Tool**:
-  R3 Corda ships with a tool for tracking, managing and applying database schema migrations.
-  A framework for data migration provides a way to upgrade the version of R3 Corda or installed CorDapps while preserving data integrity and service continuity.
+  Corda Enterprise ships with a tool for tracking, managing and applying database schema migrations.
+  A framework for data migration provides a way to upgrade the version of Corda Enterprise or installed CorDapps while preserving data integrity and service continuity.
   Based on `Liquibase <http://www.liquibase.org/>`_, the tool also allows exporting DDL and data to a file, allowing DBAs to inspect the SQL or apply the SQL statements and to apply them manually if necessary.
   See :ref:`database migration <database_migration_ref>` for further details.
 
@@ -47,21 +52,21 @@ Key new features and components
   See :doc:`running-doorman` for further details.
 
 * **Signing Service**:
-  R3 Corda 3.0 Developer Preview supports external Hardware Security Module (HSM) integration for certificate issuing and data signing.
+  Corda Enterprise 3.0 Developer Preview supports external Hardware Security Module (HSM) integration for certificate issuing and data signing.
   Doorman certificates (together with their keys) can be stored on secured hardware, constraining the way those certificates are accessed. Any usage of those certificates
   (e.g. data signing or node-level certificate generation) falls into a restrictive process that is automatically audited
   and can be configured to involve human-in-the-loop in order to prevent unauthorised access.
   See :doc:`signing-service` for further details.
 
-* **Operational Compatibility With Corda**
-  Operational Compatibility With Corda R3 Corda 3.0 Developer Preview 3 provides a baseline for wire stability and compatibility with the open-source Corda.
+* **Operational Compatibility With Open Source Corda**
+  Operational Compatibility with Corda Enterprise 3.0 Developer Preview 3 provides a baseline for wire stability and compatibility with the open-source Corda.
 
-  R3 Corda 3.0 Developer Preview 3 delivers forward compatibility with future versions of R3 Corda:
+  Corda Enterprise 3.0 Developer Preview 3 delivers forward compatibility with future versions of Corda Enterprise:
 
-  - Is operationally compatible with future versions of R3 Corda.
-  - Is upgradeable to future version of R3 Corda, preserving transaction and other data.
+  - Is operationally compatible with future versions of Corda Enterprise.
+  - Is upgradeable to future version of Corda Enterprise, preserving transaction and other data.
 
-  R3 Corda 3.0 Developer Preview 3 delivers operational compatibility with open-source Corda:
+  Corda Enterprise 3.0 Developer Preview 3 delivers operational compatibility with open-source Corda:
 
   - Can be used in networks seamlessly transacting with nodes running Corda 3.0 and future versions.
   - Can run CorDapps developed on Corda 3.0 and future versions.
@@ -82,7 +87,7 @@ Further improvements and additions
 Known issues
 ************
 
-The following lists known issues identified in this release. We will endeavour to fix these as part of the upcoming General Availability release of R3 Corda.
+The following lists known issues identified in this release. We will endeavour to fix these as part of the upcoming General Availability release of Corda Enterprise.
 
 * The database migration tool unnecessarily prints ``{}`` characters at the end of every log line [ENT-1720].
 
@@ -119,10 +124,10 @@ Further notes
 *************
 
 As per previous major releases, we have provided a comprehensive upgrade notes (:doc:`upgrade-notes`) to ease the upgrade
-of CorDapps to R3 Corda 3.0 Developer Preview. In line with our commitment to API stability, code level changes
+of CorDapps to Corda Enterprise 3.0 Developer Preview. In line with our commitment to API stability, code level changes
 are fairly minimal.
 
-From a build perspective, switching CorDapps built using Corda 3.0 to R3 Corda 3.0 Developer Preview is mostly effortless,
+From a build perspective, switching CorDapps built using Corda 3.0 to Corda Enterprise 3.0 Developer Preview is mostly effortless,
 and simply requires setting two Gradle build file variables:
 
 .. sourcecode:: shell

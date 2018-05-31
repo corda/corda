@@ -108,7 +108,7 @@ class Network private constructor(
                 throw CordaException("Unable to configure nodes in Corda network. Please check logs in $directory")
             }
 
-            if (networkType == Distribution.Type.R3_CORDA)
+            if (networkType == Distribution.Type.CORDA_ENTERPRISE)
                 network.bootstrapDoorman()
             else
                 network.bootstrapLocalNetwork()
@@ -141,7 +141,7 @@ class Network private constructor(
     }
 
     /**
-     * This method performs the configuration steps defined in the R3 Corda Network Management readme:
+     * This method performs the configuration steps defined in the Corda Enterprise Network Management readme:
      * https://github.com/corda/enterprise/blob/master/network-management/README.md
      * using Local signing and "Auto Approval" mode
      */
@@ -150,7 +150,7 @@ class Network private constructor(
         // WARNING!! Need to use the correct bootstrapper
         // only if using OS nodes (need to choose the latest version)
         val r3node = nodes.values
-                .find { it.config.distribution.type == Distribution.Type.R3_CORDA } ?: throw CordaRuntimeException("Missing R3 distribution node")
+                .find { it.config.distribution.type == Distribution.Type.CORDA_ENTERPRISE } ?: throw CordaRuntimeException("Missing R3 distribution node")
         val distribution = r3node.config.distribution
 
         // Copy over reference configuration files used in bootstrapping
@@ -285,7 +285,7 @@ class Network private constructor(
 
     private fun bootstrapLocalNetwork() {
         val bootstrapper = nodes.values
-                .filter { it.config.distribution.type != Distribution.Type.R3_CORDA }
+                .filter { it.config.distribution.type != Distribution.Type.CORDA_ENTERPRISE }
                 .sortedByDescending { it.config.distribution.version }
                 .first()
                 .config.distribution.networkBootstrapper
@@ -445,7 +445,7 @@ class Network private constructor(
         }
 
         if (isDoormanNMSRunning) {
-            log.info("Shutting down R3 Corda NMS server ...")
+            log.info("Shutting down Corda Enterprise NMS server ...")
             doormanNMS.kill()
         }
 
@@ -475,7 +475,7 @@ class Network private constructor(
         val log = contextLogger()
         const val CLEANUP_ON_ERROR = false
 
-        fun new(type: Distribution.Type = Distribution.Type.CORDA, timeout: Duration = 2.minutes
+        fun new(type: Distribution.Type = Distribution.Type.CORDA_OS, timeout: Duration = 2.minutes
         ): Builder = Builder(type, timeout)
     }
 }

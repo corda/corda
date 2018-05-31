@@ -1,7 +1,7 @@
 Upgrading a CorDapp to a new platform version
 =============================================
 
-These notes provide instructions for upgrading your CorDapps from previous versions to :ref:`V3.0 Developer Preview <changelog_r3_v3>` of R3 Corda (Enterprise Blockchain).
+These notes provide instructions for upgrading your CorDapps from previous versions to :ref:`V3.0 Developer Preview <changelog_r3_v3>` of Corda Enterprise.
 
 .. contents::
    :depth: 3
@@ -68,20 +68,20 @@ UNRELEASED
   No action is needed for default node tables as ``PersistentStateRef`` is used as Primary Key only and the backing columns are automatically not nullable
   or custom Cordapp entities using ``PersistentStateRef`` as Primary Key.
 
-Upgrading to R3 Corda V3.0 Developer Preview
---------------------------------------------
-A prerequisite to upgrade to R3 Corda V3.0 is to ensure your CorDapp is upgraded to Open Source Corda V3.x.
+Upgrading to Corda Enterprise 3.0 Developer Preview
+---------------------------------------------------
+A prerequisite to upgrade to Corda Enterprise 3.0 is to ensure your CorDapp is upgraded to Open Source Corda V3.x.
 Please follow the instructions in the "Upgrading to V3.x" section to complete this initial step.
 
-Upgrading to R3 Corda is now a simple task of updating the version identifiers as follows:
+Upgrading to Corda Enterprise is now a simple task of updating the version identifiers as follows:
 
 .. sourcecode:: shell
 
-    ext.corda_release_distribution = 'com.r3.corda'                 // R3 Corda
-    ext.corda_release_version = 'R3.CORDA-3.0.0-DEV-PREVIEW-3'      // R3 Corda
+    ext.corda_release_distribution = 'com.r3.corda'                 // Corda Enterprise
+    ext.corda_release_version = 'R3.CORDA-3.0.0-DEV-PREVIEW-3'      // Corda Enterprise
     ext.corda_gradle_plugins_version = '4.0.9'
 
-and specifying an additional repository entry to point to the location of the R3 Corda distribution:
+and specifying an additional repository entry to point to the location of the Corda Enterprise distribution:
 
 .. sourcecode:: shell
 
@@ -115,7 +115,7 @@ Build
     ext.corda_gradle_plugins_version = '4.0.9'
     ext.kotlin_version = '1.2.20'
 
-* Add a new release identifier to specify the corda distribution type (Open Source or R3 Corda):
+* Add a new release identifier to specify the corda distribution type (Open Source or Corda Enterprise):
 
 .. sourcecode:: shell
 
@@ -275,7 +275,7 @@ Databases
 Drivers
 ~~~~~~~
 
-* Alternative JDBC drivers are not bundled as part of R3 Corda releases. If you are running a node on a database different from H2 you need to provide the associated driver as described in :doc:`node-database`.
+* Alternative JDBC drivers are not bundled as part of Corda Enterprise releases. If you are running a node on a database different from H2 you need to provide the associated driver as described in :doc:`node-database`.
 
 Testing
 ^^^^^^^

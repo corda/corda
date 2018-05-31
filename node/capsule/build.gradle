@@ -16,7 +16,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'com.jfrog.artifactory'
 
-description 'R3 Corda'
+description 'Corda Enterprise'
 
 configurations {
     runtimeArtifacts.extendsFrom runtime

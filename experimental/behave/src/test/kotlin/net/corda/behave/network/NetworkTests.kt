@@ -38,9 +38,9 @@ class NetworkTests {
 
     @Ignore
     @Test
-    fun `R3 Corda network of single node with RPC proxy can be spun up`() {
+    fun `Corda Enterprise network of single node with RPC proxy can be spun up`() {
         val network = Network
-                .new(Distribution.Type.R3_CORDA)
+                .new(Distribution.Type.CORDA_ENTERPRISE)
                 .addNode(name = "Notary", distribution = Distribution.R3_MASTER, notaryType = NotaryType.NON_VALIDATING, withRPCProxy = true)
                 .generate()
         network.use {
@@ -69,7 +69,7 @@ class NetworkTests {
 
     @Ignore
     @Test
-    fun `Mixed R3 Corda network of two nodes (with an RPC proxy each) and a non-validating notary can be spun up`() {
+    fun `Mixed Corda Enterprise network of two nodes (with an RPC proxy each) and a non-validating notary can be spun up`() {
         // Note: this test exercises the Doorman / Notary / NMS setup sequence
         val distribution = Distribution.R3_MASTER
         val network = Network

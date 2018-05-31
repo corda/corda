@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Run this script from your ${R3CORDA_HOME}/experimental/behave directory, where R3CORDA_HOME refers to R3 Corda source code (eg. GitHub master, branch or TAG)
+# Run this script from your ${R3CORDA_HOME}/experimental/behave directory, where R3CORDA_HOME refers to Corda Enterprise source code (eg. GitHub master, branch or TAG)
 # For example:
 #   R3CORDA_HOME => git clone https://github.com/corda/enterprise
 #

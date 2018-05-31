@@ -13,7 +13,7 @@ import java.nio.file.Paths
 class DoormanCommandTests {
 
     /**
-     * Commands that reproduce the setting up of an R3 Corda Network as per instructions in:
+     * Commands that reproduce the setting up of a Corda Enterprise Network as per instructions in:
      * https://github.com/corda/enterprise/blob/master/network-management/README.md
      */
 

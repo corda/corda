@@ -201,7 +201,7 @@ allprojects {
             attributes('Corda-Release-Version': corda_release_version)
             attributes('Corda-Platform-Version': corda_platform_version)
             attributes('Corda-Revision': corda_revision)
-            attributes('Corda-Vendor': 'R3 Corda Edition')
+            attributes('Corda-Vendor': 'Corda Enterprise Edition')
             attributes('Automatic-Module-Name': "net.corda.${task.project.name.replaceAll('-', '.')}")
         }
     }

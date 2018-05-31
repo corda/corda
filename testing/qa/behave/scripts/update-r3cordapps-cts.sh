@@ -25,7 +25,7 @@ cd ${BUILD_DIR}
 cp -v $(ls samples/simm-valuation-demo/build/libs/simm-valuation-demo-*.jar | tail -n1) ${STAGING_DIR}/apps/simm-valuation-demo.jar
 cp -v $(ls samples/simm-valuation-demo/build/libs/simm-valuation-demo-*.jar | tail -n1) ${STAGING_DIR}/proxy/simm-valuation-demo.jar
 
-# R3 Corda only
+# Corda Enterprise only
 ./gradlew tools:notaryhealthcheck:cordaCompileJar
 cp -v $(ls tools/notaryhealthcheck/build/libs/notaryhealthcheck-*.jar | tail -n1) ${STAGING_DIR}/apps/notaryhealthcheck.jar
 cp -v $(ls tools/notaryhealthcheck/build/libs/notaryhealthcheck-*.jar | tail -n1) ${STAGING_DIR}/proxy/notaryhealthcheck.jar

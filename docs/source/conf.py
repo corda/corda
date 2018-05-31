@@ -48,7 +48,7 @@ source_encoding = 'utf-8-sig'
 master_doc = 'index'
 
 # General information about the project.
-project = u'R3 Corda'
+project = u'Corda Enterprise'
 copyright = u'2018, R3 Limited'
 author = u'R3 DLG'
 

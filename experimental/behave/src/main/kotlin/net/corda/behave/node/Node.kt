@@ -95,7 +95,7 @@ class Node(
         log.info("Configuring {} ...", this)
         serviceDependencies.addAll(config.database.type.dependencies(config))
         config.distribution.ensureAvailable()
-        if (networkType == Distribution.Type.CORDA) {
+        if (networkType == Distribution.Type.CORDA_OS) {
             config.writeToFile(rootDirectory / "${config.name}_node.conf")
         }
         else {
@@ -109,7 +109,7 @@ class Node(
         val driversDir = runtimeDirectory / "drivers"
         log.info("Creating directory for drivers: $driversDir")
         driversDir.toFile().mkdirs()
-        log.info("Initialising database for R3 Corda node: $database")
+        log.info("Initialising database for Corda Enterprise node: $database")
         val command = JarCommandWithMain(listOf(config.distribution.dbMigrationJar, rootDirectory / "libs" / database.type.driverJar!!),
                 "com.r3.corda.dbmigration.DBMigration",
                 arrayOf("--base-directory", "$runtimeDirectory", "--execute-migration"),
@@ -124,7 +124,7 @@ class Node(
         log.info("Starting {} ...", this)
         return try {
             // initialise database via DB migration tool
-            if (config.distribution.type == Distribution.Type.R3_CORDA &&
+            if (config.distribution.type == Distribution.Type.CORDA_ENTERPRISE &&
                     config.database.type != DatabaseType.H2) {
                 initialiseDatabase(config.database)
             }
@@ -388,7 +388,7 @@ class Node(
             val name = name ?: error("Node name not set")
             val directory = directory ?: error("Runtime directory not set")
             val compatibilityZoneURL =
-                    if (networkType == Distribution.Type.R3_CORDA)
+                    if (networkType == Distribution.Type.CORDA_ENTERPRISE)
                         compatibilityZoneURL ?: "http://localhost:1300"
                     else null
             return Node(

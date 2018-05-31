@@ -1,8 +1,8 @@
 @compatibility @node @cordapps
 Feature: Compatibility - Mixed Corda distributions (OS and Enterprise) running different CorDapps
-  To support an interoperable Corda network, different CorDapps must have the ability to transact in mixed Corda (OS) and R3 Corda (Enterprise) networks.
+  To support an interoperable Corda network, different CorDapps must have the ability to transact in mixed Corda (OS) and Corda Enterprise networks.
 
-  Scenario Outline: Corda (OS) Node can transact with R3 Corda (Enterprise) node using Finance Cash application.
+  Scenario Outline: Corda (OS) Node can transact with Corda Enterprise node using Finance Cash application.
     Given a node partyA of version <Corda-Node-Version> with proxy
     And node partyA has the finance app installed
     And a node partyB of version <R3-Corda-Node-Version> with proxy

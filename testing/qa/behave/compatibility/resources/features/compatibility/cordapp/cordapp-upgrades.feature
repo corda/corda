@@ -3,7 +3,7 @@ Feature: Compatibility - CorDapp upgrades and migrations
   To support an interoperable Corda network, a CordaApp must be upgradeable across different Corda distributions and
   node versions (and without loss of transactions between participating nodes in a flow)
 
-  Scenario Outline: CorDapp running on Corda OS node using default database (H2) can be migrated to an R3 Corda (Enterprise) node without loss of data.
+  Scenario Outline: CorDapp running on Corda OS node using default database (H2) can be migrated to a Corda Enterprise node without loss of data.
     Given a node A of version <Corda-Node-Version-X>
     And node A has <Cordapp-Version-X> finance app installed
     And a node B of version <Corda-Node-Version-X>

@@ -124,7 +124,7 @@ Version 3.1
 
 .. _changelog_r3_v3:
 
-R3 Corda 3.0 Developer Preview
+Corda Enterprise 3.0 Developer Preview
 ------------------------------
 
 * Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored as the raw type, List for example.

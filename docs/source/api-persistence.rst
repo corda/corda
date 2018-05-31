@@ -19,7 +19,7 @@ The ORM mapping is specified using the `Java Persistence API <https://en.wikiped
 in the node's local vault as part of a transaction.
 
 .. note:: Presently the node includes an instance of the H2 database. H2 database is supported for development purposes,
-          and we have certified R3 Corda to work against SQL Server 2017 and Azure SQL.
+          and we have certified Corda Enterprise to work against SQL Server 2017 and Azure SQL.
           PostgreSQL 9.6 is supported preliminarily. Other databases will be officially supported very soon.
           Much of the node internal state is also persisted there. You can access
           the internal H2 database via JDBC, please see the info in ":doc:`node-administration`" for details.

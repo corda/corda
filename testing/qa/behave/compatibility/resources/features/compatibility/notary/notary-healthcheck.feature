@@ -1,8 +1,8 @@
 @compatibility @notary
 Feature: Compatibility - Notary cluster member changes.
-  To support an interoperable Corda network, a Corda OS node must have the ability to transact with an R3 Corda Notary cluster.
+  To support an interoperable Corda network, a Corda OS node must have the ability to transact with a Corda Enterprise Notary cluster.
 
-  Scenario Outline: Corda (OS) health checker node can interact with R3 Corda RAFT notary cluster.
+  Scenario Outline: Corda (OS) health checker node can interact with Corda Enterprise RAFT notary cluster.
     Given a node PartyA of version <Corda-Node-Version>
     And node PartyA has app installed: <Cordapp-Name>
     And a 3 node validating RAFT notary cluster of version <R3-Corda-Node-Version>

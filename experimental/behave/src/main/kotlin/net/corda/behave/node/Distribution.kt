@@ -26,7 +26,7 @@ import java.nio.file.Path
 class Distribution private constructor(
 
         /**
-         * The distribution type of Corda: Open Source or R3 Corda (Enterprise)
+         * The distribution type of Corda: Open Source or Corda Enterprise
          */
         val type: Type,
 
@@ -72,12 +72,12 @@ class Distribution private constructor(
     val networkBootstrapper: Path = path / "network-bootstrapper.jar"
 
     /**
-     * The path to the doorman jar (R3 Corda only).
+     * The path to the doorman jar (Corda Enterprise only).
      */
     val doormanJar: Path = path / "doorman.jar"
 
     /**
-     * The path to the DB migration jar (R3 Corda only).
+     * The path to the DB migration jar (Corda Enterprise only).
      */
     val dbMigrationJar: Path = nodePrefix / version / "dbmigration.jar"
 
@@ -106,8 +106,8 @@ class Distribution private constructor(
     override fun toString() = "Corda(version = $version, path = $cordaJar)"
 
     enum class Type {
-        CORDA,
-        R3_CORDA
+        CORDA_OS,
+        CORDA_ENTERPRISE
     }
 
     companion object {
@@ -118,8 +118,8 @@ class Distribution private constructor(
 
         private val nodePrefix = stagingRoot / "corda"
 
-        val MASTER = fromJarFile(Type.CORDA, "corda-master")
-        val R3_MASTER = fromJarFile(Type.R3_CORDA, "r3corda-master")
+        val MASTER = fromJarFile(Type.CORDA_OS, "corda-master")
+        val R3_MASTER = fromJarFile(Type.CORDA_ENTERPRISE, "r3corda-master")
 
         /**
          * Get representation of a Corda distribution from Artifactory based on its version string.
@@ -128,10 +128,10 @@ class Distribution private constructor(
          */
         fun fromArtifactory(type: Type, version: String): Distribution {
             val url =
-                    when (type) {
-                        Type.CORDA -> URL("https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda/$version/corda-$version.jar")
-                        Type.R3_CORDA -> URL("https://ci-artifactory.corda.r3cev.com/artifactory/r3-corda-releases/com/r3/corda/corda/$version/corda-$version.jar")
-                    }
+                when (type) {
+                    Type.CORDA_OS -> URL("https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda/$version/corda-$version.jar")
+                    Type.CORDA_ENTERPRISE -> URL("https://ci-artifactory.corda.r3cev.com/artifactory/r3-corda-releases/com/r3/corda/corda/$version/corda-$version.jar")
+                }
             log.info("Artifactory URL: $url\n")
             val distribution = Distribution(type, version, url = url)
             distributions.add(distribution)
@@ -169,9 +169,9 @@ class Distribution private constructor(
         fun fromVersionString(version: String): Distribution = when (version) {
             "master" -> MASTER
             "r3-master" -> R3_MASTER
-            "corda-3.0" -> fromArtifactory(Type.CORDA, version)
-            "corda-3.1" -> fromArtifactory(Type.CORDA, version)
-            "R3.CORDA-3.0.0-DEV-PREVIEW-3" -> fromArtifactory(Type.R3_CORDA, version)
+            "corda-3.0" -> fromArtifactory(Type.CORDA_OS, version)
+            "corda-3.1" -> fromArtifactory(Type.CORDA_OS, version)
+            "R3.CORDA-3.0.0-DEV-PREVIEW-3" -> fromArtifactory(Type.CORDA_ENTERPRISE, version)
             else -> distributions.firstOrNull { it.version == version } ?: throw CordaRuntimeException("Unable to locate Corda distribution for version: $version")
         }
     }

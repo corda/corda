@@ -1,9 +1,9 @@
 @compatibility @node @database
 Feature: Compatibility - Node databases
-  To support an interoperable Corda network, a Corda (OS) node must have the ability to transact with an R3 Corda (Enterprise) node using different databases:
+  To support an interoperable Corda network, a Corda (OS) node must have the ability to transact with a Corda Enterprise node using different databases:
   H2, azure-sql, sql-server, postgress, oracle
 
-  Scenario Outline: Corda (OS) Node using H2 database can transact with R3 Corda node also using an H2 database
+  Scenario Outline: Corda (OS) Node using H2 database can transact with Corda Enterprise node also using an H2 database
     Given a node A of version <Corda-Node-Version>
     And node A uses database of type <Database-Type-A>
     And node A has the finance app installed
@@ -20,7 +20,7 @@ Feature: Compatibility - Node databases
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.0          | h2              |
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.1          | h2              |
 
-  Scenario Outline: Corda (OS) Node using H2 database can transact with R3 Corda node using azure-sql database
+  Scenario Outline: Corda (OS) Node using H2 database can transact with Corda Enterprise node using azure-sql database
     Given a node A of version <Corda-Node-Version>
     And node A uses database of type <Database-Type-A>
     And node A has the finance app installed
@@ -37,7 +37,7 @@ Feature: Compatibility - Node databases
     | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.0          | h2              | azure-sql        |
     | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.1          | h2              | azure-sql        |
 
-  Scenario Outline: Corda (OS) Node using H2 database can transact with R3 Corda node using a sql-server database
+  Scenario Outline: Corda (OS) Node using H2 database can transact with Corda Enterprise node using a sql-server database
     Given a node A of version <Corda-Node-Version>
     And node A uses database of type <Database-Type-A>
     And node A has the finance app installed
@@ -54,7 +54,7 @@ Feature: Compatibility - Node databases
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.0          | h2              | sql-server       |
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.1          | h2              | sql-server       |
 
-  Scenario Outline: Corda (OS) Node using H2 database can transact with R3 Corda node using an oracle 11g database
+  Scenario Outline: Corda (OS) Node using H2 database can transact with Corda Enterprise node using an oracle 11g database
     Given a node A of version <Corda-Node-Version>
     And node A uses database of type <Database-Type-A>
     And node A has the finance app installed
@@ -71,7 +71,7 @@ Feature: Compatibility - Node databases
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.0          | h2              | oracle11g        |
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.1          | h2              | oracle11g        |
 
-  Scenario Outline: Corda (OS) Node using H2 database can transact with R3 Corda node using an oracle 12c database
+  Scenario Outline: Corda (OS) Node using H2 database can transact with Corda Enterprise node using an oracle 12c database
     Given a node A of version <Corda-Node-Version>
     And node A uses database of type <Database-Type-A>
     And node A has the finance app installed
@@ -88,7 +88,7 @@ Feature: Compatibility - Node databases
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.0          | h2              | oracle12c        |
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.1          | h2              | oracle12c        |
 
-  Scenario Outline: Corda (OS) Node using H2 database can transact with R3 Corda node using a postgres database
+  Scenario Outline: Corda (OS) Node using H2 database can transact with Corda Enterprise node using a postgres database
     Given a node A of version <Corda-Node-Version>
     And node A uses database of type <Database-Type-A>
     And node A has the finance app installed
@@ -105,7 +105,7 @@ Feature: Compatibility - Node databases
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.0          | h2              | postgres        |
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | corda-3.1          | h2              | postgres        |
 
-  Scenario Outline: Corda network of an (OS) Node using H2 database and R3 Corda nodes using different commercial database providers and versions transacting between each other
+  Scenario Outline: Corda network of an (OS) Node using H2 database and Corda Enterprise nodes using different commercial database providers and versions transacting between each other
     Given a node A of version <Corda-Node-Version>
     And node A uses database of type <Database-Type-A>
     And node A has the finance app installed

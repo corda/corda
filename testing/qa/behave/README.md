@@ -1,16 +1,16 @@
-The Behave Cucumber Scenarios defined under these sub-directories exercise R3 Corda and OS Corda distributions to include:
+The Behave Cucumber Scenarios defined under these sub-directories exercise Corda Enterprise and OS Corda distributions to include:
 - Open Source master
-- R3 Corda master
+- Corda Enterprise master
 - Released versions of Open Source from V3.0 onwards
-- Released versions of R3 Corda from R3 V3.0 DEV PREVIEW 3 onwards
+- Released versions of Corda Enterprise from V3.0 DEV PREVIEW 3 onwards
 
 **Compatibility** scenarios exercise:
-- mixed networks: combinations of OS and R3 Corda nodes configured within an R3 Network
-- mixed-versioned nodes: combinations of different versions of OS (master, V3.0, V3.1, etc) and R3 Corda (master, V3.0 DP, V3.0 GA) nodes within an R3 Network.
+- mixed networks: combinations of OS and Corda Enterprise nodes configured within an R3 Network
+- mixed-versioned nodes: combinations of different versions of OS (master, V3.0, V3.1, etc) and Corda Enterprise (master, V3.0 DP, V3.0 GA) nodes within an R3 Network.
 - mixed-versioned corDapps: combinations of nodes running different versions of CorDapps (both valid and invalid upgrade mixes).
 - mixed-services: ability to continue transacting upon notaries, oracles, doorman upgrades & changes.
 
-**Functional** scenarios exercise the key behaviours of R3 Corda components and node configurations to include:
+**Functional** scenarios exercise the key behaviours of Corda Enterprise components and node configurations to include:
 - basic cash management functions (issuance, transfer, redemption)
 - vault usage of different database providers (H2, sql-server, postgreSQL)
 - doorman certificate issuance and usage

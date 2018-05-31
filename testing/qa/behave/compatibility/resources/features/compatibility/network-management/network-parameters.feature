@@ -4,7 +4,7 @@ Feature: Compatibility - CZ Network Parameters changes
   when the CZ network parameters change: minimumPlatformVersion, notaries, maxMessageSize, maxTransactionSize,
   whitelistedContractImplementations.
 
-  Scenario Outline: R3 Corda nodes continue transacting when list of Notaries changes (additive)
+  Scenario Outline: Corda Enterprise nodes continue transacting when list of Notaries changes (additive)
     Given a node A of version <Corda-Node-Version>
     And node A has the finance app installed
     And a node B of version <Corda-Node-Version>
@@ -17,7 +17,7 @@ Feature: Compatibility - CZ Network Parameters changes
       | Corda-Node-Version           |
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 |
 
-  Scenario Outline: R3 Corda nodes continue transacting when existing Notary changes from non-validating to validating
+  Scenario Outline: Corda Enterprise nodes continue transacting when existing Notary changes from non-validating to validating
     Given a node A of version <Corda-Node-Version>
     And node A has the finance app installed
     And a node B of version <Corda-Node-Version>

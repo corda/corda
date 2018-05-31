@@ -1,6 +1,6 @@
 @qa compatibility @node @cordapps
 Feature: Compatibility - Corda distributions (OS and Enterprise) running different CorDapps
-  To support an interoperable Corda network, different CorDapps must have the ability to transact in mixed Corda (OS) and R3 Corda (Enterprise) networks.
+  To support an interoperable Corda network, different CorDapps must have the ability to transact in mixed Corda (OS) and Corda Enterprise networks.
 
   Scenario Outline: Run the SIMM valuation demo in a Corda OS Network.
     Given a node PartyA of version <Corda-Node-Version> with proxy
@@ -22,7 +22,7 @@ Feature: Compatibility - Corda distributions (OS and Enterprise) running differe
       | Corda-Node-Version | Cordapp-Name        | Valuation |
       | corda-3.0          | simm-valuation-demo | 12345     |
 
-  Scenario Outline: Run the SIMM valuation demo in an R3 Corda Network.
+  Scenario Outline: Run the SIMM valuation demo in a Corda Enterprise Network.
     Given a node PartyA of version <R3-Corda-Node-Version> with proxy
     And node PartyA has app installed: <Cordapp-Name>
     And a node PartyB of version <R3-Corda-Node-Version>
@@ -42,7 +42,7 @@ Feature: Compatibility - Corda distributions (OS and Enterprise) running differe
       | R3-Corda-Node-Version        | Cordapp-Name        | Valuation |
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 | simm-valuation-demo | 12345     |
 
-  Scenario Outline: Corda (OS) Node can transact with R3 Corda (Enterprise) node using the SIMM valuation demo.
+  Scenario Outline: Corda (OS) Node can transact with Corda Enterprise node using the SIMM valuation demo.
     Given a node PartyA of version <Corda-Node-Version> with proxy
     And node PartyA has app installed: <Cordapp-Name>
     And a node PartyB of version <R3-Corda-Node-Version>

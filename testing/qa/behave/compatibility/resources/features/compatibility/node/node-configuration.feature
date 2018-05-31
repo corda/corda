@@ -4,8 +4,8 @@ Feature: Compatibility - Node configuration
   when configuration changes are applied independently to each node.
   Configuration changes may be classified into three types:
   1. Global configuration items that affect all nodes (eg. change of `compatibilityZoneURL` in an R3 network)
-  2. R3 Corda specific configuration items (eg. `relay` configuration, `security` using Apache Shiro)
-  3. General configuration items applicable to both OS and R3 Corda distributions (`database`, identity, addresses for p2p/rpc/web/ssh, jmx configuration, etc)
+  2. Corda Enterprise specific configuration items (eg. `relay` configuration, `security` using Apache Shiro)
+  3. General configuration items applicable to both OS and Corda Enterprise distributions (`database`, identity, addresses for p2p/rpc/web/ssh, jmx configuration, etc)
   TODO: implementation to provide two modes of operation (spin-up before/after change, spin-up with change-only)
 
   Scenario Outline: Corda (OS) node can transact with another Corda (OS) node where node configuration is changed on one of the Corda OS nodes
@@ -23,7 +23,7 @@ Feature: Compatibility - Node configuration
       | corda-3.1            |
       | corda-master         |
 
-  Scenario Outline: R3 Corda node can transact with another R3 Corda node where node configuration is changed on one of the R3 Corda nodes
+  Scenario Outline: Corda Enterprise node can transact with another Corda Enterprise node where node configuration is changed on one of the Corda Enterprise nodes
     Given a node A of version <Corda-Node-Version-X>
     And node A has the finance app installed
     And node A configuration is changed
@@ -37,7 +37,7 @@ Feature: Compatibility - Node configuration
       | R3.CORDA-3.0.0-DEV-PREVIEW-3 |
       | r3-master                    |
 
-  Scenario Outline: R3 Corda node can transact with another Corda (OS) node where node configuration is changed on both OS and R3 Corda nodes
+  Scenario Outline: Corda Enterprise node can transact with another Corda (OS) node where node configuration is changed on both OS and Corda Enterprise nodes
     Given a node A of version <Corda-Node-Version-X>
     And node A configuration is changed
     And node A has the finance app installed

@@ -56,9 +56,9 @@ class ScenarioState {
             return
         }
 
-        // Corda Network will be configured as R3 Corda (with Doorman/NMS) if any Node uses an R3.Corda distribution
-        val r3CordaNode = nodes.find { it.networkType == Distribution.Type.R3_CORDA }
-        val networkType = if (r3CordaNode != null) Distribution.Type.R3_CORDA else Distribution.Type.CORDA
+        // Corda Network will be configured as Corda Enterprise (with Doorman/NMS) if any Node uses an R3.Corda distribution
+        val r3CordaNode = nodes.find { it.networkType == Distribution.Type.CORDA_ENTERPRISE }
+        val networkType = if (r3CordaNode != null) Distribution.Type.CORDA_ENTERPRISE else Distribution.Type.CORDA_OS
         log.info("Corda network type: $networkType")
 
         val networkBuilder = Network.new(networkType)
