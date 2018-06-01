@@ -206,8 +206,8 @@ Why create your own zone?
 
 The primary reason to create a zone and provide the associated infrastructure is control over *network parameters*. These
 are settings that control Corda's operation, and on which all users in a network must agree. Failure to agree would create
-the Corda equivalent of a blockchain "hard fork". Parameters control things like how quickly users should upgrade,
-how long nodes can be offline before they are evicted from the system and so on.
+the Corda equivalent of a blockchain "hard fork". Parameters control things like the root of identity,
+how quickly users should upgrade, how long nodes can be offline before they are evicted from the system and so on.
 
 Creating a zone involves the following steps:
 
