@@ -131,6 +131,7 @@ see changes to this list.
 * Mustafa Ozturk (Natixis)
 * Nick Skinner (Northern Trust)
 * Nigel King (R3)
+* Nitesh Solanki (Persistent Systems Limited)
 * Nuam Athaweth (MUFG)
 * Oscar Zibordi de Paiva (Bradesco)
 * OP Financial
