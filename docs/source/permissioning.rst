@@ -38,8 +38,9 @@ A Corda network has four types of certificate authorities (CAs):
 
 The following constraints are also imposed:
 
-* Doorman certificates are issued by a network root which certificate doesn't contain the extension
-* Well-known service identity certificates are issued by an entity with a Doorman certificate
+* The network root's certificate does not contain a role extension
+* Doorman certificates are issued by the network root
+* Service identity certificates are issued by an entity with a Doorman certificate
 * Node CA certificates are issued by an entity with a Doorman certificate
 * Well known legal identity/TLS certificates are issued by a certificate marked as node CA
 * Confidential legal identity certificates are issued by a certificate marked as well known legal identity
