@@ -2,6 +2,7 @@ package net.corda.node.services.messaging
 
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.services.statemachine.FlowMessagingImpl
@@ -41,6 +42,7 @@ class MessagingExecutor(
         val amqDelayMillis = System.getProperty("amq.delivery.delay.ms", "0").toInt()
     }
 
+    @Synchronized
     fun send(message: Message, target: MessageRecipients) {
         val mqAddress = resolver.resolveTargetToArtemisQueue(target)
         val artemisMessage = cordaToArtemisMessage(message)
@@ -51,7 +53,12 @@ class MessagingExecutor(
         producer.send(SimpleString(mqAddress), artemisMessage)
     }
 
+    @Synchronized
     fun acknowledge(message: ClientMessage) {
+        log.debug {
+            val id = message.getStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID)
+            "Acking $id"
+        }
         message.individualAcknowledge()
     }
 
