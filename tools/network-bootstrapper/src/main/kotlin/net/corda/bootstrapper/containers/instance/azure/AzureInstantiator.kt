@@ -9,7 +9,7 @@ import com.microsoft.rest.ServiceCallback
 import net.corda.bootstrapper.Constants.Companion.restFriendlyName
 import net.corda.bootstrapper.containers.instance.Instantiator
 import net.corda.bootstrapper.containers.instance.Instantiator.Companion.ADDITIONAL_NODE_INFOS_PATH
-import net.corda.bootstrapper.containers.push.azure.parseCredentials
+import net.corda.bootstrapper.containers.push.azure.RegistryLocator.Companion.parseCredentials
 import net.corda.bootstrapper.volumes.azure.AzureSmbVolume
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture

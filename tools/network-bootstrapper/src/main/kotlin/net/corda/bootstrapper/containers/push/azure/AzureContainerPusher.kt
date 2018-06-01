@@ -5,6 +5,7 @@ import com.github.dockerjava.api.model.PushResponseItem
 import com.microsoft.azure.management.Azure
 import com.microsoft.azure.management.containerregistry.Registry
 import net.corda.bootstrapper.containers.push.ContainerPusher
+import net.corda.bootstrapper.containers.push.azure.RegistryLocator.Companion.parseCredentials
 import net.corda.bootstrapper.docker.DockerUtils
 import org.slf4j.LoggerFactory
 import java.io.Closeable
