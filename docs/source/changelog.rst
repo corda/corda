@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Fixed an issue preventing out of process nodes started by the ``Driver`` from logging to file.
+
 * Fixed an issue with ``CashException`` not being able to deserialise after the introduction of AMQP for RPC.
 
 * Removed -xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
