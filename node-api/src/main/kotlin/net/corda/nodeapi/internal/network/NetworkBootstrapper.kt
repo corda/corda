@@ -102,7 +102,8 @@ class NetworkBootstrapper {
         }
     }
 
-    fun bootstrap(directory: Path, cordappJars: List<Path>, numParallelProcesses: Int = Runtime.getRuntime().availableProcessors()) {
+    fun bootstrap(directory: Path, cordappJars: List<Path>) {
+
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
         generateDirectoriesIfNeeded(directory, cordappJars)
@@ -114,7 +115,7 @@ class NetworkBootstrapper {
         initialiseSerialization()
         try {
             println("Waiting for all nodes to generate their node-info files...")
-            val nodeInfoFiles = generateNodeInfos(nodeDirs, numParallelProcesses)
+            val nodeInfoFiles = generateNodeInfos(nodeDirs)
             println("Checking for duplicate nodes")
             checkForDuplicateLegalNames(nodeInfoFiles)
             println("Distributing all node-info files to all nodes")
@@ -134,11 +135,13 @@ class NetworkBootstrapper {
         }
     }
 
-    private fun generateNodeInfos(nodeDirs: List<Path>, numParallelProcesses: Int): List<Path> {
+    private fun generateNodeInfos(nodeDirs: List<Path>): List<Path> {
+        val numParallelProcesses = Runtime.getRuntime().availableProcessors()
         val timePerNode = 40.seconds // On the test machine, generating the node info takes 7 seconds for a single node.
         val tExpected = maxOf(timePerNode, timePerNode * nodeDirs.size.toLong() / numParallelProcesses.toLong())
         val warningTimer = Timer("WarnOnSlowMachines", false).schedule(tExpected.toMillis()) {
-            println("...still waiting. If this is taking longer than usual, check the node logs.")  }
+            println("...still waiting. If this is taking longer than usual, check the node logs.")
+        }
         val executor = Executors.newFixedThreadPool(numParallelProcesses)
         return try {
             nodeDirs.map { executor.fork { generateNodeInfo(it) } }.transpose().getOrThrow()
