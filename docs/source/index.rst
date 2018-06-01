@@ -1,33 +1,37 @@
-Welcome to Corda !
-==================
+Corda Enterprise 3.0
+====================
 
-`Corda <https://www.corda.net/>`_ is a blockchain-inspired open source distributed ledger platform. If you’d like a
-quick introduction to distributed ledgers and how Corda is different, then watch this short video:
+Welcome to the documentation website for **Corda Enterprise 3.0**, based on the Corda 3.1 open source release. Corda Enterprise adds:
 
-.. raw:: html
+* High performance, thanks to multi-threaded flow execution and extensive tuning.
+* Support for more database backends:
 
-    <embed>
-      <iframe src="https://player.vimeo.com/video/205410473" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-    </embed>
+   * SQL Server 2017
+   * Azure SQL
+   * Oracle 11g RC2
+   * Oracle 12c
+   * PostgreSQL 9.6
 
-Want to see Corda running? Download our demonstration application `DemoBench <https://www.corda.net/downloads/>`_ or
-follow our :doc:`quickstart guide </quickstart-index>`.
+* The Corda Firewall, for termination of TLS connections within your network's DMZ.
+* High availability features to support node-to-node failover.
+* Support for advanced database migrations.
 
-If you want to start coding on Corda, then familiarise yourself with the :doc:`key concepts </key-concepts>`, then read
-our :doc:`Hello, World! tutorial </hello-world-introduction>`. For the background behind Corda, read the non-technical
-`introductory white paper`_ or for more detail, the `technical white paper`_.
+You can learn more in the :doc:`release-notes`.
 
-If you have questions or comments, then get in touch on `Slack <https://slack.corda.net/>`_ or ask a question on
-`Stack Overflow <https://stackoverflow.com/questions/tagged/corda>`_ .
+Corda Enterprise is binary compatible with apps developed for the open source node. This docsite is intended for
+administrators and advanced users who wish to learn how to install and configure an enterprise deployment. For
+application development please continue to refer to `the main project documentation website <https://docs.corda.net/>`_.
 
-We look forward to seeing what you can do with Corda!
+------------
 
-.. note:: You can read this site offline. Either `download the PDF`_ or download the Corda source code, run ``gradle buildDocs`` and you will have
-   a copy of this site in the ``docs/build/html`` directory.
+.. toctree::
+   :caption: Corda Enterprise
+   :maxdepth: 1
 
-.. _`introductory white paper`: _static/corda-introductory-whitepaper.pdf
-.. _`technical white paper`: _static/corda-technical-whitepaper.pdf
-.. _`download the PDF`: _static/corda-developer-site.pdf
+   hot-cold-deployment
+   database-migration
+   corda-bridge-component
+   bridge-configuration-file
 
 .. toctree::
    :caption: Development
@@ -35,7 +39,6 @@ We look forward to seeing what you can do with Corda!
 
    quickstart-index.rst
    key-concepts.rst
-   operations-guide.rst
    building-a-cordapp-index.rst
    tutorials-index.rst
    tools-index.rst
@@ -53,6 +56,7 @@ We look forward to seeing what you can do with Corda!
    azure-vm.rst
    aws-vm.rst
    loadtesting.rst
+   certificate-revocation
 
 .. toctree::
    :caption: Design docs

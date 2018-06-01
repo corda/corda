@@ -14,4 +14,3 @@ Nodes
    node-database
    node-administration
    out-of-process-verification
-   hot-cold-deployment
