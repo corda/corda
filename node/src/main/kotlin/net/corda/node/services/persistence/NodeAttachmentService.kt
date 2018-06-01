@@ -93,7 +93,7 @@ class NodeAttachmentService(
 
             @ElementCollection
             @Column(name = "contract_class_name")
-            @CollectionTable(name = "node_attchments_contracts", joinColumns = arrayOf(
+            @CollectionTable(name = "${NODE_DATABASE_PREFIX}attachments_contracts", joinColumns = arrayOf(
                     JoinColumn(name = "att_id", referencedColumnName = "att_id")),
                     foreignKey = ForeignKey(name = "FK__ctr_class__attachments"))
             var contractClassNames: List<ContractClassName>? = null
