@@ -51,7 +51,7 @@ Submission of the certificate revocation requests expects the following fields t
     :SUPERSEDED: This reason indicates that the certificate has been superseded.
 
     :CESSATION_OF_OPERATION: This reason indicates that the certificate is no longer needed.
-    
+
     :PRIVILEGE_WITHDRAWN: This reason indicates that the privileges granted to the subject of the certificate have been withdrawn.
 
 :reporter: Issuer of this certificate revocation request.
@@ -60,12 +60,4 @@ Note: At least one of the three: certificateSerialNumber, csrRequestId or legalN
       Also, Corda AMQP serialization framework is used as the serialization framework.
 
 Because of the proprietary serialization mechanism, it is assumed that those endpoints are used by dedicated tools that support this kind of data encoding.
-
-
-Internal protocol
------------------
-
-There is an internal communication protocol between the revocation service and the HSM signing service for producing the signed CRLs.
-This does not use HTTP to avoid exposing any web vulnerabilities to the signing process.
-
 
