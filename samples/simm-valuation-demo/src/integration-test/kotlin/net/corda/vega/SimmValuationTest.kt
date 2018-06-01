@@ -2,9 +2,11 @@ package net.corda.vega
 
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.div
 import net.corda.core.internal.packageName
 import net.corda.core.utilities.getOrThrow
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.driver.DriverParameters
@@ -43,7 +45,13 @@ class SimmValuationTest {
 
     @Test
     fun `runs SIMM valuation demo`() {
-        driver(DriverParameters(isDebug = true, extraCordappPackagesToScan = listOf("net.corda.vega.contracts", "net.corda.vega.plugin.customserializers"))) {
+        val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
+        assertThat(logConfigFile).isRegularFile()
+        driver(DriverParameters(
+                isDebug = true,
+                extraCordappPackagesToScan = listOf("net.corda.vega.contracts", "net.corda.vega.plugin.customserializers"),
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
+        ) {
             val nodeAFuture = startNode(providedName = nodeALegalName)
             val nodeBFuture = startNode(providedName = nodeBLegalName)
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }

@@ -14,7 +14,7 @@
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
             <PatternLayout>
-                <ScriptPatternSelector defaultPattern="%highlight{%level{length=1} %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n}{INFO=white,WARN=red,FATAL=bright red}">
+                <ScriptPatternSelector defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ss,SSS} [%t] %c{2}.%method - %msg%n}{INFO=white,WARN=red,FATAL=bright red}">
                     <Script name="MDCSelector" language="javascript"><![CDATA[
                     result = null;
                     if (!logEvent.getContextData().size() == 0) {
@@ -25,7 +25,7 @@
                     result;
                ]]>
                     </Script>
-                    <PatternMatch key="WithMDC" pattern="%highlight{%level{length=1} %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n}{INFO=white,WARN=red,FATAL=bright red}"/>
+                    <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ss,SSS} [%t] %c{2}.%method - %msg %X%n}{INFO=white,WARN=red,FATAL=bright red}"/>
                 </ScriptPatternSelector>
             </PatternLayout>
             <ThresholdFilter level="trace"/>
@@ -64,15 +64,23 @@
     </Appenders>
 
     <Loggers>
-        <Root level="${sys:defaultLogLevel}">
-            <AppenderRef ref="Console-Appender" level="${sys:consoleLogLevel}"/>
-            <AppenderRef ref="RollingFile-Appender" />
+        <Root level="info">
+            <AppenderRef ref="Console-Appender"/>
         </Root>
+        <Logger name="net.corda" level="${sys:defaultLogLevel}" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+            <AppenderRef ref="RollingFile-Appender" />
+        </Logger>
         <Logger name="BasicInfo" additivity="false">
             <AppenderRef ref="Console-Appender-Println"/>
             <AppenderRef ref="RollingFile-Appender" />
         </Logger>
+        <Logger name="org.hibernate.SQL" level="info" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+            <AppenderRef ref="RollingFile-Appender"/>
+        </Logger>
         <Logger name="org.apache.activemq.artemis.core.server" level="error" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
             <AppenderRef ref="RollingFile-Appender"/>
         </Logger>
         <Logger name="org.jolokia" additivity="true" level="warn">
