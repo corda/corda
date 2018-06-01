@@ -3,25 +3,22 @@ package net.corda.bootstrapper.containers.push.azure
 import com.microsoft.azure.management.Azure
 import com.microsoft.azure.management.containerregistry.AccessKeyType
 import com.microsoft.azure.management.containerregistry.Registry
-import net.corda.bootstrapper.Constants
-import net.corda.bootstrapper.context.Context
+import com.microsoft.azure.management.resources.ResourceGroup
+import net.corda.bootstrapper.Constants.Companion.restFriendlyName
 
 class RegistryLocator(private val azure: Azure,
-                      private val context: Context) {
+                      private val resourceGroup: ResourceGroup) {
 
 
     val registry: Registry = locateRegistry()
 
 
     private fun locateRegistry(): Registry {
-
-        val found = azure.containerRegistries().getByResourceGroup(context.safeNetworkName, context.safeNetworkName)
-
-
+        val found = azure.containerRegistries().getByResourceGroup(resourceGroup.name(), resourceGroup.restFriendlyName())
         return found ?: azure.containerRegistries()
-                .define(context.safeNetworkName)
-                .withRegion(context.extraParams[Constants.REGION_ARG_NAME])
-                .withExistingResourceGroup(context.safeNetworkName)
+                .define(resourceGroup.restFriendlyName())
+                .withRegion(resourceGroup.region().name())
+                .withExistingResourceGroup(resourceGroup)
                 .withBasicSku()
                 .withRegistryNameAsAdminUser()
                 .create()

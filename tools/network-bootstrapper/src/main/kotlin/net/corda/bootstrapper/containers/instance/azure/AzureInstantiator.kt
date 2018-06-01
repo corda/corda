@@ -4,12 +4,12 @@ import com.microsoft.azure.management.Azure
 import com.microsoft.azure.management.containerinstance.ContainerGroup
 import com.microsoft.azure.management.containerinstance.ContainerGroupRestartPolicy
 import com.microsoft.azure.management.containerregistry.Registry
+import com.microsoft.azure.management.resources.ResourceGroup
 import com.microsoft.rest.ServiceCallback
-import net.corda.bootstrapper.Constants.Companion.REGION_ARG_NAME
+import net.corda.bootstrapper.Constants.Companion.restFriendlyName
 import net.corda.bootstrapper.containers.instance.Instantiator
 import net.corda.bootstrapper.containers.instance.Instantiator.Companion.ADDITIONAL_NODE_INFOS_PATH
 import net.corda.bootstrapper.containers.push.azure.parseCredentials
-import net.corda.bootstrapper.context.Context
 import net.corda.bootstrapper.volumes.azure.AzureSmbVolume
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
@@ -17,14 +17,14 @@ import java.util.concurrent.CompletableFuture
 class AzureInstantiator(private val azure: Azure,
                         private val registry: Registry,
                         private val azureSmbVolume: AzureSmbVolume,
-                        private val context: Context
+                        private val resourceGroup: ResourceGroup
 ) : Instantiator {
     override fun instantiateContainer(imageId: String,
                                       portsToOpen: List<Int>,
                                       instanceName: String,
                                       env: Map<String, String>?): CompletableFuture<Pair<String, Map<Int, Int>>> {
 
-        findAndKillExistingContainerGroup(context.safeNetworkName, buildIdent(instanceName))
+        findAndKillExistingContainerGroup(resourceGroup, buildIdent(instanceName))
 
         LOG.info("Starting instantiation of container: $instanceName using $imageId")
         val registryAddress = registry.loginServerUrl()
@@ -32,8 +32,8 @@ class AzureInstantiator(private val azure: Azure,
         val mountName = "node-setup"
         val future = CompletableFuture<Pair<String, Map<Int, Int>>>().also {
             azure.containerGroups().define(buildIdent(instanceName))
-                    .withRegion(context.extraParams[REGION_ARG_NAME])
-                    .withExistingResourceGroup(context.safeNetworkName)
+                    .withRegion(resourceGroup.region())
+                    .withExistingResourceGroup(resourceGroup)
                     .withLinux()
                     .withPrivateImageRegistry(registryAddress, username, password)
                     .defineVolume(mountName)
@@ -63,17 +63,17 @@ class AzureInstantiator(private val azure: Azure,
         return future
     }
 
-    private fun buildIdent(instanceName: String) = "$instanceName-${context.networkName}"
+    private fun buildIdent(instanceName: String) = "$instanceName-${resourceGroup.restFriendlyName()}"
 
     override fun getExpectedFQDN(instanceName: String): String {
-        return "${buildIdent(instanceName)}.${context.extraParams[REGION_ARG_NAME]}.azurecontainer.io"
+        return "${buildIdent(instanceName)}.${resourceGroup.region().name()}.azurecontainer.io"
     }
 
-    fun findAndKillExistingContainerGroup(resourceGroup: String, containerName: String): ContainerGroup? {
-        val existingContainer = azure.containerGroups().getByResourceGroup(resourceGroup, containerName)
+    fun findAndKillExistingContainerGroup(resourceGroup: ResourceGroup, containerName: String): ContainerGroup? {
+        val existingContainer = azure.containerGroups().getByResourceGroup(resourceGroup.name(), containerName)
         if (existingContainer != null) {
             LOG.info("Found an existing instance of: $containerName destroying ContainerGroup")
-            azure.containerGroups().deleteByResourceGroup(resourceGroup, containerName)
+            azure.containerGroups().deleteByResourceGroup(resourceGroup.name(), containerName)
         }
         return existingContainer;
     }

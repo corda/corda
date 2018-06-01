@@ -1,10 +1,10 @@
 package net.corda.bootstrapper.volumes.azure
 
 import com.microsoft.azure.management.Azure
+import com.microsoft.azure.management.resources.ResourceGroup
 import com.microsoft.azure.management.storage.StorageAccount
 import com.microsoft.azure.storage.CloudStorageAccount
-import net.corda.bootstrapper.Constants
-import net.corda.bootstrapper.context.Context
+import net.corda.bootstrapper.Constants.Companion.restFriendlyName
 import net.corda.bootstrapper.notaries.CopiedNotary
 import net.corda.bootstrapper.volumes.Volume
 import net.corda.bootstrapper.volumes.Volume.Companion.keyPair
@@ -15,7 +15,7 @@ import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import org.slf4j.LoggerFactory
 
 
-class AzureSmbVolume(private val azure: Azure, private val context: Context) : Volume {
+class AzureSmbVolume(private val azure: Azure, private val resourceGroup: ResourceGroup) : Volume {
 
     private val storageAccount = getStorageAccount()
 
@@ -34,7 +34,7 @@ class AzureSmbVolume(private val azure: Azure, private val context: Context) : V
     val networkParamsFolder = cloudFileShare.rootDirectoryReference.getDirectoryReference("network-params")
     val shareName: String = cloudFileShare.name
     val storageAccountName: String
-        get() = context.safeNetworkName
+        get() = resourceGroup.restFriendlyName()
     val storageAccountKey: String
         get() = accKeys.value()
 
@@ -53,10 +53,11 @@ class AzureSmbVolume(private val azure: Azure, private val context: Context) : V
     }
 
     private fun getStorageAccount(): StorageAccount {
-        return azure.storageAccounts().getByResourceGroup(context.safeNetworkName, context.safeNetworkName)
-                ?: azure.storageAccounts().define(context.safeNetworkName)
-                        .withRegion(context.extraParams[Constants.REGION_ARG_NAME])
-                        .withExistingResourceGroup(context.safeNetworkName).withAccessFromAllNetworks()
+        return azure.storageAccounts().getByResourceGroup(resourceGroup.name(), resourceGroup.restFriendlyName())
+                ?: azure.storageAccounts().define(resourceGroup.restFriendlyName())
+                        .withRegion(resourceGroup.region())
+                        .withExistingResourceGroup(resourceGroup)
+                        .withAccessFromAllNetworks()
                         .create()
     }
 

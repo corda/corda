@@ -10,6 +10,7 @@ import net.corda.bootstrapper.containers.push.azure.AzureContainerPusher
 import net.corda.bootstrapper.containers.push.azure.RegistryLocator
 import net.corda.bootstrapper.context.Context
 import net.corda.bootstrapper.volumes.azure.AzureSmbVolume
+import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 
 data class AzureBackend(override val containerPusher: AzureContainerPusher,
@@ -17,31 +18,43 @@ data class AzureBackend(override val containerPusher: AzureContainerPusher,
                         override val volume: AzureSmbVolume) : Backend {
 
     companion object {
+
+        val LOG = LoggerFactory.getLogger(AzureBackend::class.java)
+
         private val azure: Azure = kotlin.run {
             Azure.configure()
-                    .withLogLevel(LogLevel.BASIC)
+                    .withLogLevel(LogLevel.NONE)
                     .authenticate(AzureCliCredentials.create())
                     .withDefaultSubscription()
         }
 
         fun fromContext(context: Context): AzureBackend {
+            val resourceGroupName = context.networkName.replace(Constants.ALPHA_NUMERIC_DOT_AND_UNDERSCORE_ONLY_REGEX, "")
             val resourceGroup = try {
-                azure.resourceGroups().getByName(context.safeNetworkName)
-                        ?: azure.resourceGroups().define(context.safeNetworkName).withRegion(context.extraParams[Constants.REGION_ARG_NAME]).create()
+                LOG.info("Attempting to find existing resourceGroup with name: $resourceGroupName")
+                val foundResourceGroup = azure.resourceGroups().getByName(resourceGroupName)
+
+                if (foundResourceGroup == null) {
+                    LOG.info("No existing resourceGroup found creating new resourceGroup with name: $resourceGroupName")
+                    azure.resourceGroups().define(resourceGroupName).withRegion(context.extraParams[Constants.REGION_ARG_NAME]).create()
+                } else {
+                    LOG.info("Found existing resourceGroup, reusing")
+                    foundResourceGroup
+                }
             } catch (e: CloudException) {
-                azure.resourceGroups().define(context.safeNetworkName).withRegion(context.extraParams[Constants.REGION_ARG_NAME]).create()
+                throw RuntimeException(e)
             }
 
             val registryLocatorFuture = CompletableFuture.supplyAsync {
-                RegistryLocator(azure, context)
+                RegistryLocator(azure, resourceGroup)
             }
             val containerPusherFuture = registryLocatorFuture.thenApplyAsync {
                 AzureContainerPusher(azure, it.registry)
             }
-            val azureNetworkStore = CompletableFuture.supplyAsync { AzureSmbVolume(azure, context) }
+            val azureNetworkStore = CompletableFuture.supplyAsync { AzureSmbVolume(azure, resourceGroup) }
             val azureInstantiatorFuture = azureNetworkStore.thenCombine(registryLocatorFuture,
                     { azureVolume, registryLocator ->
-                        AzureInstantiator(azure, registryLocator.registry, azureVolume, context)
+                        AzureInstantiator(azure, registryLocator.registry, azureVolume, resourceGroup)
                     }
             )
             return AzureBackend(containerPusherFuture.get(), azureInstantiatorFuture.get(), azureNetworkStore.get())

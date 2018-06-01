@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import com.microsoft.azure.management.resources.ResourceGroup
 import com.microsoft.azure.management.resources.fluentcore.arm.Region
 
 class Constants {
@@ -36,11 +37,14 @@ class Constants {
             return objectMapper
         }
 
-        val ALPHA_NUMERIC_ONLY_REGEX = "[^\\p{IsAlphabetic}^\\p{IsDigit}]".toRegex()
-
+        val ALPHA_NUMERIC_ONLY_REGEX = "[^\\p{IsAlphabetic}\\p{IsDigit}]".toRegex()
+        val ALPHA_NUMERIC_DOT_AND_UNDERSCORE_ONLY_REGEX = "[^\\p{IsAlphabetic}\\p{IsDigit}._]".toRegex()
         val REGION_ARG_NAME = "REGION"
 
-
+        fun ResourceGroup.restFriendlyName(): String {
+            return this.name().replace(ALPHA_NUMERIC_ONLY_REGEX, "").toLowerCase()
+        }
     }
+
 
 }
