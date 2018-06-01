@@ -167,7 +167,7 @@ and no generic, configurable doorman codebase has been written.
 Do you need a zone?
 ^^^^^^^^^^^^^^^^^^^
 
-Think twice before going this route:
+Think twice before going down this route:
 
 1. It isn't necessary for testing.
 2. It isn't necessary to add another layer of permissioning or 'know your customer' requirements onto your app.
@@ -309,7 +309,7 @@ tree, but a flavour of it looks like this:
          ... etc ...
       )
       val signingCertAndKeyPair: CertificateAndKeyPair = loadNetworkMapCA()
-      val signedParams: SerializedBytes<SignedDataWithCert<NetworkParameters>> = signingCertAndKeyPair.sign(networkParameters).serialize()
+      val signedParams: SerializedBytes<SignedNetworkParameters> = signingCertAndKeyPair.sign(networkParameters).serialize()
       signedParams.open().copyTo(Paths.get("/some/path"))
 
 Each individual parameter is documented in `the JavaDocs/KDocs for the NetworkParameters class
