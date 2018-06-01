@@ -57,17 +57,17 @@ Keypair and certificate formats
 You can use any standard key tools to create the required public/private keypairs and certificates. The keypairs and
 certificates must obey the following restrictions:
 
-1. The certificates must follow the `X.509v3 standard <https://tools.ietf.org/html/rfc5280>`_
-2. The TLS certificates must follow the `TLS v1.2 standard <https://tools.ietf.org/html/rfc5246>`_
+1. The certificates must follow the `X.509v3 standard <https://tools.ietf.org/html/rfc5280>`__
+2. The TLS certificates must follow the `TLS v1.2 standard <https://tools.ietf.org/html/rfc5246>`__
 3. The root network CA, doorman CA and node CA keys, as well as the node TLS keys, must follow one of the following schemes:
     * ECDSA using the NIST P-256 curve (secp256r1)
     * ECDSA using the Koblitz k1 curve (secp256k1)
     * RSA with 3072-bit key size or higher.
 
-The certificates and keys will be automatically generated for you by the node on first run. But you can also generate
+The certificates and keys will be automatically generated for you by the node on first run. However, you can also generate
 them manually for more control. The ``X509Utilities`` class shows how to generate the required public/private keypairs
 and certificates using Bouncy Castle.
-You can find the ``X509Utilities`` in the `Corda repository <https://github.com/corda/corda>`_, under ``/node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto/X509Utilities.kt``.
+You can find the ``X509Utilities`` in the `Corda repository <https://github.com/corda/corda>`__, under ``/node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto/X509Utilities.kt``.
 
 Certificate role extension
 --------------------------
@@ -110,7 +110,7 @@ Connecting to a compatibility zone
 
 To connect to a compatibility zone you need to register with their certificate signing authority (doorman) by submitting
 a certificate signing request (CSR) to obtain a valid identity for the zone. You could do this out of band, for instance
-via email or a web form, but there's also a simple request/response protocol built in to Corda.
+via email or a web form, but there's also a simple request/response protocol built into Corda.
 
 Before you can register, you must first have received the trust store file containing the root certificate from the zone
 operator. For high security zones this might be delivered physically. Then run the following command:
@@ -170,7 +170,7 @@ using Docker. In this way you can bring up a simulation of a real Corda network 
 machines in the cloud for your own testing. Testing this way has several advantages, most obviously that you avoid
 flakyness caused by synchronisation issues during network bringup. You can read more about the reasons for the
 creation of the bootstrapper tool
-`in a blog post on the design thinking behind Corda's network map infrastructure <https://medium.com/corda/cordas-new-network-map-infrastructure-8c4c248fd7f3>`_.
+`in a blog post on the design thinking behind Corda's network map infrastructure <https://medium.com/corda/cordas-new-network-map-infrastructure-8c4c248fd7f3>`__.
 
 **Permissioning.** And creating a zone is also unnecessary for imposing permissioning requirements beyond that of the
 base Corda network. You can control who can use your app by creating a *business network*. A business network is what we
@@ -229,7 +229,7 @@ Writing a doorman server
 
 This step is optional because your users can obtain a signed certificate in many different ways. The doorman protocol
 is again a very simple HTTP based approach in which a node creates keys and requests a certificate, polling until it
-gets back what it expects. But you could also integrate this process with the rest of your signup process, for example,
+gets back what it expects. However, you could also integrate this process with the rest of your signup process. For example,
 by building a tool that's integrated with your payment flow (if payment is required to take part in your zone at all).
 Alternatively you may wish to distribute USB smartcard tokens that generate the private key on first use, as is typically
 seen in national PKIs. There are many options.
@@ -270,22 +270,38 @@ holder that could be read from e.g. a config file, or settings from a database.
 Signing and saving the resulting file is just a few lines of code. A full example can be found in ``NetworkParametersCopier.kt`` in the
 source tree, but a flavour of it looks like this:
 
-.. sourcecode:: kotlin
+.. container:: codeset
+   .. sourcecode:: java
 
-   val networkParameters = NetworkParameters(
-      minimumPlatformVersion = 4,
-      notaries = listOf(...),
-      maxMessageSize = 1024 * 1024 * 20   // 20mb, for example.
-      maxTransactionSize = 1024 * 1024 * 15,
-      modifiedTime = Instant.now(),
-      epoch = 2,
-      ... etc ...
-   )
-   val signingCertAndKeyPair: CertificateAndKeyPair = loadNetworkMapCA()
-   val signedParams: SerializedBytes<SignedDataWithCert<NetworkParameters>> = signingCertAndKeyPair.sign(networkParameters).serialize()
-   signedParams.open().copyTo(Paths.get("/some/path"))
+      NetworkParameters networkParameters = new NetworkParameters(
+                4,                        // minPlatformVersion
+                Collections.emptyList(),  // notaries
+                1024 * 1024 * 20,         // maxMessageSize
+                1024 * 1024 * 15,         // maxTransactionSize
+                Instant.now(),            // modifiedTime
+                2,                        // epoch
+                Collections.emptyMap()    // whitelist
+      );
+      CertificateAndKeyPair signingCertAndKeyPair = loadNetworkMapCA();
+      SerializedBytes<SignedDataWithCert<NetworkParameters>> bytes = SerializedBytes.from(netMapCA.sign(networkParameters));
+      Files.copy(bytes.open(), Paths.get("params-file"));
 
-Each individual parameter is documented in `the JavaDocs/KDocs for the NetworkParameters class <https://docs.corda.net/api/kotlin/corda/net.corda.core.node/-network-parameters/index.html>`_.
+   .. sourcecode:: kotlin
+
+      val networkParameters = NetworkParameters(
+         minimumPlatformVersion = 4,
+         notaries = listOf(...),
+         maxMessageSize = 1024 * 1024 * 20   // 20mb, for example.
+         maxTransactionSize = 1024 * 1024 * 15,
+         modifiedTime = Instant.now(),
+         epoch = 2,
+         ... etc ...
+      )
+      val signingCertAndKeyPair: CertificateAndKeyPair = loadNetworkMapCA()
+      val signedParams: SerializedBytes<SignedDataWithCert<NetworkParameters>> = signingCertAndKeyPair.sign(networkParameters).serialize()
+      signedParams.open().copyTo(Paths.get("/some/path"))
+
+Each individual parameter is documented in `the JavaDocs/KDocs for the NetworkParameters class <https://docs.corda.net/api/kotlin/corda/net.corda.core.node/-network-parameters/index.html>`__.
 
 The network map certificate is usually chained off the root certificate, and can be created according to the instructions above.
 
@@ -294,10 +310,13 @@ the parameters, and they therefore cannot go backwards.
 
 Once saved, the new parameters can be served by the network map server.
 
+Selecting parameter values
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 How to choose the parameters? This is the most complex question facing you as a new zone operator. Some settings may seem
 straightforward and others may involve cost/benefit tradeoffs specific to your business. For example, you could choose
 to run a validating notary yourself, in which case you would (in the absence of SGX) see all the users data. Or you could
 run a non-validating notary, with BFT fault tolerance, which implies recruiting others to take part in the cluster.
 
 New network parameters will be added over time as Corda evolves. You will need to ensure that when your users upgrade,
-all the new network parameters are being served. You can ask for advice on the `corda-dev mailing list <https://groups.io/g/corda-dev>`_.
+all the new network parameters are being served. You can ask for advice on the `corda-dev mailing list <https://groups.io/g/corda-dev>`__.
