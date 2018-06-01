@@ -132,6 +132,9 @@ Unreleased
 
 * Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
 
+* Node logs as warning for ``MappedSchema`` containing an entity referencing to other entity from the different ``MappedSchema`.
+  The log entry starts with `Cross-reference between MappedSchemas.` with detailed message.
+
 .. _changelog_v3.1:
 
 Version 3.1
