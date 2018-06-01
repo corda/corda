@@ -19,6 +19,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
@@ -58,7 +59,6 @@ class NetworkBootstrapper {
 
         @JvmStatic
         fun main(args: Array<String>) {
-            // TODO: Use Picocli once the bootstrapper has moved into the tools package.
             val baseNodeDirectory = requireNotNull(args.firstOrNull()) { "Expecting first argument which is the nodes' parent directory" }
             val cordappJars = if (args.size > 1) args.asList().drop(1).map { Paths.get(it) } else emptyList()
             NetworkBootstrapper().bootstrap(Paths.get(baseNodeDirectory).toAbsolutePath().normalize(), cordappJars, Runtime.getRuntime().availableProcessors())
@@ -137,10 +137,11 @@ class NetworkBootstrapper {
     private fun generateNodeInfos(nodeDirs: List<Path>, numParallelProcesses: Int): List<Path> {
         val timePerNode = 40.seconds // On the test machine, generating the node info takes 7 seconds for a single node.
         val tExpected = maxOf(timePerNode, timePerNode * nodeDirs.size.toLong() / numParallelProcesses.toLong())
-        val warningTimer = Timer("WarnOnSlowMachines", false).schedule(tExpected.toMillis()) { println("...still waiting. If this is taking longer than usual, check the node logs.")  }
+        val warningTimer = Timer("WarnOnSlowMachines", false).schedule(tExpected.toMillis()) {
+            println("...still waiting. If this is taking longer than usual, check the node logs.")  }
         val executor = Executors.newFixedThreadPool(numParallelProcesses)
         return try {
-            nodeDirs.map { executor.fork { generateNodeInfo(it) } }.transpose().get()
+            nodeDirs.map { executor.fork { generateNodeInfo(it) } }.transpose().getOrThrow()
         } finally {
             warningTimer.cancel()
             executor.shutdownNow()
@@ -155,7 +156,7 @@ class NetworkBootstrapper {
                 .redirectOutput((logsDir / "node-info-gen.log").toFile())
                 .apply { environment()["CAPSULE_CACHE_DIR"] = "../.cache" }
                 .start()
-        if (!process.waitFor(60, TimeUnit.SECONDS)) {
+        if (!process.waitFor(3, TimeUnit.MINUTES)) {
             process.destroyForcibly()
             throw IllegalStateException("Error while generating node info file. Please check the logs in $logsDir.")
         }
