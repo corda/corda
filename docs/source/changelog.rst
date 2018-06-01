@@ -119,6 +119,8 @@ Unreleased
   For instance, this method will check if an ECC key lies on a valid curve or if an RSA key is >= 2048bits. This might
   be required for extra key validation checks, e.g., for Doorman to check that a CSR key meets the minimum security requirements.
 
+* Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
+
 .. _changelog_v3.1:
 
 Version 3.1
