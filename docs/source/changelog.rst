@@ -134,6 +134,7 @@ Unreleased
 
 * Node logs as warning for ``MappedSchema`` containing an entity referencing to other entity from the different ``MappedSchema`.
   The log entry starts with `Cross-reference between MappedSchemas.` with detailed message.
+  API: Persistence documentation no longer suggests mapping between different schemas.
 
 .. _changelog_v3.1:
 
