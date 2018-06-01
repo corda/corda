@@ -356,6 +356,10 @@ class MultiThreadedStateMachineManager(
             null
         }
         externalEventMutex.withLock {
+            // Remove any sessions the old flow has.
+            for (sessionId in getFlowSessionIds(currentState.checkpoint)) {
+                sessionToFlow.remove(sessionId)
+            }
             if (flow != null) addAndStartFlow(flowId, flow)
             // Deliver all the external events from the old flow instance.
             val unprocessedExternalEvents = mutableListOf<ExternalEvent>()
