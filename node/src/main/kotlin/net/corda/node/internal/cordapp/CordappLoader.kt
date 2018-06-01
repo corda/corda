@@ -108,7 +108,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             serializationCustomSerializers = listOf(),
             customSchemas = setOf(),
             jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location, // Core JAR location
-            info = CordappImpl.Info("corda-core", versionInfo.vendor, versionInfo.releaseVersion)
+            info = CordappImpl.Info("corda-core", versionInfo.vendor, versionInfo.releaseVersion),
+            allFlows = coreRPCFlows,
+            jarHash = SecureHash.allOnesHash
     )
 
     companion object {
@@ -255,11 +257,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     findPlugins(it),
                     findSerializers(scanResult),
                     findCustomSchemas(scanResult),
-                    url,
-                    info,
-                    name)
                     findAllFlows(scanResult),
                     it.url,
+                    info,
                     getJarHash(it.url)
             )
         }
