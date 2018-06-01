@@ -33,8 +33,8 @@ data class CordappImpl(
         override val allFlows: List<Class<out FlowLogic<*>>>,
         override val jarPath: URL,
         override val info: Cordapp.Info = CordappImpl.Info.UNKNOWN,
-        override val jarHash: SecureHash.SHA256) : Cordapp {
-    override val name: String = jarPath.toPath().fileName.toString().removeSuffix(".jar")
+        override val jarHash: SecureHash.SHA256,
+        override val name: String = jarPath.toPath().fileName.toString().removeSuffix(".jar") ) : Cordapp {
 
     /**
      * An exhaustive list of all classes relevant to the node within this CorDapp
