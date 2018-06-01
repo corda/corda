@@ -3,7 +3,22 @@ package net.corda.node.services.statemachine.transitions
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.utilities.Try
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.Action
+import net.corda.node.services.statemachine.Checkpoint
+import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.EndSessionMessage
+import net.corda.node.services.statemachine.ErrorState
+import net.corda.node.services.statemachine.Event
+import net.corda.node.services.statemachine.ExistingSessionMessage
+import net.corda.node.services.statemachine.FlowRemovalReason
+import net.corda.node.services.statemachine.FlowSessionImpl
+import net.corda.node.services.statemachine.FlowState
+import net.corda.node.services.statemachine.InitiatedSessionState
+import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.statemachine.SessionId
+import net.corda.node.services.statemachine.SessionState
+import net.corda.node.services.statemachine.StateMachineState
+import net.corda.node.services.statemachine.SubFlow
 
 /**
  * This is the top level event-handling transition function capable of handling any [Event].
@@ -191,7 +206,7 @@ class TopLevelTransition(
         val sendEndMessageActions = currentState.checkpoint.sessions.values.mapIndexed { index, state ->
             if (state is SessionState.Initiated && state.initiatedState is InitiatedSessionState.Live) {
                 val message = ExistingSessionMessage(state.initiatedState.peerSinkSessionId, EndSessionMessage)
-                val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index)
+                val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index, state)
                 Action.SendExisting(state.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID))
             } else {
                 null
@@ -210,7 +225,7 @@ class TopLevelTransition(
             }
             val sourceSessionId = SessionId.createRandom(context.secureRandom)
             val sessionImpl = FlowSessionImpl(event.party, sourceSessionId)
-            val newSessions = checkpoint.sessions + (sourceSessionId to SessionState.Uninitiated(event.party, initiatingSubFlow))
+            val newSessions = checkpoint.sessions + (sourceSessionId to SessionState.Uninitiated(event.party, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong()))
             currentState = currentState.copy(checkpoint = checkpoint.copy(sessions = newSessions))
             actions.add(Action.AddSessionBinding(context.id, sourceSessionId))
             FlowContinuation.Resume(sessionImpl)
