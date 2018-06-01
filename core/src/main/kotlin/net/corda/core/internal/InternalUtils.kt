@@ -20,14 +20,12 @@ import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.UntrustworthyData
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -515,4 +513,15 @@ fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector
  */
 internal fun SignedTransaction.pushToLoggingContext() {
     MDC.put("tx_id", id.toString())
+}
+
+fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
+    val payloadData: T = try {
+        val serializer = SerializationDefaults.SERIALIZATION_FACTORY
+        serializer.deserialize(this, type, SerializationDefaults.P2P_CONTEXT)
+    } catch (ex: Exception) {
+        throw IllegalArgumentException("Payload invalid", ex)
+    }
+    return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) }
+            ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a ${payloadData.javaClass.name} ($payloadData)")
 }
