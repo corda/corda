@@ -1,8 +1,6 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.flows.FlowInfo
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.*
 import net.corda.core.utilities.Try
 
 /**
@@ -15,10 +13,13 @@ import net.corda.core.utilities.Try
 sealed class SubFlow {
     abstract val flowClass: Class<out FlowLogic<*>>
 
+    // Version of the code.
+    abstract val subFlowVersion: SubFlowVersion
+
     /**
      * An inlined subflow.
      */
-    data class Inlined(override val flowClass: Class<FlowLogic<*>>) : SubFlow()
+    data class Inlined(override val flowClass: Class<FlowLogic<*>>, override val subFlowVersion: SubFlowVersion) : SubFlow()
 
     /**
      * An initiating subflow.
@@ -30,21 +31,22 @@ sealed class SubFlow {
     data class Initiating(
             override val flowClass: Class<FlowLogic<*>>,
             val classToInitiateWith: Class<in FlowLogic<*>>,
-            val flowInfo: FlowInfo
+            val flowInfo: FlowInfo,
+            override val subFlowVersion: SubFlowVersion
     ) : SubFlow()
 
     companion object {
-        fun create(flowClass: Class<FlowLogic<*>>): Try<SubFlow> {
+        fun create(flowClass: Class<FlowLogic<*>>, subFlowVersion: SubFlowVersion): Try<SubFlow> {
             // Are we an InitiatingFlow?
             val initiatingAnnotations = getInitiatingFlowAnnotations(flowClass)
             return when (initiatingAnnotations.size) {
                 0 -> {
-                    Try.Success(Inlined(flowClass))
+                    Try.Success(Inlined(flowClass, subFlowVersion))
                 }
                 1 -> {
                     val initiatingAnnotation = initiatingAnnotations[0]
                     val flowContext = FlowInfo(initiatingAnnotation.second.version, flowClass.appName)
-                    Try.Success(Initiating(flowClass, initiatingAnnotation.first, flowContext))
+                    Try.Success(Initiating(flowClass, initiatingAnnotation.first, flowContext, subFlowVersion))
                 }
                 else -> {
                     Try.Failure(IllegalArgumentException("${InitiatingFlow::class.java.name} can only be annotated " +
