@@ -7,7 +7,7 @@
 Corda Enterprise is R3's closed source patch set on top of Corda Open Source. It adds features and improvements that we
 plan to charge for.
 
-Corda is a decentralised database system in which nodes trust each other as little as possible.
+Corda is an open source blockchain project, designed for business from the start. Only Corda allows you to build interoperable blockchain networks that transact in strict privacy. Corda's smart contract technology allows businesses to transact directly, with value.
 
 ## Features
 

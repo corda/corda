@@ -14,6 +14,10 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
+import net.corda.core.flows.*
+import net.corda.core.internal.*
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
@@ -69,6 +73,17 @@ import kotlin.streams.toList
 class CordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>, versionInfo: VersionInfo) {
     val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
     val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
+
+    // Create a map of the CorDapps that provide a Flow. If a flow is not in this map it is a Core flow.
+    // It also checks that there is only one CorDapp containing that flow class
+    val flowCordappMap: Map<Class<out FlowLogic<*>>, Cordapp> by lazy {
+        cordapps.flatMap { corDapp -> corDapp.allFlows.map { flow -> flow to corDapp } }
+                .groupBy { it.first }
+                .mapValues {
+                    require(it.value.size == 1) { "There are multiple CorDapp jars on the classpath for flow ${it.value.first().first.name}: ${it.value.map { it.second.name }.joinToString()}." }
+                    it.value.single().second
+                }
+    }
 
     init {
         if (cordappJarPaths.isEmpty()) {
@@ -165,6 +180,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             val resource = scanPackage.replace('.', '/')
             return this::class.java.classLoader.getResources(resource)
                     .asSequence()
+                    // This is to only scan classes from test folders.
+                    .filter { url -> listOf("main", "production").none { url.toString().contains("$it/$resource") } || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { scanPackage.startsWith(it) } }
                     .map { url ->
                         if (url.protocol == "jar") {
                             // When running tests from gradle this may be a corda module jar, so restrict to scanPackage:
@@ -241,8 +258,14 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     url,
                     info,
                     name)
+                    findAllFlows(scanResult),
+                    it.url,
+                    getJarHash(it.url)
+            )
         }
     }
+
+    private fun getJarHash(url: URL): SecureHash.SHA256 = url.openStream().readFully().sha256()
 
     private fun findServices(scanResult: RestrictedScanResult): List<Class<out SerializeAsToken>> {
         return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
@@ -277,6 +300,10 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
     private fun findSchedulableFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, SchedulableFlow::class)
+    }
+
+    private fun findAllFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
+        return scanResult.getConcreteClassesOfType(FlowLogic::class)
     }
 
     private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
@@ -358,6 +385,13 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
         fun <T : Any> getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
             return scanResult.getNamesOfClassesWithAnnotation(annotation.java)
+                    .filter { it.startsWith(qualifiedNamePrefix) }
+                    .mapNotNull { loadClass(it, type) }
+                    .filterNot { Modifier.isAbstract(it.modifiers) }
+        }
+
+        fun <T : Any> getConcreteClassesOfType(type: KClass<T>): List<Class<out T>> {
+            return scanResult.getNamesOfSubclassesOf(type.java)
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
                     .filterNot { Modifier.isAbstract(it.modifiers) }

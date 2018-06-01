@@ -10,6 +10,7 @@
 
 package net.corda.node.services.api
 
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.statemachine.Checkpoint

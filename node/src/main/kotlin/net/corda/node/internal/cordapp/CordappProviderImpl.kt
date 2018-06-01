@@ -16,6 +16,7 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.createCordappContext
 import net.corda.core.node.services.AttachmentId
@@ -32,7 +33,6 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
                                private val cordappConfigProvider: CordappConfigProvider,
                                attachmentStorage: AttachmentStorage,
                                private val whitelistedContractImplementations: Map<String, List<AttachmentId>>) : SingletonSerializeAsToken(), CordappProviderInternal {
-
     companion object {
         private val log = loggerFor<CordappProviderImpl>()
     }
@@ -127,4 +127,6 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
      * @return cordapp A cordapp or null if no cordapp has the given class loaded
      */
     fun getCordappForClass(className: String): Cordapp? = cordapps.find { it.cordappClasses.contains(className) }
+
+    override fun getCordappForFlow(flowLogic: FlowLogic<*>) = cordappLoader.flowCordappMap[flowLogic.javaClass]
 }

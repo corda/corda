@@ -11,6 +11,7 @@
 package net.corda.core.internal.cordapp
 
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.toPath
 import net.corda.core.schemas.MappedSchema
@@ -29,9 +30,11 @@ data class CordappImpl(
         override val serializationWhitelists: List<SerializationWhitelist>,
         override val serializationCustomSerializers: List<SerializationCustomSerializer<*, *>>,
         override val customSchemas: Set<MappedSchema>,
+        override val allFlows: List<Class<out FlowLogic<*>>>,
         override val jarPath: URL,
         override val info: Cordapp.Info = CordappImpl.Info.UNKNOWN,
-        override val name: String = jarPath.toPath().fileName.toString().removeSuffix(".jar")) : Cordapp {
+        override val jarHash: SecureHash.SHA256) : Cordapp {
+    override val name: String = jarPath.toPath().fileName.toString().removeSuffix(".jar")
 
     /**
      * An exhaustive list of all classes relevant to the node within this CorDapp
