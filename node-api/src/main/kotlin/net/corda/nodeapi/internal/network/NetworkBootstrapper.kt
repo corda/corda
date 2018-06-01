@@ -103,7 +103,6 @@ class NetworkBootstrapper {
     }
 
     fun bootstrap(directory: Path, cordappJars: List<Path>) {
-
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
         generateDirectoriesIfNeeded(directory, cordappJars)
