@@ -61,7 +61,7 @@ class NetworkBootstrapper {
         fun main(args: Array<String>) {
             val baseNodeDirectory = requireNotNull(args.firstOrNull()) { "Expecting first argument which is the nodes' parent directory" }
             val cordappJars = if (args.size > 1) args.asList().drop(1).map { Paths.get(it) } else emptyList()
-            NetworkBootstrapper().bootstrap(Paths.get(baseNodeDirectory).toAbsolutePath().normalize(), cordappJars, Runtime.getRuntime().availableProcessors())
+            NetworkBootstrapper().bootstrap(Paths.get(baseNodeDirectory).toAbsolutePath().normalize(), cordappJars)
         }
     }
 
@@ -102,7 +102,7 @@ class NetworkBootstrapper {
         }
     }
 
-    fun bootstrap(directory: Path, cordappJars: List<Path>, numParallelProcesses: Int) {
+    fun bootstrap(directory: Path, cordappJars: List<Path>, numParallelProcesses: Int = Runtime.getRuntime().availableProcessors()) {
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
         generateDirectoriesIfNeeded(directory, cordappJars)
