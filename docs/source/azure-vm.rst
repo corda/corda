@@ -115,6 +115,15 @@ For Corda nodes running release M11
 	cd /opt/corda/cordapps
 	wget http://downloads.corda.net/cordapps/net/corda/yo/0.11.0/yo-0.11.0.jar
 
+For Corda nodes running version 2
+
+.. sourcecode:: shell
+
+	cd /opt/corda/plugins
+	wget http://ci-artifactory.corda.r3cev.com/artifactory/cordapp-showcase/yo-4.jar
+
+
+
 Now restart Corda and the Corda webserver using the following commands or restart your Corda VM from the Azure portal:
 
 .. sourcecode:: shell
