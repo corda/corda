@@ -1,10 +1,11 @@
 description 'Corda serialization (deterministic)'
 
 apply plugin: 'kotlin'
+apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'net.corda.plugins.publish-utils'
 
 def javaHome = System.getProperty('java.home')
-def jarBaseName = "corda-${project.name}"
+def jarBaseName = "corda-${project.name}".toString()
 
 evaluationDependsOn(':jdk8u-deterministic')
 def jdkTask = project(':jdk8u-deterministic').assemble
@@ -176,7 +177,7 @@ publish {
     disableDefaultJar = true
     publishSources = false
     publishJavadoc = false
-    name jarBaseName.toString()
+    name jarBaseName
 }
 
 // Must be after publish {} so that the previous install task exists for overwriting.
