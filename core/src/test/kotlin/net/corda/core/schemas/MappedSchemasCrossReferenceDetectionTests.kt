@@ -78,31 +78,31 @@ class MappedSchemasCrossReferenceDetectionTests {
 
     @Test
     fun `no cross reference to other schema java`() {
-        assertThat(fieldsFromOtherMappedSchema(MappedSchemas.GoodSchemaJava.getInstance())).isEmpty()
-        assertThat(methodsFromOtherMappedSchema(MappedSchemas.GoodSchemaJava.getInstance())).isEmpty()
+        assertThat(fieldsFromOtherMappedSchema(GoodSchemaJavaV1())).isEmpty()
+        assertThat(methodsFromOtherMappedSchema(GoodSchemaJavaV1())).isEmpty()
     }
 
     @Test
     fun `cross reference to other schema is detected java`() {
-        assertThat(fieldsFromOtherMappedSchema(MappedSchemas.BadSchemaJava.getInstance())).isEmpty()
-        assertThat(methodsFromOtherMappedSchema(MappedSchemas.BadSchemaJava.getInstance())).isNotEmpty
+        assertThat(fieldsFromOtherMappedSchema(BadSchemaJavaV1())).isEmpty()
+        assertThat(methodsFromOtherMappedSchema(BadSchemaJavaV1())).isNotEmpty
     }
 
     @Test
     fun `cross reference to other schema via field is detected java`() {
-        assertThat(fieldsFromOtherMappedSchema(MappedSchemas.BadSchemaNoGetterJava.getInstance())).isNotEmpty
-        assertThat(methodsFromOtherMappedSchema(MappedSchemas.BadSchemaNoGetterJava.getInstance())).isEmpty()
+        assertThat(fieldsFromOtherMappedSchema(BadSchemaNoGetterJavaV1())).isNotEmpty
+        assertThat(methodsFromOtherMappedSchema(BadSchemaNoGetterJavaV1())).isEmpty()
     }
 
     @Test
     fun `cross reference via non JPA field is allowed java`() {
-        assertThat(fieldsFromOtherMappedSchema(MappedSchemas.TrickySchemaJava.getInstance())).isEmpty()
-        assertThat(methodsFromOtherMappedSchema(MappedSchemas.TrickySchemaJava.getInstance())).isEmpty()
+        assertThat(fieldsFromOtherMappedSchema(TrickySchemaJavaV1())).isEmpty()
+        assertThat(methodsFromOtherMappedSchema(TrickySchemaJavaV1())).isEmpty()
     }
 
     @Test
     fun `cross reference via transient field is allowed java`() {
-        assertThat(fieldsFromOtherMappedSchema(MappedSchemas.PoliteSchemaJava.getInstance())).isEmpty()
-        assertThat(methodsFromOtherMappedSchema(MappedSchemas.PoliteSchemaJava.getInstance())).isEmpty()
+        assertThat(fieldsFromOtherMappedSchema(PoliteSchemaJavaV1())).isEmpty()
+        assertThat(methodsFromOtherMappedSchema(PoliteSchemaJavaV1())).isEmpty()
     }
 }
