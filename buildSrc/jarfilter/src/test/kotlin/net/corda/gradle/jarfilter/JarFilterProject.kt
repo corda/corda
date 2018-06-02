@@ -24,10 +24,12 @@ class JarFilterProject(private val projectDir: TemporaryFolder, private val name
     override fun apply(statement: Statement, description: Description): Statement {
         return object : Statement() {
             override fun evaluate() {
-                projectDir.apply {
-                    installResource("$name/build.gradle")
-                    installResource("gradle.properties")
-                }
+                projectDir.installResources(
+                    "$name/build.gradle",
+                    "repositories.gradle",
+                    "gradle.properties",
+                    "settings.gradle"
+                )
 
                 val result = GradleRunner.create()
                     .withProjectDir(projectDir.root)

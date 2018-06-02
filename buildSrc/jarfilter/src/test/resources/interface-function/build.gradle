@@ -2,6 +2,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '$kotlin_version'
     id 'net.corda.gradle.jar-filter'
 }
+apply from: 'repositories.gradle'
 
 sourceSets {
     main {
@@ -12,11 +13,6 @@ sourceSets {
             )
         }
     }
-}
-
-repositories {
-    mavenLocal()
-    jcenter()
 }
 
 dependencies {

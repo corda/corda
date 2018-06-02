@@ -40,9 +40,10 @@ fun copyResourceTo(resourceName: String, target: Path) {
 @Throws(IOException::class)
 fun copyResourceTo(resourceName: String, target: File) = copyResourceTo(resourceName, target.toPath())
 
-@Suppress("UNUSED")
 @Throws(IOException::class)
-fun TemporaryFolder.installSettings(): File = installResource("settings.gradle")
+fun TemporaryFolder.installResources(vararg resourceNames: String) {
+    resourceNames.forEach { installResource(it) }
+}
 
 @Throws(IOException::class)
 fun TemporaryFolder.installResource(resourceName: String): File = newFile(resourceName.fileName).let { file ->
