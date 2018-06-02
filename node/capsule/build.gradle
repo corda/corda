@@ -42,7 +42,7 @@ sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
 task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
-    archiveName "corda-r3-${corda_release_version}.jar"
+    archiveName "corda-enterprise-${corda_release_version}.jar"
     applicationClass 'net.corda.node.Corda'
     applicationSource = files(
             project(':node').configurations.runtime,

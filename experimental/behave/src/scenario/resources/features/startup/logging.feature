@@ -31,7 +31,7 @@ Feature: Startup Information - Logging
 
     Examples:
       | Node-Version    | Platform-Version | Release-Version       |
-      | r3-master       | 4                | R3.CORDA-3.0-SNAPSHOT |
+      | r3-master       | 4                | 3.0.0-SNAPSHOT |
 
   Scenario Outline: Start-up a simple 3 node network with a non validating notary
     Given a node PartyA of version <Node1-Version>
