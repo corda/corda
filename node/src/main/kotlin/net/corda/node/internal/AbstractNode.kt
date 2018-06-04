@@ -663,7 +663,15 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                              networkParameters: NetworkParameters): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
 
-        verifyCheckpointsCompatible(checkpointStorage, cordappProvider.cordapps, versionInfo.platformVersion)
+        try {
+            verifyCheckpointsCompatible(checkpointStorage, cordappProvider.cordapps, versionInfo.platformVersion)
+        } catch (e: CheckpointIncompatibleException) {
+            if (configuration.devMode) {
+                Node.printWarning(e.message)
+            } else {
+                throw e
+            }
+        }
 
         val keyManagementService = makeKeyManagementService(identityService, keyPairs, database)
         _services = ServiceHubInternalImpl(
