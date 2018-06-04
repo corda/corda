@@ -3,6 +3,8 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformRename
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.trace
+import net.corda.serialization.internal.NotSerializableDetailedException
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
@@ -246,12 +248,11 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
                         map[type] = this
                     }
                 }
-            }
-            catch (e: NotSerializableException ) {
+            } catch (e: NotSerializableException) {
                 val message = "Error running transforms for $type: ${e.message}"
                 logger.error(message)
-                logger.trace(e)
-                throw NotSerializableException(message)
+                logger.trace { e.toString() }
+                throw NotSerializableDetailedException(type, e.message ?: "")
             }
         }
 
