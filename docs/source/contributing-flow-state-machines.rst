@@ -13,8 +13,8 @@ contributors.
 How to add suspending operations
 --------------------------------
 
-To add a suspending operation that's a simple request-response type function that perhaps involves some external IO you
-can use the internal ``FlowAsyncOperation`` interface.
+To add a suspending operation for a simple request-response type function that perhaps involves some external IO we can
+use the internal ``FlowAsyncOperation`` interface.
 
 .. container:: codeset
 
@@ -64,8 +64,8 @@ flow:
 
 That's it! Obviously this is a mostly useless example, but this is the basic code structure one could extend for heavier
 computations/other IO. For example the function could call into a ``CordaService`` or something similar. One thing to
-note is that the operation executed in ``execute`` must be redoable(= "idempotent") in case the node fails while the
-next checkpoint is reached.
+note is that the operation executed in ``execute`` must be redoable(= "idempotent") in case the node fails before the
+next checkpoint is committed.
 
 How to test
 -----------
@@ -222,16 +222,16 @@ transaction, to be used by user code.
 The continuation is a ``Resume``, which instructs the state machine to hand control to user code. The state change is
 a simple update of bookkeeping data.
 
-On other words the first transition concerns initializing of the flow, which includes the creation of the
+In other words the first transition concerns the initialization of the flow, which includes the creation of the
 checkpoint.
 
-The next transition is the suspension on our summing operation, triggered by the ``Suspend`` event. As we can see in
+The next transition is the suspension of our summing operation, triggered by the ``Suspend`` event. As we can see in
 this transition we aren't doing any work related to the summation yet, we're merely persisting the checkpoint that
 indicates that we want to do the summation. Had we added a ``toString`` method to our ``SummingOperationThrowing`` we
 would see a nicer message.
 
 The next transition is the faulty one, as we can see it was also triggered by a ``DoRemainingWork``, and executed our
 operation. We can see that there are two state "diff"s printed, one that would've happened had the transition succeeded,
-and one that actually happened, this is the marking of the flow's state as errored. The rest of the transitions involve
-error propagation (triggered by the ``FlowHospital``) and notification of failure, which ultimately raises the exception
-on the RPC ``resultFuture``.
+and one that actually happened, which marked the flow's state as errored. The rest of the transitions involve error
+propagation (triggered by the ``FlowHospital``) and notification of failure, which ultimately raises the exception on
+the RPC ``resultFuture``.
