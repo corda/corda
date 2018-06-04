@@ -20,12 +20,14 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
+@Ignore
 class HardRestartTest : IntegrationTest() {
     companion object {
         @ClassRule
