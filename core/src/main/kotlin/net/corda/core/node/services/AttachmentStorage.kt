@@ -2,6 +2,7 @@ package net.corda.core.node.services
 
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.AttachmentMetadata
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
@@ -69,5 +70,7 @@ interface AttachmentStorage {
      * @return true if it's in there
      */
     fun hasAttachment(attachmentId: AttachmentId): Boolean
+
+    fun getAttachmentMetadata(attachmentId: String): List<AttachmentMetadata>
 }
 

@@ -8,18 +8,18 @@ import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.AttachmentMetadata
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.AbstractAttachment
-import net.corda.core.internal.UNKNOWN_UPLOADER
-import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.readFully
+import net.corda.core.internal.*
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.builder
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationToken
 import net.corda.core.serialization.SerializeAsToken
@@ -35,6 +35,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
+import org.hibernate.query.Query
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -319,25 +320,36 @@ class NodeAttachmentService(
         AttachmentId.parse(faee.message!!)
     }
 
+    private fun queryAttachmentsHelper(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): Query<DBAttachment> {
+        val session = currentDBSession()
+        val criteriaBuilder = session.criteriaBuilder
+
+        val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
+        val root = criteriaQuery.from(DBAttachment::class.java)
+
+        val criteriaParser = HibernateAttachmentQueryCriteriaParser(criteriaBuilder, criteriaQuery, root)
+
+        // parse criteria and build where predicates
+        criteriaParser.parse(criteria, sorting)
+
+        // prepare query for execution
+        return session.createQuery(criteriaQuery)!!
+
+    }
+
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         log.info("Attachment query criteria: $criteria, sorting: $sorting")
         return database.transaction {
-            val session = currentDBSession()
-            val criteriaBuilder = session.criteriaBuilder
-
-            val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
-            val root = criteriaQuery.from(DBAttachment::class.java)
-
-            val criteriaParser = HibernateAttachmentQueryCriteriaParser(criteriaBuilder, criteriaQuery, root)
-
-            // parse criteria and build where predicates
-            criteriaParser.parse(criteria, sorting)
-
             // prepare query for execution
-            val query = session.createQuery(criteriaQuery)
+            val query = queryAttachmentsHelper(criteria, sorting)
 
             // execution
             query.resultList.map { AttachmentId.parse(it.attId) }
         }
+    }
+
+    override fun getAttachmentMetadata(attachmentId: String): List<AttachmentMetadata>{
+        val criteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(attId = Builder.equal(attachmentId))
+        return queryAttachmentsHelper(criteria,null).resultList.map { AttachmentMetadataImpl(attId = it.attId,insertionDate = it.insertionDate,uploader = it.uploader,filename = it.filename) }
     }
 }
