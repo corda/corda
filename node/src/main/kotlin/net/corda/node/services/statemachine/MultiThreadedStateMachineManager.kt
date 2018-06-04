@@ -145,7 +145,7 @@ class MultiThreadedStateMachineManager(
         serviceHub.networkMapCache.nodeReady.then {
             resumeRestoredFlows(fibers)
             flowMessaging.start { receivedMessage, deduplicationHandler ->
-                lifeCycle.requireState(State.STARTED) {
+                lifeCycle.requireState(State.STARTED, StateMachineStoppedException("Flow cannot be started. State machine is stopped.")) {
                     deliverExternalEvent(deduplicationHandler.externalCause)
                 }
             }
