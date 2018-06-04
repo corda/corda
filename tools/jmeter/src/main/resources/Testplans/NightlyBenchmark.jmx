@@ -35,7 +35,7 @@
           </elementProp>
           <elementProp name="notaryName" elementType="Argument">
             <stringProp name="Argument.name">notaryName</stringProp>
-            <stringProp name="Argument.value">O=Perf-10.155.0.11,OU=Corda,L=London,C=GB</stringProp>
+            <stringProp name="Argument.value">CN=10.155.0.11, O=R3 Ltd, L=London, C=GB</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="otherPartyName" elementType="Argument">
