@@ -4,7 +4,7 @@ Deploying Corda to Corda Testnet from an AWS Cloud Platform VM
 .. contents::
 
 This document explains how to deploy a Corda node to AWS that can connect directly to the Corda Testnet.
-A self service download link can be obtained from the [https://testnet.corda.network](testnet.corda.network). This
+A self service download link can be obtained from the https://testnet.corda.network. This
 document will describe how to set up a virtual machine on the AWS
 Cloud Platform to deploy your pre-configured Corda node and automatically connnect
 to Testnet.
