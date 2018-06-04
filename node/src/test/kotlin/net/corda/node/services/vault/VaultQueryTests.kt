@@ -1194,7 +1194,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
                 vaultFiller.fillWithSomeTestLinearStates(1, linearNumber = it.toLong(), linearString = it.toString())
             }
             val max = builder { DummyLinearStateSchemaV1.PersistentDummyLinearState::linearTimestamp.max(
-                    groupByColumns = listOf(DummyLinearStateSchemaV1.PersistentDummyLinearState::linearNumber)
+                    groupByColumns = listOf(DummyLinearStateSchemaV1.PersistentDummyLinearState::linearNumber),
+                    orderBy = Sort.Direction.ASC
                 )
             }
             val maxCriteria = VaultCustomQueryCriteria(max)

@@ -25,10 +25,7 @@ import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.exceptions.InternalNodeException
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.NodeParameters
@@ -52,8 +49,7 @@ class BootTests : IntegrationTest() {
      companion object {
         @ClassRule
         @JvmField
-         val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
-                 .map { it.toDatabaseSchemaName() }.toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
      }
 
     @Test
@@ -68,7 +64,7 @@ class BootTests : IntegrationTest() {
             }
         }
         driver {
-            val devModeNode = startNode(params).getOrThrow()
+            val devModeNode = startNode(params, BOB_NAME).getOrThrow()
             val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
             assertThatThrownBy { devModeNode.attemptJavaDeserialization() }.isInstanceOf(CordaRuntimeException::class.java)

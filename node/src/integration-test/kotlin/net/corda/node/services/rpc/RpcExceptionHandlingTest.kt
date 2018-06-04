@@ -37,8 +37,7 @@ class RpcExceptionHandlingTest : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
-                .map { it.toDatabaseSchemaName() }.toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 
     private val user = User("mark", "dadada", setOf(Permissions.all()))
@@ -63,8 +62,8 @@ class RpcExceptionHandlingTest : IntegrationTest() {
         }
 
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-            val devModeNode = startNode(params).getOrThrow()
-            val node = startNode(DUMMY_BANK_B_NAME, devMode = false, parameters = params).getOrThrow()
+            val devModeNode = startNode(params, BOB_NAME).getOrThrow()
+            val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
             assertThatThrownExceptionIsReceivedUnwrapped(devModeNode)
             assertThatThrownExceptionIsReceivedUnwrapped(node)
@@ -82,8 +81,8 @@ class RpcExceptionHandlingTest : IntegrationTest() {
         }
 
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
-            val devModeNode = startNode(params).getOrThrow()
-            val node = startNode(DUMMY_BANK_B_NAME, devMode = false, parameters = params).getOrThrow()
+            val devModeNode = startNode(params, BOB_NAME).getOrThrow()
+            val node = startNode(ALICE_NAME, devMode = false, parameters = params).getOrThrow()
 
             assertThatThrownBy { devModeNode.throwExceptionFromFlow() }.isInstanceOfSatisfying(FlowException::class.java) { exception ->
 
