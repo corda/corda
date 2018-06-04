@@ -48,7 +48,7 @@ Add a firewall rule for port range 10002-10003 and allow connection from Anywher
 
 Click on the Review and Launch button then if everything looks ok click Launch.
 
-You will be prompted to set up keys to securely access the VM remotely over ssh. Select "Create a new key pair" from the drop down and enter a name for the key file. Click download to get the keys and keep them safe on your local machine. 
+You will be prompted to set up keys to securely access the VM remotely over ssh. Select "Create a new key pair" from the drop down and enter a name for the key file. Click download to get the keys and keep them safe on your local machine. (Note, these keys are just for connecting to your VM and are separate from the keys Corda will use to sign transactions. These keys will be generated as part of the download bundle.)
 
 .. image:: resources/aws-keys.png
    :width: 200 px
@@ -61,8 +61,8 @@ Click on the link to go to the Instances pages in the AWS console where after a 
 
 **STEP 2: Set up static IP address**
 
-On AWS a permenant IP address is called an Elastic IP. Click on the
-"Elastic IP" link in the sidenav and then click on "Allocate new address":
+On AWS a permanent IP address is called an Elastic IP. Click on the
+"Elastic IP" link in the navigation panel on the left hand side of the console and then click on "Allocate new address":
 
 .. image:: resources/aws-elastic.png
 
@@ -85,9 +85,9 @@ In the instances console click on "Connect" and follow the instructions to conne
 
 **STEP 4: Download and set up your Corda node**
 
-Now your AWS environment is configured you can switch to the Testnet 
+Now your AWS environment is configured you can switch back to the Testnet 
 web application and click on the copy to clipboard button to get a one
-time installation script:
+time installation script. (If you have not already set up your account on Testnet then please visit https://testnet.corda.network and sign up.)
 
 
 .. image:: resources/testnet-platform.png
@@ -96,12 +96,14 @@ time installation script:
 You can generate as many Testnet identites as you like by refreshing
 this page to generate a new one time link. 
 	   
-In your terminal paste the command you just copied to install and run
-your unique Corda instance:
+In the terminal of your cloud instance paste the command you just copied to install and run
+your unique Corda instance on that instance:
 
 .. code:: bash
 
-    sudo ONE_TIME_DOWNLOAD_KEY=cd6913a4-5390-4956-a544-94148a8c70a7 bash -c "$(curl -L https://testnet.corda.network/api/user/node/install.sh)"
+    sudo ONE_TIME_DOWNLOAD_KEY=YOUR_UNIQUE_DOWNLOAD_KEY_HERE bash -c "$(curl -L https://testnet.corda.network/api/user/node/install.sh)"
+
+.. warning:: This command will execute the install script as ROOT on your cloud instance. You may wish to examine the script prior to executing it on your machine. 
 
 You can now navigate to the external web address of the instance and
 see any cordapps running on port 8080 (if you have any installed). 
