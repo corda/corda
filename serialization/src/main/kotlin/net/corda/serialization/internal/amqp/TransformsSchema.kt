@@ -7,6 +7,7 @@ import net.corda.core.utilities.trace
 import net.corda.serialization.internal.NotSerializableDetailedException
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
+import java.io.IOException
 import java.io.NotSerializableException
 import java.util.*
 
@@ -248,7 +249,7 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
                         map[type] = this
                     }
                 }
-            } catch (e: NotSerializableException) {
+            } catch (e: IOException) {
                 val message = "Error running transforms for $type: ${e.message}"
                 logger.error(message)
                 logger.trace { e.toString() }

@@ -6,7 +6,7 @@ import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformRename
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
-import java.io.NotSerializableException
+import java.io.IOException
 
 /**
  * Enumerated type that represents each transform that can be applied to a class. Used as the key type in
@@ -154,7 +154,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
 
         protected inline fun requireThat(expr: Boolean, errorMessage: () -> String) {
             if (!expr) {
-                throw NotSerializableException(errorMessage())
+                throw IOException(errorMessage())
             }
         }
     }
