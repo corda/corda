@@ -74,9 +74,7 @@ class BootTests : IntegrationTest() {
 
     @Test
     fun `double node start doesn't write into log file`() {
-        val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
-        assertThat(logConfigFile).isRegularFile()
-        driver(DriverParameters(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
+        driver(DriverParameters(isDebug = true)) {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }

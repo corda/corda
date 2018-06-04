@@ -8,6 +8,8 @@ Unreleased
 ==========
 * Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems related to database migrations before exiting with a non-zero code.
 
+* Fixed an issue preventing out of process nodes started by the ``Driver`` from logging to file.
+
 * Fixed an issue with ``CashException`` not being able to deserialise after the introduction of AMQP for RPC.
 
 * Removed -xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
@@ -119,6 +121,8 @@ Unreleased
 * Adding a public method to check if a public key satisfies Corda recommended algorithm specs, `Crypto.validatePublicKey(java.security.PublicKey)`.
   For instance, this method will check if an ECC key lies on a valid curve or if an RSA key is >= 2048bits. This might
   be required for extra key validation checks, e.g., for Doorman to check that a CSR key meets the minimum security requirements.
+
+* Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
 
 .. _changelog_v3.1:
 
