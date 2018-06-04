@@ -174,11 +174,11 @@ artifacts {
 }
 
 publish {
-    disableDefaultJar = true
+    dependenciesFrom configurations.runtimeArtifacts
     publishSources = false
     publishJavadoc = false
     name jarBaseName
 }
 
 // Must be after publish {} so that the previous install task exists for overwriting.
-task install(overwrite: true, dependsOn: ['metafix', 'publishToMavenLocal'])
+task install(overwrite: true, dependsOn: ['assemble', 'publishToMavenLocal'])
