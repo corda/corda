@@ -34,6 +34,7 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.internal.exceptions.StateMachineStoppedException
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
@@ -196,7 +197,7 @@ class MultiThreadedStateMachineManager(
             ourIdentity: Party?,
             deduplicationHandler: DeduplicationHandler?
     ): CordaFuture<FlowStateMachine<A>> {
-        return lifeCycle.requireState(State.STARTED) {
+        return lifeCycle.requireState(State.STARTED, StateMachineStoppedException("Flow cannot be started. State machine is stopped.")) {
             startFlowInternal(
                     invocationContext = context,
                     flowLogic = flowLogic,

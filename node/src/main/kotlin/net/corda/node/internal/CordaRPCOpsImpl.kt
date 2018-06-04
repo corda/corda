@@ -50,6 +50,7 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.internal.exceptions.StateMachineStoppedException
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.context
@@ -185,7 +186,11 @@ internal class CordaRPCOpsImpl(
         if (isFlowsDrainingModeEnabled()) {
             throw RejectedCommandException("Node is draining before shutdown. Cannot start new flows through RPC.")
         }
-        return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
+        try {
+            return flowStarter.invokeFlowAsync(logicType, context(), *args).getOrThrow()
+        } catch (e: StateMachineStoppedException) {
+            throw RejectedCommandException("Node is shutting down. Cannot start new flows through RPC.")
+        }
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {

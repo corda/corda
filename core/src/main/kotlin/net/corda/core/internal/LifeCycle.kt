@@ -39,6 +39,17 @@ class LifeCycle<S : Enum<S>>(initial: S) {
     }
     fun requireState(requiredState: S) = requireState(requiredState) {}
 
+    fun <A> requireState(
+            requiredState: S,
+            throwable: Throwable,
+            block: () -> A
+    ): A {
+        return lock.readLock().withLock {
+           if (requiredState != state) { throw throwable }
+            block()
+        }
+    }
+
     /** Assert something about the current state atomically. */
     fun <A> requireState(
             errorMessage: (S) -> String,
