@@ -260,6 +260,13 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun <T> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T>
 
+    /**
+     * Attempts to kill a flow. This is not a clean termination and should be reserved for exceptional cases such as stuck fibers.
+     *
+     * @return whether the flow existed and was killed.
+     */
+    fun killFlow(id: StateMachineRunId): Boolean
+
     /** Returns Node's NodeInfo, assuming this will not change while the node is running. */
     fun nodeInfo(): NodeInfo
 
@@ -283,9 +290,11 @@ interface CordaRPCOps : RPCOps {
     fun openAttachment(id: SecureHash): InputStream
 
     /** Uploads a jar to the node, returns it's hash. */
+    @Throws(java.nio.file.FileAlreadyExistsException::class)
     fun uploadAttachment(jar: InputStream): SecureHash
 
     /** Uploads a jar including metadata to the node, returns it's hash. */
+    @Throws(java.nio.file.FileAlreadyExistsException::class)
     fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash
 
     /** Queries attachments metadata */

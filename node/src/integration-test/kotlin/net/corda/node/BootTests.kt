@@ -2,6 +2,7 @@ package net.corda.node
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.CordaRuntimeException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.div
@@ -11,12 +12,10 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
-import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.io.*
@@ -30,15 +29,14 @@ class BootTests {
             val user = User("u", "p", setOf(startFlow<ObjectInputStreamFlow>()))
             val future = CordaRPCClient(startNode(rpcUsers = listOf(user)).getOrThrow().rpcAddress).
                     start(user.username, user.password).proxy.startFlow(::ObjectInputStreamFlow).returnValue
-            assertThatThrownBy { future.getOrThrow() }.isInstanceOf(InvalidClassException::class.java).hasMessage("filter status: REJECTED")
+            assertThatThrownBy { future.getOrThrow() }
+                    .isInstanceOf(CordaRuntimeException::class.java)
         }
     }
 
     @Test
     fun `double node start doesn't write into log file`() {
-        val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
-        assertThat(logConfigFile).isRegularFile()
-        driver(DriverParameters(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
+        driver(DriverParameters(isDebug = true)) {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }

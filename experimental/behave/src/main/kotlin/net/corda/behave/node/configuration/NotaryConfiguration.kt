@@ -12,5 +12,4 @@ class NotaryConfiguration(private val notaryType: NotaryType = NotaryType.NONE) 
                     "notary { validating = true }"
             }
         }
-
 }

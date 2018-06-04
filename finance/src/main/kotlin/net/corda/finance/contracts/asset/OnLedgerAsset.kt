@@ -30,7 +30,7 @@ data class PartyAndAmount<T : Any>(val party: AbstractParty, val amount: Amount<
  * At the same time, other contracts that just want assets and don't care much who is currently holding it can ignore
  * the issuer/depositRefs and just examine the amount fields.
  */
-abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : Contract {
+abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>> : Contract {
     companion object {
         private val log = contextLogger()
         /**
@@ -74,8 +74,6 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
          *
          * @param tx A builder, which may contain inputs, outputs and commands already. The relevant components needed
          *           to move the cash will be added on top.
-         * @param amount How much currency to send.
-         * @param to a key of the recipient.
          * @param acceptableStates a list of acceptable input states to use.
          * @param payChangeTo party to pay any change to; this is normally a confidential identity of the calling
          * party. We use a new confidential identity here so that the recipient is not identifiable.
@@ -154,7 +152,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
                         delta > 0 -> {
                             // The states from the current issuer more than covers this payment.
                             outputStates += deriveState(templateState, Amount(remainingToPay, token), party)
-                            remainingFromEachIssuer[0] = Pair(token, Amount(delta, token))
+                            remainingFromEachIssuer[remainingFromEachIssuer.lastIndex] = Pair(token, Amount(delta, token))
                             remainingToPay = 0
                         }
                         delta == 0L -> {
@@ -230,11 +228,11 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
         @Throws(InsufficientBalanceException::class)
         @JvmStatic
         @Deprecated("Replaced with generateExit() which takes in a party to pay change to")
-        fun <S : FungibleAsset<T>, T: Any> generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                                                        assetStates: List<StateAndRef<S>>,
-                                                        deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
-                                                        generateMoveCommand: () -> CommandData,
-                                                        generateExitCommand: (Amount<Issued<T>>) -> CommandData): Set<PublicKey> {
+        fun <S : FungibleAsset<T>, T : Any> generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
+                                                         assetStates: List<StateAndRef<S>>,
+                                                         deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
+                                                         generateMoveCommand: () -> CommandData,
+                                                         generateExitCommand: (Amount<Issued<T>>) -> CommandData): Set<PublicKey> {
             val owner = assetStates.map { it.state.data.owner }.toSet().firstOrNull() ?: throw InsufficientBalanceException(amountIssued)
             return generateExit(tx, amountIssued, assetStates, owner, deriveState, generateMoveCommand, generateExitCommand)
         }
@@ -252,16 +250,16 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
          */
         @Throws(InsufficientBalanceException::class)
         @JvmStatic
-        fun <S : FungibleAsset<T>, T: Any> generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                                                        assetStates: List<StateAndRef<S>>,
-                                                        payChangeTo: AbstractParty,
-                                                        deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
-                                                        generateMoveCommand: () -> CommandData,
-                                                        generateExitCommand: (Amount<Issued<T>>) -> CommandData): Set<PublicKey> {
+        fun <S : FungibleAsset<T>, T : Any> generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
+                                                         assetStates: List<StateAndRef<S>>,
+                                                         payChangeTo: AbstractParty,
+                                                         deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
+                                                         generateMoveCommand: () -> CommandData,
+                                                         generateExitCommand: (Amount<Issued<T>>) -> CommandData): Set<PublicKey> {
             require(assetStates.isNotEmpty()) { "List of states to exit cannot be empty." }
             val currency = amountIssued.token.product
             val amount = Amount(amountIssued.quantity, currency)
-            var acceptableCoins = assetStates.filter { ref -> ref.state.data.amount.token == amountIssued.token }
+            var acceptableCoins = assetStates.filter { (state) -> state.data.amount.token == amountIssued.token }
             tx.notary = acceptableCoins.firstOrNull()?.state?.notary
             // TODO: We should be prepared to produce multiple transactions exiting inputs from
             // different notaries, or at least group states by notary and take the set with the
@@ -318,20 +316,20 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
      * the responsibility of the caller to check that they do not exit funds held by others.
-     * @param payChangeTo party to pay any change to; this is normally a confidential identity of the calling
-     * party.
      * @return the public keys which must sign the transaction for it to be valid.
      */
     @Throws(InsufficientBalanceException::class)
     @Deprecated("Replaced with generateExit() which takes in a party to pay change to")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
                      assetStates: List<StateAndRef<S>>): Set<PublicKey> {
+        val changeOwner = assetStates.map { it.state.data.owner }.toSet().firstOrNull() ?: throw InsufficientBalanceException(amountIssued)
         return generateExit(
                 tx,
                 amountIssued,
                 assetStates,
+                changeOwner,
                 deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
-                generateMoveCommand = { -> generateMoveCommand() },
+                generateMoveCommand = { generateMoveCommand() },
                 generateExitCommand = { amount -> generateExitCommand(amount) }
         )
     }
@@ -355,7 +353,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
                 assetStates,
                 payChangeTo,
                 deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
-                generateMoveCommand = { -> generateMoveCommand() },
+                generateMoveCommand = { generateMoveCommand() },
                 generateExitCommand = { amount -> generateExitCommand(amount) }
         )
     }

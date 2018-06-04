@@ -7,6 +7,8 @@
       <module name="attachment-demo_integrationTest" target="1.8" />
       <module name="attachment-demo_main" target="1.8" />
       <module name="attachment-demo_test" target="1.8" />
+      <module name="avalanche_main" target="1.8" />
+      <module name="avalanche_test" target="1.8" />
       <module name="bank-of-corda-demo_integrationTest" target="1.8" />
       <module name="bank-of-corda-demo_main" target="1.8" />
       <module name="bank-of-corda-demo_test" target="1.8" />
@@ -34,6 +36,15 @@
       <module name="corda-finance_integrationTest" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
+      <module name="corda-smoke-test-utils_main" target="1.8" />
+      <module name="corda-smoke-test-utils_test" target="1.8" />
+      <module name="corda-test-common_main" target="1.8" />
+      <module name="corda-test-common_test" target="1.8" />
+      <module name="corda-test-utils_main" target="1.8" />
+      <module name="corda-test-utils_test" target="1.8" />
+      <module name="corda-utils_integrationTest" target="1.8" />
+      <module name="corda-utils_main" target="1.8" />
+      <module name="corda-utils_test" target="1.8" />
       <module name="corda-webserver_integrationTest" target="1.8" />
       <module name="corda-webserver_main" target="1.8" />
       <module name="corda-webserver_test" target="1.8" />
@@ -62,6 +73,8 @@
       <module name="example-code_integrationTest" target="1.8" />
       <module name="example-code_main" target="1.8" />
       <module name="example-code_test" target="1.8" />
+      <module name="experimental-blobinspector_main" target="1.8" />
+      <module name="experimental-blobinspector_test" target="1.8" />
       <module name="experimental-kryo-hook_main" target="1.8" />
       <module name="experimental-kryo-hook_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
@@ -113,6 +126,8 @@
       <module name="node-driver_integrationTest" target="1.8" />
       <module name="node-driver_main" target="1.8" />
       <module name="node-driver_test" target="1.8" />
+      <module name="node-schemas_main" target="1.8" />
+      <module name="node-schemas_test" target="1.8" />
       <module name="node_integrationTest" target="1.8" />
       <module name="node_main" target="1.8" />
       <module name="node_smokeTest" target="1.8" />
@@ -133,6 +148,8 @@
       <module name="samples_test" target="1.8" />
       <module name="sandbox_main" target="1.8" />
       <module name="sandbox_test" target="1.8" />
+      <module name="serialization_main" target="1.8" />
+      <module name="serialization_test" target="1.8" />
       <module name="shell_integrationTest" target="1.8" />
       <module name="shell_main" target="1.8" />
       <module name="shell_test" target="1.8" />
@@ -158,6 +175,8 @@
       <module name="testing-test-common_test" target="1.8" />
       <module name="testing-test-utils_main" target="1.8" />
       <module name="testing-test-utils_test" target="1.8" />
+      <module name="tools-blobinspector_main" target="1.8" />
+      <module name="tools-blobinspector_test" target="1.8" />
       <module name="tools_main" target="1.8" />
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />

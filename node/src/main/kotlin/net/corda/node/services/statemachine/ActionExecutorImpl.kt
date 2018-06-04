@@ -73,6 +73,7 @@ class ActionExecutorImpl(
             is Action.CommitTransaction -> executeCommitTransaction()
             is Action.ExecuteAsyncOperation -> executeAsyncOperation(fiber, action)
             is Action.ReleaseSoftLocks -> executeReleaseSoftLocks(action)
+            is Action.RetryFlowFromSafePoint -> executeRetryFlowFromSafePoint(action)
         }
     }
 
@@ -124,9 +125,8 @@ class ActionExecutorImpl(
 
     @Suspendable
     private fun executePropagateErrors(action: Action.PropagateErrors) {
-        action.errorMessages.forEach { error ->
-            val exception = error.flowException
-            log.debug("Propagating error", exception)
+        action.errorMessages.forEach { (exception) ->
+            log.warn("Propagating error", exception)
         }
         for (sessionState in action.sessions) {
             // We cannot propagate if the session isn't live.
@@ -138,7 +138,7 @@ class ActionExecutorImpl(
                 val sinkSessionId = sessionState.initiatedState.peerSinkSessionId
                 val existingMessage = ExistingSessionMessage(sinkSessionId, errorMessage)
                 val deduplicationId = DeduplicationId.createForError(errorMessage.errorId, sinkSessionId)
-                flowMessaging.sendSessionMessage(sessionState.peerParty, existingMessage, deduplicationId)
+                flowMessaging.sendSessionMessage(sessionState.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, action.senderUUID))
             }
         }
     }
@@ -225,6 +225,10 @@ class ActionExecutorImpl(
                     fiber.scheduleEvent(Event.Error(exception))
                 }
         )
+    }
+
+    private fun executeRetryFlowFromSafePoint(action: Action.RetryFlowFromSafePoint) {
+        stateMachineManager.retryFlowFromSafePoint(action.currentState)
     }
 
     private fun serializeCheckpoint(checkpoint: Checkpoint): SerializedBytes<Checkpoint> {

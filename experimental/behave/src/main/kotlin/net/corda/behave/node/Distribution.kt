@@ -128,7 +128,7 @@ class Distribution private constructor(
          * @param version The version of the Corda distribution
          */
         fun fromVersionString(version: String): Distribution = when (version) {
-            "master"  -> MASTER
+            "master" -> MASTER
             "corda-3.0" -> fromArtifactory(version)
             else -> fromJarFile(version)
         }

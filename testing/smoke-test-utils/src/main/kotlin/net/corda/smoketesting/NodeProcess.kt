@@ -2,7 +2,7 @@ package net.corda.smoketesting
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.internal.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
@@ -59,7 +59,7 @@ class NodeProcess(
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
             val defaultNetworkParameters = run {
-                KryoClientSerializationScheme.createSerializationEnv().asContextEnv {
+                AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
                     // There are no notaries in the network parameters for smoke test nodes. If this is required then we would
                     // need to introduce the concept of a "network" which predefines the notaries, like the driver and MockNetwork
                     NetworkParametersCopier(testNetworkParameters())

@@ -23,6 +23,7 @@ abstract class ANSIProgressRenderer {
     protected var checkEmoji = false
 
     protected var treeIndex: Int = 0
+    protected var treeIndexProcessed: MutableSet<Int> = mutableSetOf()
     protected var tree: List<Pair<Int,String>> = listOf()
 
     private var installedYet = false
@@ -55,6 +56,7 @@ abstract class ANSIProgressRenderer {
         subscriptionIndex?.unsubscribe()
         subscriptionTree?.unsubscribe()
         treeIndex = 0
+        treeIndexProcessed.clear()
         tree = listOf()
 
         if (!installedYet) {
@@ -70,8 +72,10 @@ abstract class ANSIProgressRenderer {
         flowProgressHandle?.apply {
             stepsTreeIndexFeed?.apply {
                 treeIndex = snapshot
+                treeIndexProcessed.add(snapshot)
                 subscriptionIndex = updates.subscribe({
                     treeIndex = it
+                    treeIndexProcessed.add(it)
                     draw(true)
                 }, { done(it) }, { done(null) })
             }
@@ -144,7 +148,8 @@ abstract class ANSIProgressRenderer {
             for ((index, step) in tree.withIndex()) {
 
                 val marker = when {
-                    index < treeIndex -> "${Emoji.greenTick} "
+                    treeIndexProcessed.contains(index) -> " ${Emoji.greenTick} "
+                    index < treeIndex -> " ${Emoji.notRun} "
                     treeIndex == tree.lastIndex -> "${Emoji.greenTick} "
                     index == treeIndex -> "${Emoji.rightArrow} "
                     error -> "${Emoji.noEntry} "

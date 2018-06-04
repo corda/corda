@@ -19,6 +19,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.NetworkMapCacheBaseInternal
@@ -37,8 +38,9 @@ import kotlin.collections.HashSet
 
 class NetworkMapCacheImpl(
         networkMapCacheBase: NetworkMapCacheBaseInternal,
-        private val identityService: IdentityService
-) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal {
+        private val identityService: IdentityService,
+        private val database: CordaPersistence
+) : NetworkMapCacheBaseInternal by networkMapCacheBase, NetworkMapCacheInternal, SingletonSerializeAsToken() {
     companion object {
         private val logger = loggerFor<NetworkMapCacheImpl>()
     }
@@ -61,9 +63,11 @@ class NetworkMapCacheImpl(
     }
 
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
-        val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
-        return wellKnownParty?.let {
-            getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
+        return database.transaction {
+            val wellKnownParty = identityService.wellKnownPartyFromAnonymous(party)
+            wellKnownParty?.let {
+                getNodesByLegalIdentityKey(it.owningKey).firstOrNull()
+            }
         }
     }
 }
@@ -182,7 +186,7 @@ open class PersistentNetworkMapCache(
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
-            val allInfos = database.transaction { getAllInfos(session) }.map { it.toNodeInfo() }
+            val allInfos = database.transaction { getAllInfos(session).map { it.toNodeInfo() } }
             return DataFeed(allInfos, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
@@ -251,8 +255,8 @@ open class PersistentNetworkMapCache(
     }
 
     private fun removeInfoDB(session: Session, nodeInfo: NodeInfo) {
-        val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey).single()
-        session.remove(info)
+        val info = findByIdentityKey(session, nodeInfo.legalIdentitiesAndCerts.first().owningKey).singleOrNull()
+        info?.let { session.remove(it) }
         // invalidate cache last - this way, we might serve up the wrong info for a short time, but it will get refreshed
         // on the next load
         invalidateCaches(nodeInfo)
@@ -305,7 +309,7 @@ open class PersistentNetworkMapCache(
                 NodeInfoSchemaV1.PersistentNodeInfo::class.java)
         query.setParameter("host", hostAndPort.host)
         query.setParameter("port", hostAndPort.port)
-        query.setMaxResults(1)
+        query.maxResults = 1
         val result = query.resultList
         return result.map { it.toNodeInfo() }.singleOrNull()
     }
@@ -336,9 +340,11 @@ open class PersistentNetworkMapCache(
     }
 
     override fun clearNetworkMapCache() {
+        logger.info("Clearing Network Map Cache entries")
         invalidateCaches()
         database.transaction {
             val result = getAllInfos(session)
+            logger.debug { "Number of node infos to be cleared: ${result.size}" }
             for (nodeInfo in result) session.remove(nodeInfo)
         }
     }

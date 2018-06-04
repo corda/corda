@@ -8,6 +8,7 @@ import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.channels.Channel
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -46,7 +47,15 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
          */
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
 
+        // If no CorDapp found then it is a Core flow.
+        internal fun createSubFlowVersion(cordapp: Cordapp?, platformVersion: Int): SubFlowVersion {
+            return cordapp?.let { SubFlowVersion.CorDappFlow(platformVersion, it.name, it.jarHash) }
+                    ?: SubFlowVersion.CoreFlow(platformVersion)
+        }
+
         private val log: Logger = LoggerFactory.getLogger("net.corda.flow")
+
+        private val SERIALIZER_BLOCKER = Fiber::class.java.getDeclaredField("SERIALIZER_BLOCKER").apply { isAccessible = true }.get(null)
     }
 
     override val serviceHub get() = getTransientField(TransientValues::serviceHub)
@@ -64,6 +73,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     internal var transientValues: TransientReference<TransientValues>? = null
     internal var transientState: TransientReference<StateMachineState>? = null
+
+    /**
+     * What sender identifier to put on messages sent by this flow.  This will either be the identifier for the current
+     * state machine manager / messaging client, or null to indicate this flow is restored from a checkpoint and
+     * the de-duplication of messages it sends should not be optimised since this could be unreliable.
+     */
+    override val ourSenderUUID: String?
+        get() = transientState?.value?.senderUUID
 
     private fun <A> getTransientField(field: KProperty1<TransientValues, A>): A {
         val suppliedValues = transientValues ?: throw IllegalStateException("${field.name} wasn't supplied!")
@@ -89,7 +106,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if (value) field = value else throw IllegalArgumentException("Can only set to true")
         }
 
-    /**
+     /**
      * Processes an event by creating the associated transition and executing it using the given executor.
      * Try to avoid using this directly, instead use [processEventsUntilFlowIsResumed] or [processEventImmediately]
      * instead.
@@ -159,7 +176,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     private fun checkDbTransaction(isPresent: Boolean) {
         if (isPresent) {
-            requireNotNull(contextTransactionOrNull != null)
+            requireNotNull(contextTransactionOrNull)
         } else {
             require(contextTransactionOrNull == null)
         }
@@ -168,6 +185,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     fun setLoggingContext() {
         context.pushToLoggingContext()
         MDC.put("flow-id", id.uuid.toString())
+        MDC.put("fiber-id", this.getId().toString())
     }
 
     @Suspendable
@@ -185,7 +203,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)
         } catch (throwable: Throwable) {
-            logger.warn("Flow threw exception", throwable)
+            logger.info("Flow threw exception... sending to flow hospital", throwable)
             Try.Failure<R>(throwable)
         }
         val softLocksId = if (hasSoftLockedStates) logic.runId.uuid else null
@@ -226,7 +244,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     override fun <R> subFlow(subFlow: FlowLogic<R>): R {
         processEventImmediately(
-                Event.EnterSubFlow(subFlow.javaClass),
+                Event.EnterSubFlow(subFlow.javaClass,
+                        createSubFlowVersion(
+                               serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion)),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         )
@@ -325,7 +345,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnExit = false
             )
             require(continuation == FlowContinuation.ProcessEvents)
-            Fiber.unparkDeserialized(this, scheduler)
+            unpark(SERIALIZER_BLOCKER)
         }
         setLoggingContext()
         return uncheckedCast(processEventsUntilFlowIsResumed(

@@ -18,18 +18,19 @@ class TopLevelTransition(
 ) : Transition {
     override fun transition(): TransitionResult {
         return when (event) {
-                is Event.DoRemainingWork -> DoRemainingWorkTransition(context, startingState).transition()
-                is Event.DeliverSessionMessage -> DeliverSessionMessageTransition(context, startingState, event).transition()
-                is Event.Error -> errorTransition(event)
-                is Event.TransactionCommitted -> transactionCommittedTransition(event)
-                is Event.SoftShutdown -> softShutdownTransition()
-                is Event.StartErrorPropagation -> startErrorPropagationTransition()
-                is Event.EnterSubFlow -> enterSubFlowTransition(event)
-                is Event.LeaveSubFlow -> leaveSubFlowTransition()
-                is Event.Suspend -> suspendTransition(event)
-                is Event.FlowFinish -> flowFinishTransition(event)
-                is Event.InitiateFlow -> initiateFlowTransition(event)
-                is Event.AsyncOperationCompletion -> asyncOperationCompletionTransition(event)
+            is Event.DoRemainingWork -> DoRemainingWorkTransition(context, startingState).transition()
+            is Event.DeliverSessionMessage -> DeliverSessionMessageTransition(context, startingState, event).transition()
+            is Event.Error -> errorTransition(event)
+            is Event.TransactionCommitted -> transactionCommittedTransition(event)
+            is Event.SoftShutdown -> softShutdownTransition()
+            is Event.StartErrorPropagation -> startErrorPropagationTransition()
+            is Event.EnterSubFlow -> enterSubFlowTransition(event)
+            is Event.LeaveSubFlow -> leaveSubFlowTransition()
+            is Event.Suspend -> suspendTransition(event)
+            is Event.FlowFinish -> flowFinishTransition(event)
+            is Event.InitiateFlow -> initiateFlowTransition(event)
+            is Event.AsyncOperationCompletion -> asyncOperationCompletionTransition(event)
+            is Event.RetryFlowFromSafePoint -> retryFlowFromSafePointTransition(startingState)
         }
     }
 
@@ -91,7 +92,7 @@ class TopLevelTransition(
 
     private fun enterSubFlowTransition(event: Event.EnterSubFlow): TransitionResult {
         return builder {
-            val subFlow = SubFlow.create(event.subFlowClass)
+            val subFlow = SubFlow.create(event.subFlowClass, event.subFlowVersion)
             when (subFlow) {
                 is Try.Success -> {
                     currentState = currentState.copy(
@@ -191,7 +192,7 @@ class TopLevelTransition(
             if (state is SessionState.Initiated && state.initiatedState is InitiatedSessionState.Live) {
                 val message = ExistingSessionMessage(state.initiatedState.peerSinkSessionId, EndSessionMessage)
                 val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index)
-                Action.SendExisting(state.peerParty, message, deduplicationId)
+                Action.SendExisting(state.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID))
             } else {
                 null
             }
@@ -228,6 +229,16 @@ class TopLevelTransition(
     private fun asyncOperationCompletionTransition(event: Event.AsyncOperationCompletion): TransitionResult {
         return builder {
             resumeFlowLogic(event.returnValue)
+        }
+    }
+
+    private fun retryFlowFromSafePointTransition(startingState: StateMachineState): TransitionResult {
+        return builder {
+            // Need to create a flow from the prior checkpoint or flow initiation.
+            actions.add(Action.CreateTransaction)
+            actions.add(Action.RetryFlowFromSafePoint(startingState))
+            actions.add(Action.CommitTransaction)
+            FlowContinuation.Abort
         }
     }
 }

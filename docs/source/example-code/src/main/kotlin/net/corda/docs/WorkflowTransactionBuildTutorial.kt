@@ -23,7 +23,7 @@ enum class WorkflowState {
     REJECTED
 }
 
-val TRADE_APPROVAL_PROGRAM_ID = "net.corda.docs.TradeApprovalContract"
+const val TRADE_APPROVAL_PROGRAM_ID = "net.corda.docs.TradeApprovalContract"
 
 /**
  * Minimal contract to encode a simple workflow with one initial state and two possible eventual states.

@@ -6,9 +6,42 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ==========
+
+* Fixed an issue preventing out of process nodes started by the ``Driver`` from logging to file.
+
+* Fixed an issue with ``CashException`` not being able to deserialise after the introduction of AMQP for RPC.
+
+* Removed -xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
+
+* Shell now kills an ongoing flow when CTRL+C is pressed in the terminal.
+
+* Add check at startup that all persisted Checkpoints are compatible with the current version of the code.
+
+* ``ServiceHub`` and ``CordaRPCOps`` can now safely be used from multiple threads without incurring in database transaction problems.
+
+* Doorman and NetworkMap url's can now be configured individually rather than being assumed to be
+  the same server. Current ``compatibilityZoneURL`` configurations remain valid. See both :doc:`corda-configuration-file`
+  and :doc:`permissioning` for details.
+
+* Improved audit trail for ``FinalityFlow`` and related sub-flows.
+
+* ``NodeStartup`` will now only print node's configuration if ``devMode`` is ``true``, avoiding the risk of printing passwords in a production setup.
+
+* SLF4J's MDC will now only be printed to the console if not empty. No more log lines ending with "{}".
+
+* ``WireTransaction.Companion.createComponentGroups`` has been marked as ``@CordaInternal``. It was never intended to be
+  public and was already internal for Kotlin code.
+
+* RPC Framework moved from Kryo to the Corda AMQP implementation [Corda-847]. This completes the removal
+  of ``Kryo`` from general use within Corda, remaining only for use in flow checkpointing.
+
+* Set co.paralleluniverse.fibers.verifyInstrumentation=true in devMode.
+
 * Node will now gracefully fail to start if one of the required ports is already in use.
 
 * Node will now gracefully fail to start if ``devMode`` is true and ``compatibilityZoneURL`` is specified.
+
+* Added smart detection logic for the development mode setting and an option to override it from the command line.
 
 * Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
 
@@ -17,8 +50,21 @@ Unreleased
   * ``Party`` objects can be deserialised by looking up their public key, in addition to their name
   * ``NodeInfo`` objects are serialised as an object and can be looked up using the same mechanism as ``Party``
   * ``NetworkHostAndPort`` serialised according to its ``toString()``
-  * ``PartyAndCertificate`` is serialised as an object containing the name and owning key
-  * ``SignedTransaction`` can now be serialized to JSON and deserialized back into an object.
+  * ``PartyAndCertificate`` is serialised as the name
+  * ``SerializedBytes`` is serialised by materialising the bytes into the object it represents, and then serialising that
+    object into YAML/JSON
+  * ``X509Certificate`` is serialised as an object with key fields such as ``issuer``, ``publicKey``, ``serialNumber``, etc.
+    The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialise an ``X509Certificate``
+    back.
+  * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
+  * ``WireTransaction`` now nicely outputs into its components: ``id``, ``notary``, ``inputs``, ``attachments``, ``outputs``,
+    ``commands``, ``timeWindow`` and ``privacySalt``. This can be deserialised back.
+  * ``SignedTransaction`` is serialised into ``wire`` (i.e. currently only ``WireTransaction`` tested) and ``signatures``,
+    and can be deserialised back.
+
+* ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
+  then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``
+  the ``certPath`` is serialised.
 
 * Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used.
 
@@ -38,7 +84,11 @@ Unreleased
   * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
   * Property keys with double quotes (e.g. `"key"`) in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
 
-* More types can be serialized now: java.security.cert.CRLReason, java.security.cert.X509CRL, java.math.BigInteger
+* Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
+  a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
+
+* The node RPC broker opens 2 endpoints that are configured with ``address`` and ``adminAddress``. RPC Clients would connect to the address, while the node will connect
+  to the adminAddress. Previously if ssl was enabled for RPC the ``adminAddress`` was equal to ``address``.
 
 * Upgraded H2 to v1.4.197
 
@@ -60,6 +110,18 @@ Unreleased
   we are disallowing this as the paradigm in general makes little sense for contract states.
 
 * Node can be shut down abruptly by ``shutdown`` function in `CordaRPCOps` or gracefully (draining flows first) through ``gracefulShutdown`` command from shell.
+
+* API change: ``net.corda.core.schemas.PersistentStateRef`` fields (index and txId) are now non-nullable.
+  The fields were always effectively non-nullable - values were set from non-nullable fields of other objects.
+  The class is used as database Primary Key columns of other entities and databases already impose those columns as non-nullable
+  (even if JPA annotation nullable=false was absent).
+  In case your Cordapps use this entity class to persist data in own custom tables as non Primary Key columns refer to :doc:`upgrade-notes` for upgrade instructions.
+
+* Adding a public method to check if a public key satisfies Corda recommended algorithm specs, `Crypto.validatePublicKey(java.security.PublicKey)`.
+  For instance, this method will check if an ECC key lies on a valid curve or if an RSA key is >= 2048bits. This might
+  be required for extra key validation checks, e.g., for Doorman to check that a CSR key meets the minimum security requirements.
+
+* Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
 
 .. _changelog_v3.1:
 

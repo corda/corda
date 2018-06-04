@@ -156,7 +156,7 @@ class HibernateConfiguration(
 
     // A tweaked version of `org.hibernate.type.descriptor.java.PrimitiveByteArrayTypeDescriptor` that truncates logged messages.
     private object CordaPrimitiveByteArrayTypeDescriptor : PrimitiveByteArrayTypeDescriptor() {
-        private val LOG_SIZE_LIMIT = 1024
+        private const val LOG_SIZE_LIMIT = 1024
 
         override fun extractLoggableRepresentation(value: ByteArray?): String {
             return if (value == null) {

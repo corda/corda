@@ -24,12 +24,15 @@ Certificate hierarchy
 
 A Corda network has 8 types of keys and a regular node requires 4 of them:
 
+**Network Keys**
+
 * The **root network CA** key
 * The **doorman CA** key
 * The **network map** key
-* The **service identity** key(s) (per service, such as a notary cluster; it can be a Composite Key)
+* The **service identity** key(s) (per service, such as a notary cluster; it can be a Composite key)
 
--- **Node Keys** --
+**Node Keys**
+
 * The **node CA** key(s) (one per node)
 * The **legal identity** key(s) (one per node)
 * The **tls** key(s) (per node)
@@ -51,7 +54,7 @@ For instance, **network map** is ECDSA NIST P-256 (secp256r1) in the Corda Netwo
 underlying HSM device, but the default for dev-mode is Pure EdDSA (ed25519).
 
 The following table presents the 5 signature schemes currently supported by Corda. The TLS column shows which of them
-are compatible with TLS 1.2, while the default scheme per key type is also shown.
+are compatible with TLS 1.2, while the default scheme per key type is also shown in the last column.
 
 +-------------------------+---------------------------------------------------------------+-----+-------------------------+
 | Cipher suite            | Description                                                   | TLS | Default for             |
@@ -90,7 +93,7 @@ are compatible with TLS 1.2, while the default scheme per key type is also shown
 +-------------------------+---------------------------------------------------------------+-----+-------------------------+
 | | SPHINCS-256           | | SPHINCS-256 is a post-quantum secure algorithm that relies  | NO  |                         |
 | | and SHA-512           | | only on hash functions. It is included as a hedge against   |     |                         |
-|                         | | the possibility of a malicious adversary obtaining a        |     |                         |
+| | (experimental)        | | the possibility of a malicious adversary obtaining a        |     |                         |
 |                         | | quantum computer capable of running Shor's algorithm in     |     |                         |
 |                         | | future. SPHINCS is based ultimately on a clever usage of    |     |                         |
 |                         | | Merkle hash trees. Hash functions are a very heavily        |     |                         |

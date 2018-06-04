@@ -1,11 +1,14 @@
 package net.corda.nodeapi.internal.network
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import net.corda.cordform.CordformNode
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
+import net.corda.core.internal.concurrent.transpose
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
@@ -15,25 +18,27 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.ContractsJar
-import net.corda.nodeapi.internal.ContractsJarFile
-import net.corda.nodeapi.internal.DEV_ROOT_CA
-import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.*
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
-import net.corda.nodeapi.internal.serialization.AMQP_P2P_CONTEXT
-import net.corda.nodeapi.internal.serialization.CordaSerializationMagic
-import net.corda.nodeapi.internal.serialization.SerializationFactoryImpl
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.nodeapi.internal.serialization.kryo.AbstractKryoSerializationScheme
-import net.corda.nodeapi.internal.serialization.kryo.kryoMagic
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.CordaSerializationMagic
+import net.corda.serialization.internal.SerializationFactoryImpl
+import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.amqpMagic
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeoutException
+import java.util.concurrent.TimeUnit
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
+import kotlin.concurrent.schedule
 import kotlin.streams.toList
 
 /**
@@ -60,6 +65,43 @@ class NetworkBootstrapper {
         }
     }
 
+    sealed class NotaryCluster {
+        data class BFT(val name: CordaX500Name) : NotaryCluster()
+        data class CFT(val name: CordaX500Name) : NotaryCluster()
+    }
+
+    data class DirectoryAndConfig(val directory: Path, val config: Config)
+
+    private fun notaryClusters(configs: Map<Path, Config>): Map<NotaryCluster, List<Path>> {
+        val clusteredNotaries = configs.flatMap { (path, config) ->
+            if (config.hasPath("notary.serviceLegalName")) {
+                listOf(CordaX500Name.parse(config.getString("notary.serviceLegalName")) to DirectoryAndConfig(path, config))
+            } else {
+                emptyList()
+            }
+        }
+        return clusteredNotaries.groupBy { it.first }.map { (k, vs) ->
+            val cs = vs.map { it.second.config }
+            if (cs.any { it.hasPath("notary.bftSMaRt") }) {
+                require(cs.all { it.hasPath("notary.bftSMaRt") }) { "Mix of BFT and non-BFT notaries with service name $k" }
+                NotaryCluster.BFT(k) to vs.map { it.second.directory }
+            } else {
+                NotaryCluster.CFT(k) to vs.map { it.second.directory }
+            }
+        }.toMap()
+    }
+
+    private fun generateServiceIdentitiesForNotaryClusters(configs: Map<Path, Config>) {
+        notaryClusters(configs).forEach { (cluster, directories) ->
+            when (cluster) {
+                is NotaryCluster.BFT ->
+                    DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(directories, cluster.name, threshold = 1 + 2 * directories.size / 3)
+                is NotaryCluster.CFT ->
+                    DevIdentityGenerator.generateDistributedNotarySingularIdentity(directories, cluster.name)
+            }
+        }
+    }
+
     fun bootstrap(directory: Path, cordappJars: List<Path>) {
         directory.createDirectories()
         println("Bootstrapping local network in $directory")
@@ -67,18 +109,21 @@ class NetworkBootstrapper {
         val nodeDirs = directory.list { paths -> paths.filter { (it / "corda.jar").exists() }.toList() }
         require(nodeDirs.isNotEmpty()) { "No nodes found" }
         println("Nodes found in the following sub-directories: ${nodeDirs.map { it.fileName }}")
-        val processes = startNodeInfoGeneration(nodeDirs)
+        val configs = nodeDirs.associateBy({ it }, { ConfigFactory.parseFile((it / "node.conf").toFile()) })
+        generateServiceIdentitiesForNotaryClusters(configs)
         initialiseSerialization()
         try {
             println("Waiting for all nodes to generate their node-info files...")
-            val nodeInfoFiles = gatherNodeInfoFiles(processes, nodeDirs)
+            val nodeInfoFiles = generateNodeInfos(nodeDirs)
+            println("Checking for duplicate nodes")
+            checkForDuplicateLegalNames(nodeInfoFiles)
             println("Distributing all node-info files to all nodes")
             distributeNodeInfos(nodeDirs, nodeInfoFiles)
             print("Loading existing network parameters... ")
             val existingNetParams = loadNetworkParameters(nodeDirs)
             println(existingNetParams ?: "none found")
             println("Gathering notary identities")
-            val notaryInfos = gatherNotaryInfos(nodeInfoFiles)
+            val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
             val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.map(::ContractsJarFile))
             val netParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs)
@@ -86,8 +131,39 @@ class NetworkBootstrapper {
             println("Bootstrapping complete!")
         } finally {
             _contextSerializationEnv.set(null)
-            processes.forEach { if (it.isAlive) it.destroyForcibly() }
         }
+    }
+
+    private fun generateNodeInfos(nodeDirs: List<Path>): List<Path> {
+        val numParallelProcesses = Runtime.getRuntime().availableProcessors()
+        val timePerNode = 40.seconds // On the test machine, generating the node info takes 7 seconds for a single node.
+        val tExpected = maxOf(timePerNode, timePerNode * nodeDirs.size.toLong() / numParallelProcesses.toLong())
+        val warningTimer = Timer("WarnOnSlowMachines", false).schedule(tExpected.toMillis()) {
+            println("...still waiting. If this is taking longer than usual, check the node logs.")
+        }
+        val executor = Executors.newFixedThreadPool(numParallelProcesses)
+        return try {
+            nodeDirs.map { executor.fork { generateNodeInfo(it) } }.transpose().getOrThrow()
+        } finally {
+            warningTimer.cancel()
+            executor.shutdownNow()
+        }
+    }
+
+    private fun generateNodeInfo(nodeDir: Path): Path {
+        val logsDir = (nodeDir / LOGS_DIR_NAME).createDirectories()
+        val process = ProcessBuilder(nodeInfoGenCmd)
+                .directory(nodeDir.toFile())
+                .redirectErrorStream(true)
+                .redirectOutput((logsDir / "node-info-gen.log").toFile())
+                .apply { environment()["CAPSULE_CACHE_DIR"] = "../.cache" }
+                .start()
+        if (!process.waitFor(3, TimeUnit.MINUTES)) {
+            process.destroyForcibly()
+            throw IllegalStateException("Error while generating node info file. Please check the logs in $logsDir.")
+        }
+        check(process.exitValue() == 0) {  "Error while generating node info file. Please check the logs in $logsDir." }
+        return nodeDir.list { paths -> paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get() }
     }
 
     private fun generateDirectoriesIfNeeded(directory: Path, cordappJars: List<Path>) {
@@ -117,38 +193,6 @@ class NetworkBootstrapper {
         return cordaJarPath
     }
 
-    private fun startNodeInfoGeneration(nodeDirs: List<Path>): List<Process> {
-        return nodeDirs.map { nodeDir ->
-            val logsDir = (nodeDir / LOGS_DIR_NAME).createDirectories()
-            ProcessBuilder(nodeInfoGenCmd)
-                    .directory(nodeDir.toFile())
-                    .redirectErrorStream(true)
-                    .redirectOutput((logsDir / "node-info-gen.log").toFile())
-                    .apply { environment()["CAPSULE_CACHE_DIR"] = "../.cache" }
-                    .start()
-        }
-    }
-
-    private fun gatherNodeInfoFiles(processes: List<Process>, nodeDirs: List<Path>): List<Path> {
-        val executor = Executors.newSingleThreadExecutor()
-
-        val future = executor.fork {
-            processes.zip(nodeDirs).map { (process, nodeDir) ->
-                check(process.waitFor() == 0) {
-                    "Node in ${nodeDir.fileName} exited with ${process.exitValue()} when generating its node-info - see logs in ${nodeDir / LOGS_DIR_NAME}"
-                }
-                nodeDir.list { paths -> paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get() }
-            }
-        }
-
-        return try {
-            future.getOrThrow(timeout = 60.seconds)
-        } catch (e: TimeoutException) {
-            println("...still waiting. If this is taking longer than usual, check the node logs.")
-            future.getOrThrow()
-        }
-    }
-
     private fun distributeNodeInfos(nodeDirs: List<Path>, nodeInfoFiles: List<Path>) {
         for (nodeDir in nodeDirs) {
             val additionalNodeInfosDir = (nodeDir / CordformNode.NODE_INFO_DIRECTORY).createDirectories()
@@ -158,12 +202,28 @@ class NetworkBootstrapper {
         }
     }
 
-    private fun gatherNotaryInfos(nodeInfoFiles: List<Path>): List<NotaryInfo> {
+    /*the function checks for duplicate myLegalName in the all the *_node.conf files
+    All the myLegalName values are added to a HashSet - this helps detect duplicate values.
+    If a duplicate name is found the process is aborted with an error message
+    */
+    private fun checkForDuplicateLegalNames(nodeInfoFiles: List<Path>) {
+      val legalNames = HashSet<String>()
+      for (nodeInfoFile in nodeInfoFiles) {
+        val nodeConfig = ConfigFactory.parseFile((nodeInfoFile.parent / "node.conf").toFile())
+        val legalName = nodeConfig.getString("myLegalName")
+        if(!legalNames.add(legalName)){
+          println("Duplicate Node Found - ensure every node has a unique legal name");
+          throw IllegalArgumentException("Duplicate Node Found - $legalName");
+        }
+      }
+    }
+
+    private fun gatherNotaryInfos(nodeInfoFiles: List<Path>, configs: Map<Path, Config>): List<NotaryInfo> {
         return nodeInfoFiles.mapNotNull { nodeInfoFile ->
             // The config contains the notary type
-            val nodeConfig = ConfigFactory.parseFile((nodeInfoFile.parent / "node.conf").toFile())
+            val nodeConfig = configs[nodeInfoFile.parent]!!
             if (nodeConfig.hasPath("notary")) {
-                val validating = nodeConfig.getConfig("notary").getBoolean("validating")
+                val validating = nodeConfig.getBoolean("notary.validating")
                 // And the node-info file contains the notary's identity
                 val nodeInfo = nodeInfoFile.readObject<SignedNodeInfo>().verified()
                 NotaryInfo(nodeInfo.notaryIdentity(), validating)
@@ -222,7 +282,8 @@ class NetworkBootstrapper {
                     maxMessageSize = 10485760,
                     maxTransactionSize = Int.MAX_VALUE,
                     whitelistedContractImplementations = whitelist,
-                    epoch = 1
+                    epoch = 1,
+                    eventHorizon = 30.days
             )
         }
         val copier = NetworkParametersCopier(networkParameters, overwriteFile = true)
@@ -275,19 +336,18 @@ class NetworkBootstrapper {
     private fun initialiseSerialization() {
         _contextSerializationEnv.set(SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
-                    registerScheme(KryoParametersSerializationScheme)
-                    registerScheme(AMQPServerSerializationScheme())
+                    registerScheme(AMQPParametersSerializationScheme)
                 },
                 AMQP_P2P_CONTEXT)
         )
     }
 
-    private object KryoParametersSerializationScheme : AbstractKryoSerializationScheme() {
-        override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
-            return magic == kryoMagic && target == SerializationContext.UseCase.P2P
-        }
+    private object AMQPParametersSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
+        override fun rpcClientSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
+        override fun rpcServerSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
 
-        override fun rpcClientKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
-        override fun rpcServerKryoPool(context: SerializationContext) = throw UnsupportedOperationException()
+        override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+            return magic == amqpMagic && target == SerializationContext.UseCase.P2P
+        }
     }
 }

@@ -12,6 +12,7 @@ interface Transition {
     val context: TransitionContext
     /** The state the transition is starting in. */
     val startingState: StateMachineState
+
     /** The (almost) pure transition function. The only side-effect we allow is random number generation. */
     fun transition(): TransitionResult
 
@@ -27,6 +28,5 @@ interface Transition {
 
 class TransitionContext(
         val id: StateMachineRunId,
-        val configuration: StateMachineConfiguration,
         val secureRandom: SecureRandom
 )

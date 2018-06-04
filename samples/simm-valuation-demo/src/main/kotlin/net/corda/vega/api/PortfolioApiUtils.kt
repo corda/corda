@@ -46,7 +46,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
 
         val yieldCurves = mapOf(
                 "name" to "EUR",
-                "values" to completeSubgroups.get("EUR")!!.filter { !it.key.contains("Fixing") }.map {
+                "values" to completeSubgroups["EUR"]!!.filter { !it.key.contains("Fixing") }.map {
                     mapOf(
                             "tenor" to it.key,
                             "rate" to it.value
@@ -56,7 +56,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
 
         val fixings = mapOf(
                 "name" to "EUR",
-                "values" to completeSubgroups.get("EUR")!!.filter { it.key.contains("Fixing") }.map {
+                "values" to completeSubgroups["EUR"]!!.filter { it.key.contains("Fixing") }.map {
                     mapOf(
                             "tenor" to it.key,
                             "rate" to it.value

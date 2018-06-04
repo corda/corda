@@ -1,5 +1,5 @@
-Corda nodes
-===========
+Nodes
+=====
 
 .. toctree::
    :maxdepth: 1

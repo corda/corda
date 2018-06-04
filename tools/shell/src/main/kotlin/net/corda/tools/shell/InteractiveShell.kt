@@ -9,15 +9,24 @@ import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
+import net.corda.client.rpc.internal.createCordaRPCClientWithInternalSslAndClassLoader
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.*
+import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.messaging.*
+import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
+import net.corda.core.internal.rootCause
+import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.DataFeed
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.pendingFlowsCount
 import net.corda.tools.shell.utlities.ANSIProgressRenderer
 import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer
 import org.crsh.command.InvocationContext
@@ -80,7 +89,6 @@ object InteractiveShell {
      * internals.
      */
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
-        shellConfiguration = configuration
         rpcOps = { username: String, credentials: String ->
             val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
                     configuration = object : CordaRPCClientConfiguration {
@@ -91,6 +99,29 @@ object InteractiveShell {
             this.connection = client.start(username, credentials)
             connection.proxy
         }
+        _startShell(configuration, classLoader)
+    }
+
+    /**
+     * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
+     * internals.
+     */
+    fun startShellInternal(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
+        rpcOps = { username: String, credentials: String ->
+            val client = createCordaRPCClientWithInternalSslAndClassLoader(hostAndPort = configuration.hostAndPort,
+                    configuration = object : CordaRPCClientConfiguration {
+                        override val maxReconnectAttempts = 1
+                    },
+                    sslConfiguration = configuration.nodeSslConfig,
+                    classLoader = classLoader)
+            this.connection = client.start(username, credentials)
+            connection.proxy
+        }
+        _startShell(configuration, classLoader)
+    }
+
+    private fun _startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
+        shellConfiguration = configuration
         InteractiveShell.classLoader = classLoader
         val runSshDaemon = configuration.sshdPort != null
 
@@ -142,7 +173,7 @@ object InteractiveShell {
             val extraCommandsPath = shellCommands.toAbsolutePath().createDirectories()
             val commandsFS = FS.Builder()
                     .register("file", fileDriver)
-                    .mount("file:" + extraCommandsPath)
+                    .mount("file:$extraCommandsPath")
                     .register("classpath", classpathDriver)
                     .mount("classpath:/net/corda/tools/shell/")
                     .mount("classpath:/crash/commands/")
@@ -245,12 +276,20 @@ object InteractiveShell {
 
             val latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, { latch.countDown() })
-            try {
-                // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
-                // the tracker is done with the screen.
-                latch.await()
-            } catch (e: InterruptedException) {
-                // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
+            // Wait for the flow to end and the progress tracker to notice. By the time the latch is released
+            // the tracker is done with the screen.
+            while (!Thread.currentThread().isInterrupted) {
+                try {
+                    latch.await()
+                    break
+                } catch (e: InterruptedException) {
+                    try {
+                        rpcOps.killFlow(stateObservable.id)
+                    } finally {
+                        Thread.currentThread().interrupt()
+                        break
+                    }
+                }
             }
             stateObservable.returnValue.get()?.apply {
                 if (this !is Throwable) {
@@ -302,7 +341,7 @@ object InteractiveShell {
             try {
                 // Attempt construction with the given arguments.
                 paramNamesFromConstructor = parser.paramNamesFromConstructor(ctor)
-                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor!!.zip(ctor.parameterTypes), inputData)
+                val args = parser.parseArguments(clazz.name, paramNamesFromConstructor.zip(ctor.parameterTypes), inputData)
                 if (args.size != ctor.parameterTypes.size) {
                     errors.add("${getPrototype()}: Wrong number of arguments (${args.size} provided, ${ctor.parameterTypes.size} needed)")
                     continue
@@ -375,7 +414,7 @@ object InteractiveShell {
             val parser = StringToMethodCallParser(CordaRPCOps::class.java, om)
             val call = parser.parse(cordaRPCOps, cmd)
             result = call.call()
-            if (result != null && result !is kotlin.Unit && result !is Void) {
+            if (result != null && result !== kotlin.Unit && result !is Void) {
                 result = printAndFollowRPCResponse(result, out)
             }
             if (result is Future<*>) {
@@ -429,9 +468,9 @@ object InteractiveShell {
                         log.error(error.message)
                         throw error
                     }
-                    .doOnNext { remaining ->
+                    .doOnNext { (first, second) ->
                         display {
-                            println("...remaining: ${remaining.first}/${remaining.second}")
+                            println("...remaining: ${first}/${second}")
                         }
                     }
                     .doOnCompleted {

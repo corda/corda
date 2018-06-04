@@ -5,7 +5,6 @@ import javafx.collections.ObservableList
 import javafx.collections.transformation.TransformationList
 import java.util.*
 
-
 /**
  * This is a variant of [EasyBind.map] where the mapped list is backed, therefore the mapping function will only be run
  * when an element is inserted or updated.

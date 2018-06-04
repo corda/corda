@@ -11,7 +11,6 @@ import net.corda.node.internal.StartedNode
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.InternalMockNetwork
@@ -64,9 +63,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
             registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
             javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
-                database.transaction {
-                    services.cordaService(NodeInterestRates.Oracle::class.java).uploadFixes(it.reader().readText())
-                }
+                services.cordaService(NodeInterestRates.Oracle::class.java).uploadFixes(it.reader().readText())
             }
         }
     }
@@ -188,7 +185,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    val networkInitialisationFinished = allOf(*mockNet.nodes.map { it.nodeReadyFuture.toCompletableFuture() }.toTypedArray())
+    val networkInitialisationFinished: CompletableFuture<Void> = allOf(*mockNet.nodes.map { it.nodeReadyFuture.toCompletableFuture() }.toTypedArray())
 
     fun start(): Future<Unit> {
         mockNet.startNodes()

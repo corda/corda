@@ -6,9 +6,7 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
-import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import java.security.PublicKey
-import java.time.Instant
 
 /** A test notary name **/
 @JvmField

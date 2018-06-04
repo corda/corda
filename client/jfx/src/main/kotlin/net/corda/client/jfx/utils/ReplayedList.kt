@@ -33,14 +33,14 @@ class ReplayedList<A>(sourceList: ObservableList<A>) : TransformationList<A, A>(
                 }
                 nextPermutation(from, to, permutation)
             } else if (c.wasUpdated()) {
-                for (i in c.from..c.to - 1) {
+                for (i in c.from until c.to) {
                     replayedList[i] = c.list[i]
                     nextUpdate(i)
                 }
             } else {
                 if (c.wasRemoved()) {
                     val removePosition = c.from
-                    for (i in 0..c.removedSize - 1) {
+                    for (i in 0 until c.removedSize) {
                         replayedList.removeAt(removePosition)
                     }
                     nextRemove(c.from, c.removed)
@@ -48,7 +48,7 @@ class ReplayedList<A>(sourceList: ObservableList<A>) : TransformationList<A, A>(
                 if (c.wasAdded()) {
                     val addStart = c.from
                     val addEnd = c.to
-                    for (i in addStart..addEnd - 1) {
+                    for (i in addStart until addEnd) {
                         replayedList.add(i, c.list[i])
                     }
                     nextAdd(addStart, addEnd)

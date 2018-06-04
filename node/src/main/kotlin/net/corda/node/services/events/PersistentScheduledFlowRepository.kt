@@ -9,17 +9,17 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 interface ScheduledFlowRepository {
     fun delete(key: StateRef): Boolean
     fun merge(value: ScheduledStateRef): Boolean
-    fun getLatest(lookahead: Int) : List<Pair<StateRef, ScheduledStateRef>>
+    fun getLatest(lookahead: Int): List<Pair<StateRef, ScheduledStateRef>>
 }
 
-class PersistentScheduledFlowRepository(val database: CordaPersistence): ScheduledFlowRepository {
+class PersistentScheduledFlowRepository(val database: CordaPersistence) : ScheduledFlowRepository {
     private fun toPersistentEntityKey(stateRef: StateRef): PersistentStateRef {
         return PersistentStateRef(stateRef.txhash.toString(), stateRef.index)
     }
 
     private fun toPersistentEntity(key: StateRef, value: ScheduledStateRef): NodeSchedulerService.PersistentScheduledState {
-        return NodeSchedulerService.PersistentScheduledState().apply {
-            output = PersistentStateRef(key.txhash.toString(), key.index)
+        val output = PersistentStateRef(key.txhash.toString(), key.index)
+        return NodeSchedulerService.PersistentScheduledState(output).apply {
             scheduledAt = value.scheduledAt
         }
     }
@@ -32,7 +32,7 @@ class PersistentScheduledFlowRepository(val database: CordaPersistence): Schedul
 
     override fun delete(key: StateRef): Boolean {
         return database.transaction {
-            val elem = session.find(NodeSchedulerService.PersistentScheduledState::class.java, toPersistentEntityKey(key!!))
+            val elem = session.find(NodeSchedulerService.PersistentScheduledState::class.java, toPersistentEntityKey(key))
             if (elem != null) {
                 session.remove(elem)
                 true
@@ -55,7 +55,7 @@ class PersistentScheduledFlowRepository(val database: CordaPersistence): Schedul
         }
     }
 
-    override fun getLatest(lookahead: Int) : List<Pair<StateRef, ScheduledStateRef>> {
+    override fun getLatest(lookahead: Int): List<Pair<StateRef, ScheduledStateRef>> {
         return database.transaction {
             val criteriaQuery = session.criteriaBuilder.createQuery(NodeSchedulerService.PersistentScheduledState::class.java)
             val shed = criteriaQuery.from(NodeSchedulerService.PersistentScheduledState::class.java)

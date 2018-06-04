@@ -45,6 +45,10 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
             h2Port   10004
             // Includes the corda-finance CorDapp on our node.
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
+            // Specify a JVM argument to be used when running the node (in this case, extra heap size).
+            extraConfig = [
+                jvmArgs : [ "-Xmx1g"]
+            ]
         }
         node {
             name "O=PartyA,L=London,C=GB"
@@ -139,8 +143,7 @@ The Dockerform task
 
 The ``Dockerform`` is a sister task of ``Cordform``. It has nearly the same syntax and produces very
 similar results - enhanced by an extra file to enable easy spin up of nodes using ``docker-compose``.
-Below you can find the example task from the ``IRS Demo<https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>``
-included in the samples directory of main Corda GitHub repository:
+Below you can find the example task from the `IRS Demo <https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
 
 .. sourcecode:: groovy
 

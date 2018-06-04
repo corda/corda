@@ -6,9 +6,12 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
+import net.corda.node.internal.CheckpointIncompatibleException
+import net.corda.node.internal.CheckpointVerifier
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.statemachine.Checkpoint
+import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.node.services.statemachine.FlowStart
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -17,8 +20,8 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -35,6 +38,7 @@ class DBCheckpointStorageTests {
     private companion object {
         val ALICE = TestIdentity(ALICE_NAME, 70).party
     }
+
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -45,7 +49,7 @@ class DBCheckpointStorageTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), rigorousMock())
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
         newCheckpointStorage()
     }
 
@@ -149,19 +153,42 @@ class DBCheckpointStorageTests {
         }
     }
 
+    @Test
+    fun `verify checkpoints compatible`() {
+        database.transaction {
+            val (id, checkpoint) = newCheckpoint(1)
+            checkpointStorage.addCheckpoint(id, checkpoint)
+        }
+
+        database.transaction {
+            CheckpointVerifier.verifyCheckpointsCompatible(checkpointStorage, emptyList(), 1)
+        }
+
+        database.transaction {
+            val (id1, checkpoint1) = newCheckpoint(2)
+            checkpointStorage.addCheckpoint(id1, checkpoint1)
+        }
+
+        Assertions.assertThatThrownBy {
+            database.transaction {
+                CheckpointVerifier.verifyCheckpointsCompatible(checkpointStorage, emptyList(), 1)
+            }
+        }.isInstanceOf(CheckpointIncompatibleException::class.java)
+    }
+
     private fun newCheckpointStorage() {
         database.transaction {
             checkpointStorage = DBCheckpointStorage()
         }
     }
 
-    private fun newCheckpoint(): Pair<StateMachineRunId, SerializedBytes<Checkpoint>> {
+    private fun newCheckpoint(version: Int = 1): Pair<StateMachineRunId, SerializedBytes<Checkpoint>> {
         val id = StateMachineRunId.createRandom()
         val logic: FlowLogic<*> = object : FlowLogic<Unit>() {
             override fun call() {}
         }
         val frozenLogic = logic.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT)
-        val checkpoint = Checkpoint.create(InvocationContext.shell(), FlowStart.Explicit, logic.javaClass, frozenLogic, ALICE, "").getOrThrow()
+        val checkpoint = Checkpoint.create(InvocationContext.shell(), FlowStart.Explicit, logic.javaClass, frozenLogic, ALICE, "", SubFlowVersion.CoreFlow(version)).getOrThrow()
         return id to checkpoint.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT)
     }
 

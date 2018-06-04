@@ -14,6 +14,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
 import java.util.Collections.nCopies
+import kotlin.test.assertNotNull
 
 class CashSelectionH2ImplTest {
     private val mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance"))
@@ -52,5 +53,20 @@ class CashSelectionH2ImplTest {
         assertThatThrownBy { flow1.getOrThrow() }.isInstanceOf(CashException::class.java)
         assertThatThrownBy { flow2.getOrThrow() }.isInstanceOf(CashException::class.java)
         assertThatThrownBy { flow3.getOrThrow() }.isInstanceOf(CashException::class.java)
+    }
+
+    @Test
+    fun `select pennies amount from cash states with more than two different issuers and expect change`() {
+        val node = mockNet.createNode()
+        val notary = mockNet.defaultNotaryIdentity
+
+        // Issue some cash
+        node.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(1), notary)).getOrThrow()
+        node.startFlow(CashIssueFlow(1.POUNDS, OpaqueBytes.of(2), notary)).getOrThrow()
+        node.startFlow(CashIssueFlow(1000.POUNDS, OpaqueBytes.of(3), notary)).getOrThrow()
+
+        // Make a payment
+        val paymentResult = node.startFlow(CashPaymentFlow(999.POUNDS, node.info.legalIdentities[0], false)).getOrThrow()
+        assertNotNull(paymentResult.recipient)
     }
 }

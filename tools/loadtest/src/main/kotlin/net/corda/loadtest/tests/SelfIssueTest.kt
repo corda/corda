@@ -55,7 +55,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
         interpret = { state, (request, node) ->
             val vaults = state.copyVaults()
             val issuer = node.mainIdentity
-            vaults.put(issuer, (vaults[issuer] ?: 0L) + request.amount.quantity)
+            vaults[issuer] = (vaults[issuer] ?: 0L) + request.amount.quantity
             SelfIssueState(vaults)
         },
 
@@ -76,7 +76,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
                     val state = it.state.data
                     val issuer = state.amount.token.issuer.party
                     if (issuer == connection.mainIdentity as AbstractParty) {
-                        selfIssueVaults.put(issuer, (selfIssueVaults[issuer] ?: 0L) + state.amount.quantity)
+                        selfIssueVaults[issuer] = (selfIssueVaults[issuer] ?: 0L) + state.amount.quantity
                     }
                 }
             }

@@ -41,6 +41,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     private var localCert: X509Certificate? = null
     private var remoteCert: X509Certificate? = null
     private var eventProcessor: EventProcessor? = null
+    private var badCert: Boolean = false
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
@@ -72,7 +73,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     override fun channelInactive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
         log.info("Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}")
-        onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false)))
+        onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false, badCert)))
         eventProcessor?.close()
         ctx.fireChannelInactive()
     }
@@ -83,22 +84,41 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 val sslHandler = ctx.pipeline().get(SslHandler::class.java)
                 localCert = sslHandler.engine().session.localCertificates[0].x509
                 remoteCert = sslHandler.engine().session.peerCertificates[0].x509
-                try {
-                    val remoteX500Name = CordaX500Name.build(remoteCert!!.subjectX500Principal)
-                    require(allowedRemoteLegalNames == null || remoteX500Name in allowedRemoteLegalNames)
-                    log.info("handshake completed subject: $remoteX500Name")
+                val remoteX500Name = try {
+                    CordaX500Name.build(remoteCert!!.subjectX500Principal)
                 } catch (ex: IllegalArgumentException) {
-                    log.error("Invalid certificate subject", ex)
+                    badCert = true
+                    log.error("Certificate subject not a valid CordaX500Name", ex)
                     ctx.close()
                     return
                 }
+                if (allowedRemoteLegalNames != null && remoteX500Name !in allowedRemoteLegalNames) {
+                    badCert = true
+                    log.error("Provided certificate subject $remoteX500Name not in expected set $allowedRemoteLegalNames")
+                    ctx.close()
+                    return
+                }
+                log.info("Handshake completed with subject: $remoteX500Name")
                 createAMQPEngine(ctx)
-                onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true)))
+                onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true, false)))
             } else {
-                log.error("Handshake failure $evt")
+                badCert = true
+                log.error("Handshake failure ${evt.cause().message}")
+                if (log.isTraceEnabled) {
+                    log.trace("Handshake failure", evt.cause())
+                }
                 ctx.close()
             }
         }
+    }
+
+    @Suppress("OverridingDeprecatedMember")
+    override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+        log.warn("Closing channel due to nonrecoverable exception ${cause.message}")
+        if (log.isTraceEnabled) {
+            log.trace("Pipeline uncaught exception", cause)
+        }
+        ctx.close()
     }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {

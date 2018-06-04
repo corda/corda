@@ -33,22 +33,20 @@ data class NodeConfig(
         val issuableCurrencies: List<String> = emptyList(),
         /** Pass-through for generating node.conf with external DB */
         val dataSourceProperties: Properties? = null,
-        val database: Properties? = null
+        val database: Properties? = null,
+        private val devMode: Boolean = true,
+        private val detectPublicIp: Boolean = false,
+        private val useTestClock: Boolean = true
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
         val defaultUser = user("guest")
-        val cordappDirName = "cordapps"
+        const val cordappDirName = "cordapps"
     }
-
-    @Suppress("unused")
-    private val detectPublicIp = false
-    @Suppress("unused")
-    private val useTestClock = true
 
     fun nodeConf(): Config {
 
-        val basic = NodeConfigurationData(myLegalName, p2pAddress, rpcAddress, notary, h2port, rpcUsers, useTestClock, detectPublicIp).toConfig()
+        val basic = NodeConfigurationData(myLegalName, p2pAddress, rpcAddress, notary, h2port, rpcUsers, useTestClock, detectPublicIp, devMode).toConfig()
         val rpcSettings = empty()
                 .withValue("address", ConfigValueFactory.fromAnyRef(rpcAddress.toString()))
                 .withValue("adminAddress", ConfigValueFactory.fromAnyRef(rpcAdminAddress.toString()))
@@ -78,7 +76,8 @@ private data class NodeConfigurationData(
         val h2port: Int,
         val rpcUsers: List<User> = listOf(NodeConfig.defaultUser),
         val useTestClock: Boolean,
-        val detectPublicIp: Boolean
+        val detectPublicIp: Boolean,
+        val devMode: Boolean
 )
 
 private data class WebServerConfigurationData(

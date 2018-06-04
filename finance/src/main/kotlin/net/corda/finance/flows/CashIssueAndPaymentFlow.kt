@@ -27,7 +27,7 @@ class CashIssueAndPaymentFlow(val amount: Amount<Currency>,
                               val anonymous: Boolean,
                               val notary: Party,
                               progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
-     constructor(amount: Amount<Currency>,
+    constructor(amount: Amount<Currency>,
                 issueRef: OpaqueBytes,
                 recipient: Party,
                 anonymous: Boolean,

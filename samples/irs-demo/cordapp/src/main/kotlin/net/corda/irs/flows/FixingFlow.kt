@@ -69,8 +69,8 @@ object FixingFlow {
                 @Suspendable
                 override fun filtering(elem: Any): Boolean {
                     return when (elem) {
-                        // Only expose Fix commands in which the oracle is on the list of requested signers
-                        // to the oracle node, to avoid leaking privacy
+                    // Only expose Fix commands in which the oracle is on the list of requested signers
+                    // to the oracle node, to avoid leaking privacy
                         is Command<*> -> handshake.payload.oracle.owningKey in elem.signers && elem.value is Fix
                         else -> false
                     }
@@ -99,11 +99,11 @@ object FixingFlow {
 
         override val notaryParty: Party get() = dealToFix.state.notary
 
-        @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {
+        @Suspendable
+        override fun checkProposal(stx: SignedTransaction) = requireThat {
             // Add some constraints here.
         }
     }
-
 
     /** Used to set up the session between [Floater] and [Fixer] */
     @CordaSerializable

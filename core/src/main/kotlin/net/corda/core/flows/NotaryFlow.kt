@@ -9,6 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
+import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -44,9 +45,12 @@ class NotaryFlow {
         @Suspendable
         @Throws(NotaryException::class)
         override fun call(): List<TransactionSignature> {
+            stx.pushToLoggingContext()
             val notaryParty = checkTransaction()
             progressTracker.currentStep = REQUESTING
+            logger.info("Sending transaction to notary: ${notaryParty.name}.")
             val response = notarise(notaryParty)
+            logger.info("Notary responded.")
             progressTracker.currentStep = VALIDATING
             return validateResponse(response, notaryParty)
         }

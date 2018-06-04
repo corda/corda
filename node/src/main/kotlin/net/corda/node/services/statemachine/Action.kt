@@ -24,7 +24,7 @@ sealed class Action {
     data class SendInitial(
             val party: Party,
             val initialise: InitialSessionMessage,
-            val deduplicationId: DeduplicationId
+            val deduplicationId: SenderDeduplicationId
     ) : Action()
 
     /**
@@ -33,7 +33,7 @@ sealed class Action {
     data class SendExisting(
             val peerParty: Party,
             val message: ExistingSessionMessage,
-            val deduplicationId: DeduplicationId
+            val deduplicationId: SenderDeduplicationId
     ) : Action()
 
     /**
@@ -62,7 +62,8 @@ sealed class Action {
      */
     data class PropagateErrors(
             val errorMessages: List<ErrorSessionMessage>,
-            val sessions: List<SessionState.Initiated>
+            val sessions: List<SessionState.Initiated>,
+            val senderUUID: String?
     ) : Action()
 
     /**
@@ -102,17 +103,23 @@ sealed class Action {
     /**
      * Create a new database transaction.
      */
-    object CreateTransaction : Action() { override fun toString() = "CreateTransaction" }
+    object CreateTransaction : Action() {
+        override fun toString() = "CreateTransaction"
+    }
 
     /**
      * Roll back the current database transaction.
      */
-    object RollbackTransaction : Action() { override fun toString() = "RollbackTransaction" }
+    object RollbackTransaction : Action() {
+        override fun toString() = "RollbackTransaction"
+    }
 
     /**
      * Commit the current database transaction.
      */
-    object CommitTransaction : Action() { override fun toString() = "CommitTransaction" }
+    object CommitTransaction : Action() {
+        override fun toString() = "CommitTransaction"
+    }
 
     /**
      * Execute the specified [operation].
@@ -123,6 +130,11 @@ sealed class Action {
      * Release soft locks associated with given ID (currently the flow ID).
      */
     data class ReleaseSoftLocks(val uuid: UUID?) : Action()
+
+    /**
+     * Retry a flow from the last checkpoint, or if there is no checkpoint, restart the flow with the same invocation details.
+     */
+    data class RetryFlowFromSafePoint(val currentState: StateMachineState) : Action()
 }
 
 /**
@@ -131,7 +143,9 @@ sealed class Action {
 sealed class FlowRemovalReason {
     data class OrderlyFinish(val flowReturnValue: Any?) : FlowRemovalReason()
     data class ErrorFinish(val flowErrors: List<FlowError>) : FlowRemovalReason()
-    object SoftShutdown : FlowRemovalReason() { override fun toString() = "SoftShutdown" }
+    object SoftShutdown : FlowRemovalReason() {
+        override fun toString() = "SoftShutdown"
+    }
     // TODO Should we remove errored flows? How will the flow hospital work? Perhaps keep them in memory for a while, flush
     // them after a timeout, reload them on flow hospital request. In any case if we ever want to remove them
     // (e.g. temporarily) then add a case for that here.

@@ -18,11 +18,11 @@ class ContractUpgradeServiceImpl : ContractUpgradeService, SingletonSerializeAsT
     @Table(name = "${NODE_DATABASE_PREFIX}contract_upgrades")
     class DBContractUpgrade(
             @Id
-            @Column(name = "state_ref", length = 96)
+            @Column(name = "state_ref", length = 96, nullable = false)
             var stateRef: String = "",
 
             /** refers to the UpgradedContract class name*/
-            @Column(name = "contract_class_name")
+            @Column(name = "contract_class_name", nullable = false)
             var upgradedContractClassName: String = ""
     ) : Serializable
 
@@ -47,7 +47,7 @@ class ContractUpgradeServiceImpl : ContractUpgradeService, SingletonSerializeAsT
     override fun getAuthorisedContractUpgrade(ref: StateRef) = authorisedUpgrade[ref.toString()]
 
     override fun storeAuthorisedContractUpgrade(ref: StateRef, upgradedContractClass: Class<out UpgradedContract<*, *>>) {
-        authorisedUpgrade.put(ref.toString(), upgradedContractClass.name)
+        authorisedUpgrade[ref.toString()] = upgradedContractClass.name
     }
 
     override fun removeAuthorisedContractUpgrade(ref: StateRef) {

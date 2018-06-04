@@ -97,7 +97,7 @@ class ScheduledFlowIntegrationTests {
             val aliceClient = CordaRPCClient(alice.rpcAddress).start(rpcUser.username, rpcUser.password)
             val bobClient = CordaRPCClient(bob.rpcAddress).start(rpcUser.username, rpcUser.password)
 
-            val scheduledFor = Instant.now().plusSeconds(20)
+            val scheduledFor = Instant.now().plusSeconds(10)
             val initialiseFutures = mutableListOf<CordaFuture<*>>()
             for (i in 0 until N) {
                 initialiseFutures.add(aliceClient.proxy.startFlow(::InsertInitialStateFlow, bob.nodeInfo.legalIdentities.first(), defaultNotaryIdentity, i, scheduledFor).returnValue)
@@ -111,6 +111,9 @@ class ScheduledFlowIntegrationTests {
                 spendAttemptFutures.add(bobClient.proxy.startFlow(::AnotherFlow, (i + 100).toString()).returnValue)
             }
             spendAttemptFutures.getOrThrowAll()
+
+            // TODO: the queries below are not atomic so we need to allow enough time for the scheduler to finish.  Would be better to query scheduler.
+            Thread.sleep(20.seconds.toMillis())
 
             val aliceStates = aliceClient.proxy.vaultQuery(ScheduledState::class.java).states.filter { it.state.data.processed }
             val aliceSpentStates = aliceClient.proxy.vaultQuery(SpentState::class.java).states

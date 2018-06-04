@@ -62,6 +62,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
         transport = Engine.transport()
         transport.idleTimeout = IDLE_TIMEOUT
         transport.context = connection
+        @Suppress("UsePropertyAccessSyntax")
         transport.setEmitFlowEventOnSend(true)
         connection.collect(collector)
         val sasl = transport.sasl()
@@ -351,7 +352,7 @@ internal class ConnectionStateMachine(serverMode: Boolean,
                 val connection = event.connection
                 val channel = connection?.context as? Channel
                 if (channel != null) {
-                    val appProperties = HashMap(amqpMessage.applicationProperties.value as Map<String, Any?>)
+                    val appProperties = HashMap(amqpMessage.applicationProperties.value)
                     appProperties["_AMQ_VALIDATED_USER"] = remoteLegalName
                     val localAddress = channel.localAddress() as InetSocketAddress
                     val remoteAddress = channel.remoteAddress() as InetSocketAddress

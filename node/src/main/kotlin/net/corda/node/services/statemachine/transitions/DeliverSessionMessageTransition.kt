@@ -38,16 +38,13 @@ class DeliverSessionMessageTransition(
             } else {
                 val payload = event.sessionMessage.payload
                 // Dispatch based on what kind of message it is.
-                val _exhaustive = when (payload) {
+                when (payload) {
                     is ConfirmSessionMessage -> confirmMessageTransition(existingSession, payload)
                     is DataSessionMessage -> dataMessageTransition(existingSession, payload)
                     is ErrorSessionMessage -> errorMessageTransition(existingSession, payload)
                     is RejectSessionMessage -> rejectMessageTransition(existingSession, payload)
                     is EndSessionMessage -> endMessageTransition()
                 }
-            }
-            if (!isErrored()) {
-                persistCheckpoint()
             }
             // Schedule a DoRemainingWork to check whether the flow needs to be woken up.
             actions.add(Action.ScheduleEvent(Event.DoRemainingWork))
@@ -73,7 +70,7 @@ class DeliverSessionMessageTransition(
                 // Send messages that were buffered pending confirmation of session.
                 val sendActions = sessionState.bufferedMessages.map { (deduplicationId, bufferedMessage) ->
                     val existingMessage = ExistingSessionMessage(message.initiatedSessionId, bufferedMessage)
-                    Action.SendExisting(initiatedSession.peerParty, existingMessage, deduplicationId)
+                    Action.SendExisting(initiatedSession.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID))
                 }
                 actions.addAll(sendActions)
                 currentState = currentState.copy(checkpoint = newCheckpoint)
@@ -144,21 +141,6 @@ class DeliverSessionMessageTransition(
             }
             else -> freshErrorTransition(UnexpectedEventInState())
         }
-    }
-
-    private fun TransitionBuilder.persistCheckpoint() {
-        // We persist the message as soon as it arrives.
-        actions.addAll(arrayOf(
-                Action.CreateTransaction,
-                Action.PersistCheckpoint(context.id, currentState.checkpoint),
-                Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                Action.CommitTransaction,
-                Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers)
-        ))
-        currentState = currentState.copy(
-                pendingDeduplicationHandlers = emptyList(),
-                isAnyCheckpointPersisted = true
-        )
     }
 
     private fun TransitionBuilder.endMessageTransition() {

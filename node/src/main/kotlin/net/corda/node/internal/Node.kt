@@ -1,8 +1,12 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
-import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.concurrent.CordaFuture
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.div
@@ -11,7 +15,6 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal.nodeSerializationEnv
@@ -25,23 +28,27 @@ import net.corda.node.internal.artemis.BrokerAddresses
 import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.security.RPCSecurityManagerWithAdditionalUser
+import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.node.serialization.kryo.KryoServerSerializationScheme
+import net.corda.node.services.Permissions
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.config.*
-import net.corda.node.services.config.shell.localShellUser
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.DemoClock
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_SHELL_USER
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
+import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.serialization.*
-import net.corda.nodeapi.internal.serialization.amqp.AMQPServerSerializationScheme
+import net.corda.serialization.internal.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Scheduler
@@ -75,6 +82,13 @@ open class Node(configuration: NodeConfiguration,
             LoggerFactory.getLogger(loggerName).info(msg)
         }
 
+        fun printWarning(message: String) {
+            Emoji.renderIfSupported {
+                println("${Emoji.warningSign} ATTENTION: $message")
+            }
+            staticLog.warn(message)
+        }
+
         internal fun failStartUp(message: String): Nothing {
             println(message)
             println("Corda will now exit...")
@@ -86,18 +100,15 @@ open class Node(configuration: NodeConfiguration,
         }
 
         private val sameVmNodeCounter = AtomicInteger()
-
         const val scanPackagesSystemProperty = "net.corda.node.cordapp.scan.packages"
         const val scanPackagesSeparator = ","
-
         private fun makeCordappLoader(configuration: NodeConfiguration): CordappLoader {
             return System.getProperty(scanPackagesSystemProperty)?.let { scanPackages ->
                 CordappLoader.createDefaultWithTestPackages(configuration, scanPackages.split(scanPackagesSeparator))
             } ?: CordappLoader.createDefault(configuration.baseDirectory)
         }
-
-        // TODO Wire up maxMessageSize
-        const val MAX_FILE_SIZE = 10485760
+        // TODO: make this configurable.
+        const val MAX_RPC_MESSAGE_SIZE = 10485760
     }
 
     override val log: Logger get() = staticLog
@@ -159,29 +170,31 @@ open class Node(configuration: NodeConfiguration,
                                       networkParameters: NetworkParameters): MessagingService {
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
-        val securityManagerConfig = configuration.security?.authService ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
+        val securityManagerConfig = configuration.security?.authService
+                ?: SecurityConfiguration.AuthService.fromUsers(configuration.rpcUsers)
 
         securityManager = with(RPCSecurityManagerImpl(securityManagerConfig)) {
-            if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this, localShellUser()) else this
+            if (configuration.shouldStartLocalShell()) RPCSecurityManagerWithAdditionalUser(this, User(INTERNAL_SHELL_USER, INTERNAL_SHELL_USER, setOf(Permissions.all()))) else this
         }
 
         if (!configuration.messagingServerExternal) {
             val brokerBindAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
-            messageBroker = ArtemisMessagingServer(configuration, brokerBindAddress, MAX_FILE_SIZE)
+            messageBroker = ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize)
         }
 
-        val serverAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port)
+        val serverAddress = configuration.messagingServerAddress
+                ?: NetworkHostAndPort("localhost", configuration.p2pAddress.port)
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
-            BrokerAddresses(configuration.rpcOptions.address!!, configuration.rpcOptions.adminAddress)
+            BrokerAddresses(configuration.rpcOptions.address, configuration.rpcOptions.adminAddress)
         } else {
-            startLocalRpcBroker(networkParameters)
+            startLocalRpcBroker()
         }
         val advertisedAddress = info.addresses[0]
-        bridgeControlListener = BridgeControlListener(configuration, serverAddress, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
+        bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
 
         printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
         rpcServerAddresses?.let {
-            rpcMessagingClient = RPCMessagingClient(configuration.rpcOptions.sslConfig, it.admin, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
+            internalRpcMessagingClient = InternalRPCMessagingClient(configuration, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.loadSslKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal))
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }
@@ -201,24 +214,23 @@ open class Node(configuration: NodeConfiguration,
                 database,
                 services.networkMapCache,
                 advertisedAddress,
-                /*networkParameters.maxMessageSize*/MAX_FILE_SIZE,
+                networkParameters.maxMessageSize,
                 isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
                 drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values)
     }
 
-    private fun startLocalRpcBroker(networkParameters: NetworkParameters): BrokerAddresses? {
-        with(configuration) {
-            return rpcOptions.address?.let {
-                require(rpcOptions.address != null) { "RPC address needs to be specified for local RPC broker." }
+    private fun startLocalRpcBroker(): BrokerAddresses? {
+        return with(configuration) {
+            rpcOptions.address.let {
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(this.address!!, sslConfig, securityManager, certificateChainCheckPolicies, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
+                        ArtemisRpcBroker.withSsl(configuration, this.address, adminAddress, sslConfig, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     } else {
-                        ArtemisRpcBroker.withoutSsl(this.address!!, adminAddress!!, sslConfig, securityManager, certificateChainCheckPolicies, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory)
+                        ArtemisRpcBroker.withoutSsl(configuration, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     }
                 }
-                return rpcBroker!!.addresses
+                rpcBroker!!.addresses
             }
         }
     }
@@ -281,13 +293,9 @@ open class Node(configuration: NodeConfiguration,
             start()
         }
         // Start up the MQ clients.
-        rpcMessagingClient?.run {
+        internalRpcMessagingClient?.run {
             runOnStop += this::close
-            when (rpcOps) {
-                // not sure what this RPCOps base interface is for
-                is SecureCordaRPCOps -> start(RpcExceptionHandlingProxy(rpcOps), securityManager)
-                else -> start(rpcOps, securityManager)
-            }
+            init(rpcOps, securityManager)
         }
         verifierMessagingClient?.run {
             runOnStop += this::stop
@@ -309,7 +317,9 @@ open class Node(configuration: NodeConfiguration,
      * This is not using the H2 "automatic mixed mode" directly but leans on many of the underpinnings.  For more details
      * on H2 URLs and configuration see: http://www.h2database.com/html/features.html#database_url
      */
-    override fun initialiseDatabasePersistence(schemaService: SchemaService, identityService: IdentityService): CordaPersistence {
+    override fun initialiseDatabasePersistence(schemaService: SchemaService,
+                                               wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
+                                               wellKnownPartyFromAnonymous: (AbstractParty) -> Party?): CordaPersistence {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
@@ -326,7 +336,7 @@ open class Node(configuration: NodeConfiguration,
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
         }
-        return super.initialiseDatabasePersistence(schemaService, identityService)
+        return super.initialiseDatabasePersistence(schemaService, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous)
     }
 
     private val _startupComplete = openFuture<Unit>()
@@ -346,20 +356,15 @@ open class Node(configuration: NodeConfiguration,
                 // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
                 //
                 // https://jolokia.org/agent/jvm.html
-                JmxReporter.
-                        forRegistry(started.services.monitoringService.metrics).
-                        inDomain("net.corda").
-                        createsObjectNamesWith { _, domain, name ->
-                            // Make the JMX hierarchy a bit better organised.
-                            val category = name.substringBefore('.')
-                            val subName = name.substringAfter('.', "")
-                            if (subName == "")
-                                ObjectName("$domain:name=$category")
-                            else
-                                ObjectName("$domain:type=$category,name=$subName")
-                        }.
-                        build().
-                        start()
+                JmxReporter.forRegistry(started.services.monitoringService.metrics).inDomain("net.corda").createsObjectNamesWith { _, domain, name ->
+                    // Make the JMX hierarchy a bit better organised.
+                    val category = name.substringBefore('.')
+                    val subName = name.substringAfter('.', "")
+                    if (subName == "")
+                        ObjectName("$domain:name=$category")
+                    else
+                        ObjectName("$domain:type=$category,name=$subName")
+                }.build().start()
 
                 _startupComplete.set(Unit)
             }
@@ -379,22 +384,22 @@ open class Node(configuration: NodeConfiguration,
         val classloader = cordappLoader.appClassLoader
         nodeSerializationEnv = SerializationEnvironmentImpl(
                 SerializationFactoryImpl().apply {
-                    registerScheme(KryoServerSerializationScheme())
                     registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps))
-                    registerScheme(KryoClientSerializationScheme())
+                    registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps))
+                    registerScheme(KryoServerSerializationScheme())
                 },
                 p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
-                rpcServerContext = KRYO_RPC_SERVER_CONTEXT.withClassLoader(classloader),
+                rpcServerContext = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader),
                 storageContext = AMQP_STORAGE_CONTEXT.withClassLoader(classloader),
                 checkpointContext = KRYO_CHECKPOINT_CONTEXT.withClassLoader(classloader),
-                rpcClientContext = if (configuration.shouldInitCrashShell()) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classloader) else null) //even Shell embeded in the node connects via RPC to the node
+                rpcClientContext = if (configuration.shouldInitCrashShell()) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classloader) else null) //even Shell embeded in the node connects via RPC to the node
     }
 
-    private var rpcMessagingClient: RPCMessagingClient? = null
+    private var internalRpcMessagingClient: InternalRPCMessagingClient? = null
     private var verifierMessagingClient: VerifierMessagingClient? = null
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
-        rpcMessagingClient?.start2(rpcBroker!!.serverControl)
+        internalRpcMessagingClient?.start(rpcBroker!!.serverControl)
         verifierMessagingClient?.start2()
         (network as P2PMessagingClient).run()
     }

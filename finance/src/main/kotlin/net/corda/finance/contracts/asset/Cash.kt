@@ -46,7 +46,7 @@ import java.util.*
  */
 class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     override fun extractCommands(commands: Collection<CommandWithParties<CommandData>>): List<CommandWithParties<Cash.Commands>>
-            = commands.select<Cash.Commands>()
+            = commands.select()
 
     // DOCSTART 1
     /** A state representing a cash claim against some party. */
@@ -159,7 +159,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                 // If we want to remove cash from the ledger, that must be signed for by the issuer.
                 // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
                 val exitKeys: Set<PublicKey> = inputs.flatMap { it.exitKeys }.toSet()
-                val exitCommand = tx.commands.select<Commands.Exit>(parties = null, signers = exitKeys).filter { it.value.amount.token == key }.singleOrNull()
+                val exitCommand = tx.commands.select<Commands.Exit>(parties = null, signers = exitKeys).singleOrNull { it.value.amount.token == key }
                 val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, Issued(issuer, currency))
 
                 requireThat {

@@ -9,3 +9,4 @@ Release process
    contributing
    codestyle
    testing
+   api-scanner

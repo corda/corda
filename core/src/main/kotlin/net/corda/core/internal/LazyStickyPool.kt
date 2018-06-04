@@ -66,6 +66,6 @@ class LazyStickyPool<A : Any>(
     }
 
     fun close(): Iterable<A> {
-        return boxes.map { it.instance?.poll() }.filterNotNull()
+        return boxes.mapNotNull { it.instance?.poll() }
     }
 }

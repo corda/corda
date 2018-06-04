@@ -7,6 +7,7 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.utilities.AppendOnlyPersistentMap
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
@@ -27,21 +28,22 @@ import javax.persistence.Lob
  * This class needs database transactions to be in-flight during method calls and init.
  */
 class PersistentKeyManagementService(val identityService: IdentityService,
-                                     initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
+                                     initialKeys: Set<KeyPair>,
+                                     private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementService {
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
 
             @Id
-            @Column(name = "public_key_hash", length = MAX_HASH_HEX_SIZE)
+            @Column(name = "public_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             var publicKeyHash: String,
 
             @Lob
-            @Column(name = "public_key")
+            @Column(name = "public_key", nullable = false)
             var publicKey: ByteArray = EMPTY_BYTE_ARRAY,
             @Lob
-            @Column(name = "private_key")
+            @Column(name = "private_key", nullable = false)
             var privateKey: ByteArray = EMPTY_BYTE_ARRAY
     ) : Serializable {
         constructor(publicKey: PublicKey, privateKey: PrivateKey)
@@ -65,17 +67,23 @@ class PersistentKeyManagementService(val identityService: IdentityService,
     val keysMap = createKeyMap()
 
     init {
-        initialKeys.forEach({ it -> keysMap.addWithDuplicatesAllowed(it.public, it.private) })
+        // TODO this should be in a start function, not in an init block.
+        database.transaction {
+            initialKeys.forEach({ it -> keysMap.addWithDuplicatesAllowed(it.public, it.private) })
+        }
     }
 
-    override val keys: Set<PublicKey> get() = keysMap.allPersisted().map { it.first }.toSet()
+    override val keys: Set<PublicKey> get() = database.transaction { keysMap.allPersisted().map { it.first }.toSet() }
 
-    override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> =
-            candidateKeys.filter { keysMap[it] != null }
+    override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = database.transaction {
+        candidateKeys.filter { keysMap[it] != null }
+    }
 
     override fun freshKey(): PublicKey {
         val keyPair = generateKeyPair()
-        keysMap[keyPair.public] = keyPair.private
+        database.transaction {
+            keysMap[keyPair.public] = keyPair.private
+        }
         return keyPair.public
     }
 
@@ -86,8 +94,10 @@ class PersistentKeyManagementService(val identityService: IdentityService,
 
     //It looks for the PublicKey in the (potentially) CompositeKey that is ours, and then returns the associated PrivateKey to use in signing
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
-        val pk = publicKey.keys.first { keysMap[it] != null } //TODO here for us to re-write this using an actual query if publicKey.keys.size > 1
-        return KeyPair(pk, keysMap[pk]!!)
+        return database.transaction {
+            val pk = publicKey.keys.first { keysMap[it] != null } //TODO here for us to re-write this using an actual query if publicKey.keys.size > 1
+            KeyPair(pk, keysMap[pk]!!)
+        }
     }
 
     override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {

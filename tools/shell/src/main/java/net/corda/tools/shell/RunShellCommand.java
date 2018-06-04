@@ -10,15 +10,24 @@ import org.crsh.cli.Man;
 import org.crsh.cli.Usage;
 import org.crsh.command.InvocationContext;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.joining;
 
 // Note that this class cannot be converted to Kotlin because CRaSH does not understand InvocationContext<Map<?, ?>> which
 // is the closest you can get in Kotlin to raw types.
 
 public class RunShellCommand extends InteractiveShellCommand {
+
+    private static Logger logger = LoggerFactory.getLogger(RunShellCommand.class);
+
     @Command
     @Man(
             "Runs a method from the CordaRPCOps interface, which is the same interface exposed to RPC clients.\n\n" +
@@ -27,10 +36,8 @@ public class RunShellCommand extends InteractiveShellCommand {
                     "consulting the developer guide at https://docs.corda.net/api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html"
     )
     @Usage("runs a method from the CordaRPCOps interface on the node.")
-    public Object main(
-            InvocationContext<Map> context,
-            @Usage("The command to run") @Argument(unquote = false) List<String> command
-    ) {
+    public Object main(InvocationContext<Map> context, @Usage("The command to run") @Argument(unquote = false) List<String> command) {
+        logger.info("Executing command \"run {}\",", (command != null) ? command.stream().collect(joining(" ")) : "<no arguments>");
         StringToMethodCallParser<CordaRPCOps> parser = new StringToMethodCallParser<>(CordaRPCOps.class, objectMapper());
 
         if (command == null) {
@@ -44,7 +51,7 @@ public class RunShellCommand extends InteractiveShellCommand {
         // Sends data down the pipeline about what commands are available. CRaSH will render it nicely.
         // Each element we emit is a map of column -> content.
         Set<Map.Entry<String, String>> entries = parser.getAvailableCommands().entrySet();
-        ArrayList<Map.Entry<String, String>> entryList = new ArrayList<>(entries);
+        List<Map.Entry<String, String>> entryList = new ArrayList<>(entries);
         entryList.sort(comparing(Map.Entry::getKey));
         for (Map.Entry<String, String> entry : entryList) {
             // Skip these entries as they aren't really interesting for the user.

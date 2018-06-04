@@ -1,10 +1,6 @@
 package net.corda.client.rpc.internal
 
 import co.paralleluniverse.common.util.SameThreadExecutor
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.Serializer
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.RemovalCause
@@ -14,7 +10,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.RPCException
 import net.corda.client.rpc.RPCSinceVersion
-import net.corda.client.rpc.internal.serialization.kryo.RpcClientObservableSerializer
+import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableSerializer
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
@@ -32,20 +28,30 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.DeduplicationChecker
 import org.apache.activemq.artemis.api.core.ActiveMQException
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
+import org.apache.activemq.artemis.api.core.client.ClientConsumer
+import org.apache.activemq.artemis.api.core.client.ClientMessage
+import org.apache.activemq.artemis.api.core.client.ClientProducer
+import org.apache.activemq.artemis.api.core.client.ClientSession
+import org.apache.activemq.artemis.api.core.client.ClientSessionFactory
+import org.apache.activemq.artemis.api.core.client.FailoverEventType
+import org.apache.activemq.artemis.api.core.client.ServerLocator
 import rx.Notification
 import rx.Observable
 import rx.subjects.UnicastSubject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
-import java.time.Instant
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.reflect.jvm.javaMethod
 
@@ -152,7 +158,7 @@ class RPCClientProxyHandler(
     private val serializationContextWithObservableContext = RpcClientObservableSerializer.createContext(serializationContext, observableContext)
 
     private fun createRpcObservableMap(): RpcObservableMap {
-        val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> { key, value, cause ->
+        val onObservableRemove = RemovalListener<InvocationId, UnicastSubject<Notification<*>>> { key, _, cause ->
             val observableId = key!!
             val rpcCallSite = callSiteMap?.remove(observableId)
             if (cause == RemovalCause.COLLECTED) {
@@ -209,7 +215,11 @@ class RPCClientProxyHandler(
         // If there's only one available, that one will be retried continuously as configured in rpcConfiguration.
         // There is no failover on first attempt, meaning that if a connection cannot be established, the serverLocator
         // will try another transport if it exists or throw an exception otherwise.
-        sessionFactory = serverLocator.createSessionFactory()
+        try {
+            sessionFactory = serverLocator.createSessionFactory()
+        } catch (e: ActiveMQNotConnectedException) {
+            throw (RPCException("Cannot connect to server(s). Tried with all available servers.", e))
+        }
         // Depending on how the client is constructed, connection failure is treated differently
         if (serverLocator.staticTransportConfigurations.size == 1) {
             sessionFactory!!.addFailoverListener(this::failoverHandler)
@@ -444,7 +454,7 @@ class RPCClientProxyHandler(
 
             log.debug("Trying to connect using ${transport.params}")
             try {
-                if (serverLocator != null && !serverLocator.isClosed) {
+                if (!serverLocator.isClosed) {
                     sessionFactory = serverLocator.createSessionFactory(transport)
                 } else {
                     log.warn("Stopping reconnect attempts.")

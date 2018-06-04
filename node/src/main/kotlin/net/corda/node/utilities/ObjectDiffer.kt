@@ -1,7 +1,7 @@
 package net.corda.node.utilities
 
+import net.corda.core.internal.isStatic
 import java.lang.reflect.Method
-import java.lang.reflect.Modifier
 import java.lang.reflect.Type
 import java.time.Instant
 
@@ -59,10 +59,10 @@ data class DiffPath(
 object ObjectDiffer {
     fun diff(a: Any?, b: Any?): DiffTree? {
         if (a == null || b == null) {
-            if (a == b) {
-                return null
+            return if (a == b) {
+                null
             } else {
-                return DiffTree.Last(a, b)
+                DiffTree.Last(a, b)
             }
         }
         if (a != b) {
@@ -72,34 +72,36 @@ object ObjectDiffer {
             // TODO deduplicate this code
             if (a is Map<*, *> && b is Map<*, *>) {
                 val allKeys = a.keys + b.keys
-                val branches = allKeys.mapNotNull { key -> diff(a.get(key), b.get(key))?.let { key.toString() to it } }
-                if (branches.isEmpty()) {
-                    return null
+                val branches = allKeys.mapNotNull { key -> diff(a[key], b[key])?.let { key.toString() to it } }
+                return if (branches.isEmpty()) {
+                    null
                 } else {
-                    return DiffTree.Step(branches)
+                    DiffTree.Step(branches)
                 }
             }
+            // Apparently this is not always caught by the above as one might think.
+            @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
             if (a is java.util.Map<*, *> && b is java.util.Map<*, *>) {
                 val allKeys = a.keySet() + b.keySet()
                 val branches = allKeys.mapNotNull { key -> diff(a.get(key), b.get(key))?.let { key.toString() to it } }
-                if (branches.isEmpty()) {
-                    return null
+                return if (branches.isEmpty()) {
+                    null
                 } else {
-                    return DiffTree.Step(branches)
+                    DiffTree.Step(branches)
                 }
             }
             val aFields = getFieldFoci(a)
             val bFields = getFieldFoci(b)
             try {
-                if (aFields != bFields) {
-                    return DiffTree.Last(a, b)
+                return if (aFields != bFields) {
+                    DiffTree.Last(a, b)
                 } else {
                     // TODO need to account for cases where the fields don't match up (different subclasses)
-                    val branches = aFields.map { field -> diff(field.get(a), field.get(b))?.let { field.name to it } }.filterNotNull()
+                    val branches = aFields.mapNotNull { field -> diff(field.get(a), field.get(b))?.let { field.name to it } }
                     if (branches.isEmpty()) {
-                        return DiffTree.Last(a, b)
+                        DiffTree.Last(a, b)
                     } else {
-                        return DiffTree.Step(branches)
+                        DiffTree.Step(branches)
                     }
                 }
             } catch (throwable: Exception) {
@@ -129,7 +131,7 @@ object ObjectDiffer {
     private fun getFieldFoci(obj: Any) : List<FieldFocus> {
         val foci = ArrayList<FieldFocus>()
         for (method in obj.javaClass.declaredMethods) {
-            if (Modifier.isStatic(method.modifiers)) {
+            if (method.isStatic) {
                 continue
             }
             if (method.name.startsWith("get") && method.name.length > 3 && method.parameterCount == 0) {

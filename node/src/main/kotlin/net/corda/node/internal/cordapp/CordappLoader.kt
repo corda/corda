@@ -4,6 +4,8 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
@@ -16,7 +18,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.coreContractClasses
-import net.corda.nodeapi.internal.serialization.DefaultWhitelist
+import net.corda.serialization.internal.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
 import java.lang.reflect.Modifier
 import java.net.JarURLConnection
@@ -41,6 +43,17 @@ import kotlin.streams.toList
 class CordappLoader private constructor(private val cordappJarPaths: List<RestrictedURL>) {
     val cordapps: List<Cordapp> by lazy { loadCordapps() + coreCordapp }
     val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
+
+    // Create a map of the CorDapps that provide a Flow. If a flow is not in this map it is a Core flow.
+    // It also checks that there is only one CorDapp containing that flow class
+    val flowCordappMap: Map<Class<out FlowLogic<*>>, Cordapp> by lazy {
+        cordapps.flatMap { corDapp -> corDapp.allFlows.map { flow -> flow to corDapp } }
+                .groupBy { it.first }
+                .mapValues {
+                    require(it.value.size == 1) { "There are multiple CorDapp jars on the classpath for flow ${it.value.first().first.name}: ${it.value.map { it.second.name }.joinToString()}." }
+                    it.value.single().second
+                }
+    }
 
     init {
         if (cordappJarPaths.isEmpty()) {
@@ -121,6 +134,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             val resource = scanPackage.replace('.', '/')
             return this::class.java.classLoader.getResources(resource)
                     .asSequence()
+                    // This is to only scan classes from test folders.
+                    .filter { url -> listOf("main", "production").none { url.toString().contains("$it/$resource") } || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { scanPackage.startsWith(it) } }
                     .map { url ->
                         if (url.protocol == "jar") {
                             // When running tests from gradle this may be a corda module jar, so restrict to scanPackage:
@@ -142,16 +157,18 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                 logger.info("Generating a test-only CorDapp of classes discovered for package $scanPackage in $url: $cordappJar")
                 JarOutputStream(cordappJar.outputStream()).use { jos ->
                     val scanDir = url.toPath()
-                    scanDir.walk { it.forEach {
-                        val entryPath = "$resource/${scanDir.relativize(it).toString().replace('\\', '/')}"
-                        val time = FileTime.from(Instant.EPOCH)
-                        val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-                        jos.putNextEntry(entry)
-                        if (it.isRegularFile()) {
-                            it.copyTo(jos)
+                    scanDir.walk {
+                        it.forEach {
+                            val entryPath = "$resource/${scanDir.relativize(it).toString().replace('\\', '/')}"
+                            val time = FileTime.from(Instant.EPOCH)
+                            val entry = ZipEntry(entryPath).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
+                            jos.putNextEntry(entry)
+                            if (it.isRegularFile()) {
+                                it.copyTo(jos)
+                            }
+                            jos.closeEntry()
                         }
-                        jos.closeEntry()
-                    } }
+                    }
                 }
                 cordappJar
             }
@@ -186,7 +203,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                 serializationWhitelists = listOf(),
                 serializationCustomSerializers = listOf(),
                 customSchemas = setOf(),
-                jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location // Core JAR location
+                allFlows = listOf(),
+                jarPath = ContractUpgradeFlow.javaClass.protectionDomain.codeSource.location, // Core JAR location
+                jarHash = SecureHash.allOnesHash
         )
     }
 
@@ -202,9 +221,14 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     findPlugins(it),
                     findSerializers(scanResult),
                     findCustomSchemas(scanResult),
-                    it.url)
+                    findAllFlows(scanResult),
+                    it.url,
+                    getJarHash(it.url)
+            )
         }
     }
+
+    private fun getJarHash(url: URL): SecureHash.SHA256 = url.openStream().readFully().sha256()
 
     private fun findServices(scanResult: RestrictedScanResult): List<Class<out SerializeAsToken>> {
         return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
@@ -239,6 +263,10 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
     private fun findSchedulableFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getClassesWithAnnotation(FlowLogic::class, SchedulableFlow::class)
+    }
+
+    private fun findAllFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
+        return scanResult.getConcreteClassesOfType(FlowLogic::class)
     }
 
     private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
@@ -293,7 +321,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
     /** @property rootPackageName only this package and subpackages may be extracted from [url], or null to allow all packages. */
     private data class RestrictedURL(val url: URL, val rootPackageName: String?) {
-        val qualifiedNamePrefix: String get() = rootPackageName?.let { it + '.' } ?: ""
+        val qualifiedNamePrefix: String get() = rootPackageName?.let { "$it." } ?: ""
     }
 
     private inner class RestrictedScanResult(private val scanResult: ScanResult, private val qualifiedNamePrefix: String) {
@@ -320,6 +348,13 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
 
         fun <T : Any> getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
             return scanResult.getNamesOfClassesWithAnnotation(annotation.java)
+                    .filter { it.startsWith(qualifiedNamePrefix) }
+                    .mapNotNull { loadClass(it, type) }
+                    .filterNot { Modifier.isAbstract(it.modifiers) }
+        }
+
+        fun <T : Any> getConcreteClassesOfType(type: KClass<T>): List<Class<out T>> {
+            return scanResult.getNamesOfSubclassesOf(type.java)
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
                     .filterNot { Modifier.isAbstract(it.modifiers) }

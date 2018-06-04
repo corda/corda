@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.context.InvocationContext
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -26,6 +27,7 @@ import net.corda.node.services.messaging.DeduplicationHandler
  *   possible.
  * @param isRemoved true if the flow has been removed from the state machine manager. This is used to avoid any further
  *   work.
+ * @param senderUUID the identifier of the sending state machine or null if this flow is resumed from a checkpoint so that it does not participate in de-duplication high-water-marking.
  */
 // TODO perhaps add a read-only environment to the state machine for things that don't change over time?
 // TODO evaluate persistent datastructure libraries to replace the inefficient copying we currently do.
@@ -37,7 +39,8 @@ data class StateMachineState(
         val isTransactionTracked: Boolean,
         val isAnyCheckpointPersisted: Boolean,
         val isStartIdempotent: Boolean,
-        val isRemoved: Boolean
+        val isRemoved: Boolean,
+        val senderUUID: String?
 )
 
 /**
@@ -68,9 +71,10 @@ data class Checkpoint(
                 flowLogicClass: Class<FlowLogic<*>>,
                 frozenFlowLogic: SerializedBytes<FlowLogic<*>>,
                 ourIdentity: Party,
-                deduplicationSeed: String
+                deduplicationSeed: String,
+                subFlowVersion: SubFlowVersion
         ): Try<Checkpoint> {
-            return SubFlow.create(flowLogicClass).map { topLevelSubFlow ->
+            return SubFlow.create(flowLogicClass, subFlowVersion).map { topLevelSubFlow ->
                 Checkpoint(
                         invocationContext = invocationContext,
                         ourIdentity = ourIdentity,
@@ -228,4 +232,13 @@ sealed class ErrorState {
             return copy(errors = errors + newErrors)
         }
     }
+}
+
+/**
+ * Stored per [SubFlow]. Contains metadata around the version of the code at the Checkpointing moment.
+ */
+sealed class SubFlowVersion {
+    abstract val platformVersion: Int
+    data class CoreFlow(override val platformVersion: Int) : SubFlowVersion()
+    data class CorDappFlow(override val platformVersion: Int, val corDappName: String, val corDappHash: SecureHash) : SubFlowVersion()
 }

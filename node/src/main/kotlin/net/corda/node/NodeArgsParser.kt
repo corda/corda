@@ -1,11 +1,13 @@
 package net.corda.node
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import joptsimple.OptionSet
 import joptsimple.util.EnumConverter
 import joptsimple.util.PathConverter
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
+import net.corda.core.utilities.Try
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
@@ -47,11 +49,13 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
             .withRequiredArg()
             .withValuesConvertedBy(object : EnumConverter<UnknownConfigKeysPolicy>(UnknownConfigKeysPolicy::class.java) {})
             .defaultsTo(UnknownConfigKeysPolicy.FAIL)
+    private val devModeArg = optionParser.accepts("dev-mode", "Run the node in developer mode. Unsafe for production.")
 
     private val isVersionArg = optionParser.accepts("version", "Print the version and exit")
     private val justGenerateNodeInfoArg = optionParser.accepts("just-generate-node-info",
             "Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit")
     private val bootstrapRaftClusterArg = optionParser.accepts("bootstrap-raft-cluster", "Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster.")
+    private val clearNetworkMapCache = optionParser.accepts("clear-network-map-cache", "Clears local copy of network map, on node startup it will be restored from server or file system.")
 
     override fun doParse(optionSet: OptionSet): CmdLineOptions {
         require(!optionSet.has(baseDirectoryArg) || !optionSet.has(configFileArg)) {
@@ -70,6 +74,8 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
         val networkRootTrustStorePath = optionSet.valueOf(networkRootTrustStorePathArg)
         val networkRootTrustStorePassword = optionSet.valueOf(networkRootTrustStorePasswordArg)
         val unknownConfigKeysPolicy = optionSet.valueOf(unknownConfigKeysPolicy)
+        val devMode = optionSet.has(devModeArg)
+        val clearNetworkMapCache = optionSet.has(clearNetworkMapCache)
 
         val registrationConfig = if (isRegistration) {
             requireNotNull(networkRootTrustStorePassword) { "Network root trust store password must be provided in registration mode using --network-root-truststore-password." }
@@ -89,7 +95,9 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
                 sshdServer,
                 justGenerateNodeInfo,
                 bootstrapRaftCluster,
-                unknownConfigKeysPolicy)
+                unknownConfigKeysPolicy,
+                devMode,
+                clearNetworkMapCache)
     }
 }
 
@@ -105,19 +113,25 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean,
                           val bootstrapRaftCluster: Boolean,
-                          val unknownConfigKeysPolicy: UnknownConfigKeysPolicy) {
-    fun loadConfig(): NodeConfiguration {
-        val config = ConfigHelper.loadConfig(
+                          val unknownConfigKeysPolicy: UnknownConfigKeysPolicy,
+                          val devMode: Boolean,
+                          val clearNetworkMapCache: Boolean) {
+    fun loadConfig(): Pair<Config, Try<NodeConfiguration>> {
+        val rawConfig = ConfigHelper.loadConfig(
                 baseDirectory,
                 configFile,
-                configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell))
-        ).parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
-        if (nodeRegistrationOption != null) {
-            require(!config.devMode) { "registration cannot occur in devMode" }
-            requireNotNull(config.compatibilityZoneURL) {
-                "compatibilityZoneURL must be present in node configuration file in registration mode."
+                configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
+                        if (devMode) mapOf("devMode" to this.devMode) else emptyMap<String, Any>())
+        )
+        return rawConfig to Try.on {
+            rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
+                if (nodeRegistrationOption != null) {
+                    require(!config.devMode) { "registration cannot occur in devMode" }
+                    require(config.compatibilityZoneURL != null || config.networkServices != null) {
+                        "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
+                    }
+                }
             }
         }
-        return config
     }
 }

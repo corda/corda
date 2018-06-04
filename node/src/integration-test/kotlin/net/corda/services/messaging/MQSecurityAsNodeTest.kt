@@ -7,7 +7,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
 import net.corda.core.internal.x500Name
 import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
@@ -43,10 +43,10 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
     }
 
     @Test
-    fun `only the node running the broker can login using the special node user`() {
+    fun `only the node running the broker can login using the special P2P node user`() {
         val attacker = clientTo(alice.internals.configuration.p2pAddress)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            attacker.start(NODE_USER, NODE_USER)
+            attacker.start(NODE_P2P_USER, NODE_P2P_USER)
         }
     }
 
@@ -70,7 +70,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
     fun `login to a non ssl port as a node user`() {
         val attacker = clientTo(alice.internals.configuration.rpcOptions.address!!, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            attacker.start(NODE_USER, NODE_USER, enableSSL = false)
+            attacker.start(NODE_P2P_USER, NODE_P2P_USER, enableSSL = false)
         }
     }
 

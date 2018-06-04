@@ -8,6 +8,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.utilities.*
@@ -15,11 +16,8 @@ import net.corda.finance.contracts.asset.Cash
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
-import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 /**
  * Pluggable interface to allow for different cash selection provider implementations
@@ -33,13 +31,13 @@ abstract class AbstractCashSelection {
 
         fun getInstance(metadata: () -> java.sql.DatabaseMetaData): AbstractCashSelection {
             return instance.get() ?: {
-                val _metadata = metadata()
+                val metadataLocal = metadata()
                 val cashSelectionAlgos = ServiceLoader.load(AbstractCashSelection::class.java, this::class.java.classLoader).toList()
-                val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(_metadata) }
+                val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(metadataLocal) }
                 cashSelectionAlgo?.let {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
-                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver name '${_metadata.driverName}'." +
+                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver name '${metadataLocal.driverName}'." +
                         "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.qualifiedName}." +
                         "\nAvailable implementations: $cashSelectionAlgos")
             }.invoke()
@@ -53,7 +51,6 @@ abstract class AbstractCashSelection {
     private val MAX_RETRIES = 8
     private val RETRY_SLEEP = 100
     private val RETRY_CAP = 2000
-    private val spendLock: ReentrantLock = ReentrantLock()
 
     /**
      * Upon dynamically loading configured Cash Selection algorithms declared in META-INF/services
@@ -65,7 +62,6 @@ abstract class AbstractCashSelection {
 
     /**
      * A vendor specific query(ies) to gather Cash states that are available.
-     * @param statement The service hub to allow access to the database session
      * @param amount The amount of currency desired (ignoring issues, but specifying the currency)
      * @param lockId The FlowLogic.runId.uuid of the flow, which is used to soft reserve the states.
      * Also, previous outputs of the flow will be eligible as they are implicitly locked with this id until the flow completes.
@@ -126,54 +122,48 @@ abstract class AbstractCashSelection {
     }
 
     private fun attemptSpend(services: ServiceHub, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, stateAndRefs: MutableList<StateAndRef<Cash.State>>): Boolean {
-        spendLock.withLock {
-            val connection = services.jdbcSession()
-            try {
-                // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
-                // the softLockReserve update will detect whether we try to lock states locked by others
-                return executeQuery(connection, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs) { rs ->
-                    stateAndRefs.clear()
+        val connection = services.jdbcSession()
+        try {
+            // we select spendable states irrespective of lock but prioritised by unlocked ones (Eg. null)
+            // the softLockReserve update will detect whether we try to lock states locked by others
+            return executeQuery(connection, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs) { rs ->
+                stateAndRefs.clear()
 
-                    var totalPennies = 0L
-                    val stateRefs = mutableSetOf<StateRef>()
-                    while (rs.next()) {
-                        val txHash = SecureHash.parse(rs.getString(1))
-                        val index = rs.getInt(2)
-                        val pennies = rs.getLong(3)
-                        totalPennies = rs.getLong(4)
-                        val rowLockId = rs.getString(5)
-                        stateRefs.add(StateRef(txHash, index))
-                        log.trace { "ROW: $rowLockId ($lockId): ${StateRef(txHash, index)} : $pennies ($totalPennies)" }
-                    }
-
-                    if (stateRefs.isNotEmpty()) {
-                        // TODO: future implementation to retrieve contract states from a Vault BLOB store
-                        stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<StateAndRef<Cash.State>>)
-                    }
-
-                    val success = stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity
-                    if (success) {
-                        // we should have a minimum number of states to satisfy our selection `amount` criteria
-                        log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
-
-                        // With the current single threaded state machine available states are guaranteed to lock.
-                        // TODO However, we will have to revisit these methods in the future multi-threaded.
-                        services.vaultService.softLockReserve(lockId, (stateAndRefs.map { it.ref }).toNonEmptySet())
-                    } else {
-                        log.trace("Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")
-                    }
-                    success
+                var totalPennies = 0L
+                val stateRefs = mutableSetOf<StateRef>()
+                while (rs.next()) {
+                    val txHash = SecureHash.parse(rs.getString(1))
+                    val index = rs.getInt(2)
+                    val pennies = rs.getLong(3)
+                    totalPennies = rs.getLong(4)
+                    val rowLockId = rs.getString(5)
+                    stateRefs.add(StateRef(txHash, index))
+                    log.trace { "ROW: $rowLockId ($lockId): ${StateRef(txHash, index)} : $pennies ($totalPennies)" }
                 }
 
-                // retry as more states may become available
-            } catch (e: SQLException) {
-                log.error("""Failed retrieving unconsumed states for: amount [$amount], onlyFromIssuerParties [$onlyFromIssuerParties], notary [$notary], lockId [$lockId]
-                            $e.
-                        """)
-            } catch (e: StatesNotAvailableException) { // Should never happen with single threaded state machine
-                log.warn(e.message)
-                // retry only if there are locked states that may become available again (or consumed with change)
+                if (stateRefs.isNotEmpty()) {
+                    // TODO: future implementation to retrieve contract states from a Vault BLOB store
+                    stateAndRefs.addAll(uncheckedCast(services.loadStates(stateRefs)))
+                }
+
+                val success = stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity
+                if (success) {
+                    // we should have a minimum number of states to satisfy our selection `amount` criteria
+                    log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
+
+                    // With the current single threaded state machine available states are guaranteed to lock.
+                    // TODO However, we will have to revisit these methods in the future multi-threaded.
+                    services.vaultService.softLockReserve(lockId, (stateAndRefs.map { it.ref }).toNonEmptySet())
+                } else {
+                    log.trace("Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")
+                }
+                success
             }
+
+            // retry as more states may become available
+        } catch (e: StatesNotAvailableException) { // Should never happen with single threaded state machine
+            log.warn(e.message)
+            // retry only if there are locked states that may become available again (or consumed with change)
         }
         return false
     }

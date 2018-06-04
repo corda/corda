@@ -1,17 +1,17 @@
 package net.corda.client.rpc
 
-import net.corda.client.rpc.internal.serialization.kryo.KryoClientSerializationScheme
-import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
+import net.corda.client.rpc.internal.RPCClient
+import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
-import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
-import net.corda.nodeapi.internal.serialization.KRYO_RPC_CLIENT_CONTEXT
+import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import java.time.Duration
 
 /**
@@ -98,7 +98,7 @@ interface CordaRPCClientConfiguration {
  *
  * @param hostAndPort The network address to connect to.
  * @param configuration An optional configuration used to tweak client behaviour.
- * @param sslConfiguration An optional [SSLConfiguration] used to enable secure communication with the server.
+ * @param sslConfiguration An optional [ClientRpcSslOptions] used to enable secure communication with the server.
  * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
  * The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
  * HA mode, the client will round-robin from the beginning of the list and try all servers.
@@ -106,12 +106,16 @@ interface CordaRPCClientConfiguration {
 class CordaRPCClient private constructor(
         private val hostAndPort: NetworkHostAndPort,
         private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
-        private val sslConfiguration: SSLConfiguration? = null,
+        private val sslConfiguration: ClientRpcSslOptions? = null,
+        private val nodeSslConfiguration: SSLConfiguration? = null,
         private val classLoader: ClassLoader? = null,
-        private val haAddressPool: List<NetworkHostAndPort> = emptyList()
+        private val haAddressPool: List<NetworkHostAndPort> = emptyList(),
+        private val internalConnection: Boolean = false
 ) {
     @JvmOverloads
-    constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) : this(hostAndPort, configuration, null)
+    constructor(hostAndPort: NetworkHostAndPort,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default())
+            : this(hostAndPort, configuration, null)
 
     /**
      * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
@@ -120,24 +124,41 @@ class CordaRPCClient private constructor(
      * @param configuration An optional configuration used to tweak client behaviour.
      */
     @JvmOverloads
-    constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) : this(haAddressPool.first(), configuration, null, null, haAddressPool)
+    constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) : this(haAddressPool.first(), configuration, null, null, null, haAddressPool)
 
     companion object {
-        internal fun createWithSsl(
+        fun createWithSsl(
                 hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
-                sslConfiguration: SSLConfiguration? = null
+                sslConfiguration: ClientRpcSslOptions,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()
         ): CordaRPCClient {
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
+        }
+
+        fun createWithSsl(
+                haAddressPool: List<NetworkHostAndPort>,
+                sslConfiguration: ClientRpcSslOptions,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()
+        ): CordaRPCClient {
+            return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, haAddressPool = haAddressPool)
         }
 
         internal fun createWithSslAndClassLoader(
                 hostAndPort: NetworkHostAndPort,
                 configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
-                sslConfiguration: SSLConfiguration? = null,
+                sslConfiguration: ClientRpcSslOptions? = null,
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {
-            return CordaRPCClient(hostAndPort, configuration, sslConfiguration, classLoader)
+            return CordaRPCClient(hostAndPort, configuration, sslConfiguration, null, classLoader)
+        }
+
+        internal fun createWithInternalSslAndClassLoader(
+                hostAndPort: NetworkHostAndPort,
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+                sslConfiguration: SSLConfiguration?,
+                classLoader: ClassLoader? = null
+        ): CordaRPCClient {
+            return CordaRPCClient(hostAndPort, configuration, null, sslConfiguration, classLoader, internalConnection = true)
         }
     }
 
@@ -146,24 +167,29 @@ class CordaRPCClient private constructor(
             effectiveSerializationEnv
         } catch (e: IllegalStateException) {
             try {
-                KryoClientSerializationScheme.initialiseSerialization(classLoader)
+                AMQPClientSerializationScheme.initialiseSerialization()
             } catch (e: IllegalStateException) {
                 // Race e.g. two of these constructed in parallel, ignore.
             }
         }
     }
 
-    private fun getRpcClient() : RPCClient<CordaRPCOps> {
-        return if (haAddressPool.isEmpty()) {
-            RPCClient(
-                    tcpTransport(ConnectionDirection.Outbound(), hostAndPort, config = sslConfiguration),
+    private fun getRpcClient(): RPCClient<CordaRPCOps> {
+        return when {
+        // Node->RPC broker, mutually authenticated SSL. This is used when connecting the integrated shell
+            internalConnection == true -> RPCClient(hostAndPort, nodeSslConfiguration!!)
+
+        // Client->RPC broker
+            haAddressPool.isEmpty() -> RPCClient(
+                    rpcConnectorTcpTransport(hostAndPort, config = sslConfiguration),
                     configuration,
-                    if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT)
-        } else {
-            RPCClient(haAddressPool,
-                    sslConfiguration,
-                    configuration,
-                    if (classLoader != null) KRYO_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else KRYO_RPC_CLIENT_CONTEXT)
+                    if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
+            else -> {
+                RPCClient(haAddressPool,
+                        sslConfiguration,
+                        configuration,
+                        if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
+            }
         }
     }
 

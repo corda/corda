@@ -29,6 +29,6 @@ class IRSDemoClientApi(hostAndPort: NetworkHostAndPort) {
     }
 
     private companion object {
-        private val apiRoot = "api/irs"
+        private const val apiRoot = "api/irs"
     }
 }

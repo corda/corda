@@ -26,8 +26,8 @@ private class TraderDemo {
         private val logger = contextLogger()
         val buyerName = DUMMY_BANK_A_NAME
         val sellerName = DUMMY_BANK_B_NAME
-        val sellerRpcPort = 10009
-        val bankRpcPort = 10012
+        const val sellerRpcPort = 10009
+        const val bankRpcPort = 10012
     }
 
     fun main(args: Array<String>) {

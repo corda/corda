@@ -144,9 +144,9 @@ class QuasarInstrumentationHookAgent {
 }
 
 object QuasarInstrumentationHook : ClassFileTransformer {
-    val classPool = ClassPool.getDefault()
+    val classPool = ClassPool.getDefault()!!
 
-    val hookClassName = "net.corda.quasarhook.QuasarInstrumentationHookKt"
+    const val hookClassName = "net.corda.quasarhook.QuasarInstrumentationHookKt"
 
     val instrumentMap = mapOf<String, (CtClass) -> Unit>(
             "co/paralleluniverse/fibers/Stack" to { clazz ->
@@ -198,10 +198,10 @@ object QuasarInstrumentationHook : ClassFileTransformer {
 
 data class Glob(val parts: List<String>, val isFull: Boolean) {
     override fun toString(): String {
-        if (isFull) {
-            return parts.joinToString(".")
+        return if (isFull) {
+            parts.joinToString(".")
         } else {
-            return "${parts.joinToString(".")}**"
+            "${parts.joinToString(".")}**"
         }
     }
 }
@@ -229,8 +229,8 @@ data class PackageTree(val branches: Map<String, PackageTree>) {
      * Truncate the tree below [other].
      */
     fun truncate(other: PackageTree): PackageTree {
-        if (other.isEmpty()) {
-            return empty
+        return if (other.isEmpty()) {
+            empty
         } else {
             val truncatedBranches = HashMap(branches)
             other.branches.forEach { (key, tree) ->
@@ -238,7 +238,7 @@ data class PackageTree(val branches: Map<String, PackageTree>) {
                     previousTree?.truncate(tree) ?: empty
                 }
             }
-            return PackageTree(truncatedBranches)
+            PackageTree(truncatedBranches)
         }
     }
 

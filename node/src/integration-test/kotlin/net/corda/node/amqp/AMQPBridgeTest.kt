@@ -35,14 +35,12 @@ class AMQPBridgeTest {
 
     private val log = loggerFor<AMQPBridgeTest>()
 
-    private val ALICE = TestIdentity(ALICE_NAME)
     private val BOB = TestIdentity(BOB_NAME)
 
     private val artemisPort = freePort()
     private val artemisPort2 = freePort()
     private val amqpPort = freePort()
     private val artemisAddress = NetworkHostAndPort("localhost", artemisPort)
-    private val artemisAddress2 = NetworkHostAndPort("localhost", artemisPort2)
     private val amqpAddress = NetworkHostAndPort("localhost", amqpPort)
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
@@ -177,7 +175,6 @@ class AMQPBridgeTest {
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
-            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
         }
         artemisConfig.configureWithDevSSLCertificate()
         val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", artemisPort), MAX_MESSAGE_SIZE)
@@ -195,7 +192,7 @@ class AMQPBridgeTest {
         return Triple(artemisServer, artemisClient, bridgeManager)
     }
 
-    private fun createAMQPServer(): AMQPServer {
+    private fun createAMQPServer(maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
         val serverConfig = rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(temporaryFolder.root.toPath() / "server").whenever(it).baseDirectory
             doReturn(BOB_NAME).whenever(it).myLegalName
@@ -212,7 +209,8 @@ class AMQPBridgeTest {
                 serverConfig.keyStorePassword,
                 serverConfig.loadTrustStore().internal,
                 crlCheckSoftFail = true,
-                trace = true
+                trace = true,
+                maxMessageSize = maxMessageSize
         )
     }
 }

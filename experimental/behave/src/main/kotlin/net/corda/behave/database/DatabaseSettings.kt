@@ -63,5 +63,4 @@ class DatabaseSettings {
 
     val template: DatabaseConfigurationTemplate
         get() = databaseConfigTemplate
-
 }

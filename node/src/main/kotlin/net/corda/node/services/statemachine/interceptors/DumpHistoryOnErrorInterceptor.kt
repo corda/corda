@@ -34,7 +34,8 @@ class DumpHistoryOnErrorInterceptor(val delegate: TransitionExecutor) : Transiti
             (record ?: ArrayList()).apply { add(transitionRecord) }
         }
 
-        if (nextState.checkpoint.errorState is ErrorState.Errored) {
+        // Just if we decide to propagate, and not if just on the way to the hospital.
+        if (nextState.checkpoint.errorState is ErrorState.Errored && nextState.checkpoint.errorState.propagating) {
             log.warn("Flow ${fiber.id} errored, dumping all transitions:\n${record!!.joinToString("\n")}")
             for (error in nextState.checkpoint.errorState.errors) {
                 log.warn("Flow ${fiber.id} error", error.exception)
@@ -47,5 +48,4 @@ class DumpHistoryOnErrorInterceptor(val delegate: TransitionExecutor) : Transiti
 
         return Pair(continuation, nextState)
     }
-
 }

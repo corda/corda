@@ -7,7 +7,7 @@ Attachments are ZIP/JAR files referenced from transaction by hash, but not inclu
 itself. These files are automatically requested from the node sending the transaction when needed and cached
 locally so they are not re-requested if encountered again. Attachments typically contain:
 
-* Contract executable code
+* Contract code
 * Metadata about a transaction, such as PDF version of an invoice being settled
 * Shared information to be permanently recorded on the ledger
 

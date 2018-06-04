@@ -29,7 +29,5 @@ class ResponseFilter : ContainerResponseFilter {
             headers.add("Access-Control-Allow-Headers", "Content-Type,Accept,Origin")
             headers.add("Access-Control-Allow-Methods", "POST,PUT,GET,OPTIONS")
         }
-
     }
-
 }

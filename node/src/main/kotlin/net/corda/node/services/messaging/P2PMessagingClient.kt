@@ -1,7 +1,6 @@
 package net.corda.node.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
-import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.ThreadBox
@@ -24,20 +23,23 @@ import net.corda.node.internal.artemis.ReactiveArtemisConsumer.Companion.multipl
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.PersistentMap
-import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import net.corda.nodeapi.internal.requireMessageSize
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
@@ -124,7 +126,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             )
         }
 
-        private class NodeClientMessage(override val topic: String, override val data: ByteSequence, override val uniqueMessageId: DeduplicationId, override val senderUUID: String?, override val additionalHeaders: Map<String, String>) : Message {
+        class NodeClientMessage(override val topic: String, override val data: ByteSequence, override val uniqueMessageId: DeduplicationId, override val senderUUID: String?, override val additionalHeaders: Map<String, String>) : Message {
             override val debugTimestamp: Instant = Instant.now()
             override fun toString() = "$topic#${String(data.bytes)}"
         }
@@ -148,9 +150,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         fun sendMessage(address: String, message: ClientMessage) = producer!!.send(address, message)
     }
 
-    private val messagesToRedeliver = database.transaction {
-        createMessageToRedeliver()
-    }
+    private val messagesToRedeliver = createMessageToRedeliver()
 
     private val scheduledMessageRedeliveries = ConcurrentHashMap<Long, ScheduledFuture<*>>()
 
@@ -158,9 +158,12 @@ class P2PMessagingClient(val config: NodeConfiguration,
     data class HandlerRegistration(val topic: String, val callback: Any) : MessageHandlerRegistration
 
     override val myAddress: SingleMessageRecipient = NodeAddress(myIdentity, advertisedAddress)
+    override val ourSenderUUID = UUID.randomUUID().toString()
+
     private val messageRedeliveryDelaySeconds = config.p2pMessagingRetry.messageRedeliveryDelay.seconds
     private val state = ThreadBox(InnerState())
     private val knownQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    private val delayStartQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
 
@@ -171,14 +174,14 @@ class P2PMessagingClient(val config: NodeConfiguration,
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_retry")
     class RetryMessage(
             @Id
-            @Column(name = "message_id", length = 64)
+            @Column(name = "message_id", length = 64, nullable = false)
             var key: Long = 0,
 
             @Lob
-            @Column
+            @Column(nullable = false)
             var message: ByteArray = EMPTY_BYTE_ARRAY,
             @Lob
-            @Column
+            @Column(nullable = false)
             var recipients: ByteArray = EMPTY_BYTE_ARRAY
     ) : Serializable
 
@@ -187,13 +190,13 @@ class P2PMessagingClient(val config: NodeConfiguration,
             started = true
             log.info("Connecting to message broker: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-            val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, config)
+            val tcpTransport = p2pConnectorTcpTransport(serverAddress, config)
             locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.
                 connectionTTL = -1
                 clientFailureCheckPeriod = -1
-                minLargeMessageSize = maxMessageSize
+                minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
             }
             val sessionFactory = locator!!.createSessionFactory()
@@ -201,7 +204,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
             // size of 1MB is acknowledged.
-            val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER, false, true, true, locator!!.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
+            val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, locator!!.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
 
             producerSession = createNewSession()
             bridgeSession = createNewSession()
@@ -226,7 +229,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                     producer!!,
                     versionInfo,
                     this@P2PMessagingClient,
-                    ourSenderUUID = deduplicator.ourSenderUUID
+                    ourSenderUUID = ourSenderUUID
             )
 
             registerBridgeControl(bridgeSession!!, inboxes.toList())
@@ -258,7 +261,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         networkChangeSubscription = networkMap.changed.subscribe { updateBridgesOnNetworkChange(it) }
     }
 
-     private fun sendBridgeControl(message: BridgeControl) {
+    private fun sendBridgeControl(message: BridgeControl) {
         state.locked {
             val controlPacket = message.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
             val artemisMessage = producerSession!!.createMessage(false)
@@ -320,7 +323,12 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
         val queues = session.addressQuery(SimpleString("$PEERS_PREFIX#")).queueNames
         for (queue in queues) {
-            createBridgeEntry(queue)
+            val queueQuery = session.queueQuery(queue)
+            if (!config.lazyBridgeStart || queueQuery.messageCount > 0) {
+                createBridgeEntry(queue)
+            } else {
+                delayStartQueues += queue.toString()
+            }
         }
         val startupMessage = BridgeControl.NodeToBridgeSnapshot(myIdentity.toStringShort(), inboxes, requiredBridges)
         sendBridgeControl(startupMessage)
@@ -366,6 +374,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private fun artemisToCordaMessage(message: ClientMessage): ReceivedMessage? {
         try {
+            requireMessageSize(message.bodySize, maxMessageSize)
             val topic = message.required(P2PMessagingHeaders.topicProperty) { getStringProperty(it) }
             val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
             val platformVersion = message.required(P2PMessagingHeaders.platformVersionProperty) { getIntProperty(it) }
@@ -409,7 +418,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 deliver(cordaMessage, artemisMessage)
             } else {
                 log.trace { "Discard duplicate message ${cordaMessage.uniqueMessageId} for ${cordaMessage.topic}" }
-                artemisMessage.individualAcknowledge()
+                messagingExecutor!!.acknowledge(artemisMessage)
             }
         }
     }
@@ -428,18 +437,23 @@ class P2PMessagingClient(val config: NodeConfiguration,
         }
     }
 
-    inner class MessageDeduplicationHandler(val artemisMessage: ClientMessage, val cordaMessage: ReceivedMessage) : DeduplicationHandler {
+    private inner class MessageDeduplicationHandler(val artemisMessage: ClientMessage, override val receivedMessage: ReceivedMessage) : DeduplicationHandler, ExternalEvent.ExternalMessageEvent {
+        override val externalCause: ExternalEvent
+            get() = this
+        override val deduplicationHandler: MessageDeduplicationHandler
+            get() = this
+
         override fun insideDatabaseTransaction() {
-            deduplicator.persistDeduplicationId(cordaMessage.uniqueMessageId)
+            deduplicator.persistDeduplicationId(receivedMessage.uniqueMessageId)
         }
 
         override fun afterDatabaseTransaction() {
-            deduplicator.signalMessageProcessFinish(cordaMessage.uniqueMessageId)
+            deduplicator.signalMessageProcessFinish(receivedMessage.uniqueMessageId)
             messagingExecutor!!.acknowledge(artemisMessage)
         }
 
         override fun toString(): String {
-            return "${javaClass.simpleName}(${cordaMessage.uniqueMessageId})"
+            return "${javaClass.simpleName}(${receivedMessage.uniqueMessageId})"
         }
     }
 
@@ -494,6 +508,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     @Suspendable
     override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
+        requireMessageSize(message.data.size, maxMessageSize)
         messagingExecutor!!.send(message, target)
         retryId?.let {
             database.transaction {
@@ -528,7 +543,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
         scheduledMessageRedeliveries[retryId] = nodeExecutor.schedule({
             sendWithRetry(retryCount + 1, message, target, retryId)
-        },messageRedeliveryDelaySeconds * Math.pow(backoffBase, retryCount.toDouble()).toLong(), TimeUnit.SECONDS)
+        }, messageRedeliveryDelaySeconds * Math.pow(backoffBase, retryCount.toDouble()).toLong(), TimeUnit.SECONDS)
     }
 
     override fun cancelRedelivery(retryId: Long) {
@@ -549,7 +564,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
         } else {
             // Otherwise we send the message to an internal queue for the target residing on our broker. It's then the
             // broker's job to route the message to the target's P2P queue.
-            val internalTargetQueue = (address as? ArtemisAddress)?.queueName ?: throw IllegalArgumentException("Not an Artemis address")
+            val internalTargetQueue = (address as? ArtemisAddress)?.queueName
+                    ?: throw IllegalArgumentException("Not an Artemis address")
             state.locked {
                 createQueueIfAbsent(internalTargetQueue, producerSession!!)
             }
@@ -559,19 +575,26 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     /** Attempts to create a durable queue on the broker which is bound to an address of the same name. */
     private fun createQueueIfAbsent(queueName: String, session: ClientSession) {
+        fun sendBridgeCreateMessage() {
+            val keyHash = queueName.substring(PEERS_PREFIX.length)
+            val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
+            for (node in peers) {
+                val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name })
+                val createBridgeMessage = BridgeControl.Create(myIdentity.toStringShort(), bridge)
+                sendBridgeControl(createBridgeMessage)
+            }
+        }
         if (!knownQueues.contains(queueName)) {
-            val queueQuery = session.queueQuery(SimpleString(queueName))
-            if (!queueQuery.isExists) {
-                log.info("Create fresh queue $queueName bound on same address")
-                session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
-                if (queueName.startsWith(PEERS_PREFIX)) {
-                    val keyHash = queueName.substring(PEERS_PREFIX.length)
-                    val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
-                    for (node in peers) {
-                        val bridge = BridgeEntry(queueName, node.addresses, node.legalIdentities.map { it.name })
-                        val createBridgeMessage = BridgeControl.Create(myIdentity.toStringShort(), bridge)
-                        sendBridgeControl(createBridgeMessage)
-                    }
+            if (delayStartQueues.contains(queueName)) {
+                log.info("Start bridge for previously empty queue $queueName")
+                sendBridgeCreateMessage()
+                delayStartQueues -= queueName
+            } else {
+                val queueQuery = session.queueQuery(SimpleString(queueName))
+                if (!queueQuery.isExists) {
+                    log.info("Create fresh queue $queueName bound on same address")
+                    session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+                    sendBridgeCreateMessage()
                 }
             }
             knownQueues += queueName
@@ -594,8 +617,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
         handlers.remove(registration.topic)
     }
 
-    override fun createMessage(topic: String, data: ByteArray, deduplicationId: DeduplicationId, additionalHeaders: Map<String, String>): Message {
-        return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId, deduplicator.ourSenderUUID, additionalHeaders)
+    override fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId, additionalHeaders: Map<String, String>): Message {
+        return NodeClientMessage(topic, OpaqueBytes(data), deduplicationId.deduplicationId, deduplicationId.senderUUID, additionalHeaders)
     }
 
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {

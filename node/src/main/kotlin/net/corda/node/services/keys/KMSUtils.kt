@@ -25,7 +25,6 @@ import java.time.Duration
  * @param subjectPublicKey public key of new identity.
  * @param issuer issuer to generate a key and certificate for. Must be an identity this node has the private key for.
  * @param issuerSigner a content signer for the issuer.
- * @param revocationEnabled whether to check revocation status of certificates in the certificate path.
  * @return X.509 certificate and path to the trust root.
  */
 fun freshCertificate(identityService: IdentityService,

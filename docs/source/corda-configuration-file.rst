@@ -125,6 +125,9 @@ absolute path to the node's base directory.
 
     :validating: Boolean to determine whether the notary is a validating or non-validating one.
 
+    :serviceLegalName: If the node is part of a distributed cluster, specify the legal name of the cluster. At runtime, Corda
+    checks whether this name matches the name of the certificate of the notary cluster.
+
     :raft: If part of a distributed Raft cluster specify this config object, with the following settings:
 
         :nodeAddress: The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
@@ -159,16 +162,28 @@ absolute path to the node's base directory.
 :devMode: This flag sets the node to run in development mode. On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks``
     does not exist, a developer keystore will be used if ``devMode`` is true. The node will exit if ``devMode`` is false
     and the keystore does not exist. ``devMode`` also turns on background checking of flow checkpoints to shake out any
-    bugs in the checkpointing process. Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda
-    or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate an existing schema
-    failing on node start if this schema is either not present or not compatible.
+    bugs in the checkpointing process.
+    Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda
+    or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate the existing schema,
+    failing on node start if the schema is either not present or not compatible.
+    If no value is specified in the node config file, the node will attempt to detect if it's running on a developer machine and set ``devMode=true`` in that case.
+    This value can be overridden from the command line using the ``--dev-mode`` option.
 
 :detectPublicIp: This flag toggles the auto IP detection behaviour, it is enabled by default. On startup the node will
     attempt to discover its externally visible IP address first by looking for any public addresses on its network
     interfaces, and then by sending an IP discovery request to the network map service. Set to ``false`` to disable.
 
 :compatibilityZoneURL: The root address of Corda compatibility zone network management services, it is used by the Corda node to register with the network and
-    obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information.
+    obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information. Cannot be
+    set at the same time as the ``networkServices`` option.
+
+:networkServices: If the Corda compatibility zone services, both network map and registration (doorman), are not running on the same endpoint
+    and thus have different URLs then this option should be used in place of the ``compatibilityZoneURL`` setting.
+
+    :doormanURL: Root address of the network registration service.
+    :networkMapURL: Root address of the network map service.
+
+.. note:: Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.
 
 :jvmArgs: An optional list of JVM args, as strings, which replace those inherited from the command line when launching via ``corda.jar``
     only. e.g. ``jvmArgs = [ "-Xmx220m", "-Xms220m", "-XX:+UseG1GC" ]``
@@ -183,7 +198,7 @@ absolute path to the node's base directory.
 
 :sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials and permissions as RPC subsystem. It has one required parameter.
 
-    :port: The port to start SSH server on
+    :port: The port to start SSH server on e.g. ``sshd { port = 2222 }``.
 
 :jmxMonitoringHttpPort: If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
     Default Jolokia access url is http://127.0.0.1:port/jolokia/
@@ -201,6 +216,13 @@ absolute path to the node's base directory.
             these keys. Private network UUID should be provided by network operator and lets you see nodes not visible on public network.
 
             .. note:: This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.
+
+:tlsCertCrlDistPoint: CRL distribution point (i.e. URL) for the TLS certificate. Default value is NULL, which indicates no CRL availability for the TLS certificate.
+                      Note: If crlCheckSoftFail is FALSE (meaning that there is the strict CRL checking mode) this value needs to be set.
+
+:tlsCertCrlIssuer: CRL issuer (given in the X500 name format) for the TLS certificate. Default value is NULL,
+                   which indicates that the issuer of the TLS certificate is also the issuer of the CRL.
+                   Note: If this parameter is set then the tlsCertCrlDistPoint needs to be set as well.
 
 Examples
 --------
@@ -226,7 +248,7 @@ Simple notary configuration file:
     notary : {
         validating : false
     }
-    devMode : true
+    devMode : false
     compatibilityZoneURL : "https://cz.corda.net"
 
 An example ``web-server.conf`` file is as follow:
@@ -244,6 +266,10 @@ An example ``web-server.conf`` file is as follow:
     }
     webAddress : "localhost:12347",
     rpcUsers : [{ username=user1, password=letmein, permissions=[ StartFlow.net.corda.protocols.CashProtocol ] }]
+
+Configuring a node where the Corda Comatability Zone's registration and Network Map services exist on different URLs
+
+.. literalinclude:: example-code/src/main/resources/example-node-with-networkservices.conf
 
 Fields
 ------
@@ -292,3 +318,13 @@ path to the node's base directory.
             ``foo.bar.FlowClass``, add the string ``StartFlow.foo.bar.FlowClass`` to the list. If the list
             contains the string ``ALL``, the user can start any flow via RPC. This value is intended for administrator
             users and for development.
+
+Fields Override
+---------------
+JVM options or environmental variables prefixed ``corda.`` can override ``node.conf`` fields.
+Provided system properties also can set value for absent fields in ``node.conf``.
+Example adding/overriding keyStore password when starting Corda node:
+
+.. sourcecode:: shell
+
+    java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar

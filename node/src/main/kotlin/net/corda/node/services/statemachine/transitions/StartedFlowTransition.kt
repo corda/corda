@@ -216,7 +216,7 @@ class StartedFlowTransition(
             }
             val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++)
             val initialMessage = createInitialSessionMessage(sessionState.initiatingSubFlow, sourceSessionId, null)
-            actions.add(Action.SendInitial(sessionState.party, initialMessage, deduplicationId))
+            actions.add(Action.SendInitial(sessionState.party, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
             newSessions[sourceSessionId] = SessionState.Initiating(
                     bufferedMessages = emptyList(),
                     rejectionError = null
@@ -250,10 +250,10 @@ class StartedFlowTransition(
             } else {
                 val sessionMessage = DataSessionMessage(message)
                 val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++)
-                val _exhaustive = when (existingSessionState) {
+                when (existingSessionState) {
                     is SessionState.Uninitiated -> {
                         val initialMessage = createInitialSessionMessage(existingSessionState.initiatingSubFlow, sourceSessionId, message)
-                        actions.add(Action.SendInitial(existingSessionState.party, initialMessage, deduplicationId))
+                        actions.add(Action.SendInitial(existingSessionState.party, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
                         newSessions[sourceSessionId] = SessionState.Initiating(
                                 bufferedMessages = emptyList(),
                                 rejectionError = null
@@ -270,7 +270,7 @@ class StartedFlowTransition(
                             is InitiatedSessionState.Live -> {
                                 val sinkSessionId = existingSessionState.initiatedState.peerSinkSessionId
                                 val existingMessage = ExistingSessionMessage(sinkSessionId, sessionMessage)
-                                actions.add(Action.SendExisting(existingSessionState.peerParty, existingMessage, deduplicationId))
+                                actions.add(Action.SendExisting(existingSessionState.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
                                 Unit
                             }
                             InitiatedSessionState.Ended -> {
@@ -317,7 +317,7 @@ class StartedFlowTransition(
             val sessionState = checkpoint.sessions[sessionId]!!
             when (sessionState) {
                 is SessionState.Initiated -> {
-                    if (sessionState.initiatedState is InitiatedSessionState.Ended) {
+                    if (sessionState.initiatedState === InitiatedSessionState.Ended) {
                         UnexpectedFlowEndException(
                                 "Tried to access ended session $sessionId",
                                 cause = null,
@@ -337,7 +337,7 @@ class StartedFlowTransition(
             val sessionState = checkpoint.sessions[sessionId]!!
             when (sessionState) {
                 is SessionState.Initiated -> {
-                    if (sessionState.initiatedState is InitiatedSessionState.Ended &&
+                    if (sessionState.initiatedState === InitiatedSessionState.Ended &&
                             sessionState.receivedMessages.isEmpty()) {
                         UnexpectedFlowEndException(
                                 "Tried to access ended session $sessionId with empty buffer",

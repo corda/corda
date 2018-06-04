@@ -22,9 +22,7 @@ object ProcessUtilities {
             workingDirectory: Path?,
             maximumHeapSize: String
     ): Process {
-        // FIXME: Instead of hacking our classpath, use the correct classpath for className.
-        val classpath = defaultClassPath.split(pathSeparator).filter { !(it / "log4j2-test.xml").exists() }.joinToString(pathSeparator)
-        return startJavaProcessImpl(className, arguments, classpath, jdwpPort, extraJvmArguments, workingDirectory, maximumHeapSize)
+        return startJavaProcessImpl(className, arguments, defaultClassPath, jdwpPort, extraJvmArguments, workingDirectory, maximumHeapSize)
     }
 
     fun startJavaProcessImpl(
@@ -47,7 +45,7 @@ object ProcessUtilities {
         }
         return ProcessBuilder(command).apply {
             inheritIO()
-            environment().put("CLASSPATH", classpath)
+            environment()["CLASSPATH"] = classpath
             if (workingDirectory != null) {
                 redirectError((workingDirectory / "$className.stderr.log").toFile())
                 redirectOutput((workingDirectory / "$className.stdout.log").toFile())

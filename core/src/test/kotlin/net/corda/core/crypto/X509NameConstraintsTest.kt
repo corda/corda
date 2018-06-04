@@ -126,6 +126,5 @@ class X509NameConstraintsTest {
             pathValidator.validate(certPath, params)
             true
         }
-
     }
 }

@@ -44,7 +44,7 @@ Transactions in Corda contain a number of elements:
    transactions to migrate the states across to a consistent notary node
    before being allowed to mutate any states)
 
-7. Optionally a timestamp that can used by the notary to bound the
+7. Optionally a time-window that can used by the notary to bound the
    period during which the proposed transaction can be committed to the
    ledger
 

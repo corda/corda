@@ -49,7 +49,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
         override fun newLatch(numberOfDowns: Int): Long {
             val id = random63BitValue()
             val latch = CountDownLatch(numberOfDowns)
-            latches.put(id, latch)
+            latches[id] = latch
             return id
         }
 

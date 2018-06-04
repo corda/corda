@@ -72,7 +72,7 @@ class Network : CordaView() {
     private val peerButtons = peerComponents.filtered { myIdentity.value !in it.nodeInfo.legalIdentitiesAndCerts.map { it.party } }.map { it.button }
     private val allComponents = FXCollections.observableArrayList(notaryComponents, peerComponents).concatenate().apply {
         addListener(ListChangeListener {
-            if(it.next()){
+            if (it.next()) {
                 it.removed.forEach {
                     mapPane.children.remove(it.label)
                 }

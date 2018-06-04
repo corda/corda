@@ -1,5 +1,6 @@
 package net.corda.node.services.api
 
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.statemachine.Checkpoint
@@ -19,6 +20,12 @@ interface CheckpointStorage {
      * @return whether the id matched a checkpoint that was removed.
      */
     fun removeCheckpoint(id: StateMachineRunId): Boolean
+
+    /**
+     * Load an existing checkpoint from the store.
+     * @return the checkpoint, still in serialized form, or null if not found.
+     */
+    fun getCheckpoint(id: StateMachineRunId): SerializedBytes<Checkpoint>?
 
     /**
      * Stream all checkpoints from the store. If this is backed by a database the stream will be valid until the

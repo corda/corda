@@ -315,9 +315,9 @@ public final class WhitelistClassLoader extends ClassLoader {
         try (final FileSystem zfs = FileSystems.newFileSystem(zipUri, env)) {
             final Path jarRoot = zfs.getRootDirectories().iterator().next();
 
-            for (final String newName : transformedClasses.keySet()) {
-                final byte[] newClassDef = transformedClasses.get(newName);
-                final String relativePathName = Utils.convertQualifiedClassNameToInternalForm(newName) + ".class";
+            for (final Map.Entry<String, byte[]> stringEntry : transformedClasses.entrySet()) {
+                final byte[] newClassDef = stringEntry.getValue();
+                final String relativePathName = Utils.convertQualifiedClassNameToInternalForm(stringEntry.getKey()) + ".class";
                 final Path outPath = jarRoot.resolve(relativePathName);
 
                 Files.createDirectories(outPath.getParent());

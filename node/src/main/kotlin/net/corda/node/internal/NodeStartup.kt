@@ -1,6 +1,8 @@
 package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.Emoji
@@ -8,6 +10,7 @@ import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.randomOrNull
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
 import net.corda.node.CmdLineOptions
 import net.corda.node.NodeArgsParser
@@ -55,7 +58,6 @@ open class NodeStartup(val args: Array<String>) {
             return false
         }
         val cmdlineOptions = NodeArgsParser().parseOrExit(*args)
-
         // We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
         enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
@@ -79,7 +81,11 @@ open class NodeStartup(val args: Array<String>) {
         drawBanner(versionInfo)
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
         val conf = try {
-            val conf0 = loadConfigFile(cmdlineOptions)
+            val (rawConfig, conf0Result) = loadConfigFile(cmdlineOptions)
+            if (cmdlineOptions.devMode) {
+                println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
+            }
+            val conf0 = conf0Result.getOrThrow()
             if (cmdlineOptions.bootstrapRaftCluster) {
                 if (conf0 is NodeConfigurationImpl) {
                     println("Bootstrapping raft cluster (starting up as seed node).")
@@ -122,6 +128,9 @@ open class NodeStartup(val args: Array<String>) {
         try {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: CheckpointIncompatibleException) {
+            logger.error(e.message)
+            return false
         } catch (e: Exception) {
             if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
                 logger.error("One of the ports required by the Corda node is already in use.")
@@ -140,12 +149,16 @@ open class NodeStartup(val args: Array<String>) {
         return true
     }
 
-    open protected fun preNetworkRegistration(conf: NodeConfiguration) = Unit
+    protected open fun preNetworkRegistration(conf: NodeConfiguration) = Unit
 
-    open protected fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
+    protected open fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo): Node = Node(conf, versionInfo)
 
-    open protected fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
+    protected open fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
         val node = createNode(conf, versionInfo)
+        if (cmdlineOptions.clearNetworkMapCache) {
+            node.clearNetworkMapCache()
+            return
+        }
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
             node.generateAndSaveNodeInfo()
@@ -178,7 +191,7 @@ open class NodeStartup(val args: Array<String>) {
         startedNode.internals.run()
     }
 
-    open protected fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
+    protected open fun logStartupInfo(versionInfo: VersionInfo, cmdlineOptions: CmdLineOptions, conf: NodeConfiguration) {
         logger.info("Vendor: ${versionInfo.vendor}")
         logger.info("Release: ${versionInfo.releaseVersion}")
         logger.info("Platform Version: ${versionInfo.platformVersion}")
@@ -200,8 +213,10 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Starting as node on ${conf.p2pAddress}")
     }
 
-    open protected fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
-        val compatibilityZoneURL = conf.compatibilityZoneURL!!
+    protected open fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
+        val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException(
+                "compatibilityZoneURL or networkServices must be configured!")
+
         println()
         println("******************************************************************")
         println("*                                                                *")
@@ -211,13 +226,13 @@ open class NodeStartup(val args: Array<String>) {
         NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
     }
 
-    open protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): NodeConfiguration = cmdlineOptions.loadConfig()
+    protected open fun loadConfigFile(cmdlineOptions: CmdLineOptions): Pair<Config, Try<NodeConfiguration>> = cmdlineOptions.loadConfig()
 
-    open protected fun banJavaSerialisation(conf: NodeConfiguration) {
+    protected open fun banJavaSerialisation(conf: NodeConfiguration) {
         SerialFilter.install(if (conf.notary?.bftSMaRt != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
     }
 
-    open protected fun getVersionInfo(): VersionInfo {
+    protected open fun getVersionInfo(): VersionInfo {
         // Manifest properties are only available if running from the corda jar
         fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
@@ -254,7 +269,7 @@ open class NodeStartup(val args: Array<String>) {
         pidFileRw.write(ourProcessID.toByteArray())
     }
 
-    open protected fun initLogging(cmdlineOptions: CmdLineOptions) {
+    protected open fun initLogging(cmdlineOptions: CmdLineOptions) {
         val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase(Locale.ENGLISH)
         System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
         if (cmdlineOptions.logToConsole) {

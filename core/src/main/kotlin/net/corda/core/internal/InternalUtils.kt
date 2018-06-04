@@ -10,23 +10,27 @@ import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.UntrustworthyData
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.slf4j.Logger
+import org.slf4j.MDC
 import rx.Observable
 import rx.Observer
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
-import java.io.*
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.lang.reflect.Field
+import java.lang.reflect.Member
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.net.HttpURLConnection
@@ -58,6 +62,17 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
 val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
+val Throwable.rootMessage: String? get() {
+    var message = this.message
+    var throwable = cause
+    while (throwable != null) {
+        if (throwable.message != null) {
+            message = throwable.message
+        }
+        throwable = throwable.cause
+    }
+    return message
+}
 
 infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)
 
@@ -267,9 +282,32 @@ fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaCl
  */
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
+/**
+ * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
+ * in its superclass [clazz].
+ */
+fun <T> Any.declaredField(clazz: Class<*>, name: String): DeclaredField<T> = DeclaredField(clazz, name, this)
+
 /** creates a new instance if not a Kotlin object */
 fun <T : Any> KClass<T>.objectOrNewInstance(): T {
     return this.objectInstance ?: this.createInstance()
+}
+
+/** Similar to [KClass.objectInstance] but also works on private objects. */
+val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
+    return try {
+        kotlin.objectInstance
+    } catch (_: Throwable) {
+        val field = try { getDeclaredField("INSTANCE") } catch (_: NoSuchFieldException) { null }
+        field?.let {
+            if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {
+                it.isAccessible = true
+                uncheckedCast(it.get(null))
+            } else {
+                null
+            }
+        }
+    }
 }
 
 /**
@@ -277,10 +315,43 @@ fun <T : Any> KClass<T>.objectOrNewInstance(): T {
  * visibility.
  */
 class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
-    private val javaField = clazz.getDeclaredField(name).apply { isAccessible = true }
+    private val javaField = findField(name, clazz)
     var value: T
-        get() = uncheckedCast<Any?, T>(javaField.get(receiver))
-        set(value) = javaField.set(receiver, value)
+        get() {
+            synchronized(this) {
+                return javaField.accessible { uncheckedCast<Any?, T>(get(receiver)) }
+            }
+        }
+        set(value) {
+            synchronized(this) {
+                javaField.accessible {
+                    set(receiver, value)
+                }
+            }
+        }
+    val name: String = javaField.name
+
+    private fun <RESULT> Field.accessible(action: Field.() -> RESULT): RESULT {
+        val accessible = isAccessible
+        isAccessible = true
+        try {
+            return action(this)
+        } finally {
+            isAccessible = accessible
+        }
+    }
+
+    @Throws(NoSuchFieldException::class)
+    private fun findField(fieldName: String, clazz: Class<*>?): Field {
+        if (clazz == null) {
+            throw NoSuchFieldException(fieldName)
+        }
+        return try {
+            return clazz.getDeclaredField(fieldName)
+        } catch (e: NoSuchFieldException) {
+            findField(fieldName, clazz.superclass)
+        }
+    }
 }
 
 /** The annotated object would have a more restricted visibility were it not needed in tests. */
@@ -312,6 +383,12 @@ val KClass<*>.packageName: String get() = java.`package`.name
 inline val Class<*>.isAbstractClass: Boolean get() = Modifier.isAbstract(modifiers)
 
 inline val Class<*>.isConcreteClass: Boolean get() = !isInterface && !isAbstractClass
+
+inline val Member.isPublic: Boolean get() = Modifier.isPublic(modifiers)
+
+inline val Member.isStatic: Boolean get() = Modifier.isStatic(modifiers)
+
+inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
 
 fun URI.toPath(): Path = Paths.get(this)
 
@@ -420,3 +497,21 @@ val PublicKey.hash: SecureHash get() = encoded.sha256()
  * Extension method for providing a sumBy method that processes and returns a Long
  */
 fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector(it) }.sum()
+
+/**
+ * Ensures each log entry from the current thread will contain id of the transaction in the MDC.
+ */
+internal fun SignedTransaction.pushToLoggingContext() {
+    MDC.put("tx_id", id.toString())
+}
+
+fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
+    val payloadData: T = try {
+        val serializer = SerializationDefaults.SERIALIZATION_FACTORY
+        serializer.deserialize(this, type, SerializationDefaults.P2P_CONTEXT)
+    } catch (ex: Exception) {
+        throw IllegalArgumentException("Payload invalid", ex)
+    }
+    return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) }
+            ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a ${payloadData.javaClass.name} ($payloadData)")
+}

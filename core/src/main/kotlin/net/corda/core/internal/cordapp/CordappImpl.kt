@@ -1,6 +1,7 @@
 package net.corda.core.internal.cordapp
 
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.toPath
 import net.corda.core.schemas.MappedSchema
@@ -13,13 +14,15 @@ data class CordappImpl(
         override val contractClassNames: List<String>,
         override val initiatedFlows: List<Class<out FlowLogic<*>>>,
         override val rpcFlows: List<Class<out FlowLogic<*>>>,
-        override val serviceFlows:  List<Class<out FlowLogic<*>>>,
+        override val serviceFlows: List<Class<out FlowLogic<*>>>,
         override val schedulableFlows: List<Class<out FlowLogic<*>>>,
         override val services: List<Class<out SerializeAsToken>>,
         override val serializationWhitelists: List<SerializationWhitelist>,
         override val serializationCustomSerializers: List<SerializationCustomSerializer<*, *>>,
         override val customSchemas: Set<MappedSchema>,
-        override val jarPath: URL) : Cordapp {
+        override val allFlows: List<Class<out FlowLogic<*>>>,
+        override val jarPath: URL,
+        override val jarHash: SecureHash.SHA256) : Cordapp {
     override val name: String = jarPath.toPath().fileName.toString().removeSuffix(".jar")
 
     /**

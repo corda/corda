@@ -43,7 +43,7 @@ class NetworkMapCacheTest {
     }
 
     @Test
-    fun `getNodeByLegalIdentity`() {
+    fun getNodeByLegalIdentity() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val alice = aliceNode.info.singleIdentity()
         val bobNode = mockNet.createPartyNode(BOB_NAME)
@@ -57,7 +57,7 @@ class NetworkMapCacheTest {
     }
 
     @Test
-    fun `getPeerByLegalName`() {
+    fun getPeerByLegalName() {
         val aliceNode = mockNet.createPartyNode(ALICE_NAME)
         val bobNode = mockNet.createPartyNode(BOB_NAME)
         val bobCache: NetworkMapCache = bobNode.services.networkMapCache

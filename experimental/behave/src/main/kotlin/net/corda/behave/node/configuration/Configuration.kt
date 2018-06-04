@@ -56,5 +56,4 @@ class Configuration(
         private val log = contextLogger()
         const val DEFAULT_PASSWORD = "S0meS3cretW0rd"
     }
-
 }

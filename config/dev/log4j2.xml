@@ -2,18 +2,32 @@
 <Configuration status="info">
 
     <Properties>
-        <Property name="log-path">logs</Property>
+        <Property name="log-path">${sys:log-path:-logs}</Property>
         <Property name="log-name">node-${hostName}</Property>
-        <Property name="archive">${sys:log-path}/archive</Property>
-        <Property name="consoleLogLevel">error</Property>
-        <Property name="defaultLogLevel">info</Property>
+        <Property name="archive">${log-path}/archive</Property>
+        <Property name="defaultLogLevel">${sys:defaultLogLevel:-info}</Property>
     </Properties>
 
     <ThresholdFilter level="trace"/>
 
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout pattern="%highlight{%level{length=1} %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n}{INFO=white,WARN=red,FATAL=bright red}" />
+            <PatternLayout>
+                <ScriptPatternSelector defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n}{INFO=white,WARN=red,FATAL=bright red}">
+                    <Script name="MDCSelector" language="javascript"><![CDATA[
+                    result = null;
+                    if (!logEvent.getContextData().size() == 0) {
+                        result = "WithMDC";
+                    } else {
+                        result = null;
+                    }
+                    result;
+               ]]>
+                    </Script>
+                    <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n}{INFO=white,WARN=red,FATAL=bright red}"/>
+                </ScriptPatternSelector>
+            </PatternLayout>
+            <ThresholdFilter level="trace"/>
         </Console>
 
         <!-- Required for printBasicInfo -->
@@ -21,10 +35,10 @@
             <PatternLayout pattern="%msg%n" />
         </Console>
 
-        <!-- Will generate up to 10 log files for a given day. During every rollover it will delete
+        <!-- Will generate up to 100 log files for a given day. During every rollover it will delete
              those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingFile name="RollingFile-Appender"
-                     fileName="${sys:log-path}/${log-name}.log"
+                     fileName="${log-path}/${log-name}.log"
                      filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
 
             <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2}.%method - %msg %X%n"/>
@@ -34,7 +48,7 @@
                 <SizeBasedTriggeringPolicy size="10MB"/>
             </Policies>
 
-            <DefaultRolloverStrategy min="1" max="10">
+            <DefaultRolloverStrategy min="1" max="100">
                 <Delete basePath="${archive}" maxDepth="1">
                     <IfFileName glob="${log-name}*.log.gz"/>
                     <IfLastModified age="60d">
@@ -49,15 +63,23 @@
     </Appenders>
 
     <Loggers>
-        <Root level="${sys:defaultLogLevel}">
-            <AppenderRef ref="Console-Appender" level="${sys:consoleLogLevel}"/>
-            <AppenderRef ref="RollingFile-Appender" />
+        <Root level="info">
+            <AppenderRef ref="Console-Appender"/>
         </Root>
+        <Logger name="net.corda" level="${defaultLogLevel}" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+            <AppenderRef ref="RollingFile-Appender" />
+        </Logger>
         <Logger name="BasicInfo" additivity="false">
             <AppenderRef ref="Console-Appender-Println"/>
             <AppenderRef ref="RollingFile-Appender" />
         </Logger>
+        <Logger name="org.hibernate.SQL" level="info" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+            <AppenderRef ref="RollingFile-Appender"/>
+        </Logger>
         <Logger name="org.apache.activemq.artemis.core.server" level="error" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
             <AppenderRef ref="RollingFile-Appender"/>
         </Logger>
         <Logger name="org.jolokia" additivity="true" level="warn">
