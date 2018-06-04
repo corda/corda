@@ -89,8 +89,9 @@ In the instances console click on "Connect" and follow the instructions to conne
 
 Now your AWS environment is configured you can switch back to the Testnet 
 web application and click on the copy to clipboard button to get a one
-time installation script. (If you have not already set up your account on Testnet then please visit https://testnet.corda.network and sign up.)
+time installation script. 
 
+.. note:: If you have not already set up your account on Testnet then please visit https://testnet.corda.network and sign up.
 
 .. image:: resources/testnet-platform.png
    :scale: 50 %
