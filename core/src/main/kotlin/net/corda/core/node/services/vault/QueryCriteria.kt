@@ -167,7 +167,8 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
      */
     data class AttachmentsQueryCriteria @JvmOverloads constructor (val uploaderCondition: ColumnPredicate<String>? = null,
                                                                    val filenameCondition: ColumnPredicate<String>? = null,
-                                                                   val uploadDateCondition: ColumnPredicate<Instant>? = null) : AttachmentQueryCriteria() {
+                                                                   val uploadDateCondition: ColumnPredicate<Instant>? = null,
+                                                                   val attId: ColumnPredicate<String>? = null) : AttachmentQueryCriteria() {
         override fun visit(parser: AttachmentsQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
         }

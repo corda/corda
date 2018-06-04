@@ -4,6 +4,7 @@ import net.corda.client.rpc.notUsed
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
+import net.corda.core.contracts.AttachmentMetadata
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -196,6 +197,10 @@ internal class CordaRPCOpsImpl(
 
     override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         return services.attachments.queryAttachments(query, sorting)
+    }
+
+    override fun queryAttachmentMetadata(attId: String): List<AttachmentMetadata> {
+        return services.attachments.getAttachmentMetadata(attId)
     }
 
     override fun currentNodeTime(): Instant = Instant.now(services.clock)

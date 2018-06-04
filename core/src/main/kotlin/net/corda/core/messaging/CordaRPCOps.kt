@@ -2,6 +2,7 @@ package net.corda.core.messaging
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.contracts.AttachmentMetadata
 import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -297,8 +298,11 @@ interface CordaRPCOps : RPCOps {
     @Throws(java.nio.file.FileAlreadyExistsException::class)
     fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash
 
-    /** Queries attachments metadata */
+    /** Queries attachments hash id */
     fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId>
+
+    /** Queries attachments metadata */
+    fun queryAttachmentMetadata(attId: String): List<AttachmentMetadata>
 
     /** Returns the node's current time. */
     fun currentNodeTime(): Instant

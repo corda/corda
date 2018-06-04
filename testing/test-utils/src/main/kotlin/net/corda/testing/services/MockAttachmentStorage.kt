@@ -1,6 +1,7 @@
 package net.corda.testing.services
 
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.AttachmentMetadata
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
@@ -26,6 +27,10 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     private val _files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
     /** A map of the currently stored files by their [SecureHash] */
     val files: Map<SecureHash, Pair<Attachment, ByteArray>> get() = _files
+
+    override fun getAttachmentMetadata(attachmentId: String): List<AttachmentMetadata> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 
     @Suppress("OverridingDeprecatedMember")
     override fun importAttachment(jar: InputStream): AttachmentId = importAttachment(jar, UNKNOWN_UPLOADER, null)

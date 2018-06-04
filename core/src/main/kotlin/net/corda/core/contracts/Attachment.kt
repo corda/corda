@@ -6,7 +6,10 @@ import net.corda.core.serialization.CordaSerializable
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.OutputStream
+import java.time.Instant
 import java.util.jar.JarInputStream
+import javax.persistence.Column
+import javax.persistence.Lob
 
 /**
  * An attachment is a ZIP (or an optionally signed JAR) that contains one or more files. Attachments are meant to
@@ -55,4 +58,16 @@ interface Attachment : NamedByHash {
      * Attachment size in bytes.
      */
     val size: Int
+
+}
+
+@CordaSerializable
+interface AttachmentMetadata {
+    val attId: String
+
+    val insertionDate: Instant
+
+    val uploader: String?
+
+    val filename: String?
 }
