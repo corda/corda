@@ -70,5 +70,6 @@ We look forward to seeing what you can do with Corda!
 
    release-process-index.rst
    corda-repo-layout.rst
+   deterministic-modules.rst
    building-the-docs.rst
    json.rst
