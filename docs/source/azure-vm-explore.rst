@@ -63,9 +63,9 @@ Click on "Public IP address" to open the settings panel
 .. image:: resources/azure-vm-settings.png
    :scale: 50 %
 
-Set the IP address to "Static" under Assignment. (Note this is so the
-IP address for your node does not change rapidly in the global network
-map)
+Set the IP address to "Static" under Assignment. 
+
+.. note:: This is so the IP address for your node does not change rapidly in the global network map.
 
 .. image:: resources/azure-set-static-ip.png
    :scale: 50 %
@@ -139,8 +139,8 @@ time installation script.
 You can generate as many Testnet identites as you like by refreshing
 this page to generate a new one time link. 
 	   
-In your terminal paste the command you just copied to install and run
-your unique Corda instance:
+In the terminal of your cloud instance paste the command you just copied to install and run
+your unique Corda node:
 
 .. code:: bash
 
