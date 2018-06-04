@@ -3,11 +3,7 @@ Deploying Corda to Corda Testnet from a Google Cloud Platform VM
 
 .. contents::
 
-https://testnet.corda.network enables a self service download
-link with a node preconfigured to join the Corda Testnet. This
-document will describe how to set up a virtual machine on the Google
-Cloud Platform (GCP) to deploy your pre-generated Corda node and automatically connnect
-to Testnet.
+This document explains how to deploy a Corda node to Google Cloud Platform that can connect directly to the Corda Testnet. A self service download link can be obtained from the https://testnet.corda.network. This document will describe how to set up a virtual machine on the Google Cloud Platform (GCP) to deploy your pre-configured Corda node and automatically connnect to Testnet.
 
 Pre-requisites
 --------------
@@ -56,7 +52,7 @@ Ubuntu 16.04 LTS.
 
 Allow full API access.
 
-Dont worry about firewall settings as we will configure those later. 
+Dont worry about firewall settings as you will configure those later. 
 
 .. image:: resources/gcpconsolevmsettings.png
    :scale: 50 %
@@ -75,7 +71,7 @@ cloud SSH terminal in a new window.
 .. image:: resources/gcpshell.png
    :scale: 50 %
 
-Now run the following to configure the firewall to allow Corda traffic
+Run the following to configure the firewall to allow Corda traffic
 
 .. code:: bash
 
@@ -84,7 +80,7 @@ Now run the following to configure the firewall to allow Corda traffic
     gcloud compute firewall-rules create webserver --allow tcp:8080
 
 
-Next we promote the ephemeral IP address associated with this
+Promote the ephemeral IP address associated with this
 instance to a static IP address.
 
 First check the region and select the one you are using from the list:
@@ -99,7 +95,7 @@ Find your external IP:
 
     gcloud compute addresses list
 
-Then run this command with the ephemeral IP address as the argument to
+Run this command with the ephemeral IP address as the argument to
 the --addresses flag and the region:
 
 .. code:: bash
@@ -110,8 +106,9 @@ the --addresses flag and the region:
 
 Now your GCP environment is configured you can switch to the Testnet 
 web application and click on the copy to clipboard button to get a one
-time installation script:
+time installation script.
 
+.. note:: If you have not already set up your account on Testnet then please visit https://testnet.corda.network and sign up.
 
 .. image:: resources/testnet-platform.png
    :scale: 50 %
@@ -119,12 +116,14 @@ time installation script:
 You can generate as many Testnet identites as you like by refreshing
 this page to generate a new one time link. 
 	   
-In your terminal paste the command you just copied to install and run
+In the terminal of your cloud instance paste the command you just copied to install and run
 your unique Corda instance:
 
 .. code:: bash
 
-    sudo ONE_TIME_DOWNLOAD_KEY=cd6913a4-5390-4956-a544-94148a8c70a7 bash -c "$(curl -L https://testnet.corda.network/api/user/node/install.sh)"
+    sudo ONE_TIME_DOWNLOAD_KEY=YOUR_UNIQUE_DOWNLOAD_KEY_HERE bash -c "$(curl -L https://testnet.corda.network/api/user/node/install.sh)"
+
+.. warning:: This command will execute the install script as ROOT on your cloud instance. You may wish to examine the script prior to executing it on your machine.
 
 You can now navigate to the external web address of the instance and
 see any cordapps running on port 8080 (if you have any installed). 
