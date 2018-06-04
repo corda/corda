@@ -301,10 +301,12 @@ class ClassTransformer private constructor (
         protected abstract fun writeStubCode()
 
         final override fun visitCode() {
-            mv.visitCode()
-            writeStubCode()
-            mv.visitMaxs(-1, -1)  // Trigger computation of the max values.
-            mv.visitEnd()
+            with (mv) {
+                visitCode()
+                writeStubCode()
+                visitMaxs(-1, -1)  // Trigger computation of the max values.
+                visitEnd()
+            }
 
             // Prevent this visitor from writing any more byte-code.
             mv = null
@@ -316,14 +318,16 @@ class ClassTransformer private constructor (
      */
     private inner class ThrowingStubMethodAdapter(mv: MethodVisitor) : StubbingMethodAdapter(mv) {
         override fun writeStubCode() {
-            val throwEx = Label()
-            mv.visitLabel(throwEx)
-            mv.visitLineNumber(0, throwEx)
-            mv.visitTypeInsn(NEW, "java/lang/UnsupportedOperationException")
-            mv.visitInsn(DUP)
-            mv.visitLdcInsn("Method has been deleted")
-            mv.visitMethodInsn(INVOKESPECIAL, "java/lang/UnsupportedOperationException", "<init>", "(Ljava/lang/String;)V", false)
-            mv.visitInsn(ATHROW)
+            with (mv) {
+                val throwEx = Label()
+                visitLabel(throwEx)
+                visitLineNumber(0, throwEx)
+                visitTypeInsn(NEW, "java/lang/UnsupportedOperationException")
+                visitInsn(DUP)
+                visitLdcInsn("Method has been deleted")
+                visitMethodInsn(INVOKESPECIAL, "java/lang/UnsupportedOperationException", "<init>", "(Ljava/lang/String;)V", false)
+                visitInsn(ATHROW)
+            }
         }
     }
 

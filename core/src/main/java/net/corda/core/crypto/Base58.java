@@ -1,7 +1,6 @@
 package net.corda.core.crypto;
 
 import net.corda.core.Deterministic;
-
 import java.math.*;
 import java.util.*;
 
