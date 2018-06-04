@@ -122,7 +122,7 @@ class NodeAttachmentService(
 
             @ElementCollection
             @Column(name = "contract_class_name", nullable = false)
-            @CollectionTable(name = "node_attchments_contracts", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
+            @CollectionTable(name = "${NODE_DATABASE_PREFIX}attachments_contracts", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
                     foreignKey = ForeignKey(name = "FK__ctr_class__attachments"))
             var contractClassNames: List<ContractClassName>? = null
     ) : Serializable
