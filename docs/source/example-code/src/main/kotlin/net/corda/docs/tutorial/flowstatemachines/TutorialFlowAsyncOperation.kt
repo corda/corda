@@ -30,7 +30,7 @@ class SummingOperationThrowing(val a: Int, val b: Int) : FlowAsyncOperation<Int>
 class ExampleSummingFlow : FlowLogic<Int>() {
     @Suspendable
     override fun call(): Int {
-        val answer = executeAsync(SummingOperationThrowing(1, 2))
+        val answer = executeAsync(SummingOperation(1, 2))
         return answer // hopefully 3
     }
 }
