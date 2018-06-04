@@ -184,7 +184,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     .asSequence()
                     // This is to only scan classes from test folders.
                     .filter { url ->
-                        listOf("main", "production/classes").none { url.toString().contains("$it/$resource") } || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { scanPackage.startsWith(it) } }
+                        listOf("main", "production/classes").none { url.toString().contains("$it/$resource") } || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { scanPackage.startsWith(it) }
+                    }
                     .map { url ->
                         if (url.protocol == "jar") {
                             // When running tests from gradle this may be a corda module jar, so restrict to scanPackage:
@@ -249,19 +250,20 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             val name = url.toPath().fileName.toString().removeSuffix(".jar")
             val info = url.openStream().let(::JarInputStream).use { it.manifest }.toCordappInfo(name)
             val scanResult = scanCordapp(it)
-            CordappImpl(findContractClassNames(scanResult),
-                    findInitiatedFlows(scanResult),
-                    findRPCFlows(scanResult),
-                    findServiceFlows(scanResult),
-                    findSchedulableFlows(scanResult),
-                    findServices(scanResult),
-                    findPlugins(it),
-                    findSerializers(scanResult),
-                    findCustomSchemas(scanResult),
-                    findAllFlows(scanResult),
-                    it.url,
-                    info,
-                    getJarHash(it.url)
+            CordappImpl(contractClassNames = findContractClassNames(scanResult),
+                    initiatedFlows = findInitiatedFlows(scanResult),
+                    rpcFlows = findRPCFlows(scanResult),
+                    serviceFlows = findServiceFlows(scanResult),
+                    schedulableFlows = findSchedulableFlows(scanResult),
+                    services = findServices(scanResult),
+                    serializationWhitelists = findPlugins(it),
+                    serializationCustomSerializers = findSerializers(scanResult),
+                    customSchemas = findCustomSchemas(scanResult),
+                    allFlows = findAllFlows(scanResult),
+                    jarPath = it.url,
+                    info = info,
+                    jarHash = getJarHash(it.url),
+                    name = name
             )
         }
     }
