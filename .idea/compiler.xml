@@ -7,6 +7,8 @@
       <module name="attachment-demo_integrationTest" target="1.8" />
       <module name="attachment-demo_main" target="1.8" />
       <module name="attachment-demo_test" target="1.8" />
+      <module name="avalanche_main" target="1.8" />
+      <module name="avalanche_test" target="1.8" />
       <module name="bank-of-corda-demo_integrationTest" target="1.8" />
       <module name="bank-of-corda-demo_main" target="1.8" />
       <module name="bank-of-corda-demo_test" target="1.8" />
