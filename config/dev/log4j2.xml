@@ -5,6 +5,7 @@
         <Property name="log-path">${sys:log-path:-logs}</Property>
         <Property name="log-name">node-${hostName}</Property>
         <Property name="archive">${log-path}/archive</Property>
+        <Property name="consoleLogLevel">${sys:consoleLogLevel:-error}</Property>
         <Property name="defaultLogLevel">${sys:defaultLogLevel:-info}</Property>
     </Properties>
 
@@ -63,13 +64,10 @@
     </Appenders>
 
     <Loggers>
-        <Root level="info">
-            <AppenderRef ref="Console-Appender"/>
-        </Root>
-        <Logger name="net.corda" level="${defaultLogLevel}" additivity="false">
-            <AppenderRef ref="Console-Appender"/>
+        <Root level="${defaultLogLevel}">
+            <AppenderRef ref="Console-Appender" level="${consoleLogLevel}"/>
             <AppenderRef ref="RollingFile-Appender" />
-        </Logger>
+        </Root>
         <Logger name="BasicInfo" additivity="false">
             <AppenderRef ref="Console-Appender-Println"/>
             <AppenderRef ref="RollingFile-Appender" />
