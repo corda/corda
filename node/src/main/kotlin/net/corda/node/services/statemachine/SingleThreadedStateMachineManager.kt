@@ -8,25 +8,17 @@ import co.paralleluniverse.strands.channels.Channels
 import com.codahale.metrics.Gauge
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.bufferUntilSubscribed
-import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -39,11 +31,6 @@ import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
 import net.corda.node.services.statemachine.interceptors.*
-import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
-import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
-import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
-import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
-import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -55,11 +42,11 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.SecureRandom
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 import kotlin.concurrent.withLock
 import kotlin.streams.toList
 
@@ -87,14 +74,17 @@ class SingleThreadedStateMachineManager(
     // property.
     private class InnerState {
         val changesPublisher = PublishSubject.create<StateMachineManager.Change>()!!
-        // True if we're shutting down, so don't resume anything.
+        /** True if we're shutting down, so don't resume anything. */
         var stopping = false
         val flows = HashMap<StateMachineRunId, Flow>()
         val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
+        /** Flows scheduled to be retried if not finished until a specified timeout. */
+        val flowsToRetry = HashMap<StateMachineRunId, ScheduledFuture<*>>()
     }
 
     private val mutex = ThreadBox(InnerState())
     private val scheduler = FiberExecutorScheduler("Same thread scheduler", executor)
+    private val retryScheduler = Executors.newScheduledThreadPool(1)
     // How many Fibers are running and not suspended.  If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
     // Monitoring support.
@@ -209,8 +199,8 @@ class SingleThreadedStateMachineManager(
     }
 
     override fun killFlow(id: StateMachineRunId): Boolean {
-
         return mutex.locked {
+            cancelRetryIfScheduled(id)
             val flow = flows.remove(id)
             if (flow != null) {
                 logger.debug("Killing flow known to physical node.")
@@ -262,6 +252,7 @@ class SingleThreadedStateMachineManager(
 
     override fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState) {
         mutex.locked {
+            cancelRetryIfScheduled(flowId)
             val flow = flows.remove(flowId)
             if (flow != null) {
                 decrementLiveFibers()
@@ -426,7 +417,7 @@ class SingleThreadedStateMachineManager(
                                 "unknown session $recipientId, discarding..."
                     }
                 } else {
-                    throw IllegalArgumentException("Cannot find flow corresponding to session ID $recipientId")
+                    logger.warn("Cannot find flow corresponding to session ID $recipientId.")
                 }
             } else {
                 val flow = mutex.locked { flows[flowId] } ?: throw IllegalStateException("Cannot find fiber corresponding to ID $flowId")
@@ -556,6 +547,38 @@ class SingleThreadedStateMachineManager(
         return startedFuture.map { flowStateMachineImpl as FlowStateMachine<A> }
     }
 
+    override fun scheduleFlowRetry(flowId: StateMachineRunId) {
+        mutex.locked { scheduleRetry(flowId) }
+    }
+
+    override fun cancelFlowRetry(flowId: StateMachineRunId) {
+        mutex.locked { cancelRetryIfScheduled(flowId) }
+    }
+
+    private fun InnerState.scheduleRetry(flowId: StateMachineRunId) {
+        mutex.locked {
+            val flow = flows[flowId]
+            if (flow != null) {
+                with(serviceHub.configuration.p2pMessagingRetry) {
+                    val retryFuture = retryScheduler.schedule({
+                        val event = Event.Error(FlowRetryException(maxRetryCount))
+                        flow.fiber.scheduleEvent(event)
+                    }, messageRedeliveryDelay.seconds, TimeUnit.SECONDS)
+                    flowsToRetry[flowId] = retryFuture
+                }
+            } else {
+                logger.warn("Unable to schedule retry for flow $flowId – flow not found.")
+            }
+        }
+    }
+
+    private fun InnerState.cancelRetryIfScheduled(flowId: StateMachineRunId) {
+        flowsToRetry[flowId]?.let {
+            if (!it.isDone) it.cancel(true)
+            flowsToRetry.remove(flowId)
+        }
+    }
+
     private fun deserializeCheckpoint(serializedCheckpoint: SerializedBytes<Checkpoint>): Checkpoint? {
         return try {
             serializedCheckpoint.deserialize(context = checkpointSerializationContext!!)
@@ -663,6 +686,8 @@ class SingleThreadedStateMachineManager(
                 } else {
                     oldFlow.resultFuture.captureLater(flow.resultFuture)
                 }
+                val flowLogic = flow.fiber.logic
+                if (flowLogic is RetryableFlow) scheduleRetry(id)
                 flow.fiber.scheduleEvent(Event.DoRemainingWork)
                 when (checkpoint.flowState) {
                     is FlowState.Unstarted -> {

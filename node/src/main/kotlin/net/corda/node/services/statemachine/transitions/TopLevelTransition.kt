@@ -2,23 +2,9 @@ package net.corda.node.services.statemachine.transitions
 
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.RetryableFlow
 import net.corda.core.utilities.Try
-import net.corda.node.services.statemachine.Action
-import net.corda.node.services.statemachine.Checkpoint
-import net.corda.node.services.statemachine.DeduplicationId
-import net.corda.node.services.statemachine.EndSessionMessage
-import net.corda.node.services.statemachine.ErrorState
-import net.corda.node.services.statemachine.Event
-import net.corda.node.services.statemachine.ExistingSessionMessage
-import net.corda.node.services.statemachine.FlowRemovalReason
-import net.corda.node.services.statemachine.FlowSessionImpl
-import net.corda.node.services.statemachine.FlowState
-import net.corda.node.services.statemachine.InitiatedSessionState
-import net.corda.node.services.statemachine.SenderDeduplicationId
-import net.corda.node.services.statemachine.SessionId
-import net.corda.node.services.statemachine.SessionState
-import net.corda.node.services.statemachine.StateMachineState
-import net.corda.node.services.statemachine.SubFlow
+import net.corda.node.services.statemachine.*
 
 /**
  * This is the top level event-handling transition function capable of handling any [Event].
@@ -115,6 +101,9 @@ class TopLevelTransition(
                                     subFlowStack = currentState.checkpoint.subFlowStack + subFlow.value
                             )
                     )
+                    if (RetryableFlow::class.java.isAssignableFrom(event.subFlowClass)) {
+                        actions.add(Action.ScheduleFlowRetry(currentState.flowLogic.runId))
+                    }
                 }
                 is Try.Failure -> {
                     freshErrorTransition(subFlow.exception)
@@ -130,14 +119,24 @@ class TopLevelTransition(
             if (checkpoint.subFlowStack.isEmpty()) {
                 freshErrorTransition(UnexpectedEventInState())
             } else {
+                val lastSubFlowClass = checkpoint.subFlowStack.last().flowClass
+                val isLastSubFlowRetryable = RetryableFlow::class.java.isAssignableFrom(lastSubFlowClass)
+                val newSubFlowStack = checkpoint.subFlowStack.dropLast(1)
                 currentState = currentState.copy(
                         checkpoint = checkpoint.copy(
-                                subFlowStack = checkpoint.subFlowStack.subList(0, checkpoint.subFlowStack.size - 1).toList()
+                                subFlowStack = newSubFlowStack
                         )
                 )
+                if (isLastSubFlowRetryable && !containsRetryableFlows(currentState.checkpoint.subFlowStack)) {
+                    actions.add(Action.CancelFlowRetry(currentState.flowLogic.runId))
+                }
             }
             FlowContinuation.ProcessEvents
         }
+    }
+
+    private fun containsRetryableFlows(subFlowStack: List<SubFlow>): Boolean {
+        return subFlowStack.any { RetryableFlow::class.java.isAssignableFrom(it.flowClass) }
     }
 
     private fun suspendTransition(event: Event.Suspend): TransitionResult {
@@ -146,19 +145,30 @@ class TopLevelTransition(
                     flowState = FlowState.Started(event.ioRequest, event.fiber),
                     numberOfSuspends = currentState.checkpoint.numberOfSuspends + 1
             )
-            actions.addAll(arrayOf(
-                    Action.PersistCheckpoint(context.id, newCheckpoint),
-                    Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
-                    Action.CommitTransaction,
-                    Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
-                    Action.ScheduleEvent(Event.DoRemainingWork)
-            ))
-            currentState = currentState.copy(
-                    checkpoint = newCheckpoint,
-                    pendingDeduplicationHandlers = emptyList(),
-                    isFlowResumed = false,
-                    isAnyCheckpointPersisted = true
-            )
+            if (event.maySkipCheckpoint) {
+                actions.addAll(arrayOf(
+                        Action.CommitTransaction,
+                        Action.ScheduleEvent(Event.DoRemainingWork)
+                ))
+                currentState = currentState.copy(
+                        checkpoint = newCheckpoint,
+                        isFlowResumed = false
+                )
+            } else {
+                actions.addAll(arrayOf(
+                        Action.PersistCheckpoint(context.id, newCheckpoint),
+                        Action.PersistDeduplicationFacts(currentState.pendingDeduplicationHandlers),
+                        Action.CommitTransaction,
+                        Action.AcknowledgeMessages(currentState.pendingDeduplicationHandlers),
+                        Action.ScheduleEvent(Event.DoRemainingWork)
+                ))
+                currentState = currentState.copy(
+                        checkpoint = newCheckpoint,
+                        pendingDeduplicationHandlers = emptyList(),
+                        isFlowResumed = false,
+                        isAnyCheckpointPersisted = true
+                )
+            }
             FlowContinuation.ProcessEvents
         }
     }

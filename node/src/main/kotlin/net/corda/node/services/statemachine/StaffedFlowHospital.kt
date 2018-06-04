@@ -1,6 +1,8 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.FlowRetryException
+import net.corda.core.internal.RetryableFlow
 import net.corda.core.utilities.loggerFor
 import java.sql.SQLException
 import java.time.Instant
@@ -12,11 +14,11 @@ import java.util.concurrent.ConcurrentHashMap
 object StaffedFlowHospital : FlowHospital {
     private val log = loggerFor<StaffedFlowHospital>()
 
-    private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist)
+    private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist, DoctorRetry)
 
     private val patients = ConcurrentHashMap<StateMachineRunId, MedicalHistory>()
 
-    val numberOfPatients = patients.size
+    val numberOfPatients get() = patients.size
 
     class MedicalHistory {
         val records: MutableList<Record> = mutableListOf()
@@ -122,6 +124,21 @@ object StaffedFlowHospital : FlowHospital {
 
         private fun mentionsConstraintViolation(exception: Throwable?): Boolean {
             return exception != null && (exception is org.hibernate.exception.ConstraintViolationException || mentionsConstraintViolation(exception.cause))
+        }
+    }
+
+    /**
+     * Restarts [RetryableFlow], keeping track of the number of retries and making sure it does not
+     * exceed the limit specified by the flow.
+     */
+    object DoctorRetry : Staff {
+        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: MedicalHistory): Diagnosis {
+            if (newError is FlowRetryException) {
+                flowFiber.snapshot().checkpoint.subFlowStack.firstOrNull { RetryableFlow::class.java.isAssignableFrom(it.flowClass) }
+                        ?: throw IllegalArgumentException("Unable to retry a non-retryable flow")
+                if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this)) return Diagnosis.DISCHARGE
+            }
+            return Diagnosis.NOT_MY_SPECIALTY
         }
     }
 }

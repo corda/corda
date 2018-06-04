@@ -135,6 +135,19 @@ sealed class Action {
      * Retry a flow from the last checkpoint, or if there is no checkpoint, restart the flow with the same invocation details.
      */
     data class RetryFlowFromSafePoint(val currentState: StateMachineState) : Action()
+
+    /**
+     * Set a timer for retrying flow [flowId] if it does not complete in time.
+     *
+     * Note that this only works with [RetryableFlow].
+     */
+    data class ScheduleFlowRetry(val flowId: StateMachineRunId) : Action()
+
+    /**
+     * Cancel the retry timer for flow [flowId]. This must be called when a retryable flow completes to prevent
+     * unnecessary additional invocations.
+     */
+    data class CancelFlowRetry(val flowId: StateMachineRunId) : Action()
 }
 
 /**
