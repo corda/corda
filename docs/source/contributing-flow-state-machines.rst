@@ -33,6 +33,11 @@ implement ``FlowAsyncOperation``:
         :start-after: DOCSTART SummingOperation
         :end-before: DOCEND SummingOperation
 
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/flowstatemachines/SummingOperation.java
+        :language: java
+        :start-after: DOCSTART SummingOperation
+        :end-before: DOCEND SummingOperation
+
 As we can see the constructor of ``SummingOperation`` takes the two numbers, and the ``execute`` function simply returns
 a future that is immediately completed by the result of summing the numbers. Note how we don't use ``@Suspendable`` on
 ``execute``, this is because we'll never suspend inside this function, the suspension will happen before we're calling
@@ -62,6 +67,11 @@ flow:
         :start-after: DOCSTART ExampleSummingFlow
         :end-before: DOCEND ExampleSummingFlow
 
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/flowstatemachines/ExampleSummingFlow.java
+        :language: java
+        :start-after: DOCSTART ExampleSummingFlow
+        :end-before: DOCEND ExampleSummingFlow
+
 That's it! Obviously this is a mostly useless example, but this is the basic code structure one could extend for heavier
 computations/other IO. For example the function could call into a ``CordaService`` or something similar. One thing to
 note is that the operation executed in ``execute`` must be redoable(= "idempotent") in case the node fails before the
@@ -80,6 +90,11 @@ flow with a full node.
         :start-after: DOCSTART summingWorks
         :end-before: DOCEND summingWorks
 
+    .. literalinclude:: ../../docs/source/example-code/src/integration-test/java/net/corda/docs/java/TutorialFlowAsyncOperationTest.java
+        :language: java
+        :start-after: DOCSTART summingWorks
+        :end-before: DOCEND summingWorks
+
 The above will spin up a node and run our example flow.
 
 How to debug issues
@@ -91,6 +106,11 @@ Let's assume we made a mistake in our summing operation:
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/flowstatemachines/TutorialFlowAsyncOperation.kt
         :language: kotlin
+        :start-after: DOCSTART SummingOperationThrowing
+        :end-before: DOCEND SummingOperationThrowing
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/tutorial/flowstatemachines/SummingOperationThrowing.java
+        :language: java
         :start-after: DOCSTART SummingOperationThrowing
         :end-before: DOCEND SummingOperationThrowing
 
