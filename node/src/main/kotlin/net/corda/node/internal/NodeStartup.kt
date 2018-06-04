@@ -144,6 +144,9 @@ open class NodeStartup(val args: Array<String>) {
         } catch (e: DatabaseMigrationException) {
             logger.error(e.message)
             return false
+        } catch (e: CheckpointIncompatibleException) {
+            logger.error(e.message)
+            return false
         } catch (e: Exception) {
             if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
                 logger.error("One of the ports required by the Corda node is already in use.")

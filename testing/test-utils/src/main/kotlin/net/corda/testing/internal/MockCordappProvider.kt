@@ -12,6 +12,7 @@ package net.corda.testing.internal
 
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.TEST_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.node.services.AttachmentId
@@ -43,7 +44,9 @@ class MockCordappProvider(
                 serializationWhitelists = emptyList(),
                 serializationCustomSerializers = emptyList(),
                 customSchemas = emptySet(),
-                jarPath = Paths.get("").toUri().toURL())
+                jarPath = Paths.get("").toUri().toURL(),
+                allFlows = emptyList(),
+                jarHash = SecureHash.allOnesHash)
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) }) {
             cordappRegistry.add(Pair(cordapp, findOrImportAttachment(listOf(contractClassName), contractClassName.toByteArray(), attachments)))
         }

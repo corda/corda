@@ -18,6 +18,7 @@ import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.channels.Channel
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -55,6 +56,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
          * Return the current [FlowStateMachineImpl] or null if executing outside of one.
          */
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
+
+        // If no CorDapp found then it is a Core flow.
+        internal fun createSubFlowVersion(cordapp: Cordapp?, platformVersion: Int): SubFlowVersion {
+            return cordapp?.let { SubFlowVersion.CorDappFlow(platformVersion, it.name, it.jarHash) }
+                    ?: SubFlowVersion.CoreFlow(platformVersion)
+        }
 
         private val log: Logger = LoggerFactory.getLogger("net.corda.flow")
 
@@ -109,7 +116,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if (value) field = value else throw IllegalArgumentException("Can only set to true")
         }
 
-    /**
+     /**
      * Processes an event by creating the associated transition and executing it using the given executor.
      * Try to avoid using this directly, instead use [processEventsUntilFlowIsResumed] or [processEventImmediately]
      * instead.
@@ -247,7 +254,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     override fun <R> subFlow(subFlow: FlowLogic<R>): R {
         processEventImmediately(
-                Event.EnterSubFlow(subFlow.javaClass),
+                Event.EnterSubFlow(subFlow.javaClass,
+                        createSubFlowVersion(
+                               serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion)),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         )
