@@ -3,10 +3,10 @@ Deploying Corda to Corda Testnet from an AWS Cloud Platform VM
 
 .. contents::
 
-https://testnet.corda.network enables a self service download
-link with a node preconfigured to join the Corda Testnet. This
+This document explains how to deploy a Corda node to AWS that can connect directly to the Corda Testnet.
+A self service download link can be obtained from the [https://testnet.corda.network](testnet.corda.network). This
 document will describe how to set up a virtual machine on the AWS
-Cloud Platform to deploy your pre-generated Corda node and automatically connnect
+Cloud Platform to deploy your pre-configured Corda node and automatically connnect
 to Testnet.
 
 Pre-requisites
@@ -26,7 +26,7 @@ Click on Launch a virtual machine with EC2.
 
 .. image:: resources/aws-launch.png
 
-In the quick start wizard scroll down and select "Ubuntu Server 16.04 LTS" as the Amazon Machine Image (AMI).
+In the quick start wizard scroll down and select the most recent Ubuntu machine image as the Amazon Machine Image (AMI).
 
 .. image:: resources/aws_select_ubuntu.png
 
@@ -34,13 +34,13 @@ Select the instance type (for example t2.xlarge).
 
 .. image:: resources/aws-instance-type.png
 
-Lets configure a couple of other settings before we review and launch
+Configure a couple of other settings before we review and launch
 
 Under the storage tab (Step 4) increase the storage to 40GB:
 
 .. image:: resources/aws-storage.png
 
-Next we consifure the security group (Step 6) to open the firewall ports which Corda uses.
+Configure the security group (Step 6) to open the firewall ports which Corda uses.
 
 .. image:: resources/aws-firewall.png
 
