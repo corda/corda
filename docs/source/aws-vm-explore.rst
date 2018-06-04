@@ -48,7 +48,9 @@ Add a firewall rule for port range 10002-10003 and allow connection from Anywher
 
 Click on the Review and Launch button then if everything looks ok click Launch.
 
-You will be prompted to set up keys to securely access the VM remotely over ssh. Select "Create a new key pair" from the drop down and enter a name for the key file. Click download to get the keys and keep them safe on your local machine. (Note, these keys are just for connecting to your VM and are separate from the keys Corda will use to sign transactions. These keys will be generated as part of the download bundle.)
+You will be prompted to set up keys to securely access the VM remotely over ssh. Select "Create a new key pair" from the drop down and enter a name for the key file. Click download to get the keys and keep them safe on your local machine. 
+
+.. note:: These keys are just for connecting to your VM and are separate from the keys Corda will use to sign transactions. These keys will be generated as part of the download bundle.
 
 .. image:: resources/aws-keys.png
    :width: 200 px
