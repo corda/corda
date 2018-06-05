@@ -7,13 +7,13 @@ This document explains how to deploy a Corda node to Azure that can connect dire
 
 Pre-requisites
 --------------
-* Ensure you have a registered Microsoft Azure account which can create virtual machines and you are logged on to the Azure portal: `https://portal.azure.com`.
+* Ensure you have a registered Microsoft Azure account which can create virtual machines and you are logged on to the Azure portal: https://portal.azure.com.
 
 
 Deploy Corda node
 -----------------
 
-Browse to `https://portal.azure.com` and log in with your Microsoft account.
+Browse to https://portal.azure.com and log in with your Microsoft account.
 
 
 **STEP 1: Create a Resource Group**
@@ -34,7 +34,7 @@ Fill in the form and click "Create":
 
 At the top of the left sidenav click on the button with the green cross "Create a resource".
 
-In this example we are going to use an Ubuntu server so select the "Ubuntu Server 17.10 VM" option.
+In this example we are going to use an Ubuntu server so select the latest Ubuntu Server option.
 
 .. image:: resources/azure-select-ubuntu.png
    :scale: 50 %
