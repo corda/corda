@@ -29,7 +29,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
     @MappedSuperclass
     open class PersistentUniqueness(
             @EmbeddedId
-            var id: PersistentStateRef = PersistentStateRef(),
+            var id: PersistentStateRef,
 
             @Column(name = "consuming_transaction_id", nullable = false)
             var consumingTxHash: String = "",

@@ -114,14 +114,13 @@ class NodeSchedulerService(private val clock: CordaClock,
                     toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                     fromPersistentEntity = {
                         //TODO null check will become obsolete after making DB/JPA columns not nullable
-                        val txId = it.output.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
-                        val index = it.output.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                        val txId = it.output.txId
+                        val index = it.output.index
                         Pair(StateRef(SecureHash.parse(txId), index),
                                 ScheduledStateRef(StateRef(SecureHash.parse(txId), index), it.scheduledAt))
                     },
                     toPersistentEntity = { key: StateRef, value: ScheduledStateRef ->
-                        PersistentScheduledState().apply {
-                            output = PersistentStateRef(key.txhash.toString(), key.index)
+                        PersistentScheduledState(PersistentStateRef(key.txhash.toString(), key.index)).apply {
                             scheduledAt = value.scheduledAt
                         }
                     },
