@@ -161,7 +161,7 @@ Run from IntelliJ
 6. At the top-right of the screen, to the left of the green ``play`` arrow, you should see a dropdown. In that
    dropdown, select ``Run Example Cordapp - Kotlin`` and click the green ``play`` arrow.
 7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
-8. Test the CorDapp is running correctly by visiting the front end at `http://localhost:10007/web/example/
+8. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
 
 Corda source code
 -----------------

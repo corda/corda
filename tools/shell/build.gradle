@@ -37,7 +37,7 @@ dependencies {
     compile project(':node-api')
     compile project(':client:rpc')
 
-    // Jackson support: serialisation to/from JSON, YAML, etc
+    // Jackson support: serialisation to/from JSON, YAML, etc.
     compile project(':client:jackson')
 
 
@@ -58,8 +58,11 @@ dependencies {
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
     compile "org.fusesource.jansi:jansi:$jansi_version"
 
-    // Manifests: for reading stuff from the manifest file
+    // Manifests: for reading stuff from the manifest file.
     compile "com.jcabi:jcabi-manifests:1.1"
+    
+    // For logging.
+    compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"
@@ -67,11 +70,11 @@ dependencies {
     testCompile project(':test-utils')
     testCompile project(':finance')
 
-    // Integration test helpers
+    // Integration test helpers.
     integrationTestCompile "junit:junit:$junit_version"
     integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
 
-    // Jsh: Testing SSH server
+    // Jsh: Testing SSH server.
     integrationTestCompile "com.jcraft:jsch:$jsch_version"
 
     integrationTestCompile project(':node-driver')
