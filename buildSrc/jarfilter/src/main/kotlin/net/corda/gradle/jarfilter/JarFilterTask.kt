@@ -55,8 +55,9 @@ open class JarFilterTask : DefaultTask() {
 
     @get:Input
     var maxPasses: Int = DEFAULT_MAX_PASSES
-
-    fun maxPasses(maximum: Int) { maxPasses = max(maximum, 1) }
+        set(value) {
+            field = max(value, 1)
+        }
 
     @get:Input
     var preserveTimestamps: Boolean = true
@@ -144,13 +145,15 @@ open class JarFilterTask : DefaultTask() {
             var input = source
 
             try {
-                var passes = 0
-                while (++passes <= maxPasses) {
+                var passes = 1
+                while (true) {
                     verbose("Pass {}", passes)
                     val isModified = Pass(input).use { it.run() }
 
                     if (!isModified) {
                         logger.info("No changes after latest pass - exiting.")
+                        break
+                    } else if (++passes > maxPasses) {
                         break
                     }
 
