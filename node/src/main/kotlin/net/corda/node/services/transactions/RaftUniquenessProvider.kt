@@ -75,14 +75,14 @@ class RaftUniquenessProvider(private val transportConfiguration: NodeSSLConfigur
     @Table(name = "${NODE_DATABASE_PREFIX}raft_committed_states")
     class RaftState(
             @Id
-            @Column(name = "id")
+            @Column(name = "id", nullable = false)
             var key: String = "",
 
             @Lob
-            @Column(name = "state_value")
+            @Column(name = "state_value", nullable = false)
             var value: ByteArray = ByteArray(0),
 
-            @Column(name = "state_index")
+            @Column(name = "state_index", nullable = false)
             var index: Long = 0
     ) : Serializable
 

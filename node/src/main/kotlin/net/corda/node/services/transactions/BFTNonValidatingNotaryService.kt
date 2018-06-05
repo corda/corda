@@ -107,8 +107,8 @@ class BFTNonValidatingNotaryService(
                 toPersistentEntityKey = { PersistentStateRef(it.txhash.toString(), it.index) },
                 fromPersistentEntity = {
                     //TODO null check will become obsolete after making DB/JPA columns not nullable
-                    val txId = it.id.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
-                    val index = it.id.index ?: throw IllegalStateException("DB returned null SecureHash index")
+                    val txId = it.id.txId
+                    val index = it.id.index
                     Pair(StateRef(txhash = SecureHash.parse(txId), index = index),
                             UniquenessProvider.ConsumingTx(
                                     id = SecureHash.parse(it.consumingTxHash),
