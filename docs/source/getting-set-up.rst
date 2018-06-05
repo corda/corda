@@ -94,7 +94,7 @@ Run from IntelliJ
 
 3. Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
    clicking ``New...``, clicking ``JDK``, and navigating to ``C:\\Program Files\\Java\\jdk1.8.0_XXX`` (where ``XXX`` is
-   the latest minor version number). Click "OK"
+   the latest minor version number). Click ``OK``
 4. Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
    the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
    ``Gradle``, click ``Next`` then ``Finish`` (leaving the defaults) and ``OK``
@@ -148,7 +148,7 @@ Run from IntelliJ
 
 3. Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
    clicking ``New...``, clicking ``JDK``, and navigating to ``C:\\Program Files\\Java\\jdk1.8.0_XXX`` (where ``XXX`` is
-   the latest minor version number). Click "OK"
+   the latest minor version number). Click ``OK``
 4. Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
    the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
    ``Gradle``, click ``Next`` then ``Finish`` (leaving the defaults) and ``OK``
