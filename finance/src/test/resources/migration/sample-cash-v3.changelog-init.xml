@@ -22,11 +22,21 @@
             <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="ccy_code" type="NVARCHAR(3)"/>
-            <column name="issuer_name" type="NVARCHAR(255)"/>
-            <column name="issuer_ref" type="VARBINARY(512)"/>
-            <column name="owner_name" type="NVARCHAR(255)"/>
-            <column name="pennies" type="BIGINT"/>
+            <column name="ccy_code" type="NVARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issuer_name" type="NVARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="issuer_ref" type="VARBINARY(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_name" type="NVARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="pennies" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
 
         <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_DC"
@@ -39,7 +49,9 @@
             <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="participants" type="NVARCHAR(255)"/>
+            <column name="participants" type="NVARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
         </createTable>
 
     </changeSet>

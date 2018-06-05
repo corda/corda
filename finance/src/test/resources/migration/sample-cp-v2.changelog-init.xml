@@ -21,14 +21,30 @@
             <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="issuer_name" type="NVARCHAR(255)"/>
-            <column name="issuer_ref" type="VARBINARY(512)"/>
-            <column name="owner_name" type="NVARCHAR(255)"/>
-            <column name="quantity" type="BIGINT"/>
-            <column name="ccy_code" type="NVARCHAR(3)"/>
-            <column name="face_value_issuer_key_hash" type="NVARCHAR(130)"/>
-            <column name="face_value_issuer_ref" type="VARBINARY(512)"/>
-            <column name="maturity_instant" type="TIMESTAMP"/>
+            <column name="issuer_name" type="NVARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="issuer_ref" type="VARBINARY(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_name" type="NVARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="quantity" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ccy_code" type="NVARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="face_value_issuer_key_hash" type="NVARCHAR(130)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="face_value_issuer_ref" type="VARBINARY(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="maturity_instant" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
 
         <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_5"
@@ -45,7 +61,9 @@
             <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="participants" type="NVARCHAR(255)"/>
+            <column name="participants" type="NVARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
         </createTable>
 
         <addForeignKeyConstraint baseColumnNames="output_index,transaction_id"

@@ -21,14 +21,30 @@
             <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="ccy_code" type="NVARCHAR(3)"/>
-            <column name="face_value" type="BIGINT"/>
-            <column name="face_value_issuer_key_hash" type="NVARCHAR(130)"/>
-            <column name="face_value_issuer_ref" type="varbinary(512)"/>
-            <column name="issuance_key_hash" type="NVARCHAR(130)"/>
-            <column name="issuance_ref" type="varbinary(255)"/>
-            <column name="maturity_instant" type="timestamp"/>
-            <column name="owner_key_hash" type="NVARCHAR(130)"/>
+            <column name="ccy_code" type="NVARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="face_value" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="face_value_issuer_key_hash" type="NVARCHAR(130)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="face_value_issuer_ref" type="varbinary(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issuance_key_hash" type="NVARCHAR(130)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issuance_ref" type="varbinary(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="maturity_instant" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_key_hash" type="NVARCHAR(130)">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-29">

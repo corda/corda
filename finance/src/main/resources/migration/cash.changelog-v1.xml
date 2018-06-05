@@ -5,8 +5,11 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
-    <changeSet author="R3.Corda" id="rename_contract_attachment">
-        <renameTable newTableName="node_attachments_contracts"
-                     oldTableName="node_attchments_contracts"/>
+    <changeSet id="1525793504" author="R3.Corda">
+        <addNotNullConstraint tableName="contract_cash_states" columnName="ccy_code" columnDataType="NVARCHAR(3)"/>
+        <addNotNullConstraint tableName="contract_cash_states" columnName="issuer_key_hash"
+                              columnDataType="NVARCHAR(130)"/>
+        <addNotNullConstraint tableName="contract_cash_states" columnName="issuer_ref" columnDataType="varbinary(512)"/>
+        <addNotNullConstraint tableName="contract_cash_states" columnName="pennies" columnDataType="BIGINT"/>
     </changeSet>
 </databaseChangeLog>

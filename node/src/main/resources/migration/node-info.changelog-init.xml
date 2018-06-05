@@ -78,6 +78,7 @@
                                  referencedColumnNames="node_info_id" referencedTableName="node_infos"/>
     </changeSet>
     <changeSet author="R3.Corda" id="remove_host_port_pk">
+        <!--Delete, in fact,  truncates the table-->
         <delete tableName="node_infos"/>
         <delete tableName="node_link_nodeinfo_party"/>
         <delete tableName="node_info_hosts"/>

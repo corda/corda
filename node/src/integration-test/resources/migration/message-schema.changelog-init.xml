@@ -27,4 +27,9 @@
         </createTable>
 
     </changeSet>
+    <changeSet id="1525962920" author="R3.Corda">
+        <addNotNullConstraint tableName="messages" columnName="message_by" columnDataType="NVARCHAR(255)" />
+        <addNotNullConstraint tableName="messages" columnName="message_value" columnDataType="NVARCHAR(255)" />
+    </changeSet>
+
 </databaseChangeLog>

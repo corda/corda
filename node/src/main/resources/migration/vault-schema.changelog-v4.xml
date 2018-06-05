@@ -1,0 +1,21 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <!--this is needed because pre-v3 states are no longer supported-->
+    <changeSet author="R3.Corda" id="nullability">
+        <addNotNullConstraint tableName="vault_fungible_states" columnName="quantity" columnDataType="BIGINT"/>
+        <addNotNullConstraint tableName="vault_fungible_states" columnName="quantity" columnDataType="BIGINT"/>
+
+
+        <addNotNullConstraint tableName="vault_states" columnName="contract_state_class_name" columnDataType="NVARCHAR(255)"/>
+        <addNotNullConstraint tableName="vault_states" columnName="notary_name" columnDataType="NVARCHAR(255)"/>
+        <addNotNullConstraint tableName="vault_states" columnName="recorded_timestamp" columnDataType="timestamp"/>
+        <addNotNullConstraint tableName="vault_states" columnName="state_status" columnDataType="INT"/>
+
+        <addNotNullConstraint tableName="vault_transaction_notes" columnName="note" columnDataType="NVARCHAR(255)"/>
+        <addNotNullConstraint tableName="vault_transaction_notes" columnName="transaction_id" columnDataType="NVARCHAR(64)"/>
+    </changeSet>
+</databaseChangeLog>

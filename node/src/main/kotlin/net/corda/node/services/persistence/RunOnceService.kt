@@ -66,16 +66,16 @@ class RunOnceService(private val database: CordaPersistence, private val machine
         @Id
         val id: Char = 'X'
 
-        @Column(name = MACHINE_NAME)
+        @Column(name = MACHINE_NAME, nullable = false)
         val machineName = machineNameInit
 
-        @Column(name = PID)
+        @Column(name = PID, nullable = false)
         val pid = pidInit
 
-        @Column(name = TIMESTAMP)
+        @Column(name = TIMESTAMP, nullable = false)
         val timestamp = timeStampInit
 
-        @Column(name = VERSION)
+        @Column(name = VERSION, nullable = false)
         val version = versionInit
     }
 

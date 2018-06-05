@@ -1,0 +1,41 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet author="R3.Corda" id="attchments_rename">
+        <renameTable oldTableName="node_attchments_contracts" newTableName="node_attachments_contracts" />
+    </changeSet>
+
+    <changeSet author="R3.Corda" id="nullability">
+        <addNotNullConstraint tableName="node_identities" columnName="identity_value" columnDataType="blob" />
+
+        <addNotNullConstraint tableName="node_attachments" columnName="content" columnDataType="blob"/>
+
+        <addNotNullConstraint tableName="node_attachments_contracts" columnName="contract_class_name" columnDataType="NVARCHAR(255)"/>
+
+        <addNotNullConstraint tableName="node_checkpoints" columnName="checkpoint_value" columnDataType="blob"/>
+
+        <addNotNullConstraint tableName="node_contract_upgrades" columnName="contract_class_name" columnDataType="NVARCHAR(255)"/>
+
+        <addNotNullConstraint tableName="node_message_ids" columnName="insertion_time" columnDataType="timestamp"/>
+        <addNotNullConstraint tableName="node_message_ids" columnName="sequence_number" columnDataType="BIGINT"/>
+
+        <addNotNullConstraint tableName="node_message_retry" columnName="message" columnDataType="blob"/>
+        <addNotNullConstraint tableName="node_message_retry" columnName="recipients" columnDataType="blob"/>
+
+        <addNotNullConstraint tableName="node_named_identities" columnName="pk_hash" columnDataType="NVARCHAR(130)"/>
+
+        <addNotNullConstraint tableName="node_our_key_pairs" columnName="private_key" columnDataType="blob"/>
+        <addNotNullConstraint tableName="node_our_key_pairs" columnName="public_key" columnDataType="blob"/>
+
+        <addNotNullConstraint tableName="node_transaction_mappings" columnName="state_machine_run_id" columnDataType="NVARCHAR(36)"/>
+
+        <addNotNullConstraint tableName="node_transactions" columnName="transaction_value" columnDataType="blob"/>
+
+        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="MACHINE_NAME" columnDataType="NVARCHAR(255)"/>
+        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="PID" columnDataType="NVARCHAR(255)"/>
+        <addNotNullConstraint tableName="node_mutual_exclusion" columnName="MUTUAL_EXCLUSION_TIMESTAMP" columnDataType="timestamp"/>
+    </changeSet>
+</databaseChangeLog>

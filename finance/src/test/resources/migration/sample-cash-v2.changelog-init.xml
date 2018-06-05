@@ -23,10 +23,16 @@
                 <constraints nullable="false"/>
             </column>
             <column name="issuer_name" type="NVARCHAR(255)"/>
-            <column name="issuer_ref" type="VARBINARY(512)"/>
+            <column name="issuer_ref" type="VARBINARY(512)">
+                <constraints nullable="false"/>
+            </column>
             <column name="owner_name" type="NVARCHAR(255)"/>
-            <column name="quantity" type="BIGINT"/>
-            <column name="ccy_code" type="NVARCHAR(3)"/>
+            <column name="quantity" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ccy_code" type="NVARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
 
         <addPrimaryKey columnNames="output_index, transaction_id" constraintName="CONSTRAINT_D"

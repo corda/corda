@@ -21,11 +21,21 @@
             <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="ccy_code" type="NVARCHAR(3)"/>
-            <column name="issuer_key_hash" type="NVARCHAR(130)"/>
-            <column name="issuer_ref" type="varbinary(512)"/>
-            <column name="owner_key_hash" type="NVARCHAR(130)"/>
-            <column name="pennies" type="BIGINT"/>
+            <column name="ccy_code" type="NVARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issuer_key_hash" type="NVARCHAR(130)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issuer_ref" type="varbinary(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_key_hash" type="NVARCHAR(130)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="pennies" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-28">
