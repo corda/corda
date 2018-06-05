@@ -1,8 +1,6 @@
 package net.corda.testing.node.internal
 
 import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import java.io.File.pathSeparator
 import java.nio.file.Path
 
 object ProcessUtilities {
@@ -23,9 +21,7 @@ object ProcessUtilities {
             workingDirectory: Path?,
             maximumHeapSize: String
     ): Process {
-        // FIXME: Instead of hacking our classpath, use the correct classpath for className.
-        val classpath = defaultClassPath.split(pathSeparator).filter { !(it / "log4j2-test.xml").exists() }.joinToString(pathSeparator)
-        return startJavaProcessImpl(className, arguments, classpath, jdwpPort, extraJvmArguments, errorLogPath, workingDirectory, maximumHeapSize)
+        return startJavaProcessImpl(className, arguments, defaultClassPath, jdwpPort, extraJvmArguments, errorLogPath, workingDirectory, maximumHeapSize)
     }
 
     fun startJavaProcessImpl(
