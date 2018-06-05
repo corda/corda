@@ -555,6 +555,12 @@ class SingleThreadedStateMachineManager(
         mutex.locked { cancelRetryIfScheduled(flowId) }
     }
 
+    /**
+     * Schedules the flow [flowId] to be retried if it does not finish within a timeout value
+     * specified in the config.
+     *
+     * Assumes lock is taken on the [InnerState].
+     */
     private fun InnerState.scheduleRetry(flowId: StateMachineRunId) {
         val flow = flows[flowId]
         if (flow != null) {
@@ -570,6 +576,11 @@ class SingleThreadedStateMachineManager(
         }
     }
 
+    /**
+     * Cancels any scheduled flow retry for [flowId].
+     *
+     * Assumes lock is taken on the [InnerState].
+     */
     private fun InnerState.cancelRetryIfScheduled(flowId: StateMachineRunId) {
         flowsToRetry[flowId]?.let {
             if (!it.isDone) it.cancel(true)

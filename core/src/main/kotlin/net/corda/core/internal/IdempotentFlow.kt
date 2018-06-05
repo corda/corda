@@ -21,6 +21,3 @@ interface IdempotentFlow
  */
 // TODO: allow specifying retry settings per flow
 interface RetryableFlow : IdempotentFlow
-
-/** This exception is fired once the retry timeout expires. It will indicate to the flow hospital to restart the flow. */
-data class FlowRetryException(val maxRetries: Int) : Exception()

@@ -1,7 +1,6 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.FlowRetryException
 import net.corda.core.internal.RetryableFlow
 import net.corda.core.utilities.loggerFor
 import java.sql.SQLException
@@ -134,11 +133,23 @@ object StaffedFlowHospital : FlowHospital {
     object DoctorRetry : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: MedicalHistory): Diagnosis {
             if (newError is FlowRetryException) {
-                flowFiber.snapshot().checkpoint.subFlowStack.firstOrNull { RetryableFlow::class.java.isAssignableFrom(it.flowClass) }
-                        ?: throw IllegalArgumentException("Unable to retry a non-retryable flow")
-                if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this)) return Diagnosis.DISCHARGE
+                if (isRetryable(flowFiber)) {
+                    if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this)) {
+                        return Diagnosis.DISCHARGE
+                    } else {
+                        log.warn("\"Maximum number of retries reached for flow ${flowFiber.javaClass}")
+                    }
+                } else {
+                    log.warn("\"Unable to retry flow: ${flowFiber.javaClass}, it is not retryable and does not contain any retryable sub-flows.")
+                }
             }
             return Diagnosis.NOT_MY_SPECIALTY
+        }
+
+        private fun isRetryable(flowFiber: FlowFiber): Boolean {
+            return flowFiber.snapshot().checkpoint.subFlowStack.any {
+                RetryableFlow::class.java.isAssignableFrom(it.flowClass)
+            }
         }
     }
 }

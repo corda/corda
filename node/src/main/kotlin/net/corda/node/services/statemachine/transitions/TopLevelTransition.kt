@@ -96,12 +96,18 @@ class TopLevelTransition(
             val subFlow = SubFlow.create(event.subFlowClass, event.subFlowVersion)
             when (subFlow) {
                 is Try.Success -> {
+                    val containsRetryableSubFlows = currentState.checkpoint.subFlowStack.any {
+                        RetryableFlow::class.java.isAssignableFrom(it.flowClass)
+                    }
+                    val isCurrentSubFlowRetryable = RetryableFlow::class.java.isAssignableFrom(event.subFlowClass)
                     currentState = currentState.copy(
                             checkpoint = currentState.checkpoint.copy(
                                     subFlowStack = currentState.checkpoint.subFlowStack + subFlow.value
                             )
                     )
-                    if (RetryableFlow::class.java.isAssignableFrom(event.subFlowClass)) {
+                    // We don't schedule a retry if there already is a retryable subflow on the stack - a retry had
+                    // been scheduled already.
+                    if (isCurrentSubFlowRetryable && !containsRetryableSubFlows) {
                         actions.add(Action.ScheduleFlowRetry(currentState.flowLogic.runId))
                     }
                 }
