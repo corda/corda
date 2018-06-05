@@ -30,15 +30,15 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val b = B(A(testA), testB)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        assert(obj.obj is B)
+        require(obj.obj is B)
 
         val amqpObj = obj.obj as B
 
         assertEquals(testB, amqpObj.b)
         assertEquals(testA, amqpObj.a.a)
         assertEquals(2, obj.envelope.schema.types.size)
-        assert(obj.envelope.schema.types[0] is CompositeType)
-        assert(obj.envelope.schema.types[1] is CompositeType)
+        require(obj.envelope.schema.types[0] is CompositeType)
+        require(obj.envelope.schema.types[1] is CompositeType)
 
         var amqpSchemaA: CompositeType? = null
         var amqpSchemaB: CompositeType? = null
@@ -50,8 +50,8 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
             }
         }
 
-        assert(amqpSchemaA != null)
-        assert(amqpSchemaB != null)
+        require(amqpSchemaA != null)
+        require(amqpSchemaB != null)
 
         // Just ensure the amqp schema matches what we want before we go messing
         // around with the internals
@@ -68,9 +68,9 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val metaSchema = obj.envelope.schema.carpenterSchema(ClassLoader.getSystemClassLoader())
 
         // if we know all the classes there is nothing to really achieve here
-        assert(metaSchema.carpenterSchemas.isEmpty())
-        assert(metaSchema.dependsOn.isEmpty())
-        assert(metaSchema.dependencies.isEmpty())
+        require(metaSchema.carpenterSchemas.isEmpty())
+        require(metaSchema.dependsOn.isEmpty())
+        require(metaSchema.dependencies.isEmpty())
     }
 
     // you cannot have an element of a composite class we know about
@@ -92,7 +92,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A")))
 
-        assert(obj.obj is B)
+        require(obj.obj is B)
 
         amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
     }
@@ -111,7 +111,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val b = B(A(testA), testB)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        assert(obj.obj is B)
+        require(obj.obj is B)
 
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("B")))
         val carpenterSchema = amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
@@ -122,7 +122,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         metaCarpenter.build()
 
-        assert(mangleName(classTestName("B")) in metaCarpenter.objects)
+        require(mangleName(classTestName("B")) in metaCarpenter.objects)
     }
 
     @Test
@@ -139,7 +139,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val b = B(A(testA), testB)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        assert(obj.obj is B)
+        require(obj.obj is B)
 
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
         val carpenterSchema = amqpSchema.carpenterSchema(ClassLoader.getSystemClassLoader())
@@ -149,9 +149,9 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(1, carpenterSchema.size)
         assertEquals(mangleName(classTestName("A")), carpenterSchema.carpenterSchemas.first().name)
         assertEquals(1, carpenterSchema.dependencies.size)
-        assert(mangleName(classTestName("B")) in carpenterSchema.dependencies)
+        require(mangleName(classTestName("B")) in carpenterSchema.dependencies)
         assertEquals(1, carpenterSchema.dependsOn.size)
-        assert(mangleName(classTestName("A")) in carpenterSchema.dependsOn)
+        require(mangleName(classTestName("A")) in carpenterSchema.dependsOn)
 
         val metaCarpenter = TestMetaCarpenter(carpenterSchema, ClassCarpenterImpl(whitelist = AllWhitelist))
 
@@ -172,8 +172,8 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         // second manual iteration, will carpent B
         metaCarpenter.build()
-        assert(mangleName(classTestName("A")) in metaCarpenter.objects)
-        assert(mangleName(classTestName("B")) in metaCarpenter.objects)
+        require(mangleName(classTestName("A")) in metaCarpenter.objects)
+        require(mangleName(classTestName("B")) in metaCarpenter.objects)
 
         // and we must be finished
         assertTrue(carpenterSchema.carpenterSchemas.isEmpty())
@@ -198,7 +198,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val c = C(B(testA, testB), testC)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(c))
 
-        assert(obj.obj is C)
+        require(obj.obj is C)
 
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
 
@@ -224,7 +224,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val c = C(B(testA, testB), testC)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(c))
 
-        assert(obj.obj is C)
+        require(obj.obj is C)
 
         val amqpSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
 
@@ -250,7 +250,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val c = C(B(testA, testB), testC)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(c))
 
-        assert(obj.obj is C)
+        require(obj.obj is C)
 
         val carpenterSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
         TestMetaCarpenter(carpenterSchema.carpenterSchema(
@@ -273,7 +273,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val b = B(testA, testB)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        assert(obj.obj is B)
+        require(obj.obj is B)
 
         val carpenterSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
         val metaCarpenter = TestMetaCarpenter(carpenterSchema.carpenterSchema())

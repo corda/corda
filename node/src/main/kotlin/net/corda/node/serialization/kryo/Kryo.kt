@@ -74,7 +74,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
 
     init {
         // Verify that this class is immutable (all properties are final)
-        assert(props.none { it is KMutableProperty<*> })
+        require(props.none { it is KMutableProperty<*> })
     }
 
     // Just a utility to help us catch cases where nodes are running out of sync versions.
@@ -109,7 +109,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<T>): T {
-        assert(type.kotlin == klass)
+        require(type.kotlin == klass)
         val numFields = input.readVarInt(true)
         val fieldTypeHash = input.readInt()
 

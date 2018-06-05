@@ -139,7 +139,7 @@ class ClassCarpenterImpl(cl: ClassLoader, override val whitelist: ClassWhitelist
             }
         }
 
-        assert(schema.name in _loaded)
+        require(schema.name in _loaded)
 
         return _loaded[schema.name]!!
     }
