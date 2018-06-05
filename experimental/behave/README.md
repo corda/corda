@@ -56,3 +56,34 @@ $ ../../gradlew scenario -Ptags="@cash"
 # or
 $ ../../gradlew scenario -Ptags="@cash,@logging"
 ```
+
+# Environment variables and system properties
+
+The following environment variables must be set to enable access to the internal R3 Artifactory repository hosting Enterprise distributions:
+https://ci-artifactory.corda.r3cev.com/artifactory/r3-corda-releases
+
+```bash
+CORDA_ARTIFACTORY_USERNAME
+CORDA_ARTIFACTORY_PASSWORD
+```
+
+The following system properties may be passed to the Cucumber and ScenarioRunner run-time processes:
+
+* `STAGING_ROOT` to specify the filesystem location of the Corda distributions to be used (as setup by the prepare.sh script)
+
+```bash
+e.g. -DSTAGING_ROOT=$HOME/staging
+```
+
+* `USE_NETWORK_SERVICES` specifies to use the Doorman/NMS service to perform setup of an Enterprise network.
+By default both OS and Enterprise scenarios will use the [Network Bootstrapper utility](https://docs.corda.net/head/setting-up-a-corda-network.html#bootstrapping-the-network) to create a Corda network.
+
+```bash
+e.g. -DUSE_NETWORK_SERVICES
+```
+
+* `DISABLE_CLEANUP` to prevent clean-up of runtime directories after successfully running tests.
+
+```bash
+e.g. -DDISABLE_CLEANUP
+```

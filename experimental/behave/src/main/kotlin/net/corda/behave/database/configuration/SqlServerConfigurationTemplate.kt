@@ -28,7 +28,7 @@ class SqlServerConfigurationTemplate : DatabaseConfigurationTemplate() {
             |    dataSource.password = "${it.password}"
             |}
             |database = {
-            |    initialiseSchema=true
+            |    runMigration=true
             |    transactionIsolationLevel = READ_COMMITTED
             |    schema="${it.schema}"
             |}

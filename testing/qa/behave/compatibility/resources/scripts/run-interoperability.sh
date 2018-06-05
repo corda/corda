@@ -12,5 +12,8 @@ BEHAVE_DIR=${R3CORDA_HOME}/experimental/behave
 cd ${BEHAVE_DIR}
 ../../gradlew behaveJar
 
-# QA interoperability
-java -jar ${BEHAVE_DIR}/build/libs/corda-behave.jar -d --glue net.corda.behave.scenarios -path ${R3CORDA_HOME}/testing/qa/behave/compatibility/resources/features/interoperability.feature
+BEHAVE_JAR=$(ls build/libs/corda-behave-*.jar | tail -n1)
+STAGING_ROOT="${STAGING_ROOT:-TMPDIR/staging}"
+
+# QA interoperability (specify -d for dry-run)
+java -DSTAGING_ROOT=${STAGING_ROOT} -DDISABLE_CLEANUP=true -jar ${BEHAVE_JAR} --glue net.corda.behave.scenarios -path ${R3CORDA_HOME}/testing/qa/behave/compatibility/resources/features/interoperability.feature

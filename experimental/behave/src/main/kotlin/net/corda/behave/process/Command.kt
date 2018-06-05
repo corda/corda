@@ -60,7 +60,7 @@ open class Command(
 
     private val thread = Thread(Runnable {
         try {
-            log.info("Command: $command")
+            log.info("Executing command: $command from directory: $directory")
             val processBuilder = ProcessBuilder(command)
                     .directory(directory.toFile())
                     .redirectErrorStream(true)

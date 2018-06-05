@@ -17,8 +17,13 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.utilities.contextLogger
+import java.io.IOException
+import java.net.Authenticator
+import java.net.PasswordAuthentication
 import java.net.URL
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+
 
 /**
  * Corda distribution.
@@ -41,9 +46,9 @@ class Distribution private constructor(
         file: Path? = null,
 
         /**
-         * The URL of the distribution fat JAR, if available.
+         * Map of all distribution JAR artifacts from artifactory, if available.
          */
-        val url: URL? = null,
+        val artifactUrlMap: Map<String,URL>? = null,
 
         /**
          *  The Docker image details, if available
@@ -86,10 +91,22 @@ class Distribution private constructor(
      */
     fun ensureAvailable() {
         if (cordaJar.exists()) return
-        val url = checkNotNull(url) { "File not found $cordaJar" }
         try {
-            cordaJar.parent.createDirectories()
-            url.openStream().use { it.copyTo(cordaJar) }
+            path.createDirectories()
+            cordappDirectory.createDirectories()
+            Authenticator.setDefault(object : Authenticator() {
+                override fun getPasswordAuthentication(): PasswordAuthentication {
+                    return PasswordAuthentication(System.getenv("CORDA_ARTIFACTORY_USERNAME"), System.getenv("CORDA_ARTIFACTORY_PASSWORD").toCharArray())
+                }
+            })
+            artifactUrlMap!!.forEach { artifactName, artifactUrl ->
+                artifactUrl.openStream().use {
+                    if (artifactName.startsWith("corda-finance")) {
+                        it.copyTo(cordappDirectory / "$artifactName.jar", StandardCopyOption.REPLACE_EXISTING)
+                    }
+                    else it.copyTo(path / "$artifactName.jar", StandardCopyOption.REPLACE_EXISTING)
+                }
+            }
         } catch (e: Exception) {
             if ("HTTP response code: 401" in e.message!!) {
                 log.warn("CORDA_ARTIFACTORY_USERNAME ${System.getenv("CORDA_ARTIFACTORY_USERNAME")}")
@@ -105,9 +122,11 @@ class Distribution private constructor(
      */
     override fun toString() = "Corda(version = $version, path = $cordaJar)"
 
-    enum class Type {
-        CORDA_OS,
-        CORDA_ENTERPRISE
+    enum class Type(val artifacts: Set<String>) {
+        CORDA_OS(setOf("corda", "corda-webserver", "corda-finance")),
+        // bridge-server not available in Enterprise Dev Previews
+        // migration-tool not published in Enterprise Dev Previews
+        CORDA_ENTERPRISE(setOf("corda", "corda-webserver", "corda-finance", "corda-bridgeserver", "migration-tool"))
     }
 
     companion object {
@@ -122,20 +141,41 @@ class Distribution private constructor(
         val R3_MASTER = fromJarFile(Type.CORDA_ENTERPRISE, "r3corda-master")
 
         /**
-         * Get representation of a Corda distribution from Artifactory based on its version string.
+         * Get all jar artifacts from Artifactory for a given distribution and version of Corda.
          * @param type The Corda distribution type.
          * @param version The version of the Corda distribution.
          */
         fun fromArtifactory(type: Type, version: String): Distribution {
-            val url =
-                when (type) {
-                    Type.CORDA_OS -> URL("https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda/$version/corda-$version.jar")
-                    Type.CORDA_ENTERPRISE -> URL("https://ci-artifactory.corda.r3cev.com/artifactory/r3-corda-releases/com/r3/corda/corda/$version/corda-$version.jar")
+            val artifactUrlMap = when (type) {
+                Type.CORDA_OS -> resolveArtifacts(Type.CORDA_OS.artifacts, version, "https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda")
+                Type.CORDA_ENTERPRISE -> {
+                    Authenticator.setDefault(object : Authenticator() {
+                        override fun getPasswordAuthentication(): PasswordAuthentication {
+                            return PasswordAuthentication(System.getenv("CORDA_ARTIFACTORY_USERNAME"), System.getenv("CORDA_ARTIFACTORY_PASSWORD").toCharArray())
+                        }
+                    })
+                    resolveArtifacts(Type.CORDA_ENTERPRISE.artifacts, version, "https://ci-artifactory.corda.r3cev.com/artifactory/r3-corda-releases/com/r3/corda")
                 }
-            log.info("Artifactory URL: $url\n")
-            val distribution = Distribution(type, version, url = url)
+            }
+            val distribution = Distribution(type, version, artifactUrlMap = artifactUrlMap)
             distributions.add(distribution)
             return distribution
+        }
+
+        private fun resolveArtifacts(artifacts: Set<String>, version: String, artifactoryBaseUrl: String) : Map<String,URL> {
+            val urlMap = mutableMapOf<String,URL>()
+            artifacts.forEach { artifact ->
+                val url = URL("$artifactoryBaseUrl/$artifact/$version/$artifact-$version.jar")
+                log.info("Artifactory resource URL: $url")
+                try {
+                    url.openStream()
+                    urlMap[artifact] = url
+                }
+                catch (ex: IOException) {
+                    log.warn("Unable to open artifactory resource URL: ${ex.message}")
+                }
+            }
+            return urlMap
         }
 
         /**
@@ -166,13 +206,24 @@ class Distribution private constructor(
          * Get registered representation of a Corda distribution based on its version string.
          * @param version The version of the Corda distribution
          */
+        private val entVersionScheme = "^\\d\\.\\d\\.\\d.*".toRegex() // ENTERPRISE version scheme x.y.z,
+        private val osVersionScheme = "^\\d\\.\\d.*".toRegex()        // OS version scheme x.y
+
         fun fromVersionString(version: String): Distribution = when (version) {
             "master" -> MASTER
             "r3-master" -> R3_MASTER
             "corda-3.0" -> fromArtifactory(Type.CORDA_OS, version)
-            "corda-3.1" -> fromArtifactory(Type.CORDA_OS, version)
+            "3.1-corda" -> fromArtifactory(Type.CORDA_OS, version)
             "R3.CORDA-3.0.0-DEV-PREVIEW-3" -> fromArtifactory(Type.CORDA_ENTERPRISE, version)
-            else -> distributions.firstOrNull { it.version == version } ?: throw CordaRuntimeException("Unable to locate Corda distribution for version: $version")
+            else -> {
+                if (version.matches(entVersionScheme))
+                    fromArtifactory(Type.CORDA_ENTERPRISE, version)
+                else if (version.matches(osVersionScheme))
+                    fromArtifactory(Type.CORDA_OS, version)
+                else
+                    distributions.firstOrNull { it.version == version }
+                            ?: throw CordaRuntimeException("Invalid Corda distribution for specified version: $version")
+            }
         }
     }
 }

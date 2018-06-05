@@ -108,10 +108,11 @@ class Network private constructor(
                 throw CordaException("Unable to configure nodes in Corda network. Please check logs in $directory")
             }
 
-            if (networkType == Distribution.Type.CORDA_ENTERPRISE)
+            if (networkType == Distribution.Type.CORDA_ENTERPRISE && System.getProperty("USE_NETWORK_SERVICES") != null)
+                // TODO: rework how we use the Doorman/NMS (now these are a separate product / distribution)
                 network.bootstrapDoorman()
             else
-                network.bootstrapLocalNetwork()
+                network.bootstrapLocalNetwork(networkType)
             return network
         }
     }
@@ -147,6 +148,10 @@ class Network private constructor(
      */
     private fun bootstrapDoorman() {
 
+        // TODO: rework how we use the Doorman/NMS (now these are a separate product / distribution)
+        signalFailure("Bootstrapping a Corda Enterprise network using the Doorman is no longer supported; exiting ...")
+        return
+
         // WARNING!! Need to use the correct bootstrapper
         // only if using OS nodes (need to choose the latest version)
         val r3node = nodes.values
@@ -158,21 +163,25 @@ class Network private constructor(
         val doormanTargetDirectory = targetDirectory / "doorman"
         source.toFile().copyRecursively(doormanTargetDirectory.toFile(), true)
 
+        // Use master version of Bootstrapper
+        val doormanJar = Distribution.R3_MASTER.doormanJar
+        log.info("DoormanJar URL: $doormanJar\n")
+
         // 1. Create key stores for local signer
 
         //  java -jar doorman-<version>.jar --mode ROOT_KEYGEN
         log.info("Doorman target directory: $doormanTargetDirectory")
-        runCommand(JarCommand(distribution.doormanJar,
+        runCommand(JarCommand(doormanJar,
                               arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf", "--mode", "ROOT_KEYGEN", "--trust-store-password", "password"),
                               doormanTargetDirectory, timeout))
 
         //  java -jar doorman-<version>.jar --mode CA_KEYGEN
-        runCommand(JarCommand(distribution.doormanJar,
+        runCommand(JarCommand(doormanJar,
                               arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf", "--mode", "CA_KEYGEN"),
                               doormanTargetDirectory, timeout))
 
         // 2. Start the doorman service for notary registration
-        doormanNMS = JarCommand(distribution.doormanJar,
+        doormanNMS = JarCommand(doormanJar,
                                         arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf"),
                                         doormanTargetDirectory, timeout)
 
@@ -216,13 +225,13 @@ class Network private constructor(
 
         // 6. Load initial network parameters file for network map service
         val networkParamsConfig = if (notaryNodes.isEmpty()) "network-parameters-without-notary.conf" else "network-parameters.conf"
-        val updateNetworkParams = JarCommand(distribution.doormanJar,
+        val updateNetworkParams = JarCommand(doormanJar,
                                              arrayOf("--config-file", "$doormanTargetDirectory/node.conf", "--set-network-parameters", "$doormanTargetDirectory/$networkParamsConfig"),
                                              doormanTargetDirectory, timeout)
         runCommand(updateNetworkParams)
 
         // 7. Start a fully configured Doorman / NMS
-        doormanNMS = JarCommand(distribution.doormanJar,
+        doormanNMS = JarCommand(doormanJar,
                             arrayOf("--config-file", "$doormanConfigDirectory/node.conf"),
                             doormanTargetDirectory, timeout)
 
@@ -283,12 +292,14 @@ class Network private constructor(
         return command
     }
 
-    private fun bootstrapLocalNetwork() {
-        val bootstrapper = nodes.values
-                .filter { it.config.distribution.type != Distribution.Type.CORDA_ENTERPRISE }
-                .sortedByDescending { it.config.distribution.version }
-                .first()
-                .config.distribution.networkBootstrapper
+    private fun bootstrapLocalNetwork(networkType: Distribution.Type) {
+        // Use master version of Bootstrapper
+        val bootstrapper =
+                when (networkType) {
+                    Distribution.Type.CORDA_OS -> Distribution.MASTER.networkBootstrapper
+                    Distribution.Type.CORDA_ENTERPRISE -> Distribution.R3_MASTER.networkBootstrapper
+                }
+        log.info("Bootstrapper URL: $bootstrapper\n")
 
         if (!bootstrapper.exists()) {
             signalFailure("Network bootstrapping tool does not exist; exiting ...")
@@ -320,7 +331,7 @@ class Network private constructor(
             runCommand(rpcProxyCommand)
         }
         else {
-            log.warn("Missing RPC proxy startup script. Continuing ...")
+            log.warn("Missing RPC proxy startup script ($startProxyScript). Continuing ...")
         }
     }
 

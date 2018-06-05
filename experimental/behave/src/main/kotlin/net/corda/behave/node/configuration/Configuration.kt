@@ -36,7 +36,7 @@ class Configuration(
         vararg configElements: ConfigurationTemplate
 ) {
 
-    private val developerMode = (distribution.type == Distribution.Type.CORDA_OS)
+    private val developerMode = System.getProperty("USE_NETWORK_SERVICES") == null
 
     val cordaX500Name: CordaX500Name by lazy({
         CordaX500Name(name, location, country)

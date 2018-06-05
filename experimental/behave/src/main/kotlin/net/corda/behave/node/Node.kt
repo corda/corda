@@ -45,7 +45,7 @@ import java.util.concurrent.CountDownLatch
  */
 class Node(
         val config: Configuration,
-        private val rootDirectory: Path = currentDirectory,
+        val rootDirectory: Path = currentDirectory,
         private val settings: ServiceSettings = ServiceSettings(),
         val rpcProxy: Boolean = false,
         val networkType: Distribution.Type
@@ -95,12 +95,12 @@ class Node(
         log.info("Configuring {} ...", this)
         serviceDependencies.addAll(config.database.type.dependencies(config))
         config.distribution.ensureAvailable()
-        if (networkType == Distribution.Type.CORDA_OS) {
-            config.writeToFile(rootDirectory / "${config.name}_node.conf")
-        }
-        else {
+        if (networkType == Distribution.Type.CORDA_ENTERPRISE && System.getProperty("USE_NETWORK_SERVICES") != null) {
             val nodeDirectory = (rootDirectory / config.name).createDirectories()
             config.writeToFile(nodeDirectory / "node.conf")
+        }
+        else {
+            config.writeToFile(rootDirectory / "${config.name}_node.conf")
         }
         installApps()
     }
@@ -273,8 +273,7 @@ class Node(
     }
 
     private fun installApps() {
-        val version = config.distribution.version
-        val appDirectory = stagingRoot / "corda" / version / "apps"
+        val appDirectory = config.distribution.cordappDirectory
         if (appDirectory.exists()) {
             val targetAppDirectory = runtimeDirectory / "cordapps"
             FileUtils.copyDirectory(appDirectory.toFile(), targetAppDirectory.toFile())
@@ -387,9 +386,10 @@ class Node(
         fun build(): Node {
             val name = name ?: error("Node name not set")
             val directory = directory ?: error("Runtime directory not set")
-            val compatibilityZoneURL =
-                    if (networkType == Distribution.Type.CORDA_ENTERPRISE)
-                        compatibilityZoneURL ?: "http://localhost:1300"
+            // TODO: rework how we use the Doorman/NMS (now these are a separate product / distribution)
+            val compatibilityZoneURL = null
+                    if (networkType == Distribution.Type.CORDA_ENTERPRISE && System.getProperty("USE_NETWORK_SERVICES") != null)
+                        "http://localhost:1300"         // TODO: add additional USE_NETWORK_SERVICES_URL to specify location of existing operational environment to use.
                     else null
             return Node(
                     Configuration(

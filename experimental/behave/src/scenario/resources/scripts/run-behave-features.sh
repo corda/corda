@@ -14,7 +14,7 @@ cd ${BUILD_DIR}
 ../../gradlew behaveJar
 
 BEHAVE_JAR=$(ls build/libs/corda-behave-*.jar | tail -n1)
-STAGING_ROOT=~/staging
+STAGING_ROOT="${STAGING_ROOT:-TMPDIR/staging}"
 
 # startup
 java -DSTAGING_ROOT=${STAGING_ROOT} -jar ${BEHAVE_JAR} --glue net.corda.behave.scenarios -path ./src/scenario/resources/features/startup/logging.feature
