@@ -523,7 +523,7 @@ class SingleThreadedStateMachineManager(
         flowLogic.stateMachine = flowStateMachineImpl
         val frozenFlowLogic = (flowLogic as FlowLogic<*>).serialize(context = checkpointSerializationContext!!)
 
-        val flowCorDappVersion= createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
+        val flowCorDappVersion = createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
 
         val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, deduplicationSeed, flowCorDappVersion).getOrThrow()
         val startedFuture = openFuture<Unit>()
@@ -556,19 +556,17 @@ class SingleThreadedStateMachineManager(
     }
 
     private fun InnerState.scheduleRetry(flowId: StateMachineRunId) {
-        mutex.locked {
-            val flow = flows[flowId]
-            if (flow != null) {
-                with(serviceHub.configuration.p2pMessagingRetry) {
-                    val retryFuture = retryScheduler.schedule({
-                        val event = Event.Error(FlowRetryException(maxRetryCount))
-                        flow.fiber.scheduleEvent(event)
-                    }, messageRedeliveryDelay.seconds, TimeUnit.SECONDS)
-                    flowsToRetry[flowId] = retryFuture
-                }
-            } else {
-                logger.warn("Unable to schedule retry for flow $flowId – flow not found.")
+        val flow = flows[flowId]
+        if (flow != null) {
+            with(serviceHub.configuration.p2pMessagingRetry) {
+                val retryFuture = retryScheduler.schedule({
+                    val event = Event.Error(FlowRetryException(maxRetryCount))
+                    flow.fiber.scheduleEvent(event)
+                }, messageRedeliveryDelay.seconds, TimeUnit.SECONDS)
+                flowsToRetry[flowId] = retryFuture
             }
+        } else {
+            logger.warn("Unable to schedule retry for flow $flowId – flow not found.")
         }
     }
 

@@ -18,7 +18,7 @@ object StaffedFlowHospital : FlowHospital {
 
     private val patients = ConcurrentHashMap<StateMachineRunId, MedicalHistory>()
 
-    val numberOfPatients get() = patients.size
+    val numberOfPatients = patients.size
 
     class MedicalHistory {
         val records: MutableList<Record> = mutableListOf()
