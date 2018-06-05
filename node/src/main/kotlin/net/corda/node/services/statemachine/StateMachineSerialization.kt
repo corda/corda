@@ -1,5 +1,6 @@
 package net.corda.node.services.statemachine
 
+import net.corda.core.internal.checkPayloadIs
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializationContext.UseCase
 import net.corda.core.serialization.SerializationContext.UseCase.Checkpoint
@@ -12,7 +13,6 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.UntrustworthyData
-import net.corda.core.utilities.checkPayloadIs
 import net.corda.serialization.internal.SerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 import net.corda.core.serialization.deserialize as deserializeImpl

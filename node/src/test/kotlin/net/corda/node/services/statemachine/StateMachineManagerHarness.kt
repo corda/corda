@@ -59,6 +59,7 @@ open class StateMachineManagerHarness {
         doReturn(participant<MessagingService>().also {
             doReturn(UUID.randomUUID().toString()).whenever(it).ourSenderUUID
         }).whenever(it).networkService
+        doReturn(participant<SubFlowVersion>()).whenever(it).createSubFlowVersion(any())
     }
     private val checkpointStorage = spectator<CheckpointStorage>().also {
         doReturn(Stream.empty<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>>()).whenever(it).getAllCheckpoints() // Start idle.

@@ -33,7 +33,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
-import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
 import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
 import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
 import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
@@ -524,7 +523,7 @@ class SingleThreadedStateMachineManager(
         flowStateMachineImpl.transientValues = TransientReference(createTransientValues(flowId, resultFuture))
         flowLogic.stateMachine = flowStateMachineImpl
         val frozenFlowLogic = serialization.serialize(flowLogic, UseCase.Checkpoint)
-        val flowCorDappVersion= createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
+        val flowCorDappVersion = serviceHub.createSubFlowVersion(flowLogic)
         val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, deduplicationSeed, flowCorDappVersion).getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
