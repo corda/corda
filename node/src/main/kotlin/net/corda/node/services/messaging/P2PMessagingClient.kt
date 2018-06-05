@@ -342,6 +342,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         }
 
         val queues = session.addressQuery(SimpleString("$PEERS_PREFIX#")).queueNames
+        knownQueues.clear()
         for (queue in queues) {
             val queueQuery = session.queueQuery(queue)
             if (!config.lazyBridgeStart || queueQuery.messageCount > 0) {
