@@ -3,7 +3,7 @@ package net.corda.gradle.jarfilter
 import org.gradle.api.logging.Logger
 import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.ProtoBuf.Class.Kind.*
-import org.jetbrains.kotlin.metadata.deserialization.Flags
+import org.jetbrains.kotlin.metadata.deserialization.Flags.*
 import org.jetbrains.kotlin.metadata.deserialization.NameResolver
 import org.jetbrains.kotlin.metadata.deserialization.TypeTable
 import org.jetbrains.kotlin.metadata.jvm.JvmProtoBuf.*
@@ -166,7 +166,7 @@ internal class ClassMetaFixTransformer(
     ProtoBuf.Class::parseFrom
 ) {
     override val typeTable = TypeTable(message.typeTable)
-    override val classKind: ProtoBuf.Class.Kind = Flags.CLASS_KIND.get(message.flags)
+    override val classKind: ProtoBuf.Class.Kind = CLASS_KIND.get(message.flags)
     override val properties = mutableList(message.propertyList)
     override val functions = mutableList(message.functionList)
     override val constructors = mutableList(message.constructorList)
