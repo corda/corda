@@ -83,7 +83,7 @@ Run from the command prompt
 1. From the cordapp-example folder, deploy the nodes by running ``gradlew deployNodes``
 2. Start the nodes by running ``call kotlin-source/build/nodes/runnodes.bat``
 3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
-4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
+4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
 
 Run from IntelliJ
 ^^^^^^^^^^^^^^^^^
@@ -103,7 +103,7 @@ Run from IntelliJ
 6. At the top-right of the screen, to the left of the green ``play`` arrow, you should see a dropdown. In that
    dropdown, select ``Run Example Cordapp - Kotlin`` and click the green ``play`` arrow.
 7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
-8. Test the CorDapp is running correctly by visiting the front end at `http://localhost:10007/web/example/
+8. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
 
 .. _mac-label:
 
@@ -137,7 +137,7 @@ Run from the terminal
 1. From the cordapp-example folder, deploy the nodes by running ``./gradlew deployNodes``
 2. Start the nodes by running ``kotlin-source/build/nodes/runnodes``. Do not click while 8 additional terminal windows start up.
 3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
-4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
+4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
 
 Run from IntelliJ
 ^^^^^^^^^^^^^^^^^
@@ -157,7 +157,7 @@ Run from IntelliJ
 6. At the top-right of the screen, to the left of the green ``play`` arrow, you should see a dropdown. In that
    dropdown, select ``Run Example Cordapp - Kotlin`` and click the green ``play`` arrow.
 7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
-8. Test the CorDapp is running correctly by visiting the front end at `http://localhost:10007/web/example/
+8. Test the CorDapp is running correctly by visiting the front end at `http://localhost:10009/web/example/
 
 Corda source code
 -----------------
