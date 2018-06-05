@@ -1,5 +1,5 @@
 Deploying Corda to Corda Testnet from an AWS Cloud Platform VM
-====================================================
+==============================================================
 
 .. contents::
 
@@ -11,13 +11,13 @@ to Testnet.
 
 Pre-requisites
 --------------
-* Ensure you have a registered Amazon AWS account which can create virtual machines and you are logged on to the AWS console: `https://console.aws.amazon.com`.
+* Ensure you have a registered Amazon AWS account which can create virtual machines and you are logged on to the AWS console: https://console.aws.amazon.com.
 
 
 Deploy Corda node
 -----------------
 
-Browse to `https://console.aws.amazon.com` and log in with your AWS account.
+Browse to https://console.aws.amazon.com and log in with your AWS account.
 
 
 **STEP 1: Launch a new virtual machine**
