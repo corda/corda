@@ -11,6 +11,7 @@ see changes to this list.
 * acetheultimate
 * Adrian Fletcher (TD)
 * agoldvarg
+* Ajitha Thayaharan (BCS Technology International)
 * Alberto Arri (R3)
 * amiracam
 * Andras Slemmer (R3)
