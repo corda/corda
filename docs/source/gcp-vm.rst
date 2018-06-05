@@ -1,5 +1,5 @@
 Deploying Corda to Corda Testnet from a Google Cloud Platform VM
-====================================================
+================================================================
 
 .. contents::
 
@@ -8,13 +8,13 @@ This document explains how to deploy a Corda node to Google Cloud Platform that 
 Pre-requisites
 --------------
 * Ensure you have a registered Google Cloud Platform account with
-  `billing enabled <https://cloud.google.com/billing/docs/how-to/manage-billing-account>` which can create virtual machines under your subscription(s) and you are logged on to the GCP console: `<https://console.cloud.google.com>`.
+  billing enabled (https://cloud.google.com/billing/docs/how-to/manage-billing-account) which can create virtual machines under your subscription(s) and you are logged on to the GCP console: https://console.cloud.google.com.
 
 
 Deploy Corda node
 -----------------
 
-Browse to `<https://console.cloud.google.com>` and log in with your
+Browse to https://console.cloud.google.com and log in with your
 Google credentials.
 
 **STEP 1: Create a GCP Project**
