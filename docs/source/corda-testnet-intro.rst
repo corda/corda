@@ -1,5 +1,5 @@
 The Corda Testnet
-================================================================
+=================
 
 .. contents::
 
@@ -11,7 +11,7 @@ The Corda Testnet is currently in private beta. Interested parties can request i
    
 
 Deploying a Corda node to the Corda Testnet
-------------------------------------
+-------------------------------------------
 
 Access to the Corda Testnet is enabled by visiting https://testnet.corda.network.
 
@@ -76,7 +76,7 @@ The installation script will download the Corda binaries as well as your PKI cer
 Hosting a Corda node locally is possible but will require manually configuring firewall and port forwarding on your local router. If you want this option then click on the "Download" button to download a Zip file with a pre-configured Corda node.
 
 A note on identities on Corda Testnet
-------------------------------
+-------------------------------------
 
 Unlike the main Corda Network, which is designed for verified real world identities, The Corda Testnet automatically assigns a "distinguished name" as your identity on the network. This is to prevent name abuse such as the use of offensive language in the names or name squatting. This allows the provision of a node to be automatic and instantaneous. It also enables the same user to safely generate many nodes without accidental name conflicts. If you require a human readable name then please contact support and a partial organsation name can be approved. 
 
