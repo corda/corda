@@ -51,7 +51,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         val log = contextLogger()
         const val MIN_RETRY_INTERVAL = 1000L
-        const val MAX_RETRY_INTERVAL = 300000L
+        const val MAX_RETRY_INTERVAL = 60000L
         const val BACKOFF_MULTIPLIER = 2L
         const val NUM_CLIENT_THREADS = 2
     }
