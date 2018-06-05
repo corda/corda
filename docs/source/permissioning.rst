@@ -10,17 +10,17 @@ Network permissioning
 .. contents::
 
 Every Corda node is a part of a network (also called a zone), and networks are *permissioned*. To connect to a
-zone, a node needs a signed X.509 certificate from the network operator. This takes the form of three keystores in a node's
-``<workspace>/certificates/`` folder:
+zone, a node needs a signed X.509 certificate from the network operator. Production deployments require a secure certificate authority.
+The issued certificates take the form of three keystores in a node's ``<workspace>/certificates/`` folder:
 
 * ``network-root-truststore.jks``, which stores the network/zone operator's public keys and certificates
 * ``nodekeystore.jks``, which stores the node’s identity keypairs and certificates
 * ``sslkeystore.jks``, which stores the node’s TLS keypairs and certificates
 
-Production deployments require a secure certificate authority. Most users will join an existing network such as the
-main Corda network or the Corda TestNet. You can also build your own networks. During development, no particular
-network is required because you can use the included tools to pre-create and pre-distribute the certificates and
-map files that would normally be provided dynamically by the network.
+Most users will join an existing network such as the main Corda network or the Corda TestNet. You can also build your
+own networks. During development, no network is required because you can use the included tools to pre-create
+and pre-distribute the certificates and map files that would normally be provided dynamically by the network. Effectively
+the bootstrapper tool creates a private semi-static network for you.
 
 Certificate hierarchy
 ---------------------
@@ -91,9 +91,9 @@ The extension contains a single ASN.1 integer identifying the identity type the 
 6. Well-known legal identity
 7. Confidential legal identity
 
-In a typical installation, node administrators need not be aware of these. However, when node certificates are managed
-by external tools (such as an existing PKI solution deployed within an organisation), it is important to understand
-these constraints.
+In a typical installation, node administrators need not be aware of these. However, if node certificates are to be
+managed by external tools, such as those provided as part of an existing PKI solution deployed within an organisation,
+it is important to recognise these extensions and the constraints noted above.
 
 Certificate path validation is extended so that a certificate must contain the extension if the extension was present
 in the certificate of the issuer.
@@ -170,7 +170,7 @@ Do you need a zone?
 Think twice before going down this route:
 
 1. It isn't necessary for testing.
-2. It isn't necessary to add another layer of permissioning or 'know your customer' requirements onto your app.
+2. It isn't necessary for adding another layer of permissioning or 'know your customer' requirements onto your app.
 
 **Testing.** Creating a production-ready zone isn't necessary for testing as you can use the *network bootstrapper*
 tool to create all the certificates, keys, and distribute the needed map files to run many nodes. The bootstrapper can
