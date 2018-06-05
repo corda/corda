@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.context.InvocationContext
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -70,9 +71,10 @@ data class Checkpoint(
                 flowLogicClass: Class<FlowLogic<*>>,
                 frozenFlowLogic: SerializedBytes<out FlowLogic<*>>,
                 ourIdentity: Party,
-                deduplicationSeed: String
+                deduplicationSeed: String,
+                subFlowVersion: SubFlowVersion
         ): Try<Checkpoint> {
-            return SubFlow.create(flowLogicClass).map { topLevelSubFlow ->
+            return SubFlow.create(flowLogicClass, subFlowVersion).map { topLevelSubFlow ->
                 Checkpoint(
                         invocationContext = invocationContext,
                         ourIdentity = ourIdentity,
@@ -230,4 +232,13 @@ sealed class ErrorState {
             return copy(errors = errors + newErrors)
         }
     }
+}
+
+/**
+ * Stored per [SubFlow]. Contains metadata around the version of the code at the Checkpointing moment.
+ */
+sealed class SubFlowVersion {
+    abstract val platformVersion: Int
+    data class CoreFlow(override val platformVersion: Int) : SubFlowVersion()
+    data class CorDappFlow(override val platformVersion: Int, val corDappName: String, val corDappHash: SecureHash) : SubFlowVersion()
 }

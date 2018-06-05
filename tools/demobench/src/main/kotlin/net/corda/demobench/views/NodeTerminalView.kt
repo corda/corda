@@ -13,6 +13,7 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import javafx.util.Duration
+import net.corda.client.rpc.RPCException
 import net.corda.core.concurrent.match
 import net.corda.core.contracts.ContractState
 import net.corda.core.messaging.CordaRPCOps
@@ -201,13 +202,25 @@ class NodeTerminalView : Fragment() {
             }
 
             val fxScheduler = Schedulers.from(Platform::runLater)
-            subscriptions.add(txNext.observeOn(fxScheduler).subscribe {
+            subscriptions.add(txNext.observeOn(fxScheduler).subscribe({
                 transactions.value = (++txCount).toString()
-            })
-            subscriptions.add(stateNext.observeOn(fxScheduler).subscribe {
+            }, { error ->
+                if (error is RPCException && error.message?.contains("Connection failure detected") == true) {
+                    // Ignore this ^^^, it only happens when we shutdown a node in Demobench.
+                } else {
+                    throw error
+                }
+            }))
+            subscriptions.add(stateNext.observeOn(fxScheduler).subscribe({
                 stateCount += (it.produced.size - it.consumed.size)
                 states.value = stateCount.toString()
-            })
+            }, { error ->
+                if (error is RPCException && error.message?.contains("Connection failure detected") == true) {
+                    // Ignore this ^^^, it only happens when we shutdown a node in Demobench.
+                } else {
+                    throw error
+                }
+            }))
         } catch (e: Exception) {
             log.log(Level.WARNING, "RPC failed: ${e.message}", e)
         }

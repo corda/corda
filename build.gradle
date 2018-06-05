@@ -4,7 +4,7 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "corda-4.0-SNAPSHOT"
+    ext.corda_release_version = "4.0-SNAPSHOT"
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     ext.corda_platform_version = constants.getProperty("platformVersion")
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
@@ -37,7 +37,7 @@ buildscript {
      * https://issues.apache.org/jira/browse/ARTEMIS-1559
      */
     ext.artemis_version = '2.5.0'
-    ext.jackson_version = '2.9.3'
+    ext.jackson_version = '2.9.5'
     ext.jetty_version = '9.4.7.v20170914'
     ext.jersey_version = '2.25'
     ext.assertj_version = '3.8.0'

@@ -33,9 +33,13 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
-import net.corda.node.services.statemachine.interceptors.*
+import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
+import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
+import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
+import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
+import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
+import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.services.statemachine.transitions.StateMachine
-import net.corda.node.services.statemachine.transitions.StateMachineConfiguration
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
@@ -276,8 +280,6 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    private val stateMachineConfiguration = StateMachineConfiguration.default
-
     private fun checkQuasarJavaAgentPresence() {
         check(SuspendableHelper.isJavaAgentActive(), {
             """Missing the '-javaagent' JVM argument. Make sure you run the tests with the Quasar java agent attached to your JVM.
@@ -348,6 +350,10 @@ class SingleThreadedStateMachineManager(
             null
         }
         externalEventMutex.withLock {
+            // Remove any sessions the old flow has.
+            for (sessionId in getFlowSessionIds(currentState.checkpoint)) {
+                sessionToFlow.remove(sessionId)
+            }
             if (flow != null) addAndStartFlow(flowId, flow)
             // Deliver all the external events from the old flow instance.
             val unprocessedExternalEvents = mutableListOf<ExternalEvent>()
@@ -518,7 +524,8 @@ class SingleThreadedStateMachineManager(
         flowStateMachineImpl.transientValues = TransientReference(createTransientValues(flowId, resultFuture))
         flowLogic.stateMachine = flowStateMachineImpl
         val frozenFlowLogic = serialization.serialize(flowLogic, UseCase.Checkpoint)
-        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, deduplicationSeed).getOrThrow()
+        val flowCorDappVersion= createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
+        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, deduplicationSeed, flowCorDappVersion).getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
                 checkpoint = initialCheckpoint,
@@ -569,7 +576,7 @@ class SingleThreadedStateMachineManager(
                 database = database,
                 transitionExecutor = transitionExecutor,
                 actionExecutor = actionExecutor!!,
-                stateMachine = StateMachine(id, stateMachineConfiguration, secureRandom, serialization, sessionIdFactory),
+                stateMachine = StateMachine(id, secureRandom, serialization, sessionIdFactory),
                 serviceHub = serviceHub,
                 serialization = serialization,
                 persistence = persistence)

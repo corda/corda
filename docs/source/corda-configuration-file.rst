@@ -125,6 +125,9 @@ absolute path to the node's base directory.
 
     :validating: Boolean to determine whether the notary is a validating or non-validating one.
 
+    :serviceLegalName: If the node is part of a distributed cluster, specify the legal name of the cluster. At runtime, Corda
+    checks whether this name matches the name of the certificate of the notary cluster.
+
     :raft: If part of a distributed Raft cluster specify this config object, with the following settings:
 
         :nodeAddress: The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
@@ -261,7 +264,6 @@ An example ``web-server.conf`` file is as follow:
         address : "my-corda-node:10003"
         adminAddress : "my-corda-node:10004"
     }
-    webAddress : "localhost:12347",
     rpcUsers : [{ username=user1, password=letmein, permissions=[ StartFlow.net.corda.protocols.CashProtocol ] }]
 
 Configuring a node where the Corda Comatability Zone's registration and Network Map services exist on different URLs
@@ -303,8 +305,6 @@ path to the node's base directory.
                 :sslKeystore: absolute path to the ssl key store, defaulted to ``certificatesDirectory / "sslkeystore.jks"``.
                 :trustStoreFile: absolute path to the trust store, defaulted to ``certificatesDirectory / "truststore.jks"``.
                 :trustStoreFile: absolute path to the trust store, defaulted to ``certificatesDirectory / "truststore.jks"``.
-
-:webAddress: The host and port on which the webserver will listen if it is started. This is not used by the node itself.
 
 :rpcUsers: A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
         following fields:

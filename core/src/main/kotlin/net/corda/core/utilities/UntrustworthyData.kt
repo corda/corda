@@ -32,14 +32,3 @@ class UntrustworthyData<out T>(@PublishedApi internal val fromUntrustedWorld: T)
 }
 
 inline fun <T, R> UntrustworthyData<T>.unwrap(validator: (T) -> R): R = validator(fromUntrustedWorld)
-
-fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
-    val payloadData: T = try {
-        val serializer = SerializationDefaults.SERIALIZATION_FACTORY
-        serializer.deserialize(this, type, SerializationDefaults.P2P_CONTEXT)
-    } catch (ex: Exception) {
-        throw IllegalArgumentException("Payload invalid", ex)
-    }
-    return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) } ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a " +
-            "${payloadData.javaClass.name} ($payloadData)")
-}

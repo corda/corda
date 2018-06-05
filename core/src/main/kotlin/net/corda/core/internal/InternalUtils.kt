@@ -7,22 +7,15 @@ import com.google.common.hash.HashingInputStream
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.sha256
-import net.corda.core.crypto.sign
+import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.UntrustworthyData
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -37,6 +30,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.reflect.Field
+import java.lang.reflect.Member
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.net.HttpURLConnection
@@ -51,23 +45,11 @@ import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.security.cert.CertPath
-import java.security.cert.CertPathValidator
-import java.security.cert.CertPathValidatorException
-import java.security.cert.PKIXCertPathValidatorResult
-import java.security.cert.PKIXParameters
-import java.security.cert.TrustAnchor
-import java.security.cert.X509Certificate
+import java.security.cert.*
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
-import java.util.Spliterator.DISTINCT
-import java.util.Spliterator.IMMUTABLE
-import java.util.Spliterator.NONNULL
-import java.util.Spliterator.ORDERED
-import java.util.Spliterator.SIZED
-import java.util.Spliterator.SORTED
-import java.util.Spliterator.SUBSIZED
+import java.util.Spliterator.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.stream.IntStream
@@ -311,6 +293,23 @@ fun <T : Any> KClass<T>.objectOrNewInstance(): T {
     return this.objectInstance ?: this.createInstance()
 }
 
+/** Similar to [KClass.objectInstance] but also works on private objects. */
+val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
+    return try {
+        kotlin.objectInstance
+    } catch (_: Throwable) {
+        val field = try { getDeclaredField("INSTANCE") } catch (_: NoSuchFieldException) { null }
+        field?.let {
+            if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {
+                it.isAccessible = true
+                uncheckedCast(it.get(null))
+            } else {
+                null
+            }
+        }
+    }
+}
+
 /**
  * A simple wrapper around a [Field] object providing type safe read and write access using [value], ignoring the field's
  * visibility.
@@ -384,6 +383,12 @@ val KClass<*>.packageName: String get() = java.`package`.name
 inline val Class<*>.isAbstractClass: Boolean get() = Modifier.isAbstract(modifiers)
 
 inline val Class<*>.isConcreteClass: Boolean get() = !isInterface && !isAbstractClass
+
+inline val Member.isPublic: Boolean get() = Modifier.isPublic(modifiers)
+
+inline val Member.isStatic: Boolean get() = Modifier.isStatic(modifiers)
+
+inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
 
 fun URI.toPath(): Path = Paths.get(this)
 
@@ -498,4 +503,15 @@ fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector
  */
 internal fun SignedTransaction.pushToLoggingContext() {
     MDC.put("tx_id", id.toString())
+}
+
+fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
+    val payloadData: T = try {
+        val serializer = SerializationDefaults.SERIALIZATION_FACTORY
+        serializer.deserialize(this, type, SerializationDefaults.P2P_CONTEXT)
+    } catch (ex: Exception) {
+        throw IllegalArgumentException("Payload invalid", ex)
+    }
+    return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) }
+            ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a ${payloadData.javaClass.name} ($payloadData)")
 }

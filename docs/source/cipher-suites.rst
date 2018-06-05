@@ -54,7 +54,7 @@ For instance, **network map** is ECDSA NIST P-256 (secp256r1) in the Corda Netwo
 underlying HSM device, but the default for dev-mode is Pure EdDSA (ed25519).
 
 The following table presents the 5 signature schemes currently supported by Corda. The TLS column shows which of them
-are compatible with TLS 1.2, while the default scheme per key type is also shown.
+are compatible with TLS 1.2, while the default scheme per key type is also shown in the last column.
 
 +-------------------------+---------------------------------------------------------------+-----+-------------------------+
 | Cipher suite            | Description                                                   | TLS | Default for             |
@@ -93,7 +93,7 @@ are compatible with TLS 1.2, while the default scheme per key type is also shown
 +-------------------------+---------------------------------------------------------------+-----+-------------------------+
 | | SPHINCS-256           | | SPHINCS-256 is a post-quantum secure algorithm that relies  | NO  |                         |
 | | and SHA-512           | | only on hash functions. It is included as a hedge against   |     |                         |
-|                         | | the possibility of a malicious adversary obtaining a        |     |                         |
+| | (experimental)        | | the possibility of a malicious adversary obtaining a        |     |                         |
 |                         | | quantum computer capable of running Shor's algorithm in     |     |                         |
 |                         | | future. SPHINCS is based ultimately on a clever usage of    |     |                         |
 |                         | | Merkle hash trees. Hash functions are a very heavily        |     |                         |

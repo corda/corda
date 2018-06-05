@@ -93,7 +93,7 @@ class TopLevelTransition(
 
     private fun enterSubFlowTransition(event: Event.EnterSubFlow): TransitionResult {
         return builder {
-            val subFlow = SubFlow.create(event.subFlowClass)
+            val subFlow = SubFlow.create(event.subFlowClass, event.subFlowVersion)
             when (subFlow) {
                 is Try.Success -> {
                     currentState = currentState.copy(

@@ -220,7 +220,7 @@ object Crypto {
     }
 
     /**
-     * Factory pattern to retrieve the corresponding [SignatureScheme] based on the type of the [String] input.
+     * Factory pattern to retrieve the corresponding [SignatureScheme] based on [SignatureScheme.schemeCodeName].
      * This function is usually called by key generators and verify signature functions.
      * In case the input is not a key in the supportedSignatureSchemes map, null will be returned.
      * @param schemeCodeName a [String] that should match a supported signature scheme code name (e.g. ECDSA_SECP256K1_SHA256), see [Crypto].

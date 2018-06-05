@@ -131,9 +131,10 @@ class NodeVaultService(
         fun makeUpdate(tx: WireTransaction): Vault.Update<ContractState>? {
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
-                StatesToRecord.ONLY_RELEVANT -> tx.outputs.filter { isRelevant(it.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet()) }
-                StatesToRecord.ALL_VISIBLE -> tx.outputs
-            }.map { tx.outRef<ContractState>(it.data) }
+                StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter {
+                    isRelevant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet()) }
+                StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
+            }.map { tx.outRef<ContractState>(it.index) }
 
             // Retrieve all unconsumed states for this transaction's inputs
             val consumedStates = loadStates(tx.inputs)
@@ -407,7 +408,7 @@ class NodeVaultService(
 
     @Throws(VaultQueryException::class)
     private fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean): Vault.Page<T> {
-        log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
+        log.debug { "Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting" }
         return database.transaction {
             // calculate total results where a page specification has been defined
             var totalStates = -1L
