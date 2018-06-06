@@ -19,7 +19,7 @@ import java.time.Instant
  * @property epoch Version number of the network parameters. Starting from 1, this will always increment on each new set
  * of parameters.
  * @property whitelistedContractImplementations List of whitelisted jars containing contract code for each contract class.
- *  This will be used by [net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint]. Read more about contract constraints here: <https://docs.corda.net/api-contract-constraints.html>
+ *  This will be used by [net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint]. [You can learn more about contract constraints here](https://docs.corda.net/api-contract-constraints.html).
  * @property eventHorizon Time after which nodes will be removed from the network map if they have not been seen
  * during this period
  */
