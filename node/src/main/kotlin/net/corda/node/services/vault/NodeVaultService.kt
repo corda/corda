@@ -131,9 +131,9 @@ class NodeVaultService(
             val myKeys = keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } })
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
-                StatesToRecord.ONLY_RELEVANT -> tx.outputs.filter { isRelevant(it.data, myKeys.toSet()) }
-                StatesToRecord.ALL_VISIBLE -> tx.outputs
-            }.map { tx.outRef<ContractState>(it.data) }
+                StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter { isRelevant(it.value.data, myKeys.toSet()) }
+                StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
+            }.map { tx.outRef<ContractState>(it.index) }
 
             // Retrieve all unconsumed states for this transaction's inputs
             val consumedStates = loadStates(tx.inputs)
