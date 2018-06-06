@@ -645,7 +645,7 @@ class ResponderFlow(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
                 // Any additional checking we see fit...
                 val outputState = stx.tx.outputsOfType<DummyState>().single()
-                assert(outputState.magicNumber == 777)
+                require(outputState.magicNumber == 777)
             }
         }
 

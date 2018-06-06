@@ -60,12 +60,12 @@ class PluginRegistrationTest {
         val classpath = outputLines.filter { it.contains(" classpath:") }.last()
 
         // If DummyJdbcDriver has been registered it should have printed a message
-        assert(outputLines.count { it.contains("[DummyJDBCDriver] hello") } > 0) {
+        require(outputLines.count { it.contains("[DummyJDBCDriver] hello") } > 0) {
             "Cannot find registration message from installed jdbc driver"
         }
 
         // Check the printed classpath contains 'nodeJarDir'
-        assert(classpath.contains(jarDir)) {
+        require(classpath.contains(jarDir)) {
             "Expected to find $jarDir in printed classpath"
         }
     }

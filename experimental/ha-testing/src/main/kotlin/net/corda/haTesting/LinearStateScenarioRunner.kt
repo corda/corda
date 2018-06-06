@@ -31,7 +31,7 @@ class LinearStateScenarioRunner(options: OptionSet) : AbstractScenarioRunner(opt
             }
 
             // Verify
-            assert(results.size == iterCount) { "Expected number of results is $iterCount, actual number of payments: ${results.size}" }
+            require(results.size == iterCount) { "Expected number of results is $iterCount, actual number of payments: ${results.size}" }
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
             // TODO: Potentially implement paging validation logic for bigger data sets.
             val pageSpecification = PageSpecification(pageNumber = 1, pageSize = Int.MAX_VALUE)

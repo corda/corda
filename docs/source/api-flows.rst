@@ -540,7 +540,7 @@ transaction ourselves, we can automatically gather the signatures of the other r
         :dedent: 12
 
 Each required signer will need to respond by invoking its own ``SignTransactionFlow`` subclass to check the
-transaction and provide their signature if they are satisfied:
+transaction (by implementing the ``checkTransaction`` method) and provide their signature if they are satisfied:
 
 .. container:: codeset
 
@@ -555,6 +555,14 @@ transaction and provide their signature if they are satisfied:
         :start-after: DOCSTART 16
         :end-before: DOCEND 16
         :dedent: 12
+
+Types of things to check include:
+
+    * Ensuring that the transaction received is the expected type, i.e. has the expected type of inputs and outputs
+    * Checking that the properties of the outputs are expected, this is in the absence of integrating reference
+      data sources to facilitate this
+    * Checking that the transaction is not incorrectly spending (perhaps maliciously) asset states, as potentially
+      the transaction creator has access to some of signer's state references
 
 SendTransactionFlow/ReceiveTransactionFlow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
