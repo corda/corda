@@ -8,9 +8,11 @@ import net.corda.core.internal.toMultiMap
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.nodeapi.internal.ContractsJar
+import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
 private const val EXCLUDE_WHITELIST_FILE_NAME = "exclude_whitelist.txt"
+private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.network.WhitelistGenerator")
 
 fun generateWhitelist(networkParameters: NetworkParameters?,
                       excludeContracts: List<ContractClassName>,
@@ -18,7 +20,7 @@ fun generateWhitelist(networkParameters: NetworkParameters?,
     val existingWhitelist = networkParameters?.whitelistedContractImplementations ?: emptyMap()
 
     if (excludeContracts.isNotEmpty()) {
-        println("Exclude contracts from whitelist: ${excludeContracts.joinToString()}")
+        logger.info("Exclude contracts from whitelist: ${excludeContracts.joinToString()}")
         existingWhitelist.keys.forEach {
             require(it !in excludeContracts) { "$it is already part of the existing whitelist and cannot be excluded." }
         }
