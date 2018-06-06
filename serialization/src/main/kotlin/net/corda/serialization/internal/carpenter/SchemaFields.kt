@@ -77,7 +77,7 @@ open class NonNullableField(field: Class<out Any?>) : ClassField(field) {
     }
 
     override fun nullTest(mv: MethodVisitor, slot: Int) {
-        assert(name != unsetName)
+        require(name != unsetName)
 
         if (!field.isPrimitive) {
             with(mv) {
@@ -113,7 +113,7 @@ class NullableField(field: Class<out Any?>) : ClassField(field) {
     }
 
     override fun nullTest(mv: MethodVisitor, slot: Int) {
-        assert(name != unsetName)
+        require(name != unsetName)
     }
 }
 

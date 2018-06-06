@@ -82,7 +82,7 @@ abstract class MetaCarpenterBase(val schemas: CarpenterMetaSchema, val cc: Class
         // carpented class existing and remove it from their dependency list, If that
         // list is now empty we have no impediment to carpenting that class up
         schemas.dependsOn.remove(newObject.name)?.forEach { dependent ->
-            assert(newObject.name in schemas.dependencies[dependent]!!.second)
+            require(newObject.name in schemas.dependencies[dependent]!!.second)
 
             schemas.dependencies[dependent]?.second?.remove(newObject.name)
 

@@ -116,7 +116,7 @@ class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>
             }
         }
         endChange()
-        assert(sourceList.size == indexMap.size)
+        require(sourceList.size == indexMap.size)
     }
 
     override fun get(index: Int): A = sourceList[index].value

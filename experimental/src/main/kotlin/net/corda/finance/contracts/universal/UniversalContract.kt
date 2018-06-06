@@ -214,7 +214,7 @@ class UniversalContract : Contract {
                 val rest = extractRemainder(arr, action)
 
                 // for now - let's assume not
-                assert(rest is Zero)
+                require(rest is Zero)
 
                 requireThat {
                     "action must have a time-window" using (tx.timeWindow != null)

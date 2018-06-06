@@ -87,7 +87,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
         // Verify that this class is immutable (all properties are final).
         // We disable this check inside SGX as the reflection blows up.
         if (!SgxSupport.isInsideEnclave) {
-            assert(props.none { it is KMutableProperty<*> })
+            require(props.none { it is KMutableProperty<*> })
         }
     }
 
@@ -123,7 +123,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<T>): T {
-        assert(type.kotlin == klass)
+        require(type.kotlin == klass)
         val numFields = input.readVarInt(true)
         val fieldTypeHash = input.readInt()
 
