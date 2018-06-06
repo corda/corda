@@ -70,7 +70,7 @@ class SingleThreadedStateMachineManager(
 
     private class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
 
-    private data class ScheduledRetry(
+    private data class ScheduledTimeout(
             /** Will fire a [FlowTimeoutException] indicating to the flow hospital to restart the flow. */
             val scheduledFuture: ScheduledFuture<*>,
             /** Specifies the number of times this flow has been retried. */
@@ -86,12 +86,12 @@ class SingleThreadedStateMachineManager(
         val flows = HashMap<StateMachineRunId, Flow>()
         val startedFutures = HashMap<StateMachineRunId, OpenFuture<Unit>>()
         /** Flows scheduled to be retried if not finished within the specified timeout period. */
-        val timedFlows = HashMap<StateMachineRunId, ScheduledRetry>()
+        val timedFlows = HashMap<StateMachineRunId, ScheduledTimeout>()
     }
 
     private val mutex = ThreadBox(InnerState())
     private val scheduler = FiberExecutorScheduler("Same thread scheduler", executor)
-    private val retryScheduler = Executors.newScheduledThreadPool(1)
+    private val timeoutScheduler = Executors.newScheduledThreadPool(1)
     // How many Fibers are running and not suspended.  If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
     // Monitoring support.
@@ -573,16 +573,16 @@ class SingleThreadedStateMachineManager(
     private fun InnerState.scheduleTimeout(flowId: StateMachineRunId) {
         val flow = flows[flowId]
         if (flow != null) {
-            val scheduledRetry = timedFlows[flowId]
-            val retryCount = if (scheduledRetry != null) {
-                val retryFuture = scheduledRetry.scheduledFuture
-                if (!retryFuture.isDone) scheduledRetry.scheduledFuture.cancel(true)
-                scheduledRetry.retryCount
+            val scheduledTimeout = timedFlows[flowId]
+            val retryCount = if (scheduledTimeout != null) {
+                val timeoutFuture = scheduledTimeout.scheduledFuture
+                if (!timeoutFuture.isDone) scheduledTimeout.scheduledFuture.cancel(true)
+                scheduledTimeout.retryCount
             } else 0
             val scheduledFuture = scheduleTimeoutException(flow, retryCount)
-            timedFlows[flowId] = ScheduledRetry(scheduledFuture, retryCount + 1)
+            timedFlows[flowId] = ScheduledTimeout(scheduledFuture, retryCount + 1)
         } else {
-            logger.warn("Unable to schedule retry for flow $flowId – flow not found.")
+            logger.warn("Unable to schedule timeout for flow $flowId – flow not found.")
         }
     }
 
@@ -590,7 +590,7 @@ class SingleThreadedStateMachineManager(
     private fun scheduleTimeoutException(flow: Flow, retryCount: Int): ScheduledFuture<*> {
         return with(serviceHub.configuration.p2pMessagingRetry) {
             val timeoutDelaySeconds = messageRedeliveryDelay.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
-            retryScheduler.schedule({
+            timeoutScheduler.schedule({
                 val event = Event.Error(FlowTimeoutException(maxRetryCount))
                 flow.fiber.scheduleEvent(event)
             }, timeoutDelaySeconds, TimeUnit.SECONDS)
@@ -802,8 +802,7 @@ class SingleThreadedStateMachineManager(
         while (true) {
             val event = flow.fiber.transientValues!!.value.eventQueue.tryReceive() ?: return
             when (event) {
-                is Event.DoRemainingWork -> {
-                }
+                is Event.DoRemainingWork -> {}
                 is Event.DeliverSessionMessage -> {
                     // Acknowledge the message so it doesn't leak in the broker.
                     event.deduplicationHandler.afterDatabaseTransaction()

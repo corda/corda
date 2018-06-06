@@ -74,8 +74,8 @@ class ActionExecutorImpl(
             is Action.ExecuteAsyncOperation -> executeAsyncOperation(fiber, action)
             is Action.ReleaseSoftLocks -> executeReleaseSoftLocks(action)
             is Action.RetryFlowFromSafePoint -> executeRetryFlowFromSafePoint(action)
-            is Action.ScheduleFlowRetry -> scheduleFlowRetry(action)
-            is Action.CancelFlowRetry -> cancelFlowRetry(action)
+            is Action.ScheduleFlowTimeout -> scheduleFlowTimeout(action)
+            is Action.CancelFlowTimeout -> cancelFlowTimeout(action)
         }
     }
     private fun executeReleaseSoftLocks(action: Action.ReleaseSoftLocks) {
@@ -236,11 +236,11 @@ class ActionExecutorImpl(
         return checkpoint.serialize(context = checkpointSerializationContext)
     }
 
-    private fun cancelFlowRetry(action: Action.CancelFlowRetry) {
+    private fun cancelFlowTimeout(action: Action.CancelFlowTimeout) {
         stateMachineManager.cancelFlowTimeout(action.flowId)
     }
 
-    private fun scheduleFlowRetry(action: Action.ScheduleFlowRetry) {
+    private fun scheduleFlowTimeout(action: Action.ScheduleFlowTimeout) {
         stateMachineManager.scheduleFlowTimeout(action.flowId)
     }
 }

@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap
 object StaffedFlowHospital : FlowHospital {
     private val log = loggerFor<StaffedFlowHospital>()
 
-    private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist, DoctorRetry)
+    private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist, DoctorTimeout)
 
     private val patients = ConcurrentHashMap<StateMachineRunId, MedicalHistory>()
 
@@ -128,25 +128,25 @@ object StaffedFlowHospital : FlowHospital {
 
     /**
      * Restarts [TimedFlow], keeping track of the number of retries and making sure it does not
-     * exceed the limit specified by the flow.
+     * exceed the limit specified by the [FlowTimeoutException].
      */
-    object DoctorRetry : Staff {
+    object DoctorTimeout : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: MedicalHistory): Diagnosis {
             if (newError is FlowTimeoutException) {
-                if (isRetryable(flowFiber)) {
+                if (isTimedFlow(flowFiber)) {
                     if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this)) {
                         return Diagnosis.DISCHARGE
                     } else {
-                        log.warn("\"Maximum number of retries reached for flow ${flowFiber.javaClass}")
+                        log.warn("\"Maximum number of retries reached for timed flow ${flowFiber.javaClass}")
                     }
                 } else {
-                    log.warn("\"Unable to retry flow: ${flowFiber.javaClass}, it is not retryable and does not contain any retryable sub-flows.")
+                    log.warn("\"Unable to restart flow: ${flowFiber.javaClass}, it is not timed and does not contain any timed sub-flows.")
                 }
             }
             return Diagnosis.NOT_MY_SPECIALTY
         }
 
-        private fun isRetryable(flowFiber: FlowFiber): Boolean {
+        private fun isTimedFlow(flowFiber: FlowFiber): Boolean {
             return flowFiber.snapshot().checkpoint.subFlowStack.any {
                 TimedFlow::class.java.isAssignableFrom(it.flowClass)
             }

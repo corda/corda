@@ -137,17 +137,17 @@ sealed class Action {
     data class RetryFlowFromSafePoint(val currentState: StateMachineState) : Action()
 
     /**
-     * Set a timer for retrying flow [flowId] if it does not complete in time.
+     * Schedule the flow [flowId] to be retried if it does not complete within the timeout period specified in the configuration.
      *
-     * Note that this only works with [RetryableFlow].
+     * Note that this only works with [TimedFlow].
      */
-    data class ScheduleFlowRetry(val flowId: StateMachineRunId) : Action()
+    data class ScheduleFlowTimeout(val flowId: StateMachineRunId) : Action()
 
     /**
-     * Cancel the retry timer for flow [flowId]. This must be called when a retryable flow completes to prevent
+     * Cancel the retry timeout for flow [flowId]. This must be called when a timed flow completes to prevent
      * unnecessary additional invocations.
      */
-    data class CancelFlowRetry(val flowId: StateMachineRunId) : Action()
+    data class CancelFlowTimeout(val flowId: StateMachineRunId) : Action()
 }
 
 /**

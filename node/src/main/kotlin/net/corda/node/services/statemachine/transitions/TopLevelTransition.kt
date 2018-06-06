@@ -96,19 +96,19 @@ class TopLevelTransition(
             val subFlow = SubFlow.create(event.subFlowClass, event.subFlowVersion)
             when (subFlow) {
                 is Try.Success -> {
-                    val containsRetryableSubFlows = currentState.checkpoint.subFlowStack.any {
+                    val containsTimedSubFlows = currentState.checkpoint.subFlowStack.any {
                         TimedFlow::class.java.isAssignableFrom(it.flowClass)
                     }
-                    val isCurrentSubFlowRetryable = TimedFlow::class.java.isAssignableFrom(event.subFlowClass)
+                    val isCurrentSubFlowTimed = TimedFlow::class.java.isAssignableFrom(event.subFlowClass)
                     currentState = currentState.copy(
                             checkpoint = currentState.checkpoint.copy(
                                     subFlowStack = currentState.checkpoint.subFlowStack + subFlow.value
                             )
                     )
-                    // We don't schedule a retry if there already is a retryable subflow on the stack - a retry had
+                    // We don't schedule a timeout if there already is a timed subflow on the stack - a timeout had
                     // been scheduled already.
-                    if (isCurrentSubFlowRetryable && !containsRetryableSubFlows) {
-                        actions.add(Action.ScheduleFlowRetry(currentState.flowLogic.runId))
+                    if (isCurrentSubFlowTimed && !containsTimedSubFlows) {
+                        actions.add(Action.ScheduleFlowTimeout(currentState.flowLogic.runId))
                     }
                 }
                 is Try.Failure -> {
@@ -126,22 +126,22 @@ class TopLevelTransition(
                 freshErrorTransition(UnexpectedEventInState())
             } else {
                 val lastSubFlowClass = checkpoint.subFlowStack.last().flowClass
-                val isLastSubFlowRetryable = TimedFlow::class.java.isAssignableFrom(lastSubFlowClass)
+                val isLastSubFlowTimed = TimedFlow::class.java.isAssignableFrom(lastSubFlowClass)
                 val newSubFlowStack = checkpoint.subFlowStack.dropLast(1)
                 currentState = currentState.copy(
                         checkpoint = checkpoint.copy(
                                 subFlowStack = newSubFlowStack
                         )
                 )
-                if (isLastSubFlowRetryable && !containsRetryableFlows(currentState.checkpoint.subFlowStack)) {
-                    actions.add(Action.CancelFlowRetry(currentState.flowLogic.runId))
+                if (isLastSubFlowTimed && !containsTimedFlows(currentState.checkpoint.subFlowStack)) {
+                    actions.add(Action.CancelFlowTimeout(currentState.flowLogic.runId))
                 }
             }
             FlowContinuation.ProcessEvents
         }
     }
 
-    private fun containsRetryableFlows(subFlowStack: List<SubFlow>): Boolean {
+    private fun containsTimedFlows(subFlowStack: List<SubFlow>): Boolean {
         return subFlowStack.any { TimedFlow::class.java.isAssignableFrom(it.flowClass) }
     }
 
