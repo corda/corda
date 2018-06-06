@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.jcabi.manifests.Manifests
 import net.corda.client.jackson.JacksonSupport
+import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.rootMessage
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
@@ -63,6 +64,8 @@ class Main : Runnable {
     var verbose: Boolean = false
 
     override fun run() {
+        System.setProperty("logLevel", if (verbose) "trace" else "off")
+
         val bytes = source!!.readBytes().run {
             require(size > amqpMagic.size) { "Insufficient bytes for AMQP blob" }
             sequence()
@@ -73,6 +76,8 @@ class Main : Runnable {
         if (schema) {
             val envelope = DeserializationInput.getEnvelope(bytes)
             println(envelope.schema)
+            println()
+            println(envelope.transformsSchema)
             println()
         }
 
@@ -112,7 +117,9 @@ private class SourceConverter : ITypeConverter<URL> {
         return try {
             URL(value)
         } catch (e: MalformedURLException) {
-            Paths.get(value).toUri().toURL()
+            val path = Paths.get(value)
+            require(path.isRegularFile()) { "$path is not a file" }
+            path.toUri().toURL()
         }
     }
 }
