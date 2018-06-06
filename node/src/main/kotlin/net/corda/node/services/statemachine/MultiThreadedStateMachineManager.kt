@@ -54,10 +54,11 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.ArrayList
-import kotlin.concurrent.withLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 import kotlin.streams.toList
 
 /**
@@ -356,7 +357,7 @@ class MultiThreadedStateMachineManager(
             // Just flow initiation message
             null
         }
-        externalEventMutex.withLock {
+        externalEventMutex.write {
             // Remove any sessions the old flow has.
             for (sessionId in getFlowSessionIds(currentState.checkpoint)) {
                 sessionToFlow.remove(sessionId)
@@ -377,9 +378,9 @@ class MultiThreadedStateMachineManager(
         }
     }
 
-    private val externalEventMutex = ReentrantLock()
+    private val externalEventMutex = ReentrantReadWriteLock()
     override fun deliverExternalEvent(event: ExternalEvent) {
-        externalEventMutex.withLock {
+        externalEventMutex.read {
             when (event) {
                 is ExternalEvent.ExternalMessageEvent -> onSessionMessage(event)
                 is ExternalEvent.ExternalStartFlowEvent<*> -> onExternalStartFlow(event)

@@ -10,12 +10,10 @@
 
 package com.r3.corda.enterprise.perftestcordapp
 
-import co.paralleluniverse.fibers.Suspendable
 import com.google.common.base.Stopwatch
 import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueAndPaymentNoSelection
+import com.r3.corda.enterprise.perftestcordapp.flows.EmptyFlow
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -57,13 +55,6 @@ class NodePerformanceTests : IntegrationTest() {
                 DUMMY_BANK_A_NAME.toDatabaseSchemaName())
     }
 
-    @StartableByRPC
-    class EmptyFlow : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-        }
-    }
-
     private data class FlowMeasurementResult(
             val flowPerSecond: Double,
             val averageMs: Double
@@ -84,7 +75,7 @@ class NodePerformanceTests : IntegrationTest() {
                             queueBound = 50
                     ) {
                         val timing = Stopwatch.createStarted().apply {
-                            connection.proxy.startFlow(NodePerformanceTests::EmptyFlow).returnValue.getOrThrow()
+                            connection.proxy.startFlow(::EmptyFlow).returnValue.getOrThrow()
                         }.stop().elapsed(TimeUnit.MICROSECONDS)
                         timings.add(timing)
                     }
@@ -113,7 +104,7 @@ class NodePerformanceTests : IntegrationTest() {
                         injectionRate = 2000L / TimeUnit.SECONDS,
                         workBound = 50
                 ) {
-                    connection.proxy.startFlow(NodePerformanceTests::EmptyFlow).returnValue
+                    connection.proxy.startFlow(::EmptyFlow).returnValue
                 }
             }
         }

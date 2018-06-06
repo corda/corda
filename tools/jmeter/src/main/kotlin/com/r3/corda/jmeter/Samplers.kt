@@ -12,10 +12,7 @@ package com.r3.corda.jmeter
 
 import com.r3.corda.enterprise.perftestcordapp.DOLLARS
 import com.r3.corda.enterprise.perftestcordapp.POUNDS
-import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueAndPaymentFlow
-import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueAndPaymentNoSelection
-import com.r3.corda.enterprise.perftestcordapp.flows.CashIssueFlow
-import com.r3.corda.enterprise.perftestcordapp.flows.LinearStateBatchNotariseFlow
+import com.r3.corda.enterprise.perftestcordapp.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
@@ -45,6 +42,23 @@ abstract class AbstractSampler : BaseFlowSampler() {
 
     protected fun getNotaryIdentity(rpc: CordaRPCOps, testContext: JavaSamplerContext) {
         notaryIdentity = getIdentity(rpc,testContext, notary)
+    }
+}
+
+/**
+ * A sampler for calling EmptyFlow.
+ */
+class EmptyFlowSampler : AbstractSampler() {
+    override val additionalArgs: Set<Argument> = emptySet()
+
+    override fun setupTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
+    }
+
+    override fun teardownTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext) {
+    }
+
+    override fun createFlowInvoke(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext): FlowInvoke<EmptyFlow> {
+        return FlowInvoke<EmptyFlow>(EmptyFlow::class.java, emptyArray())
     }
 }
 
