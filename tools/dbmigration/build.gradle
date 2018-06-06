@@ -53,6 +53,6 @@ jar {
 }
 
 publish {
-    name 'migration-tool'
+    name 'tools-database-migration'
     disableDefaultJar = true
 }
