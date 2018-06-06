@@ -27,7 +27,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
-@Ignore
 class HardRestartTest : IntegrationTest() {
     companion object {
         @ClassRule
@@ -80,6 +79,7 @@ class HardRestartTest : IntegrationTest() {
                 // No matter the kill
                 returnValue.getOrThrow()
             }
+
 
             pongRestartThread.join()
         }
