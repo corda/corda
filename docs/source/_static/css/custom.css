@@ -66,11 +66,13 @@ a:visited {
     color: transparent;
     background-image: url('../images/fg002_corda_w3.png');
     background-repeat: no-repeat;
-    background-size: Auto 20px;
-    background-position: center top;
+    background-position: center center;
     background-origin: content box;
-    height: 20px;
-    width: 100%
+    background-size: cover;
+    width: 100%;
+    height: 0;
+    padding: 0; /* reset */
+    padding-bottom: calc(100% * 1 / 4);
 }
 
 .wy-side-nav-search input[type=text] {
@@ -182,17 +184,25 @@ a:visited {
 
 .wy-nav-top {
     background-color: #252627;
+    line-height: inherit;
 }
 
 .wy-nav-top a {
     color: transparent;
     background-image: url('../images/fg002_corda_w3.png');
     background-repeat: no-repeat;
-    background-size: Auto 19px;
-    background-position: center top;
+    background-position: center center;
     background-origin: content box;
+    background-size: cover;
+    width: 100%;
+    height: 0;
+    padding: 0; /* reset */
+    padding-bottom: calc(100% * 1 / 4);
 }
 
+.wy-nav-top a {
+    display: none;
+}
 
 /* Version dropdown */
 
