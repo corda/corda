@@ -34,6 +34,6 @@ class EnterpriseNodeTest {
 
         val expectedPattern = if (custom == null) "${expectedName}_London_GB_\\d+_\\d+_\\d+_\\d+" else expectedName
         val createdName = EnterpriseNode.getGraphitePrefix(nodeConfig)
-        assert(Regex(expectedPattern).matches(createdName), { "${createdName} did not match ${expectedPattern}" })
+        require(Regex(expectedPattern).matches(createdName), { "${createdName} did not match ${expectedPattern}" })
     }
 }

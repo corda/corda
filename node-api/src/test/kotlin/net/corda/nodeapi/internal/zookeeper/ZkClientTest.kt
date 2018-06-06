@@ -69,7 +69,7 @@ class ZkClientTests {
         }
 
         leaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
-        assert(client.isLeader())
+        require(client.isLeader())
         client.close()
     }
 
@@ -86,7 +86,7 @@ class ZkClientTests {
         }
 
         leaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
-        assert(client.isLeader())
+        require(client.isLeader())
         client.relinquishLeadership()
         leaderLoss.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
         assertFalse(client.isLeader())
@@ -117,7 +117,7 @@ class ZkClientTests {
         }
 
         aliceLeaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
-        assert(alice.isLeader())
+        require(alice.isLeader())
         if (bobLeaderGain.count == 0L) //wait to lose leadership if leader at some point
             bobLeaderLoss.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
         assertFalse(bob.isLeader())
@@ -152,7 +152,7 @@ class ZkClientTests {
         }
 
         aliceLeaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
-        assert(alice.isLeader())
+        require(alice.isLeader())
         if (bobLeaderGain.count == 0L) //wait to lose leadership if leader at some point
             bobLeaderLoss.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
         assertFalse(bob.isLeader())
@@ -167,7 +167,7 @@ class ZkClientTests {
         bobLeaderGain2.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS) // wait for bob to become leader
 
         assertFalse(alice.isLeader())
-        assert(bob.isLeader())
+        require(bob.isLeader())
         assertFalse(chip.isLeader())
 
         val chipLeaderGain2 = CountDownLatch(1)
@@ -178,7 +178,7 @@ class ZkClientTests {
 
         assertFalse(alice.isLeader())
         assertFalse(bob.isLeader())
-        assert(chip.isLeader())
+        require(chip.isLeader())
 
         listOf(alice, bob, chip).forEach { client -> client.close() }
     }
@@ -199,7 +199,7 @@ class ZkClientTests {
         chip.requestLeadership()
 
         chipLeaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
-        assert(chip.isLeader())
+        require(chip.isLeader())
 
         bob.start()
         bob.addLeadershipListener(SyncHelperListener(bob.nodeId, bobLeaderGain, bobLeaderLoss))
@@ -207,7 +207,7 @@ class ZkClientTests {
 
         chipLeaderLoss.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
         bobLeaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
-        assert(bob.isLeader())
+        require(bob.isLeader())
         assertFalse(chip.isLeader())
 
         alice.start()
@@ -217,7 +217,7 @@ class ZkClientTests {
         bobLeaderLoss.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
         aliceLeaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
 
-        assert(alice.isLeader())
+        require(alice.isLeader())
         assertFalse(bob.isLeader())
         assertFalse(chip.isLeader())
 
@@ -249,14 +249,14 @@ class ZkClientTests {
         aliceLeaderGain.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
         if (chipLeaderGain.count == 0L) //wait to lose leadership if leader at some point
             chipLeaderLoss.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
-        assert(alice.isLeader())
+        require(alice.isLeader())
         assertFalse(chip.isLeader())
 
         bob.start()
         bob.addLeadershipListener(SyncHelperListener(bob.nodeId, bobLeaderGain))
         bob.requestLeadership()
 
-        assert(alice.isLeader())
+        require(alice.isLeader())
         assertFalse(bob.isLeader())
         assertFalse(chip.isLeader())
 
@@ -270,7 +270,7 @@ class ZkClientTests {
             chipLeaderLoss2.await(ELECTION_TIMEOUT, TimeUnit.MILLISECONDS)
 
         assertFalse(alice.isLeader())
-        assert(bob.isLeader())
+        require(bob.isLeader())
         assertFalse(chip.isLeader())
 
         listOf(alice, bob, chip).forEach { client -> client.close() }
@@ -318,8 +318,8 @@ class ZkClientTests {
             }
         }
 
-        assert(leaderCount <= 1)
-        assert(leaderBuffer.size <= 1)
+        require(leaderCount <= 1)
+        require(leaderBuffer.size <= 1)
         if (leaderBuffer.size == 1) {
             println(leaderBuffer)
             assertEquals(leaderBuffer.first(), leaderId)

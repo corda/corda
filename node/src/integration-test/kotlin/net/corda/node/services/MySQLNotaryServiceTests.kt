@@ -194,7 +194,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
         val transactionCount = 100
         val results = notaryNode.services.startFlow(RequestGenerationFlow(notaryService, transactionCount)).resultFuture.get()
         assertEquals(transactionCount, results.size)
-        assert(results.all { it === Result.Success })
+        require(results.all { it === Result.Success })
     }
 
     @Test
@@ -203,7 +203,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
         val transactionCount = 10
         val results = notaryNode.services.startFlow(RequestGenerationFlow(notaryService, transactionCount, 50)).resultFuture.get()
         assertEquals(transactionCount, results.size)
-        assert(results.all { it === Result.Success })
+        require(results.all { it === Result.Success })
     }
 
     private class RequestGenerationFlow(

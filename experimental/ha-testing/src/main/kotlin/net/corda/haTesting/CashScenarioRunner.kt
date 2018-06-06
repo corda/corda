@@ -59,7 +59,7 @@ class CashScenarioRunner(options: OptionSet) : AbstractScenarioRunner(options), 
             }
 
             // Verify
-            assert(allPayments.size == (iterCount * 2)) { "Expected number of payments is ${iterCount * 2}, actual number of payments: ${allPayments.size}" }
+            require(allPayments.size == (iterCount * 2)) { "Expected number of payments is ${iterCount * 2}, actual number of payments: ${allPayments.size}" }
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
             // TODO: Potentially implement paging validation logic for bigger data sets.
             val pageSpecification = PageSpecification(pageNumber = 1, pageSize = Int.MAX_VALUE)
@@ -83,7 +83,7 @@ class CashScenarioRunner(options: OptionSet) : AbstractScenarioRunner(options), 
             val allStatesForParty = hashesByParty[recipient] ?: throw IllegalArgumentException("Cannot find states for party: $recipient in transaction: $transactionId")
 
             // Recipient definitely should have hash of a transaction in its states.
-            assert(transactionId in allStatesForParty) { "States for party: $recipient should contain reference: $transactionId" }
+            require(transactionId in allStatesForParty) { "States for party: $recipient should contain reference: $transactionId" }
         }
 
         return true
