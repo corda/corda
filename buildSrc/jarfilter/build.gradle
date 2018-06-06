@@ -13,7 +13,7 @@ repositories {
 gradlePlugin {
     plugins {
         jarFilterPlugin {
-            id = 'net.corda.gradle.jar-filter'
+            id = 'net.corda.plugins.jar-filter'
             implementationClass = 'net.corda.gradle.jarfilter.JarFilterPlugin'
         }
     }

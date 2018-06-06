@@ -1,6 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '$kotlin_version'
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 apply from: 'repositories.gradle'
 

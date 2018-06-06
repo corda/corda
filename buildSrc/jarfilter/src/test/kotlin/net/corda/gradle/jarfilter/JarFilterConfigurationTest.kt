@@ -35,7 +35,7 @@ class JarFilterConfigurationTest {
         val result = gradleProject("""
 plugins {
     id 'java'
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.JarFilterTask
@@ -56,7 +56,7 @@ task jarFilter(type: JarFilterTask) {
     fun checkWithMissingJar() {
         val result = gradleProject("""
 plugins {
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.JarFilterTask
@@ -81,7 +81,7 @@ task jarFilter(type: JarFilterTask) {
         val result = gradleProject("""
 plugins {
     id 'java'
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.JarFilterTask
@@ -109,7 +109,7 @@ task jarFilter(type: JarFilterTask) {
         val result = gradleProject("""
 plugins {
     id 'java'
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.JarFilterTask
@@ -137,7 +137,7 @@ task jarFilter(type: JarFilterTask) {
         val result = gradleProject("""
 plugins {
     id 'java'
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.JarFilterTask
@@ -165,7 +165,7 @@ task jarFilter(type: JarFilterTask) {
         val result = gradleProject("""
 plugins {
     id 'java'
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.JarFilterTask
@@ -194,7 +194,7 @@ task jarFilter(type: JarFilterTask) {
         val result = gradleProject("""
 plugins {
     id 'java'
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.JarFilterTask
@@ -217,7 +217,7 @@ task jarFilter(type: JarFilterTask) {
         val result = gradleProject("""
 plugins {
     id 'java'
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.JarFilterTask
@@ -240,7 +240,7 @@ task jarFilter(type: JarFilterTask) {
         val result = gradleProject("""
 plugins {
     id 'java'
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.JarFilterTask

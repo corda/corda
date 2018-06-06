@@ -45,7 +45,7 @@ class MetaFixTimestampTest {
                     testProjectDir.installResource("gradle.properties")
                     testProjectDir.newFile("build.gradle").writeText("""
 plugins {
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.MetaFixerTask

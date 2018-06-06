@@ -28,7 +28,7 @@ class MetaFixConfigurationTests {
         val result = gradleProject("""
 plugins {
     id 'java'
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.MetaFixerTask
@@ -45,7 +45,7 @@ task metafix(type: MetaFixerTask)
     fun checkWithMissingJar() {
         val result = gradleProject("""
 plugins {
-    id 'net.corda.gradle.jar-filter'
+    id 'net.corda.plugins.jar-filter'
 }
 
 import net.corda.gradle.jarfilter.MetaFixerTask
