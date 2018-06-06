@@ -2,7 +2,7 @@ package net.corda.node.services.statemachine.transitions
 
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
-import net.corda.core.internal.RetryableFlow
+import net.corda.core.internal.TimedFlow
 import net.corda.core.utilities.Try
 import net.corda.node.services.statemachine.*
 
@@ -97,9 +97,9 @@ class TopLevelTransition(
             when (subFlow) {
                 is Try.Success -> {
                     val containsRetryableSubFlows = currentState.checkpoint.subFlowStack.any {
-                        RetryableFlow::class.java.isAssignableFrom(it.flowClass)
+                        TimedFlow::class.java.isAssignableFrom(it.flowClass)
                     }
-                    val isCurrentSubFlowRetryable = RetryableFlow::class.java.isAssignableFrom(event.subFlowClass)
+                    val isCurrentSubFlowRetryable = TimedFlow::class.java.isAssignableFrom(event.subFlowClass)
                     currentState = currentState.copy(
                             checkpoint = currentState.checkpoint.copy(
                                     subFlowStack = currentState.checkpoint.subFlowStack + subFlow.value
@@ -126,7 +126,7 @@ class TopLevelTransition(
                 freshErrorTransition(UnexpectedEventInState())
             } else {
                 val lastSubFlowClass = checkpoint.subFlowStack.last().flowClass
-                val isLastSubFlowRetryable = RetryableFlow::class.java.isAssignableFrom(lastSubFlowClass)
+                val isLastSubFlowRetryable = TimedFlow::class.java.isAssignableFrom(lastSubFlowClass)
                 val newSubFlowStack = checkpoint.subFlowStack.dropLast(1)
                 currentState = currentState.copy(
                         checkpoint = checkpoint.copy(
@@ -142,7 +142,7 @@ class TopLevelTransition(
     }
 
     private fun containsRetryableFlows(subFlowStack: List<SubFlow>): Boolean {
-        return subFlowStack.any { RetryableFlow::class.java.isAssignableFrom(it.flowClass) }
+        return subFlowStack.any { TimedFlow::class.java.isAssignableFrom(it.flowClass) }
     }
 
     private fun suspendTransition(event: Event.Suspend): TransitionResult {

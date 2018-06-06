@@ -1,7 +1,7 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.RetryableFlow
+import net.corda.core.internal.TimedFlow
 import net.corda.core.utilities.loggerFor
 import java.sql.SQLException
 import java.time.Instant
@@ -127,12 +127,12 @@ object StaffedFlowHospital : FlowHospital {
     }
 
     /**
-     * Restarts [RetryableFlow], keeping track of the number of retries and making sure it does not
+     * Restarts [TimedFlow], keeping track of the number of retries and making sure it does not
      * exceed the limit specified by the flow.
      */
     object DoctorRetry : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: MedicalHistory): Diagnosis {
-            if (newError is FlowRetryException) {
+            if (newError is FlowTimeoutException) {
                 if (isRetryable(flowFiber)) {
                     if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this)) {
                         return Diagnosis.DISCHARGE
@@ -148,7 +148,7 @@ object StaffedFlowHospital : FlowHospital {
 
         private fun isRetryable(flowFiber: FlowFiber): Boolean {
             return flowFiber.snapshot().checkpoint.subFlowStack.any {
-                RetryableFlow::class.java.isAssignableFrom(it.flowClass)
+                TimedFlow::class.java.isAssignableFrom(it.flowClass)
             }
         }
     }

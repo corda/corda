@@ -16,8 +16,8 @@ interface IdempotentFlow
  * would be stuck waiting for that member to come back up. Retrying the notary flow will re-send the request to the
  * next available notary cluster member.
  *
- * Note that any sub-flows called by a [RetryableFlow] are assumed to be [IdempotentFlow] and will NOT have checkpoints
- * persisted. Otherwise, it wouldn't be possible to correctly reset the [RetryableFlow].
+ * Note that any sub-flows called by a [TimedFlow] are assumed to be [IdempotentFlow] and will NOT have checkpoints
+ * persisted. Otherwise, it wouldn't be possible to correctly reset the [TimedFlow].
  */
 // TODO: allow specifying retry settings per flow
-interface RetryableFlow : IdempotentFlow
+interface TimedFlow : IdempotentFlow

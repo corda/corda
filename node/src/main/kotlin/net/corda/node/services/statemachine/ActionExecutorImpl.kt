@@ -237,10 +237,10 @@ class ActionExecutorImpl(
     }
 
     private fun cancelFlowRetry(action: Action.CancelFlowRetry) {
-        stateMachineManager.cancelFlowRetry(action.flowId)
+        stateMachineManager.cancelFlowTimeout(action.flowId)
     }
 
     private fun scheduleFlowRetry(action: Action.ScheduleFlowRetry) {
-        stateMachineManager.scheduleFlowRetry(action.flowId)
+        stateMachineManager.scheduleFlowTimeout(action.flowId)
     }
 }

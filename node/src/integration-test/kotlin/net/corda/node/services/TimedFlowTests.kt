@@ -36,12 +36,15 @@ import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
-import org.junit.*
+import org.junit.AfterClass
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Test
 import org.slf4j.MDC
 import java.security.PublicKey
 import java.util.concurrent.atomic.AtomicInteger
 
-class NotarisationRetryTests {
+class TimedFlowTests {
     companion object {
         /** The notary nodes don't run any consensus protocol, so 2 nodes are sufficient for the purpose of this test. */
         private const val CLUSTER_SIZE = 2
@@ -68,7 +71,6 @@ class NotarisationRetryTests {
             notary = started.first
             node = started.second
         }
-
 
         @AfterClass
         @JvmStatic
@@ -121,9 +123,8 @@ class NotarisationRetryTests {
         requestsReceived = AtomicInteger(0)
     }
 
-
     @Test
-    fun `retryable flows are retried`() {
+    fun `timed flows are restarted`() {
         node.run {
             val issueTx = signInitialTransaction(notary) {
                 setTimeWindow(services.clock.instant(), 30.seconds)
@@ -136,14 +137,14 @@ class NotarisationRetryTests {
     }
 
     @Test
-    fun `retryable sub-flows are retried`() {
+    fun `timed sub-flows are restarted`() {
         node.run {
             val issueTx = signInitialTransaction(notary) {
                 setTimeWindow(services.clock.instant(), 30.seconds)
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             val flow = FinalityFlow(issueTx)
-            val stx =services.startFlow(flow).resultFuture.get()
+            val stx = services.startFlow(flow).resultFuture.get()
             stx.verifyRequiredSignatures()
         }
     }
@@ -175,7 +176,7 @@ class NotarisationRetryTests {
             val stx = requestPayload.signedTransaction
             subFlow(ResolveTransactionsFlow(stx, otherSideSession))
 
-            if (NotarisationRetryTests.requestsReceived.getAndIncrement() == 0) {
+            if (TimedFlowTests.requestsReceived.getAndIncrement() == 0) {
                 logger.info("Ignoring")
                 // Waiting forever
                 stateMachine.suspend(FlowIORequest.WaitForLedgerCommit(SecureHash.randomSHA256()), false)

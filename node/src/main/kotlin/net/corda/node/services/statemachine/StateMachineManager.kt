@@ -92,8 +92,8 @@ interface StateMachineManagerInternal {
     fun removeSessionBindings(sessionIds: Set<SessionId>)
     fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState)
     fun retryFlowFromSafePoint(currentState: StateMachineState)
-    fun scheduleFlowRetry(flowId: StateMachineRunId)
-    fun cancelFlowRetry(flowId: StateMachineRunId)
+    fun scheduleFlowTimeout(flowId: StateMachineRunId)
+    fun cancelFlowTimeout(flowId: StateMachineRunId)
 }
 
 /**
