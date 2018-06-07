@@ -6,6 +6,7 @@ import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
 import java.security.SignatureException
 
@@ -33,9 +34,9 @@ class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSess
             TransactionVerificationException::class)
     override fun call(): SignedTransaction {
         if (checkSufficientSignatures) {
-            logger.trace("Receiving a transaction from ${otherSideSession.counterparty}")
+            logger.trace { "Receiving a transaction from ${otherSideSession.counterparty}" }
         } else {
-            logger.trace("Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}")
+            logger.trace { "Receiving a transaction (but without checking the signatures) from ${otherSideSession.counterparty}" }
         }
         val stx = otherSideSession.receive<SignedTransaction>().unwrap {
             it.pushToLoggingContext()
