@@ -242,7 +242,7 @@ class NodeVaultService(
             val txIdPredicate = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultTxnNote::txId.name), txnId.toString())
             criteriaQuery.where(txIdPredicate)
             val results = session.createQuery(criteriaQuery).resultList
-            results.asIterable().map { it.note }
+            results.asIterable().map { it.note ?: "" }
         }
     }
 
