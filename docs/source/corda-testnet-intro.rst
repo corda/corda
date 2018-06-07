@@ -17,7 +17,6 @@ Access to the Corda Testnet is enabled by visiting https://testnet.corda.network
 
 .. image:: resources/testnet-landing.png
    :target: https://testnet.corda.network
-   :scale: 50 %
 
 Click on "Join the Corda Testnet".
 
@@ -26,13 +25,11 @@ Select whether you want to register a company or as an individual on the Testnet
 This will create you an account with the Testnet onboarding application which will enable you to provision and manage multiple Corda nodes on Testnet. You will log in to this account to view and manage you Corda Testnet identitiy certificates.
 
 .. image:: resources/testnet-account-type.png 
-   :scale: 50 %
 
 Fill in the form with your details. This helps prioritise requests to join the private beta.
 
 
 .. image:: resources/testnet-form.png 
-   :scale: 50 %
 
 Note we currently only support federated login using either Google email accounts or Github enabled email accounts. Please ensure the email you use to register is either set up as a Google or Github account and that you use this email to log in with the appropriate service.
 
@@ -46,19 +43,16 @@ Once you have been approved to join the beta you will receive an email. Follow t
 Sign in using either the Google or Github login services:
 
 .. image:: resources/testnet-signin.png 
-   :scale: 50 %
 
 When prompted approve the Testnet application:
 
 .. image:: resources/testnet-signin-auth.png 
-   :scale: 50 %
 
 At this point you may need to verify your email address is valid. If prompted check your email and click on the link to validate then return to the sign in page and sign in again.
 
 Next agree to the terms of service:
 
 .. image:: resources/testnet-terms.png 
-   :scale: 50 %
 
 You can now choose how to deploy your Corda node to the Corda Testnet. We strongly recommend hosting your Corda node on a public cloud resource. 
 
@@ -67,7 +61,6 @@ You can now choose how to deploy your Corda node to the Corda Testnet. We strong
 Select the cloud provider you wish to use for documentation on how to specifically configure Corda for that environment. 
 
 .. image:: resources/testnet-platform-clean.png 
-   :scale: 50 %
 
 Once your cloud instance is set up you can install and run your Testnet pre-provisioned Corda node by clicking on "Copy" and pasting the one time link into your cloud shell. 
 	   

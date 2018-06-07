@@ -22,13 +22,10 @@ Click on the "Resource groups" link in the side nav in the Azure
 Portal and then click "Add":
 
 .. image:: resources/azure-rg.png
-   :scale: 50 %
 
 Fill in the form and click "Create":
 
 .. image:: resources/azure-rg-2.png
-   :scale: 50 %
-      
 
 **STEP 2: Launch the VM**
 
@@ -37,13 +34,10 @@ At the top of the left sidenav click on the button with the green cross "Create 
 In this example we are going to use an Ubuntu server so select the latest Ubuntu Server option.
 
 .. image:: resources/azure-select-ubuntu.png
-   :scale: 50 %
-
 
 Fill in the form:
 
 .. image:: resources/azure-vm-form.png
-   :scale: 50 %
 
 Add a username (to log into the VM) and choose and enter a password.
 
@@ -56,26 +50,22 @@ Click on OK.
 Choose the "D4S_V3 Standard" option and click "Select":
 
 .. image:: resources/azure-instance-type.png
-   :scale: 50 %
 
 Click on "Public IP address" to open the settings panel
 
 .. image:: resources/azure-vm-settings.png
-   :scale: 50 %
 
 Set the IP address to "Static" under Assignment. 
 
 .. note:: This is so the IP address for your node does not change rapidly in the global network map.
 
 .. image:: resources/azure-set-static-ip.png
-   :scale: 50 %
 
 Click OK.
 
 Next click on "Network security group (firewall)":
 
 .. image:: resources/azure-nsg.png
-   :scale: 50 %
 
 Add inbound rules for ports 8080 (webserver), and
 10002-10003 for the P2P and RPC ports used by the Corda node
@@ -94,20 +84,16 @@ Add 3 rules with the following port, name and priorities:
 	  has a unique priority or there will be a validation failure and error message.
 	   
 .. image:: resources/azure-nsg-2.png
-   :scale: 50 %
-
 	   
 Click OK and OK again on the Settings panel.
 
 .. image:: resources/azure-settings-ok.png
-   :scale: 50 %
 
 	   
 Click "Create" and wait a few minutes for your instance to provision
 and start running.
 
 .. image:: resources/azure-create-vm.png
-   :scale: 50 %
 
 
 
@@ -116,12 +102,10 @@ and start running.
 Once your instance is running click on the "Connect" button and copy the ssh command:
 
 .. image:: resources/azure-ssh.png
-   :scale: 50 %
 
 Enter the ssh command into your terminal. At the prompt to continue connecting type yes and then enter the password you configured earlier to log into the remote VM:
 
 .. image:: resources/azure-shell.png
-   :scale: 50 %
 
 
 **STEP 4: Download and set up your Corda node**
@@ -134,7 +118,6 @@ time installation script.
 
 
 .. image:: resources/testnet-platform.png
-   :scale: 50 %
 
 You can generate as many Testnet identites as you like by refreshing
 this page to generate a new one time link. 

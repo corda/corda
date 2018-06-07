@@ -53,7 +53,6 @@ You will be prompted to set up keys to securely access the VM remotely over ssh.
 .. note:: These keys are just for connecting to your VM and are separate from the keys Corda will use to sign transactions. These keys will be generated as part of the download bundle.
 
 .. image:: resources/aws-keys.png
-   :width: 200 px
 
 Click "Launch Instances".
 
@@ -94,7 +93,6 @@ time installation script.
 .. note:: If you have not already set up your account on Testnet then please visit https://testnet.corda.network and sign up.
 
 .. image:: resources/testnet-platform.png
-   :scale: 50 %
 
 You can generate as many Testnet identites as you like by refreshing
 this page to generate a new one time link. 

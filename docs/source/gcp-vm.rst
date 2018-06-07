@@ -23,13 +23,10 @@ In the project drop down click on the plus icon to create a new
 project to house your Corda resources.
 
 .. image:: resources/consolegcp.png
-   :scale: 50 %
 
 .. image:: resources/console2.png
-   :scale: 50 %
    
 .. image:: resources/newprojectgcp.png
-   :scale: 50 %
 
 Enter a project name and click Create.
 
@@ -38,12 +35,10 @@ Enter a project name and click Create.
 In the left hand side nav click on Compute Engine.
 
 .. image:: resources/gcpcompute.png
-   :scale: 50 %
 
 Click on Create Instance.
 
 .. image:: resources/consolegcpcreatevm.png
-   :scale: 50 %
 
 Fill in the form with the desired VM specs:
 
@@ -55,7 +50,6 @@ Allow full API access.
 Dont worry about firewall settings as you will configure those later. 
 
 .. image:: resources/gcpconsolevmsettings.png
-   :scale: 50 %
 
 Click Create and wait a few sections for your instance to provision
 and start running.
@@ -66,10 +60,8 @@ Once your instance is running click on the SSH button to launch a
 cloud SSH terminal in a new window. 
 
 .. image:: resources/gcpconsolelaunchssh.png
-   :scale: 50 %
    
 .. image:: resources/gcpshell.png
-   :scale: 50 %
 
 Run the following to configure the firewall to allow Corda traffic
 
@@ -111,7 +103,6 @@ time installation script.
 .. note:: If you have not already set up your account on Testnet then please visit https://testnet.corda.network and sign up.
 
 .. image:: resources/testnet-platform.png
-   :scale: 50 %
 
 You can generate as many Testnet identites as you like by refreshing
 this page to generate a new one time link. 
