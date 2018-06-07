@@ -12,9 +12,7 @@ package net.corda.services.messaging
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.randomOrNull
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.CordaSerializable
@@ -33,7 +31,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
@@ -41,10 +38,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : IntegrationTest() {
      private companion object {
@@ -62,73 +56,6 @@ class P2PMessagingTest : IntegrationTest() {
         }
     }
 
-    
-    @Test
-    fun `distributed service requests are retried if one of the nodes in the cluster goes down without sending a response`() {
-        startDriverWithDistributedService { distributedServiceNodes ->
-            val alice = startAlice()
-            val serviceAddress = alice.services.networkMapCache.run {
-                val notaryParty = notaryIdentities.randomOrNull()!!
-                alice.internalServices.networkService.getAddressOfParty(getPartyInfo(notaryParty)!!)
-            }
-
-            val responseMessage = "response"
-
-            val crashingNodes = simulateCrashingNodes(distributedServiceNodes, responseMessage)
-
-            // Send a single request with retry
-            val responseFuture = alice.receiveFrom(serviceAddress, retryId = 0)
-            crashingNodes.firstRequestReceived.await(5, TimeUnit.SECONDS)
-            // The request wasn't successful.
-            assertThat(responseFuture.isDone).isFalse()
-            crashingNodes.ignoreRequests = false
-
-            // The retry should be successful.
-            val response = responseFuture.getOrThrow(10.seconds)
-            assertThat(response).isEqualTo(responseMessage)
-        }
-    }
-
-    @Test
-    fun `distributed service request retries are persisted across client node restarts`() {
-        startDriverWithDistributedService { distributedServiceNodes ->
-            val alice = startAlice()
-            val serviceAddress = alice.services.networkMapCache.run {
-                val notaryParty = notaryIdentities.randomOrNull()!!
-                alice.internalServices.networkService.getAddressOfParty(getPartyInfo(notaryParty)!!)
-            }
-
-            val responseMessage = "response"
-
-            val crashingNodes = simulateCrashingNodes(distributedServiceNodes, responseMessage)
-
-            // Send a single request with retry
-            alice.receiveFrom(serviceAddress, retryId = 0)
-
-            // Wait until the first request is received
-            crashingNodes.firstRequestReceived.await()
-            // Stop alice's node after we ensured that the first request was delivered and ignored.
-            alice.stop()
-            val numberOfRequestsReceived = crashingNodes.requestsReceived.get()
-            assertThat(numberOfRequestsReceived).isGreaterThanOrEqualTo(1)
-
-            crashingNodes.ignoreRequests = false
-
-            // Restart the node and expect a response
-            val aliceRestarted = startAlice()
-
-            val responseFuture = openFuture<Any>()
-            aliceRestarted.internalServices.networkService.runOnNextMessage("test.response") {
-                responseFuture.set(it.data.deserialize())
-            }
-            val response = responseFuture.getOrThrow()
-
-            assertThat(crashingNodes.requestsReceived.get()).isGreaterThan(numberOfRequestsReceived)
-            assertThat(response).isEqualTo(responseMessage)
-        }
-    }
-
-
     private fun startDriverWithDistributedService(dsl: DriverDSL.(List<InProcess>) -> Unit) {
         driver(DriverParameters(
                         startNodesInProcess = true,
@@ -136,55 +63,6 @@ class P2PMessagingTest : IntegrationTest() {
         )) {
             dsl(defaultNotaryHandle.nodeHandles.getOrThrow().map { (it as InProcess) })
         }
-    }
-
-    private fun DriverDSL.startAlice(): InProcess {
-        return startNode(providedName = ALICE_NAME, customOverrides = mapOf("p2pMessagingRetry" to mapOf(
-                "messageRedeliveryDelay" to 1.seconds, "backoffBase" to 1.0, "maxRetryCount" to 3)))
-                .map { (it as InProcess) }
-                .getOrThrow()
-    }
-
-    data class CrashingNodes(
-            val firstRequestReceived: CountDownLatch,
-            val requestsReceived: AtomicInteger,
-            var ignoreRequests: Boolean
-    )
-
-    /**
-     * Sets up the [distributedServiceNodes] to respond to "test.request" requests. All nodes will receive requests and
-     * either ignore them or respond to "test.response", depending on the value of [CrashingNodes.ignoreRequests],
-     * initially set to true. This may be used to simulate scenarios where nodes receive request messages but crash
-     * before sending back a response.
-     */
-    private fun simulateCrashingNodes(distributedServiceNodes: List<InProcess>, responseMessage: String): CrashingNodes {
-        val crashingNodes = CrashingNodes(
-                requestsReceived = AtomicInteger(0),
-                firstRequestReceived = CountDownLatch(1),
-                ignoreRequests = true
-        )
-
-        distributedServiceNodes.forEach {
-            val nodeName = it.services.myInfo.chooseIdentity().name
-            it.internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handler ->
-                crashingNodes.requestsReceived.incrementAndGet()
-                crashingNodes.firstRequestReceived.countDown()
-                // The node which receives the first request will ignore all requests
-                print("$nodeName: Received request - ")
-                if (crashingNodes.ignoreRequests) {
-                    println("ignoring")
-                    // Requests are ignored to simulate a service node crashing before sending back a response.
-                    // A retry by the client will result in the message being redelivered to another node in the service cluster.
-                } else {
-                    println("sending response")
-                    val request = netMessage.data.deserialize<TestRequest>()
-                    val response = it.internalServices.networkService.createMessage("test.response", responseMessage.serialize().bytes)
-                    it.internalServices.networkService.send(response, request.replyTo)
-                }
-                handler.afterDatabaseTransaction()
-            }
-        }
-        return crashingNodes
     }
 
     private fun assertAllNodesAreUsed(participatingServiceNodes: List<InProcess>, serviceName: CordaX500Name, originatingNode: InProcess) {
@@ -217,12 +95,12 @@ class P2PMessagingTest : IntegrationTest() {
         }
     }
 
-    private fun InProcess.receiveFrom(target: MessageRecipients, retryId: Long? = null): CordaFuture<Any> {
+    private fun InProcess.receiveFrom(target: MessageRecipients): CordaFuture<Any> {
         val response = openFuture<Any>()
         internalServices.networkService.runOnNextMessage("test.response") { netMessage ->
             response.set(netMessage.data.deserialize())
         }
-        internalServices.networkService.send("test.request", TestRequest(replyTo = internalServices.networkService.myAddress), target, retryId = retryId)
+        internalServices.networkService.send("test.request", TestRequest(replyTo = internalServices.networkService.myAddress), target)
         return response
     }
 

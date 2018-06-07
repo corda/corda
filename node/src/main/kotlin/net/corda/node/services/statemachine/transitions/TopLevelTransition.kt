@@ -12,6 +12,7 @@ package net.corda.node.services.statemachine.transitions
 
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
+import net.corda.core.internal.TimedFlow
 import net.corda.core.utilities.Try
 import net.corda.node.services.statemachine.*
 
@@ -105,11 +106,20 @@ class TopLevelTransition(
             val subFlow = SubFlow.create(event.subFlowClass, event.subFlowVersion)
             when (subFlow) {
                 is Try.Success -> {
+                    val containsTimedSubFlows = currentState.checkpoint.subFlowStack.any {
+                        TimedFlow::class.java.isAssignableFrom(it.flowClass)
+                    }
+                    val isCurrentSubFlowTimed = TimedFlow::class.java.isAssignableFrom(event.subFlowClass)
                     currentState = currentState.copy(
                             checkpoint = currentState.checkpoint.copy(
                                     subFlowStack = currentState.checkpoint.subFlowStack + subFlow.value
                             )
                     )
+                    // We don't schedule a timeout if there already is a timed subflow on the stack - a timeout had
+                    // been scheduled already.
+                    if (isCurrentSubFlowTimed && !containsTimedSubFlows) {
+                        actions.add(Action.ScheduleFlowTimeout(currentState.flowLogic.runId))
+                    }
                 }
                 is Try.Failure -> {
                     freshErrorTransition(subFlow.exception)
@@ -125,14 +135,24 @@ class TopLevelTransition(
             if (checkpoint.subFlowStack.isEmpty()) {
                 freshErrorTransition(UnexpectedEventInState())
             } else {
+                val lastSubFlowClass = checkpoint.subFlowStack.last().flowClass
+                val isLastSubFlowTimed = TimedFlow::class.java.isAssignableFrom(lastSubFlowClass)
+                val newSubFlowStack = checkpoint.subFlowStack.dropLast(1)
                 currentState = currentState.copy(
                         checkpoint = checkpoint.copy(
-                                subFlowStack = checkpoint.subFlowStack.subList(0, checkpoint.subFlowStack.size - 1).toList()
+                                subFlowStack = newSubFlowStack
                         )
                 )
+                if (isLastSubFlowTimed && !containsTimedFlows(currentState.checkpoint.subFlowStack)) {
+                    actions.add(Action.CancelFlowTimeout(currentState.flowLogic.runId))
+                }
             }
             FlowContinuation.ProcessEvents
         }
+    }
+
+    private fun containsTimedFlows(subFlowStack: List<SubFlow>): Boolean {
+        return subFlowStack.any { TimedFlow::class.java.isAssignableFrom(it.flowClass) }
     }
 
     private fun suspendTransition(event: Event.Suspend): TransitionResult {
@@ -212,7 +232,7 @@ class TopLevelTransition(
         val sendEndMessageActions = currentState.checkpoint.sessions.values.mapIndexed { index, state ->
             if (state is SessionState.Initiated && state.initiatedState is InitiatedSessionState.Live) {
                 val message = ExistingSessionMessage(state.initiatedState.peerSinkSessionId, EndSessionMessage)
-                val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index)
+                val deduplicationId = DeduplicationId.createForNormal(currentState.checkpoint, index, state)
                 Action.SendExisting(state.peerParty, message, SenderDeduplicationId(deduplicationId, currentState.senderUUID))
             } else {
                 null
@@ -231,7 +251,7 @@ class TopLevelTransition(
             }
             val sourceSessionId = SessionId.createRandom(context.secureRandom)
             val sessionImpl = FlowSessionImpl(event.party, sourceSessionId)
-            val newSessions = checkpoint.sessions + (sourceSessionId to SessionState.Uninitiated(event.party, initiatingSubFlow))
+            val newSessions = checkpoint.sessions + (sourceSessionId to SessionState.Uninitiated(event.party, initiatingSubFlow, sourceSessionId, context.secureRandom.nextLong()))
             currentState = currentState.copy(checkpoint = checkpoint.copy(sessions = newSessions))
             actions.add(Action.AddSessionBinding(context.id, sourceSessionId))
             FlowContinuation.Resume(sessionImpl)

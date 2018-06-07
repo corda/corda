@@ -14,8 +14,18 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
-import net.corda.core.flows.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.sha256
+import net.corda.core.crypto.sign
+import net.corda.core.flows.NotarisationPayload
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.Party
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.messaging.MessageRecipients
@@ -36,7 +46,12 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.TestClock
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.InMemoryMessage
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.MessagingServiceSpy
+import net.corda.testing.node.internal.setMessagingServiceSpy
+import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -303,7 +318,7 @@ class ValidatingNotaryServiceTests {
 
     private fun runNotarisationAndInterceptClientPayload(payloadModifier: (NotarisationPayload) -> NotarisationPayload) {
         aliceNode.setMessagingServiceSpy(object : MessagingServiceSpy(aliceNode.network) {
-            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
+            override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
                 val messageData = message.data.deserialize<Any>() as? InitialSessionMessage
                 val payload = messageData?.firstPayload!!.deserialize()
 
@@ -311,10 +326,10 @@ class ValidatingNotaryServiceTests {
                     val alteredPayload = payloadModifier(payload)
                     val alteredMessageData = messageData.copy(firstPayload = alteredPayload.serialize())
                     val alteredMessage = InMemoryMessage(message.topic, OpaqueBytes(alteredMessageData.serialize().bytes), message.uniqueMessageId)
-                    messagingService.send(alteredMessage, target, retryId)
+                    messagingService.send(alteredMessage, target)
 
                 } else {
-                    messagingService.send(message, target, retryId)
+                    messagingService.send(message, target)
                 }
             }
         })

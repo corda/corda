@@ -16,7 +16,22 @@ import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.toNonEmptySet
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.Action
+import net.corda.node.services.statemachine.Checkpoint
+import net.corda.node.services.statemachine.DataSessionMessage
+import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.ExistingSessionMessage
+import net.corda.node.services.statemachine.FlowError
+import net.corda.node.services.statemachine.FlowSessionImpl
+import net.corda.node.services.statemachine.FlowState
+import net.corda.node.services.statemachine.InitialSessionMessage
+import net.corda.node.services.statemachine.InitiatedSessionState
+import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.statemachine.SessionId
+import net.corda.node.services.statemachine.SessionMap
+import net.corda.node.services.statemachine.SessionState
+import net.corda.node.services.statemachine.StateMachineState
+import net.corda.node.services.statemachine.SubFlow
 
 /**
  * This transition describes what should happen with a specific [FlowIORequest]. Note that at this time the request
@@ -224,13 +239,15 @@ class StartedFlowTransition(
             if (sessionState !is SessionState.Uninitiated) {
                 continue
             }
-            val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++)
-            val initialMessage = createInitialSessionMessage(sessionState.initiatingSubFlow, sourceSessionId, null)
-            actions.add(Action.SendInitial(sessionState.party, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
-            newSessions[sourceSessionId] = SessionState.Initiating(
+            val initialMessage = createInitialSessionMessage(sessionState.initiatingSubFlow, sourceSessionId, sessionState.additionalEntropy, null)
+            val newSessionState = SessionState.Initiating(
                     bufferedMessages = emptyList(),
-                    rejectionError = null
+                    rejectionError = null,
+                    deduplicationSeed = sessionState.deduplicationSeed
             )
+            val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++, newSessionState)
+            actions.add(Action.SendInitial(sessionState.party, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
+            newSessions[sourceSessionId] = newSessionState
         }
         currentState = currentState.copy(checkpoint = checkpoint.copy(sessions = newSessions))
     }
@@ -259,14 +276,15 @@ class StartedFlowTransition(
                 return freshErrorTransition(CannotFindSessionException(sourceSessionId))
             } else {
                 val sessionMessage = DataSessionMessage(message)
-                val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++)
+                val deduplicationId = DeduplicationId.createForNormal(checkpoint, index++, existingSessionState)
                 when (existingSessionState) {
                     is SessionState.Uninitiated -> {
-                        val initialMessage = createInitialSessionMessage(existingSessionState.initiatingSubFlow, sourceSessionId, message)
+                        val initialMessage = createInitialSessionMessage(existingSessionState.initiatingSubFlow, sourceSessionId, existingSessionState.additionalEntropy, message)
                         actions.add(Action.SendInitial(existingSessionState.party, initialMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
                         newSessions[sourceSessionId] = SessionState.Initiating(
                                 bufferedMessages = emptyList(),
-                                rejectionError = null
+                                rejectionError = null,
+                                deduplicationSeed = existingSessionState.deduplicationSeed
                         )
                         Unit
                     }
@@ -398,12 +416,13 @@ class StartedFlowTransition(
     private fun createInitialSessionMessage(
             initiatingSubFlow: SubFlow.Initiating,
             sourceSessionId: SessionId,
+            additionalEntropy: Long,
             payload: SerializedBytes<Any>?
     ): InitialSessionMessage {
         return InitialSessionMessage(
                 initiatorSessionId = sourceSessionId,
                 // We add additional entropy to add to the initiated side's deduplication seed.
-                initiationEntropy = context.secureRandom.nextLong(),
+                initiationEntropy = additionalEntropy,
                 initiatorFlowClassName = initiatingSubFlow.classToInitiateWith.name,
                 flowVersion = initiatingSubFlow.flowInfo.flowVersion,
                 appName = initiatingSubFlow.flowInfo.appName,

@@ -29,13 +29,9 @@ sealed class FlowIORequest<out R : Any> {
      * @property shouldRetrySend specifies whether the send should be retried.
      */
     data class Send(
-            val sessionToMessage: Map<FlowSession, SerializedBytes<Any>>,
-            val shouldRetrySend: Boolean
+            val sessionToMessage: Map<FlowSession, SerializedBytes<Any>>
     ) : FlowIORequest<Unit>() {
-        override fun toString() = "Send(" +
-                "sessionToMessage=${sessionToMessage.mapValues { it.value.hash }}, " +
-                "shouldRetrySend=$shouldRetrySend" +
-                ")"
+        override fun toString() = "Send(sessionToMessage=${sessionToMessage.mapValues { it.value.hash }})"
     }
 
     /**
