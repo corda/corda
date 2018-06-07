@@ -692,9 +692,6 @@ class FlowFrameworkPersistenceTests {
     fun `flow loaded from checkpoint will respond to messages from before start`() {
         aliceNode.registerFlowFactory(ReceiveFlow::class) { InitiatedSendFlow("Hello", it) }
         bobNode.services.startFlow(ReceiveFlow(alice).nonTerminating()) // Prepare checkpointed receive flow
-        // Make sure the add() has finished initial processing.
-        bobNode.internals.disableDBCloseOnStop()
-        bobNode.dispose() // kill receiver
         val restoredFlow = bobNode.restartAndGetRestoredFlow<ReceiveFlow>()
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
@@ -752,14 +749,11 @@ class FlowFrameworkPersistenceTests {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //region Helpers
 
-    private inline fun <reified P : FlowLogic<*>> StartedNode<MockNode>.restartAndGetRestoredFlow() = internals.run {
-        disableDBCloseOnStop() // Handover DB to new node copy
-        stop()
-        val newNode = mockNet.createNode(InternalMockNodeParameters(id, configuration.myLegalName))
+    private inline fun <reified P : FlowLogic<*>> StartedNode<MockNode>.restartAndGetRestoredFlow(): P {
+        val newNode = mockNet.restartNode(this)
         newNode.internals.acceptableLiveFiberCountOnStop = 1
-        manuallyCloseDB()
         mockNet.runNetwork()
-        newNode.getSingleFlow<P>().first
+        return newNode.getSingleFlow<P>().first
     }
 
     private fun assertSessionTransfers(vararg expected: SessionTransfer) {
