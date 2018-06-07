@@ -127,7 +127,7 @@ object MappedSchemaValidator {
                 "MappedSchema '${schema.substringAfterLast(".")}' entity '$entity' field '$fieldOrMethod' is of type '$fieldOrMethodType' " +
                 "defined in the other MappedSchema '${referencedSchema.substringAfterLast(".")}'."
 
-        fun toWarning() = toString() + " This may cause issues when evolving MappedSchema or migrating it's data, " +
-                "ensure JPA entity reference entities defined within the same enclosing MappedSchema."
+        fun toWarning() = toString() + " This may cause issues when evolving MappedSchema or migrating its data, " +
+                "ensure JPA entities are defined within the same enclosing MappedSchema."
     }
 }

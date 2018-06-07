@@ -232,7 +232,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         initCertificate()
         initialiseJVMAgents()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null)
-        schemaService.mappedSchemasWarnings().forEach { log.warn(it.toWarning()) }
+        schemaService.mappedSchemasWarnings().forEach {
+            val warning = it.toWarning()
+            log.warn(warning)
+            Node.printWarning(warning)
+        }
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
 
         // Wrapped in an atomic reference just to allow setting it before the closure below gets invoked.

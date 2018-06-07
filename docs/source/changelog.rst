@@ -132,8 +132,8 @@ Unreleased
 
 * Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
 
-* Node logs warning for any ``MappedSchema`` containing an JPA entity referencing to other JPA entity from the different ``MappedSchema`.
-  The log entry starts with `Cross-reference between MappedSchemas.` with detailed message.
+* Node logs a warning for any ``MappedSchema`` containing a JPA entity referencing ather JPA entity from a different ``MappedSchema`.
+  The log entry starts with `Cross-reference between MappedSchemas.`.
   API: Persistence documentation no longer suggests mapping between different schemas.
 
 .. _changelog_v3.1:

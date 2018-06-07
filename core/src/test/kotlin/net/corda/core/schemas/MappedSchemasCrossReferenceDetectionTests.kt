@@ -36,7 +36,7 @@ class MappedSchemasCrossReferenceDetectionTests {
                 @Column
                 var id: String,
 
-                //the field is from other schema bu it's not persisted one (no JPA annotation)
+                //the field is a cross-reference to other MappedSchema however the field is not persistent (no JPA annotation)
                 var other: GoodSchema.State
         ) : PersistentState()
     }
