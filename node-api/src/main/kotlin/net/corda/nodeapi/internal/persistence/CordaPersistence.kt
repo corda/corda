@@ -297,3 +297,5 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
             is SQLException -> true
             else -> cause?.hasSQLExceptionCause() ?: false
         }
+
+class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()

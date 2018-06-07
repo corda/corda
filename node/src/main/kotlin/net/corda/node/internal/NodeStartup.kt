@@ -40,6 +40,7 @@ import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.DatabaseMigrationException
 import net.corda.nodeapi.internal.persistence.oracleJdbcDriverSerialFilter
+import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -143,6 +144,9 @@ open class NodeStartup(val args: Array<String>) {
             startNode(conf, versionInfo, startTime, cmdlineOptions)
         } catch (e: DatabaseMigrationException) {
             logger.error(e.message)
+            return false
+        } catch (e: CouldNotCreateDataSourceException) {
+            logger.error(e.message, e.cause)
             return false
         } catch (e: CheckpointIncompatibleException) {
             logger.error(e.message)
