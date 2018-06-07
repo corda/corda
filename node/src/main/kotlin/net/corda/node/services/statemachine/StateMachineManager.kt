@@ -82,6 +82,8 @@ interface StateMachineManager {
      * The event may be replayed if a flow fails and attempts to retry.
      */
     fun deliverExternalEvent(event: ExternalEvent)
+
+    val flowHospital: StaffedFlowHospital
 }
 
 // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call
