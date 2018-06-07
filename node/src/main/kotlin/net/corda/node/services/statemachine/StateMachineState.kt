@@ -51,7 +51,6 @@ data class StateMachineState(
  * @param flowState the state of the flow itself, including the frozen fiber/FlowLogic.
  * @param errorState the "dirtiness" state including the involved errors and their propagation status.
  * @param numberOfSuspends the number of flow suspends due to IO API calls.
- * @param deduplicationSeed the basis seed for the deduplication ID. This is used to produce replayable IDs.
  */
 data class Checkpoint(
         val invocationContext: InvocationContext,
@@ -60,8 +59,7 @@ data class Checkpoint(
         val subFlowStack: List<SubFlow>,
         val flowState: FlowState,
         val errorState: ErrorState,
-        val numberOfSuspends: Int,
-        val deduplicationSeed: String
+        val numberOfSuspends: Int
 ) {
     companion object {
 
@@ -82,8 +80,7 @@ data class Checkpoint(
                         subFlowStack = listOf(topLevelSubFlow),
                         flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
                         errorState = ErrorState.Clean,
-                        numberOfSuspends = 0,
-                        deduplicationSeed = deduplicationSeed
+                        numberOfSuspends = 0
                 )
             }
         }
@@ -95,13 +92,19 @@ data class Checkpoint(
  */
 sealed class SessionState {
 
+    abstract val deduplicationSeed: String
+
     /**
      * We haven't yet sent the initialisation message
      */
     data class Uninitiated(
             val party: Party,
-            val initiatingSubFlow: SubFlow.Initiating
-    ) : SessionState()
+            val initiatingSubFlow: SubFlow.Initiating,
+            val sourceSessionId: SessionId,
+            val additionalEntropy: Long
+    ) : SessionState() {
+        override val deduplicationSeed: String get() = "R-${sourceSessionId.toLong}-$additionalEntropy"
+    }
 
     /**
      * We have sent the initialisation message but have not yet received a confirmation.
@@ -109,7 +112,8 @@ sealed class SessionState {
      */
     data class Initiating(
             val bufferedMessages: List<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
-            val rejectionError: FlowError?
+            val rejectionError: FlowError?,
+            override val deduplicationSeed: String
     ) : SessionState()
 
     /**
@@ -121,7 +125,8 @@ sealed class SessionState {
             val peerFlowInfo: FlowInfo,
             val receivedMessages: List<DataSessionMessage>,
             val initiatedState: InitiatedSessionState,
-            val errors: List<FlowError>
+            val errors: List<FlowError>,
+            override val deduplicationSeed: String
     ) : SessionState()
 }
 

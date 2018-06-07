@@ -1,7 +1,19 @@
 package net.corda.node.services.statemachine.transitions
 
 import net.corda.core.flows.UnexpectedFlowEndException
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.Action
+import net.corda.node.services.statemachine.ConfirmSessionMessage
+import net.corda.node.services.statemachine.DataSessionMessage
+import net.corda.node.services.statemachine.EndSessionMessage
+import net.corda.node.services.statemachine.ErrorSessionMessage
+import net.corda.node.services.statemachine.Event
+import net.corda.node.services.statemachine.ExistingSessionMessage
+import net.corda.node.services.statemachine.FlowError
+import net.corda.node.services.statemachine.InitiatedSessionState
+import net.corda.node.services.statemachine.RejectSessionMessage
+import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.statemachine.SessionState
+import net.corda.node.services.statemachine.StateMachineState
 
 /**
  * This transition handles incoming session messages. It handles the following cases:
@@ -62,7 +74,8 @@ class DeliverSessionMessageTransition(
                         peerFlowInfo = message.initiatedFlowInfo,
                         receivedMessages = emptyList(),
                         initiatedState = InitiatedSessionState.Live(message.initiatedSessionId),
-                        errors = emptyList()
+                        errors = emptyList(),
+                        deduplicationSeed = sessionState.deduplicationSeed
                 )
                 val newCheckpoint = currentState.checkpoint.copy(
                         sessions = currentState.checkpoint.sessions + (event.sessionMessage.recipientSessionId to initiatedSession)
