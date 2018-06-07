@@ -24,7 +24,7 @@ public class TrickySchemaJavaV1 extends MappedSchema {
             this.id = id;
         }
 
-        //the field is from other schema bu it's not persisted one (no JPA annotation)
+        //the field is a cross-reference to other MappedSchema however the field is not persistent (no JPA annotation)
         public GoodSchemaJavaV1.State getOther() {
             return other;
         }
