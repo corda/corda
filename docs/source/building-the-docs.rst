@@ -21,6 +21,11 @@ done by specifying the installation target on the command line:
 
     sudo -H pip install --install-option '--install-data=/usr/local' Sphinx
     sudo -H pip install --install-option '--install-data=/usr/local' sphinx_rtd_theme
+    
+.. warning:: When installing Sphinx, you may see the following error message: "Found existing installation: six 1.4.1
+   Cannot uninstall 'six'. It is a distutils installed project and thus we cannot accurately determine which files
+   belong to it which would lead to only a partial uninstall.". If so, run the install with the 
+   ``--ignore-installed six`` flag.
 
 Build
 -----
