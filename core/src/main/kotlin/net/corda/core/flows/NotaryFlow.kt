@@ -17,6 +17,7 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
 import net.corda.core.internal.pushToLoggingContext
@@ -41,8 +42,10 @@ class NotaryFlow {
      */
     @DoNotImplement
     @InitiatingFlow
-    open class Client(private val stx: SignedTransaction,
-                      override val progressTracker: ProgressTracker) : FlowLogic<List<TransactionSignature>>() {
+    open class Client(
+            private val stx: SignedTransaction,
+            override val progressTracker: ProgressTracker
+    ) : FlowLogic<List<TransactionSignature>>(), TimedFlow {
         constructor(stx: SignedTransaction) : this(stx, tracker())
 
         companion object {

@@ -430,7 +430,7 @@ class InMemoryMessagingNetwork private constructor(
             state.locked { check(handlers.remove(registration as Handler)) }
         }
 
-        override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
+        override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
             check(running)
             msgSend(this, message, target)
             if (!sendManuallyPumped) {
@@ -439,8 +439,8 @@ class InMemoryMessagingNetwork private constructor(
         }
 
         override fun send(addressedMessages: List<MessagingService.AddressedMessage>) {
-            for ((message, target, retryId, sequenceKey) in addressedMessages) {
-                send(message, target, retryId, sequenceKey)
+            for ((message, target, sequenceKey) in addressedMessages) {
+                send(message, target, sequenceKey)
             }
         }
 
@@ -452,8 +452,6 @@ class InMemoryMessagingNetwork private constructor(
             running = false
             netNodeHasShutdown(peerHandle)
         }
-
-        override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
         override fun createMessage(topic: String, data: ByteArray, deduplicationId: SenderDeduplicationId, additionalHeaders: Map<String, String>): Message {

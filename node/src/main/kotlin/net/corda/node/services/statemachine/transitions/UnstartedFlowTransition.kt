@@ -11,7 +11,17 @@
 package net.corda.node.services.statemachine.transitions
 
 import net.corda.core.flows.FlowInfo
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.Action
+import net.corda.node.services.statemachine.ConfirmSessionMessage
+import net.corda.node.services.statemachine.DataSessionMessage
+import net.corda.node.services.statemachine.DeduplicationId
+import net.corda.node.services.statemachine.ExistingSessionMessage
+import net.corda.node.services.statemachine.FlowStart
+import net.corda.node.services.statemachine.FlowState
+import net.corda.node.services.statemachine.InitiatedSessionState
+import net.corda.node.services.statemachine.SenderDeduplicationId
+import net.corda.node.services.statemachine.SessionState
+import net.corda.node.services.statemachine.StateMachineState
 
 /**
  * This transition is responsible for starting the flow from a FlowLogic instance. It creates the first checkpoint and
@@ -55,7 +65,8 @@ class UnstartedFlowTransition(
                 } else {
                     listOf(DataSessionMessage(initiatingMessage.firstPayload))
                 },
-                errors = emptyList()
+                errors = emptyList(),
+                deduplicationSeed = "D-${initiatingMessage.initiatorSessionId.toLong}-${initiatingMessage.initiationEntropy}"
         )
         val confirmationMessage = ConfirmSessionMessage(flowStart.initiatedSessionId, flowStart.initiatedFlowInfo)
         val sessionMessage = ExistingSessionMessage(initiatingMessage.initiatorSessionId, confirmationMessage)
@@ -68,7 +79,7 @@ class UnstartedFlowTransition(
                 Action.SendExisting(
                         flowStart.peerSession.counterparty,
                         sessionMessage,
-                        SenderDeduplicationId(DeduplicationId.createForNormal(currentState.checkpoint, 0), currentState.senderUUID)
+                        SenderDeduplicationId(DeduplicationId.createForNormal(currentState.checkpoint, 0, initiatedState), currentState.senderUUID)
                 )
         )
     }

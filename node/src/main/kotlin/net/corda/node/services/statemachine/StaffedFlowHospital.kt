@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.internal.TimedFlow
 import net.corda.core.utilities.loggerFor
 import java.sql.SQLException
 import java.time.Instant
@@ -12,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap
 object StaffedFlowHospital : FlowHospital {
     private val log = loggerFor<StaffedFlowHospital>()
 
-    private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist)
+    private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist, DoctorTimeout)
 
     private val patients = ConcurrentHashMap<StateMachineRunId, MedicalHistory>()
 
@@ -122,6 +123,33 @@ object StaffedFlowHospital : FlowHospital {
 
         private fun mentionsConstraintViolation(exception: Throwable?): Boolean {
             return exception != null && (exception is org.hibernate.exception.ConstraintViolationException || mentionsConstraintViolation(exception.cause))
+        }
+    }
+
+    /**
+     * Restarts [TimedFlow], keeping track of the number of retries and making sure it does not
+     * exceed the limit specified by the [FlowTimeoutException].
+     */
+    object DoctorTimeout : Staff {
+        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: MedicalHistory): Diagnosis {
+            if (newError is FlowTimeoutException) {
+                if (isTimedFlow(flowFiber)) {
+                    if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this)) {
+                        return Diagnosis.DISCHARGE
+                    } else {
+                        log.warn("\"Maximum number of retries reached for timed flow ${flowFiber.javaClass}")
+                    }
+                } else {
+                    log.warn("\"Unable to restart flow: ${flowFiber.javaClass}, it is not timed and does not contain any timed sub-flows.")
+                }
+            }
+            return Diagnosis.NOT_MY_SPECIALTY
+        }
+
+        private fun isTimedFlow(flowFiber: FlowFiber): Boolean {
+            return flowFiber.snapshot().checkpoint.subFlowStack.any {
+                TimedFlow::class.java.isAssignableFrom(it.flowClass)
+            }
         }
     }
 }

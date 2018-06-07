@@ -51,9 +51,7 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.SecureRandom
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.ArrayList
@@ -80,6 +78,14 @@ class MultiThreadedStateMachineManager(
     }
 
     private class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
+
+    private data class ScheduledTimeout(
+            /** Will fire a [FlowTimeoutException] indicating to the flow hospital to restart the flow. */
+            val scheduledFuture: ScheduledFuture<*>,
+            /** Specifies the number of times this flow has been retried. */
+            val retryCount: Int = 0
+    )
+
     private enum class State {
         UNSTARTED,
         STARTED,
@@ -92,11 +98,15 @@ class MultiThreadedStateMachineManager(
         val flows = ConcurrentHashMap<StateMachineRunId, Flow>()
         val startedFutures = ConcurrentHashMap<StateMachineRunId, OpenFuture<Unit>>()
         val changesPublisher = PublishSubject.create<StateMachineManager.Change>()!!
+        /** Flows scheduled to be retried if not finished within the specified timeout period. */
+        val timedFlows = ConcurrentHashMap<StateMachineRunId, ScheduledTimeout>()
     }
 
     private val concurrentBox = ConcurrentBox(InnerState())
 
     private val scheduler = FiberExecutorScheduler("Flow fiber scheduler", executor)
+    private val timeoutScheduler = AffinityExecutor.ServiceAffinityExecutor("Flow timeout scheduler", 1)
+
     // How many Fibers are running and not suspended.  If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
     // Monitoring support.
@@ -212,6 +222,7 @@ class MultiThreadedStateMachineManager(
 
     override fun killFlow(id: StateMachineRunId): Boolean {
         concurrentBox.concurrent {
+            cancelTimeoutIfScheduled(id)
             val flow = flows.remove(id)
             if (flow != null) {
                 logger.debug("Killing flow known to physical node.")
@@ -263,6 +274,7 @@ class MultiThreadedStateMachineManager(
 
     override fun removeFlow(flowId: StateMachineRunId, removalReason: FlowRemovalReason, lastState: StateMachineState) {
         concurrentBox.concurrent {
+            cancelTimeoutIfScheduled(flowId)
             val flow = flows.remove(flowId)
             if (flow != null) {
                 decrementLiveFibers()
@@ -427,7 +439,7 @@ class MultiThreadedStateMachineManager(
                                 "unknown session $recipientId, discarding..."
                     }
                 } else {
-                    throw IllegalArgumentException("Cannot find flow corresponding to session ID $recipientId")
+                    logger.warn("Cannot find flow corresponding to session ID $recipientId.")
                 }
             } else {
                 val flow = concurrentBox.content.flows[flowId] ?: throw IllegalStateException("Cannot find fiber corresponding to ID $flowId")
@@ -533,7 +545,7 @@ class MultiThreadedStateMachineManager(
         flowLogic.stateMachine = flowStateMachineImpl
         val frozenFlowLogic = (flowLogic as FlowLogic<*>).serialize(context = checkpointSerializationContext!!)
 
-        val flowCorDappVersion= FlowStateMachineImpl.createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
+        val flowCorDappVersion = FlowStateMachineImpl.createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
         val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, deduplicationSeed, flowCorDappVersion).getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
@@ -554,6 +566,59 @@ class MultiThreadedStateMachineManager(
         totalStartedFlows.inc()
         addAndStartFlow(flowId, Flow(flowStateMachineImpl, resultFuture))
         return startedFuture.map { flowStateMachineImpl as FlowStateMachine<A> }
+    }
+
+    override fun scheduleFlowTimeout(flowId: StateMachineRunId) {
+        concurrentBox.concurrent { scheduleTimeout(flowId) }
+    }
+
+    override fun cancelFlowTimeout(flowId: StateMachineRunId) {
+        concurrentBox.concurrent { cancelTimeoutIfScheduled(flowId) }
+    }
+
+    /**
+     * Schedules the flow [flowId] to be retried if it does not finish within the timeout period
+     * specified in the config.
+     *
+     * Assumes a read lock is taken on the [InnerState].
+     */
+    private fun InnerState.scheduleTimeout(flowId: StateMachineRunId) {
+        val flow = flows[flowId]
+        if (flow != null) {
+            val scheduledTimeout = timedFlows[flowId]
+            val retryCount = if (scheduledTimeout != null) {
+                val timeoutFuture = scheduledTimeout.scheduledFuture
+                if (!timeoutFuture.isDone) scheduledTimeout.scheduledFuture.cancel(true)
+                scheduledTimeout.retryCount
+            } else 0
+            val scheduledFuture = scheduleTimeoutException(flow, retryCount)
+            timedFlows[flowId] = ScheduledTimeout(scheduledFuture, retryCount + 1)
+        } else {
+            logger.warn("Unable to schedule timeout for flow $flowId – flow not found.")
+        }
+    }
+
+    /** Schedules a [FlowTimeoutException] to be fired in order to restart the flow. */
+    private fun scheduleTimeoutException(flow: Flow, retryCount: Int): ScheduledFuture<*> {
+        return with(serviceHub.configuration.p2pMessagingRetry) {
+            val timeoutDelaySeconds = messageRedeliveryDelay.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
+            timeoutScheduler.schedule({
+                val event = Event.Error(FlowTimeoutException(maxRetryCount))
+                flow.fiber.scheduleEvent(event)
+            }, timeoutDelaySeconds, TimeUnit.SECONDS)
+        }
+    }
+
+    /**
+     * Cancels any scheduled flow timeout for [flowId].
+     *
+     * Assumes a read lock is taken on the [InnerState].
+     */
+    private fun InnerState.cancelTimeoutIfScheduled(flowId: StateMachineRunId) {
+        timedFlows[flowId]?.let { (future, _) ->
+            if (!future.isDone) future.cancel(true)
+            timedFlows.remove(flowId)
+        }
     }
 
     private fun deserializeCheckpoint(serializedCheckpoint: SerializedBytes<Checkpoint>): Checkpoint? {
@@ -659,6 +724,8 @@ class MultiThreadedStateMachineManager(
             } else {
                 oldFlow.resultFuture.captureLater(flow.resultFuture)
             }
+            val flowLogic = flow.fiber.logic
+            if (flowLogic is TimedFlow) scheduleTimeout(id)
             flow.fiber.scheduleEvent(Event.DoRemainingWork)
             when (checkpoint.flowState) {
                 is FlowState.Unstarted -> {
