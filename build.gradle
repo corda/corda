@@ -410,7 +410,7 @@ artifactory {
     publish {
         contextUrl = artifactory_contextUrl
         repository {
-            repoKey = 'enterprise-dev'
+            repoKey = 'r3-corda-dev'
             username = 'teamcity'
             password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
         }
