@@ -71,7 +71,7 @@ import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.CouldNotCreateDatasource
+import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.storeLegalIdentity
@@ -83,7 +83,6 @@ import rx.Observable
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
-import java.net.ConnectException
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
@@ -1007,7 +1006,7 @@ internal class NetworkMapCacheEmptyException : Exception()
 /**
  * Creates the connection pool to the database.
  *
- *@throws [CouldNotCreateDatasource]
+ *@throws [CouldNotCreateDataSourceException]
  */
 fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
@@ -1024,11 +1023,10 @@ fun configureDatabase(hikariProperties: Properties,
         val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
         return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, attributeConverters)
     } catch (ex: Exception) {
-        val msg = when {
-            ex is HikariPool.PoolInitializationException -> "Could not connect to the database. Please check your jdbc connection url, or the connectivity to the database."
-            ex.cause is ClassNotFoundException -> "Could not find the database driver class. Please add it to the 'drivers' folders. See: https://docs.corda.net/corda-configuration-file.html"
-            else -> ex.message
+        when {
+            ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.")
+            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folders. See: https://docs.corda.net/corda-configuration-file.html")
+            else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
         }
-        throw CouldNotCreateDatasource(msg, ex)
     }
 }

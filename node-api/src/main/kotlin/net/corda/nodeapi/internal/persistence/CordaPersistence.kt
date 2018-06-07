@@ -266,4 +266,4 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
             else -> cause?.hasSQLExceptionCause() ?: false
         }
 
-class CouldNotCreateDatasource(override val message: String?, override val cause: Throwable?) : Exception()
+class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()
