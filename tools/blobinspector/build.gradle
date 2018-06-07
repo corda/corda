@@ -31,5 +31,4 @@ jar {
 
 publish {
     name 'tools-blob-inspector'
-    disableDefaultJar = true
 }
