@@ -70,9 +70,9 @@ class RetryFlowMockTest {
         val messagesSent = mutableListOf<Message>()
         val partyB = internalNodeB.info.legalIdentities.first()
         internalNodeA.setMessagingServiceSpy(object : MessagingServiceSpy(internalNodeA.network) {
-            override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
+            override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
                 messagesSent.add(message)
-                messagingService.send(message, target, retryId)
+                messagingService.send(message, target)
             }
         })
         internalNodeA.startFlow(SendAndRetryFlow(1, partyB)).get()
@@ -89,8 +89,11 @@ class RetryFlowMockTest {
 
     @Test
     fun `Patient records do not leak in hospital`() {
+        val patientCountBefore = StaffedFlowHospital.numberOfPatients
         assertEquals(Unit, internalNodeA.startFlow(RetryFlow(1)).get())
-        assertEquals(0, StaffedFlowHospital.numberOfPatients)
+        // Need to make sure the state machine has finished.  Otherwise this test is flakey.
+        mockNet.waitQuiescent()
+        assertEquals(patientCountBefore, StaffedFlowHospital.numberOfPatients)
         assertEquals(2, RetryFlow.count)
     }
 }

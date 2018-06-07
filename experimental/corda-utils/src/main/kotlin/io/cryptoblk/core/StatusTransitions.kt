@@ -67,7 +67,7 @@ class StatusTransitions<out S, in R, T : StatusTrackingContractState<S, R>>(priv
             // for each combination of in x out which should normally be at most 1...
             inputStates.forEach { inp ->
                 outputStates.forEach { outp ->
-                    assert((inp != null) || (outp != null))
+                    require(inp != null || outp != null)
                     val options = matchingTransitions(inp?.status, outp?.status, cmd.value)
 
                     val signerGroup = options.groupBy { it.signer }.entries.singleOrNull()

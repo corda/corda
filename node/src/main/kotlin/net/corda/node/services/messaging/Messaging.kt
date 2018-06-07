@@ -64,8 +64,6 @@ interface MessagingService {
      * There is no way to know if a message has been received. If your flow requires this, you need the recipient
      * to send an ACK message back.
      *
-     * @param retryId if provided the message will be scheduled for redelivery until [cancelRedelivery] is called for this id.
-     *     Note that this feature should only be used when the target is an idempotent distributed service, e.g. a notary.
      * @param sequenceKey an object that may be used to enable a parallel [MessagingService] implementation. Two
      *     subsequent send()s with the same [sequenceKey] (up to equality) are guaranteed to be delivered in the same
      *     sequence the send()s were called. By default this is chosen conservatively to be [target].
@@ -74,7 +72,6 @@ interface MessagingService {
     fun send(
             message: Message,
             target: MessageRecipients,
-            retryId: Long? = null,
             sequenceKey: Any = target
     )
 
@@ -82,7 +79,6 @@ interface MessagingService {
     data class AddressedMessage(
             val message: Message,
             val target: MessageRecipients,
-            val retryId: Long? = null,
             val sequenceKey: Any = target
     )
 
@@ -94,9 +90,6 @@ interface MessagingService {
      */
     @Suspendable
     fun send(addressedMessages: List<AddressedMessage>)
-
-    /** Cancels the scheduled message redelivery for the specified [retryId] */
-    fun cancelRedelivery(retryId: Long)
 
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.
@@ -115,7 +108,7 @@ interface MessagingService {
     val myAddress: SingleMessageRecipient
 }
 
-fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), retryId: Long? = null, additionalHeaders: Map<String, String> = emptyMap()) = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId, additionalHeaders), to, retryId)
+fun MessagingService.send(topicSession: String, payload: Any, to: MessageRecipients, deduplicationId: SenderDeduplicationId = SenderDeduplicationId(DeduplicationId.createRandom(newSecureRandom()), ourSenderUUID), additionalHeaders: Map<String, String> = emptyMap()) = send(createMessage(topicSession, payload.serialize().bytes, deduplicationId, additionalHeaders), to)
 
 interface MessageHandlerRegistration
 

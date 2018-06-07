@@ -74,9 +74,10 @@ class ActionExecutorImpl(
             is Action.ExecuteAsyncOperation -> executeAsyncOperation(fiber, action)
             is Action.ReleaseSoftLocks -> executeReleaseSoftLocks(action)
             is Action.RetryFlowFromSafePoint -> executeRetryFlowFromSafePoint(action)
+            is Action.ScheduleFlowTimeout -> scheduleFlowTimeout(action)
+            is Action.CancelFlowTimeout -> cancelFlowTimeout(action)
         }
     }
-
     private fun executeReleaseSoftLocks(action: Action.ReleaseSoftLocks) {
         if (action.uuid != null) services.vaultService.softLockRelease(action.uuid)
     }
@@ -233,5 +234,13 @@ class ActionExecutorImpl(
 
     private fun serializeCheckpoint(checkpoint: Checkpoint): SerializedBytes<Checkpoint> {
         return checkpoint.serialize(context = checkpointSerializationContext)
+    }
+
+    private fun cancelFlowTimeout(action: Action.CancelFlowTimeout) {
+        stateMachineManager.cancelFlowTimeout(action.flowId)
+    }
+
+    private fun scheduleFlowTimeout(action: Action.ScheduleFlowTimeout) {
+        stateMachineManager.scheduleFlowTimeout(action.flowId)
     }
 }
