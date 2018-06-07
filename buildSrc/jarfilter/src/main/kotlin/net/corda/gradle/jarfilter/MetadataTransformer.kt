@@ -22,6 +22,7 @@ internal abstract class MetadataTransformer<out T : MessageLite>(
     private val deletedFunctions: Collection<MethodElement>,
     private val deletedConstructors: Collection<MethodElement>,
     private val deletedNestedClasses: Collection<String>,
+    private val deletedClasses: Collection<String>,
     private val handleExtraMethod: (MethodElement) -> Unit,
     d1: List<String>,
     d2: List<String>,
@@ -34,6 +35,7 @@ internal abstract class MetadataTransformer<out T : MessageLite>(
     protected abstract val typeTable: TypeTable
     protected open val className: String get() = throw UnsupportedOperationException("No className")
     protected open val nestedClassNames: MutableList<Int> get() = throw UnsupportedOperationException("No nestedClassNames")
+    protected open val sealedSubclassNames: MutableList<Int> get() = throw UnsupportedOperationException("No sealedSubclassNames")
     protected abstract val properties: MutableList<ProtoBuf.Property>
     protected abstract val functions: MutableList<ProtoBuf.Function>
     protected open val constructors: MutableList<ProtoBuf.Constructor> get() = throw UnsupportedOperationException("No constructors")
@@ -55,6 +57,7 @@ internal abstract class MetadataTransformer<out T : MessageLite>(
             + filterConstructors()
             + filterNestedClasses()
             + filterTypeAliases()
+            + filterSealedSubclasses()
         )
         if (count == 0) {
             return emptyList()
@@ -175,6 +178,24 @@ internal abstract class MetadataTransformer<out T : MessageLite>(
         return count
     }
 
+    private fun filterSealedSubclasses(): Int {
+        if (deletedClasses.isEmpty()) return 0
+
+        var count = 0
+        var idx = 0
+        while (idx < sealedSubclassNames.size) {
+            val subclassName = nameResolver.getString(sealedSubclassNames[idx]).replace('.', '$')
+            if (deletedClasses.contains(subclassName)) {
+                logger.info("-- removing sealed subclass: {}", subclassName)
+                sealedSubclassNames.removeAt(idx)
+                ++count
+            } else {
+                ++idx
+            }
+        }
+        return count
+    }
+
     /**
      * Removes any Kotlin suffix, e.g. "$delegate" or "$annotations".
      */
@@ -190,6 +211,7 @@ internal class ClassMetadataTransformer(
     deletedFunctions: Collection<MethodElement>,
     deletedConstructors: Collection<MethodElement>,
     deletedNestedClasses: Collection<String>,
+    deletedClasses: Collection<String>,
     handleExtraMethod: (MethodElement) -> Unit,
     d1: List<String>,
     d2: List<String>
@@ -199,6 +221,7 @@ internal class ClassMetadataTransformer(
     deletedFunctions,
     deletedConstructors,
     deletedNestedClasses,
+    deletedClasses,
     handleExtraMethod,
     d1,
     d2,
@@ -207,6 +230,7 @@ internal class ClassMetadataTransformer(
     override val typeTable = TypeTable(message.typeTable)
     override val className = nameResolver.getString(message.fqName)
     override val nestedClassNames = mutableList(message.nestedClassNameList)
+    override val sealedSubclassNames = mutableList(message.sealedSubclassFqNameList)
     override val properties = mutableList(message.propertyList)
     override val functions = mutableList(message.functionList)
     override val constructors = mutableList(message.constructorList)
@@ -228,6 +252,9 @@ internal class ClassMetadataTransformer(
         if (typeAliases.size != typeAliasCount) {
             clearTypeAlias().addAllTypeAlias(typeAliases)
         }
+        if (sealedSubclassNames.size != sealedSubclassFqNameCount) {
+            clearSealedSubclassFqName().addAllSealedSubclassFqName(sealedSubclassNames)
+        }
     }.build()
 }
 
@@ -242,6 +269,7 @@ internal class PackageMetadataTransformer(
     logger,
     deletedFields,
     deletedFunctions,
+    emptyList(),
     emptyList(),
     emptyList(),
     handleExtraMethod,

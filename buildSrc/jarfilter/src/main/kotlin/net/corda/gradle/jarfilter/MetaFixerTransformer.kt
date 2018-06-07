@@ -22,6 +22,7 @@ internal abstract class MetaFixTransformer<out T : MessageLite>(
     private val actualFields: Collection<FieldElement>,
     private val actualMethods: Collection<String>,
     private val actualNestedClasses: Collection<String>,
+    private val actualClasses: Collection<String>,
     d1: List<String>,
     d2: List<String>,
     parser: (InputStream, ExtensionRegistryLite) -> T
@@ -35,7 +36,8 @@ internal abstract class MetaFixTransformer<out T : MessageLite>(
     protected abstract val properties: MutableList<ProtoBuf.Property>
     protected abstract val functions: MutableList<ProtoBuf.Function>
     protected abstract val constructors: MutableList<ProtoBuf.Constructor>
-    protected abstract val nestedClassNames: MutableList<Int>
+    protected open val nestedClassNames: MutableList<Int> get() = throw UnsupportedOperationException("No nestedClassNames")
+    protected open val sealedSubclassNames: MutableList<Int> get() = throw UnsupportedOperationException("No sealedSubclassNames")
 
     init {
         val input = ByteArrayInputStream(BitEncoding.decodeBytes(d1.toTypedArray()))
@@ -47,6 +49,8 @@ internal abstract class MetaFixTransformer<out T : MessageLite>(
     abstract fun rebuild(): T
 
     private fun filterNestedClasses(): Int {
+        if (actualNestedClasses.isEmpty()) return 0
+
         var count = 0
         var idx = 0
         while (idx < nestedClassNames.size) {
@@ -56,6 +60,24 @@ internal abstract class MetaFixTransformer<out T : MessageLite>(
             } else {
                 logger.info("-- removing nested class: {}", nestedClassName)
                 nestedClassNames.removeAt(idx)
+                ++count
+            }
+        }
+        return count
+    }
+
+    private fun filterSealedSubclassNames(): Int {
+        if (actualClasses.isEmpty()) return 0
+
+        var count = 0
+        var idx = 0
+        while (idx < sealedSubclassNames.size) {
+            val sealedSubclassName = nameResolver.getString(sealedSubclassNames[idx]).replace('.', '$')
+            if (actualClasses.contains(sealedSubclassName)) {
+                ++idx
+            } else {
+                logger.info("-- removing sealed subclass: {}", sealedSubclassName)
+                sealedSubclassNames.removeAt(idx)
                 ++count
             }
         }
@@ -134,7 +156,7 @@ internal abstract class MetaFixTransformer<out T : MessageLite>(
     }
 
     fun transform(): List<String> {
-        var count = filterProperties() + filterFunctions() + filterNestedClasses()
+        var count = filterProperties() + filterFunctions() + filterNestedClasses() + filterSealedSubclassNames()
         if (classKind != ANNOTATION_CLASS) {
             count += filterConstructors()
         }
@@ -154,6 +176,7 @@ internal class ClassMetaFixTransformer(
     actualFields: Collection<FieldElement>,
     actualMethods: Collection<String>,
     actualNestedClasses: Collection<String>,
+    actualClasses: Collection<String>,
     d1: List<String>,
     d2: List<String>
 ) : MetaFixTransformer<ProtoBuf.Class>(
@@ -161,6 +184,7 @@ internal class ClassMetaFixTransformer(
     actualFields,
     actualMethods,
     actualNestedClasses,
+    actualClasses,
     d1,
     d2,
     ProtoBuf.Class::parseFrom
@@ -171,10 +195,14 @@ internal class ClassMetaFixTransformer(
     override val functions = mutableList(message.functionList)
     override val constructors = mutableList(message.constructorList)
     override val nestedClassNames = mutableList(message.nestedClassNameList)
+    override val sealedSubclassNames= mutableList(message.sealedSubclassFqNameList)
 
     override fun rebuild(): ProtoBuf.Class = message.toBuilder().apply {
         if (nestedClassNames.size != nestedClassNameCount) {
             clearNestedClassName().addAllNestedClassName(nestedClassNames)
+        }
+        if (sealedSubclassNames.size != sealedSubclassFqNameCount) {
+            clearSealedSubclassFqName().addAllSealedSubclassFqName(sealedSubclassNames)
         }
         if (constructors.size != constructorCount) {
             clearConstructor().addAllConstructor(constructors)
@@ -199,6 +227,7 @@ internal class PackageMetaFixTransformer(
     actualFields,
     actualMethods,
     emptyList(),
+    emptyList(),
     d1,
     d2,
     ProtoBuf.Package::parseFrom
@@ -207,7 +236,6 @@ internal class PackageMetaFixTransformer(
     override val properties = mutableList(message.propertyList)
     override val functions = mutableList(message.functionList)
     override val constructors = mutableListOf<ProtoBuf.Constructor>()
-    override val nestedClassNames = mutableListOf<Int>()
 
     override fun rebuild(): ProtoBuf.Package = message.toBuilder().apply {
         if (functions.size != functionCount) {

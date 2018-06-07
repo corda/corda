@@ -10,6 +10,7 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.*
 import java.util.zip.Deflater.BEST_COMPRESSION
+import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
@@ -98,6 +99,7 @@ open class MetaFixerTask : DefaultTask() {
             logger.info("Writing to {}", target)
             outJar.setComment(inJar.comment)
 
+            val classNames = inJar.entries().asSequence().namesEndingWith(".class")
             for (entry in inJar.entries()) {
                 val entryData = inJar.getInputStream(entry)
 
@@ -109,13 +111,18 @@ open class MetaFixerTask : DefaultTask() {
                 } else {
                     // This entry's byte contents have almost certainly
                     // changed, and will be stored compressed.
-                    val classData = entryData.readBytes().fixMetadata(logger)
+                    val classData = entryData.readBytes().fixMetadata(logger, classNames)
                     outJar.putNextEntry(entry.asCompressed().withFileTimestamps(preserveTimestamps))
                     outJar.write(classData)
                 }
             }
         }
     }
+
+    private fun Sequence<ZipEntry>.namesEndingWith(suffix: String): Set<String> {
+        return filter { it.name.endsWith(suffix) }.map { it.name.dropLast(suffix.length) }.toSet()
+    }
 }
 
-fun ByteArray.fixMetadata(logger: Logger): ByteArray = execute({ writer -> MetaFixerVisitor(writer, logger) })
+fun ByteArray.fixMetadata(logger: Logger, classNames: Set<String>): ByteArray
+                  = execute({ writer -> MetaFixerVisitor(writer, logger, classNames) })

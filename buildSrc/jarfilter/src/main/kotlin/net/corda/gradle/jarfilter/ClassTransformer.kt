@@ -171,6 +171,7 @@ class ClassTransformer private constructor (
                 deletedFunctions = partitioned[false] ?: emptyList(),
                 deletedConstructors = partitioned[true] ?: emptyList(),
                 deletedNestedClasses = unwantedClasses.filter { it.startsWith(prefix) }.map { it.drop(prefix.length) },
+                deletedClasses = unwantedClasses,
                 handleExtraMethod = ::delete,
                 d1 = d1,
                 d2 = d2)

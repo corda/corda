@@ -36,7 +36,7 @@ class MetaFixConstructorTest {
         assertThat("<init>(Long) not found", sourceClass.kotlin.constructors, hasItem(wantedCon))
 
         // Rewrite the metadata according to the contents of the bytecode.
-        val fixedClass = bytecode.fixMetadata(logger).toClass<WithConstructor, HasLong>()
+        val fixedClass = bytecode.fixMetadata(logger, pathsOf(WithConstructor::class)).toClass<WithConstructor, HasLong>()
         val fixedObj = fixedClass.getDeclaredConstructor(Long::class.java).newInstance(BIG_NUMBER)
         assertEquals(BIG_NUMBER, fixedObj.longData())
         assertThat("<init>(Int,Long) still exists", fixedClass.kotlin.constructors, not(hasItem(unwantedCon)))

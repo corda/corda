@@ -35,7 +35,7 @@ class MetaFixFunctionTest {
         assertThat("longData not found", sourceClass.kotlin.declaredFunctions, hasItem(longData))
 
         // Rewrite the metadata according to the contents of the bytecode.
-        val fixedClass = bytecode.fixMetadata(logger).toClass<WithFunction, HasLong>()
+        val fixedClass = bytecode.fixMetadata(logger, pathsOf(WithFunction::class)).toClass<WithFunction, HasLong>()
         val fixedObj = fixedClass.newInstance()
         assertEquals(BIG_NUMBER, fixedObj.longData())
         assertThat("unwantedFun(String) still exists", fixedClass.kotlin.declaredFunctions, not(hasItem(unwantedFun)))

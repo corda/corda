@@ -62,7 +62,8 @@ internal fun toDescriptors(classNames: Iterable<String>): Set<String> {
     return classNames.map(String::descriptor).toSet()
 }
 
-internal val String.descriptor: String get() = 'L' + replace(".", "/") + ';'
+internal val String.toPathFormat: String get() = replace('.', '/')
+internal val String.descriptor: String get() = "L$toPathFormat;"
 
 
 /**

@@ -26,7 +26,8 @@ class MetaFixAnnotationTest {
         assertThat("<init>() not found", sourceClass.kotlin.constructors, hasItem(defaultCon))
 
         // Rewrite the metadata according to the contents of the bytecode.
-        val fixedClass = sourceClass.bytecode.fixMetadata(logger).toClass<SimpleAnnotation, Any>()
+        val fixedClass = sourceClass.bytecode.fixMetadata(logger, pathsOf(SimpleAnnotation::class))
+                 .toClass<SimpleAnnotation, Any>()
         assertThat("<init>() not found", fixedClass.kotlin.constructors, hasItem(defaultCon))
     }
 
@@ -36,7 +37,8 @@ class MetaFixAnnotationTest {
         assertThat("<init>(String) not found", sourceClass.kotlin.constructors, hasItem(valueCon))
 
         // Rewrite the metadata according to the contents of the bytecode.
-        val fixedClass = sourceClass.bytecode.fixMetadata(logger).toClass<AnnotationWithValue, Any>()
+        val fixedClass = sourceClass.bytecode.fixMetadata(logger, pathsOf(AnnotationWithValue::class))
+                .toClass<AnnotationWithValue, Any>()
         assertThat("<init>(String) not found", fixedClass.kotlin.constructors, hasItem(valueCon))
     }
 }

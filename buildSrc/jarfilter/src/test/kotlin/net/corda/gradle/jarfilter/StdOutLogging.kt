@@ -7,8 +7,8 @@ import org.slf4j.Marker
 import org.slf4j.helpers.MessageFormatter
 import kotlin.reflect.KClass
 
-class StdOutLogging(private val name: String, private val threshold: LogLevel) : Logger {
-    constructor(clazz: KClass<*>, threshold: LogLevel = INFO) : this(clazz.java.simpleName, threshold)
+class StdOutLogging(private val name: String, private val threshold: LogLevel = INFO) : Logger {
+    constructor(clazz: KClass<*>) : this(clazz.java.simpleName)
 
     override fun getName(): String = name
 

@@ -50,7 +50,7 @@ class DummyJar(
         private fun compressed(name: String) = ZipEntry(name).apply { method = DEFLATED }
 
         private fun directoryOf(type: Class<*>)
-            = directory(type.`package`.name.replace('.', '/') + '/')
+            = directory(type.`package`.name.toPathFormat + '/')
 
         private fun directory(name: String) = ZipEntry(name).apply {
             method = STORED

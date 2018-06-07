@@ -1,5 +1,6 @@
 package net.corda.gradle.jarfilter
 
+import net.corda.gradle.jarfilter.asm.classMetadata
 import net.corda.gradle.jarfilter.matcher.isClass
 import org.assertj.core.api.Assertions.*
 import org.hamcrest.core.IsCollectionContaining.hasItem
@@ -19,8 +20,13 @@ class DeleteNestedClassTest {
         private const val DELETED_CLASS = "$HOST_CLASS\$OneToThrowAway"
 
         private const val SEALED_CLASS = "net.corda.gradle.SealedClass"
-        private const val WANTED_CLASS = "$SEALED_CLASS\$Wanted"
-        private const val UNWANTED_CLASS = "$SEALED_CLASS\$Unwanted"
+        private const val WANTED_SUBCLASS = "$SEALED_CLASS\$Wanted"
+        private const val UNWANTED_SUBCLASS = "$SEALED_CLASS\$Unwanted"
+
+        private val keptClass = isClass(KEPT_CLASS)
+        private val deletedClass = isClass(DELETED_CLASS)
+        private val wantedSubclass = isClass(WANTED_SUBCLASS)
+        private val unwantedSubclass = isClass(UNWANTED_SUBCLASS)
 
         private val testProjectDir = TemporaryFolder()
         private val testProject = JarFilterProject(testProjectDir, "delete-nested-class")
@@ -38,9 +44,9 @@ class DeleteNestedClassTest {
             val deleted = cl.load<Any>(DELETED_CLASS)
             val kept = cl.load<Any>(KEPT_CLASS)
             cl.load<Any>(HOST_CLASS).apply {
-                assertThat(classes).containsExactlyInAnyOrder(deleted, kept)
-                assertThat("OneToThrowAway class is missing", kotlin.nestedClasses, hasItem(isClass(DELETED_CLASS)))
-                assertThat("OneToKeep class is missing", kotlin.nestedClasses, hasItem(isClass(KEPT_CLASS)))
+                assertThat(declaredClasses).containsExactlyInAnyOrder(deleted, kept)
+                assertThat("OneToThrowAway class is missing", kotlin.nestedClasses, hasItem(deletedClass))
+                assertThat("OneToKeep class is missing", kotlin.nestedClasses, hasItem(keptClass))
             }
         }
 
@@ -48,9 +54,9 @@ class DeleteNestedClassTest {
             assertFailsWith<ClassNotFoundException> { cl.load<Any>(DELETED_CLASS) }
             val kept = cl.load<Any>(KEPT_CLASS)
             cl.load<Any>(HOST_CLASS).apply {
-                assertThat(classes).containsExactly(kept)
-                assertThat("OneToThrowAway class still exists", kotlin.nestedClasses, not(hasItem(isClass(DELETED_CLASS))))
-                assertThat("OneToKeep class is missing", kotlin.nestedClasses, hasItem(isClass(KEPT_CLASS)))
+                assertThat(declaredClasses).containsExactly(kept)
+                assertThat("OneToThrowAway class still exists", kotlin.nestedClasses, not(hasItem(deletedClass)))
+                assertThat("OneToKeep class is missing", kotlin.nestedClasses, hasItem(keptClass))
             }
         }
     }
@@ -58,24 +64,26 @@ class DeleteNestedClassTest {
     @Test
     fun deleteFromSealedClass() {
         classLoaderFor(testProject.sourceJar).use { cl ->
-            val unwanted = cl.load<Any>(UNWANTED_CLASS)
-            val wanted = cl.load<Any>(WANTED_CLASS)
+            val unwanted = cl.load<Any>(UNWANTED_SUBCLASS)
+            val wanted = cl.load<Any>(WANTED_SUBCLASS)
             cl.load<Any>(SEALED_CLASS).apply {
                 assertTrue(kotlin.isSealed)
-                assertThat(classes).containsExactlyInAnyOrder(wanted, unwanted)
-                assertThat("Wanted class is missing", kotlin.nestedClasses, hasItem(isClass(WANTED_CLASS)))
-                assertThat("Unwanted class is missing", kotlin.nestedClasses, hasItem(isClass(UNWANTED_CLASS)))
+                assertThat(declaredClasses).containsExactlyInAnyOrder(wanted, unwanted)
+                assertThat("Wanted class is missing", kotlin.nestedClasses, hasItem(wantedSubclass))
+                assertThat("Unwanted class is missing", kotlin.nestedClasses, hasItem(unwantedSubclass))
+                assertThat(classMetadata.sealedSubclasses).containsExactlyInAnyOrder(WANTED_SUBCLASS, UNWANTED_SUBCLASS)
             }
         }
 
         classLoaderFor(testProject.filteredJar).use { cl ->
-            assertFailsWith<ClassNotFoundException> { cl.load<Any>(UNWANTED_CLASS) }
-            val wanted = cl.load<Any>(WANTED_CLASS)
+            assertFailsWith<ClassNotFoundException> { cl.load<Any>(UNWANTED_SUBCLASS) }
+            val wanted = cl.load<Any>(WANTED_SUBCLASS)
             cl.load<Any>(SEALED_CLASS).apply {
                 assertTrue(kotlin.isSealed)
-                assertThat(classes).containsExactly(wanted)
-                assertThat("Unwanted class still exists", kotlin.nestedClasses, not(hasItem(isClass(UNWANTED_CLASS))))
-                assertThat("Wanted class is missing", kotlin.nestedClasses, hasItem(isClass(WANTED_CLASS)))
+                assertThat(declaredClasses).containsExactly(wanted)
+                assertThat("Unwanted class still exists", kotlin.nestedClasses, not(hasItem(unwantedSubclass)))
+                assertThat("Wanted class is missing", kotlin.nestedClasses, hasItem(wantedSubclass))
+                assertThat(classMetadata.sealedSubclasses).containsExactly(WANTED_SUBCLASS)
             }
         }
     }

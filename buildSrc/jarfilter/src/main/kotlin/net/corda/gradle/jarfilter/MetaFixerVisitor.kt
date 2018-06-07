@@ -8,14 +8,15 @@ class MetaFixerVisitor private constructor(
     visitor: ClassVisitor,
     logger: Logger,
     kotlinMetadata: MutableMap<String, List<String>>,
+    private val classNames: Set<String>,
     private val fields: MutableSet<FieldElement>,
     private val methods: MutableSet<String>,
     private val nestedClasses: MutableSet<String>
 ) : KotlinAwareVisitor(ASM6, visitor, logger, kotlinMetadata), Repeatable<MetaFixerVisitor> {
-    constructor(visitor: ClassVisitor, logger: Logger)
-        : this(visitor, logger, mutableMapOf(), mutableSetOf(), mutableSetOf(), mutableSetOf())
+    constructor(visitor: ClassVisitor, logger: Logger, classNames: Set<String>)
+        : this(visitor, logger, mutableMapOf(), classNames, mutableSetOf(), mutableSetOf(), mutableSetOf())
 
-    override fun recreate(visitor: ClassVisitor) = MetaFixerVisitor(visitor, logger, kotlinMetadata, fields, methods, nestedClasses)
+    override fun recreate(visitor: ClassVisitor) = MetaFixerVisitor(visitor, logger, kotlinMetadata, classNames, fields, methods, nestedClasses)
 
     private var className: String = "(unknown)"
 
@@ -52,6 +53,7 @@ class MetaFixerVisitor private constructor(
                 actualFields = fields,
                 actualMethods = methods,
                 actualNestedClasses = nestedClasses,
+                actualClasses = classNames,
                 d1 = d1,
                 d2 = d2)
             .transform()

@@ -13,6 +13,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.stream.Collectors.*
 import java.util.zip.ZipFile
+import kotlin.reflect.KClass
 
 const val DEFAULT_MESSAGE = "<default-value>"
 const val MESSAGE = "Goodbye, Cruel World!"
@@ -53,6 +54,9 @@ fun TemporaryFolder.installResource(resourceName: String): File = newFile(resour
 
 private val String.fileName: String get() = substring(1 + lastIndexOf('/'))
 
+val String.toPackageFormat: String get() = replace('/', '.')
+fun pathsOf(vararg types: KClass<*>): Set<String> = types.map { it.java.name.toPathFormat }.toSet()
+
 fun TemporaryFolder.pathOf(vararg elements: String): Path = Paths.get(root.absolutePath, *elements)
 
 fun arrayOfJunk(size: Int) = ByteArray(size).apply {
@@ -70,9 +74,9 @@ fun <T> ClassLoader.load(className: String)
             = Class.forName(className, true, this) as Class<T>
 
 fun Path.getClassNames(prefix: String): List<String> {
-    val resourcePrefix = prefix.replace('.', '/')
+    val resourcePrefix = prefix.toPathFormat
     return ZipFile(toFile()).stream()
         .filter { it.name.startsWith(resourcePrefix) && it.name.endsWith(".class") }
-        .map { it.name.removeSuffix(".class").replace('/', '.') }
+        .map { it.name.removeSuffix(".class").toPackageFormat }
         .collect(toList<String>())
 }

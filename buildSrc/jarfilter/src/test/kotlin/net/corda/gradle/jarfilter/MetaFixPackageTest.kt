@@ -35,7 +35,7 @@ class MetaFixPackageTest {
             val emptyClass = Class.forName(EMPTY_CLASS)
             val bytecode = emptyClass.metadataAs(Class.forName(TEMPLATE_CLASS))
             sourceClass = bytecode.toClass(emptyClass, Any::class.java)
-            fixedClass = bytecode.fixMetadata(logger).toClass(sourceClass, Any::class.java)
+            fixedClass = bytecode.fixMetadata(logger, setOf(EMPTY_CLASS)).toClass(sourceClass, Any::class.java)
         }
     }
 

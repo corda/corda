@@ -1,38 +1,33 @@
 package net.corda.gradle.jarfilter
 
 import net.corda.gradle.jarfilter.asm.*
-import net.corda.gradle.jarfilter.matcher.isClass
+import org.assertj.core.api.Assertions.*
 import org.gradle.api.logging.Logger
-import org.hamcrest.core.IsCollectionContaining.*
-import org.hamcrest.core.IsNot.*
-import org.junit.Assert.*
 import org.junit.Test
 import kotlin.reflect.jvm.jvmName
 
 /**
- * Kotlin reflection determines the nested classes directly from the java byte-code,
- * and not from the [kotlin.Metadata] annotation. The annotation still contains the
- * list of nested classes, and this task does fix it correctly. However, I can't use
- * Kotlin reflection to test it.
+ * Kotlin reflection will attempt to validate the nested classes stored in the [kotlin.Metadata]
+ * annotation rather than just reporting what is there, which means that it can tell us nothing
+ * about what the MetaFixer task has done.
  */
 class MetaFixNestedClassTest {
     companion object {
         private val logger: Logger = StdOutLogging(MetaFixNestedClassTest::class)
-        private val wantedClass = isClass(WithNestedClass.Wanted::class.jvmName)
-        private val unwantedClass = isClass("${WithNestedClass::class.jvmName}\$Unwanted")
+        private val WANTED_CLASS: String = WithNestedClass.Wanted::class.jvmName
+        private val UNWANTED_CLASS: String = "${WithNestedClass::class.jvmName}\$Unwanted"
     }
 
     @Test
     fun testNestedClassRemovedFromMetadata() {
         val bytecode = recodeMetadataFor<WithNestedClass, MetadataTemplate>()
         val sourceClass = bytecode.toClass<WithNestedClass, Any>()
-        assertThat("Wanted class not found", sourceClass.kotlin.nestedClasses, hasItem(wantedClass))
-        //assertThat("Unwanted class not found", sourceClass.kotlin.nestedClasses, hasItem(unwantedClass))
+        assertThat(sourceClass.classMetadata.nestedClasses).containsExactlyInAnyOrder(WANTED_CLASS, UNWANTED_CLASS)
 
         // Rewrite the metadata according to the contents of the bytecode.
-        val fixedClass = bytecode.fixMetadata(logger).toClass<WithNestedClass, Any>()
-        assertThat("Wanted class not found", fixedClass.kotlin.nestedClasses, hasItem(wantedClass))
-        assertThat("Unwanted class still exists", fixedClass.kotlin.nestedClasses, not(hasItem(unwantedClass)))
+        val fixedClass = bytecode.fixMetadata(logger, pathsOf(WithNestedClass::class, WithNestedClass.Wanted::class))
+                .toClass<WithNestedClass, Any>()
+        assertThat(fixedClass.classMetadata.nestedClasses).containsExactly(WANTED_CLASS)
     }
 
     @Suppress("UNUSED")

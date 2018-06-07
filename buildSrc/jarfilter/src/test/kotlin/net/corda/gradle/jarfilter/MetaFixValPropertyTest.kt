@@ -31,7 +31,7 @@ class MetaFixValPropertyTest {
         assertThat("intVal not found", sourceClass.kotlin.declaredMemberProperties, hasItem(intVal))
 
         // Rewrite the metadata according to the contents of the bytecode.
-        val fixedClass = bytecode.fixMetadata(logger).toClass<WithValProperty, HasIntVal>()
+        val fixedClass = bytecode.fixMetadata(logger, pathsOf(WithValProperty::class)).toClass<WithValProperty, HasIntVal>()
         val fixedObj = fixedClass.newInstance()
         assertEquals(NUMBER, fixedObj.intVal)
         assertThat("unwantedVal still exists", fixedClass.kotlin.declaredMemberProperties, not(hasItem(unwantedVal)))
