@@ -388,7 +388,8 @@ fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serial
 fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
 
 /** Convenience method to get the package name of a class literal. */
-val KClass<*>.packageName: String get() = java.`package`.name
+val KClass<*>.packageName: String get() = java.packageName
+val Class<*>.packageName: String get() = `package`.name
 
 inline val Class<*>.isAbstractClass: Boolean get() = Modifier.isAbstract(modifiers)
 

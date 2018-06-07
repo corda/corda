@@ -7,6 +7,8 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
+import net.corda.core.internal.concurrent.flatMap
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
@@ -15,10 +17,13 @@ import net.corda.node.services.messaging.Message
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNetwork.MockNode
 import net.corda.testing.node.internal.MessagingServiceSpy
 import net.corda.testing.node.internal.newContext
 import net.corda.testing.node.internal.setMessagingServiceSpy
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.hibernate.exception.ConstraintViolationException
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -30,21 +35,23 @@ import kotlin.test.assertNull
 
 class RetryFlowMockTest {
     private lateinit var mockNet: InternalMockNetwork
-    private lateinit var internalNodeA: StartedNode<InternalMockNetwork.MockNode>
-    private lateinit var internalNodeB: StartedNode<InternalMockNetwork.MockNode>
+    private lateinit var nodeA: StartedNode<MockNode>
+    private lateinit var nodeB: StartedNode<MockNode>
 
     @Before
     fun start() {
-        mockNet = InternalMockNetwork(threadPerNode = true, cordappPackages = listOf(this.javaClass.`package`.name))
-        internalNodeA = mockNet.createNode()
-        internalNodeB = mockNet.createNode()
+        mockNet = InternalMockNetwork(threadPerNode = true, cordappPackages = listOf(this.javaClass.packageName))
+        nodeA = mockNet.createNode()
+        nodeB = mockNet.createNode()
         mockNet.startNodes()
         RetryFlow.count = 0
         SendAndRetryFlow.count = 0
         RetryInsertFlow.count = 0
     }
 
-    private fun <T> StartedNode<InternalMockNetwork.MockNode>.startFlow(logic: FlowLogic<T>): CordaFuture<T> = this.services.startFlow(logic, this.services.newContext()).getOrThrow().resultFuture
+    private fun <T> StartedNode<MockNode>.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
+        return this.services.startFlow(logic, this.services.newContext()).flatMap { it.resultFuture }
+    }
 
     @After
     fun cleanUp() {
@@ -53,14 +60,14 @@ class RetryFlowMockTest {
 
     @Test
     fun `Single retry`() {
-        assertEquals(Unit, internalNodeA.startFlow(RetryFlow(1)).get())
+        assertEquals(Unit, nodeA.startFlow(RetryFlow(1)).get())
         assertEquals(2, RetryFlow.count)
     }
 
     @Test
     fun `Retry forever`() {
-        Assertions.assertThatThrownBy {
-            internalNodeA.startFlow(RetryFlow(Int.MAX_VALUE)).getOrThrow()
+        assertThatThrownBy {
+            nodeA.startFlow(RetryFlow(Int.MAX_VALUE)).getOrThrow()
         }.isInstanceOf(LimitedRetryCausingError::class.java)
         assertEquals(5, RetryFlow.count)
     }
@@ -68,14 +75,14 @@ class RetryFlowMockTest {
     @Test
     fun `Retry does not set senderUUID`() {
         val messagesSent = mutableListOf<Message>()
-        val partyB = internalNodeB.info.legalIdentities.first()
-        internalNodeA.setMessagingServiceSpy(object : MessagingServiceSpy(internalNodeA.network) {
+        val partyB = nodeB.info.legalIdentities.first()
+        nodeA.setMessagingServiceSpy(object : MessagingServiceSpy(nodeA.network) {
             override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
                 messagesSent.add(message)
                 messagingService.send(message, target)
             }
         })
-        internalNodeA.startFlow(SendAndRetryFlow(1, partyB)).get()
+        nodeA.startFlow(SendAndRetryFlow(1, partyB)).get()
         assertNotNull(messagesSent.first().senderUUID)
         assertNull(messagesSent.last().senderUUID)
         assertEquals(2, SendAndRetryFlow.count)
@@ -83,26 +90,25 @@ class RetryFlowMockTest {
 
     @Test
     fun `Retry duplicate insert`() {
-        assertEquals(Unit, internalNodeA.startFlow(RetryInsertFlow(1)).get())
+        assertEquals(Unit, nodeA.startFlow(RetryInsertFlow(1)).get())
         assertEquals(2, RetryInsertFlow.count)
     }
 
     @Test
     fun `Patient records do not leak in hospital`() {
-        val patientCountBefore = StaffedFlowHospital.numberOfPatients
-        assertEquals(Unit, internalNodeA.startFlow(RetryFlow(1)).get())
+        assertEquals(Unit, nodeA.startFlow(RetryFlow(1)).get())
         // Need to make sure the state machine has finished.  Otherwise this test is flakey.
         mockNet.waitQuiescent()
-        assertEquals(patientCountBefore, StaffedFlowHospital.numberOfPatients)
+        assertThat(nodeA.smm.flowHospital.track().snapshot).isEmpty()
         assertEquals(2, RetryFlow.count)
     }
 }
 
-class LimitedRetryCausingError : org.hibernate.exception.ConstraintViolationException("Test message", SQLException(), "Test constraint")
+class LimitedRetryCausingError : ConstraintViolationException("Test message", SQLException(), "Test constraint")
 
 class RetryCausingError : SQLException("deadlock")
 
-class RetryFlow(val i: Int) : FlowLogic<Unit>() {
+class RetryFlow(private val i: Int) : FlowLogic<Unit>() {
     companion object {
         var count = 0
     }
@@ -121,7 +127,7 @@ class RetryFlow(val i: Int) : FlowLogic<Unit>() {
 }
 
 @InitiatingFlow
-class SendAndRetryFlow(val i: Int, val other: Party) : FlowLogic<Unit>() {
+class SendAndRetryFlow(private val i: Int, private val other: Party) : FlowLogic<Unit>() {
     companion object {
         var count = 0
     }
@@ -137,8 +143,9 @@ class SendAndRetryFlow(val i: Int, val other: Party) : FlowLogic<Unit>() {
     }
 }
 
+@Suppress("unused")
 @InitiatedBy(SendAndRetryFlow::class)
-class ReceiveFlow2(val other: FlowSession) : FlowLogic<Unit>() {
+class ReceiveFlow2(private val other: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val received = other.receive<String>().unwrap { it }
@@ -146,7 +153,7 @@ class ReceiveFlow2(val other: FlowSession) : FlowLogic<Unit>() {
     }
 }
 
-class RetryInsertFlow(val i: Int) : FlowLogic<Unit>() {
+class RetryInsertFlow(private val i: Int) : FlowLogic<Unit>() {
     companion object {
         var count = 0
     }

@@ -99,6 +99,8 @@ class SingleThreadedStateMachineManager(
         val timedFlows = HashMap<StateMachineRunId, ScheduledTimeout>()
     }
 
+    override val flowHospital: StaffedFlowHospital = StaffedFlowHospital()
+
     private val mutex = ThreadBox(InnerState())
     private val scheduler = FiberExecutorScheduler("Same thread scheduler", executor)
     private val timeoutScheduler = Executors.newScheduledThreadPool(1)
@@ -113,12 +115,10 @@ class SingleThreadedStateMachineManager(
     private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
 
     private var checkpointSerializationContext: SerializationContext? = null
-    private var tokenizableServices: List<Any>? = null
     private var actionExecutor: ActionExecutor? = null
 
     override val allStateMachines: List<FlowLogic<*>>
         get() = mutex.locked { flows.values.map { it.fiber.logic } }
-
 
     private val totalStartedFlows = metrics.counter("Flows.Started")
     private val totalFinishedFlows = metrics.counter("Flows.Finished")
@@ -133,7 +133,6 @@ class SingleThreadedStateMachineManager(
 
     override fun start(tokenizableServices: List<Any>) {
         checkQuasarJavaAgentPresence()
-        this.tokenizableServices = tokenizableServices
         val checkpointSerializationContext = SerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
                 SerializeAsTokenContextImpl(tokenizableServices, SerializationDefaults.SERIALIZATION_FACTORY, SerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
         )
@@ -763,7 +762,7 @@ class SingleThreadedStateMachineManager(
 
     private fun makeTransitionExecutor(): TransitionExecutor {
         val interceptors = ArrayList<TransitionInterceptor>()
-        interceptors.add { HospitalisingInterceptor(StaffedFlowHospital, it) }
+        interceptors.add { HospitalisingInterceptor(flowHospital, it) }
         if (serviceHub.configuration.devMode) {
             interceptors.add { DumpHistoryOnErrorInterceptor(it) }
         }
@@ -787,7 +786,7 @@ class SingleThreadedStateMachineManager(
         require(lastState.pendingDeduplicationHandlers.isEmpty())
         require(lastState.isRemoved)
         require(lastState.checkpoint.subFlowStack.size == 1)
-        sessionToFlow.none { it.value == flow.fiber.id }
+        require(flow.fiber.id !in sessionToFlow.values)
         flow.resultFuture.set(removalReason.flowReturnValue)
         lastState.flowLogic.progressTracker?.currentStep = ProgressTracker.DONE
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Success(removalReason.flowReturnValue)))
