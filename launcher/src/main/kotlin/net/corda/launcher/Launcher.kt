@@ -35,6 +35,10 @@ fun main(args: Array<String>) {
     System.setProperty("corda-launcher.cwd", Settings.WORKING_DIR)
     System.setProperty("user.dir", Settings.WORKING_DIR)
 
+    // To distinguish how Corda was started in order to create more detailed message for any discrepancies between Capsule and javapackager (tarball)
+    // e.g. if JDBC driver was not found, remove once Corda started by Capsule is no longer in use
+    System.setProperty("corda-distribution.tarball", "true")
+
     try {
         appMain.invoke(null, args.sliceArray(1..args.lastIndex))
     } catch (e: Exception) {

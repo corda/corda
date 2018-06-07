@@ -35,15 +35,13 @@ and Hibernate properties in `database` entry - see :ref:`Node configuration <dat
 
 The Corda distribution does not include any JDBC drivers with the exception of the H2 driver used by samples.
 It is the responsibility of the node administrator to download the appropriate JDBC drivers and configure the database settings.
-Corda will search for valid JDBC drivers either under the ``./drivers`` subdirectory of the node base directory or in one
-of the paths specified by the ``jarDirs`` field of the node configuration. Please make sure a ``jar`` file containing drivers
-supporting the database in use is present in one of these locations.
+Corda will search for valid JDBC drivers under the ``./drivers`` subdirectory of the node base directory.
+For Corda distributions with Capsule it will also search in the paths specified by the ``jarDirs`` field of the node configuration.
+Please make sure a JAR file containing drivers supporting the database in use is present in the ``./drivers`` subdirectory,
+alternatively if applicable specify ``jarDirs`` property, as this is a list of paths, each value needs to be wrapped in single quotes e.g. `jarDirs = [ '/lib/jdbc/driver' ]`.
 
 Example configuration for supported standalone databases are shown below.
-In each configuration replace placeholders `[USER]`, `[PASSWORD]`, `[SCHEMA]` (optionally), `path_to_jdbc_driver_dir` and
-others from ``dataSource.url`` with the appropriate values.
-The string `path_to_jdbc_driver_dir` needs to be wrapped by single quotes e.g. `jarDirs = [ '/lib/jdbc/driver' ]`.
-
+In each configuration replace placeholders `[USER]`, `[PASSWORD]`, `[SCHEMA]` (optionally).
 
 SQL Azure and SQL Server
 ````````````````````````
@@ -64,15 +62,14 @@ Example node configuration for SQL Azure:
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
     }
-    jarDirs = ['path_to_jdbc_driver_dir']
 
 Note that:
 
 * The ``database.schema`` property is optional
 * The minimum transaction isolation level ``database.transactionIsolationLevel`` is `READ_COMMITTED`
-* ``jarDirs`` specifies a path to the directory with Microsoft JDBC driver,
+* Ensure that the Microsoft JDBC driver JAR is copied to the ``./drivers`` subdirectory or if applicable specify a path in the ``jarDirs`` property,
   the driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
-  extract the archive and ensure the directory denoted by ``jarDirs`` contains only a single driver `mssql-jdbc-6.2.2.jre8.jar` as the archive comes with two jar versions
+  extract the archive and copy the single file ``mssql-jdbc-6.2.2.jre8.jar`` as the archive comes with two JAR versions
 
 Oracle
 ````````````````````````
@@ -92,13 +89,12 @@ Example node configuration for Oracle:
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
     }
-    jarDirs = ['path_to_jdbc_driver_dir']
 
 Note that:
 
 * The ``database.schema`` property is optional
 * The minimum transaction isolation level ``database.transactionIsolationLevel`` is `READ_COMMITTED`
-* ``jarDirs`` specifies a path to the directory with the relevant Oracle JDBC driver
+* Ensure that the Oracle JDBC driver JAR is copied to the ``./drivers`` subdirectory or if applicable specify path in the ``jarDirs`` property
 
 .. _postgres_ref:
 
@@ -120,7 +116,6 @@ Here is an example node configuration for PostgreSQL:
         transactionIsolationLevel = READ_COMMITTED
         schema = [SCHEMA]
     }
-    jarDirs = ['path_to_jdbc_driver_dir']
 
 Note that:
 
@@ -128,4 +123,4 @@ Note that:
 * The value of ``database.schema`` is automatically wrapped in double quotes to preserve case-sensitivity
   (e.g. `AliceCorp` becomes `"AliceCorp"`, without quotes PostgresSQL would treat the value as `alicecorp`),
   this behaviour differs from Corda Open Source where the value is not wrapped in double quotes
-* ``jarDirs`` specifies a path to the directory with the PostgreSQL JDBC driver
+* Ensure that the PostgreSQL JDBC driver JAR is copied to the ``./drivers`` subdirectory or if applicable specify path in the ``jarDirs`` property

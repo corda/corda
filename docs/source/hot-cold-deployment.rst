@@ -268,7 +268,6 @@ file that can be used for either node:
     myLegalName : "O=Corda HA, L=London, C=GB"
     keyStorePassword : "password"
     trustStorePassword : "password"
-    jarDirs = ["plugins", "cordapps"]
     rpcUsers=[
         {
             user=corda
