@@ -10,6 +10,7 @@ import kotlin.annotation.Target
  * will be deleted from the .class file when creating the deterministic version of Corda
  * Core.
  */
+// DOCSTART 01
 @Target(
     FILE,
     CLASS,
@@ -24,3 +25,4 @@ import kotlin.annotation.Target
 @Retention(BINARY)
 @CordaInternal
 annotation class NonDeterministic
+// DOCEND 01

@@ -77,26 +77,10 @@ The build generates each of Corda's deterministic JARs in six steps:
     deleted functions and properties are still present.
  #. Finally, we use ProGuard again to validate our JAR against the deterministic ``rt.jar``:
 
-    .. sourcecode:: groovy
-
-        task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
-            injars metafix
-
-            libraryjars "$deterministic_jdk_home/jre/lib/rt.jar"
-
-            configurations.runtimeLibraries.forEach {
-                libraryjars it.path, filter: '!META-INF/versions/**'
-            }
-
-            keepattributes '*'
-            dontpreverify
-            dontobfuscate
-            dontoptimize
-            verbose
-
-            keep 'class *'
-        }
-
+    .. literalinclude:: ../../core-deterministic/build.gradle
+       :language: groovy
+       :start-after: DOCSTART 01
+       :end-before: DOCEND 01
     ..
 
     This step will fail if ProGuard spots any Java API references that still cannot be satisfied by the deterministic
@@ -148,12 +132,10 @@ use Gradle's ``--info`` or ``--debug`` command-line options.
 Deterministic Classes
     Classes that *must* be included in the deterministic JAR should be annotated as ``@Deterministic``.
 
-    .. sourcecode:: kotlin
-
-        @Target(FILE, CLASS)
-        @Retention(BINARY)
-        @CordaInternal
-        annotation class Deterministic
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/Deterministic.kt
+       :language: kotlin
+       :start-after: DOCSTART 01
+       :end-before: DOCEND 01
     ..
 
     To preserve any Kotlin functions, properties or type aliases that have been declared outside of a ``class``,
@@ -172,23 +154,10 @@ Deterministic Classes
 Non-Deterministic Elements
     Elements that *must* be deleted from classes in the deterministic JAR should be annotated as ``@NonDeterministic``.
 
-    .. sourcecode:: kotlin
-
-        @Target(
-            FILE,
-            CLASS,
-            CONSTRUCTOR,
-            FUNCTION,
-            PROPERTY_GETTER,
-            PROPERTY_SETTER,
-            PROPERTY,
-            FIELD,
-            TYPEALIAS
-        )
-        @Retention(BINARY)
-        @CordaInternal
-        annotation class NonDeterministic
-
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/NonDeterministic.kt
+        :language: kotlin
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
     ..
 
     You must also ensure that a deterministic class's primary constructor does not reference any classes that are
@@ -220,18 +189,10 @@ Non-Deterministic Function Stubs
     embedded inside it that cannot be removed. For these rare cases, there is the ``@NonDeterministicStub``
     annotation:
 
-    .. sourcecode:: kotlin
-
-        @Target(
-            CONSTRUCTOR,
-            FUNCTION,
-            PROPERTY_GETTER,
-            PROPERTY_SETTER
-        )
-        @Retention(BINARY)
-        @CordaInternal
-        annotation class NonDeterministicStub
-
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/NonDeterministicStub.kt
+        :language: kotlin
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
     ..
 
     This annotation instructs ``JarFilter`` to replace the function's body with either an empty body (for functions
@@ -250,4 +211,3 @@ Non-Deterministic Function Stubs
         }
 
     ..
-

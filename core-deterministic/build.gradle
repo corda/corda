@@ -155,6 +155,7 @@ task metafix(type: MetaFixerTask) {
     preserveTimestamps = false
 }
 
+// DOCSTART 01
 task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
     injars metafix
 
@@ -172,6 +173,7 @@ task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
 
     keep 'class *'
 }
+// DOCEND 01
 
 defaultTasks "determinise"
 determinise.finalizedBy metafix

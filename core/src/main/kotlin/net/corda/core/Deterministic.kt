@@ -11,7 +11,9 @@ import kotlin.annotation.Target
  * elements need to be annotated with either [NonDeterministic] or [NonDeterministicStub] so that they
  * can be deleted.
  */
+// DOCSTART 01
 @Target(FILE, CLASS)
 @Retention(BINARY)
 @CordaInternal
 annotation class Deterministic
+// DOCEND 01
