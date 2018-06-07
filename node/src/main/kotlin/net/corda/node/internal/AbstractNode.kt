@@ -13,6 +13,7 @@ package net.corda.node.internal
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
+import com.zaxxer.hikari.pool.HikariPool
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
@@ -109,6 +110,7 @@ import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.persistence.SchemaMigration
@@ -267,7 +269,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             networkMapCache.clearNetworkMapCache()
         }
     }
-    
+
     open fun start(): StartedNode<AbstractNode> {
         check(started == null) { "Node has already been started" }
         if (configuration.devMode) {
@@ -1065,6 +1067,11 @@ class ConfigurationException(message: String) : CordaException(message)
  */
 internal class NetworkMapCacheEmptyException : Exception()
 
+/**
+ * Creates the connection pool to the database.
+ *
+ *@throws [CouldNotCreateDataSourceException]
+ */
 fun configureDatabase(hikariProperties: Properties,
                       databaseConfig: DatabaseConfig,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
@@ -1075,13 +1082,21 @@ fun configureDatabase(hikariProperties: Properties,
     // so we end up providing both descriptor and converter. We should re-examine this in later versions to see if
     // either Hibernate can be convinced to stop warning, use the descriptor by default, or something else.
     JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
-    val dataSource = DataSourceFactory.createDataSource(hikariProperties)
-    val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
-    val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
-    SchemaMigration(
-            schemaService.schemaOptions.keys,
-            dataSource,
-            !isH2Database(jdbcUrl),
-            databaseConfig).nodeStartup()
-    return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
+    try {
+        val dataSource = DataSourceFactory.createDataSource(hikariProperties)
+        val attributeConverters = listOf(AbstractPartyToX500NameAsStringConverter(wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous))
+        val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
+        SchemaMigration(
+                schemaService.schemaOptions.keys,
+                dataSource,
+                !isH2Database(jdbcUrl),
+                databaseConfig).nodeStartup()
+        return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
+    } catch (ex: Exception) {
+        when {
+            ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.")
+            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folders. See: https://docs.corda.net/corda-configuration-file.html")
+            else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
+        }
+    }
 }

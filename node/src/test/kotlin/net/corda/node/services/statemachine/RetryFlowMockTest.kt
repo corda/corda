@@ -89,8 +89,11 @@ class RetryFlowMockTest {
 
     @Test
     fun `Patient records do not leak in hospital`() {
+        val patientCountBefore = StaffedFlowHospital.numberOfPatients
         assertEquals(Unit, internalNodeA.startFlow(RetryFlow(1)).get())
-        assertEquals(0, StaffedFlowHospital.numberOfPatients)
+        // Need to make sure the state machine has finished.  Otherwise this test is flakey.
+        mockNet.waitQuiescent()
+        assertEquals(patientCountBefore, StaffedFlowHospital.numberOfPatients)
         assertEquals(2, RetryFlow.count)
     }
 }
