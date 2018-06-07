@@ -44,6 +44,7 @@ sealed class AbstractMutableClassWhitelist(private val whitelist: MutableSet<Str
  * A whitelist that can be customised via the [net.corda.core.serialization.SerializationWhitelist],
  * since it implements [MutableClassWhitelist].
  */
+@Deterministic
 class TransientClassWhiteList(delegate: ClassWhitelist) : AbstractMutableClassWhitelist(Collections.synchronizedSet(mutableSetOf()), delegate)
 
 // TODO: Need some concept of from which class loader
