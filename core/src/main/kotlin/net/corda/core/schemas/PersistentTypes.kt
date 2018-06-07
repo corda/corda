@@ -125,7 +125,7 @@ object MappedSchemaValidator {
 
         override fun toString() = "Cross-reference between MappedSchemas '$schema' and '$referencedSchema'. " +
                 "MappedSchema '${schema.substringAfterLast(".")}' entity '$entity' field '$fieldOrMethod' is of type '$fieldOrMethodType' " +
-                "defined in the other MappedSchema '${referencedSchema.substringAfterLast(".")}'."
+                "defined in another MappedSchema '${referencedSchema.substringAfterLast(".")}'."
 
         fun toWarning() = toString() + " This may cause issues when evolving MappedSchema or migrating its data, " +
                 "ensure JPA entities are defined within the same enclosing MappedSchema."
