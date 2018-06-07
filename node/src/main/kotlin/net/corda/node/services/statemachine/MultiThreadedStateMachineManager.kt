@@ -102,6 +102,8 @@ class MultiThreadedStateMachineManager(
         val timedFlows = ConcurrentHashMap<StateMachineRunId, ScheduledTimeout>()
     }
 
+    override val flowHospital: StaffedFlowHospital = StaffedFlowHospital()
+
     private val concurrentBox = ConcurrentBox(InnerState())
 
     private val scheduler = FiberExecutorScheduler("Flow fiber scheduler", executor)
@@ -760,7 +762,7 @@ class MultiThreadedStateMachineManager(
 
     private fun makeTransitionExecutor(): TransitionExecutor {
         val interceptors = ArrayList<TransitionInterceptor>()
-        interceptors.add { HospitalisingInterceptor(StaffedFlowHospital, it) }
+        interceptors.add { HospitalisingInterceptor(flowHospital, it) }
         if (serviceHub.configuration.devMode) {
             interceptors.add { DumpHistoryOnErrorInterceptor(it) }
             interceptors.add { MetricInterceptor(metrics, it) }
