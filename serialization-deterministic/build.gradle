@@ -4,10 +4,11 @@ apply plugin: 'kotlin'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'net.corda.plugins.publish-utils'
 
+evaluationDependsOn(':jdk8u-deterministic')
+evaluationDependsOn(":serialization")
+
 def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()
-
-evaluationDependsOn(':jdk8u-deterministic')
 def jdkTask = project(':jdk8u-deterministic').assemble
 def deterministic_jdk_home = project(':jdk8u-deterministic').jdk_home
 
@@ -30,7 +31,7 @@ dependencies {
 
 tasks.withType(JavaCompile) {
     dependsOn jdkTask
-    options.compilerArgs << "-bootclasspath" << "$deterministic_jdk_home/jre/lib/rt.jar"
+    options.compilerArgs << "-bootclasspath" << "$deterministic_jdk_home/jre/lib/rt.jar".toString()
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
@@ -45,7 +46,6 @@ jar {
     enabled = false
 }
 
-evaluationDependsOn(":serialization")
 def serializationJarTask = tasks.getByPath(':serialization:jar')
 def originalJar = serializationJarTask.outputs.files.singleFile
 
@@ -181,4 +181,4 @@ publish {
 }
 
 // Must be after publish {} so that the previous install task exists for overwriting.
-task install(overwrite: true, dependsOn: ['assemble', 'publishToMavenLocal'])
+task install(overwrite: true, dependsOn: 'publishToMavenLocal')

@@ -5,6 +5,9 @@ code, it also modifies the `@kotlin.Metadata` annotations not to contain any fun
 type aliases that have been deleted. This prevents the Kotlin compiler from successfully compiling against
 any elements which no longer exist.
 
+We use this plugin together with ProGuard to generate Corda's `core-deterministic` and `serialization-deterministic`
+modules. See [here](../../docs/source/deterministic-modules.rst) for more information.
+
 ## Usage
 This plugin is automatically available on Gradle's classpath since it lives in Corda's `buildSrc` directory.
 You need only `import` the plugin's task classes in the `build.gradle` file and then use them to declare
