@@ -235,6 +235,8 @@ simple JSON-like language. The key features of Yaml are:
 
 * Strings do not need to be surrounded by quotes unless they contain commas, colons or embedded quotes
 * Class names must be fully-qualified (e.g. ``java.lang.String``)
+* Nested classes are referenced using ``$``. For example, the ``net.corda.finance.contracts.asset.Cash.State`` 
+  class is referenced as ``net.corda.finance.contracts.asset.Cash$State`` (note the ``$``)
 
 .. note:: If your CorDapp is written in Java, named arguments won't work unless you compiled the node using the
    ``-parameters`` argument to javac. See :doc:`generating-a-node` for how to specify it via Gradle.
