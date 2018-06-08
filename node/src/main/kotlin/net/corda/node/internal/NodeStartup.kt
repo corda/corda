@@ -27,6 +27,7 @@ import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
+import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -128,6 +129,9 @@ open class NodeStartup(val args: Array<String>) {
         try {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: CouldNotCreateDataSourceException) {
+            logger.error(e.message, e.cause)
+            return false
         } catch (e: CheckpointIncompatibleException) {
             logger.error(e.message)
             return false

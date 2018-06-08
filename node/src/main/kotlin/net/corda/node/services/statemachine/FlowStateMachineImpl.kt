@@ -126,7 +126,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
         val eventQueue = getTransientField(TransientValues::eventQueue)
         try {
-            eventLoop@while (true) {
+            eventLoop@ while (true) {
                 val nextEvent = eventQueue.receive()
                 val continuation = processEvent(transitionExecutor, nextEvent)
                 when (continuation) {
@@ -305,11 +305,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val transaction = extractThreadLocalTransaction()
         parkAndSerialize { _, _ ->
             logger.trace("Suspended on {}", ioRequest)
+            // Will skip checkpoint if there are any idempotent flows in the subflow stack.
+            val skipPersistingCheckpoint = containsIdempotentFlows() || maySkipCheckpoint
             persistence.value.setContextTransaction(transaction.value)
             val event = try {
                 Event.Suspend(
                         ioRequest = ioRequest,
-                        maySkipCheckpoint = maySkipCheckpoint,
+                        maySkipCheckpoint = skipPersistingCheckpoint,
                         fiber = serialization.value.serialize(this, UseCase.Checkpoint))
             } catch (throwable: Throwable) {
                 Event.Error(throwable)
@@ -330,6 +332,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 isDbTransactionOpenOnEntry = false,
                 isDbTransactionOpenOnExit = true
         ))
+    }
+
+    private fun containsIdempotentFlows(): Boolean {
+        val subFlowStack = snapshot().checkpoint.subFlowStack
+        return subFlowStack.any { IdempotentFlow::class.java.isAssignableFrom(it.flowClass) }
     }
 
     @Suspendable

@@ -2225,7 +2225,7 @@ public final class net.corda.core.flows.NotaryFlow extends java.lang.Object
 ##
 @DoNotImplement
 @InitiatingFlow
-public static class net.corda.core.flows.NotaryFlow$Client extends net.corda.core.flows.FlowLogic
+public static class net.corda.core.flows.NotaryFlow$Client extends net.corda.core.flows.FlowLogic implements net.corda.core.internal.TimedFlow
   public <init>(net.corda.core.transactions.SignedTransaction)
   public <init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)
   @Suspendable

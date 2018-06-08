@@ -70,9 +70,10 @@ class ActionExecutorImpl(
             is Action.ExecuteAsyncOperation -> executeAsyncOperation(fiber, action)
             is Action.ReleaseSoftLocks -> executeReleaseSoftLocks(action)
             is Action.RetryFlowFromSafePoint -> executeRetryFlowFromSafePoint(action)
+            is Action.ScheduleFlowTimeout -> scheduleFlowTimeout(action)
+            is Action.CancelFlowTimeout -> cancelFlowTimeout(action)
         }
     }
-
     private fun executeReleaseSoftLocks(action: Action.ReleaseSoftLocks) {
         if (action.uuid != null) services.vaultService.softLockRelease(action.uuid)
     }
@@ -202,5 +203,13 @@ class ActionExecutorImpl(
 
     private fun executeRetryFlowFromSafePoint(action: Action.RetryFlowFromSafePoint) {
         stateMachineManager.retryFlowFromSafePoint(action.currentState)
+    }
+
+    private fun cancelFlowTimeout(action: Action.CancelFlowTimeout) {
+        stateMachineManager.cancelFlowTimeout(action.flowId)
+    }
+
+    private fun scheduleFlowTimeout(action: Action.ScheduleFlowTimeout) {
+        stateMachineManager.scheduleFlowTimeout(action.flowId)
     }
 }

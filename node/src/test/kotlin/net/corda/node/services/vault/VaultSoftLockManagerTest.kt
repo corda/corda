@@ -30,7 +30,6 @@ import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Test
@@ -71,8 +70,7 @@ class NodePair(private val mockNet: InternalMockNetwork) {
         client.services.startFlow(clientLogic)
         while (!serverRunning.get()) mockNet.runNetwork(1)
         if (rebootClient) {
-            client.dispose()
-            client = mockNet.createNode(InternalMockNodeParameters(client.internals.id))
+            client = mockNet.restartNode(client)
         }
         return uncheckedCast(client.smm.allStateMachines.single().stateMachine)
     }

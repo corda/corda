@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.core.crypto.Crypto.generateKeyPair;
 
@@ -662,7 +663,7 @@ public class FlowCookbookJava {
                     requireThat(require -> {
                         // Any additional checking we see fit...
                         DummyState outputState = (DummyState) stx.getTx().getOutputs().get(0).getData();
-                        assert (outputState.getMagicNumber() == 777);
+                        checkArgument(outputState.getMagicNumber() == 777);
                         return null;
                     });
                 }

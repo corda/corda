@@ -16,7 +16,7 @@ import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 /**
  * Used by the Node to communicate with the RPC broker.
  */
-class InternalRPCMessagingClient(val sslConfig: SSLConfiguration, val serverAddress: NetworkHostAndPort, val maxMessageSize: Int, val nodeName: CordaX500Name) : SingletonSerializeAsToken(), AutoCloseable {
+class InternalRPCMessagingClient(val sslConfig: SSLConfiguration, val serverAddress: NetworkHostAndPort, val maxMessageSize: Int, val nodeName: CordaX500Name, val rpcServerConfiguration: RPCServerConfiguration) : SingletonSerializeAsToken(), AutoCloseable {
     private var locator: ServerLocator? = null
     private var rpcServer: RPCServer? = null
 
@@ -32,7 +32,7 @@ class InternalRPCMessagingClient(val sslConfig: SSLConfiguration, val serverAddr
             isUseGlobalPools = nodeSerializationEnv != null
         }
 
-        rpcServer = RPCServer(rpcOps, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName)
+        rpcServer = RPCServer(rpcOps, NODE_RPC_USER, NODE_RPC_USER, locator!!, securityManager, nodeName, rpcServerConfiguration)
     }
 
     fun start(serverControl: ActiveMQServerControl) = synchronized(this) {

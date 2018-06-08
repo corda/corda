@@ -125,7 +125,7 @@ fun actions(arrangement: Arrangement): Map<String, Action> = when (arrangement) 
 }
 
 fun debugCompare(left: String, right: String) {
-    assert(left == right)
+    require(left == right)
 }
 
 fun <T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
@@ -142,7 +142,7 @@ fun <T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
             if (perRight is PerceivableOperation) {
                 debugCompare(perLeft.left, perRight.left)
                 debugCompare(perLeft.right, perRight.right)
-                assert(perLeft.op == perRight.op)
+                require(perLeft.op == perRight.op)
                 return
             }
         }
@@ -152,7 +152,7 @@ fun <T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
                 debugCompare(perLeft.interest, perRight.interest)
                 debugCompare(perLeft.start, perRight.start)
                 debugCompare(perLeft.end, perRight.end)
-                assert(perLeft.dayCountConvention == perRight.dayCountConvention)
+                require(perLeft.dayCountConvention == perRight.dayCountConvention)
                 return
             }
         }
@@ -166,25 +166,25 @@ fun <T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
         }
     }
 
-    assert(false)
+    require(false)
 }
 
 fun debugCompare(parLeft: Party, parRight: Party) {
-    assert(parLeft == parRight)
+    require(parLeft == parRight)
 }
 
 fun debugCompare(left: Frequency, right: Frequency) {
-    assert(left == right)
+    require(left == right)
 }
 
 fun debugCompare(left: LocalDate, right: LocalDate) {
-    assert(left == right)
+    require(left == right)
 }
 
 fun debugCompare(parLeft: Set<Party>, parRight: Set<Party>) {
     if (parLeft == parRight) return
 
-    assert(parLeft == parRight)
+    require(parLeft == parRight)
 }
 
 fun debugCompare(arrLeft: Arrangement, arrRight: Arrangement) {
@@ -229,5 +229,5 @@ fun debugCompare(arrLeft: Arrangement, arrRight: Arrangement) {
         }
     }
 
-    assert(false)
+    require(false)
 }

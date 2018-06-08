@@ -121,7 +121,7 @@ class RPCSecurityManagerTest {
                 id = AuthServiceId("TEST"))
         val subject = userRealm.buildSubject("foo")
         for (action in allActions) {
-            assert(!subject.isPermitted(action)) {
+            require(!subject.isPermitted(action)) {
                 "Invalid subject should not be allowed to call $action"
             }
         }
@@ -143,24 +143,24 @@ class RPCSecurityManagerTest {
             for (request in permitted) {
                 val call = request.first()
                 val args = request.drop(1).toTypedArray()
-                assert(subject.isPermitted(request.first(), *args)) {
+                require(subject.isPermitted(request.first(), *args)) {
                     "User ${subject.principal} should be permitted $call with target '${request.toList()}'"
                 }
                 if (args.isEmpty()) {
-                    assert(subject.isPermitted(request.first(), "XXX")) {
+                    require(subject.isPermitted(request.first(), "XXX")) {
                         "User ${subject.principal} should be permitted $call with any target"
                     }
                 }
             }
 
             disabled.forEach {
-                assert(!subject.isPermitted(it)) {
+                require(!subject.isPermitted(it)) {
                     "Permissions $permissions should not allow to call $it"
                 }
             }
 
             disabled.filter { !permitted.contains(listOf(it, "foo")) }.forEach {
-                assert(!subject.isPermitted(it, "foo")) {
+                require(!subject.isPermitted(it, "foo")) {
                     "Permissions $permissions should not allow to call $it with argument 'foo'"
                 }
             }

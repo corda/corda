@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
  * transition.
  */
 class HospitalisingInterceptor(
-        private val flowHospital: FlowHospital,
+        private val flowHospital: StaffedFlowHospital,
         private val delegate: TransitionExecutor
 ) : TransitionExecutor {
     private val hospitalisedFlows = ConcurrentHashMap<StateMachineRunId, FlowFiber>()

@@ -69,8 +69,7 @@ class FlowSessionImpl(
     @Suspendable
     override fun send(payload: Any, maySkipCheckpoint: Boolean) {
         val request = FlowIORequest.Send(
-                sessionToMessage = mapOf(this to serialization.serialize(payload, UseCase.P2P)),
-                shouldRetrySend = false
+                sessionToMessage = mapOf(this to serialization.serialize(payload, UseCase.P2P))
         )
         return getFlowStateMachine().suspend(request, maySkipCheckpoint)
     }
