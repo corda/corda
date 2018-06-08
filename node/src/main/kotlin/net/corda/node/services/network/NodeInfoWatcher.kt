@@ -83,7 +83,7 @@ class NodeInfoWatcher(private val nodePath: Path,
      * @return an [Observable] returning [NodeInfoUpdate]s, at most one [NodeInfo] is returned for each processed file.
      */
     fun nodeInfoUpdates(): Observable<NodeInfoUpdate> {
-        return Observable.interval(pollInterval.toMillis(), TimeUnit.MILLISECONDS, scheduler)
+        return Observable.interval(0, pollInterval.toMillis(), TimeUnit.MILLISECONDS, scheduler)
                 .flatMapIterable { loadFromDirectory() }
     }
 
