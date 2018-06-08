@@ -135,7 +135,7 @@ Download a sample project
 Run from the terminal
 ^^^^^^^^^^^^^^^^^^^^^
 1. From the cordapp-example folder, deploy the nodes by running ``./gradlew deployNodes``
-2. Start the nodes by running ``kotlin-source/build/nodes/runnodes``. Do not click while 8 additional terminal windows start up.
+2. Start the nodes by running ``kotlin-source/build/nodes/runnodes``. Do not click while 7 additional terminal windows start up.
 3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
 4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
 
