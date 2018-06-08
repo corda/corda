@@ -1,4 +1,7 @@
 apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
@@ -12,4 +15,13 @@ ext {
 
 jar {
     baseName 'corda-launcher'
+}
+
+
+artifacts {
+    compile jar
+}
+
+publish {
+    name jar.baseName
 }
