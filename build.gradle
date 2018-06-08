@@ -324,7 +324,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities', 'corda-shell', 'corda-serialization']
+    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-test-common', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver', 'corda-node-driver', 'corda-confidential-identities', 'corda-shell', 'corda-serialization', 'tools-blob-inspector', 'tools-network-bootstrapper']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
