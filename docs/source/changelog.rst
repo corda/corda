@@ -8,11 +8,19 @@ Unreleased
 ==========
 * Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems related to database migrations before exiting with a non-zero code.
 
+* Introducing the flow hospital - a component of the node that manages flows that have errored and whether they should
+  be retried from their previous checkpoints or have their errors propagate. Currently it will respond to any error that
+  occurs during the resolution of a received transaction as part of ``FinalityFlow``. In such a scenerio the receiving
+  flow will be parked and retried on node restart. This is to allow the node operator to rectify the situation as otherwise
+  the node will have an incomplete view of the ledger.
+
 * Fixed an issue preventing out of process nodes started by the ``Driver`` from logging to file.
 
 * Fixed an issue with ``CashException`` not being able to deserialise after the introduction of AMQP for RPC.
 
-* Removed -xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
+* Removed -Xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
+
+* New ``killFlow`` RPC for killing stuck flows.
 
 * Shell now kills an ongoing flow when CTRL+C is pressed in the terminal.
 
@@ -26,7 +34,8 @@ Unreleased
 
 * Improved audit trail for ``FinalityFlow`` and related sub-flows.
 
-* ``NodeStartup`` will now only print node's configuration if ``devMode`` is ``true``, avoiding the risk of printing passwords in a production setup.
+* The node's configuration is only printed on startup if ``devMode`` is ``true``, avoiding the risk of printing passwords
+  in a production setup.
 
 * SLF4J's MDC will now only be printed to the console if not empty. No more log lines ending with "{}".
 
