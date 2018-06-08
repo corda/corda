@@ -78,7 +78,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     }
 }
 
-data class DevModeOptions(val disableCheckpointChecker: Boolean = false)
+data class DevModeOptions(val disableCheckpointChecker: Boolean = false, val allowCompatibilityZone: Boolean = false)
 
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
@@ -255,16 +255,19 @@ data class NodeConfigurationImpl(
     private fun validateDevModeOptions(): List<String> {
         if (devMode) {
             compatibilityZoneURL?.let {
-                return listOf("'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true.")
+                if (devModeOptions?.allowCompatibilityZone != true) {
+                    return listOf("'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true.")
+                }
             }
 
             // if compatibiliZoneURL is set then it will be copied into the networkServices field and thus skipping
             // this check by returning above is fine.
             networkServices?.let {
-                return listOf("'networkServices': present. Property cannot be set when 'devMode' is true.")
+                if (devModeOptions?.allowCompatibilityZone != true) {
+                    return listOf("'networkServices': present. Property cannot be set when 'devMode' is true.")
+                }
             }
         }
-
         return emptyList()
     }
 
