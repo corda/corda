@@ -1,4 +1,6 @@
 apply plugin: 'us.kirchmeier.capsule'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 description 'Network bootstrapper'
 
@@ -12,7 +14,7 @@ dependencies {
 
 task buildBootstrapperJar(type: FatCapsule, dependsOn: project(':node-api').compileJava) {
     applicationClass 'net.corda.nodeapi.internal.network.NetworkBootstrapper'
-    archiveName "network-bootstrapper.jar"
+    archiveName = "network-bootstrapper-${version}.jar"
     capsuleManifest {
         applicationVersion = corda_release_version
         systemProperties['visualvm.display.name'] = 'Network Bootstrapper'
@@ -30,4 +32,12 @@ task buildBootstrapperJar(type: FatCapsule, dependsOn: project(':node-api').comp
 
 artifacts {
     runtimeArtifacts buildBootstrapperJar
+    publish buildBootstrapperJar {
+        classifier ""
+    }
+}
+
+publish {
+    name 'tools-network-bootstrapper'
+    disableDefaultJar = true
 }
