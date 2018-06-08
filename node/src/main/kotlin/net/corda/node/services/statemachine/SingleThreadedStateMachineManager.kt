@@ -24,6 +24,7 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.internal.exceptions.UnknownPeerException
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
@@ -141,6 +142,17 @@ class SingleThreadedStateMachineManager(
                     deliverExternalEvent(deduplicationHandler.externalCause)
                 }
             }
+
+            serviceHub.networkMapCache.changed.subscribe({
+                mutex.locked {
+                    for ((_, flow) in flows) {
+                        if (flowHospital.flowAffected(flow.fiber, UnknownPeerException::class.javaObjectType)) {
+                            logger.info("Scheduling flow ${flow.fiber.id} for retry.")
+                            flow.fiber.scheduleEvent(Event.RetryFlowFromSafePoint)
+                        }
+                    }
+                }
+            })
         }
     }
 
@@ -408,6 +420,7 @@ class SingleThreadedStateMachineManager(
             }
         } else {
             logger.error("Unknown peer $peer in $sessionMessage")
+            throw(UnknownPeerException("Could not resolve peer $peer"))
         }
     }
 

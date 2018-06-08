@@ -6,6 +6,7 @@ import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
+import net.corda.node.internal.exceptions.UnknownPeerException
 import net.corda.node.services.FinalityHandler
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
@@ -19,7 +20,7 @@ import java.util.*
 class StaffedFlowHospital {
     private companion object {
         private val log = contextLogger()
-        private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist, DoctorTimeout, FinalityDoctor)
+        private val staff = listOf(DeadlockNurse, DuplicateInsertSpecialist, DoctorTimeout, FinalityDoctor, UnknownPeerAssistant)
     }
 
     private val mutex = ThreadBox(object {
@@ -120,6 +121,17 @@ class StaffedFlowHospital {
         return mutex.locked {
             DataFeed(patients.values.flatMap { it.records }, recordsPublisher.bufferUntilSubscribed())
         }
+    }
+
+    /** Returns [true] if the flow is still affected by [error] or [false] otherwise.*/
+    fun <T: Throwable> flowAffected(flowFiber: FlowFiber, errorType: Class<T>): Boolean {
+        mutex.locked {
+            patients[flowFiber.id]?.let {
+                val record = it.records.last() as MedicalRecord.KeptInForObservation
+                return record.errors.last().javaClass == errorType
+            }
+        }
+        return false
     }
 
     sealed class MedicalRecord {
@@ -230,6 +242,20 @@ class StaffedFlowHospital {
     object FinalityDoctor : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: MedicalHistory): Diagnosis {
             return if (currentState.flowLogic is FinalityHandler) Diagnosis.OVERNIGHT_OBSERVATION else Diagnosis.NOT_MY_SPECIALTY
+        }
+    }
+
+    object UnknownPeerAssistant : Staff {
+        override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: MedicalHistory): Diagnosis {
+            return if (mentionsUnknownPeer(newError)) {
+                Diagnosis.OVERNIGHT_OBSERVATION
+            } else {
+                Diagnosis.NOT_MY_SPECIALTY
+            }
+        }
+
+        private fun mentionsUnknownPeer(exception: Throwable?): Boolean {
+            return exception != null && (exception is UnknownPeerException || mentionsUnknownPeer((exception.cause)))
         }
     }
 }
