@@ -147,7 +147,13 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
 
     override fun maybeWriteToDisk(downloaded: List<Attachment>) {
         for (attachment in downloaded) {
-            serviceHub.attachments.importAttachment(attachment.open(), "$P2P_UPLOADER:${otherSideSession.counterparty.name}", null)
+            with(serviceHub.attachments) {
+                if (!hasAttachment(attachment.id)) {
+                    importAttachment(attachment.open(), "$P2P_UPLOADER:${otherSideSession.counterparty.name}", null)
+                } else {
+                    logger.info("Attachment ${attachment.id} already exists, skipping.")
+                }
+            }
         }
     }
 
