@@ -280,6 +280,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         initCertificate()
         initialiseJVMAgents()
         val schemaService = NodeSchemaService(cordappLoader.cordappSchemas, configuration.notary != null)
+        schemaService.mappedSchemasWarnings().forEach {
+            val warning = it.toWarning()
+            log.warn(warning)
+            Node.printWarning(warning)
+        }
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
 
         // Wrapped in an atomic reference just to allow setting it before the closure below gets invoked.
@@ -1095,7 +1100,7 @@ fun configureDatabase(hikariProperties: Properties,
     } catch (ex: Exception) {
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.")
-            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folders. See: https://docs.corda.net/corda-configuration-file.html")
+            ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html")
             else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
         }
     }

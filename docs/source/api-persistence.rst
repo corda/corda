@@ -58,10 +58,14 @@ integration points and not necessarily with every upgrade to the contract code. 
 ``MappedSchema`` offered by a ``QueryableState``, automatically upgrade to a later version of a schema or even
 provide a ``MappedSchema`` not originally offered by the ``QueryableState``.
 
-It is expected that multiple different contract state implementations might provide mappings to some common schema.
-For example an Interest Rate Swap contract and an Equity OTC Option contract might both provide a mapping to a common
-Derivative schema. The schemas should typically not be part of the contract itself and should exist independently of it
+It is expected that multiple different contract state implementations might provide mappings within a single schema.
+For example an Interest Rate Swap contract and an Equity OTC Option contract might both provide a mapping to
+a Derivative contract within the same schema. The schemas should typically not be part of the contract itself and should exist independently
 to encourage re-use of a common set within a particular business area or Cordapp.
+
+.. note:: It's advisable to avoid cross-references between different schemas as this may cause issues when evolving ``MappedSchema``
+   or migrating its data. At startup, nodes log such violations as warnings stating that there's a cross-reference between ``MappedSchema``'s.
+   The detailed messages incorporate information about what schemas, entities and fields are involved.
 
 ``MappedSchema`` offer a family name that is disambiguated using Java package style name-spacing derived from the
 class name of a *schema family* class that is constant across versions, allowing the ``SchemaService`` to select a
