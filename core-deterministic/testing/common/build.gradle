@@ -11,12 +11,14 @@ dependencies {
     compileOnly "junit:junit:$junit_version"
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(AbstractCompile) {
     dependsOn jdkTask
+}
+
+tasks.withType(JavaCompile) {
     options.compilerArgs << '-bootclasspath' << "$deterministic_jdk_home/jre/lib/rt.jar".toString()
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
-    dependsOn jdkTask
     kotlinOptions.jdkHome = deterministic_jdk_home
 }

@@ -19,7 +19,7 @@ dependencies {
     jdk "net.corda:deterministic-rt:$deterministic_rt_version:api"
 }
 
-task copyJdk (type: Copy) {
+task copyJdk(type: Copy) {
     from(configurations.jdk.asPath) {
         rename 'deterministic-rt-(.*).jar', 'rt.jar'
     }
