@@ -30,22 +30,43 @@ interface for you to query them using SQL.
 Standalone database
 -------------------
 
-To run a node against a remote database modify node JDBC connection properties in `dataSourceProperties` entry
-and Hibernate properties in `database` entry - see :ref:`Node configuration <database_properties_ref>`.
+Running a node against a standalone database requires the following setup steps:
 
-The Corda distribution does not include any JDBC drivers with the exception of the H2 driver used by samples.
-It is the responsibility of the node administrator to download the appropriate JDBC drivers and configure the database settings.
-Corda will search for valid JDBC drivers under the ``./drivers`` subdirectory of the node base directory.
-For Corda distributions with Capsule it will also search in the paths specified by the ``jarDirs`` field of the node configuration.
-Please make sure a JAR file containing drivers supporting the database in use is present in the ``./drivers`` subdirectory,
-alternatively if applicable specify ``jarDirs`` property, as this is a list of paths, each value needs to be wrapped in single quotes e.g. `jarDirs = [ '/lib/jdbc/driver' ]`.
+* A node with the embedded H2 database creates the full database schema including users, permissions and tables definitions.
+  For a standalone database a database administrator needs to create database users/logins, an empty schema and permissions on the custom database.
+  Tables and sequences may be created by a database administrator, however a node can create the tables/sequences at startup if the ``database.runMigration`` ìs set to ``true``.
+* Add node JDBC connection properties to the `dataSourceProperties` entry and Hibernate properties to the `database` entry - see :ref:`Node configuration <database_properties_ref>`.
+  Each node needs to use a separate database schema which requires a separate database user/login with a default schema set.
+  Properties can be generated with the :ref:`deployNodes Cordform task <testing_cordform_ref>`.
+* The Corda distribution does not include any JDBC drivers with the exception of the H2 driver used by samples.
+  It is the responsibility of the node administrator to download the appropriate JDBC drivers and configure the database settings.
+  Corda will search for valid JDBC drivers under the ``./drivers`` subdirectory of the node base directory.
+  Corda distributed via published artifacts (e.g. added as Gradle dependency) will also search for the paths specified by the ``jarDirs`` field of the node configuration.
+  The ``jarDirs`` property is a list of paths, separated by commas and wrapped in single quotes e.g. `jarDirs = [ '/lib/jdbc/driver' ]`.
+* When a node reuses an existing database (e.g. frequent tests when developing a Cordapp), the data is not deleted by the node at startup.
+  E.g. ``Cordform`` Gradle task always delete existing H2 database data file, while a remote database is not altered.
+  Ensure that in such cases the database rows have been deleted or all tables and sequences were dropped.
 
 Example configuration for supported standalone databases are shown below.
-In each configuration replace placeholders `[USER]`, `[PASSWORD]`, `[SCHEMA]` (optionally).
+In each configuration replace placeholders `[USER]`, `[PASSWORD]` and `[SCHEMA]`.
+
+.. note::
+   SQL database schema setup scripts are suitable for development purposes only.
 
 SQL Azure and SQL Server
 ````````````````````````
 Corda has been tested with SQL Server 2017 (14.0.3006.16) and Azure SQL (12.0.2000.8), using Microsoft JDBC Driver 6.2.
+
+To set up a database schema, use the following SQL:
+
+.. sourcecode:: sql
+
+    --for Azure SQL, a login needs to be created on the master database and not on a user database
+    CREATE LOGIN [LOGIN] WITH PASSWORD = [PASSWORD];
+    CREATE SCHEMA [SCHEMA];
+    CREATE USER [USER] FOR LOGIN [SCHEMA] WITH DEFAULT_SCHEMA = [SCHEMA];
+    GRANT ALTER, DELETE, EXECUTE, INSERT, REFERENCES, SELECT, UPDATE, VIEW DEFINITION ON SCHEMA::[SCHEMA] TO [USER];
+    GRANT CREATE TABLE, CREATE PROCEDURE, CREATE FUNCTION, CREATE VIEW TO [USER];
 
 Example node configuration for SQL Azure:
 
@@ -71,9 +92,94 @@ Note that:
   the driver can be downloaded from `Microsoft Download Center <https://www.microsoft.com/en-us/download/details.aspx?id=55539>`_,
   extract the archive and copy the single file ``mssql-jdbc-6.2.2.jre8.jar`` as the archive comes with two JAR versions
 
+To delete existing data from the database, run the following SQL:
+
+.. sourcecode:: sql
+
+    DROP TABLE IF EXISTS [SCHEMA].cash_state_participants;
+    DROP TABLE IF EXISTS [SCHEMA].cash_states_v2_participants;
+    DROP TABLE IF EXISTS [SCHEMA].cp_states_v2_participants;
+    DROP TABLE IF EXISTS [SCHEMA].dummy_linear_state_parts;
+    DROP TABLE IF EXISTS [SCHEMA].dummy_linear_states_v2_parts;
+    DROP TABLE IF EXISTS [SCHEMA].dummy_deal_states_parts;
+    DROP TABLE IF EXISTS [SCHEMA].node_attchments_contracts;
+    DROP TABLE IF EXISTS [SCHEMA].node_attachments;
+    DROP TABLE IF EXISTS [SCHEMA].node_checkpoints;
+    DROP TABLE IF EXISTS [SCHEMA].node_transactions;
+    DROP TABLE IF EXISTS [SCHEMA].node_message_retry;
+    DROP TABLE IF EXISTS [SCHEMA].node_message_ids;
+    DROP TABLE IF EXISTS [SCHEMA].vault_states;
+    DROP TABLE IF EXISTS [SCHEMA].node_our_key_pairs;
+    DROP TABLE IF EXISTS [SCHEMA].node_scheduled_states;
+    DROP TABLE IF EXISTS [SCHEMA].node_network_map_nodes;
+    DROP TABLE IF EXISTS [SCHEMA].node_network_map_subscribers;
+    DROP TABLE IF EXISTS [SCHEMA].node_notary_committed_states;
+    DROP TABLE IF EXISTS [SCHEMA].node_notary_request_log;
+    DROP TABLE IF EXISTS [SCHEMA].node_transaction_mappings;
+    DROP TABLE IF EXISTS [SCHEMA].vault_fungible_states_parts;
+    DROP TABLE IF EXISTS [SCHEMA].vault_linear_states_parts;
+    DROP TABLE IF EXISTS [SCHEMA].vault_fungible_states;
+    DROP TABLE IF EXISTS [SCHEMA].vault_linear_states;
+    DROP TABLE IF EXISTS [SCHEMA].node_bft_committed_states;
+    DROP TABLE IF EXISTS [SCHEMA].node_raft_committed_states;
+    DROP TABLE IF EXISTS [SCHEMA].vault_transaction_notes;
+    DROP TABLE IF EXISTS [SCHEMA].link_nodeinfo_party;
+    DROP TABLE IF EXISTS [SCHEMA].node_link_nodeinfo_party;
+    DROP TABLE IF EXISTS [SCHEMA].node_info_party_cert;
+    DROP TABLE IF EXISTS [SCHEMA].node_info_hosts;
+    DROP TABLE IF EXISTS [SCHEMA].node_infos;
+    DROP TABLE IF EXISTS [SCHEMA].cp_states;
+    DROP TABLE IF EXISTS [SCHEMA].node_contract_upgrades;
+    DROP TABLE IF EXISTS [SCHEMA].node_identities;
+    DROP TABLE IF EXISTS [SCHEMA].node_named_identities;
+    DROP TABLE IF EXISTS [SCHEMA].node_properties;
+    DROP TABLE IF EXISTS [SCHEMA].children;
+    DROP TABLE IF EXISTS [SCHEMA].parents;
+    DROP TABLE IF EXISTS [SCHEMA].contract_cash_states;
+    DROP TABLE IF EXISTS [SCHEMA].contract_cash_states_v1;
+    DROP TABLE IF EXISTS [SCHEMA].messages;
+    DROP TABLE IF EXISTS [SCHEMA].state_participants;
+    DROP TABLE IF EXISTS [SCHEMA].cash_states_v2;
+    DROP TABLE IF EXISTS [SCHEMA].cash_states_v3;
+    DROP TABLE IF EXISTS [SCHEMA].cp_states_v1;
+    DROP TABLE IF EXISTS [SCHEMA].cp_states_v2;
+    DROP TABLE IF EXISTS [SCHEMA].dummy_deal_states;
+    DROP TABLE IF EXISTS [SCHEMA].dummy_linear_states;
+    DROP TABLE IF EXISTS [SCHEMA].dummy_linear_states_v2;
+    DROP TABLE IF EXISTS [SCHEMA].dummy_test_states_parts;
+    DROP TABLE IF EXISTS [SCHEMA].dummy_test_states;
+    DROP TABLE IF EXISTS [SCHEMA].node_mutual_exclusion;
+    DROP TABLE IF EXISTS [SCHEMA].DATABASECHANGELOG;
+    DROP TABLE IF EXISTS [SCHEMA].DATABASECHANGELOGLOCK;
+    DROP TABLE IF EXISTS [SCHEMA].cert_revocation_request_AUD;
+    DROP TABLE IF EXISTS [SCHEMA].cert_signing_request_AUD;
+    DROP TABLE IF EXISTS [SCHEMA].network_map_AUD;
+    DROP TABLE IF EXISTS [SCHEMA].REVINFO;
+    DROP TABLE IF EXISTS [SCHEMA].cert_revocation_request;
+    DROP TABLE IF EXISTS [SCHEMA].cert_data;
+    DROP TABLE IF EXISTS [SCHEMA].cert_revocation_list;
+    DROP TABLE IF EXISTS [SCHEMA].node_info;
+    DROP TABLE IF EXISTS [SCHEMA].cert_signing_request;
+    DROP TABLE IF EXISTS [SCHEMA].network_map;
+    DROP TABLE IF EXISTS [SCHEMA].parameters_update;
+    DROP TABLE IF EXISTS [SCHEMA].network_parameters;
+    DROP TABLE IF EXISTS [SCHEMA].private_network;
+    DROP SEQUENCE [SCHEMA].hibernate_sequence;
+
 Oracle
-````````````````````````
+``````
 Corda supports Oracle 11g RC2 (with ojdbc6.jar) and Oracle 12c (ojdbc8.jar).
+
+To set up a database schema, use the following SQL:
+
+.. sourcecode:: sql
+
+    CREATE USER [USER] IDENTIFIED BY [PASSWORD];
+    GRANT UNLIMITED TABLESPACE TO [USER];
+    GRANT CREATE SESSION TO [USER];
+    GRANT CREATE TABLE TO [USER];
+    GRANT CREATE SEQUENCE TO [USER];
+    GRANT ALL PRIVILEGES TO [USER] IDENTIFIED BY [PASSWORD];
 
 Example node configuration for Oracle:
 
@@ -96,13 +202,99 @@ Note that:
 * The minimum transaction isolation level ``database.transactionIsolationLevel`` is `READ_COMMITTED`
 * Ensure that the Oracle JDBC driver JAR is copied to the ``./drivers`` subdirectory or if applicable specify path in the ``jarDirs`` property
 
+To delete existing data from the database, run the following SQL:
+
+.. sourcecode:: sql
+
+    DROP TABLE [USER].cash_state_participants CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cash_states_v2_participants CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cp_states_v2_participants CASCADE CONSTRAINTS;
+    DROP TABLE [USER].dummy_linear_state_parts CASCADE CONSTRAINTS;
+    DROP TABLE [USER].dummy_linear_states_v2_parts CASCADE CONSTRAINTS;
+    DROP TABLE [USER].dummy_deal_states_parts CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_attchments_contracts CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_attachments CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_checkpoints CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_transactions CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_message_retry CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_message_ids CASCADE CONSTRAINTS;
+    DROP TABLE [USER].vault_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_our_key_pairs CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_scheduled_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_network_map_nodes CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_network_map_subscribers CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_notary_committed_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_notary_request_log CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_transaction_mappings CASCADE CONSTRAINTS;
+    DROP TABLE [USER].vault_fungible_states_parts CASCADE CONSTRAINTS;
+    DROP TABLE [USER].vault_linear_states_parts CASCADE CONSTRAINTS;
+    DROP TABLE [USER].vault_fungible_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].vault_linear_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_bft_committed_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_raft_committed_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].vault_transaction_notes CASCADE CONSTRAINTS;
+    DROP TABLE [USER].link_nodeinfo_party CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_link_nodeinfo_party CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_info_party_cert CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_info_hosts CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_infos CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cp_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_contract_upgrades CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_identities CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_named_identities CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_properties CASCADE CONSTRAINTS;
+    DROP TABLE [USER].children CASCADE CONSTRAINTS;
+    DROP TABLE [USER].parents CASCADE CONSTRAINTS;
+    DROP TABLE [USER].contract_cash_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].contract_cash_states_v1 CASCADE CONSTRAINTS;
+    DROP TABLE [USER].messages CASCADE CONSTRAINTS;
+    DROP TABLE [USER].state_participants CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cash_states_v2 CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cash_states_v3 CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cp_states_v1 CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cp_states_v2 CASCADE CONSTRAINTS;
+    DROP TABLE [USER].dummy_deal_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].dummy_linear_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].dummy_linear_states_v2 CASCADE CONSTRAINTS;
+    DROP TABLE [USER].dummy_test_states_parts CASCADE CONSTRAINTS;
+    DROP TABLE [USER].dummy_test_states CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_mutual_exclusion CASCADE CONSTRAINTS;
+    DROP TABLE [USER].DATABASECHANGELOG CASCADE CONSTRAINTS;
+    DROP TABLE [USER].DATABASECHANGELOGLOCK CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cert_revocation_request_AUD CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cert_signing_request_AUD CASCADE CONSTRAINTS;
+    DROP TABLE [USER].network_map_AUD CASCADE CONSTRAINTS;
+    DROP TABLE [USER].REVINFO CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cert_revocation_request CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cert_data CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cert_revocation_list CASCADE CONSTRAINTS;
+    DROP TABLE [USER].node_info CASCADE CONSTRAINTS;
+    DROP TABLE [USER].cert_signing_request CASCADE CONSTRAINTS;
+    DROP TABLE [USER].network_map CASCADE CONSTRAINTS;
+    DROP TABLE [USER].parameters_update CASCADE CONSTRAINTS;
+    DROP TABLE [USER].network_parameters CASCADE CONSTRAINTS;
+    DROP TABLE [USER].private_network CASCADE CONSTRAINTS;
+    DROP SEQUENCE [USER].hibernate_sequence;
+
 .. _postgres_ref:
 
 PostgreSQL
 ````````````````````````
 Corda has been tested on PostgreSQL 9.6 database, using PostgreSQL JDBC Driver 42.1.4.
 
-Here is an example node configuration for PostgreSQL:
+To set up a database schema, use the following SQL:
+
+.. sourcecode:: sql
+
+    CREATE USER "[USER]" WITH LOGIN password '[PASSWORD]';
+    CREATE SCHEMA "[SCHEMA]";
+    GRANT ALL ON SCHEMA "[SCHEMA]" TO "[USER]";
+    GRANT ALL ON ALL tables IN SCHEMA "[SCHEMA]" TO "[USER]";
+    ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT ALL ON tables TO "[USER]";
+    GRANT ALL ON ALL sequences IN SCHEMA "[SCHEMA]" TO "[USER]";
+    ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT ALL ON sequences TO "[USER]";
+
+Example node configuration for PostgreSQL:
 
 .. sourcecode:: none
 
@@ -124,3 +316,15 @@ Note that:
   (e.g. `AliceCorp` becomes `"AliceCorp"`, without quotes PostgresSQL would treat the value as `alicecorp`),
   this behaviour differs from Corda Open Source where the value is not wrapped in double quotes
 * Ensure that the PostgreSQL JDBC driver JAR is copied to the ``./drivers`` subdirectory or if applicable specify path in the ``jarDirs`` property
+
+To delete existing data from the database, run the following SQL:
+
+.. sourcecode:: sql
+
+    DROP SCHEMA IF EXISTS "[SCHEMA]" CASCADE;
+    CREATE SCHEMA "[SCHEMA]";
+    GRANT ALL ON SCHEMA "[SCHEMA]" TO "[USER]";
+    GRANT ALL ON ALL tables IN SCHEMA "[SCHEMA]" TO "[USER]";
+    ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT ALL ON tables TO "[USER]";
+    GRANT ALL ON ALL sequences IN SCHEMA "[SCHEMA]" TO "[USER]";
+    ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT ALL ON sequences TO "[USER]";
