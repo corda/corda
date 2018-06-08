@@ -16,7 +16,9 @@ import java.time.Instant
  * This interceptor simply prints all state machine transitions. Useful for debugging.
  */
 class PrintingInterceptor(val delegate: TransitionExecutor) : TransitionExecutor {
-    override fun forceRemoveFlow(id: StateMachineRunId) {}
+    override fun forceRemoveFlow(id: StateMachineRunId) {
+        delegate.forceRemoveFlow(id)
+    }
 
     companion object {
         val log = contextLogger()

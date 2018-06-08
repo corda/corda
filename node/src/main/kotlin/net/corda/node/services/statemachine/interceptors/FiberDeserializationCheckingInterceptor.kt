@@ -25,7 +25,9 @@ class FiberDeserializationCheckingInterceptor(
         val fiberDeserializationChecker: FiberDeserializationChecker,
         val delegate: TransitionExecutor
 ) : TransitionExecutor {
-    override fun forceRemoveFlow(id: StateMachineRunId) {}
+    override fun forceRemoveFlow(id: StateMachineRunId) {
+        delegate.forceRemoveFlow(id)
+    }
 
     @Suspendable
     override fun executeTransition(

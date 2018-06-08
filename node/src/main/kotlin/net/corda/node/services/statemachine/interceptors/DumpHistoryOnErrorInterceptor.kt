@@ -56,5 +56,6 @@ class DumpHistoryOnErrorInterceptor(val delegate: TransitionExecutor) : Transiti
 
     override fun forceRemoveFlow(id: StateMachineRunId) {
         records.remove(id)
+        delegate.forceRemoveFlow(id)
     }
 }

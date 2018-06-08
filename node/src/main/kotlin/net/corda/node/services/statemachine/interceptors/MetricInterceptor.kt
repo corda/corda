@@ -13,7 +13,9 @@ import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
 
 class MetricInterceptor(val metrics: MetricRegistry, val delegate: TransitionExecutor) : TransitionExecutor {
-    override fun forceRemoveFlow(id: StateMachineRunId) {}
+    override fun forceRemoveFlow(id: StateMachineRunId) {
+        delegate.forceRemoveFlow(id)
+    }
 
     @Suspendable
     override fun executeTransition(fiber: FlowFiber, previousState: StateMachineState, event: Event, transition: TransitionResult, actionExecutor: ActionExecutor): Pair<FlowContinuation, StateMachineState> {

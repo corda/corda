@@ -21,7 +21,10 @@ class HospitalisingInterceptor(
         private val flowHospital: StaffedFlowHospital,
         private val delegate: TransitionExecutor
 ) : TransitionExecutor {
-    override fun forceRemoveFlow(id: StateMachineRunId) = removeFlow(id)
+    override fun forceRemoveFlow(id: StateMachineRunId) {
+        removeFlow(id)
+        delegate.forceRemoveFlow(id)
+    }
 
     private fun removeFlow(id: StateMachineRunId) {
         hospitalisedFlows.remove(id)
