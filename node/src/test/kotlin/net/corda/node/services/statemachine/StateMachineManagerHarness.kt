@@ -124,7 +124,10 @@ open class StateMachineManagerHarness {
 
     protected fun <T> FlowLogic<T>.spawn() = smm.startFlow(this, InvocationContext.newInstance(participant()), participant(), null).getOrThrow().resultFuture
     protected inner class Channel {
-        private val localSession = participant<SessionId>().also { localSessions += it }
+        private val localSession = participant<SessionId>().also {
+            doReturn(Random().nextLong()).whenever(it).toLong
+            localSessions += it
+        }
         private val peerSession = participant<SessionId>()
         private val peerName = participant<CordaX500Name>()
         val peer = participant<Party>()
