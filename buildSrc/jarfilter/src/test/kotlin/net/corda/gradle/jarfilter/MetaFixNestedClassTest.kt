@@ -30,6 +30,19 @@ class MetaFixNestedClassTest {
         assertThat(fixedClass.classMetadata.nestedClasses).containsExactly(WANTED_CLASS)
     }
 
+    @Test
+    fun testAllNestedClassesRemovedFromMetadata() {
+        val bytecode = recodeMetadataFor<WithoutNestedClass, MetadataTemplate>()
+        val sourceClass = bytecode.toClass<WithoutNestedClass, Any>()
+        assertThat(sourceClass.classMetadata.nestedClasses)
+                .containsExactlyInAnyOrder("${WithoutNestedClass::class.jvmName}\$Wanted", "${WithoutNestedClass::class.jvmName}\$Unwanted")
+
+        // Rewrite the metadata according to the contents of the bytecode.
+        val fixedClass = bytecode.fixMetadata(logger, pathsOf(WithoutNestedClass::class))
+                .toClass<WithoutNestedClass, Any>()
+        assertThat(fixedClass.classMetadata.nestedClasses).isEmpty()
+    }
+
     @Suppress("UNUSED")
     class MetadataTemplate {
         class Wanted
@@ -40,3 +53,5 @@ class MetaFixNestedClassTest {
 class WithNestedClass {
     class Wanted
 }
+
+class WithoutNestedClass

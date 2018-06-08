@@ -49,7 +49,7 @@ internal abstract class MetaFixTransformer<out T : MessageLite>(
     abstract fun rebuild(): T
 
     private fun filterNestedClasses(): Int {
-        if (actualNestedClasses.isEmpty()) return 0
+        if (classKind == null) return 0
 
         var count = 0
         var idx = 0
@@ -67,7 +67,7 @@ internal abstract class MetaFixTransformer<out T : MessageLite>(
     }
 
     private fun filterSealedSubclassNames(): Int {
-        if (actualClasses.isEmpty()) return 0
+        if (classKind == null) return 0
 
         var count = 0
         var idx = 0
