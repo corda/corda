@@ -102,6 +102,15 @@ class RetryFlowMockTest {
         assertThat(nodeA.smm.flowHospital.track().snapshot).isEmpty()
         assertEquals(2, RetryFlow.count)
     }
+
+    @Test
+    fun `Patient records do not leak in hospital when using killFlow`() {
+        assertEquals(Unit, nodeA.startFlow(RetryFlow(1)).get())
+        // Need to make sure the state machine has finished.  Otherwise this test is flakey.
+        mockNet.waitQuiescent()
+        assertThat(nodeA.smm.flowHospital.track().snapshot).isEmpty()
+        assertEquals(2, RetryFlow.count)
+    }
 }
 
 class LimitedRetryCausingError : ConstraintViolationException("Test message", SQLException(), "Test constraint")

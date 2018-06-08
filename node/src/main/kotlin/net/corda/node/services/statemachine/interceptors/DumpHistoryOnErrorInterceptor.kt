@@ -3,7 +3,12 @@ package net.corda.node.services.statemachine.interceptors
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.utilities.contextLogger
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.ActionExecutor
+import net.corda.node.services.statemachine.ErrorState
+import net.corda.node.services.statemachine.Event
+import net.corda.node.services.statemachine.FlowFiber
+import net.corda.node.services.statemachine.StateMachineState
+import net.corda.node.services.statemachine.TransitionExecutor
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
 import java.time.Instant
@@ -47,5 +52,9 @@ class DumpHistoryOnErrorInterceptor(val delegate: TransitionExecutor) : Transiti
         }
 
         return Pair(continuation, nextState)
+    }
+
+    override fun forceRemoveFlow(id: StateMachineRunId) {
+        records.remove(id)
     }
 }

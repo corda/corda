@@ -1,8 +1,13 @@
 package net.corda.node.services.statemachine.interceptors
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.utilities.contextLogger
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.ActionExecutor
+import net.corda.node.services.statemachine.Event
+import net.corda.node.services.statemachine.FlowFiber
+import net.corda.node.services.statemachine.StateMachineState
+import net.corda.node.services.statemachine.TransitionExecutor
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
 import java.time.Instant
@@ -11,6 +16,8 @@ import java.time.Instant
  * This interceptor simply prints all state machine transitions. Useful for debugging.
  */
 class PrintingInterceptor(val delegate: TransitionExecutor) : TransitionExecutor {
+    override fun forceRemoveFlow(id: StateMachineRunId) {}
+
     companion object {
         val log = contextLogger()
     }
