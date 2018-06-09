@@ -184,6 +184,7 @@ see changes to this list.
 * Tudor Malene (R3)
 * Tushar Singh Bora
 * varunkm
+* Venelin Stoykov (INDUSTRIA)
 * verymahler
 * Viktor Kolomeyko (R3)
 * Vipin Bharathan
