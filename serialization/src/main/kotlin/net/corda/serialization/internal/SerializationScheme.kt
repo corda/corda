@@ -67,7 +67,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
 }
 
 /*
- * This class is internal rather than private so that node-api-deterministic
+ * This class is internal rather than private so that serialization-deterministic
  * can replace it with an alternative version.
  */
 @NonDeterministic

@@ -92,6 +92,7 @@ data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdenti
 /**
  * Represents the source of an action such as a flow start, an RPC, a shell command etc.
  */
+@NonDeterministic
 @CordaSerializable
 sealed class InvocationOrigin {
     /**
@@ -102,7 +103,6 @@ sealed class InvocationOrigin {
     /**
      * Origin was an RPC call.
      */
-    @Deterministic
     data class RPC(private val actor: Actor) : InvocationOrigin() {
         override fun principal() = Principal { actor.id.value }
     }
@@ -110,7 +110,6 @@ sealed class InvocationOrigin {
     /**
      * Origin was a message sent by a [Peer].
      */
-    @Deterministic
     data class Peer(val party: CordaX500Name) : InvocationOrigin() {
         override fun principal() = Principal { party.toString() }
     }
@@ -118,7 +117,6 @@ sealed class InvocationOrigin {
     /**
      * Origin was a Corda Service.
      */
-    @Deterministic
     data class Service(val serviceClassName: String, val owningLegalIdentity: CordaX500Name) : InvocationOrigin() {
         override fun principal() = Principal { serviceClassName }
     }
@@ -126,7 +124,6 @@ sealed class InvocationOrigin {
     /**
      * Origin was a scheduled activity.
      */
-    @Deterministic
     data class Scheduled(val scheduledState: ScheduledStateRef) : InvocationOrigin() {
         override fun principal() = Principal { "Scheduler" }
     }
@@ -135,7 +132,6 @@ sealed class InvocationOrigin {
     /**
      * Origin was the Shell.
      */
-    @Deterministic
     object Shell : InvocationOrigin() {
         override fun principal() = Principal { "Shell User" }
     }

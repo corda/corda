@@ -16,6 +16,10 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 
+/**
+ * Base class for removing unwanted elements from [kotlin.Metadata] annotations.
+ * This is used by [ClassTransformer] for [JarFilterTask].
+ */
 internal abstract class MetadataTransformer<out T : MessageLite>(
     private val logger: Logger,
     private val deletedFields: Collection<FieldElement>,
@@ -205,6 +209,10 @@ internal abstract class MetadataTransformer<out T : MessageLite>(
     }
 }
 
+/**
+ * Removes elements from a [kotlin.Metadata] annotation that contains
+ * a [ProtoBuf.Class] object in its [d1][kotlin.Metadata.d1] field.
+ */
 internal class ClassMetadataTransformer(
     logger: Logger,
     deletedFields: Collection<FieldElement>,
@@ -258,6 +266,10 @@ internal class ClassMetadataTransformer(
     }.build()
 }
 
+/**
+ * Removes elements from a [kotlin.Metadata] annotation that contains
+ * a [ProtoBuf.Package] object in its [d1][kotlin.Metadata.d1] field.
+ */
 internal class PackageMetadataTransformer(
     logger: Logger,
     deletedFields: Collection<FieldElement>,

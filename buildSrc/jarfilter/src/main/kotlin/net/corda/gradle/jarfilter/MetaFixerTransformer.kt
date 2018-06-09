@@ -17,7 +17,12 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 
-internal abstract class MetaFixTransformer<out T : MessageLite>(
+/**
+ * Base class for aligning the contents of [kotlin.Metadata] annotations
+ * with the contents of the host byte-code.
+ * This is used by [MetaFixerVisitor] for [MetaFixerTask].
+ */
+internal abstract class MetaFixerTransformer<out T : MessageLite>(
     private val logger: Logger,
     private val actualFields: Collection<FieldElement>,
     private val actualMethods: Collection<String>,
@@ -171,7 +176,11 @@ internal abstract class MetaFixTransformer<out T : MessageLite>(
     }
 }
 
-internal class ClassMetaFixTransformer(
+/**
+ * Aligns a [kotlin.Metadata] annotation containing a [ProtoBuf.Class] object
+ * in its [d1][kotlin.Metadata.d1] field with the byte-code of its host class.
+ */
+internal class ClassMetaFixerTransformer(
     logger: Logger,
     actualFields: Collection<FieldElement>,
     actualMethods: Collection<String>,
@@ -179,7 +188,7 @@ internal class ClassMetaFixTransformer(
     actualClasses: Collection<String>,
     d1: List<String>,
     d2: List<String>
-) : MetaFixTransformer<ProtoBuf.Class>(
+) : MetaFixerTransformer<ProtoBuf.Class>(
     logger,
     actualFields,
     actualMethods,
@@ -216,13 +225,17 @@ internal class ClassMetaFixTransformer(
     }.build()
 }
 
-internal class PackageMetaFixTransformer(
+/**
+ * Aligns a [kotlin.Metadata] annotation containing a [ProtoBuf.Package] object
+ * in its [d1][kotlin.Metadata.d1] field with the byte-code of its host class.
+ */
+internal class PackageMetaFixerTransformer(
     logger: Logger,
     actualFields: Collection<FieldElement>,
     actualMethods: Collection<String>,
     d1: List<String>,
     d2: List<String>
-) : MetaFixTransformer<ProtoBuf.Package>(
+) : MetaFixerTransformer<ProtoBuf.Package>(
     logger,
     actualFields,
     actualMethods,

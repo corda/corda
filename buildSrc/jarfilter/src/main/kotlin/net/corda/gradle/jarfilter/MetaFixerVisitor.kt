@@ -4,6 +4,11 @@ import org.gradle.api.logging.Logger
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 
+/**
+ * ASM [ClassVisitor] for the MetaFixer task. This visitor inventories every function,
+ * property and inner class within the byte-code and then passes this information to
+ * the [MetaFixerTransformer].
+ */
 class MetaFixerVisitor private constructor(
     visitor: ClassVisitor,
     logger: Logger,
@@ -48,7 +53,7 @@ class MetaFixerVisitor private constructor(
     }
 
     override fun transformClassMetadata(d1: List<String>, d2: List<String>): List<String> {
-        return ClassMetaFixTransformer(
+        return ClassMetaFixerTransformer(
                 logger = logger,
                 actualFields = fields,
                 actualMethods = methods,
@@ -60,7 +65,7 @@ class MetaFixerVisitor private constructor(
     }
 
     override fun transformPackageMetadata(d1: List<String>, d2: List<String>): List<String> {
-        return PackageMetaFixTransformer(
+        return PackageMetaFixerTransformer(
                 logger = logger,
                 actualFields = fields,
                 actualMethods = methods,

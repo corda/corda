@@ -5,6 +5,16 @@ import org.gradle.api.logging.Logger
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 
+/**
+ * ASM [ClassVisitor] for the JarFilter task that deletes unwanted class elements.
+ * The unwanted elements have been annotated in advance. Elements that reference
+ * unwanted elements are also removed to keep the byte-code consistent. Finally,
+ * the deleted elements are passed to the [MetadataTransformer] so that they can
+ * be removed from the [kotlin.Metadata] annotation.
+ *
+ * This Visitor is applied to the byte-code repeatedly until it has removed
+ * everything that is no longer wanted.
+ */
 class ClassTransformer private constructor (
     visitor: ClassVisitor,
     logger: Logger,

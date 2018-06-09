@@ -6,6 +6,10 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.carpenter.ClassCarpenter
 import net.corda.serialization.internal.carpenter.Schema
 
+/**
+ * Creates a [SerializerFactoryFactory] suitable for the DJVM,
+ * i.e. one without a [ClassCarpenter] implementation.
+ */
 @Suppress("UNUSED")
 fun createSerializerFactoryFactory(): SerializerFactoryFactory = DeterministicSerializerFactoryFactory()
 
