@@ -492,7 +492,7 @@ whether the change is one of position (i.e. progress), structure (i.e. new subta
 aspect of rendering (i.e. a step has changed in some way and is requesting a re-render).
 
 The flow framework is somewhat integrated with this API. Each ``FlowLogic`` may optionally provide a tracker by
-overriding the ``flowTracker`` property (``getFlowTracker`` method in Java). If the
+overriding the ``progressTracker`` property (``getProgressTracker`` method in Java). If the
 ``FlowLogic.subFlow`` method is used, then the tracker of the sub-flow will be made a child of the current
 step in the parent flow automatically, if the parent is using tracking in the first place. The framework will also
 automatically set the current step to ``DONE`` for you, when the flow is finished.
