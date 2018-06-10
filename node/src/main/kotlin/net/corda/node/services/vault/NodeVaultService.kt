@@ -497,13 +497,12 @@ class NodeVaultService(
         }
     }
 
-    private fun <T : ContractState> filterContractStates(update: Vault.Update<T>, contractStateType: Class<out T>): Vault.Update<T> {
-        return update.copy(consumed = filterByContractState(contractStateType, update.consumed),
-                produced = filterByContractState(contractStateType, update.produced))
-    }
+    private fun <T : ContractState> filterContractStates(update: Vault.Update<T>, contractStateType: Class<out T>) =
+            update.copy(consumed = filterByContractState(contractStateType, update.consumed),
+                    produced = filterByContractState(contractStateType, update.produced))
 
-    private fun <T : ContractState> filterByContractState(contractStateType: Class<out T>, stateAndRefs: Set<StateAndRef<T>>)
-            = stateAndRefs.filter { contractStateType.isAssignableFrom(it.state.data.javaClass) }.toSet()
+    private fun <T : ContractState> filterByContractState(contractStateType: Class<out T>, stateAndRefs: Set<StateAndRef<T>>) =
+            stateAndRefs.filter { contractStateType.isAssignableFrom(it.state.data.javaClass) }.toSet()
 
     private fun getSession() = database.currentOrNew().session
     /**
