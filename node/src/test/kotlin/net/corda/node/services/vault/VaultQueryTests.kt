@@ -28,10 +28,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.*
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
-import net.corda.testing.internal.vault.DummyLinearContract
-import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
-import net.corda.testing.internal.vault.VaultFiller
+import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
@@ -2264,6 +2261,33 @@ class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
             vaultFiller.consumeDeals(dealStates.toList())
             vaultFiller.consumeLinearStates(linearStates.toList())
 
+            updates
+        }
+
+        updates.expectEvents {
+            sequence(
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 3) {}
+                    },
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 1) {}
+                    }
+            )
+        }
+    }
+
+    @Test
+    fun `track by only returns updates of tracked type`() {
+        val updates = database.transaction {
+            val (snapshot, updates) = vaultService.trackBy<DummyDealContract.State>()
+            assertThat(snapshot.states).hasSize(0)
+            val states = vaultFiller.fillWithSomeTestLinearAndDealStates(10).states
+            this.session.flush()
+            vaultFiller.consumeLinearStates(states.toList())
             updates
         }
 
