@@ -61,9 +61,9 @@ class TimedFlowMultiThreadedSMMTests : IntegrationTest() {
         driver(DriverParameters(isDebug = true, startNodesInProcess = true,
                 portAllocation = RandomFree)) {
 
-            val configOverrides = mapOf("p2pMessagingRetry" to mapOf(
-                    "messageRedeliveryDelay" to Duration.ofSeconds(1),
-                    "maxRetryCount" to 2,
+            val configOverrides = mapOf("flowTimeout" to mapOf(
+                    "timeout" to Duration.ofSeconds(1),
+                    "maxRestartCount" to 2,
                     "backoffBase" to 1.0
             ))
 

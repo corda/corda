@@ -11,6 +11,7 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
@@ -25,6 +26,7 @@ import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
+import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -89,6 +91,33 @@ class TraderDemoTest : IntegrationTest() {
             executor.shutdown()
             assertThat(clientA.dollarCashBalance).isEqualTo(95.DOLLARS)
             assertThat(clientB.dollarCashBalance).isEqualTo(5.DOLLARS)
+        }
+    }
+
+    @Test
+    fun `Tudor test`() {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+            val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))
+            val bankUser = User("user1", "test", permissions = setOf(all()))
+            val (nodeA, nodeB, bankNode) = listOf(
+                    startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
+                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
+                    startNode(providedName = BOC_NAME, rpcUsers = listOf(bankUser))
+            ).map { (it.getOrThrow() as OutOfProcess) }
+
+            val nodeBRpc = CordaRPCClient(nodeB.rpcAddress).start(demoUser.username, demoUser.password).proxy
+            val nodeARpc = CordaRPCClient(nodeA.rpcAddress).start(demoUser.username, demoUser.password).proxy
+            val nodeBankRpc = let {
+                val client = CordaRPCClient(bankNode.rpcAddress)
+                client.start(bankUser.username, bankUser.password).proxy
+            }
+
+            TraderDemoClientApi(nodeBankRpc).runIssuer(amount = 100.DOLLARS, buyerName = nodeA.nodeInfo.singleIdentity().name, sellerName = nodeB.nodeInfo.singleIdentity().name)
+            val stxFuture = nodeBRpc.startFlow(::SellerFlow, nodeA.nodeInfo.singleIdentity(), 5.DOLLARS).returnValue
+            nodeARpc.stateMachinesFeed().updates.toBlocking().first() // wait until initiated flow starts
+            nodeA.stop()
+            startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to nodeA.p2pAddress.toString()))
+            stxFuture.getOrThrow()
         }
     }
 }
