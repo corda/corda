@@ -23,7 +23,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.P2PMessagingRetryConfiguration
+import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
@@ -101,8 +101,8 @@ class TimedFlowTests {
                     InternalMockNodeParameters(
                             legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
                             configOverrides = { conf: NodeConfiguration ->
-                                val retryConfig = P2PMessagingRetryConfiguration(1.seconds, 3, 1.0)
-                                doReturn(retryConfig).whenever(conf).p2pMessagingRetry
+                                val retryConfig = FlowTimeoutConfiguration(1.seconds, 3, 1.0)
+                                doReturn(retryConfig).whenever(conf).flowTimeout
                             }
                     )
             )

@@ -44,13 +44,13 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          * @throws IllegalArgumentException The input string does not contain 64 hexadecimal digits, or it contains incorrectly-encoded characters.
          */
         @JvmStatic
-        fun parse(str: String): SHA256 {
-            return str.toUpperCase().parseAsHex().let {
+        fun parse(str: String?): SHA256 {
+            return str?.toUpperCase()?.parseAsHex()?.let {
                 when (it.size) {
                     32 -> SHA256(it)
                     else -> throw IllegalArgumentException("Provided string is ${it.size} bytes not 32 bytes in hex: $str")
                 }
-            }
+            } ?: throw IllegalArgumentException("Provided string is null")
         }
 
         /**

@@ -17,7 +17,7 @@ class PersistentMapTests {
     private fun createTestMap(): PersistentMap<String, String, ContractUpgradeServiceImpl.DBContractUpgrade, String> {
         return PersistentMap(
                 toPersistentEntityKey = { it },
-                fromPersistentEntity = { Pair(it.stateRef, it.upgradedContractClassName) },
+                fromPersistentEntity = { Pair(it.stateRef, it.upgradedContractClassName ?: "") },
                 toPersistentEntity = { key: String, value: String ->
                     ContractUpgradeServiceImpl.DBContractUpgrade().apply {
                         stateRef = key

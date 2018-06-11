@@ -229,7 +229,7 @@ class NodeConfigurationImplTest {
                 verifierType = VerifierType.InMemory,
                 p2pAddress = NetworkHostAndPort("localhost", 0),
                 messagingServerAddress = null,
-                p2pMessagingRetry = P2PMessagingRetryConfiguration(5.seconds, 3, 1.0),
+                flowTimeout = FlowTimeoutConfiguration(5.seconds, 3, 1.0),
                 notary = null,
                 devMode = true,
                 noLocalShell = false,

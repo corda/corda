@@ -2,7 +2,6 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
@@ -110,8 +109,8 @@ class StaffedFlowHospital {
     /**
      * The flow has been removed from the state machine.
      */
-    fun flowRemoved(flowFiber: FlowFiber) {
-        mutex.locked { patients.remove(flowFiber.id) }
+    fun flowRemoved(flowId: StateMachineRunId) {
+        mutex.locked { patients.remove(flowId) }
     }
 
     // TODO MedicalRecord subtypes can expose the Staff class, something which we probably don't want when wiring this method to RPC
@@ -204,23 +203,13 @@ class StaffedFlowHospital {
     object DoctorTimeout : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: MedicalHistory): Diagnosis {
             if (newError is FlowTimeoutException) {
-                if (isTimedFlow(flowFiber)) {
-                    if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this)) {
-                        return Diagnosis.DISCHARGE
-                    } else {
-                        log.warn("\"Maximum number of retries reached for timed flow ${flowFiber.javaClass}")
-                    }
+                if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this)) {
+                    return Diagnosis.DISCHARGE
                 } else {
-                    log.warn("\"Unable to restart flow: ${flowFiber.javaClass}, it is not timed and does not contain any timed sub-flows.")
+                    log.warn("\"Maximum number of retries reached for timed flow ${flowFiber.javaClass}")
                 }
             }
             return Diagnosis.NOT_MY_SPECIALTY
-        }
-
-        private fun isTimedFlow(flowFiber: FlowFiber): Boolean {
-            return flowFiber.snapshot().checkpoint.subFlowStack.any {
-                TimedFlow::class.java.isAssignableFrom(it.flowClass)
-            }
         }
     }
 

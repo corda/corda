@@ -13,7 +13,11 @@ import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.TimedFlow
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
@@ -44,12 +48,14 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.SecureRandom
 import java.util.*
-import java.util.concurrent.*
-import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
-import kotlin.concurrent.withLock
 import kotlin.streams.toList
 
 /**
@@ -224,6 +230,7 @@ class SingleThreadedStateMachineManager(
                     database.transaction {
                         checkpointStorage.removeCheckpoint(id)
                     }
+                    transitionExecutor.forceRemoveFlow(id)
                 }
             } else {
                 // TODO replace with a clustered delete after we'll support clustered nodes
@@ -309,6 +316,7 @@ class SingleThreadedStateMachineManager(
             mutex.locked { if (flows.containsKey(id)) return@map null }
             val checkpoint = deserializeCheckpoint(serializedCheckpoint)
             if (checkpoint == null) return@map null
+            logger.debug { "Restored $checkpoint" }
             createFlowFromCheckpoint(
                     id = id,
                     checkpoint = checkpoint,
@@ -357,7 +365,10 @@ class SingleThreadedStateMachineManager(
             // Just flow initiation message
             null
         }
-        externalEventMutex.withLock {
+        mutex.locked {
+            if (stopping) {
+                return
+            }
             // Remove any sessions the old flow has.
             for (sessionId in getFlowSessionIds(currentState.checkpoint)) {
                 sessionToFlow.remove(sessionId)
@@ -378,12 +389,13 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    private val externalEventMutex = ReentrantLock()
     override fun deliverExternalEvent(event: ExternalEvent) {
-        externalEventMutex.withLock {
-            when (event) {
-                is ExternalEvent.ExternalMessageEvent -> onSessionMessage(event)
-                is ExternalEvent.ExternalStartFlowEvent<*> -> onExternalStartFlow(event)
+        mutex.locked {
+            if (!stopping) {
+                when (event) {
+                    is ExternalEvent.ExternalMessageEvent -> onSessionMessage(event)
+                    is ExternalEvent.ExternalStartFlowEvent<*> -> onExternalStartFlow(event)
+                }
             }
         }
     }
@@ -589,10 +601,10 @@ class SingleThreadedStateMachineManager(
 
     /** Schedules a [FlowTimeoutException] to be fired in order to restart the flow. */
     private fun scheduleTimeoutException(flow: Flow, retryCount: Int): ScheduledFuture<*> {
-        return with(serviceHub.configuration.p2pMessagingRetry) {
-            val timeoutDelaySeconds = messageRedeliveryDelay.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
+        return with(serviceHub.configuration.flowTimeout) {
+            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
             timeoutScheduler.schedule({
-                val event = Event.Error(FlowTimeoutException(maxRetryCount))
+                val event = Event.Error(FlowTimeoutException(maxRestartCount))
                 flow.fiber.scheduleEvent(event)
             }, timeoutDelaySeconds, TimeUnit.SECONDS)
         }
