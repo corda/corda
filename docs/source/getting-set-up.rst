@@ -81,13 +81,27 @@ Download a sample project
 1. Open a command prompt
 2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
 3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
+4. Checkout the branch for Corda Enterprise 3.0.0 by running ``git checkout release-enterprise-V3``
+
+Resolve Corda Enterprise binaries
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Corda Enterprise binaries are not available in a publicly accessible Maven repository.
+The ``build.gradle`` file on ``release-enterprise-V3`` branch includes instructions on how to allow Gradle to resolve these dependencies.
+
+1. Open ``cordapp-example\build.gradle``
+2. Do any of the following to allow Gradle to resolve Corda Enterprise binaries, for more information read the commented code in ``build.gradle``:
+
+   a. Add Corda Enterprise binaries and dependencies to your local maven repository path (e.g., ``C:\Documents and Settings\{your-username}\.m2``).
+   b. Upload Corda Enterprise binaries and dependencies to your company's private Maven repository and register the repository with Gradle.
+   c. Add Corda Enterprise binaries to a local directory and register a local Maven repository pointing to this directory with Gradle.
 
 Run from the command prompt
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-1. From the cordapp-example folder, deploy the nodes by running ``gradlew deployNodes``
-2. Start the nodes by running ``call kotlin-source/build/nodes/runnodes.bat``
-3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
-4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
+1. From the ``cordapp-example`` folder, deploy the nodes by running ``gradlew deployNodes``
+2. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
+3. Start the nodes by running ``call kotlin-source/build/nodes/runnodes.bat``
+4. Wait until all the terminal windows display either ``Webserver started up in XX.X sec`` or ``Node for "NodeC" started up and registered in XX.XX sec``
+5. Confirm that the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
 
 Run from IntelliJ
 ^^^^^^^^^^^^^^^^^
@@ -107,7 +121,7 @@ Run from IntelliJ
 6. At the top-right of the screen, to the left of the green ``play`` arrow, you should see a dropdown. In that
    dropdown, select ``Run Example Cordapp - Kotlin`` and click the green ``play`` arrow.
 7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
-8. Test the CorDapp is running correctly by visiting the front end at `http://localhost:10009/web/example/
+8. Confirm that the CorDapp is running correctly by visiting the front end at `http://localhost:10009/web/example/
 
 .. _mac-label:
 
@@ -135,13 +149,27 @@ Download a sample project
 1. Open a terminal
 2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
 3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
+4. Checkout the branch for Corda Enterprise 3.0.0 by running ``git checkout release-enterprise-V3``
+
+Resolve Corda Enterprise binaries
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Corda Enterprise binaries are not available in a publicly accessible Maven repository.
+The ``build.gradle`` file on ``release-enterprise-V3`` branch includes instructions on how to allow Gradle to resolve these dependencies.
+
+1. Open ``cordapp-example/build.gradle``
+2. Do any of the following to allow Gradle to resolve Corda Enterprise binaries, for more information read the commented code in ``build.gradle``:
+
+   a. Add Corda Enterprise binaries and dependencies to your local maven repository path e.g., ``~/.m2/repository``
+   b. Upload Corda Enterprise binaries and dependencies to your company's private Maven repository and register the repository with Gradle.
+   c. Add Corda Enterprise binaries to a local directory and register a local Maven repository pointing to this directory with Gradle.
 
 Run from the terminal
 ^^^^^^^^^^^^^^^^^^^^^
-1. From the cordapp-example folder, deploy the nodes by running ``./gradlew deployNodes``
-2. Start the nodes by running ``kotlin-source/build/nodes/runnodes``. Do not click while 8 additional terminal windows start up.
-3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
-4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
+1. From the ``cordapp-example`` folder, deploy the nodes by running ``./gradlew deployNodes``
+2. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
+3. Start the nodes by running ``kotlin-source/build/nodes/runnodes``. Do not click while 8 additional terminal windows start up.
+4. Wait until all the terminal windows display either ``Webserver started up in XX.X sec`` or ``Node for "NodeC" started up and registered in XX.XX sec``
+5. Confirm that the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
 
 Run from IntelliJ
 ^^^^^^^^^^^^^^^^^
@@ -151,7 +179,7 @@ Run from IntelliJ
 .. warning:: If you click ``Import Project`` instead of ``Open``, the project's run configurations will be erased!
 
 3. Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
-   clicking ``New...``, clicking ``JDK``, and navigating to ``C:\\Program Files\\Java\\jdk1.8.0_XXX`` (where ``XXX`` is
+   clicking ``New...``, clicking ``JDK``, and navigating to your JDK installation (e.g., ``/Library/Java/JavaVirtualMachines/jdk1.8.0_XXX.jdk``, where ``XXX`` is
    the latest minor version number). Click ``OK``
 4. Again under ``File`` then ``Project Structure``, select ``Modules``. Click ``+``, then ``Import Module``, then select
    the ``cordapp-example`` folder and click ``Open``. Choose to ``Import module from external model``, select
@@ -161,7 +189,7 @@ Run from IntelliJ
 6. At the top-right of the screen, to the left of the green ``play`` arrow, you should see a dropdown. In that
    dropdown, select ``Run Example Cordapp - Kotlin`` and click the green ``play`` arrow.
 7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
-8. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
+8. Confirm that the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
 
 Corda source code
 -----------------
