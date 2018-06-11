@@ -277,24 +277,29 @@ inline fun <T, R : Any> Stream<T>.mapNotNull(crossinline transform: (T) -> R?): 
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [Class]. */
+@NonDeterministic
 fun <T> Class<*>.staticField(name: String): DeclaredField<T> = DeclaredField(this, name, null)
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [KClass]. */
+@NonDeterministic
 fun <T> KClass<*>.staticField(name: String): DeclaredField<T> = DeclaredField(java, name, null)
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
+@NonDeterministic
 fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
 
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
  */
+@NonDeterministic
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
  */
+@NonDeterministic
 fun <T> Any.declaredField(clazz: Class<*>, name: String): DeclaredField<T> = DeclaredField(clazz, name, this)
 
 /** creates a new instance if not a Kotlin object */
@@ -323,6 +328,7 @@ val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
  * A simple wrapper around a [Field] object providing type safe read and write access using [value], ignoring the field's
  * visibility.
  */
+@NonDeterministic
 class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
     private val javaField = findField(name, clazz)
     var value: T
@@ -427,7 +433,7 @@ fun HttpURLConnection.checkOkResponse() {
     }
 }
 
-@get:NonDeterministic
+@NonDeterministic
 val HttpURLConnection.errorMessage: String? get() = errorStream?.let { it.use { it.reader().readText() } }
 
 @NonDeterministic

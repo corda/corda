@@ -51,13 +51,13 @@ jar {
 def serializationJarTask = tasks.getByPath(':serialization:jar')
 def originalJar = serializationJarTask.outputs.files.singleFile
 
-task patchSerialization(type: Zip, dependsOn: [serializationJarTask, compileKotlin]) {
+task patchSerialization(type: Zip, dependsOn: serializationJarTask) {
     destinationDir file("$buildDir/source-libs")
     metadataCharset 'UTF-8'
     classifier 'transient'
     extension 'jar'
 
-    from(compileKotlin.outputs)
+    from(compileKotlin)
     from(zipTree(originalJar)) {
         exclude 'net/corda/serialization/internal/AttachmentsClassLoaderBuilder*'
         exclude 'net/corda/serialization/internal/ByteBufferStreams*'

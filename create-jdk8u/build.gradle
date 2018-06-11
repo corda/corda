@@ -73,6 +73,7 @@ task validate(type: ProGuardTask) {
 
     keep 'class *'
 }
+runtimeJar.finalizedBy validate
 
 task apiJar(type: Jar, dependsOn: runtimeJar) {
     baseName 'deterministic-rt'
@@ -87,6 +88,8 @@ task apiJar(type: Jar, dependsOn: runtimeJar) {
         exclude 'java/lang/*Thread*.class'
         exclude 'java/lang/Shutdown*.class'
         exclude 'java/lang/ref/'
+        exclude 'java/lang/reflect/InvocationHandler.class'
+        exclude 'java/lang/reflect/Proxy*.class'
         exclude 'java/lang/reflect/Weak*.class'
         exclude 'java/io/File.class'
         exclude 'java/io/File$*.class'
@@ -118,7 +121,7 @@ task apiJar(type: Jar, dependsOn: runtimeJar) {
 }
 
 defaultTasks "build"
-assemble.dependsOn validate
+assemble.dependsOn runtimeJar
 assemble.dependsOn apiJar
 clean.dependsOn cleanJdk
 

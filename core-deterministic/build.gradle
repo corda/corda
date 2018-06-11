@@ -57,13 +57,13 @@ jar {
 def coreJarTask = tasks.getByPath(':core:jar')
 def originalJar = coreJarTask.outputs.files.singleFile
 
-task patchCore(type: Zip, dependsOn: [coreJarTask, compileKotlin]) {
+task patchCore(type: Zip, dependsOn: coreJarTask) {
     destinationDir file("$buildDir/source-libs")
     metadataCharset 'UTF-8'
     classifier 'transient'
     extension 'jar'
 
-    from(compileKotlin.outputs)
+    from(compileKotlin)
     from(zipTree(originalJar)) {
         exclude 'net/corda/core/internal/*ToggleField*.class'
         exclude 'net/corda/core/serialization/*SerializationFactory*.class'
