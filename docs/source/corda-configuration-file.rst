@@ -333,7 +333,3 @@ Example adding/overriding keyStore password when starting Corda node:
 .. sourcecode:: shell
 
     java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar
-
-
-Securing sensitive
----------------
