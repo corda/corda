@@ -114,12 +114,14 @@ absolute path to the node's base directory.
         here must be externally accessible when running nodes across a cluster of machines. If the provided host is unreachable,
         the node will try to auto-discover its public one.
 
-:p2pMessagingRetry: Only used for notarisation requests. When the response doesn't arrive in time, the message is
-    resent to a different notary-replica round-robin in case of clustered notaries.
+:flowTimeout: When a flow implementing the ``TimedFlow`` interface does not complete in time, it is restarted from the
+    initial checkpoint. Currently only used for notarisation requests: if a notary replica dies while processing a notarisation request,
+    the client flow eventually times out and gets restarted. On restart the request is resent to a different notary replica
+    in a round-robin fashion (assuming the notary is clustered).
 
-        :messageRedeliveryDelay: The initial retry delay, e.g. `30 seconds`.
-        :maxRetryCount: How many retries to attempt.
-        :backoffBase: The base of the exponential backoff, `t_{wait} = messageRedeliveryDelay * backoffBase^{retryCount}`.
+        :timeout: The initial flow timeout period, e.g. `30 seconds`.
+        :maxRestartCount: Maximum number of times the flow will restart before resulting in an error.
+        :backoffBase: The base of the exponential backoff, `t_{wait} = timeout * backoffBase^{retryCount}`.
 
 :rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of the ``rpcSettings`` block.
 

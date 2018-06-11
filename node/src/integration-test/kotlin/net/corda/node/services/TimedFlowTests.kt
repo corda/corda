@@ -31,10 +31,9 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.P2PMessagingRetryConfiguration
-import net.corda.node.services.vault.VaultQueryIntegrationTests
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
@@ -43,13 +42,14 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.GlobalDatabaseRule
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.startFlow
-import org.junit.*
+import org.junit.Before
+import org.junit.ClassRule
+import org.junit.Test
 import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.slf4j.MDC
@@ -85,8 +85,8 @@ class TimedFlowTestRule(val clusterSize: Int) : ExternalResource() {
                 InternalMockNodeParameters(
                         legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
                         configOverrides = { conf: NodeConfiguration ->
-                            val retryConfig = P2PMessagingRetryConfiguration(10.seconds, 3, 1.0)
-                            doReturn(retryConfig).whenever(conf).p2pMessagingRetry
+                            val flowTimeoutConfig = FlowTimeoutConfiguration(10.seconds, 3, 1.0)
+                            doReturn(flowTimeoutConfig).whenever(conf).flowTimeout
                         }
                 )
         )

@@ -619,10 +619,10 @@ class SingleThreadedStateMachineManager(
 
     /** Schedules a [FlowTimeoutException] to be fired in order to restart the flow. */
     private fun scheduleTimeoutException(flow: Flow, retryCount: Int): ScheduledFuture<*> {
-        return with(serviceHub.configuration.p2pMessagingRetry) {
-            val timeoutDelaySeconds = messageRedeliveryDelay.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
+        return with(serviceHub.configuration.flowTimeout) {
+            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
             timeoutScheduler.schedule({
-                val event = Event.Error(FlowTimeoutException(maxRetryCount))
+                val event = Event.Error(FlowTimeoutException(maxRestartCount))
                 flow.fiber.scheduleEvent(event)
             }, timeoutDelaySeconds, TimeUnit.SECONDS)
         }
