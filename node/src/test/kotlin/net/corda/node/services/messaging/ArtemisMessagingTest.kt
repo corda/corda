@@ -8,7 +8,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.internal.configureDatabase
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.P2PMessagingRetryConfiguration
+import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.NetworkMapCacheImpl
 import net.corda.node.services.network.PersistentNetworkMapCache
@@ -73,7 +73,7 @@ class ArtemisMessagingTest {
             doReturn(NetworkHostAndPort("0.0.0.0", serverPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
-            doReturn(P2PMessagingRetryConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).p2pMessagingRetry
+            doReturn(FlowTimeoutConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).flowTimeout
         }
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null })
