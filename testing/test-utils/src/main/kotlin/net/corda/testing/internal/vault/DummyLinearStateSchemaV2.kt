@@ -21,7 +21,7 @@ object DummyLinearStateSchemaV2 : MappedSchema(schemaFamily = DummyLinearStateSc
             @CollectionTable(name = "dummy_linear_states_v2_parts", joinColumns = [(JoinColumn(name = "output_index", referencedColumnName = "output_index")), (JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"))])
             override var participants: MutableSet<AbstractParty>? = null,
 
-            @Column(name = "linear_string", nullable = false) var linearString: String,
+            @Column(name = "linear_string", nullable = true) var linearString: String?,
 
             @Column(name = "linear_number", nullable = false) var linearNumber: Long,
 
