@@ -2,7 +2,6 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
