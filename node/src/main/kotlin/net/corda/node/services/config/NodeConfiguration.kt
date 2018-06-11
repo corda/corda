@@ -256,7 +256,7 @@ data class NodeConfigurationImpl(
         if (devMode) {
             compatibilityZoneURL?.let {
                 if (devModeOptions?.allowCompatibilityZone != true) {
-                    return listOf("'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true.")
+                    return listOf("'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true unless devModeOptions.allowCompatibilityZone is also true")
                 }
             }
 
@@ -264,7 +264,7 @@ data class NodeConfigurationImpl(
             // this check by returning above is fine.
             networkServices?.let {
                 if (devModeOptions?.allowCompatibilityZone != true) {
-                    return listOf("'networkServices': present. Property cannot be set when 'devMode' is true.")
+                    return listOf("'networkServices': present. Property cannot be set when 'devMode' is true unless devModeOptions.allowCompatibilityZone is also true")
                 }
             }
         }

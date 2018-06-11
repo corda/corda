@@ -187,7 +187,7 @@ absolute path to the node's base directory.
 
         .. note:: Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.
 
-:devModeOptions: Allows modification of certain devMode features
+:devModeOptions: Allows modification of certain ``devMode`` features
 
     :allowCompatibilityZone: Allows a node configured to operate in development mode to connect to a compatibility zone.
 
@@ -333,3 +333,7 @@ Example adding/overriding keyStore password when starting Corda node:
 .. sourcecode:: shell
 
     java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar
+
+
+Securing sensitive
+---------------
