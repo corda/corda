@@ -1,6 +1,6 @@
 package net.corda.core.internal.cordapp
 
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -11,7 +11,7 @@ import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import java.net.URL
 
-@NonDeterministic
+@DeleteForDJVM
 data class CordappImpl(
         override val contractClassNames: List<String>,
         override val initiatedFlows: List<Class<out FlowLogic<*>>>,

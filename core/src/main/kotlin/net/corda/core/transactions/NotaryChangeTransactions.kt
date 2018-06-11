@@ -1,7 +1,7 @@
 package net.corda.core.transactions
 
-import net.corda.core.Deterministic
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -23,7 +23,7 @@ import java.security.PublicKey
  * on the fly.
  */
 @CordaSerializable
-@Deterministic
+@KeepForDJVM
 data class NotaryChangeWireTransaction(
         /**
          * Contains all of the transaction components in serialized form.
@@ -64,14 +64,14 @@ data class NotaryChangeWireTransaction(
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
-    @NonDeterministic
+    @DeleteForDJVM
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
         val resolvedInputs = services.loadStates(inputs.toSet()).toList()
         return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs)
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
-    @NonDeterministic
+    @DeleteForDJVM
     fun resolve(services: ServiceHub, sigs: List<TransactionSignature>) = resolve(services as ServicesForResolution, sigs)
 
     enum class Component {
@@ -87,7 +87,7 @@ data class NotaryChangeWireTransaction(
  * signatures are checked against the signers specified by input states' *participants* fields, so full resolution is
  * needed for signature verification.
  */
-@Deterministic
+@KeepForDJVM
 data class NotaryChangeLedgerTransaction(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,

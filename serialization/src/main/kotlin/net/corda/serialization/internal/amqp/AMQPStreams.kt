@@ -1,8 +1,8 @@
 @file:JvmName("AMQPStreams")
-@file:NonDeterministic
+@file:DeleteForDJVM
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
 import net.corda.serialization.internal.ByteBufferInputStream
 import net.corda.serialization.internal.ByteBufferOutputStream
 import net.corda.serialization.internal.serializeOutputStreamPool

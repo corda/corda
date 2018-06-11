@@ -1,6 +1,6 @@
 package net.corda.serialization.internal.amqp.custom
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.ZoneId
@@ -15,6 +15,6 @@ class ZoneIdSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Zone
 
     override fun fromProxy(proxy: ZoneIdProxy): ZoneId = ZoneId.of(proxy.id)
 
-    @Deterministic
+    @KeepForDJVM
     data class ZoneIdProxy(val id: String)
 }

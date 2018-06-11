@@ -6,9 +6,7 @@ import kotlin.annotation.Retention
 import kotlin.annotation.Target
 
 /**
- * Declare the annotated element to be non-deterministic, which means that its bytecode
- * will be deleted from the .class file when creating the deterministic version of Corda
- * Core.
+ * Declare the annotated element to unsuitable for the deterministic version of Corda.
  */
 // DOCSTART 01
 @Target(
@@ -24,5 +22,5 @@ import kotlin.annotation.Target
 )
 @Retention(BINARY)
 @CordaInternal
-annotation class NonDeterministic
+annotation class DeleteForDJVM
 // DOCEND 01

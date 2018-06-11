@@ -1,11 +1,11 @@
 @file:JvmName("InternalUtils")
-@file:Deterministic
+@file:KeepForDJVM
 package net.corda.core.internal
 
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
-import net.corda.core.Deterministic
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
@@ -110,7 +110,7 @@ fun <T> List<T>.noneOrSingle(): T? {
 }
 
 /** Returns a random element in the list, or `null` if empty */
-@NonDeterministic
+@DeleteForDJVM
 fun <T> List<T>.randomOrNull(): T? {
     return when (size) {
         0 -> null
@@ -126,7 +126,7 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
     return i
 }
 
-@NonDeterministic fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
+@DeleteForDJVM fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
 /** Same as [InputStream.readBytes] but also closes the stream. */
 fun InputStream.readFully(): ByteArray = use { it.readBytes() }
@@ -157,7 +157,7 @@ fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a +
  * Returns an Observable that buffers events until subscribed.
  * @see UnicastSubject
  */
-@NonDeterministic
+@DeleteForDJVM
 fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
     val subject = UnicastSubject.create<T>()
     val subscription = subscribe(subject)
@@ -165,7 +165,7 @@ fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
 }
 
 /** Copy an [Observer] to multiple other [Observer]s. */
-@NonDeterministic
+@DeleteForDJVM
 fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
     val subject = PublishSubject.create<T>()
     subject.subscribe(this)
@@ -174,7 +174,7 @@ fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
 }
 
 /** Executes the given code block and returns a [Duration] of how long it took to execute in nanosecond precision. */
-@NonDeterministic
+@DeleteForDJVM
 inline fun elapsedTime(block: () -> Unit): Duration {
     val start = System.nanoTime()
     block()
@@ -187,7 +187,7 @@ fun <T> Logger.logElapsedTime(label: String, body: () -> T): T = logElapsedTime(
 
 // TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
 // returns in the IRSSimulationTest. If not, commit the inline back.
-@NonDeterministic
+@DeleteForDJVM
 fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
     // Use nanoTime as it's monotonic.
     val now = System.nanoTime()
@@ -215,7 +215,7 @@ fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {
     return InputStreamAndHash(bytes.inputStream(), bytes.sha256())
 }
 
-@Deterministic
+@KeepForDJVM
 data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHash.SHA256) {
     companion object {
         /**
@@ -223,7 +223,7 @@ data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHa
          * called "z" that contains the given content byte repeated the given number of times.
          * Note that a slightly bigger than numOfExpectedBytes size is expected.
          */
-        @NonDeterministic
+        @DeleteForDJVM
         fun createInMemoryTestZip(numOfExpectedBytes: Int, content: Byte): InputStreamAndHash {
             require(numOfExpectedBytes > 0)
             val baos = ByteArrayOutputStream()
@@ -277,29 +277,29 @@ inline fun <T, R : Any> Stream<T>.mapNotNull(crossinline transform: (T) -> R?): 
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [Class]. */
-@NonDeterministic
+@DeleteForDJVM
 fun <T> Class<*>.staticField(name: String): DeclaredField<T> = DeclaredField(this, name, null)
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [KClass]. */
-@NonDeterministic
+@DeleteForDJVM
 fun <T> KClass<*>.staticField(name: String): DeclaredField<T> = DeclaredField(java, name, null)
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
-@NonDeterministic
+@DeleteForDJVM
 fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
 
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
  */
-@NonDeterministic
+@DeleteForDJVM
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
  */
-@NonDeterministic
+@DeleteForDJVM
 fun <T> Any.declaredField(clazz: Class<*>, name: String): DeclaredField<T> = DeclaredField(clazz, name, this)
 
 /** creates a new instance if not a Kotlin object */
@@ -328,7 +328,7 @@ val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
  * A simple wrapper around a [Field] object providing type safe read and write access using [value], ignoring the field's
  * visibility.
  */
-@NonDeterministic
+@DeleteForDJVM
 class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
     private val javaField = findField(name, clazz)
     var value: T
@@ -385,12 +385,12 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-@NonDeterministic fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+@DeleteForDJVM fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
     return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-@NonDeterministic fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
+@DeleteForDJVM fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
 
 /** Convenience method to get the package name of a class literal. */
 val KClass<*>.packageName: String get() = java.packageName
@@ -406,14 +406,14 @@ inline val Member.isStatic: Boolean get() = Modifier.isStatic(modifiers)
 
 inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
 
-@NonDeterministic fun URI.toPath(): Path = Paths.get(this)
+@DeleteForDJVM fun URI.toPath(): Path = Paths.get(this)
 
-@NonDeterministic fun URL.toPath(): Path = toURI().toPath()
+@DeleteForDJVM fun URL.toPath(): Path = toURI().toPath()
 
-@NonDeterministic
+@DeleteForDJVM
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 
-@NonDeterministic
+@DeleteForDJVM
 fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String>): ByteArray {
     return openHttpConnection().run {
         doOutput = true
@@ -426,24 +426,24 @@ fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String
     }
 }
 
-@NonDeterministic
+@DeleteForDJVM
 fun HttpURLConnection.checkOkResponse() {
     if (responseCode != HTTP_OK) {
         throw IOException("Response Code $responseCode: $errorMessage")
     }
 }
 
-@NonDeterministic
+@DeleteForDJVM
 val HttpURLConnection.errorMessage: String? get() = errorStream?.let { it.use { it.reader().readText() } }
 
-@NonDeterministic
+@DeleteForDJVM
 inline fun <reified T : Any> HttpURLConnection.responseAs(): T {
     checkOkResponse()
     return inputStream.readObject()
 }
 
 /** Analogous to [Thread.join]. */
-@NonDeterministic
+@DeleteForDJVM
 fun ExecutorService.join() {
     shutdown() // Do not change to shutdownNow, tests use this method to assert the executor has no more tasks.
     while (!awaitTermination(1, TimeUnit.SECONDS)) {

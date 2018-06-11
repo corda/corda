@@ -1,6 +1,6 @@
 package net.corda.serialization.internal
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
@@ -13,7 +13,7 @@ import java.nio.ByteBuffer
 import java.util.zip.DeflaterOutputStream
 import java.util.zip.InflaterInputStream
 
-@Deterministic
+@KeepForDJVM
 class CordaSerializationMagic(bytes: ByteArray) : OpaqueBytes(bytes) {
     private val bufferView = slice()
     fun consume(data: ByteSequence): ByteBuffer? {
@@ -21,7 +21,7 @@ class CordaSerializationMagic(bytes: ByteArray) : OpaqueBytes(bytes) {
     }
 }
 
-@Deterministic
+@KeepForDJVM
 enum class SectionId : OrdinalWriter {
     /** Serialization data follows, and then discard the rest of the stream (if any) as legacy data may have trailing garbage. */
     DATA_AND_STOP,
@@ -37,7 +37,7 @@ enum class SectionId : OrdinalWriter {
     override val bits = OrdinalBits(ordinal)
 }
 
-@Deterministic
+@KeepForDJVM
 enum class CordaSerializationEncoding : SerializationEncoding, OrdinalWriter {
     DEFLATE {
         override fun wrap(stream: OutputStream) = DeflaterOutputStream(stream)

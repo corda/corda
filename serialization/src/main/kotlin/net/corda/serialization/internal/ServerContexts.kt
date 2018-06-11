@@ -1,8 +1,8 @@
 @file:JvmName("ServerContexts")
-@file:NonDeterministic
+@file:DeleteForDJVM
 package net.corda.serialization.internal
 
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.serialization.internal.amqp.amqpMagic

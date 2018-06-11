@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 import java.security.InvalidKeyException
 import java.security.PublicKey
@@ -16,7 +16,7 @@ import java.util.*
  * @property partialMerkleTree required when multi-transaction signing is utilised.
  */
 @CordaSerializable
-@Deterministic
+@KeepForDJVM
 class TransactionSignature(bytes: ByteArray, val by: PublicKey, val signatureMetadata: SignatureMetadata, val partialMerkleTree: PartialMerkleTree?) : DigitalSignature(bytes) {
     /**
      * Construct a [TransactionSignature] with [partialMerkleTree] set to null.

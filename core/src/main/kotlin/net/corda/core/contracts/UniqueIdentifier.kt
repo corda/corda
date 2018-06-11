@@ -1,7 +1,7 @@
 package net.corda.core.contracts
 
-import net.corda.core.Deterministic
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
@@ -19,10 +19,10 @@ import java.util.*
  * Subsequent copies and evolutions of a state should just copy the [externalId] and [id] fields unmodified.
  */
 @CordaSerializable
-@Deterministic
+@KeepForDJVM
 data class UniqueIdentifier(val externalId: String?, val id: UUID) : Comparable<UniqueIdentifier> {
-    @NonDeterministic constructor(externalId: String?) : this(externalId, UUID.randomUUID())
-    @NonDeterministic constructor() : this(null)
+    @DeleteForDJVM constructor(externalId: String?) : this(externalId, UUID.randomUUID())
+    @DeleteForDJVM constructor() : this(null)
 
     override fun toString(): String = if (externalId != null) "${externalId}_$id" else id.toString()
 

@@ -3,9 +3,9 @@
 package net.corda.serialization.internal.amqp
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
-import net.corda.core.Deterministic
-import net.corda.core.NonDeterministic
-import net.corda.core.NonDeterministicStub
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
+import net.corda.core.StubOutForDJVM
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.internal.uncheckedCast
@@ -34,13 +34,13 @@ interface SerializerFactoryFactory {
     fun make(context: SerializationContext): SerializerFactory
 }
 
-@Deterministic
+@KeepForDJVM
 abstract class AbstractAMQPSerializationScheme(
     private val cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>>,
     private val serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>,
     val sff: SerializerFactoryFactory = createSerializerFactoryFactory()
 ) : SerializationScheme {
-    @NonDeterministic
+    @DeleteForDJVM
     constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, ConcurrentHashMap())
 
     // TODO: This method of initialisation for the Whitelist and plugin serializers will have to change
@@ -68,7 +68,7 @@ abstract class AbstractAMQPSerializationScheme(
             }
         }
 
-        @NonDeterministic
+        @DeleteForDJVM
         val List<Cordapp>.customSerializers get() = flatMap { it.serializationCustomSerializers }.toSet()
     }
 
@@ -132,7 +132,7 @@ abstract class AbstractAMQPSerializationScheme(
     /*
      * Register the serializers which will be excluded from the DJVM.
      */
-    @NonDeterministicStub
+    @StubOutForDJVM
     private fun registerNonDeterministicSerializers(factory: SerializerFactory) {
         with(factory) {
             register(net.corda.serialization.internal.amqp.custom.SimpleStringSerializer)

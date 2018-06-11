@@ -1,8 +1,8 @@
 @file:JvmName("PlatformSecureRandom")
-@file:NonDeterministic
+@file:DeleteForDJVM
 package net.corda.core.crypto.internal
 
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
 import org.apache.commons.lang.SystemUtils
 import java.security.SecureRandom
 

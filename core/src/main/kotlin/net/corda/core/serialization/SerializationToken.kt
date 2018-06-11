@@ -1,6 +1,6 @@
 package net.corda.core.serialization
 
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializationToken.Companion.singletonSerializationToken
 
@@ -19,7 +19,7 @@ import net.corda.core.serialization.SingletonSerializationToken.Companion.single
  *
  * This models a similar pattern to the readReplace/writeReplace methods in Java serialization.
  */
-@NonDeterministic
+@DeleteForDJVM
 @CordaSerializable
 interface SerializeAsToken {
     fun toToken(context: SerializeAsTokenContext): SerializationToken
@@ -28,7 +28,7 @@ interface SerializeAsToken {
 /**
  * This represents a token in the serialized stream for an instance of a type that implements [SerializeAsToken].
  */
-@NonDeterministic
+@DeleteForDJVM
 interface SerializationToken {
     fun fromToken(context: SerializeAsTokenContext): Any
 }
@@ -36,7 +36,7 @@ interface SerializationToken {
 /**
  * A context for mapping SerializationTokens to/from SerializeAsTokens.
  */
-@NonDeterministic
+@DeleteForDJVM
 interface SerializeAsTokenContext {
     val serviceHub: ServiceHub
     fun putSingleton(toBeTokenized: SerializeAsToken)
@@ -47,7 +47,7 @@ interface SerializeAsTokenContext {
  * A class representing a [SerializationToken] for some object that is not serializable but can be looked up
  * (when deserialized) via just the class name.
  */
-@NonDeterministic
+@DeleteForDJVM
 class SingletonSerializationToken private constructor(private val className: String) : SerializationToken {
 
     override fun fromToken(context: SerializeAsTokenContext) = context.getSingleton(className)
@@ -63,7 +63,7 @@ class SingletonSerializationToken private constructor(private val className: Str
  * A base class for implementing large objects / components / services that need to serialize themselves to a string token
  * to indicate which instance the token is a serialized form of.
  */
-@NonDeterministic
+@DeleteForDJVM
 abstract class SingletonSerializeAsToken : SerializeAsToken {
     private val token = singletonSerializationToken(javaClass)
 

@@ -1,13 +1,13 @@
 package net.corda.core.crypto
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_KEY
 import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_SIGNATURE
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
-import net.corda.core.NonDeterministicStub
+import net.corda.core.StubOutForDJVM
 import java.security.Provider
 
-@Deterministic
+@KeepForDJVM
 class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME security provider wrapper") {
     companion object {
         const val PROVIDER_NAME = "Corda"
@@ -24,14 +24,14 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
 /**
  * The core-deterministic module is not allowed to generate keys.
  */
-@NonDeterministicStub
+@StubOutForDJVM
 private fun provideNonDeterministic(provider: Provider) {
     provider["KeyFactory.${CompositeKey.KEY_ALGORITHM}"] = CompositeKeyFactory::class.java.name
     provider["Alg.Alias.KeyFactory.$COMPOSITE_KEY"] = CompositeKey.KEY_ALGORITHM
     provider["Alg.Alias.KeyFactory.OID.$COMPOSITE_KEY"] = CompositeKey.KEY_ALGORITHM
 }
 
-@Deterministic
+@KeepForDJVM
 object CordaObjectIdentifier {
     // UUID-based OID
     // TODO: Register for an OID space and issue our own shorter OID.

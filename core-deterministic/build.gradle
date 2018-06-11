@@ -98,7 +98,7 @@ task predeterminise(type: ProGuardTask) {
     keep '@interface net.corda.core.* { *; }'
     keep '@interface net.corda.core.contracts.** { *; }'
     keep '@interface net.corda.core.serialization.** { *; }'
-    keep '@net.corda.core.Deterministic class * { *; }', includedescriptorclasses:true
+    keep '@net.corda.core.KeepForDJVM class * { *; }', includedescriptorclasses:true
     keepclassmembers 'class net.corda.core.** { public synthetic <methods>; }'
 }
 
@@ -107,10 +107,10 @@ task jarFilter(type: JarFilterTask) {
     jars predeterminise
     annotations {
         forDelete = [
-            "net.corda.core.NonDeterministic"
+            "net.corda.core.DeleteForDJVM"
         ]
         forStub = [
-            "net.corda.core.NonDeterministicStub"
+            "net.corda.core.StubOutForDJVM"
         ]
         forRemove = [
             "co.paralleluniverse.fibers.Suspendable"
@@ -139,11 +139,11 @@ task determinise(type: ProGuardTask) {
     verbose
 
     keep '@interface net.corda.core.CordaInternal { *; }'
-    keep '@interface net.corda.core.Deterministic { *; }'
     keep '@interface net.corda.core.DoNotImplement { *; }'
+    keep '@interface net.corda.core.KeepForDJVM { *; }'
     keep '@interface net.corda.core.contracts.** { *; }'
     keep '@interface net.corda.core.serialization.** { *; }'
-    keep '@net.corda.core.Deterministic class * { *; }', includedescriptorclasses:true
+    keep '@net.corda.core.KeepForDJVM class * { *; }', includedescriptorclasses:true
     keepclassmembers 'class net.corda.core.** { public synthetic <methods>; }'
 }
 

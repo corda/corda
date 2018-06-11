@@ -1,6 +1,6 @@
 package net.corda.core.transactions
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
@@ -27,7 +27,7 @@ import java.util.function.Predicate
 // TODO LedgerTransaction is not supposed to be serialisable as it references attachments, etc. The verification logic
 // currently sends this across to out-of-process verifiers. We'll need to change that first.
 // DOCSTART 1
-@Deterministic
+@KeepForDJVM
 @CordaSerializable
 data class LedgerTransaction @JvmOverloads constructor(
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
@@ -243,7 +243,7 @@ data class LedgerTransaction @JvmOverloads constructor(
      * be used to simplify this logic.
      */
     // DOCSTART 3
-    @Deterministic
+    @KeepForDJVM
     data class InOutGroup<out T : ContractState, out K : Any>(val inputs: List<T>, val outputs: List<T>, val groupingKey: K)
     // DOCEND 3
 

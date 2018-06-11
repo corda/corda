@@ -1,7 +1,7 @@
 package net.corda.core.transactions
 
 import net.corda.core.CordaException
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
@@ -108,7 +108,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
  * @param filteredComponentGroups list of transaction components groups remained after filters are applied to [WireTransaction].
  * @param groupHashes the roots of the transaction component groups.
  */
-@Deterministic
+@KeepForDJVM
 @CordaSerializable
 class FilteredTransaction internal constructor(
         override val id: SecureHash,
@@ -333,7 +333,7 @@ class FilteredTransaction internal constructor(
  * A FilteredComponentGroup is used to store the filtered list of transaction components of the same type in serialised form.
  * This is similar to [ComponentGroup], but it also includes the corresponding nonce per component.
  */
-@Deterministic
+@KeepForDJVM
 @CordaSerializable
 data class FilteredComponentGroup(override val groupIndex: Int, override val components: List<OpaqueBytes>, val nonces: List<SecureHash>, val partialMerkleTree: PartialMerkleTree) : ComponentGroup(groupIndex, components) {
     init {
@@ -345,7 +345,7 @@ data class FilteredComponentGroup(override val groupIndex: Int, override val com
  * @param id transaction's id.
  * @param reason information about the exception.
  */
-@Deterministic
+@KeepForDJVM
 @CordaSerializable
 class ComponentVisibilityException(val id: SecureHash, val reason: String) : CordaException("Component visibility error for transaction with id:$id. Reason: $reason")
 
@@ -353,6 +353,6 @@ class ComponentVisibilityException(val id: SecureHash, val reason: String) : Cor
  * @param id transaction's id.
  * @param reason information about the exception.
  */
-@Deterministic
+@KeepForDJVM
 @CordaSerializable
 class FilteredTransactionVerificationException(val id: SecureHash, val reason: String) : CordaException("Transaction with id:$id cannot be verified. Reason: $reason")

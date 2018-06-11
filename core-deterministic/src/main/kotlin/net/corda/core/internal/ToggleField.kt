@@ -1,6 +1,6 @@
 package net.corda.core.internal
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.core.utilities.contextLogger
 import org.slf4j.Logger
 import kotlin.reflect.KProperty
@@ -24,7 +24,7 @@ abstract class ToggleField<T>(val name: String) {
     operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T?) = set(value)
 }
 
-@Deterministic
+@KeepForDJVM
 class SimpleToggleField<T>(name: String, private val once: Boolean = false) : ToggleField<T>(name) {
     private var holder: T? = null // Force T? in API for safety.
     override fun get() = holder
@@ -35,7 +35,7 @@ class SimpleToggleField<T>(name: String, private val once: Boolean = false) : To
     }
 }
 
-@Deterministic
+@KeepForDJVM
 class ThreadLocalToggleField<T>(name: String) : ToggleField<T>(name) {
     private var holder: T? = null // Force T? in API for safety.
     override fun get() = holder
@@ -46,7 +46,7 @@ class ThreadLocalToggleField<T>(name: String) : ToggleField<T>(name) {
 }
 
 @Suppress("UNUSED")
-@Deterministic
+@KeepForDJVM
 class InheritableThreadLocalToggleField<T>(name: String,
                                            private val log: Logger = staticLog,
                                            private val isAGlobalThreadBeingCreated: (Array<StackTraceElement>) -> Boolean) : ToggleField<T>(name) {

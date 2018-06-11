@@ -1,7 +1,7 @@
-@file:Deterministic
+@file:KeepForDJVM
 package net.corda.serialization.internal
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import java.util.*

@@ -1,6 +1,6 @@
 package net.corda.core.internal
 
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -12,7 +12,7 @@ import java.util.concurrent.LinkedBlockingQueue
  * @param newInstance The function to call to create a pooled resource.
  */
 // TODO This could be implemented more efficiently. Currently the "non-sticky" use case is not optimised, it just chooses a random instance to wait on.
-@NonDeterministic
+@DeleteForDJVM
 class LazyStickyPool<A : Any>(
         size: Int,
         private val newInstance: () -> A

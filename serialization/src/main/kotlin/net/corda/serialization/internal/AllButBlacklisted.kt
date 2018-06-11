@@ -1,6 +1,6 @@
 package net.corda.serialization.internal
 
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
 import net.corda.core.serialization.ClassWhitelist
 import sun.misc.Unsafe
 import sun.security.util.Password
@@ -35,7 +35,7 @@ import kotlin.collections.LinkedHashSet
  * in the blacklist - it will still be serialized as specified by custom serializer.
  * For more details, see [net.corda.serialization.internal.CordaClassResolver.getRegistration]
  */
-@NonDeterministic
+@DeleteForDJVM
 object AllButBlacklisted : ClassWhitelist {
 
     private val blacklistedClasses = hashSetOf<String>(

@@ -1,6 +1,6 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.Data
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
@@ -14,7 +14,7 @@ import java.io.NotSerializableException
  */
 // TODO: make the schema parsing lazy since mostly schemas will have been seen before and we only need it if we
 // TODO: don't recognise a type descriptor.
-@Deterministic
+@KeepForDJVM
 data class Envelope(val obj: Any?, val schema: Schema, val transformsSchema: TransformsSchema) : DescribedType {
     companion object : DescribedTypeConstructor<Envelope> {
         val DESCRIPTOR = AMQPDescriptorRegistry.ENVELOPE.amqpDescriptor

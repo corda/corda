@@ -1,10 +1,10 @@
-@file:Deterministic
+@file:KeepForDJVM
 @file:JvmName("CryptoUtils")
 
 package net.corda.core.crypto
 
-import net.corda.core.Deterministic
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.internal.platformSecureRandomFactory
 import net.corda.core.serialization.SerializationDefaults
@@ -127,7 +127,7 @@ operator fun KeyPair.component1(): PrivateKey = this.private
 operator fun KeyPair.component2(): PublicKey = this.public
 
 /** A simple wrapper that will make it easier to swap out the signature algorithm we use in future. */
-@NonDeterministic
+@DeleteForDJVM
 fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
 
 /**
@@ -136,7 +136,7 @@ fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
  * @param entropy a [BigInteger] value.
  * @return a deterministically generated [KeyPair] for the [Crypto.DEFAULT_SIGNATURE_SCHEME].
  */
-@NonDeterministic
+@DeleteForDJVM
 fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.deriveKeyPairFromEntropy(entropy)
 
 /**
@@ -173,7 +173,7 @@ fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Cr
  * or if no strong [SecureRandom] implementations are available or if Security.getProperty("securerandom.strongAlgorithms") is null or empty,
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
-@NonDeterministic
+@DeleteForDJVM
 @Throws(NoSuchAlgorithmException::class)
 fun secureRandomBytes(numOfBytes: Int): ByteArray = ByteArray(numOfBytes).apply { newSecureRandom().nextBytes(this) }
 
@@ -195,7 +195,7 @@ fun secureRandomBytes(numOfBytes: Int): ByteArray = ByteArray(numOfBytes).apply 
  * or if no strong SecureRandom implementations are available or if Security.getProperty("securerandom.strongAlgorithms") is null or empty,
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
-@NonDeterministic
+@DeleteForDJVM
 @Throws(NoSuchAlgorithmException::class)
 fun newSecureRandom(): SecureRandom = platformSecureRandomFactory()
 
@@ -203,7 +203,7 @@ fun newSecureRandom(): SecureRandom = platformSecureRandomFactory()
  * Returns a random positive non-zero long generated using a secure RNG. This function sacrifies a bit of entropy in order
  * to avoid potential bugs where the value is used in a context where negative numbers or zero are not expected.
  */
-@NonDeterministic
+@DeleteForDJVM
 fun random63BitValue(): Long {
     while (true) {
         val candidate = Math.abs(newSecureRandom().nextLong())

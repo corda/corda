@@ -1,6 +1,6 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
@@ -61,7 +61,7 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
     /**
      * A property serializer for a complex type (another object).
      */
-    @Deterministic
+    @KeepForDJVM
     class DescribedTypePropertySerializer(
             name: String,
             readMethod: PropertyReader,

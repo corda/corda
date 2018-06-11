@@ -1,7 +1,7 @@
 package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
@@ -34,7 +34,7 @@ import kotlin.collections.ArrayList
  * When this is set to a non-null value, an output state can be added by just passing in a [ContractState] – a
  * [TransactionState] with this notary specified will be generated automatically.
  */
-@NonDeterministic
+@DeleteForDJVM
 open class TransactionBuilder(
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),

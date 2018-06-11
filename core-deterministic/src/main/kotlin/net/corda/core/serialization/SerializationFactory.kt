@@ -1,6 +1,6 @@
 package net.corda.core.serialization
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.ByteSequence
 
@@ -8,7 +8,7 @@ import net.corda.core.utilities.ByteSequence
  * An abstraction for serializing and deserializing objects, with support for versioning of the wire format via
  * a header / prefix in the bytes.
  */
-@Deterministic
+@KeepForDJVM
 abstract class SerializationFactory {
     /**
      * Deserialize the bytes in to an object, using the prefixed bytes to determine the format.

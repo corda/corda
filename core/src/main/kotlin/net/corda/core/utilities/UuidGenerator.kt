@@ -1,9 +1,9 @@
 package net.corda.core.utilities
 
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
 import java.util.*
 
-@NonDeterministic
+@DeleteForDJVM
 class UuidGenerator {
 
     companion object {

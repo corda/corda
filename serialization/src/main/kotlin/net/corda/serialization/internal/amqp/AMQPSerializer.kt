@@ -1,6 +1,6 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.SerializationContext
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
@@ -9,7 +9,7 @@ import java.lang.reflect.Type
 /**
  * Implemented to serialize and deserialize different types of objects to/from AMQP.
  */
-@Deterministic
+@KeepForDJVM
 interface AMQPSerializer<out T> {
     /**
      * The JVM type this can serialize and deserialize.

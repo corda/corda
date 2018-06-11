@@ -2,8 +2,8 @@ package net.corda.core.transactions
 
 import net.corda.core.CordaException
 import net.corda.core.CordaThrowable
-import net.corda.core.Deterministic
-import net.corda.core.NonDeterministic
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
@@ -35,7 +35,7 @@ import java.util.function.Predicate
  * sign.
  */
 // DOCSTART 1
-@Deterministic
+@KeepForDJVM
 @CordaSerializable
 data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                              override val sigs: List<TransactionSignature>
@@ -134,7 +134,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * @throws SignaturesMissingException if any signatures that should have been present are missing.
      */
     @JvmOverloads
-    @NonDeterministic
+    @DeleteForDJVM
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true): LedgerTransaction {
         // TODO: We could probably optimise the below by
@@ -163,7 +163,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * @throws SignaturesMissingException if any signatures that should have been present are missing.
      */
     @JvmOverloads
-    @NonDeterministic
+    @DeleteForDJVM
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
         when (coreTransaction) {
@@ -174,7 +174,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     /** No contract code is run when verifying notary change transactions, it is sufficient to check invariants during initialisation. */
-    @NonDeterministic
+    @DeleteForDJVM
     private fun verifyNotaryChangeTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
         val ntx = resolveNotaryChangeTransaction(services)
         if (checkSufficientSignatures) ntx.verifyRequiredSignatures()
@@ -182,7 +182,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     /** No contract code is run when verifying contract upgrade transactions, it is sufficient to check invariants during initialisation. */
-    @NonDeterministic
+    @DeleteForDJVM
     private fun verifyContractUpgradeTransaction(services: ServicesForResolution, checkSufficientSignatures: Boolean) {
         val ctx = resolveContractUpgradeTransaction(services)
         if (checkSufficientSignatures) ctx.verifyRequiredSignatures()
@@ -192,7 +192,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     // TODO: Verify contract constraints here as well as in LedgerTransaction to ensure that anything being deserialised
     // from the attachment is trusted. This will require some partial serialisation work to not load the ContractState
     // objects from the TransactionState.
-    @NonDeterministic
+    @DeleteForDJVM
     private fun verifyRegularTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
         val ltx = toLedgerTransaction(services, checkSufficientSignatures)
         // TODO: allow non-blocking verification.
@@ -203,7 +203,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * Resolves the underlying base transaction and then returns it, handling any special case transactions such as
      * [NotaryChangeWireTransaction].
      */
-    @NonDeterministic
+    @DeleteForDJVM
     fun resolveBaseTransaction(servicesForResolution: ServicesForResolution): BaseTransaction {
         return when (coreTransaction) {
             is NotaryChangeWireTransaction -> resolveNotaryChangeTransaction(servicesForResolution)
@@ -219,7 +219,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * Resolves the underlying transaction with signatures and then returns it, handling any special case transactions
      * such as [NotaryChangeWireTransaction].
      */
-    @NonDeterministic
+    @DeleteForDJVM
     fun resolveTransactionWithSignatures(services: ServicesForResolution): TransactionWithSignatures {
         return when (coreTransaction) {
             is NotaryChangeWireTransaction -> resolveNotaryChangeTransaction(services)
@@ -234,7 +234,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * If [transaction] is a [NotaryChangeWireTransaction], loads the input states and resolves it to a
      * [NotaryChangeLedgerTransaction] so the signatures can be verified.
      */
-    @NonDeterministic
+    @DeleteForDJVM
     fun resolveNotaryChangeTransaction(services: ServicesForResolution): NotaryChangeLedgerTransaction {
         val ntx = coreTransaction as? NotaryChangeWireTransaction
                 ?: throw IllegalStateException("Expected a ${NotaryChangeWireTransaction::class.simpleName} but found ${coreTransaction::class.simpleName}")
@@ -245,14 +245,14 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
      * If [transaction] is a [NotaryChangeWireTransaction], loads the input states and resolves it to a
      * [NotaryChangeLedgerTransaction] so the signatures can be verified.
      */
-    @NonDeterministic
+    @DeleteForDJVM
     fun resolveNotaryChangeTransaction(services: ServiceHub) = resolveNotaryChangeTransaction(services as ServicesForResolution)
 
     /**
      * If [coreTransaction] is a [ContractUpgradeWireTransaction], loads the input states and resolves it to a
      * [ContractUpgradeLedgerTransaction] so the signatures can be verified.
      */
-    @NonDeterministic
+    @DeleteForDJVM
     fun resolveContractUpgradeTransaction(services: ServicesForResolution): ContractUpgradeLedgerTransaction {
         val ctx = coreTransaction as? ContractUpgradeWireTransaction
                 ?: throw IllegalStateException("Expected a ${ContractUpgradeWireTransaction::class.simpleName} but found ${coreTransaction::class.simpleName}")
@@ -266,7 +266,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                 "Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}"
     }
 
-    @Deterministic
+    @KeepForDJVM
     @CordaSerializable
     class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash)
         : NamedByHash, SignatureException(missingSignatureMsg(missing, descriptions, id)), CordaThrowable by CordaException(missingSignatureMsg(missing, descriptions, id))

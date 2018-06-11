@@ -1,6 +1,6 @@
 package net.corda.core.serialization
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 
 /**
  * Allows CorDapps to provide custom serializers for third party libraries where those libraries cannot
@@ -11,7 +11,7 @@ import net.corda.core.Deterministic
  * NOTE: The proxy object should be specified as a separate class. However, this can be defined within the
  * scope of the custom serializer.
  */
-@Deterministic
+@KeepForDJVM
 interface SerializationCustomSerializer<OBJ, PROXY> {
     /**
      * Should facilitate the conversion of the third party object into the serializable

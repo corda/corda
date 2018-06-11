@@ -7,8 +7,8 @@ import kotlin.annotation.Target
 
 /**
  * We expect that almost every non-deterministic element can have its bytecode
- * deleted entirely from the deterministic version of Corda Core. This annotation
- * is for those (hopefully!) few occasions where the non-deterministic function
+ * deleted entirely from the deterministic version of Corda. This annotation is
+ * for those (hopefully!) few occasions where the non-deterministic function
  * cannot be deleted. In these cases, the function will be stubbed out instead.
  */
 // DOCSTART 01
@@ -20,5 +20,5 @@ import kotlin.annotation.Target
 )
 @Retention(BINARY)
 @CordaInternal
-annotation class NonDeterministicStub
+annotation class StubOutForDJVM
 // DOCEND 01

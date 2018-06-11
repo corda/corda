@@ -1,6 +1,6 @@
 package net.corda.serialization.internal.amqp.custom
 
-import net.corda.core.Deterministic
+import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.lang.reflect.Method
@@ -29,6 +29,6 @@ class ZonedDateTimeSerializer(factory: SerializerFactory) : CustomSerializer.Pro
 
     override fun fromProxy(proxy: ZonedDateTimeProxy): ZonedDateTime = ofLenient.invoke(null, proxy.dateTime, proxy.offset, proxy.zone) as ZonedDateTime
 
-    @Deterministic
+    @KeepForDJVM
     data class ZonedDateTimeProxy(val dateTime: LocalDateTime, val offset: ZoneOffset, val zone: ZoneId)
 }
