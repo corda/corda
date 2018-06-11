@@ -139,7 +139,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val eventQueue = getTransientField(TransientValues::eventQueue)
         try {
             eventLoop@ while (true) {
-                val nextEvent = eventQueue.receive()
+                val nextEvent = try {
+                    eventQueue.receive()
+                } catch (interrupted: InterruptedException) {
+                    log.error("Flow interrupted while waiting for events, aborting immediately")
+                    abortFiber()
+                }
                 val continuation = processEvent(transitionExecutor, nextEvent)
                 when (continuation) {
                     is FlowContinuation.Resume -> return continuation.result
@@ -166,7 +171,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      *   processing finished. Purely used for internal invariant checks.
      */
     @Suspendable
-    private fun processEventImmediately(event: Event, isDbTransactionOpenOnEntry: Boolean, isDbTransactionOpenOnExit: Boolean): FlowContinuation {
+    private fun processEventImmediately(
+            event: Event,
+            isDbTransactionOpenOnEntry: Boolean,
+            isDbTransactionOpenOnExit: Boolean): FlowContinuation {
         checkDbTransaction(isDbTransactionOpenOnEntry)
         val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
         val continuation = processEvent(transitionExecutor, event)
@@ -246,7 +254,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         processEventImmediately(
                 Event.EnterSubFlow(subFlow.javaClass,
                         createSubFlowVersion(
-                               serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion)),
+                               serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion
+                        )
+                ),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         )
