@@ -1,8 +1,12 @@
 @file:JvmName("Elements")
 package net.corda.gradle.jarfilter
 
+import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.deserialization.NameResolver
+import org.jetbrains.kotlin.metadata.deserialization.TypeTable
+import org.jetbrains.kotlin.metadata.deserialization.returnType
 import org.jetbrains.kotlin.metadata.jvm.JvmProtoBuf
+import org.jetbrains.kotlin.metadata.jvm.deserialization.ClassMapperLite
 import org.objectweb.asm.Opcodes.ACC_SYNTHETIC
 import java.util.*
 
@@ -74,3 +78,33 @@ internal fun JvmProtoBuf.JvmPropertySignature.toSetter(nameResolver: NameResolve
 
 internal fun JvmProtoBuf.JvmMethodSignature.toMethodElement(nameResolver: NameResolver)
     = MethodElement(nameResolver.getString(name), nameResolver.getString(desc))
+
+/**
+ * This logic is based heavily on [JvmProtoBufUtil.getJvmFieldSignature].
+ */
+internal fun JvmProtoBuf.JvmPropertySignature.toFieldElement(property: ProtoBuf.Property, nameResolver: NameResolver, typeTable: TypeTable): FieldElement {
+    var nameId = property.name
+    var descId = -1
+
+    if (hasField()) {
+        if (field.hasName()) {
+            nameId = field.name
+        }
+        if (field.hasDesc()) {
+            descId = field.desc
+        }
+    }
+
+    val descriptor = if (descId == -1) {
+        val returnType = property.returnType(typeTable)
+        if (returnType.hasClassName()) {
+            ClassMapperLite.mapClass(nameResolver.getQualifiedClassName(returnType.className))
+        } else {
+            "?"
+        }
+    } else {
+        nameResolver.getString(descId)
+    }
+
+    return FieldElement(nameResolver.getString(nameId), descriptor)
+}

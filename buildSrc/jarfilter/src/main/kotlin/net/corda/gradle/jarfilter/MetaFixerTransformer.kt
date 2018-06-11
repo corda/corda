@@ -6,6 +6,7 @@ import org.jetbrains.kotlin.metadata.ProtoBuf.Class.Kind.*
 import org.jetbrains.kotlin.metadata.deserialization.Flags.*
 import org.jetbrains.kotlin.metadata.deserialization.NameResolver
 import org.jetbrains.kotlin.metadata.deserialization.TypeTable
+import org.jetbrains.kotlin.metadata.deserialization.getExtensionOrNull
 import org.jetbrains.kotlin.metadata.jvm.JvmProtoBuf.*
 import org.jetbrains.kotlin.metadata.jvm.deserialization.BitEncoding
 import org.jetbrains.kotlin.metadata.jvm.deserialization.JvmNameResolver
@@ -126,34 +127,30 @@ internal abstract class MetaFixerTransformer<out T : MessageLite>(
         var idx = 0
         removed@ while (idx < properties.size) {
             val property = properties[idx]
-            val signature = JvmProtoBufUtil.getJvmFieldSignature(property, nameResolver, typeTable)
-            if (signature != null) {
-                if (property.hasExtension(propertySignature)) {
-                    val getterMethod = property.getExtension(propertySignature).toGetter(nameResolver)
-                    val field = FieldElement(signature.name, signature.desc)
+            val signature = property.getExtensionOrNull(propertySignature) ?: continue
+            val field = signature.toFieldElement(property, nameResolver, typeTable)
+            val getterMethod = signature.toGetter(nameResolver)
 
-                    /**
-                     * A property annotated with [JvmField] will use a field instead of a getter method.
-                     * But properties without [JvmField] will also usually have a backing field. So we only
-                     * remove a property that has either lost its getter method, or never had a getter method
-                     * and has lost its field.
-                     *
-                     * Having said that, we cannot remove [JvmField] properties from a companion object class
-                     * because these properties are implemented as static fields on the companion's host class.
-                     */
-                    val isValidProperty = if (getterMethod == null) {
-                        actualFields.contains(field) || classKind == COMPANION_OBJECT
-                    } else {
-                        actualMethods.contains(getterMethod.name + getterMethod.descriptor)
-                    }
+            /**
+             * A property annotated with [JvmField] will use a field instead of a getter method.
+             * But properties without [JvmField] will also usually have a backing field. So we only
+             * remove a property that has either lost its getter method, or never had a getter method
+             * and has lost its field.
+             *
+             * Having said that, we cannot remove [JvmField] properties from a companion object class
+             * because these properties are implemented as static fields on the companion's host class.
+             */
+            val isValidProperty = if (getterMethod == null) {
+                actualFields.contains(field) || classKind == COMPANION_OBJECT
+            } else {
+                actualMethods.contains(getterMethod.name + getterMethod.descriptor)
+            }
 
-                    if (!isValidProperty) {
-                        logger.info("-- removing property: {},{}", field.name, field.descriptor)
-                        properties.removeAt(idx)
-                        ++count
-                        continue@removed
-                    }
-                }
+            if (!isValidProperty) {
+                logger.info("-- removing property: {},{}", field.name, field.descriptor)
+                properties.removeAt(idx)
+                ++count
+                continue@removed
             }
             ++idx
         }

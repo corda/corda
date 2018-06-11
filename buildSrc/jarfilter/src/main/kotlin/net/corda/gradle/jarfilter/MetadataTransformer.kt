@@ -5,6 +5,7 @@ import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.deserialization.Flags.*
 import org.jetbrains.kotlin.metadata.deserialization.NameResolver
 import org.jetbrains.kotlin.metadata.deserialization.TypeTable
+import org.jetbrains.kotlin.metadata.deserialization.getExtensionOrNull
 import org.jetbrains.kotlin.metadata.jvm.JvmProtoBuf.*
 import org.jetbrains.kotlin.metadata.jvm.deserialization.BitEncoding
 import org.jetbrains.kotlin.metadata.jvm.deserialization.JvmNameResolver
@@ -132,23 +133,21 @@ internal abstract class MetadataTransformer<out T : MessageLite>(
     private fun filterProperty(deleted: FieldElement): Boolean {
         for (idx in 0 until properties.size) {
             val property = properties[idx]
-            val signature = JvmProtoBufUtil.getJvmFieldSignature(property, nameResolver, typeTable) ?: continue
-            if (signature.name.toVisible() == deleted.name) {
+            val signature = property.getExtensionOrNull(propertySignature) ?: continue
+            val field = signature.toFieldElement(property, nameResolver, typeTable)
+            if (field.name.toVisible() == deleted.name) {
                 // Check that this property's getter has the correct descriptor.
                 // If it doesn't then we have the wrong property here.
-                if (property.hasExtension(propertySignature)) {
-                    val ext = property.getExtension(propertySignature)
-                    val getter = ext.toGetter(nameResolver)
-                    if (getter != null) {
-                        if (!getter.descriptor.startsWith(deleted.extension)) {
-                            continue
-                        }
-                        deleteExtra(getter)
+                val getter = signature.toGetter(nameResolver)
+                if (getter != null) {
+                    if (!getter.descriptor.startsWith(deleted.extension)) {
+                        continue
                     }
-                    ext.toSetter(nameResolver)?.apply(::deleteExtra)
+                    deleteExtra(getter)
                 }
+                signature.toSetter(nameResolver)?.apply(::deleteExtra)
 
-                logger.info("-- removing property: {},{}", signature.name, signature.desc)
+                logger.info("-- removing property: {},{}", field.name, field.descriptor)
                 properties.removeAt(idx)
                 return true
             }

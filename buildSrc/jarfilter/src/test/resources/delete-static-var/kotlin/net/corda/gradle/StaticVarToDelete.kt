@@ -12,3 +12,8 @@ var longVar: Long = 123456789L
 
 @DeleteMe
 var intVar: Int = 123456
+
+@DeleteMe
+var <T: Any> T.memberVar: T
+    get() = this
+    set(value) { }

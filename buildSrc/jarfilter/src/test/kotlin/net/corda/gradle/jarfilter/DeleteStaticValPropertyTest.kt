@@ -13,6 +13,7 @@ class DeleteStaticValPropertyTest {
         private const val PROPERTY_CLASS = "net.corda.gradle.StaticValToDelete"
         private const val DEFAULT_BIG_NUMBER: Long = 123456789L
         private const val DEFAULT_NUMBER: Int = 123456
+        private object LocalBlob
 
         private val testProjectDir = TemporaryFolder()
         private val testProject = JarFilterProject(testProjectDir, "delete-static-val")
@@ -67,7 +68,23 @@ class DeleteStaticValPropertyTest {
 
         classLoaderFor(testProject.filteredJar).use { cl ->
             cl.load<Any>(PROPERTY_CLASS).apply {
-                assertFailsWith<NoSuchMethodException> { getDeclaredMethod("getIntVar") }
+                assertFailsWith<NoSuchMethodException> { getDeclaredMethod("getIntVal") }
+            }
+        }
+    }
+
+    @Test
+    fun deleteMemberVal() {
+        classLoaderFor(testProject.sourceJar).use { cl ->
+            cl.load<Any>(PROPERTY_CLASS).apply {
+                val getter = getDeclaredMethod("getMemberVal", Any::class.java)
+                assertEquals(LocalBlob, getter.invoke(null, LocalBlob))
+            }
+        }
+
+        classLoaderFor(testProject.filteredJar).use { cl ->
+            cl.load<Any>(PROPERTY_CLASS).apply {
+                assertFailsWith<NoSuchMethodException> { getDeclaredMethod("getMemberVal", Any::class.java) }
             }
         }
     }

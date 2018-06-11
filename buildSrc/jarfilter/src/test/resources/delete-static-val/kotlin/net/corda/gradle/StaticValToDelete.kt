@@ -12,3 +12,6 @@ val longVal: Long = 123456789L
 
 @DeleteMe
 val intVal: Int = 123456
+
+@DeleteMe
+val <T: Any> T.memberVal: T get() = this
