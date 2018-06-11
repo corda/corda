@@ -204,23 +204,13 @@ class StaffedFlowHospital {
     object DoctorTimeout : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: MedicalHistory): Diagnosis {
             if (newError is FlowTimeoutException) {
-                if (isTimedFlow(flowFiber)) {
-                    if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this)) {
-                        return Diagnosis.DISCHARGE
-                    } else {
-                        log.warn("\"Maximum number of retries reached for timed flow ${flowFiber.javaClass}")
-                    }
+                if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this)) {
+                    return Diagnosis.DISCHARGE
                 } else {
-                    log.warn("\"Unable to restart flow: ${flowFiber.javaClass}, it is not timed and does not contain any timed sub-flows.")
+                    log.warn("\"Maximum number of retries reached for timed flow ${flowFiber.javaClass}")
                 }
             }
             return Diagnosis.NOT_MY_SPECIALTY
-        }
-
-        private fun isTimedFlow(flowFiber: FlowFiber): Boolean {
-            return flowFiber.snapshot().checkpoint.subFlowStack.any {
-                TimedFlow::class.java.isAssignableFrom(it.flowClass)
-            }
         }
     }
 
