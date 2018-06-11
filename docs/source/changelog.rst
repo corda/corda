@@ -7,6 +7,9 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Fixed an issue where ``trackBy`` was returning ``ContractStates`` from a transaction that were not being tracked. The
+  unrelated ``ContractStates`` will now be filtered out from the returned ``Vault.Update``.
+
 * Introducing the flow hospital - a component of the node that manages flows that have errored and whether they should
   be retried from their previous checkpoints or have their errors propagate. Currently it will respond to any error that
   occurs during the resolution of a received transaction as part of ``FinalityFlow``. In such a scenerio the receiving
