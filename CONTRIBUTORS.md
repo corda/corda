@@ -68,6 +68,7 @@ see changes to this list.
 * David Lee (BCS)
 * Dirk Hermans (KBC)
 * Edward Greenwood (State Street)
+* Elendu Uche (APPZONE)
 * Farzad Pezeshkpour (RBS)
 * fracting
 * Frederic Dalibard (Natixis)
