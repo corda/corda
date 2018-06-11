@@ -150,7 +150,7 @@ database before executing the migration scripts.
 Migration tool
 --------------
 
-The migration tool is distributed as a standalone jar file named ``db-migration-tool-${corda_version}.jar``.
+The migration tool is distributed as a standalone jar file named ``tools-database-migration-${corda_version}.jar``.
 It is intended to be used by Corda Enterprise node administrators.
 
 Currently it has these features:
@@ -192,7 +192,7 @@ It has the following command line options:
 
 For example::
 
-    java -jar db-migration-tool-R3.CORDA-3.0-DP3-RC01.jar --base-directory /path/to/node --execute-migration
+    java -jar tools-database-migration-3.0.0.jar --base-directory /path/to/node --execute-migration
 
 .. note:: When running the migration tool, prefer using absolute paths when specifying the "base-directory".
 
@@ -203,11 +203,11 @@ Examples
 The first time you set up your node, you will want to create the necessary database tables. Run the normal installation
 steps. Using the db migration tool, attempt a dry-run to inspect the output SQL::
 
-    --base-directory /path/to/node --dry-run
+    java -jar tools-database-migration-3.0.0.jar --base-directory /path/to/node --dry-run
 
 The output sql from the above command can be executed directly on the database or this command can be run::
 
-    --base-directory /path/to/node --execute-migration
+    java -jar tools-database-migration-3.0.0.jar --base-directory /path/to/node --execute-migration
 
 At this point the node can be started successfully.
 
@@ -229,7 +229,7 @@ These are the steps:
 
 1. Deploy the CorDapp on your node (copy the jar into the ``cordapps`` folder)
 2. Find out the name of the ``MappedSchema`` containing the new contract state entities.
-3. Call the migration tool: ``--base-directory /path/to/node --create-migration-sql-for-cordapp com.example.MyMappedSchema``
+3. Call the migration tool: ``java -jar tools-database-migration-3.0.0.jar --base-directory /path/to/node --create-migration-sql-for-cordapp com.example.MyMappedSchema``
    This will generate a file called ``my-mapped-schema.changelog-master.sql`` in a folder called ``migration`` in the ``base-directory``.
    In case you don't specify the actual ``MappedSchema`` name, the tool will generate one SQL file for each schema defined in the CorDapp
 4. Inspect the file(s) to make sure it is correct. This is a standard SQL file with some Liquibase metadata as comments.
@@ -294,6 +294,6 @@ When seeing problems acquiring the lock, with output like this::
             at liquibase.integration.commandline.Main.main(Main.java:116)
 
 then the advice at `this StackOverflow question <https://stackoverflow.com/questions/15528795/liquibase-lock-reasons>`_
-may be useful. You can run ``--base-directory /path/to/node --release-lock`` to force Liquibase to give up the lock.
+may be useful. You can run ``java -jar tools-database-migration-3.0.0.jar --base-directory /path/to/node --release-lock`` to force Liquibase to give up the lock.
 
 
