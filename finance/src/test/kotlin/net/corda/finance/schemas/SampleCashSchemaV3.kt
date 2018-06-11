@@ -23,11 +23,11 @@ object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
 
             /** X500Name of participant parties **/
             @ElementCollection
-            var participants: MutableSet<AbstractParty>? = null,
+            var participants: MutableSet<AbstractParty?>? = null,
 
             /** X500Name of owner party **/
             @Column(name = "owner_name", nullable = true)
-            var owner: AbstractParty,
+            var owner: AbstractParty?,
 
             @Column(name = "pennies", nullable = false)
             var pennies: Long,
@@ -37,7 +37,7 @@ object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
 
             /** X500Name of issuer party **/
             @Column(name = "issuer_name", nullable = true)
-            var issuer: AbstractParty,
+            var issuer: AbstractParty?,
 
             @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
             @Type(type = "corda-wrapper-binary")

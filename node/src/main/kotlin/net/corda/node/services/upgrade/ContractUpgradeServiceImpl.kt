@@ -22,15 +22,15 @@ class ContractUpgradeServiceImpl : ContractUpgradeService, SingletonSerializeAsT
             var stateRef: String = "",
 
             /** refers to the UpgradedContract class name*/
-            @Column(name = "contract_class_name", nullable = false)
-            var upgradedContractClassName: String = ""
+            @Column(name = "contract_class_name", nullable = true)
+            var upgradedContractClassName: String? = ""
     ) : Serializable
 
     private companion object {
         fun createContractUpgradesMap(): PersistentMap<String, String, DBContractUpgrade, String> {
             return PersistentMap(
                     toPersistentEntityKey = { it },
-                    fromPersistentEntity = { Pair(it.stateRef, it.upgradedContractClassName) },
+                    fromPersistentEntity = { Pair(it.stateRef, it.upgradedContractClassName ?: "") },
                     toPersistentEntity = { key: String, value: String ->
                         DBContractUpgrade().apply {
                             stateRef = key

@@ -33,8 +33,8 @@ class DBTransactionMappingStorage(private val database: CordaPersistence) : Stat
             @Column(name = "tx_id", length = 64, nullable = false)
             var txId: String = "",
 
-            @Column(name = "state_machine_run_id", length = 36, nullable = false)
-            var stateMachineRunId: String = ""
+            @Column(name = "state_machine_run_id", length = 36, nullable = true)
+            var stateMachineRunId: String? = ""
     ) : Serializable
 
     private companion object {
