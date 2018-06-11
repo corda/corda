@@ -39,7 +39,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val networkServices: NetworkServicesConfig?
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
-    val p2pMessagingRetry: P2PMessagingRetryConfiguration
+    val flowTimeout: FlowTimeoutConfiguration
     val notary: NotaryConfig?
     val additionalNodeInfoPollingFrequencyMsec: Long
     val p2pAddress: NetworkHostAndPort
@@ -139,12 +139,11 @@ data class NetworkServicesConfig(
 /**
  * Currently only used for notarisation requests.
  *
- * When the response doesn't arrive in time, the message is resent to a different notary-replica round-robin
- * in case of clustered notaries.
+ * Specifies the configuration for timing out and restarting a [TimedFlow].
  */
-data class P2PMessagingRetryConfiguration(
-        val messageRedeliveryDelay: Duration,
-        val maxRetryCount: Int,
+data class FlowTimeoutConfiguration(
+        val timeout: Duration,
+        val maxRestartCount: Int,
         val backoffBase: Double
 )
 
@@ -167,7 +166,7 @@ data class NodeConfigurationImpl(
         override val rpcUsers: List<User>,
         override val security: SecurityConfiguration? = null,
         override val verifierType: VerifierType,
-        override val p2pMessagingRetry: P2PMessagingRetryConfiguration,
+        override val flowTimeout: FlowTimeoutConfiguration,
         override val p2pAddress: NetworkHostAndPort,
         private val rpcAddress: NetworkHostAndPort? = null,
         private val rpcSettings: NodeRpcSettings,

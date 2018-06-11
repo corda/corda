@@ -483,7 +483,7 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(null).whenever(it).networkServices
         doReturn(VerifierType.InMemory).whenever(it).verifierType
         // Set to be long enough so retries don't trigger unless we override it
-        doReturn(P2PMessagingRetryConfiguration(1.hours, 3, backoffBase = 2.0)).whenever(it).p2pMessagingRetry
+        doReturn(FlowTimeoutConfiguration(1.hours, 3, backoffBase = 1.0)).whenever(it).flowTimeout
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
     }
