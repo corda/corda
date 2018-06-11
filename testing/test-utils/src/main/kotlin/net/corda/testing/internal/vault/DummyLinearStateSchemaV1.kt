@@ -58,8 +58,8 @@ object DummyLinearStateSchemaV1 : MappedSchema(schemaFamily = DummyLinearStateSc
             /**
              *  Dummy attributes
              */
-            @Column(name = "linear_string", nullable = false)
-            var linearString: String,
+            @Column(name = "linear_string", nullable = true)
+            var linearString: String?,
 
             @Column(name = "linear_number", nullable = false)
             var linearNumber: Long,

@@ -100,8 +100,6 @@
       <module name="experimental-behave_main" target="1.8" />
       <module name="experimental-behave_smokeTest" target="1.8" />
       <module name="experimental-behave_test" target="1.8" />
-      <module name="experimental-blobinspector_main" target="1.8" />
-      <module name="experimental-blobinspector_test" target="1.8" />
       <module name="experimental-kryo-hook_main" target="1.8" />
       <module name="experimental-kryo-hook_test" target="1.8" />
       <module name="experimental_main" target="1.8" />

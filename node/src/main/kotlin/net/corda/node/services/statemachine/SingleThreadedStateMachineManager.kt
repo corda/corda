@@ -23,12 +23,20 @@ import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.TimedFlow
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
@@ -40,7 +48,11 @@ import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
-import net.corda.node.services.statemachine.interceptors.*
+import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
+import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
+import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
+import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
+import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -52,7 +64,11 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.SecureRandom
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.ArrayList
@@ -230,6 +246,7 @@ class SingleThreadedStateMachineManager(
                     database.transaction {
                         checkpointStorage.removeCheckpoint(id)
                     }
+                    transitionExecutor.forceRemoveFlow(id)
                 }
             } else {
                 // TODO replace with a clustered delete after we'll support clustered nodes
