@@ -70,11 +70,3 @@ application development please continue to refer to `the main project documentat
    design/monitoring-management/design.md
    design/sgx-integration/design.md
 
-.. toctree::
-   :caption: Participate
-   :maxdepth: 2
-
-   release-process-index.rst
-   corda-repo-layout.rst
-   deterministic-modules.rst
-   building-the-docs.rst
