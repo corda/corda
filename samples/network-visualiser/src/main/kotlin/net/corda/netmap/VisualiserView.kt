@@ -46,7 +46,7 @@ internal class VisualiserView {
 
     val iconImage = Image(NetworkMapVisualiser::class.java.getResourceAsStream("Corda logo.png"))
 
-    val titleString = "Corda Network Visualiser"
+    val titleString = "Corda Network Simulator"
 
     val backgroundColor: Color = mapImage.image.pixelReader.getColor(0, 0)
 
