@@ -41,6 +41,7 @@ We look forward to seeing what you can do with Corda!
    node-internals-index.rst
    component-library-index.rst
    troubleshooting.rst
+   json.rst
 
 .. toctree::
    :caption: Operations
@@ -72,4 +73,3 @@ We look forward to seeing what you can do with Corda!
    corda-repo-layout.rst
    deterministic-modules.rst
    building-the-docs.rst
-   json.rst
