@@ -30,8 +30,7 @@ application development please continue to refer to `the main project documentat
 
    hot-cold-deployment
    database-migration
-   corda-bridge-component
-   bridge-configuration-file
+   corda-firewall
 
 .. toctree::
    :caption: Development
