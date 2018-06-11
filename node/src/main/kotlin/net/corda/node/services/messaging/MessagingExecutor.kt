@@ -15,6 +15,7 @@ import co.paralleluniverse.strands.SettableFuture
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.services.statemachine.FlowMessagingImpl
@@ -189,6 +190,10 @@ class MessagingExecutor(
     }
 
     private fun acknowledgeJob(job: Job.Acknowledge) {
+        log.debug {
+            val id = job.message.getStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID)
+            "Acking $id"
+        }
         job.message.individualAcknowledge()
     }
 }

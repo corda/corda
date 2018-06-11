@@ -6,12 +6,17 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.testing.core.*
+import net.corda.testing.common.internal.ProjectStructure
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
@@ -20,12 +25,12 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import org.junit.ClassRule
-import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
+import kotlin.test.assertEquals
 
 class HardRestartTest : IntegrationTest() {
     companion object {
@@ -33,14 +38,20 @@ class HardRestartTest : IntegrationTest() {
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(),
                 DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val logConfigFile = ProjectStructure.projectRootDir / "config" / "dev" / "log4j2.xml"
     }
+
     @StartableByRPC
     @InitiatingFlow
-    class Ping(val pongParty: Party) : FlowLogic<Unit>() {
+    class Ping(val pongParty: Party, val times: Int) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val pongSession = initiateFlow(pongParty)
-            pongSession.sendAndReceive<Unit>(Unit)
+            pongSession.sendAndReceive<Unit>(times)
+            for (i in 1 .. times) {
+                val j = pongSession.sendAndReceive<Int>(i).unwrap { it }
+                assertEquals(i, j)
+            }
         }
     }
 
@@ -48,14 +59,18 @@ class HardRestartTest : IntegrationTest() {
     class Pong(val pingSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            pingSession.sendAndReceive<Unit>(Unit)
+            val times = pingSession.sendAndReceive<Int>(Unit).unwrap { it }
+            for (i in 1 .. times) {
+                val j = pingSession.sendAndReceive<Int>(i).unwrap { it }
+                assertEquals(i, j)
+            }
         }
     }
 
     @Test
-    fun restartPingPongFlowRandomly() {
+    fun restartShortPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false)) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
             val (a, b) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:30000")),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
@@ -74,12 +89,74 @@ class HardRestartTest : IntegrationTest() {
                 startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
             }
             CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
-                val returnValue = it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity()).returnValue
+                val returnValue = it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 1).returnValue
                 latch.countDown()
                 // No matter the kill
                 returnValue.getOrThrow()
             }
 
+            pongRestartThread.join()
+        }
+    }
+
+    @Test
+    fun restartLongPingPongFlowRandomly() {
+        val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
+        driver(DriverParameters(isDebug = true, startNodesInProcess = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
+            val (a, b) = listOf(
+                    startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:30000")),
+                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
+            ).transpose().getOrThrow()
+
+            val latch = CountDownLatch(1)
+
+            // We kill -9 and restart the Pong node after a random sleep
+            val pongRestartThread = thread {
+                latch.await()
+                val ms = Random().nextInt(1000)
+                println("Sleeping $ms ms before kill")
+                Thread.sleep(ms.toLong())
+                (b as OutOfProcess).process.destroyForcibly()
+                b.stop()
+                startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
+            }
+            CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
+                val returnValue = it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 100).returnValue
+                latch.countDown()
+                // No matter the kill
+                returnValue.getOrThrow()
+            }
+
+            pongRestartThread.join()
+        }
+    }
+
+    @Test
+    fun softRestartLongPingPongFlowRandomly() {
+        val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
+        driver(DriverParameters(isDebug = true, startNodesInProcess = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
+            val (a, b) = listOf(
+                    startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:30000")),
+                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
+            ).transpose().getOrThrow()
+
+            val latch = CountDownLatch(1)
+
+            // We kill -9 and restart the Pong node after a random sleep
+            val pongRestartThread = thread {
+                latch.await()
+                val ms = Random().nextInt(1000)
+                println("Sleeping $ms ms before kill")
+                Thread.sleep(ms.toLong())
+                b.stop()
+                startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
+            }
+            CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
+                val returnValue = it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 100).returnValue
+                latch.countDown()
+                // No matter the kill
+                returnValue.getOrThrow()
+            }
 
             pongRestartThread.join()
         }
@@ -133,7 +210,7 @@ class HardRestartTest : IntegrationTest() {
     @Test
     fun restartRecursiveFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<RecursiveA>(), Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false)) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
             val (a, b) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:30000")),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
