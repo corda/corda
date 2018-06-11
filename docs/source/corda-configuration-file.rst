@@ -185,7 +185,13 @@ absolute path to the node's base directory.
     :doormanURL: Root address of the network registration service.
     :networkMapURL: Root address of the network map service.
 
-.. note:: Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.
+        .. note:: Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.
+
+:devModeOptions: Allows modification of certain devMode features
+
+    :allowCompatibilityZone: Allows a node configured to operate in development mode to connect to a compatibility zone.
+
+        .. note:: This is an unsupported configuration.
 
 :jvmArgs: An optional list of JVM args, as strings, which replace those inherited from the command line when launching via ``corda.jar``
     only. e.g. ``jvmArgs = [ "-Xmx220m", "-Xms220m", "-XX:+UseG1GC" ]``
