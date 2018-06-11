@@ -52,9 +52,8 @@
 
     </changeSet>
     <changeSet id="nullability" author="R3.Corda">
-        <addNotNullConstraint tableName="dummy_linear_states" columnName="linear_boolean" columnDataType="BOOLEAN"/>
-        <addNotNullConstraint tableName="dummy_linear_states" columnName="linear_number" columnDataType="BIGINT"/>
-        <addNotNullConstraint tableName="dummy_linear_states" columnName="linear_string" columnDataType="NVARCHAR(255)"/>
-        <addNotNullConstraint tableName="dummy_linear_states" columnName="linear_timestamp" columnDataType="TIMESTAMP"/>
+        <addNotNullConstraint tableName="dummy_linear_states_v2" columnName="linear_boolean" columnDataType="BOOLEAN"/>
+        <addNotNullConstraint tableName="dummy_linear_states_v2" columnName="linear_number" columnDataType="BIGINT"/>
+        <addNotNullConstraint tableName="dummy_linear_states_v2" columnName="linear_timestamp" columnDataType="TIMESTAMP"/>
     </changeSet>
 </databaseChangeLog>

@@ -11,13 +11,26 @@
 
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
     <changeSet author="R3.Corda" id="1525962920">
+        <!-- drop indexes before adding not null constraints to the underlying table, recreating index immediately after -->
+        <dropIndex tableName="cp_states" indexName="ccy_code_index"/>
         <addNotNullConstraint tableName="cp_states" columnName="ccy_code" columnDataType="NVARCHAR(3)"/>
+        <createIndex indexName="ccy_code_index" tableName="cp_states">
+            <column name="ccy_code"/>
+        </createIndex>
+        <dropIndex tableName="cp_states" indexName="face_value_index"/>
         <addNotNullConstraint tableName="cp_states" columnName="face_value" columnDataType="BIGINT"/>
+        <createIndex indexName="face_value_index" tableName="cp_states">
+            <column name="face_value"/>
+        </createIndex>
         <addNotNullConstraint tableName="cp_states" columnName="face_value_issuer_key_hash" columnDataType="NVARCHAR(130)"/>
         <addNotNullConstraint tableName="cp_states" columnName="face_value_issuer_ref" columnDataType="varbinary(512)"/>
         <addNotNullConstraint tableName="cp_states" columnName="issuance_key_hash" columnDataType="NVARCHAR(130)"/>
         <addNotNullConstraint tableName="cp_states" columnName="issuance_ref" columnDataType="varbinary(255)"/>
+        <dropIndex tableName="cp_states" indexName="maturity_index"/>
         <addNotNullConstraint tableName="cp_states" columnName="maturity_instant" columnDataType="timestamp"/>
+        <createIndex indexName="maturity_index" tableName="cp_states">
+            <column name="maturity_instant"/>
+        </createIndex>
         <addNotNullConstraint tableName="cp_states" columnName="owner_key_hash" columnDataType="NVARCHAR(130)"/>
     </changeSet>
 
