@@ -35,7 +35,7 @@ Unreleased
 
 * Notary client flow retry logic was improved to handle validating flows better. Instead of re-sending flow messages the
   entire flow is not restarted after a timeout. The relevant node configuration section was renamed from ``p2pMessagingRetry``,
-  to `flowTimeout`` to reflect the behaviour change.
+  to ``flowTimeout`` to reflect the behaviour change.
 
 * The node's configuration is only printed on startup if ``devMode`` is ``true``, avoiding the risk of printing passwords
   in a production setup.
