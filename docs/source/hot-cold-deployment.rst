@@ -166,7 +166,7 @@ The following are the properties that can be set during creation:
     * Performance - drive access speeds. The **Standard (HDD)** offers speeds around 14-16 MB/s. **Premium (SSD)** is
       superior (no performance values found). Both options are sufficient for the purpose of this storage account.
     * Replication type - can be any of **LRS**, **ZRS** or **GRS**.
-    * Secure transfer - set to **Enabled**
+    * Secure transfer - disabled or enabled. See note below.
     * Location - chosen based on requirements. Some of the above options are not available for all location.
 
 .. note:: From the Azure documentation: *LRS is the lowest cost replication option and offers the least durability compared
@@ -190,6 +190,11 @@ base directory of both primary and back-up VMs. To facilitate operations, a pers
 In the above command, **mymountpoint** represents the location on the VM's file system where the mount point will be created.
 
 It is important to set the appropriate **file_mode** value, based on user requirements.
+
+.. important:: If *Secure transfer* is set to enabled, Azure only allows the file share to be mounted using SMB 3.0.
+               Depending on what Linux distribution is being used, it may not be possible to mount the file share using
+               SMB 3.0 as it requires a newer kernel version. Please ensure you choose the secure transfer type and OS
+               based on these considerations.
 
 Amazon Web Services
 ~~~~~~~~~~~~~~~~~~~
