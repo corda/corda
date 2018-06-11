@@ -110,8 +110,8 @@ class StaffedFlowHospital {
     /**
      * The flow has been removed from the state machine.
      */
-    fun flowRemoved(flowFiber: FlowFiber) {
-        mutex.locked { patients.remove(flowFiber.id) }
+    fun flowRemoved(flowId: StateMachineRunId) {
+        mutex.locked { patients.remove(flowId) }
     }
 
     // TODO MedicalRecord subtypes can expose the Staff class, something which we probably don't want when wiring this method to RPC

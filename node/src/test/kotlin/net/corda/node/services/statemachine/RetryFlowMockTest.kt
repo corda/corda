@@ -2,17 +2,17 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.MessageRecipients
+import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.FinalityHandler
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.nodeapi.internal.persistence.contextTransaction
@@ -102,6 +102,51 @@ class RetryFlowMockTest {
         assertThat(nodeA.smm.flowHospital.track().snapshot).isEmpty()
         assertEquals(2, RetryFlow.count)
     }
+
+    @Test
+    fun `Patient records do not leak in hospital when using killFlow`() {
+        val flow: FlowStateMachine<Unit> = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
+            override val counterparty: Party
+                get() = TODO("not implemented")
+
+            override fun getCounterpartyFlowInfo(maySkipCheckpoint: Boolean): FlowInfo {
+                TODO("not implemented")
+            }
+
+            override fun getCounterpartyFlowInfo(): FlowInfo {
+                TODO("not implemented")
+            }
+
+            override fun <R : Any> sendAndReceive(receiveType: Class<R>, payload: Any, maySkipCheckpoint: Boolean): UntrustworthyData<R> {
+                TODO("not implemented")
+            }
+
+            override fun <R : Any> sendAndReceive(receiveType: Class<R>, payload: Any): UntrustworthyData<R> {
+                TODO("not implemented")
+            }
+
+            override fun <R : Any> receive(receiveType: Class<R>, maySkipCheckpoint: Boolean): UntrustworthyData<R> {
+                TODO("not implemented")
+            }
+
+            override fun <R : Any> receive(receiveType: Class<R>): UntrustworthyData<R> {
+                TODO("not implemented")
+            }
+
+            override fun send(payload: Any, maySkipCheckpoint: Boolean) {
+                TODO("not implemented")
+            }
+
+            override fun send(payload: Any) {
+                TODO("not implemented")
+            }
+        }), nodeA.services.newContext()).get()
+        // Make sure we have seen an update from the hospital, and thus the flow went there.
+        nodeA.smm.flowHospital.track().updates.toBlocking().first()
+        // Killing it should remove it.
+        nodeA.smm.killFlow(flow.id)
+        assertThat(nodeA.smm.flowHospital.track().snapshot).isEmpty()
+    }
 }
 
 class LimitedRetryCausingError : ConstraintViolationException("Test message", SQLException(), "Test constraint")
@@ -122,6 +167,26 @@ class RetryFlow(private val i: Int) : FlowLogic<Unit>() {
             } else {
                 throw RetryCausingError()
             }
+        }
+    }
+}
+
+class RetryAndSleepFlow(private val i: Int) : FlowLogic<Unit>() {
+    companion object {
+        var count = 0
+    }
+
+    @Suspendable
+    override fun call() {
+        logger.info("Hello $count")
+        if (count++ < i) {
+            if (i == Int.MAX_VALUE) {
+                throw LimitedRetryCausingError()
+            } else {
+                throw RetryCausingError()
+            }
+        } else {
+            sleep(Duration.ofDays(1))
         }
     }
 }
