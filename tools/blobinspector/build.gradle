@@ -1,6 +1,7 @@
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
 
 dependencies {
     compile project(':client:jackson')
@@ -28,11 +29,6 @@ jar {
     }
 }
 
-jar {
-    classifier "ignore"
-}
-
 publish {
     name 'tools-blob-inspector'
-    disableDefaultJar = true
 }

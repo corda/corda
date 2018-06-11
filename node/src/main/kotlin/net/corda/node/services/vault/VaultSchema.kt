@@ -87,7 +87,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
                     joinColumns = [(JoinColumn(name = "output_index", referencedColumnName = "output_index")), (JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"))],
                     foreignKey = ForeignKey(name = "FK__lin_stat_parts__lin_stat"))
             @Column(name = "participants")
-            var participants: MutableSet<AbstractParty>? = null,
+            var participants: MutableSet<AbstractParty?>? = null,
             // Reason for not using Set is described here:
             // https://stackoverflow.com/questions/44213074/kotlin-collection-has-neither-generic-type-or-onetomany-targetentity
 
@@ -124,7 +124,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** X500Name of owner party **/
             @Column(name = "owner_name", nullable = true)
-            var owner: AbstractParty,
+            var owner: AbstractParty?,
 
             /** [FungibleAsset] attributes
              *
@@ -140,7 +140,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             /** X500Name of issuer party **/
             @Column(name = "issuer_name", nullable = true)
-            var issuer: AbstractParty,
+            var issuer: AbstractParty?,
 
             @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
             @Type(type = "corda-wrapper-binary")
@@ -162,11 +162,11 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @Column(name = "seq_no", nullable = false)
             var seqNo: Int,
 
-            @Column(name = "transaction_id", length = 64, nullable = false)
-            var txId: String,
+            @Column(name = "transaction_id", length = 64, nullable = true)
+            var txId: String?,
 
-            @Column(name = "note", nullable = false)
-            var note: String
+            @Column(name = "note", nullable = true)
+            var note: String?
     ) : Serializable {
         constructor(txId: String, note: String) : this(0, txId, note)
     }

@@ -105,8 +105,8 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
             @Column(name = "name", length = 128, nullable = false)
             var name: String = "",
 
-            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
-            var publicKeyHash: String = ""
+            @Column(name = "pk_hash", length = MAX_HASH_HEX_SIZE, nullable = true)
+            var publicKeyHash: String? = ""
     ) : Serializable
 
     override val caCertStore: CertStore

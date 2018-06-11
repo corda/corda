@@ -11,11 +11,18 @@
 package net.corda.node.services.statemachine.interceptors
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.contextLogger
-import net.corda.node.services.statemachine.*
+import net.corda.node.services.statemachine.ActionExecutor
+import net.corda.node.services.statemachine.Event
+import net.corda.node.services.statemachine.FlowFiber
+import net.corda.node.services.statemachine.FlowState
+import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.services.statemachine.StateMachineState
+import net.corda.node.services.statemachine.TransitionExecutor
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
 import java.util.concurrent.LinkedBlockingQueue
@@ -28,6 +35,10 @@ class FiberDeserializationCheckingInterceptor(
         val fiberDeserializationChecker: FiberDeserializationChecker,
         val delegate: TransitionExecutor
 ) : TransitionExecutor {
+    override fun forceRemoveFlow(id: StateMachineRunId) {
+        delegate.forceRemoveFlow(id)
+    }
+
     @Suspendable
     override fun executeTransition(
             fiber: FlowFiber,
