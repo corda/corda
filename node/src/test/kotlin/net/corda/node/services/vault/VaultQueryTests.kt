@@ -28,10 +28,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.*
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
-import net.corda.testing.internal.vault.DummyLinearContract
-import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
-import net.corda.testing.internal.vault.VaultFiller
+import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
 import net.corda.testing.node.makeTestIdentityService
@@ -2278,6 +2275,75 @@ class VaultQueryTests : VaultQueryTestsBase(), VaultQueryParties by delegate {
                         require(flowId == null) {}
                         require(consumed.isEmpty()) {}
                         require(produced.size == 1) {}
+                    }
+            )
+        }
+    }
+
+    @Test
+    fun `track by only returns updates of tracked type`() {
+        val updates = database.transaction {
+            val (snapshot, updates) = vaultService.trackBy<DummyDealContract.State>()
+            assertThat(snapshot.states).hasSize(0)
+            val states = vaultFiller.fillWithSomeTestLinearAndDealStates(10).states
+            this.session.flush()
+            vaultFiller.consumeLinearStates(states.toList())
+            updates
+        }
+
+        updates.expectEvents {
+            sequence(
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 10) {}
+                        require(produced.filter { DummyDealContract.State::class.java.isAssignableFrom(it.state.data::class.java) }.size == 10) {}
+                    }
+            )
+        }
+    }
+
+    @Test
+    fun `track by of super class only returns updates of sub classes of tracked type`() {
+        val updates = database.transaction {
+            val (snapshot, updates) = vaultService.trackBy<DealState>()
+            assertThat(snapshot.states).hasSize(0)
+            val states = vaultFiller.fillWithSomeTestLinearAndDealStates(10).states
+            this.session.flush()
+            vaultFiller.consumeLinearStates(states.toList())
+            updates
+        }
+
+        updates.expectEvents {
+            sequence(
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 10) {}
+                        require(produced.filter { DealState::class.java.isAssignableFrom(it.state.data::class.java) }.size == 10) {}
+                    }
+            )
+        }
+    }
+
+    @Test
+    fun `track by of contract state interface returns updates of all states`() {
+        val updates = database.transaction {
+            val (snapshot, updates) = vaultService.trackBy<ContractState>()
+            assertThat(snapshot.states).hasSize(0)
+            val states = vaultFiller.fillWithSomeTestLinearAndDealStates(10).states
+            this.session.flush()
+            vaultFiller.consumeLinearStates(states.toList())
+            updates
+        }
+
+        updates.expectEvents {
+            sequence(
+                    expect { (consumed, produced, flowId) ->
+                        require(flowId == null) {}
+                        require(consumed.isEmpty()) {}
+                        require(produced.size == 20) {}
+                        require(produced.filter { ContractState::class.java.isAssignableFrom(it.state.data::class.java) }.size == 20) {}
                     }
             )
         }
