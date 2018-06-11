@@ -61,6 +61,7 @@ see changes to this list.
 * cncorda
 * Credit Suisse
 * cyrsis
+* Dan Newton (Accenture)
 * Daniel Roig (SEB)
 * Dave Hudson (R3)
 * David John Grundy (Dankse Bank)
