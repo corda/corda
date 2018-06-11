@@ -10,10 +10,10 @@
 
 package net.corda.node.services.api
 
-import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.serialization.SerializedBytes
 import net.corda.node.services.statemachine.Checkpoint
+import java.sql.Connection
 import java.util.stream.Stream
 
 /**
@@ -42,4 +42,12 @@ interface CheckpointStorage {
      * underlying database connection is closed, so any processing should happen before it is closed.
      */
     fun getAllCheckpoints(): Stream<Pair<StateMachineRunId, SerializedBytes<Checkpoint>>>
+
+    /**
+     * This needs to run before Hibernate is initialised.
+     *
+     * @param connection The SQL Connection.
+     * @return the number of checkpoints stored in the database.
+     */
+    fun getCheckpointCount(connection: Connection): Long
 }

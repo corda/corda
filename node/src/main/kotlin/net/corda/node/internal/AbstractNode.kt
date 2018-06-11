@@ -1095,13 +1095,13 @@ fun configureDatabase(hikariProperties: Properties,
                 schemaService.schemaOptions.keys,
                 dataSource,
                 !isH2Database(jdbcUrl),
-                databaseConfig).nodeStartup()
+                databaseConfig).nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         return CordaPersistence(dataSource, databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, attributeConverters)
     } catch (ex: Exception) {
         when {
             ex is HikariPool.PoolInitializationException -> throw CouldNotCreateDataSourceException("Could not connect to the database. Please check your JDBC connection URL, or the connectivity to the database.", ex)
             ex.cause is ClassNotFoundException -> throw CouldNotCreateDataSourceException("Could not find the database driver class. Please add it to the 'drivers' folder. See: https://docs.corda.net/corda-configuration-file.html")
-            else -> throw CouldNotCreateDataSourceException("Could not create the DataSource: ${ex.message}", ex)
+            else -> throw ex
         }
     }
 }

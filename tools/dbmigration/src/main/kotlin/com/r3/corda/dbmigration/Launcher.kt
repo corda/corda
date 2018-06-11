@@ -28,10 +28,12 @@ import net.corda.node.internal.cordapp.CordappLoader
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.configOf
 import net.corda.node.services.config.parseAsNodeConfiguration
+import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.persistence.MigrationExporter
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.persistence.CheckpointsException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration
 import org.slf4j.LoggerFactory
@@ -163,8 +165,8 @@ private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: P
     }
     val config = parsedConfig.parseAs(Configuration::class, UnknownConfigKeysPolicy.IGNORE::handle)
 
-    fun runMigrationCommand(withMigration: (SchemaMigration) -> Unit): Unit = runWithDataSource(config, baseDirectory, classLoader) { dataSource ->
-        withMigration(SchemaMigration(schemas, dataSource, true, config.database, classLoader))
+    fun runMigrationCommand(withMigration: (SchemaMigration, DataSource) -> Unit): Unit = runWithDataSource(config, baseDirectory, classLoader) { dataSource ->
+        withMigration(SchemaMigration(schemas, dataSource, true, config.database, classLoader), dataSource)
     }
 
     when {
@@ -174,13 +176,13 @@ private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: P
         options.has(DRY_RUN) -> {
             val writer = getMigrationOutput(baseDirectory, options)
             migrationLogger.info("Exporting the current db migrations ...")
-            runMigrationCommand {
-                it.generateMigrationScript(writer)
+            runMigrationCommand { migration, dataSource ->
+                migration.generateMigrationScript(writer)
             }
         }
         options.has(RUN_MIGRATION) -> {
             migrationLogger.info("Running the database migration on  $baseDirectory")
-            runMigrationCommand { it.runMigration() }
+            runMigrationCommand { migration, dataSource -> migration.runMigration(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L }) }
         }
         options.has(CREATE_MIGRATION_CORDAPP) && (mode == Mode.NODE) -> {
 
@@ -244,6 +246,8 @@ private fun runWithDataSource(config: Configuration, baseDirectory: Path, classL
 
     return try {
         withDatasource(createDatasourceFromDriverJarFolders(config.dataSourceProperties, classLoader, driversFolder + jarDirs))
+    } catch (e: CheckpointsException) {
+        errorAndExit(e.message)
     } catch (e: Exception) {
         errorAndExit("""Failed to create datasource.
             |Please check that the correct JDBC driver is installed in one of the following folders:

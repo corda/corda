@@ -61,7 +61,7 @@ class SchemaMigrationTest {
 
         //run the migration on the database
         val migration = SchemaMigration(schemaService.schemaOptions.keys, HikariDataSource(HikariConfig(dataSourceProps)), true, DatabaseConfig())
-        migration.runMigration()
+        migration.runMigration(false)
 
         //start the node with "runMigration = false" and check that it started correctly
         val db = configureDatabase(dataSourceProps, DatabaseConfig(runMigration = false), { null }, { null }, schemaService)

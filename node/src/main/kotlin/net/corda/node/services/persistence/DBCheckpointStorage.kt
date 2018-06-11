@@ -21,6 +21,8 @@ import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.Serializable
+import java.sql.Connection
+import java.sql.SQLException
 import java.util.*
 import java.util.stream.Stream
 import javax.persistence.Column
@@ -75,6 +77,20 @@ class DBCheckpointStorage : CheckpointStorage {
         criteriaQuery.select(root)
         return session.createQuery(criteriaQuery).stream().map {
             StateMachineRunId(UUID.fromString(it.checkpointId)) to SerializedBytes<Checkpoint>(it.checkpoint)
+        }
+    }
+
+    override fun getCheckpointCount(connection: Connection): Long {
+        try {
+            return connection.prepareStatement("select count(*) from node_checkpoints").use { ps ->
+                ps.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getLong(1)
+                }
+            }
+        } catch (e: SQLException) {
+            // Happens when the table was not created yet.
+            return 0L
         }
     }
 }

@@ -43,30 +43,30 @@ class SchemaMigration(
      * Main entry point to the schema migration.
      * Called during node startup.
      */
-    fun nodeStartup() {
+    fun nodeStartup(existingCheckpoints: Boolean) {
         when {
-            databaseConfig.runMigration -> runMigration()
+            databaseConfig.runMigration -> runMigration(existingCheckpoints)
             failOnMigrationMissing -> checkState()
         }
     }
 
     /**
-     * will run the liquibase migration on the actual database
+     * Will run the Liquibase migration on the actual database.
      */
-    fun runMigration() = doRunMigration(run = true, outputWriter = null, check = false)
+    fun runMigration(existingCheckpoints: Boolean) = doRunMigration(run = true, outputWriter = null, check = false, existingCheckpoints = existingCheckpoints)
 
     /**
-     * will write the migration to a Writer
+     * Will write the migration to a [Writer].
      */
     fun generateMigrationScript(writer: Writer) = doRunMigration(run = false, outputWriter = writer, check = false)
 
     /**
-     * ensures that the database is up to date with the latest migration changes
+     * Ensures that the database is up to date with the latest migration changes.
      */
     fun checkState() = doRunMigration(run = false, outputWriter = null, check = true)
 
     /**
-     * can be used from an external tool to release the lock in case something went terribly wrong
+     * Can be used from an external tool to release the lock in case something went terribly wrong.
      */
     fun forceReleaseMigrationLock() {
         dataSource.connection.use { connection ->
@@ -74,15 +74,15 @@ class SchemaMigration(
         }
     }
 
-    private fun doRunMigration(run: Boolean, outputWriter: Writer?, check: Boolean) {
+    private fun doRunMigration(run: Boolean, outputWriter: Writer?, check: Boolean, existingCheckpoints: Boolean? = null) {
 
-        // virtual file name of the changelog that includes all schemas
+        // Virtual file name of the changelog that includes all schemas.
         val dynamicInclude = "master.changelog.json"
 
         dataSource.connection.use { connection ->
 
-            // collect all changelog file referenced in the included schemas
-            // for backward compatibility reasons, when failOnMigrationMissing=false, we don't manage CorDapps via Liquibase but use the hibernate hbm2ddl=update
+            // Collect all changelog file referenced in the included schemas.
+            // For backward compatibility reasons, when failOnMigrationMissing=false, we don't manage CorDapps via Liquibase but use the hibernate hbm2ddl=update.
             val changelogList = schemas.map { mappedSchema ->
                 val resource = getMigrationResource(mappedSchema, classLoader)
                 when {
@@ -95,18 +95,18 @@ class SchemaMigration(
                 }
             }
 
-            //create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream
+            // Create a resourse accessor that aggregates the changelogs included in the schemas into one dynamic stream.
             val customResourceAccessor = object : ClassLoaderResourceAccessor(classLoader) {
                 override fun getResourcesAsStream(path: String): Set<InputStream> {
 
                     if (path == dynamicInclude) {
-                        //create a map in liquibase format including all migration files
+                        // Create a map in Liquibase format including all migration files.
                         val includeAllFiles = mapOf("databaseChangeLog" to changelogList.filter { it != null }.map { file -> mapOf("include" to mapOf("file" to file)) })
 
-                        // transform it to json
+                        // Transform it to json.
                         val includeAllFilesJson = ObjectMapper().writeValueAsBytes(includeAllFiles)
 
-                        //return the json as a stream
+                        // Return the json as a stream.
                         return setOf(ByteArrayInputStream(includeAllFilesJson))
                     }
                     return super.getResourcesAsStream(path)?.take(1)?.toSet() ?: emptySet()
@@ -130,14 +130,13 @@ class SchemaMigration(
             logger.info("liquibaseSchemaName=${liquibase.database.liquibaseSchemaName}")
             logger.info("outputDefaultSchema=${liquibase.database.outputDefaultSchema}")
 
+            val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
+
             when {
+                (run && !check) && (unRunChanges.isNotEmpty() && existingCheckpoints!!) -> throw CheckpointsException() // Do not allow database migration when there are checkpoints
                 run && !check -> liquibase.update(Contexts())
-                check && !run -> {
-                    val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
-                    if (unRunChanges.isNotEmpty()) {
-                        throw OutstandingDatabaseChangesException(unRunChanges.size)
-                    }
-                }
+                check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
+                check && !run -> {} // Do nothing will be interpreted as "check succeeded"
                 (outputWriter != null) && !check && !run -> liquibase.update(Contexts(), outputWriter)
                 else -> throw IllegalStateException("Invalid usage.")
             }
@@ -146,7 +145,7 @@ class SchemaMigration(
 
     private fun getLiquibaseDatabase(conn: JdbcConnection): Database {
 
-        // the standard MSSQLDatabase in liquibase does not support sequences for Ms Azure
+        // The standard MSSQLDatabase in Liquibase does not support sequences for Ms Azure.
         // this class just overrides that behaviour
         class AzureDatabase(conn: JdbcConnection) : MSSQLDatabase() {
             init {
@@ -179,3 +178,8 @@ class OutstandingDatabaseChangesException(@Suppress("MemberVisibilityCanBePrivat
         fun errorMessageFor(count: Int): String = "There are $count outstanding database changes that need to be run. Please use the advanced migration tool. See: https://docs.corda.r3.com/database-migration.html"
     }
 }
+
+class CheckpointsException : DatabaseMigrationException("Attempting to update the database while there are flows in flight. " +
+        "This is dangerous because the node might not be able to restore the flows correctly and could consequently fail. " +
+        "Updating the database would make reverting to the previous version more difficult. " +
+        "Please drain your node first. See: https://docs.corda.net/upgrading-cordapps.html#flow-drains")
