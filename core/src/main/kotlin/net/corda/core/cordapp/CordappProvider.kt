@@ -1,5 +1,6 @@
 package net.corda.core.cordapp
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.node.services.AttachmentId
@@ -8,6 +9,7 @@ import net.corda.core.node.services.AttachmentId
  * Provides access to what the node knows about loaded applications.
  */
 @DoNotImplement
+@DeleteForDJVM
 interface CordappProvider {
     /**
      * Exposes the current CorDapp context which will contain information and configuration of the CorDapp that

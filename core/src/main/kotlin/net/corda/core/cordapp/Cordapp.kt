@@ -1,5 +1,6 @@
 package net.corda.core.cordapp
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -31,6 +32,7 @@ import java.net.URL
  * @property jarHash Hash of the jar
  */
 @DoNotImplement
+@DeleteForDJVM
 interface Cordapp {
     val name: String
     val contractClassNames: List<String>

@@ -1,5 +1,6 @@
 package net.corda.serialization.internal
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
@@ -22,6 +23,7 @@ import java.util.*
  * AttachmentsClassLoader is somewhat expensive, as every attachment is scanned to ensure that there are no overlapping
  * file paths.
  */
+@KeepForDJVM
 class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader = ClassLoader.getSystemClassLoader()) : SecureClassLoader(parent) {
     private val pathsToAttachments = HashMap<String, Attachment>()
     private val idsToAttachments = HashMap<SecureHash, Attachment>()

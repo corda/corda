@@ -30,7 +30,7 @@ JDK 8
 Corda Modules
   ``core-deterministic`` and ``serialization-deterministic`` are generated from Corda's ``core`` and ``serialization``
   modules respectively using both `ProGuard <https://www.guardsquare.com/en/proguard>`_ and Corda's ``JarFilter`` Gradle
-  plugin. Corda developers configure these tools by applying Corda's ``@Deterministic`` and ``@NonDeterministic``
+  plugin. Corda developers configure these tools by applying Corda's ``@KeepForDJVM`` and ``@DeleteForDJVM``
   annotations to elements of ``core`` and ``serialization`` as described `here <deterministic_annotations_>`_.
 
 The build generates each of Corda's deterministic JARs in six steps:
@@ -42,12 +42,12 @@ The build generates each of Corda's deterministic JARs in six steps:
 
     .. sourcecode:: groovy
 
-        keep '@interface net.corda.core.Deterministic { *; }'
+        keep '@interface net.corda.core.KeepForDJVM { *; }'
 
     ..
 
     ProGuard works by calculating how much code is reachable from given "entry points", and in our case these entry
-    points are the ``@Deterministic`` classes. The unreachable classes are then discarded by ProGuard's ``shrink``
+    points are the ``@KeepForDJVM`` classes. The unreachable classes are then discarded by ProGuard's ``shrink``
     option.
  #. The remaining classes may still contain non-deterministic code. However, there is no way of writing a ProGuard rule
     explicitly to discard anything. Consider the following class:
@@ -55,10 +55,10 @@ The build generates each of Corda's deterministic JARs in six steps:
     .. sourcecode:: kotlin
 
         @CordaSerializable
-        @Deterministic
+        @KeepForDJVM
         data class UniqueIdentifier(val externalId: String?, val id: UUID) : Comparable<UniqueIdentifier> {
-            @NonDeterministic constructor(externalId: String?) : this(externalId, UUID.randomUUID())
-            @NonDeterministic constructor() : this(null)
+            @DeleteForDJVM constructor(externalId: String?) : this(externalId, UUID.randomUUID())
+            @DeleteForDJVM constructor() : this(null)
             ...
         }
 
@@ -67,9 +67,9 @@ The build generates each of Corda's deterministic JARs in six steps:
     While CorDapps will definitely need to handle ``UniqueIdentifier`` objects, both of the secondary constructors
     generate a new random ``UUID`` and so are non-deterministic. Hence the next "determinising" step is to pass the
     classes to the ``JarFilter`` tool, which strips out all of the elements which have been annotated as
-    ``@NonDeterministic`` and stubs out any functions annotated with ``@NonDeterministicStub``. (Stub functions that
+    ``@DeleteForDJVM`` and stubs out any functions annotated with ``@StubOutForDJVM``. (Stub functions that
     return a value will throw ``UnsupportedOperationException``, whereas ``void`` or ``Unit`` stubs will do nothing.)
- #. After the ``@NonDeterministic`` elements have been filtered out, the classes are rescanned using ProGuard to remove
+ #. After the ``@DeleteForDJVM`` elements have been filtered out, the classes are rescanned using ProGuard to remove
     any more code that has now become unreachable.
  #. The remaining classes define our deterministic subset. However, the ``@kotlin.Metadata`` annotations on the compiled
     Kotlin classes still contain references to all of the functions and properties that ProGuard has deleted. Therefore
@@ -77,26 +77,10 @@ The build generates each of Corda's deterministic JARs in six steps:
     deleted functions and properties are still present.
  #. Finally, we use ProGuard again to validate our JAR against the deterministic ``rt.jar``:
 
-    .. sourcecode:: groovy
-
-        task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
-            injars metafix
-
-            libraryjars "$deterministic_jdk_home/jre/lib/rt.jar"
-
-            configurations.runtimeLibraries.forEach {
-                libraryjars it.path, filter: '!META-INF/versions/**'
-            }
-
-            keepattributes '*'
-            dontpreverify
-            dontobfuscate
-            dontoptimize
-            verbose
-
-            keep 'class *'
-        }
-
+    .. literalinclude:: ../../core-deterministic/build.gradle
+       :language: groovy
+       :start-after: DOCSTART 01
+       :end-before: DOCEND 01
     ..
 
     This step will fail if ProGuard spots any Java API references that still cannot be satisfied by the deterministic
@@ -123,7 +107,7 @@ The ``testing`` module also has two sub-modules:
 
 .. _deterministic_annotations:
 
-Applying @Deterministic and @NonDeterministic annotations
+Applying @KeepForDJVM and @DeleteForDJVM annotations
 ---------------------------------------------------------
 
 Corda developers need to understand how to annotate classes in the ``core`` and ``serialization`` modules correctly
@@ -146,14 +130,12 @@ For more information about how ``JarFilter`` is processing the byte-code inside 
 use Gradle's ``--info`` or ``--debug`` command-line options.
 
 Deterministic Classes
-    Classes that *must* be included in the deterministic JAR should be annotated as ``@Deterministic``.
+    Classes that *must* be included in the deterministic JAR should be annotated as ``@KeepForDJVM``.
 
-    .. sourcecode:: kotlin
-
-        @Target(FILE, CLASS)
-        @Retention(BINARY)
-        @CordaInternal
-        annotation class Deterministic
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/KeepForDJVM.kt
+       :language: kotlin
+       :start-after: DOCSTART 01
+       :end-before: DOCEND 01
     ..
 
     To preserve any Kotlin functions, properties or type aliases that have been declared outside of a ``class``,
@@ -170,25 +152,12 @@ Deterministic Classes
     ..
 
 Non-Deterministic Elements
-    Elements that *must* be deleted from classes in the deterministic JAR should be annotated as ``@NonDeterministic``.
+    Elements that *must* be deleted from classes in the deterministic JAR should be annotated as ``@DeleteForDJVM``.
 
-    .. sourcecode:: kotlin
-
-        @Target(
-            FILE,
-            CLASS,
-            CONSTRUCTOR,
-            FUNCTION,
-            PROPERTY_GETTER,
-            PROPERTY_SETTER,
-            PROPERTY,
-            FIELD,
-            TYPEALIAS
-        )
-        @Retention(BINARY)
-        @CordaInternal
-        annotation class NonDeterministic
-
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/DeleteForDJVM.kt
+        :language: kotlin
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
     ..
 
     You must also ensure that a deterministic class's primary constructor does not reference any classes that are
@@ -206,32 +175,24 @@ Non-Deterministic Elements
 
         package net.corda.core
 
-        @NonDeterministic
+        @DeleteForDJVM
         val map: MutableMap<String, String> = ConcurrentHashMap()
 
     ..
 
     In this case, ``JarFilter`` would delete the ``map`` property but the ``<clinit>`` block would still create
     an instance of ``ConcurrentHashMap``. The solution here is to refactor the property into its own file and then
-    annotate the file itself as ``@NonDeterministic`` instead.
+    annotate the file itself as ``@DeleteForDJVM`` instead.
 
 Non-Deterministic Function Stubs
     Sometimes it is impossible to delete a function entirely. Or a function may have some non-deterministic code
-    embedded inside it that cannot be removed. For these rare cases, there is the ``@NonDeterministicStub``
+    embedded inside it that cannot be removed. For these rare cases, there is the ``@StubOutForDJVM``
     annotation:
 
-    .. sourcecode:: kotlin
-
-        @Target(
-            CONSTRUCTOR,
-            FUNCTION,
-            PROPERTY_GETTER,
-            PROPERTY_SETTER
-        )
-        @Retention(BINARY)
-        @CordaInternal
-        annotation class NonDeterministicStub
-
+    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/StubOutForDJVM.kt
+        :language: kotlin
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
     ..
 
     This annotation instructs ``JarFilter`` to replace the function's body with either an empty body (for functions
@@ -244,10 +205,9 @@ Non-Deterministic Function Stubs
             otherOperations()
         }
 
-        @NonDeterministicStub
+        @StubOutForDJVM
         private fun nonDeterministicOperations() {
             // etc
         }
 
     ..
-

@@ -1,5 +1,6 @@
 package net.corda.core.contracts
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.internal.div
 import net.corda.core.internal.until
 import net.corda.core.serialization.CordaSerializable
@@ -78,6 +79,7 @@ abstract class TimeWindow {
     /** Returns true iff the given [instant] is within the time interval of this [TimeWindow]. */
     abstract operator fun contains(instant: Instant): Boolean
 
+    @KeepForDJVM
     private data class From(override val fromTime: Instant) : TimeWindow() {
         override val untilTime: Instant? get() = null
         override val midpoint: Instant? get() = null
@@ -85,6 +87,7 @@ abstract class TimeWindow {
         override fun toString(): String = "[$fromTime, ∞)"
     }
 
+    @KeepForDJVM
     private data class Until(override val untilTime: Instant) : TimeWindow() {
         override val fromTime: Instant? get() = null
         override val midpoint: Instant? get() = null
@@ -92,6 +95,7 @@ abstract class TimeWindow {
         override fun toString(): String = "(∞, $untilTime)"
     }
 
+    @KeepForDJVM
     private data class Between(override val fromTime: Instant, override val untilTime: Instant) : TimeWindow() {
         init {
             require(fromTime < untilTime) { "fromTime must be earlier than untilTime" }

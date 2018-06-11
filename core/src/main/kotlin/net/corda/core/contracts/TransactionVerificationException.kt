@@ -1,5 +1,7 @@
 package net.corda.core.contracts
 
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
@@ -13,6 +15,7 @@ import java.security.PublicKey
  *
  * @property hash Merkle root of the transaction being resolved, see [net.corda.core.transactions.WireTransaction.id]
  */
+@KeepForDJVM
 class TransactionResolutionException(val hash: SecureHash) : FlowException("Transaction resolution failure for $hash")
 
 /**
@@ -21,6 +24,7 @@ class TransactionResolutionException(val hash: SecureHash) : FlowException("Tran
  *
  * @property hash Hash of the bytes of the attachment, see [Attachment.id]
  */
+@KeepForDJVM
 class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attachment resolution failure for $hash")
 
 /**
@@ -41,6 +45,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
      *
      * @property contractClass The fully qualified class name of the failing contract.
      */
+    @KeepForDJVM
     class ContractRejection(txId: SecureHash, val contractClass: String, cause: Throwable) : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, contract: $contractClass", cause) {
         constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause)
     }
@@ -51,6 +56,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
      *
      * @property contractClass The fully qualified class name of the failing contract.
      */
+    @KeepForDJVM
     class ContractConstraintRejection(txId: SecureHash, val contractClass: String)
         : TransactionVerificationException(txId, "Contract constraints failed for $contractClass", null)
 
@@ -60,6 +66,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
      *
      * @property contractClass The fully qualified class name of the failing contract.
      */
+    @KeepForDJVM
     class MissingAttachmentRejection(txId: SecureHash, val contractClass: String)
         : TransactionVerificationException(txId, "Contract constraints failed, could not find attachment for: $contractClass", null)
 
@@ -72,6 +79,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
      *
      * @property contractClass The fully qualified class name of the failing contract.
      */
+    @KeepForDJVM
     class ConflictingAttachmentsRejection(txId: SecureHash, val contractClass: String)
         : TransactionVerificationException(txId, "Contract constraints failed for: $contractClass, because multiple attachments providing this contract were attached.", null)
 
@@ -81,6 +89,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
      *
      * @property contractClass The fully qualified class name of the failing contract.
      */
+    @KeepForDJVM
     class ContractCreationError(txId: SecureHash, val contractClass: String, cause: Throwable)
         : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, could not create contract class: $contractClass", cause)
 
@@ -90,6 +99,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
      * @property txNotary the [Party] specified by the transaction header.
      * @property outputNotary the [Party] specified by the errant state.
      */
+    @KeepForDJVM
     class NotaryChangeInWrongTransactionType(txId: SecureHash, val txNotary: Party, val outputNotary: Party)
         : TransactionVerificationException(txId, "Found unexpected notary change in transaction. Tx notary: $txNotary, found: $outputNotary", null)
 
@@ -102,11 +112,13 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
      * @property missing the index of the state missing the encumbrance.
      * @property inOut whether the issue exists in the input list or output list.
      */
+    @KeepForDJVM
     class TransactionMissingEncumbranceException(txId: SecureHash, val missing: Int, val inOut: Direction)
         : TransactionVerificationException(txId, "Missing required encumbrance $missing in $inOut", null)
 
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable
+    @KeepForDJVM
     enum class Direction {
         /** Issue in the inputs list */
         INPUT,
@@ -119,19 +131,23 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     // as a cause.
     /** @suppress This class is not used: duplicate inputs throw a [IllegalStateException] instead. */
     @Deprecated("This class is not used: duplicate inputs throw a [IllegalStateException] instead.")
+    @DeleteForDJVM
     class DuplicateInputStates(txId: SecureHash, val duplicates: NonEmptySet<StateRef>)
         : TransactionVerificationException(txId, "Duplicate inputs: ${duplicates.joinToString()}", null)
 
     /** @suppress This class is obsolete and nothing has ever used it. */
     @Deprecated("This class is obsolete and nothing has ever used it.")
+    @DeleteForDJVM
     class MoreThanOneNotary(txId: SecureHash) : TransactionVerificationException(txId, "More than one notary", null)
 
     /** @suppress This class is obsolete and nothing has ever used it. */
     @Deprecated("This class is obsolete and nothing has ever used it.")
+    @DeleteForDJVM
     class SignersMissing(txId: SecureHash, val missing: List<PublicKey>) : TransactionVerificationException(txId, "Signers missing: ${missing.joinToString()}", null)
 
     /** @suppress This class is obsolete and nothing has ever used it. */
     @Deprecated("This class is obsolete and nothing has ever used it.")
+    @DeleteForDJVM
     class InvalidNotaryChange(txId: SecureHash)
         : TransactionVerificationException(txId, "Detected a notary change. Outputs must use the same notary as inputs", null)
 }

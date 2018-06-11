@@ -7,6 +7,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
+import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -460,6 +461,7 @@ fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializ
  * unmodifiable collection to [java.lang.Throwable.suppressedExceptions] which will fail some sentinel identity checks
  * e.g. in [java.lang.Throwable.addSuppressed]
  */
+@DeleteForDJVM
 @ThreadSafe
 class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>(false, true) {
 

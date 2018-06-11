@@ -1,7 +1,9 @@
 @file:JvmName("EncodingUtils")
+@file:KeepForDJVM
 
 package net.corda.core.utilities
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.Base58
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.hash

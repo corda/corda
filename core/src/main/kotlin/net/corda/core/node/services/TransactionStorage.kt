@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
@@ -10,6 +11,7 @@ import rx.Observable
 /**
  * Thread-safe storage of transactions.
  */
+@DeleteForDJVM
 @DoNotImplement
 interface TransactionStorage {
     /**

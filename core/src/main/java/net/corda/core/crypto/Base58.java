@@ -1,5 +1,6 @@
 package net.corda.core.crypto;
 
+import net.corda.core.KeepForDJVM;
 import java.math.*;
 import java.util.*;
 
@@ -27,6 +28,7 @@ import java.util.*;
  * NB: This class originally comes from the Apache licensed bitcoinj library. The original author of this code is the
  * same as the original author of the R3 repository.
  */
+@KeepForDJVM
 public class Base58 {
     private static final char[] ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray();
     private static final char ENCODED_ZERO = ALPHABET[0];

@@ -1,5 +1,8 @@
+@file:KeepForDJVM
 package net.corda.core.internal
 
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
@@ -23,8 +26,10 @@ const val UNKNOWN_UPLOADER = "unknown"
 fun isUploaderTrusted(uploader: String?) =
         uploader?.let { it in listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER, TEST_UPLOADER) } ?: false
 
+@KeepForDJVM
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     companion object {
+        @DeleteForDJVM
         fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
             return {
                 val a = serviceHub.attachments.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
