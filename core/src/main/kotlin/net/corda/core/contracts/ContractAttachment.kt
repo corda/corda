@@ -10,6 +10,7 @@
 
 package net.corda.core.contracts
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -19,6 +20,7 @@ import net.corda.core.serialization.CordaSerializable
  * @property contract The contract name contained within the JAR. A Contract attachment has to contain at least 1 contract.
  * @property additionalContracts Additional contract names contained within the JAR.
  */
+@KeepForDJVM
 @CordaSerializable
 class ContractAttachment @JvmOverloads constructor(val attachment: Attachment, val contract: ContractClassName, val additionalContracts: Set<ContractClassName> = emptySet(), val uploader: String? = null) : Attachment by attachment {
 

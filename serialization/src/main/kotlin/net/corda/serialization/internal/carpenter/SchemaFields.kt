@@ -11,6 +11,7 @@
 package net.corda.serialization.internal.carpenter
 
 import jdk.internal.org.objectweb.asm.Opcodes.*
+import net.corda.core.DeleteForDJVM
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type
@@ -25,7 +26,9 @@ abstract class Field(val field: Class<out Any?>) {
     var name: String = unsetName
     abstract val type: String
 
+    @DeleteForDJVM
     abstract fun generateField(cw: ClassWriter)
+    @DeleteForDJVM
     abstract fun visitParameter(mv: MethodVisitor, idx: Int)
 }
 
@@ -36,6 +39,7 @@ abstract class Field(val field: Class<out Any?>) {
  *   - [NullableField]
  *   - [NonNullableField]
  */
+@DeleteForDJVM
 abstract class ClassField(field: Class<out Any?>) : Field(field) {
     abstract val nullabilityAnnotation: String
     abstract fun nullTest(mv: MethodVisitor, slot: Int)
@@ -69,6 +73,7 @@ abstract class ClassField(field: Class<out Any?>) : Field(field) {
  *
  * maps to AMQP mandatory = true fields
  */
+@DeleteForDJVM
 open class NonNullableField(field: Class<out Any?>) : ClassField(field) {
     override val nullabilityAnnotation = "Ljavax/annotation/Nonnull;"
 
@@ -99,6 +104,7 @@ open class NonNullableField(field: Class<out Any?>) : ClassField(field) {
  *
  * maps to AMQP mandatory = false fields
  */
+@DeleteForDJVM
 class NullableField(field: Class<out Any?>) : ClassField(field) {
     override val nullabilityAnnotation = "Ljavax/annotation/Nullable;"
 
@@ -120,6 +126,7 @@ class NullableField(field: Class<out Any?>) : ClassField(field) {
 /**
  * Represents enum constants within an enum
  */
+@DeleteForDJVM
 class EnumField : Field(Enum::class.java) {
     override var descriptor: String? = null
 
@@ -140,6 +147,7 @@ class EnumField : Field(Enum::class.java) {
  * Constructs a Field Schema object of the correct type depending weather
  * the AMQP schema indicates it's mandatory (non nullable) or not (nullable)
  */
+@DeleteForDJVM
 object FieldFactory {
     fun newInstance(mandatory: Boolean, name: String, field: Class<out Any?>) =
             if (mandatory) NonNullableField(name, field) else NullableField(name, field)

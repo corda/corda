@@ -10,6 +10,7 @@
 
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializationContext
@@ -53,6 +54,7 @@ abstract class EvolutionSerializer(
      * should be placed
      * @param property object to read the actual property value
      */
+    @KeepForDJVM
     data class OldParam(var resultsIndex: Int, val property: PropertySerializer) {
         fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput,
                          new: Array<Any?>, context: SerializationContext
@@ -269,6 +271,7 @@ abstract class EvolutionSerializerGetterBase {
  * The normal use case for generating an [EvolutionSerializer]'s based on the differences
  * between the received schema and the class as it exists now on the class path,
  */
+@KeepForDJVM
 class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
     override fun getEvolutionSerializer(factory: SerializerFactory,
                                         typeNotation: TypeNotation,

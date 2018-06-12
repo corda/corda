@@ -8,6 +8,9 @@ Unreleased
 ==========
 * Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems related to database migrations before exiting with a non-zero code.
 
+* Fixed an issue where ``trackBy`` was returning ``ContractStates`` from a transaction that were not being tracked. The
+  unrelated ``ContractStates`` will now be filtered out from the returned ``Vault.Update``.
+
 * Introducing the flow hospital - a component of the node that manages flows that have errored and whether they should
   be retried from their previous checkpoints or have their errors propagate. Currently it will respond to any error that
   occurs during the resolution of a received transaction as part of ``FinalityFlow``. In such a scenerio the receiving
@@ -33,6 +36,10 @@ Unreleased
   and :doc:`permissioning` for details.
 
 * Improved audit trail for ``FinalityFlow`` and related sub-flows.
+
+* Notary client flow retry logic was improved to handle validating flows better. Instead of re-sending flow messages the
+  entire flow is now restarted after a timeout. The relevant node configuration section was renamed from ``p2pMessagingRetry``,
+  to ``flowTimeout`` to reflect the behaviour change.
 
 * The node's configuration is only printed on startup if ``devMode`` is ``true``, avoiding the risk of printing passwords
   in a production setup.

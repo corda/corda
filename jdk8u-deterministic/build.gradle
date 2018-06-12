@@ -1,0 +1,30 @@
+repositories {
+    maven {
+        url "$artifactory_contextUrl/corda-releases"
+    }
+    maven {
+        url "$artifactory_contextUrl/corda-dev"
+    }
+}
+
+ext {
+    jdk_home = "$buildDir/jdk"
+}
+
+configurations {
+    jdk
+}
+
+dependencies {
+    jdk "net.corda:deterministic-rt:$deterministic_rt_version:api"
+}
+
+task copyJdk(type: Copy) {
+    from(configurations.jdk.asPath) {
+        rename 'deterministic-rt-(.*).jar', 'rt.jar'
+    }
+    into "$jdk_home/jre/lib"
+}
+
+assemble.dependsOn copyJdk
+jar.enabled = false

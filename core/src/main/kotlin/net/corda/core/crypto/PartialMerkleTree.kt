@@ -11,10 +11,12 @@
 package net.corda.core.crypto
 
 import net.corda.core.CordaException
+import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
+@KeepForDJVM
 @CordaSerializable
 class MerkleTreeException(val reason: String) : CordaException("Partial Merkle Tree exception. Reason: $reason")
 
@@ -52,6 +54,7 @@ class MerkleTreeException(val reason: String) : CordaException("Partial Merkle T
  * (there can be a difference in obtained leaves ordering - that's why it's a set comparison not hashing leaves into a tree).
  * If both equalities hold, we can assume that l3 and l5 belong to the transaction with root h15.
  */
+@KeepForDJVM
 @CordaSerializable
 class PartialMerkleTree(val root: PartialTree) {
     /**
@@ -63,9 +66,9 @@ class PartialMerkleTree(val root: PartialTree) {
      */
     @CordaSerializable
     sealed class PartialTree {
-        data class IncludedLeaf(val hash: SecureHash) : PartialTree()
-        data class Leaf(val hash: SecureHash) : PartialTree()
-        data class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
+        @KeepForDJVM data class IncludedLeaf(val hash: SecureHash) : PartialTree()
+        @KeepForDJVM data class Leaf(val hash: SecureHash) : PartialTree()
+        @KeepForDJVM data class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
     }
 
     companion object {

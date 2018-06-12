@@ -11,6 +11,7 @@
 package net.corda.core.transactions
 
 import net.corda.core.DoNotImplement
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
@@ -22,6 +23,7 @@ import java.security.SignatureException
 import java.util.*
 
 /** An interface for transactions containing signatures, with logic for signature verification. */
+@KeepForDJVM
 @DoNotImplement
 interface TransactionWithSignatures : NamedByHash {
     /**

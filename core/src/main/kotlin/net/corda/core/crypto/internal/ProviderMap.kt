@@ -9,6 +9,7 @@
  */
 package net.corda.core.crypto.internal
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.CordaSecurityProvider
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.decodePrivateKey
@@ -53,4 +54,5 @@ internal val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
 // The val is private to avoid any harmful state changes.
 internal val providerMap = listOf(cordaBouncyCastleProvider, cordaSecurityProvider, bouncyCastlePQCProvider).map { it.name to it }.toMap()
 
+@DeleteForDJVM
 internal fun platformSecureRandomFactory() = platformSecureRandom // To minimise diff of CryptoUtils against open-source.

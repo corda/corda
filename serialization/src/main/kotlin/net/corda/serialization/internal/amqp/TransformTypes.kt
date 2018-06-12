@@ -10,6 +10,7 @@
 
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
@@ -30,6 +31,7 @@ import java.io.NotSerializableException
  */
 // TODO:  it would be awesome to auto build this list by scanning for transform annotations themselves
 // TODO: annotated with some annotation
+@KeepForDJVM
 enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType {
     /**
      * Placeholder entry for future transforms where a node receives a transform we've subsequently

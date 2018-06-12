@@ -10,38 +10,46 @@
 
 package net.corda.core.crypto
 
+import io.netty.util.concurrent.FastThreadLocal
+import net.corda.core.KeepForDJVM
+import net.corda.core.StubOutForDJVM
 import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_KEY
 import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_SIGNATURE
 import net.corda.core.internal.VisibleForTesting
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
-import io.netty.util.concurrent.FastThreadLocal
 import java.security.Provider
 import java.security.SecureRandom
 import java.security.SecureRandomSpi
 
 internal const val CORDA_SECURE_RANDOM_ALGORITHM = "CordaPRNG"
 
+@KeepForDJVM
 class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME security provider wrapper") {
     companion object {
         const val PROVIDER_NAME = "Corda"
     }
 
     init {
-        put("KeyFactory.${CompositeKey.KEY_ALGORITHM}", CompositeKeyFactory::class.java.name)
+        provideNonDeterministic(this)
         put("Signature.${CompositeSignature.SIGNATURE_ALGORITHM}", CompositeSignature::class.java.name)
-        put("Alg.Alias.KeyFactory.$COMPOSITE_KEY", CompositeKey.KEY_ALGORITHM)
-        put("Alg.Alias.KeyFactory.OID.$COMPOSITE_KEY", CompositeKey.KEY_ALGORITHM)
         put("Alg.Alias.Signature.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
         put("Alg.Alias.Signature.OID.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
-        setSecureRandomService()
-    }
-
-    private fun setSecureRandomService() {
         // Assuming this Provider is the first SecureRandom Provider, this algorithm is the SecureRandom default:
         putService(DelegatingSecureRandomService(this))
     }
 }
 
+/**
+ * The core-deterministic module is not allowed to generate keys.
+ */
+@StubOutForDJVM
+private fun provideNonDeterministic(provider: Provider) {
+    provider["KeyFactory.${CompositeKey.KEY_ALGORITHM}"] = CompositeKeyFactory::class.java.name
+    provider["Alg.Alias.KeyFactory.$COMPOSITE_KEY"] = CompositeKey.KEY_ALGORITHM
+    provider["Alg.Alias.KeyFactory.OID.$COMPOSITE_KEY"] = CompositeKey.KEY_ALGORITHM
+}
+
+@KeepForDJVM
 object CordaObjectIdentifier {
     // UUID-based OID
     // TODO: Register for an OID space and issue our own shorter OID.

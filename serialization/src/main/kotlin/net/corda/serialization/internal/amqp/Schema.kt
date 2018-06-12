@@ -10,6 +10,7 @@
 
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.serialization.internal.CordaSerializationMagic
 import org.apache.qpid.proton.amqp.DescribedType
@@ -28,6 +29,7 @@ val amqpMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(1, 0
  * This and the classes below are OO representations of the AMQP XML schema described in the specification. Their
  * [toString] representations generate the associated XML form.
  */
+@KeepForDJVM
 data class Schema(val types: List<TypeNotation>) : DescribedType {
     companion object : DescribedTypeConstructor<Schema> {
         val DESCRIPTOR = AMQPDescriptorRegistry.SCHEMA.amqpDescriptor
@@ -56,6 +58,7 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
     override fun toString(): String = types.joinToString("\n")
 }
 
+@KeepForDJVM
 data class Descriptor(val name: Symbol?, val code: UnsignedLong? = null) : DescribedType {
     constructor(name: String?) : this(Symbol.valueOf(name))
 
@@ -96,6 +99,7 @@ data class Descriptor(val name: Symbol?, val code: UnsignedLong? = null) : Descr
     }
 }
 
+@KeepForDJVM
 data class Field(
         val name: String,
         val type: String,
@@ -163,6 +167,7 @@ sealed class TypeNotation : DescribedType {
     abstract val descriptor: Descriptor
 }
 
+@KeepForDJVM
 data class CompositeType(
         override val name: String,
         override val label: String?,
@@ -213,6 +218,7 @@ data class CompositeType(
     }
 }
 
+@KeepForDJVM
 data class RestrictedType(override val name: String,
                           override val label: String?,
                           override val provides: List<String>,
@@ -263,6 +269,7 @@ data class RestrictedType(override val name: String,
     }
 }
 
+@KeepForDJVM
 data class Choice(val name: String, val value: String) : DescribedType {
     companion object : DescribedTypeConstructor<Choice> {
         val DESCRIPTOR = AMQPDescriptorRegistry.CHOICE.amqpDescriptor
@@ -292,6 +299,7 @@ data class Choice(val name: String, val value: String) : DescribedType {
     }
 }
 
+@KeepForDJVM
 data class ReferencedObject(private val refCounter: Int) : DescribedType {
     companion object : DescribedTypeConstructor<ReferencedObject> {
         val DESCRIPTOR = AMQPDescriptorRegistry.REFERENCED_OBJECT.amqpDescriptor

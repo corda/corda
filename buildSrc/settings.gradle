@@ -10,3 +10,6 @@
 
 rootProject.name = 'buildSrc'
 include 'canonicalizer'
+include 'jarfilter'
+include 'jarfilter:unwanteds'
+include 'jarfilter:kotlin-metadata'

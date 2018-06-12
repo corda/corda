@@ -10,6 +10,7 @@
 
 package net.corda.core.contracts
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.identity.AbstractParty
 import net.corda.core.serialization.CordaSerializable
 
@@ -21,6 +22,7 @@ import net.corda.core.serialization.CordaSerializable
  * notary is responsible for ensuring there is no "double spending" by only signing a transaction if the input states
  * are all free.
  */
+@KeepForDJVM
 @CordaSerializable
 interface ContractState {
     /**

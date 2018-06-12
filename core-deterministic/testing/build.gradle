@@ -1,0 +1,25 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+apply plugin: 'kotlin'
+
+dependencies {
+    testCompile project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
+    testCompile project(path: ':serialization-deterministic', configuration: 'runtimeArtifacts')
+    testCompile project(path: ':core-deterministic:testing:data', configuration: 'testData')
+    testCompile project(':core-deterministic:testing:common')
+    testCompile(project(':finance')) {
+        transitive = false
+    }
+
+    testCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile "junit:junit:$junit_version"
+}

@@ -12,6 +12,8 @@ package net.corda.serialization.internal
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.copyBytes
@@ -30,6 +32,7 @@ internal object NullEncodingWhitelist : EncodingWhitelist {
     override fun acceptEncoding(encoding: SerializationEncoding) = false
 }
 
+@KeepForDJVM
 data class SerializationContextImpl @JvmOverloads constructor(override val preferredSerializationVersion: SerializationMagic,
                                                               override val deserializationClassLoader: ClassLoader,
                                                               override val whitelist: ClassWhitelist,
@@ -74,9 +77,10 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
 }
 
 /*
- * This class is internal rather than private so that node-api-deterministic
+ * This class is internal rather than private so that serialization-deterministic
  * can replace it with an alternative version.
  */
+@DeleteForDJVM
 internal class AttachmentsClassLoaderBuilder(private val properties: Map<Any, Any>, private val deserializationClassLoader: ClassLoader) {
     private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).build()
 
@@ -100,10 +104,12 @@ internal class AttachmentsClassLoaderBuilder(private val properties: Map<Any, An
     }
 }
 
+@KeepForDJVM
 open class SerializationFactoryImpl(
     // TODO: This is read-mostly. Probably a faster implementation to be found.
     private val schemes: MutableMap<Pair<CordaSerializationMagic, SerializationContext.UseCase>, SerializationScheme>
 ) : SerializationFactory() {
+    @DeleteForDJVM
     constructor() : this(ConcurrentHashMap())
 
     companion object {
@@ -165,6 +171,7 @@ open class SerializationFactoryImpl(
 }
 
 
+@KeepForDJVM
 interface SerializationScheme {
     fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean
     @Throws(NotSerializableException::class)

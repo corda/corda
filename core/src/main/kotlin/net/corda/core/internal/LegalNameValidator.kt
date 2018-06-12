@@ -10,6 +10,7 @@
 
 package net.corda.core.internal
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.internal.LegalNameValidator.normalize
 import java.text.Normalizer
 import javax.security.auth.x500.X500Principal
@@ -115,12 +116,14 @@ object LegalNameValidator {
 
         abstract fun validate(legalName: T)
 
+        @KeepForDJVM
         private class UnicodeNormalizationRule : Rule<String>() {
             override fun validate(legalName: String) {
                 require(legalName == normalize(legalName)) { "Legal name must be normalized. Please use 'normalize' to normalize the legal name before validation." }
             }
         }
 
+        @KeepForDJVM
         private class UnicodeRangeRule(vararg supportScripts: Character.UnicodeBlock) : Rule<String>() {
             val supportScriptsSet = supportScripts.toSet()
 
@@ -131,6 +134,7 @@ object LegalNameValidator {
             }
         }
 
+        @KeepForDJVM
         private class CharacterRule(vararg val bannedChars: Char) : Rule<String>() {
             override fun validate(legalName: String) {
                 bannedChars.forEach {
@@ -139,6 +143,7 @@ object LegalNameValidator {
             }
         }
 
+        @KeepForDJVM
         private class WordRule(vararg val bannedWords: String) : Rule<String>() {
             override fun validate(legalName: String) {
                 bannedWords.forEach {
@@ -147,12 +152,14 @@ object LegalNameValidator {
             }
         }
 
+        @KeepForDJVM
         private class LengthRule(val maxLength: Int) : Rule<String>() {
             override fun validate(legalName: String) {
                 require(legalName.length <= maxLength) { "Legal name longer then $maxLength characters." }
             }
         }
 
+        @KeepForDJVM
         private class CapitalLetterRule : Rule<String>() {
             override fun validate(legalName: String) {
                 val capitalizedLegalName = legalName.capitalize()
@@ -160,6 +167,7 @@ object LegalNameValidator {
             }
         }
 
+        @KeepForDJVM
         private class X500NameRule : Rule<String>() {
             override fun validate(legalName: String) {
                 // This will throw IllegalArgumentException if the name does not comply with X500 name format.
@@ -167,6 +175,7 @@ object LegalNameValidator {
             }
         }
 
+        @KeepForDJVM
         private class MustHaveAtLeastTwoLettersRule : Rule<String>() {
             override fun validate(legalName: String) {
                 // Try to exclude names like "/", "£", "X" etc.

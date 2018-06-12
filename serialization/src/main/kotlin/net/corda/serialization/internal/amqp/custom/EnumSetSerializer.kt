@@ -10,6 +10,7 @@
 
 package net.corda.serialization.internal.amqp.custom
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.MapSerializer
@@ -40,5 +41,6 @@ class EnumSetSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Enu
         }
     }
 
+    @KeepForDJVM
     data class EnumSetProxy(val clazz: Class<*>, val elements: List<Any>)
 }

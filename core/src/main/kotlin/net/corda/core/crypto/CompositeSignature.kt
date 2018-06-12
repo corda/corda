@@ -10,6 +10,7 @@
 
 package net.corda.core.crypto
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.deserialize
 import java.io.ByteArrayOutputStream
 import java.security.*
@@ -18,6 +19,7 @@ import java.security.spec.AlgorithmParameterSpec
 /**
  * Dedicated class for storing a set of signatures that comprise [CompositeKey].
  */
+@KeepForDJVM
 class CompositeSignature : Signature(SIGNATURE_ALGORITHM) {
     companion object {
         const val SIGNATURE_ALGORITHM = "COMPOSITESIG"

@@ -1,0 +1,12 @@
+apply plugin: 'kotlin'
+
+description 'Test artifacts for the jar-filter plugin.'
+
+repositories {
+    mavenLocal()
+    jcenter()
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+}
