@@ -28,7 +28,6 @@ We look forward to seeing what you can do with Corda!
 .. _`introductory white paper`: _static/corda-introductory-whitepaper.pdf
 .. _`technical white paper`: _static/corda-technical-whitepaper.pdf
 .. _`download the PDF`: _static/corda-developer-site.pdf
-
 .. toctree::
    :caption: Development
    :maxdepth: 1
@@ -42,7 +41,6 @@ We look forward to seeing what you can do with Corda!
    component-library-index.rst
    troubleshooting.rst
    json.rst
-
 .. toctree::
    :caption: Operations
    :maxdepth: 2
@@ -52,7 +50,6 @@ We look forward to seeing what you can do with Corda!
    azure-vm.rst
    aws-vm.rst
    loadtesting.rst
-
 .. toctree::
    :caption: Design docs
    :maxdepth: 2
@@ -65,7 +62,6 @@ We look forward to seeing what you can do with Corda!
    design/kafka-notary/design.md
    design/monitoring-management/design.md
    design/sgx-integration/design.md
-
 .. toctree::
    :caption: Participate
    :maxdepth: 2

@@ -22,7 +22,7 @@ what order.
 
 Here is a visualisation of the process of agreeing a simple ledger update between Alice and Bob:
 
-.. image:: resources/flow.gif
+.. image:: resources/flow.png
    :scale: 25%
    :align: center
 

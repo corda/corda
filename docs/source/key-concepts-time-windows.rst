@@ -38,7 +38,7 @@ For this reason, times in transactions are specified as time *windows*, not abso
 there can never be "true time", only an approximation of it. Time windows can be open-ended (i.e. specify only one of
 "before" and "after") or they can be fully bounded.
 
-.. image:: resources/time-window.gif
+.. image:: resources/time-window.png
    :scale: 25%
    :align: center
 
