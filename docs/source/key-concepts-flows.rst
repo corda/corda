@@ -7,12 +7,15 @@ Flows
    * *Communication between nodes only occurs in the context of these flows, and is point-to-point*
    * *Built-in flows are provided to automate common tasks*
 
-Video
------
-.. raw:: html
+.. only:: htmlmode
 
-    <iframe src="https://player.vimeo.com/video/214046145" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-    <p></p>
+    Video
+    -----
+    .. raw:: html
+    
+        <iframe src="https://player.vimeo.com/video/214046145" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+        <p></p>
+
 
 Motivation
 ----------

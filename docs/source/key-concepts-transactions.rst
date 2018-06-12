@@ -10,12 +10,15 @@ Transactions
      * *It is contractually valid*
      * *It is signed by the required parties*
 
-Video
------
-.. raw:: html
+.. only:: htmlmode
 
-    <iframe src="https://player.vimeo.com/video/213879807" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-    <p></p>
+   Video
+   -----
+   .. raw:: html
+   
+       <iframe src="https://player.vimeo.com/video/213879807" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+       <p></p>
+
 
 Overview
 --------

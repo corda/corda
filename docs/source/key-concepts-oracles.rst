@@ -6,12 +6,15 @@ Oracles
    * *A fact can be included in a transaction as part of a command*
    * *An oracle is a service that will only sign the transaction if the included fact is true*
 
-Video
------
-.. raw:: html
+.. only:: htmlmode
 
-    <iframe src="https://player.vimeo.com/video/214157956" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-    <p></p>
+    Video
+    -----
+    .. raw:: html
+    
+        <iframe src="https://player.vimeo.com/video/214157956" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+        <p></p>
+
 
 Overview
 --------
