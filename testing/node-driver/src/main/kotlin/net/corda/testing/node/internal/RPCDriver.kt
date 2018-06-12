@@ -109,6 +109,7 @@ fun <A> rpcDriver(
         externalTrace: Trace? = null,
         jmxPolicy: JmxPolicy = JmxPolicy(),
         networkParameters: NetworkParameters = testNetworkParameters(),
+        notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -126,7 +127,8 @@ fun <A> rpcDriver(
                             notarySpecs = notarySpecs,
                             jmxPolicy = jmxPolicy,
                             compatibilityZone = null,
-                            networkParameters = networkParameters
+                            networkParameters = networkParameters,
+                            notaryCustomOverrides = notaryCustomOverrides
                     ), externalTrace
             ),
             coerce = { it },
