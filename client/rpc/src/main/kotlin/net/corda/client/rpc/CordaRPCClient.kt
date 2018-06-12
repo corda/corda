@@ -27,42 +27,45 @@ class CordaRPCConnection internal constructor(connection: RPCConnection<CordaRPC
 interface CordaRPCClientConfiguration {
 
     /** The minimum protocol version required from the server */
-    val minimumServerProtocolVersion: Int get() = default().minimumServerProtocolVersion
+    val minimumServerProtocolVersion: Int get() = getDefault().minimumServerProtocolVersion
     /**
      * If set to true the client will track RPC call sites. If an error occurs subsequently during the RPC or in a
      * returned Observable stream the stack trace of the originating RPC will be shown as well. Note that
      * constructing call stacks is a moderately expensive operation.
      */
-    val trackRpcCallSites: Boolean get() = default().trackRpcCallSites
+    val trackRpcCallSites: Boolean get() = getDefault().trackRpcCallSites
     /**
      * The interval of unused observable reaping. Leaked Observables (unused ones) are detected using weak references
      * and are cleaned up in batches in this interval. If set too large it will waste server side resources for this
      * duration. If set too low it wastes client side cycles.
      */
-    val reapInterval: Duration get() = default().reapInterval
+    val reapInterval: Duration get() = getDefault().reapInterval
     /** The number of threads to use for observations (for executing [Observable.onNext]) */
-    val observationExecutorPoolSize: Int get() = default().observationExecutorPoolSize
+    val observationExecutorPoolSize: Int get() = getDefault().observationExecutorPoolSize
     /**
      * Determines the concurrency level of the Observable Cache. This is exposed because it implicitly determines
      * the limit on the number of leaked observables reaped because of garbage collection per reaping.
      * See the implementation of [com.google.common.cache.LocalCache] for details.
      */
-    val cacheConcurrencyLevel: Int get() = default().cacheConcurrencyLevel
+    val cacheConcurrencyLevel: Int get() = getDefault().cacheConcurrencyLevel
     /** The retry interval of artemis connections in milliseconds */
-    val connectionRetryInterval: Duration get() = default().connectionRetryInterval
+    val connectionRetryInterval: Duration get() = getDefault().connectionRetryInterval
     /** The retry interval multiplier for exponential backoff */
-    val connectionRetryIntervalMultiplier: Double get() = default().connectionRetryIntervalMultiplier
+    val connectionRetryIntervalMultiplier: Double get() = getDefault().connectionRetryIntervalMultiplier
     /** Maximum retry interval */
-    val connectionMaxRetryInterval: Duration get() = default().connectionMaxRetryInterval
+    val connectionMaxRetryInterval: Duration get() = getDefault().connectionMaxRetryInterval
     /** Maximum reconnect attempts on failover */
-    val maxReconnectAttempts: Int get() = default().maxReconnectAttempts
+    val maxReconnectAttempts: Int get() = getDefault().maxReconnectAttempts
     /** Maximum file size */
-    val maxFileSize: Int get() = default().maxFileSize
+    val maxFileSize: Int get() = getDefault().maxFileSize
     /** The cache expiry of a deduplication watermark per client. */
-    val deduplicationCacheExpiry: Duration get() = default().deduplicationCacheExpiry
+    val deduplicationCacheExpiry: Duration get() = getDefault().deduplicationCacheExpiry
 
     companion object {
-        fun default(): CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default
+        /**
+         * Get the default configuration used for RPC clients.
+         */
+        fun getDefault(): CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.DEFAULT
     }
 }
 
@@ -105,7 +108,7 @@ interface CordaRPCClientConfiguration {
  */
 class CordaRPCClient private constructor(
         private val hostAndPort: NetworkHostAndPort,
-        private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+        private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.getDefault(),
         private val sslConfiguration: ClientRpcSslOptions? = null,
         private val nodeSslConfiguration: SSLConfiguration? = null,
         private val classLoader: ClassLoader? = null,
@@ -114,7 +117,7 @@ class CordaRPCClient private constructor(
 ) {
     @JvmOverloads
     constructor(hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default())
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.getDefault())
             : this(hostAndPort, configuration, null)
 
     /**
@@ -124,13 +127,13 @@ class CordaRPCClient private constructor(
      * @param configuration An optional configuration used to tweak client behaviour.
      */
     @JvmOverloads
-    constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()) : this(haAddressPool.first(), configuration, null, null, null, haAddressPool)
+    constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.getDefault()) : this(haAddressPool.first(), configuration, null, null, null, haAddressPool)
 
     companion object {
         fun createWithSsl(
                 hostAndPort: NetworkHostAndPort,
                 sslConfiguration: ClientRpcSslOptions,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.getDefault()
         ): CordaRPCClient {
             return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
         }
@@ -138,14 +141,14 @@ class CordaRPCClient private constructor(
         fun createWithSsl(
                 haAddressPool: List<NetworkHostAndPort>,
                 sslConfiguration: ClientRpcSslOptions,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default()
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.getDefault()
         ): CordaRPCClient {
             return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, haAddressPool = haAddressPool)
         }
 
         internal fun createWithSslAndClassLoader(
                 hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.getDefault(),
                 sslConfiguration: ClientRpcSslOptions? = null,
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {
@@ -154,7 +157,7 @@ class CordaRPCClient private constructor(
 
         internal fun createWithInternalSslAndClassLoader(
                 hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.getDefault(),
                 sslConfiguration: SSLConfiguration?,
                 classLoader: ClassLoader? = null
         ): CordaRPCClient {

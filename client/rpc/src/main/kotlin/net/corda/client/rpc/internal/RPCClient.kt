@@ -43,7 +43,7 @@ data class CordaRPCClientConfigurationImpl(
     companion object {
         private const val unlimitedReconnectAttempts = -1
         @JvmStatic
-        val default = CordaRPCClientConfigurationImpl(
+        val DEFAULT = CordaRPCClientConfigurationImpl(
                 minimumServerProtocolVersion = 0,
                 trackRpcCallSites = false,
                 reapInterval = 1.seconds,
@@ -64,28 +64,28 @@ data class CordaRPCClientConfigurationImpl(
  */
 class RPCClient<I : RPCOps>(
         val transport: TransportConfiguration,
-        val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+        val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.DEFAULT,
         val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
         val haPoolTransportConfigurations: List<TransportConfiguration> = emptyList()
 ) {
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: ClientRpcSslOptions? = null,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(rpcConnectorTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
 
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: SSLConfiguration,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(rpcInternalClientTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
 
     constructor(
             haAddressPool: List<NetworkHostAndPort>,
             sslConfiguration: ClientRpcSslOptions? = null,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration),
             configuration, serializationContext, rpcConnectorTcpTransportsFromList(haAddressPool, sslConfiguration))

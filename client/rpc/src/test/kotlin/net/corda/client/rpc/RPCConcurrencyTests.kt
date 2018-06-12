@@ -90,7 +90,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
     private fun RPCDriverDSL.testProxy(): TestProxy<TestOps> {
         return testProxy<TestOps>(
                 TestOpsImpl(pool),
-                clientConfiguration = CordaRPCClientConfigurationImpl.default.copy(
+                clientConfiguration = CordaRPCClientConfigurationImpl.DEFAULT.copy(
                         reapInterval = 100.millis
                 ),
                 serverConfiguration = RPCServerConfiguration.default.copy(

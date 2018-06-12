@@ -12,14 +12,14 @@ import rx.Observable
 /** Utility which exposes the internal Corda RPC constructor to other internal Corda components */
 fun createCordaRPCClientWithSslAndClassLoader(
         hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.getDefault(),
         sslConfiguration: ClientRpcSslOptions? = null,
         classLoader: ClassLoader? = null
 ) = CordaRPCClient.createWithSslAndClassLoader(hostAndPort, configuration, sslConfiguration, classLoader)
 
 fun createCordaRPCClientWithInternalSslAndClassLoader(
         hostAndPort: NetworkHostAndPort,
-        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default(),
+        configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.getDefault(),
         sslConfiguration: SSLConfiguration? = null,
         classLoader: ClassLoader? = null
 ) = CordaRPCClient.createWithInternalSslAndClassLoader(hostAndPort, configuration, sslConfiguration, classLoader)
