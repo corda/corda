@@ -7,18 +7,15 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializationContext.UseCase
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
-import net.corda.core.internal.checkPayloadIs
 
 class FlowSessionImpl(
         override val counterparty: Party,
-        val sourceSessionId: SessionId
-) : FlowSession() {
-
+        val sourceSessionId: SessionId,
+        private val serialization: StateMachineSerialization) : FlowSession() {
     override fun toString() = "FlowSessionImpl(counterparty=$counterparty, sourceSessionId=$sourceSessionId)"
 
     override fun equals(other: Any?): Boolean {
@@ -48,13 +45,12 @@ class FlowSessionImpl(
     ): UntrustworthyData<R> {
         enforceNotPrimitive(receiveType)
         val request = FlowIORequest.SendAndReceive(
-                sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT)),
+                sessionToMessage = mapOf(this to serialization.serialize(payload, UseCase.P2P)),
                 shouldRetrySend = false
         )
         val responseValues: Map<FlowSession, SerializedBytes<Any>> = getFlowStateMachine().suspend(request, maySkipCheckpoint)
         val responseForCurrentSession = responseValues[this]!!
-
-        return responseForCurrentSession.checkPayloadIs(receiveType)
+        return serialization.checkPayloadIs(responseForCurrentSession, receiveType)
     }
 
     @Suspendable
@@ -64,7 +60,7 @@ class FlowSessionImpl(
     override fun <R : Any> receive(receiveType: Class<R>, maySkipCheckpoint: Boolean): UntrustworthyData<R> {
         enforceNotPrimitive(receiveType)
         val request = FlowIORequest.Receive(NonEmptySet.of(this))
-        return getFlowStateMachine().suspend(request, maySkipCheckpoint)[this]!!.checkPayloadIs(receiveType)
+        return serialization.checkPayloadIs(getFlowStateMachine().suspend(request, maySkipCheckpoint)[this]!!, receiveType)
     }
 
     @Suspendable
@@ -73,7 +69,7 @@ class FlowSessionImpl(
     @Suspendable
     override fun send(payload: Any, maySkipCheckpoint: Boolean) {
         val request = FlowIORequest.Send(
-                sessionToMessage = mapOf(this to payload.serialize(context = SerializationDefaults.P2P_CONTEXT))
+                sessionToMessage = mapOf(this to serialization.serialize(payload, UseCase.P2P))
         )
         return getFlowStateMachine().suspend(request, maySkipCheckpoint)
     }

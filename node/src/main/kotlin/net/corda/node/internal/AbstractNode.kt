@@ -59,7 +59,13 @@ import net.corda.node.services.persistence.*
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
-import net.corda.node.services.transactions.*
+import net.corda.node.services.transactions.BFTNonValidatingNotaryService
+import net.corda.node.services.transactions.BFTSMaRt
+import net.corda.node.services.transactions.RaftNonValidatingNotaryService
+import net.corda.node.services.transactions.RaftUniquenessProvider
+import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
@@ -440,12 +446,17 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
     protected open fun makeStateMachineManager(database: CordaPersistence): StateMachineManager {
+        val secureRandom = newSecureRandom()
         return SingleThreadedStateMachineManager(
                 services,
                 checkpointStorage,
                 serverThread,
                 database,
-                newSecureRandom(),
+                secureRandom,
+                NodeStateMachineSerializationImplementation(services),
+                NodeStateMachinePersistence(),
+                NodeSessionIdFactory(secureRandom),
+                NodeFlowMessagingFactory(services),
                 busyNodeLatch,
                 cordappLoader.appClassLoader
         )

@@ -21,10 +21,10 @@ import java.security.SecureRandom
 sealed class SessionMessage
 
 @CordaSerializable
-data class SessionId(val toLong: Long) {
-    companion object {
-        fun createRandom(secureRandom: SecureRandom) = SessionId(secureRandom.nextLong())
-    }
+data class SessionId(val toLong: Long)
+
+class NodeSessionIdFactory(private val secureRandom: SecureRandom) : () -> SessionId {
+    override fun invoke() = SessionId(secureRandom.nextLong())
 }
 
 /**

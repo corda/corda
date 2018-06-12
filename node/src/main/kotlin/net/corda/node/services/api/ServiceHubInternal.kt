@@ -23,8 +23,8 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.services.statemachine.SubFlowVersion
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.contextDatabase
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBaseInternal
 interface NetworkMapCacheBaseInternal : NetworkMapCacheBase {
@@ -133,6 +133,12 @@ interface ServiceHubInternal : ServiceHub {
     }
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
+    fun createSubFlowVersion(flowLogic: FlowLogic<*>): SubFlowVersion {
+        val platformVersion = myInfo.platformVersion
+        // If no CorDapp found then it is a Core flow.
+        return cordappProvider.getCordappForFlow(flowLogic)?.let { SubFlowVersion.CorDappFlow(platformVersion, it.name, it.jarHash) }
+                ?: SubFlowVersion.CoreFlow(platformVersion)
+    }
 }
 
 interface FlowStarter {

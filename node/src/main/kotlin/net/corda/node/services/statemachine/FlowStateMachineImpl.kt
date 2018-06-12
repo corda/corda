@@ -8,15 +8,12 @@ import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.channels.Channel
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.SerializationContext.UseCase
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.trace
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
@@ -25,8 +22,6 @@ import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
-import net.corda.nodeapi.internal.persistence.contextTransaction
-import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -47,12 +42,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
          */
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
 
-        // If no CorDapp found then it is a Core flow.
-        internal fun createSubFlowVersion(cordapp: Cordapp?, platformVersion: Int): SubFlowVersion {
-            return cordapp?.let { SubFlowVersion.CorDappFlow(platformVersion, it.name, it.jarHash) }
-                    ?: SubFlowVersion.CoreFlow(platformVersion)
-        }
-
         private val log: Logger = LoggerFactory.getLogger("net.corda.flow")
 
         private val SERIALIZER_BLOCKER = Fiber::class.java.getDeclaredField("SERIALIZER_BLOCKER").apply { isAccessible = true }.get(null)
@@ -68,8 +57,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val actionExecutor: ActionExecutor,
             val stateMachine: StateMachine,
             val serviceHub: ServiceHubInternal,
-            val checkpointSerializationContext: SerializationContext
-    )
+            val serialization: StateMachineSerialization,
+            val persistence: StateMachinePersistence)
 
     internal var transientValues: TransientReference<TransientValues>? = null
     internal var transientState: TransientReference<StateMachineState>? = null
@@ -88,9 +77,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun extractThreadLocalTransaction(): TransientReference<DatabaseTransaction> {
-        val transaction = contextTransaction
-        contextTransactionOrNull = null
-        return TransientReference(transaction)
+        return TransientReference(getTransientField(TransientValues::persistence).removeContextTransaction())
     }
 
     /**
@@ -134,7 +121,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     @Suspendable
     private fun processEventsUntilFlowIsResumed(isDbTransactionOpenOnEntry: Boolean, isDbTransactionOpenOnExit: Boolean): Any? {
-        checkDbTransaction(isDbTransactionOpenOnEntry)
+        val persistence = TransientReference(getTransientField(TransientValues::persistence))
+        persistence.value.checkContextTransaction(isDbTransactionOpenOnEntry)
         val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
         val eventQueue = getTransientField(TransientValues::eventQueue)
         try {
@@ -157,7 +145,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 }
             }
         } finally {
-            checkDbTransaction(isDbTransactionOpenOnExit)
+            persistence.value.checkContextTransaction(isDbTransactionOpenOnExit)
         }
     }
 
@@ -175,19 +163,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             event: Event,
             isDbTransactionOpenOnEntry: Boolean,
             isDbTransactionOpenOnExit: Boolean): FlowContinuation {
-        checkDbTransaction(isDbTransactionOpenOnEntry)
+        val persistence = TransientReference(getTransientField(TransientValues::persistence))
+        persistence.value.checkContextTransaction(isDbTransactionOpenOnEntry)
         val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
         val continuation = processEvent(transitionExecutor, event)
-        checkDbTransaction(isDbTransactionOpenOnExit)
+        persistence.value.checkContextTransaction(isDbTransactionOpenOnExit)
         return continuation
-    }
-
-    private fun checkDbTransaction(isPresent: Boolean) {
-        if (isPresent) {
-            requireNotNull(contextTransactionOrNull)
-        } else {
-            require(contextTransactionOrNull == null)
-        }
     }
 
     fun setLoggingContext() {
@@ -252,11 +233,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     override fun <R> subFlow(subFlow: FlowLogic<R>): R {
         processEventImmediately(
-                Event.EnterSubFlow(subFlow.javaClass,
-                        createSubFlowVersion(
-                               serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion
-                        )
-                ),
+                Event.EnterSubFlow(subFlow.javaClass, serviceHub.createSubFlowVersion(subFlow)),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         )
@@ -331,21 +308,19 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun <R : Any> suspend(ioRequest: FlowIORequest<R>, maySkipCheckpoint: Boolean): R {
-        val serializationContext = TransientReference(getTransientField(TransientValues::checkpointSerializationContext))
+        val serialization = TransientReference(getTransientField(TransientValues::serialization))
+        val persistence = TransientReference(getTransientField(TransientValues::persistence))
         val transaction = extractThreadLocalTransaction()
         parkAndSerialize { _, _ ->
-            logger.trace { "Suspended on $ioRequest" }
-
+            logger.trace("Suspended on {}", ioRequest)
             // Will skip checkpoint if there are any idempotent flows in the subflow stack.
             val skipPersistingCheckpoint = containsIdempotentFlows() || maySkipCheckpoint
-
-            contextTransactionOrNull = transaction.value
+            persistence.value.setContextTransaction(transaction.value)
             val event = try {
                 Event.Suspend(
                         ioRequest = ioRequest,
                         maySkipCheckpoint = skipPersistingCheckpoint,
-                        fiber = this.serialize(context = serializationContext.value)
-                )
+                        fiber = serialization.value.serialize(this, UseCase.Checkpoint))
             } catch (throwable: Throwable) {
                 Event.Error(throwable)
             }

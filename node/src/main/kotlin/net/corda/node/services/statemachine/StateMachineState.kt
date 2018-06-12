@@ -67,7 +67,7 @@ data class Checkpoint(
                 invocationContext: InvocationContext,
                 flowStart: FlowStart,
                 flowLogicClass: Class<FlowLogic<*>>,
-                frozenFlowLogic: SerializedBytes<FlowLogic<*>>,
+                frozenFlowLogic: SerializedBytes<out FlowLogic<*>>,
                 ourIdentity: Party,
                 deduplicationSeed: String,
                 subFlowVersion: SubFlowVersion
@@ -176,7 +176,7 @@ sealed class FlowState {
      */
     data class Unstarted(
             val flowStart: FlowStart,
-            val frozenFlowLogic: SerializedBytes<FlowLogic<*>>
+            val frozenFlowLogic: SerializedBytes<out FlowLogic<*>>
     ) : FlowState() {
         override fun toString() = "Unstarted(flowStart=$flowStart, frozenFlowLogic=${frozenFlowLogic.hash})"
     }
