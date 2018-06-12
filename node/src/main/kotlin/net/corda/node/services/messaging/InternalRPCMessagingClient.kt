@@ -26,7 +26,7 @@ class InternalRPCMessagingClient(val sslConfig: SSLConfiguration, val serverAddr
         locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
             // would be the default and the two lines below can be deleted.
-            connectionTTL = -1
+            connectionTTL = 60000
             clientFailureCheckPeriod = -1
             minLargeMessageSize = maxMessageSize
             isUseGlobalPools = nodeSerializationEnv != null
