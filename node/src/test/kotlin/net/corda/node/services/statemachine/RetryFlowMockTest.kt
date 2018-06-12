@@ -105,6 +105,8 @@ class RetryFlowMockTest {
 
     @Test
     fun `Patient records do not leak in hospital when using killFlow`() {
+        // Make sure we have seen an update from the hospital, and thus the flow went there.
+        val records = nodeA.smm.flowHospital.track().updates.toBlocking().toIterable().iterator()
         val flow: FlowStateMachine<Unit> = nodeA.services.startFlow(FinalityHandler(object : FlowSession() {
             override val counterparty: Party
                 get() = TODO("not implemented")
@@ -141,8 +143,9 @@ class RetryFlowMockTest {
                 TODO("not implemented")
             }
         }), nodeA.services.newContext()).get()
-        // Make sure we have seen an update from the hospital, and thus the flow went there.
-        nodeA.smm.flowHospital.track().updates.toBlocking().first()
+        // Should be 2 records, one for admission and one for keep in.
+        records.next()
+        records.next()
         // Killing it should remove it.
         nodeA.smm.killFlow(flow.id)
         assertThat(nodeA.smm.flowHospital.track().snapshot).isEmpty()
