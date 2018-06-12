@@ -778,7 +778,6 @@ class SingleThreadedStateMachineManager(
         drainFlowEventQueue(flow)
         // final sanity checks
         require(lastState.pendingDeduplicationHandlers.isEmpty())
-        println("RREEEEEQUIRED")
         require(lastState.isRemoved)
         require(lastState.checkpoint.subFlowStack.size == 1)
         require(flow.fiber.id !in sessionToFlow.values)
