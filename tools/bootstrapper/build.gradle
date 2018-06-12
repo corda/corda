@@ -5,8 +5,7 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Network bootstrapper'
 
 configurations {
-    runtimeArtifacts.extendsFrom runtime
-    capsuleRuntime
+    runtimeArtifacts
 }
 
 jar {
