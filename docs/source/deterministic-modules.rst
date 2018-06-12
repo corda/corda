@@ -118,7 +118,7 @@ in order to maintain the deterministic JARs.
 
           .. sourcecode:: kotlin
 
-              @file:Deterministic
+              @file:KeepForDJVM
               package net.corda.core.internal
 
           ..
@@ -144,7 +144,7 @@ Deterministic Classes
     .. sourcecode:: kotlin
 
         @file:JvmName("InternalUtils")
-        @file:Deterministic
+        @file:KeepForDJVM
         package net.corda.core.internal
 
         infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)
