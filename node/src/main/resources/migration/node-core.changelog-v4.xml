@@ -20,7 +20,6 @@
         <addNotNullConstraint tableName="node_contract_upgrades" columnName="contract_class_name" columnDataType="NVARCHAR(255)"/>
 
         <addNotNullConstraint tableName="node_message_ids" columnName="insertion_time" columnDataType="timestamp"/>
-        <addNotNullConstraint tableName="node_message_ids" columnName="sequence_number" columnDataType="BIGINT"/>
 
         <addNotNullConstraint tableName="node_message_retry" columnName="message" columnDataType="blob"/>
         <addNotNullConstraint tableName="node_message_retry" columnName="recipients" columnDataType="blob"/>
