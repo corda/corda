@@ -10,6 +10,7 @@
 
 package net.corda.core.crypto
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.security.InvalidKeyException
@@ -21,8 +22,10 @@ import java.security.SignatureException
 //       should be renamed to match.
 /** A wrapper around a digital signature. */
 @CordaSerializable
+@KeepForDJVM
 open class DigitalSignature(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** A digital signature that identifies who the public key is owned by. */
+    @KeepForDJVM
     open class WithKey(val by: PublicKey, bytes: ByteArray) : DigitalSignature(bytes) {
         /**
          * Utility to simplify the act of verifying a signature.

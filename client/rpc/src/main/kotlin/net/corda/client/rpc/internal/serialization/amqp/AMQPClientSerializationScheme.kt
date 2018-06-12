@@ -22,10 +22,10 @@ class AMQPClientSerializationScheme(
             cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>>,
             serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
     ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
-        constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, ConcurrentHashMap())
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, ConcurrentHashMap())
 
-        @Suppress("UNUSED")
-        constructor() : this(emptySet(), ConcurrentHashMap())
+    @Suppress("UNUSED")
+    constructor() : this(emptySet(), ConcurrentHashMap())
 
     companion object {
         /** Call from main only. */

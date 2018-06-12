@@ -8,8 +8,10 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 @file:JvmName("PlatformSecureRandom")
+@file:DeleteForDJVM
 package net.corda.core.crypto.internal
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.CORDA_SECURE_RANDOM_ALGORITHM
 import net.corda.core.crypto.DummySecureRandom
 import net.corda.core.internal.VisibleForTesting

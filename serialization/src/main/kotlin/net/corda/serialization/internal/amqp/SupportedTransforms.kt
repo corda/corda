@@ -10,6 +10,7 @@
 
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformRename
@@ -25,6 +26,7 @@ import net.corda.core.serialization.CordaSerializationTransformRenames
  * that reference the transform. Notionally this allows the code that extracts transforms to work on single instances
  * of a transform or a meta list of them.
  */
+@KeepForDJVM
 data class SupportedTransform(
         val type: Class<out Annotation>,
         val enum: TransformTypes,

@@ -8,10 +8,11 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
+@file:DeleteForDJVM
 @file:JvmName("ClientContexts")
-
 package net.corda.serialization.internal
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.serialization.internal.amqp.amqpMagic

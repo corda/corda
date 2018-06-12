@@ -14,6 +14,7 @@ package net.corda.core
  * OIDs used for the Corda platform. Entries MUST NOT be removed from this file; if an OID is incorrectly assigned it
  * should be marked deprecated.
  */
+@KeepForDJVM
 object CordaOID {
     /** Assigned to R3, see http://www.oid-info.com/cgi-bin/display?oid=1.3.6.1.4.1.50530&action=display */
     const val R3_ROOT = "1.3.6.1.4.1.50530"

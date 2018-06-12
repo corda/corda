@@ -1,0 +1,33 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+apply plugin: 'kotlin'
+
+evaluationDependsOn(':jdk8u-deterministic')
+
+def jdkTask = project(':jdk8u-deterministic').assemble
+def deterministic_jdk_home = project(':jdk8u-deterministic').jdk_home
+
+dependencies {
+    compileOnly project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
+    compileOnly project(path: ':serialization-deterministic', configuration: 'runtimeArtifacts')
+    compileOnly "junit:junit:$junit_version"
+}
+
+tasks.withType(AbstractCompile) {
+    dependsOn jdkTask
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-bootclasspath' << "$deterministic_jdk_home/jre/lib/rt.jar".toString()
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+    kotlinOptions.jdkHome = deterministic_jdk_home
+}

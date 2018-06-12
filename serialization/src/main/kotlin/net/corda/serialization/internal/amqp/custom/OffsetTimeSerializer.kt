@@ -10,6 +10,7 @@
 
 package net.corda.serialization.internal.amqp.custom
 
+import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.LocalTime
@@ -26,5 +27,6 @@ class OffsetTimeSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<
 
     override fun fromProxy(proxy: OffsetTimeProxy): OffsetTime = OffsetTime.of(proxy.time, proxy.offset)
 
+    @KeepForDJVM
     data class OffsetTimeProxy(val time: LocalTime, val offset: ZoneOffset)
 }

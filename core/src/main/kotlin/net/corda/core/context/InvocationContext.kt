@@ -10,6 +10,8 @@
 
 package net.corda.core.context
 
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
@@ -31,36 +33,42 @@ data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val
         /**
          * Creates an [InvocationContext] with a [Trace] that defaults to a [java.util.UUID] as value and [java.time.Instant.now] timestamp.
          */
+        @DeleteForDJVM
         @JvmStatic
         fun newInstance(origin: InvocationOrigin, trace: Trace = Trace.newInstance(), actor: Actor? = null, externalTrace: Trace? = null, impersonatedActor: Actor? = null) = InvocationContext(origin, trace, actor, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.RPC] origin.
          */
+        @DeleteForDJVM
         @JvmStatic
         fun rpc(actor: Actor, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(InvocationOrigin.RPC(actor), trace, actor, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Peer] origin.
          */
+        @DeleteForDJVM
         @JvmStatic
         fun peer(party: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null, impersonatedActor: Actor? = null): InvocationContext = newInstance(InvocationOrigin.Peer(party), trace, null, externalTrace, impersonatedActor)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Service] origin.
          */
+        @DeleteForDJVM
         @JvmStatic
         fun service(serviceClassName: String, owningLegalIdentity: CordaX500Name, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(InvocationOrigin.Service(serviceClassName, owningLegalIdentity), trace, null, externalTrace)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Scheduled] origin.
          */
+        @DeleteForDJVM
         @JvmStatic
         fun scheduled(scheduledState: ScheduledStateRef, trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = newInstance(InvocationOrigin.Scheduled(scheduledState), trace, null, externalTrace)
 
         /**
          * Creates an [InvocationContext] with [InvocationOrigin.Shell] origin.
          */
+        @DeleteForDJVM
         @JvmStatic
         fun shell(trace: Trace = Trace.newInstance(), externalTrace: Trace? = null): InvocationContext = InvocationContext(InvocationOrigin.Shell, trace, null, externalTrace)
     }
@@ -74,6 +82,7 @@ data class InvocationContext(val origin: InvocationOrigin, val trace: Trace, val
 /**
  * Models an initiator in Corda, can be a user, a service, etc.
  */
+@KeepForDJVM
 @CordaSerializable
 data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdentity: CordaX500Name) {
 
@@ -85,6 +94,7 @@ data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdenti
     /**
      * Actor id.
      */
+    @KeepForDJVM
     @CordaSerializable
     data class Id(val value: String)
 }
@@ -92,6 +102,7 @@ data class Actor(val id: Id, val serviceId: AuthServiceId, val owningLegalIdenti
 /**
  * Represents the source of an action such as a flow start, an RPC, a shell command etc.
  */
+@DeleteForDJVM
 @CordaSerializable
 sealed class InvocationOrigin {
     /**
@@ -139,5 +150,6 @@ sealed class InvocationOrigin {
 /**
  * Authentication / Authorisation Service ID.
  */
+@KeepForDJVM
 @CordaSerializable
 data class AuthServiceId(val value: String)

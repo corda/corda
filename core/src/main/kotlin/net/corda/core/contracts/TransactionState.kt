@@ -8,8 +8,10 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
+@file:KeepForDJVM
 package net.corda.core.contracts
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 

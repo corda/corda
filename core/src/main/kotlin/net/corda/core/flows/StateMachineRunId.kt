@@ -10,6 +10,7 @@
 
 package net.corda.core.flows
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
@@ -20,6 +21,7 @@ import java.util.*
 @CordaSerializable
 data class StateMachineRunId(val uuid: UUID) {
     companion object {
+        @DeleteForDJVM
         fun createRandom(): StateMachineRunId = StateMachineRunId(UUID.randomUUID())
     }
 

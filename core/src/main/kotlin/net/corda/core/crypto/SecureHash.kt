@@ -8,9 +8,12 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
+@file:KeepForDJVM
 package net.corda.core.crypto
 
 import io.netty.util.concurrent.FastThreadLocal
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parseAsHex
@@ -22,6 +25,7 @@ import java.util.function.Supplier
  * Container for a cryptographically secure hash value.
  * Provides utilities for generating a cryptographic hash using different algorithms (currently only SHA-256 supported).
  */
+@KeepForDJVM
 @CordaSerializable
 sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes). */
@@ -91,6 +95,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         /**
          * Generates a random SHA-256 value.
          */
+        @DeleteForDJVM
         @JvmStatic
         fun randomSHA256() = sha256(secureRandomBytes(32))
 

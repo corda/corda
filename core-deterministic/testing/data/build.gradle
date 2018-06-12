@@ -1,0 +1,38 @@
+/*
+ * R3 Proprietary and Confidential
+ *
+ * Copyright (c) 2018 R3 Limited.  All rights reserved.
+ *
+ * The intellectual and technical concepts contained herein are proprietary to R3 and its suppliers and are protected by trade secret law.
+ *
+ * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
+ */
+apply plugin: 'kotlin'
+
+configurations {
+    testData
+}
+
+dependencies {
+    testCompile project(':core')
+    testCompile project(':finance')
+    testCompile project(':node-driver')
+    testCompile project(':core-deterministic:testing:common')
+
+    testCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testCompile "org.jetbrains.kotlin:kotlin-reflect"
+    testCompile "junit:junit:$junit_version"
+}
+
+jar.enabled = false
+
+test {
+    filter {
+        // Running this class is the whole point, so include it explicitly.
+        includeTestsMatching "net.corda.deterministic.data.GenerateData"
+    }
+}
+
+artifacts {
+    testData file: file("$buildDir/test-data.jar"), type: 'jar', builtBy: test
+}

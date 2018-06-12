@@ -10,6 +10,7 @@
 
 package net.corda.core.utilities
 
+import net.corda.core.DeleteForDJVM
 import java.time.Instant
 import java.time.Instant.now
 
@@ -25,6 +26,7 @@ open class Id<out VALUE : Any>(val value: VALUE, val entityType: String?, val ti
         /**
          * Creates an id using [Instant.now] as timestamp.
          */
+        @DeleteForDJVM
         @JvmStatic
         fun <V : Any> newInstance(value: V, entityType: String? = null, timestamp: Instant = now()) = Id(value, entityType, timestamp)
     }

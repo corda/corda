@@ -499,11 +499,20 @@ class NodeVaultService(
         return database.transaction {
             concurrentBox.exclusive {
                 val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
-                val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) })
+                val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed()
+                        .filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
+                        .map { filterContractStates(it, contractStateType) })
                 DataFeed(snapshotResults, updates)
             }
         }
     }
+
+    private fun <T : ContractState> filterContractStates(update: Vault.Update<T>, contractStateType: Class<out T>) =
+            update.copy(consumed = filterByContractState(contractStateType, update.consumed),
+                    produced = filterByContractState(contractStateType, update.produced))
+
+    private fun <T : ContractState> filterByContractState(contractStateType: Class<out T>, stateAndRefs: Set<StateAndRef<T>>) =
+            stateAndRefs.filter { contractStateType.isAssignableFrom(it.state.data.javaClass) }.toSet()
 
     private fun getSession() = database.currentOrNew().session
     /**

@@ -8,8 +8,10 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
+@file:DeleteForDJVM
 package net.corda.serialization.internal
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
@@ -29,6 +31,7 @@ fun SerializationContext.withTokenContext(serializationContext: SerializeAsToken
  * Then it is a case of using the companion object methods on [SerializeAsTokenSerializer] to set and clear context as necessary
  * when serializing to enable/disable tokenization.
  */
+@DeleteForDJVM
 class SerializeAsTokenContextImpl(override val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) : SerializeAsTokenContext {
     constructor(toBeTokenized: Any, serializationFactory: SerializationFactory, context: SerializationContext, serviceHub: ServiceHub) : this(serviceHub, {
         serializationFactory.serialize(toBeTokenized, context.withTokenContext(this))

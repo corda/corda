@@ -10,6 +10,7 @@
 
 package net.corda.serialization.internal.amqp.custom
 
+import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.ClassSerializer.ClassProxy
@@ -22,5 +23,6 @@ class ClassSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Class
 
     override fun fromProxy(proxy: ClassProxy): Class<*> = Class.forName(proxy.className, true, factory.classloader)
 
+    @KeepForDJVM
     data class ClassProxy(val className: String)
 }

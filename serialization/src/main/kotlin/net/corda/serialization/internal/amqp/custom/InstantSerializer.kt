@@ -10,6 +10,7 @@
 
 package net.corda.serialization.internal.amqp.custom
 
+import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Instant
@@ -22,5 +23,6 @@ class InstantSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Ins
 
     override fun fromProxy(proxy: InstantProxy): Instant = Instant.ofEpochSecond(proxy.epochSeconds, proxy.nanos.toLong())
 
+    @KeepForDJVM
     data class InstantProxy(val epochSeconds: Long, val nanos: Int)
 }

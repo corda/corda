@@ -10,6 +10,7 @@
 
 package net.corda.core.transactions
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
@@ -32,6 +33,7 @@ import java.security.PublicKey
 // TODO: check transaction size is within limits
 
 /** A special transaction for upgrading the contract of a state. */
+@KeepForDJVM
 @CordaSerializable
 data class ContractUpgradeWireTransaction(
         /**
@@ -120,6 +122,7 @@ data class ContractUpgradeWireTransaction(
  * is no flexibility on what parts of the transaction to reveal – the inputs and notary field are always visible and the
  * rest of the transaction is always hidden. Its only purpose is to hide transaction data when using a non-validating notary.
  */
+@KeepForDJVM
 @CordaSerializable
 data class ContractUpgradeFilteredTransaction(
         /** Transaction components that are exposed. */
@@ -168,6 +171,7 @@ data class ContractUpgradeFilteredTransaction(
  * In contrast with a regular transaction, signatures are checked against the signers specified by input states'
  * *participants* fields, so full resolution is needed for signature verification.
  */
+@KeepForDJVM
 data class ContractUpgradeLedgerTransaction(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,

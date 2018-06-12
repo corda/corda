@@ -1,0 +1,32 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '$kotlin_version'
+    id 'net.corda.plugins.jar-filter'
+}
+apply from: 'repositories.gradle'
+
+sourceSets {
+    main {
+        kotlin {
+            srcDir files(
+                '../resources/test/delete-static-field/kotlin',
+                '../resources/test/annotations/kotlin'
+            )
+        }
+    }
+}
+
+dependencies {
+    compile 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+}
+
+jar {
+    baseName = 'delete-static-field'
+}
+
+import net.corda.gradle.jarfilter.JarFilterTask
+task jarFilter(type: JarFilterTask) {
+    jars jar
+    annotations {
+        forDelete = ["net.corda.gradle.jarfilter.DeleteMe"]
+    }
+}

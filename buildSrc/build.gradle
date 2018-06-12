@@ -12,7 +12,24 @@ buildscript {
     Properties constants = new Properties()
     file("../constants.properties").withInputStream { constants.load(it) }
 
-    ext.guava_version = constants.getProperty("guavaVersion")
+    ext {
+        guava_version = constants.getProperty("guavaVersion")
+        kotlin_version = constants.getProperty("kotlinVersion")
+        proguard_version = constants.getProperty("proguardVersion")
+        assertj_version = '3.9.1'
+        junit_version = '4.12'
+        asm_version = '6.2'
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "net.sf.proguard:proguard-gradle:$proguard_version"
+    }
 }
 
 apply plugin: 'maven'
@@ -21,6 +38,27 @@ apply plugin: 'java'
 repositories {
     mavenLocal()
     mavenCentral()
+}
+
+allprojects {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+        kotlinOptions {
+            languageVersion = "1.2"
+            apiVersion = "1.2"
+            jvmTarget = "1.8"
+            javaParameters = true   // Useful for reflection.
+        }
+    }
+
+    tasks.withType(Test) {
+        // Prevent the project from creating temporary files outside of the build directory.
+        systemProperty 'java.io.tmpdir', buildDir.absolutePath
+
+        // Tell the tests where Gradle's current module cache is.
+        // We need the tests to share this module cache to prevent the
+        // Gradle Test-Kit from downloading its own copy of Kotlin etc.
+        systemProperty 'test.gradle.user.home', project.gradle.gradleUserHomeDir
+    }
 }
 
 dependencies {
