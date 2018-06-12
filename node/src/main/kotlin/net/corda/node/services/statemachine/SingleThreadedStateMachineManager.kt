@@ -345,8 +345,7 @@ class SingleThreadedStateMachineManager(
                     checkpoint = checkpoint,
                     initialDeduplicationHandler = null,
                     isAnyCheckpointPersisted = true,
-                    isStartIdempotent = false,
-                    senderUUID = null
+                    isStartIdempotent = false
             )
         } else {
             // Just flow initiation message
@@ -652,8 +651,7 @@ class SingleThreadedStateMachineManager(
             checkpoint: Checkpoint,
             isAnyCheckpointPersisted: Boolean,
             isStartIdempotent: Boolean,
-            initialDeduplicationHandler: DeduplicationHandler?,
-            senderUUID: String? = ourSenderUUID
+            initialDeduplicationHandler: DeduplicationHandler?
     ): Flow {
         val flowState = checkpoint.flowState
         val resultFuture = openFuture<Any?>()
@@ -669,7 +667,7 @@ class SingleThreadedStateMachineManager(
                         isStartIdempotent = isStartIdempotent,
                         isRemoved = false,
                         flowLogic = logic,
-                        senderUUID = senderUUID
+                        senderUUID = null
                 )
                 val fiber = FlowStateMachineImpl(id, logic, scheduler)
                 fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
@@ -688,7 +686,7 @@ class SingleThreadedStateMachineManager(
                         isStartIdempotent = isStartIdempotent,
                         isRemoved = false,
                         flowLogic = fiber.logic,
-                        senderUUID = senderUUID
+                        senderUUID = null
                 )
                 fiber.transientValues = TransientReference(createTransientValues(id, resultFuture))
                 fiber.transientState = TransientReference(state)
