@@ -7,7 +7,7 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
-* Improved docs PDF quality. Building the docs now requires ``LaTex`` to be installed on the OS.
+* Improved documentation PDF quality. Building the documentation now requires ``LaTex`` to be installed on the OS.
 
 * Fixed an issue where ``trackBy`` was returning ``ContractStates`` from a transaction that were not being tracked. The
   unrelated ``ContractStates`` will now be filtered out from the returned ``Vault.Update``.

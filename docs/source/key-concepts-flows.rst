@@ -22,9 +22,19 @@ what order.
 
 Here is a visualisation of the process of agreeing a simple ledger update between Alice and Bob:
 
-.. image:: resources/flow.png
-   :scale: 25%
-   :align: center
+.. only:: htmlmode
+
+   .. image:: resources/flow.gif
+      :scale: 25%
+      :align: center
+
+
+.. only:: pdfmode
+
+   .. image:: resources/flow.png
+      :scale: 25%
+      :align: center
+
 
 The flow framework
 ------------------
