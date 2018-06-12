@@ -29,6 +29,7 @@ import org.junit.Before
 import org.junit.Test
 import java.sql.SQLException
 import java.time.Duration
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -47,6 +48,7 @@ class RetryFlowMockTest {
         RetryFlow.count = 0
         SendAndRetryFlow.count = 0
         RetryInsertFlow.count = 0
+        KeepSendingFlow.count = 0
     }
 
     private fun <T> StartedNode<MockNode>.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
@@ -74,7 +76,7 @@ class RetryFlowMockTest {
 
     @Test
     fun `Retry does not set senderUUID`() {
-        val messagesSent = mutableListOf<Message>()
+        val messagesSent = Collections.synchronizedList(mutableListOf<Message>())
         val partyB = nodeB.info.legalIdentities.first()
         nodeA.setMessagingServiceSpy(object : MessagingServiceSpy(nodeA.network) {
             override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
@@ -86,6 +88,38 @@ class RetryFlowMockTest {
         assertNotNull(messagesSent.first().senderUUID)
         assertNull(messagesSent.last().senderUUID)
         assertEquals(2, SendAndRetryFlow.count)
+    }
+
+    @Test
+    fun `Restart does not set senderUUID`() {
+        val messagesSent = Collections.synchronizedList(mutableListOf<Message>())
+        val partyB = nodeB.info.legalIdentities.first()
+        nodeA.setMessagingServiceSpy(object : MessagingServiceSpy(nodeA.network) {
+            override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
+                messagesSent.add(message)
+                messagingService.send(message, target)
+            }
+        })
+        val count = 10000 // Lots of iterations so the flow keeps going long enough
+        nodeA.startFlow(KeepSendingFlow(count, partyB))
+        while (messagesSent.size < 1) {
+            Thread.sleep(10)
+        }
+        assertNotNull(messagesSent.first().senderUUID)
+        nodeA = mockNet.restartNode(nodeA)
+        // This is a bit racy because restarting the node actually starts it, so we need to make sure there's enough iterations we get here with flow still going.
+        nodeA.setMessagingServiceSpy(object : MessagingServiceSpy(nodeA.network) {
+            override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
+                messagesSent.add(message)
+                messagingService.send(message, target)
+            }
+        })
+        // Now short circuit the iterations so the flow finishes soon.
+        KeepSendingFlow.count = count - 2
+        while (nodeA.smm.allStateMachines.size > 0) {
+            Thread.sleep(10)
+        }
+        assertNull(messagesSent.last().senderUUID)
     }
 
     @Test
@@ -158,6 +192,7 @@ class RetryCausingError : SQLException("deadlock")
 
 class RetryFlow(private val i: Int) : FlowLogic<Unit>() {
     companion object {
+        @Volatile
         var count = 0
     }
 
@@ -170,26 +205,6 @@ class RetryFlow(private val i: Int) : FlowLogic<Unit>() {
             } else {
                 throw RetryCausingError()
             }
-        }
-    }
-}
-
-class RetryAndSleepFlow(private val i: Int) : FlowLogic<Unit>() {
-    companion object {
-        var count = 0
-    }
-
-    @Suspendable
-    override fun call() {
-        logger.info("Hello $count")
-        if (count++ < i) {
-            if (i == Int.MAX_VALUE) {
-                throw LimitedRetryCausingError()
-            } else {
-                throw RetryCausingError()
-            }
-        } else {
-            sleep(Duration.ofDays(1))
         }
     }
 }
@@ -197,6 +212,7 @@ class RetryAndSleepFlow(private val i: Int) : FlowLogic<Unit>() {
 @InitiatingFlow
 class SendAndRetryFlow(private val i: Int, private val other: Party) : FlowLogic<Unit>() {
     companion object {
+        @Volatile
         var count = 0
     }
 
@@ -221,8 +237,40 @@ class ReceiveFlow2(private val other: FlowSession) : FlowLogic<Unit>() {
     }
 }
 
+@InitiatingFlow
+class KeepSendingFlow(private val i: Int, private val other: Party) : FlowLogic<Unit>() {
+    companion object {
+        @Volatile
+        var count = 0
+    }
+
+    @Suspendable
+    override fun call() {
+        val session = initiateFlow(other)
+        session.send(i.toString())
+        do {
+            logger.info("Sending... $count")
+            session.send("Boo")
+        } while (count++ < i)
+    }
+}
+
+@Suppress("unused")
+@InitiatedBy(KeepSendingFlow::class)
+class ReceiveFlow3(private val other: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        var count = other.receive<String>().unwrap { it.toInt() }
+        while (count-- > 0) {
+            val received = other.receive<String>().unwrap { it }
+            logger.info("Received... $received $count")
+        }
+    }
+}
+
 class RetryInsertFlow(private val i: Int) : FlowLogic<Unit>() {
     companion object {
+        @Volatile
         var count = 0
     }
 
