@@ -238,7 +238,7 @@ latex_documents = [('index', u'corda-developer-site.tex', u'Corda Developer Docu
 # If false, no module index is generated.
 #latex_domain_indices = True
 
-+latex_elements = {
+latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #'papersize': 'letterpaper',
 
