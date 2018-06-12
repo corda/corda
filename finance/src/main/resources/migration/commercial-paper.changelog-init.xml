@@ -46,4 +46,10 @@
             <column name="maturity_instant"/>
         </createIndex>
     </changeSet>
+    <changeSet id="non-clustered_pk-commercial-paper" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="cp_states" constraintName="cp_states_pkey"/>
+        <addPrimaryKey tableName="cp_states" columnNames="output_index, transaction_id" constraintName="cp_states_pkey"
+                       clustered="false"/>
+    </changeSet>
+
 </databaseChangeLog>

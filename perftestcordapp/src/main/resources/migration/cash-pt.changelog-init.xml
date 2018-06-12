@@ -38,4 +38,9 @@
             <column name="pennies"/>
         </createIndex>
     </changeSet>
+    <changeSet id="non-clustered_pk-cash-pt" author="R3.Corda" onValidationFail="MARK_RAN">
+        <dropPrimaryKey tableName="contract_pt_cash_states" constraintName="contract_pt_cash_states_pkey"/>
+        <addPrimaryKey tableName="contract_pt_cash_states" columnNames="output_index, transaction_id"
+                       constraintName="contract_pt_cash_states_pkey" clustered="false"/>
+    </changeSet>
 </databaseChangeLog>

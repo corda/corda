@@ -17,5 +17,6 @@
     <include file="migration/node-core.changelog-init.xml"/>
     <include file="migration/node-core.changelog-v3.xml"/>
     <include file="migration/node-core.changelog-v4.xml"/>
+    <include file="migration/node-core.changelog-pkey.xml"/>
 
 </databaseChangeLog>
