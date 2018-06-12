@@ -152,14 +152,14 @@ nodes using ``docker-compose``. It supports the following configuration options 
 * ``rpcUsers``
 * ``useTestClock``
 
-There is no need to specify the nodes' ports, as every node is in a separated container, so no ports conflict will occur. 
+There is no need to specify the nodes' ports, as every node has a separate container, so no ports conflict will occur. 
 Every node will expose port ``10003`` for RPC connections.
 
-The nodes' webservers will not be started. Instead, you should interact with them using each node's shell over SSH 
+The nodes' webservers will not be started. Instead, you should interact with each node via its shell over SSH 
 (see the :doc:`node configuration options <corda-configuration-file>`). You have to enable the shell by adding the 
 following line to each node's ``node.conf`` file:
 
-    sshd { port = 2222 }
+    ``sshd { port = 2222 }``
 
 Where ``2222`` is the port you want to open to SSH into the shell.
 
