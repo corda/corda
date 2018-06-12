@@ -71,8 +71,8 @@ Any database browsing tool that supports JDBC can be used, but if you have Intel
 a tool integrated with your IDE. Just open the database window and add an H2 data source with the above details.
 You will now be able to browse the tables and row data within them.
 
-By default the node will expose its database the localhost network interface. This behaviour can be
-overridden by using specifying the full network address (interface and port) using the new h2Settings
+By default the node will expose its database on the localhost network interface. This behaviour can be
+overridden by specifying the full network address (interface and port), using the new h2Settings
 syntax in the node configuration:
 
 .. sourcecode:: groovy

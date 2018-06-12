@@ -32,8 +32,9 @@ stored states, transactions and attachments as follows:
 You will be presented with a web interface that shows the contents of your node's storage and vault, and provides an
 interface for you to query them using SQL.
 
-The default behaviour is to expose the H2 database on the localhost interface. This can be overridden in the
-node configuration us
+The default behaviour is to expose the H2 database on localhost. This can be overridden in the
+node configuration using ``h2Settings.address`` and specifying the address of the network interface to listen on,
+or simply using ``0.0.0.0:0`` to listen on all interfaces.
 
 PostgreSQL
 ----------
