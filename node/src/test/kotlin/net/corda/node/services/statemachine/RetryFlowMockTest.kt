@@ -270,6 +270,7 @@ class ReceiveFlow3(private val other: FlowSession) : FlowLogic<Unit>() {
 
 class RetryInsertFlow(private val i: Int) : FlowLogic<Unit>() {
     companion object {
+        @Volatile
         var count = 0
     }
 
