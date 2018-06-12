@@ -21,7 +21,7 @@ jar {
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
     }
-    archiveName = "blob-inspector-${version}.jar"
+    archiveName = "blob-inspector-${corda_release_version}.jar"
     manifest {
         attributes(
                 'Automatic-Module-Name': 'net.corda.blobinspector',
@@ -31,5 +31,5 @@ jar {
 }
 
 publish {
-    name 'tools-blob-inspector'
+    name 'corda-tools-blob-inspector'
 }
