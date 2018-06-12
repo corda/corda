@@ -26,6 +26,12 @@
       <module name="corda-finance_integrationTest" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
+      <module name="corda-smoke-test-utils_main" target="1.8" />
+      <module name="corda-smoke-test-utils_test" target="1.8" />
+      <module name="corda-test-common_main" target="1.8" />
+      <module name="corda-test-common_test" target="1.8" />
+      <module name="corda-test-utils_main" target="1.8" />
+      <module name="corda-test-utils_test" target="1.8" />
       <module name="corda-webserver_integrationTest" target="1.8" />
       <module name="corda-webserver_main" target="1.8" />
       <module name="corda-webserver_test" target="1.8" />
@@ -102,6 +108,8 @@
       <module name="node-driver_integrationTest" target="1.8" />
       <module name="node-driver_main" target="1.8" />
       <module name="node-driver_test" target="1.8" />
+      <module name="node-schemas_main" target="1.8" />
+      <module name="node-schemas_test" target="1.8" />
       <module name="node_integrationTest" target="1.8" />
       <module name="node_main" target="1.8" />
       <module name="node_smokeTest" target="1.8" />
