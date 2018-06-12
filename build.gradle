@@ -13,9 +13,9 @@ buildscript {
     //
     // TODO: Sort this alphabetically.
     ext.kotlin_version = constants.getProperty("kotlinVersion")
-    // use our fork of quasar
-    ext.quasar_group = 'com.github.corda.quasar'
-    ext.quasar_version = '7629695563deae6cc95adcfbebcbc8322fd0241a'
+
+    ext.quasar_group = 'co.paralleluniverse'
+    ext.quasar_version = '0.7.10'
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1
     // TODO: Upgrade gradle-capsule-plugin to a version with capsule:1.0.3
