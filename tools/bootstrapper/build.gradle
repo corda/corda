@@ -5,7 +5,12 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Network bootstrapper'
 
 configurations {
-    runtimeArtifacts
+    runtimeArtifacts.extendsFrom runtime
+    capsuleRuntime
+}
+
+jar {
+    baseName "corda-tools-network-bootstrapper"
 }
 
 dependencies {
@@ -14,7 +19,7 @@ dependencies {
 
 task buildBootstrapperJar(type: FatCapsule, dependsOn: project(':node-api').compileJava) {
     applicationClass 'net.corda.nodeapi.internal.network.NetworkBootstrapper'
-    archiveName = "network-bootstrapper-${version}.jar"
+    archiveName "tools-network-bootstrapper-${corda_release_version}.jar"
     capsuleManifest {
         applicationVersion = corda_release_version
         systemProperties['visualvm.display.name'] = 'Network Bootstrapper'
@@ -38,6 +43,6 @@ artifacts {
 }
 
 publish {
-    name 'tools-network-bootstrapper'
     disableDefaultJar = true
+    name 'corda-tools-network-bootstrapper'
 }
