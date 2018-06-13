@@ -7,12 +7,15 @@ Time-windows
    * *The notary is the timestamping authority, refusing to commit transactions outside of that window*
    * *Time-windows can have a start and end time, or be open at either end*
 
-Video
------
-.. raw:: html
+.. only:: htmlmode
 
-    <iframe src="https://player.vimeo.com/video/213879314" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-    <p></p>
+    Video
+    -----
+    .. raw:: html
+    
+        <iframe src="https://player.vimeo.com/video/213879314" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+        <p></p>
+
 
 Time in a distributed system
 ----------------------------
@@ -38,9 +41,19 @@ For this reason, times in transactions are specified as time *windows*, not abso
 there can never be "true time", only an approximation of it. Time windows can be open-ended (i.e. specify only one of
 "before" and "after") or they can be fully bounded.
 
-.. image:: resources/time-window.gif
-   :scale: 25%
-   :align: center
+.. only:: htmlmode
+
+   .. image:: resources/time-window.gif
+      :scale: 25%
+      :align: center
+
+
+.. only:: pdfmode
+
+   .. image:: resources/time-window.png
+      :scale: 25%
+      :align: center
+
 
 In this way, we express the idea that the *true value* of the fact "the current time" is actually unknowable. Even when
 both a before and an after time are included, the transaction could have occurred at any point within that time-window.
