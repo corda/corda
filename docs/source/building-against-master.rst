@@ -7,7 +7,9 @@ on the main codebase.
 
 To work against the Master branch, proceed as follows:
 
-1. Open a terminal window in the folder where you cloned the `Corda repository <https://github.com/corda/corda>`_
+1. Clone the `Corda repository <https://github.com/corda/corda>`_
+
+1. Open a terminal window in the folder where you cloned the Corda repository
 
 2. Use the following command to check out the latest master branch:
 
@@ -17,8 +19,6 @@ To work against the Master branch, proceed as follows:
 
   * Unix/Mac OSX: ``./gradlew install``
   * Windows: ``gradlew.bat install``
-
-  This step is not necessary when using a stable releases, as the stable releases are published online
 
   .. warning:: If you do modify your local Corda repository after having published it to Maven local, then you must
      re-publish it to Maven local for the local installation to reflect the changes you have made.
