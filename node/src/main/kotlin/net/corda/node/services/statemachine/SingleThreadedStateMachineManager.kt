@@ -144,7 +144,7 @@ class SingleThreadedStateMachineManager(
                 }
             }
 
-            serviceHub.networkMapCache.changed.subscribe({
+            serviceHub.networkMapCache.changed.subscribe {
                 mutex.locked {
                     for ((_, flow) in flows) {
                         if (flowHospital.flowAffected(flow.fiber, UnknownPeerException::class.javaObjectType)) {
@@ -154,7 +154,7 @@ class SingleThreadedStateMachineManager(
                         }
                     }
                 }
-            })
+            }
         }
     }
 
