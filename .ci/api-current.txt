@@ -6537,7 +6537,6 @@ public class net.corda.client.rpc.CordaRPCClientConfiguration extends java.lang.
   @NotNull
   public java.time.Duration getConnectionMaxRetryInterval()
   public int hashCode()
-  @NotNull
   public String toString()
   public static final net.corda.client.rpc.CordaRPCClientConfiguration$Companion Companion
   @NotNull
