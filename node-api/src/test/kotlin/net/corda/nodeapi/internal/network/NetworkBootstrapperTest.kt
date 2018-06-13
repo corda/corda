@@ -127,7 +127,7 @@ class NetworkBootstrapperTest {
     private fun generateWhitelist(existingWhitelist: Map<String, List<AttachmentId>>,
                                   excludeContracts: List<ContractClassName>,
                                   contractJars: List<TestContractsJar>): Map<String, List<AttachmentId>> {
-        return NetworkBootstrapper().generateWhitelist(
+        return generateWhitelist(
                 testNetworkParameters(whitelistedContractImplementations = existingWhitelist),
                 excludeContracts,
                 contractJars

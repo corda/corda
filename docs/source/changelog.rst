@@ -8,6 +8,8 @@ Unreleased
 ==========
 * Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems related to database migrations before exiting with a non-zero code.
 
+* Add ``devModeOptions.allowCompatibilityZone`` to re-enable the use of a compatibility zone and ``devMode``
+
 * Fixed an issue where ``trackBy`` was returning ``ContractStates`` from a transaction that were not being tracked. The
   unrelated ``ContractStates`` will now be filtered out from the returned ``Vault.Update``.
 
@@ -151,7 +153,7 @@ Version 3.1
 
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
-* Added `database.hibernateDialect` node configuration option
+  * Added `database.hibernateDialect` node configuration option
 
 .. _changelog_r3_v3:
 
