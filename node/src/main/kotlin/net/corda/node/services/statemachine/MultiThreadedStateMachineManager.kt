@@ -230,7 +230,6 @@ class MultiThreadedStateMachineManager(
                 logger.debug("Killing flow known to physical node.")
                 decrementLiveFibers()
                 totalFinishedFlows.inc()
-                unfinishedFibers.countDown()
                 try {
                     flow.fiber.interrupt()
                     return true
@@ -238,6 +237,8 @@ class MultiThreadedStateMachineManager(
                     database.transaction {
                         checkpointStorage.removeCheckpoint(id)
                     }
+                    transitionExecutor.forceRemoveFlow(id)
+                    unfinishedFibers.countDown()
                 }
             } else {
                 // TODO replace with a clustered delete after we'll support clustered nodes
@@ -281,7 +282,6 @@ class MultiThreadedStateMachineManager(
             if (flow != null) {
                 decrementLiveFibers()
                 totalFinishedFlows.inc()
-                unfinishedFibers.countDown()
                 return when (removalReason) {
                     is FlowRemovalReason.OrderlyFinish -> removeFlowOrderly(flow, removalReason, lastState)
                     is FlowRemovalReason.ErrorFinish -> removeFlowError(flow, removalReason, lastState)
