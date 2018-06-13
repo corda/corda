@@ -12,6 +12,8 @@ Unreleased
   * The database server address must also be enabled in the node configuration.
   * A new ``h2Settings`` configuration block supercedes the ``h2Port`` option.
 
+* Improved documentation PDF quality. Building the documentation now requires ``LaTex`` to be installed on the OS.
+
 * Add ``devModeOptions.allowCompatibilityZone`` to re-enable the use of a compatibility zone and ``devMode``
 
 * Fixed an issue where ``trackBy`` was returning ``ContractStates`` from a transaction that were not being tracked. The
@@ -160,7 +162,7 @@ Version 3.1
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
   .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions
-later than 2.12.3 (including 2.12.4) exhibit a different issue.
+     later than 2.12.3 (including 2.12.4) exhibit a different issue.
 
 * Updated the api scanner gradle plugin to work the same way as the version in master. These changes make the api scanner more
   accurate and fix a couple of bugs, and change the format of the api-current.txt file slightly. Backporting these changes
@@ -978,15 +980,15 @@ Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsk
 to Corda in M10.
 
 .. warning:: Due to incompatibility between older version of IntelliJ and gradle 3.4, you will need to upgrade Intellij
-to 2017.1 (with kotlin-plugin v1.1.1) in order to run Corda demos in IntelliJ. You can download the latest IntelliJ
+   to 2017.1 (with kotlin-plugin v1.1.1) in order to run Corda demos in IntelliJ. You can download the latest IntelliJ
    from `JetBrains <https://www.jetbrains.com/idea/download/>`_.
 
 .. warning:: The Kapt-generated models are no longer included in our codebase. If you experience ``unresolved references``
-errors when building in IntelliJ, please rebuild the schema model by running ``gradlew kaptKotlin`` in Windows or
+   errors when building in IntelliJ, please rebuild the schema model by running ``gradlew kaptKotlin`` in Windows or
    ``./gradlew kaptKotlin`` in other systems. Alternatively, perform a full gradle build or install.
 
 .. note:: Kapt is used to generate schema model and entity code (from annotations in the codebase) using the Kotlin Annotation
-processor.
+   processor.
 
 * Corda DemoBench:
     * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate
