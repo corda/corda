@@ -28,6 +28,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import javax.persistence.Query
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class RunOnceServiceTest {
@@ -60,17 +61,14 @@ class RunOnceServiceTest {
 
     @Test
     fun `change of master node exits if failed to update row`() {
-        exit.expectSystemExitWithStatus(1)
-
         runOnceServiceMachine1.start()
 
-        val waitInterval = 20000000000000000;
-        val shutdownWaitStub = { waitTime: Long -> assertEquals(waitInterval, waitTime) }
+        val waitInterval = 20000000000000000
 
         val runOnceServiceLongWait = RunOnceService(database, "machineLongWait", "99999", 1,
-                waitInterval, mockUpdateExecutor, shutdownWaitStub)
+                waitInterval, mockUpdateExecutor)
         // fails as didn't wait long enough, someone else could still be running
-        runOnceServiceLongWait.start()
+        assertFailsWith<RunOnceService.RunOnceServiceWaitIntervalSleepException> { runOnceServiceLongWait.start() }
     }
 
     @Test

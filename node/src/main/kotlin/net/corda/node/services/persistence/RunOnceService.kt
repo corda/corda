@@ -41,13 +41,11 @@ const val VERSION = "version"
  * @property updateInterval rate(milliseconds) at which the running node updates row.
  * @property waitInterval amount of time(milliseconds) to wait since last row update before being able to become the master node.
  * @property updateExecutor runs a row update every [updateInterval] milliseconds.
- * @property shutdownWait function executed before shutdown.
  */
 class RunOnceService(private val database: CordaPersistence, private val machineName: String, private val pid: String,
                      private val updateInterval: Long, private val waitInterval: Long,
                      private val updateExecutor: ScheduledExecutorService =
-                     AffinityExecutor.ServiceAffinityExecutor("RunOnceService", 1),
-                     private val shutdownWait: (Long) -> Unit = Thread::sleep) : SingletonSerializeAsToken() {
+                     AffinityExecutor.ServiceAffinityExecutor("RunOnceService", 1)) : SingletonSerializeAsToken() {
 
     private val log = loggerFor<RunOnceService>()
     private val running = AtomicBoolean(false)
@@ -178,11 +176,11 @@ class RunOnceService(private val database: CordaPersistence, private val machine
                         "Check if ${mutualExclusion.machineName}, PID: ${mutualExclusion.pid} is still running. " +
                         "Try again in ${Duration.ofMillis(waitInterval)}")
             }
-            log.info("Will sleep for $waitInterval seconds till lease expires then shutting down this process.")
-            shutdownWait(waitInterval)
-            System.exit(1)
+            throw RunOnceServiceWaitIntervalSleepException()
         }
 
         return returnValue == 1
     }
+
+    class RunOnceServiceWaitIntervalSleepException : Exception()
 }

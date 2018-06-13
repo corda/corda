@@ -295,6 +295,22 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 schemaService,
                 { name -> identityServiceRef.get().wellKnownPartyFromX500Name(name) },
                 { party -> identityServiceRef.get().wellKnownPartyFromAnonymous(party) })
+
+        val mutualExclusionConfiguration = configuration.enterpriseConfiguration.mutualExclusionConfiguration
+        if (mutualExclusionConfiguration.on) {
+            // Ensure uniqueness in case nodes are hosted on the same machine.
+            val extendedMachineName = "${configuration.baseDirectory}/${mutualExclusionConfiguration.machineName}"
+            try {
+                RunOnceService(database, extendedMachineName,
+                        ManagementFactory.getRuntimeMXBean().name.split("@")[0],
+                        mutualExclusionConfiguration.updateInterval, mutualExclusionConfiguration.waitInterval).start()
+            } catch (exception: RunOnceService.RunOnceServiceWaitIntervalSleepException) {
+                log.info("Will sleep for $mutualExclusionConfiguration.waitInterval seconds till lease expires then shutting down this process.")
+                Thread.sleep(mutualExclusionConfiguration.waitInterval)
+                System.exit(1)
+            }
+        }
+
         val identityService = makeIdentityService(identity.certificate, database).also(identityServiceRef::set)
         networkMapClient = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, identityService.trustRoot) }
         val networkParameteresReader = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory)
@@ -302,7 +318,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
-
         val (startedImpl, schedulerService) = database.transaction {
             val networkMapCache = NetworkMapCacheImpl(PersistentNetworkMapCache(database, networkParameters.notaries).start(), identityService, database)
             val (keyPairs, nodeInfo) = updateNodeInfo(networkMapCache, networkMapClient, identity, identityKeyPair)
@@ -329,14 +344,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     nodeProperties,
                     cordappProvider,
                     networkParameters)
-            val mutualExclusionConfiguration = configuration.enterpriseConfiguration.mutualExclusionConfiguration
-            if (mutualExclusionConfiguration.on) {
-                // Ensure uniqueness in case nodes are hosted on the same machine.
-                val extendedMachineName = "${configuration.baseDirectory}/${mutualExclusionConfiguration.machineName}"
-                RunOnceService(database, extendedMachineName,
-                        ManagementFactory.getRuntimeMXBean().name.split("@")[0],
-                        mutualExclusionConfiguration.updateInterval, mutualExclusionConfiguration.waitInterval).start()
-            }
             val notaryService = makeNotaryService(nodeServices, database)
             val smm = makeStateMachineManager(database)
             val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
