@@ -44,7 +44,7 @@ open class AbstractRPCTest {
     inline fun <reified I : RPCOps> RPCDriverDSL.testProxy(
             ops: I,
             rpcUser: User = rpcTestUser,
-            clientConfiguration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.default,
+            clientConfiguration: CordaRPCClientConfigurationImpl = CordaRPCClientConfigurationImpl.DEFAULT,
             serverConfiguration: RPCServerConfiguration = RPCServerConfiguration.default
     ): TestProxy<I> {
         return when (mode) {

@@ -55,7 +55,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
     private fun warmup() {
         rpcDriver {
             val proxy = testProxy(
-                    CordaRPCClientConfigurationImpl.default,
+                    CordaRPCClientConfigurationImpl.DEFAULT,
                     RPCServerConfiguration.default
             )
             val executor = Executors.newFixedThreadPool(4)
@@ -85,7 +85,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
         measure(inputOutputSizes, (1..5)) { inputOutputSize, _ ->
             rpcDriver {
                 val proxy = testProxy(
-                        CordaRPCClientConfigurationImpl.default.copy(
+                        CordaRPCClientConfigurationImpl.DEFAULT.copy(
                                 observationExecutorPoolSize = 2
                         ),
                         RPCServerConfiguration.default.copy(
@@ -124,7 +124,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
         rpcDriver {
             val metricRegistry = startReporter(shutdownManager)
             val proxy = testProxy(
-                    CordaRPCClientConfigurationImpl.default.copy(
+                    CordaRPCClientConfigurationImpl.DEFAULT.copy(
                             reapInterval = 1.seconds
                     ),
                     RPCServerConfiguration.default.copy(
@@ -156,7 +156,7 @@ class RPCPerformanceTests : AbstractRPCTest() {
             // TODO this hangs with more parallelism
             rpcDriver {
                 val proxy = testProxy(
-                        CordaRPCClientConfigurationImpl.default,
+                        CordaRPCClientConfigurationImpl.DEFAULT,
                         RPCServerConfiguration.default
                 )
                 val numberOfMessages = 1000
