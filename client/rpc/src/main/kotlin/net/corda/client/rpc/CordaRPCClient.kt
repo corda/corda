@@ -29,6 +29,11 @@ class CordaRPCConnection internal constructor(connection: RPCConnection<CordaRPC
 open class CordaRPCClientConfiguration @JvmOverloads constructor(
 
         /**
+         * Maximum retry interval.
+         */
+        open val connectionMaxRetryInterval: Duration = 3.minutes,
+
+        /**
          * The minimum protocol version required from the server.
          */
         open val minimumServerProtocolVersion: Int = 0,
@@ -70,11 +75,6 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         open val connectionRetryIntervalMultiplier: Double = 1.5,
 
         /**
-         * Maximum retry interval.
-         */
-        open val connectionMaxRetryInterval: Duration = 3.minutes,
-
-        /**
          * Maximum reconnect attempts on failover>
          */
         open val maxReconnectAttempts: Int = unlimitedReconnectAttempts,
@@ -107,6 +107,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
      */
     @JvmOverloads
     fun copy(
+            connectionMaxRetryInterval: Duration = this.connectionMaxRetryInterval,
             minimumServerProtocolVersion: Int = this.minimumServerProtocolVersion,
             trackRpcCallSites: Boolean = this.trackRpcCallSites,
             reapInterval: Duration = this.reapInterval,
@@ -114,12 +115,12 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
             cacheConcurrencyLevel: Int = this.cacheConcurrencyLevel,
             connectionRetryInterval: Duration = this.connectionRetryInterval,
             connectionRetryIntervalMultiplier: Double = this.connectionRetryIntervalMultiplier,
-            connectionMaxRetryInterval: Duration = this.connectionMaxRetryInterval,
             maxReconnectAttempts: Int = this.maxReconnectAttempts,
             maxFileSize: Int = this.maxFileSize,
             deduplicationCacheExpiry: Duration = this.deduplicationCacheExpiry
     ): CordaRPCClientConfiguration {
         return CordaRPCClientConfiguration(
+                connectionMaxRetryInterval,
                 minimumServerProtocolVersion,
                 trackRpcCallSites,
                 reapInterval,
@@ -127,7 +128,6 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
                 cacheConcurrencyLevel,
                 connectionRetryInterval,
                 connectionRetryIntervalMultiplier,
-                connectionMaxRetryInterval,
                 maxReconnectAttempts,
                 maxFileSize,
                 deduplicationCacheExpiry
@@ -139,6 +139,7 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         if (javaClass != other?.javaClass) return false
 
         other as CordaRPCClientConfiguration
+        if (connectionMaxRetryInterval != other.connectionMaxRetryInterval) return false
         if (minimumServerProtocolVersion != other.minimumServerProtocolVersion) return false
         if (trackRpcCallSites != other.trackRpcCallSites) return false
         if (reapInterval != other.reapInterval) return false
@@ -146,7 +147,6 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
         if (cacheConcurrencyLevel != other.cacheConcurrencyLevel) return false
         if (connectionRetryInterval != other.connectionRetryInterval) return false
         if (connectionRetryIntervalMultiplier != other.connectionRetryIntervalMultiplier) return false
-        if (connectionMaxRetryInterval != other.connectionMaxRetryInterval) return false
         if (maxReconnectAttempts != other.maxReconnectAttempts) return false
         if (maxFileSize != other.maxFileSize) return false
         if (deduplicationCacheExpiry != other.deduplicationCacheExpiry) return false
@@ -156,13 +156,13 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
 
     override fun hashCode(): Int {
         var result = minimumServerProtocolVersion
+        result = 31 * result + connectionMaxRetryInterval.hashCode()
         result = 31 * result + trackRpcCallSites.hashCode()
         result = 31 * result + reapInterval.hashCode()
         result = 31 * result + observationExecutorPoolSize
         result = 31 * result + cacheConcurrencyLevel
         result = 31 * result + connectionRetryInterval.hashCode()
         result = 31 * result + connectionRetryIntervalMultiplier.hashCode()
-        result = 31 * result + connectionMaxRetryInterval.hashCode()
         result = 31 * result + maxReconnectAttempts
         result = 31 * result + maxFileSize
         result = 31 * result + deduplicationCacheExpiry.hashCode()
@@ -171,13 +171,17 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
 
     override fun toString(): String {
         return "CordaRPCClientConfiguration(" +
+                "connectionMaxRetryInterval=$connectionMaxRetryInterval, " +
                 "minimumServerProtocolVersion=$minimumServerProtocolVersion, trackRpcCallSites=$trackRpcCallSites, " +
                 "reapInterval=$reapInterval, observationExecutorPoolSize=$observationExecutorPoolSize, " +
                 "cacheConcurrencyLevel=$cacheConcurrencyLevel, connectionRetryInterval=$connectionRetryInterval, " +
                 "connectionRetryIntervalMultiplier=$connectionRetryIntervalMultiplier, " +
-                "connectionMaxRetryInterval=$connectionMaxRetryInterval, maxReconnectAttempts=$maxReconnectAttempts, " +
-                "maxFileSize=$maxFileSize, deduplicationCacheExpiry=$deduplicationCacheExpiry)"
+                "maxReconnectAttempts=$maxReconnectAttempts, maxFileSize=$maxFileSize, " +
+                "deduplicationCacheExpiry=$deduplicationCacheExpiry)"
     }
+
+    // Left is for backwards compatibility with version 3.1
+    operator fun component1() = connectionMaxRetryInterval
 
 }
 

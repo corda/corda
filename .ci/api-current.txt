@@ -6527,7 +6527,7 @@ public static final class net.corda.client.rpc.CordaRPCClient$Companion extends 
   @NotNull
   public final net.corda.client.rpc.CordaRPCClient createWithSsl(net.corda.core.utilities.NetworkHostAndPort, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
 ##
-public final class net.corda.client.rpc.CordaRPCClientConfiguration extends java.lang.Object
+public class net.corda.client.rpc.CordaRPCClientConfiguration extends java.lang.Object
   public <init>(java.time.Duration)
   @NotNull
   public final java.time.Duration component1()
@@ -6535,8 +6535,9 @@ public final class net.corda.client.rpc.CordaRPCClientConfiguration extends java
   public final net.corda.client.rpc.CordaRPCClientConfiguration copy(java.time.Duration)
   public boolean equals(Object)
   @NotNull
-  public final java.time.Duration getConnectionMaxRetryInterval()
+  public java.time.Duration getConnectionMaxRetryInterval()
   public int hashCode()
+  @NotNull
   public String toString()
   public static final net.corda.client.rpc.CordaRPCClientConfiguration$Companion Companion
   @NotNull
