@@ -101,9 +101,9 @@ object InteractiveShell {
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
         rpcOps = { username: String, credentials: String ->
             val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
-                    configuration = object : CordaRPCClientConfiguration {
-                        override val maxReconnectAttempts = 1
-                    },
+                    configuration = CordaRPCClientConfiguration.DEFAULT.copy(
+                            maxReconnectAttempts = 1
+                    ),
                     sslConfiguration = configuration.ssl,
                     classLoader = classLoader)
             this.connection = client.start(username, credentials)
@@ -119,9 +119,9 @@ object InteractiveShell {
     fun startShellInternal(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
         rpcOps = { username: String, credentials: String ->
             val client = createCordaRPCClientWithInternalSslAndClassLoader(hostAndPort = configuration.hostAndPort,
-                    configuration = object : CordaRPCClientConfiguration {
-                        override val maxReconnectAttempts = 1
-                    },
+                    configuration = CordaRPCClientConfiguration.DEFAULT.copy(
+                            maxReconnectAttempts = 1
+                    ),
                     sslConfiguration = configuration.nodeSslConfig,
                     classLoader = classLoader)
             this.connection = client.start(username, credentials)
@@ -312,7 +312,7 @@ object InteractiveShell {
         } catch (e: PermissionException) {
             output.println(e.message ?: "Access denied", Color.red)
         } catch (e: ExecutionException) {
-          // ignoring it as already logged by the progress handler subscriber
+            // ignoring it as already logged by the progress handler subscriber
         } finally {
             InputStreamDeserializer.closeAll()
         }

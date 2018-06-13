@@ -81,7 +81,7 @@ data class RPCServerConfiguration(
         val deduplicationCacheExpiry: Duration
 ) {
     companion object {
-        val default = RPCServerConfiguration(
+        val DEFAULT = RPCServerConfiguration(
                 rpcThreadPoolSize = 4,
                 reapInterval = 1.seconds,
                 deduplicationCacheExpiry = 1.days

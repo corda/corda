@@ -70,9 +70,9 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", C
     override fun setUp() {
         super.setUp()
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!, object : CordaRPCClientConfiguration {
-            override val maxReconnectAttempts = 5
-        })
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!, CordaRPCClientConfiguration.DEFAULT.copy(
+            maxReconnectAttempts = 5
+        ))
         identity = node.info.identityFromX500Name(ALICE_NAME)
     }
 

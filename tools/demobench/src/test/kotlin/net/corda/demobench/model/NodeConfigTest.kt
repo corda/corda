@@ -56,7 +56,6 @@ class NodeConfigTest {
         assertEquals(localPort(40002), fullConfig.rpcOptions.address)
         assertEquals(localPort(10001), fullConfig.p2pAddress)
         assertEquals(listOf(user("jenny")), fullConfig.rpcUsers)
-        assertThat(fullConfig.dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] as String).contains("AUTO_SERVER_PORT=30001")
         assertTrue(fullConfig.useTestClock)
         assertFalse(fullConfig.detectPublicIp)
     }
