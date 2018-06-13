@@ -7,6 +7,11 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* H2 database changes:
+  * The node's H2 database now listens on ``localhost`` by default.
+  * The database server address must also be enabled in the node configuration.
+  * A new ``h2Settings`` configuration block supercedes the ``h2Port`` option.
+
 * Improved documentation PDF quality. Building the documentation now requires ``LaTex`` to be installed on the OS.
 
 * Add ``devModeOptions.allowCompatibilityZone`` to re-enable the use of a compatibility zone and ``devMode``
@@ -46,6 +51,8 @@ Unreleased
 
 * The node's configuration is only printed on startup if ``devMode`` is ``true``, avoiding the risk of printing passwords
   in a production setup.
+
+* ``NodeStartup`` will now only print node's configuration if ``devMode`` is ``true``, avoiding the risk of printing passwords in a production setup.
 
 * SLF4J's MDC will now only be printed to the console if not empty. No more log lines ending with "{}".
 
