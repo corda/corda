@@ -59,7 +59,7 @@ buildscript {
     ext.h2_version = '1.4.197' // Update docs if renamed or removed.
     ext.postgresql_version = '42.1.4'
     ext.rxjava_version = '1.2.4'
-    ext.dokka_version = '0.9.16-eap-2'
+    ext.dokka_version = '0.9.17'
     ext.eddsa_version = '0.2.0'
     ext.dependency_checker_version = '3.1.0'
     ext.commons_collections_version = '4.1'
@@ -431,6 +431,6 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
 }
 
 wrapper {
-    gradleVersion = "4.4.1"
+    gradleVersion = "4.8"
     distributionType = Wrapper.DistributionType.ALL
 }
