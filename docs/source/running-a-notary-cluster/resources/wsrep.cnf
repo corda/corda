@@ -1,0 +1,48 @@
+[mysqld]
+# Path to Galera library
+wsrep_provider=/usr/lib/galera3/libgalera_smm.so
+wsrep_provider_options="gcache.size=8G"
+# TODO set options related to the timeouts for WAN:
+# evs.keepalive_period=PT3s
+# evs.inactive_check_period=PT10S
+# evs.suspect_timeout=PT30S
+# evs.install_timeout=PT1M
+# evs.send_window=1024
+# evs.user_send_window=512
+
+# Cluster connection URL contains IPs of nodes
+#If no IP is found, this implies that a new cluster needs to be created,
+#in order to do that you need to bootstrap this node
+wsrep_cluster_address="gcomm://{{ your_cluster_IPs }}"
+
+# In order for Galera to work correctly binlog format should be ROW
+binlog_format=ROW
+
+# MyISAM storage engine has only experimental support
+default_storage_engine=InnoDB
+
+# Slave thread to use
+wsrep_slave_threads= 8
+
+wsrep_log_conflicts
+
+# This changes how InnoDB autoincrement locks are managed and is a requirement for Galera
+innodb_autoinc_lock_mode=2
+
+# Node IP address
+wsrep_node_address={{ node_address }}
+
+# Cluster name
+wsrep_cluster_name={{ cluster_name }}
+
+#If wsrep_node_name is not specified,  then system hostname will be used
+#wsrep_node_name=
+
+#pxc_strict_mode allowed values: DISABLED,PERMISSIVE,ENFORCING,MASTER
+pxc_strict_mode=ENFORCING
+
+# SST method
+wsrep_sst_method=xtrabackup-v2
+
+#Authentication for SST method
+wsrep_sst_auth={{ sst_user }}:{{ sst_pass }}
