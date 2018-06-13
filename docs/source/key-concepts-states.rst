@@ -7,12 +7,15 @@ States
    * *States are evolved by marking the current state as historic and creating an updated state*
    * *Each node has a vault where it stores any relevant states to itself*
 
-Video
------
-.. raw:: html
+.. only:: htmlmode
 
-    <iframe src="https://player.vimeo.com/video/213812054" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-    <p></p>
+   Video
+   -----
+   .. raw:: html
+   
+       <iframe src="https://player.vimeo.com/video/213812054" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+       <p></p>
+
 
 Overview
 --------
