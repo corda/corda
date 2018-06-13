@@ -206,7 +206,7 @@ open class Node(configuration: NodeConfiguration,
         bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
 
         printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
-        val rpcServerConfiguration = RPCServerConfiguration.default
+        val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
         rpcServerAddresses?.let {
             internalRpcMessagingClient = InternalRPCMessagingClient(configuration, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.loadSslKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal), rpcServerConfiguration)
             printBasicNodeInfo("RPC connection address", it.primary.toString())

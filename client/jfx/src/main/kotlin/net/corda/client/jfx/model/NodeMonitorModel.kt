@@ -71,7 +71,7 @@ class NodeMonitorModel {
             // Only execute using "runLater()" if JavaFX been initialized.
             // It may not be initialized in the unit test.
             // Also if we are already in the JavaFX thread - perform direct invocation without postponing it.
-            if(initialized.value.get() && !Platform.isFxApplicationThread()) {
+            if (initialized.value.get() && !Platform.isFxApplicationThread()) {
                 Platform.runLater(op)
             } else {
                 op()
@@ -98,7 +98,7 @@ class NodeMonitorModel {
 
         // Proxy may change during re-connect, ensure that subject wiring accurately reacts to this activity.
         proxyObservable.addListener { _, _, wrapper ->
-            if(wrapper != null) {
+            if (wrapper != null) {
                 val proxy = wrapper.cordaRPCOps
                 // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates
                 val (statesSnapshot, vaultUpdates) = proxy.vaultTrackBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
@@ -134,7 +134,8 @@ class NodeMonitorModel {
         }
         val futureProgressTrackerUpdates = stateMachineUpdatesSubject.map { stateMachineUpdate ->
             if (stateMachineUpdate is StateMachineUpdate.Added) {
-                ProgressTrackingEvent.createStreamFromStateMachineInfo(stateMachineUpdate.stateMachineInfo) ?: Observable.empty<ProgressTrackingEvent>()
+                ProgressTrackingEvent.createStreamFromStateMachineInfo(stateMachineUpdate.stateMachineInfo)
+                        ?: Observable.empty<ProgressTrackingEvent>()
             } else {
                 Observable.empty<ProgressTrackingEvent>()
             }
@@ -183,29 +184,28 @@ class NodeMonitorModel {
                 logger.info("Connecting to: $nodeHostAndPort")
                 val client = CordaRPCClient(
                         nodeHostAndPort,
-                        object : CordaRPCClientConfiguration {
-                            override val connectionMaxRetryInterval = retryInterval
-                        }
+                        CordaRPCClientConfiguration.DEFAULT.copy(
+                                connectionMaxRetryInterval = retryInterval
+                        )
                 )
                 val _connection = client.start(username, password)
                 // Check connection is truly operational before returning it.
                 val nodeInfo = _connection.proxy.nodeInfo()
                 require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
                 _connection
-            } catch(secEx: ActiveMQException) {
+            } catch (secEx: ActiveMQException) {
                 // Happens when:
                 // * incorrect credentials provided;
                 // * incorrect endpoint specified;
                 // - no point to retry connecting.
                 throw secEx
-            }
-            catch(th: Throwable) {
+            } catch (th: Throwable) {
                 // Deliberately not logging full stack trace as it will be full of internal stacktraces.
                 logger.info("Exception upon establishing connection: " + th.message)
                 null
             }
 
-            if(connection != null) {
+            if (connection != null) {
                 logger.info("Connection successfully established with: $nodeHostAndPort")
                 return connection
             }
