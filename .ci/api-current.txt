@@ -6527,27 +6527,22 @@ public static final class net.corda.client.rpc.CordaRPCClient$Companion extends 
   @NotNull
   public final net.corda.client.rpc.CordaRPCClient createWithSsl(net.corda.core.utilities.NetworkHostAndPort, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
 ##
-public interface net.corda.client.rpc.CordaRPCClientConfiguration
-  public abstract int getCacheConcurrencyLevel()
+public final class net.corda.client.rpc.CordaRPCClientConfiguration extends java.lang.Object
+  public <init>(java.time.Duration)
   @NotNull
-  public abstract java.time.Duration getConnectionMaxRetryInterval()
+  public final java.time.Duration component1()
   @NotNull
-  public abstract java.time.Duration getConnectionRetryInterval()
-  public abstract double getConnectionRetryIntervalMultiplier()
+  public final net.corda.client.rpc.CordaRPCClientConfiguration copy(java.time.Duration)
+  public boolean equals(Object)
   @NotNull
-  public abstract java.time.Duration getDeduplicationCacheExpiry()
-  public abstract int getMaxFileSize()
-  public abstract int getMaxReconnectAttempts()
-  public abstract int getMinimumServerProtocolVersion()
-  public abstract int getObservationExecutorPoolSize()
-  @NotNull
-  public abstract java.time.Duration getReapInterval()
-  public abstract boolean getTrackRpcCallSites()
+  public final java.time.Duration getConnectionMaxRetryInterval()
+  public int hashCode()
+  public String toString()
   public static final net.corda.client.rpc.CordaRPCClientConfiguration$Companion Companion
+  @NotNull
+  public static final net.corda.client.rpc.CordaRPCClientConfiguration DEFAULT
 ##
 public static final class net.corda.client.rpc.CordaRPCClientConfiguration$Companion extends java.lang.Object
-  @NotNull
-  public final net.corda.client.rpc.CordaRPCClientConfiguration default()
 ##
 @DoNotImplement
 public final class net.corda.client.rpc.CordaRPCConnection extends java.lang.Object implements net.corda.client.rpc.RPCConnection
