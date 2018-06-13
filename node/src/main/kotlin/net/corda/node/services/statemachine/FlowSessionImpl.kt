@@ -19,14 +19,12 @@ import net.corda.node.internal.exceptions.UnknownPeerException
 class FlowSessionImpl(
         val partyName: CordaX500Name,
         val sourceSessionId: SessionId,
-        var resolvedParty: Party? = null
+        private var resolvedParty: Party? = null
 ) : FlowSession() {
 
     constructor(party: Party, sessionId: SessionId) : this(party.name, sessionId, party)
 
     override val counterparty: Party get() = resolveLazy()
-
-//    private var resolvedParty: Party? = null
 
     private fun resolveLazy(): Party {
         if (resolvedParty == null) {
