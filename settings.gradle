@@ -43,6 +43,7 @@ include 'tools:graphs'
 include 'tools:bootstrapper'
 include 'tools:blobinspector'
 include 'tools:shell'
+include 'tools:network-bootstrapper'
 include 'example-code'
 project(':example-code').projectDir = file("$settingsDir/docs/source/example-code")
 include 'samples:attachment-demo'

@@ -9,6 +9,8 @@ Unreleased
 
 * Improved documentation PDF quality. Building the documentation now requires ``LaTex`` to be installed on the OS.
 
+* Add ``devModeOptions.allowCompatibilityZone`` to re-enable the use of a compatibility zone and ``devMode``
+
 * Fixed an issue where ``trackBy`` was returning ``ContractStates`` from a transaction that were not being tracked. The
   unrelated ``ContractStates`` will now be filtered out from the returned ``Vault.Update``.
 

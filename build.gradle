@@ -348,8 +348,8 @@ bintrayConfig {
             'corda-shell',
             'corda-serialization',
             'corda-serialization-deterministic',
-            'tools-blob-inspector',
-            'tools-network-bootstrapper'
+            'corda-tools-blob-inspector',
+            'corda-tools-network-bootstrapper'
     ]
     license {
         name = 'Apache-2.0'
