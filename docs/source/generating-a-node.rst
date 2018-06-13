@@ -170,25 +170,25 @@ Below you can find the example task from the `IRS Demo <https://github.com/corda
         node {
             name "O=Notary Service,L=Zurich,C=CH"
             notary = [validating : true]
-            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }
         node {
             name "O=Bank A,L=London,C=GB"
-            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }
         node {
             name "O=Bank B,L=New York,C=US"
-            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }
         node {
             name "O=Regulator,L=Moscow,C=RU"
-            cordapps = ["${project.group}:finance:$corda_release_version"]
+            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }

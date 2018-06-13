@@ -152,11 +152,8 @@
       <module name="loadtest_test" target="1.8" />
       <module name="mock_main" target="1.8" />
       <module name="mock_test" target="1.8" />
-      <module name="network-management-capsule_main" target="1.8" />
-      <module name="network-management-capsule_test" target="1.8" />
-      <module name="network-management_integrationTest" target="1.8" />
-      <module name="network-management_main" target="1.8" />
-      <module name="network-management_test" target="1.8" />
+      <module name="network-bootstrapper_main" target="1.8" />
+      <module name="network-bootstrapper_test" target="1.8" />
       <module name="network-visualiser_main" target="1.8" />
       <module name="network-visualiser_test" target="1.8" />
       <module name="node-api_main" target="1.8" />

@@ -10,12 +10,8 @@
 
 package net.corda.node.services.config
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.*
 import com.zaxxer.hikari.HikariConfig
-import com.typesafe.config.ConfigParseOptions
-import com.typesafe.config.ConfigValueFactory
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
@@ -24,11 +20,9 @@ import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatCode
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Assert.assertNotNull
+import org.assertj.core.api.Assertions.*
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.net.InetAddress
 import java.net.URL
@@ -177,6 +171,17 @@ class NodeConfigurationImplTest {
         val errors = configuration.validate()
 
         assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("compatibilityZoneURL") && error.contains("devMode") }
+    }
+
+    @Test
+    fun `validation succeeds when compatibilityZoneURL is present and devMode is true and allowCompatibilityZoneURL is set`() {
+        val configuration = testConfiguration.copy(
+                devMode = true,
+                compatibilityZoneURL = URL("https://r3.com"),
+                devModeOptions = DevModeOptions(allowCompatibilityZone = true))
+
+        val errors = configuration.validate()
+        assertThat(errors).isEmpty()
     }
 
     @Test
