@@ -654,7 +654,8 @@ class MultiThreadedStateMachineManager(
                 actionExecutor = actionExecutor!!,
                 stateMachine = StateMachine(id, secureRandom),
                 serviceHub = serviceHub,
-                checkpointSerializationContext = checkpointSerializationContext!!
+                checkpointSerializationContext = checkpointSerializationContext!!,
+                unfinishedFibers = unfinishedFibers
         )
     }
 
