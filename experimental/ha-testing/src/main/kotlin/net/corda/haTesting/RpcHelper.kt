@@ -12,6 +12,7 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.exceptions.RejectedCommandException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Duration
@@ -57,13 +58,19 @@ fun <T> arithmeticBackoff(retryInterval: Duration, giveUpInterval: Duration, mea
     val start = System.currentTimeMillis()
     var iterCount = 0
 
+    fun doOnException(ex: Exception) {
+        logger.warn("Exception $meaningfulDescription, iteration #$iterCount", ex)
+        Thread.sleep(iterCount * retryInterval.toMillis())
+    }
+
     do {
         try {
             iterCount++
             return op()
         } catch (ex: RPCException) {
-            logger.warn("Exception $meaningfulDescription, iteration #$iterCount", ex)
-            Thread.sleep(iterCount * retryInterval.toMillis())
+            doOnException(ex)
+        } catch (ex: RejectedCommandException) {
+            doOnException(ex)
         }
     } while ((System.currentTimeMillis() - start) < giveUpInterval.toMillis())
 

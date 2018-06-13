@@ -45,6 +45,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     cordaCompile project(":client:rpc")
+    cordaCompile project(':node-api')
     cordaCompile project(":finance")
     cordaCompile project(":perftestcordapp")
 
