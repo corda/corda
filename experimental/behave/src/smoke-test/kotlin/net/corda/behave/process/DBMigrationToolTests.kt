@@ -12,7 +12,7 @@ class DBMigrationToolTests {
 
     /**
      * Commands used to perform Database initialisation and migration as per:
-     * http://docs.corda.r3.com/website/releases/docs_head/api-persistence.html#database-migration
+     * http://docs.corda.r3.com/website/releases/docs_head/api-persistence.html#database-management
      */
 
     // Set corresponding Java properties to point to valid Corda node configurations

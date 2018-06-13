@@ -5,15 +5,15 @@
    <script type="text/javascript" src="_static/codesets.js"></script>
 
 
-Database Migration
-==================
+Database Management
+===================
 
 Corda - the platform, and the installed third-party CorDapps store their data in a relational database (see
 :doc:`api-persistence`). When Corda is first installed, or when a new CorDapp is installed, associated tables, indexes,
 foreign-keys, etc. must be created. Similarly, when Corda is upgraded, or when a new version of a CorDapp is installed,
 their database schemas may have changed, but the existing data needs to be preserved or changed accordingly.
 
-Corda supports multiple database management systems, so CorDapp developers need to keep this database portability
+Corda can run on most major SQL databases, so CorDapp developers need to keep this database portability
 requirement in mind when writing and testing the code. To address these concerns, Corda Enterprise provides a mechanism
 to make it straightforward to migrate from the old schemas to the new ones whilst preserving data. It does this by
 integrating a specialised database migration library. Also Corda Enterprise makes it easy to "lift" a CorDapp that does
@@ -66,7 +66,7 @@ avoid data corruption. To bring the database to the correct state we provide an 
 
 Running the migration at startup automatically can be configured by specifying true in the ``database.runMigration``
 node configuration setting (default behaviour is false). We recommend node administrators to leave the default behaviour
-in production, and use the migration tool to have better control. It is safe to run at startup if you have
+in production, and use the database management tool to have better control. It is safe to run at startup if you have
 implemented the usual best practices for database management (e.g. running a backup before installing a new version, etc.).
 
 Migration scripts structure
@@ -147,21 +147,21 @@ database before executing the migration scripts.
 
 .. _migration-tool:
 
-Migration tool
---------------
+Database management tool
+------------------------
 
-The migration tool is distributed as a standalone jar file named ``tools-database-migration-${corda_version}.jar``.
+The database management tool is distributed as a standalone jar file named ``tools-database-manager-${corda_version}.jar``.
 It is intended to be used by Corda Enterprise node administrators.
 
 Currently it has these features:
 
     1. It allows running the migration on the database (``--execute-migration`` )
     2. Offers the option to inspect the actual SQL statements that will be run as part of the current migration (``--dry-run`` )
-    3. Sometimes, when a node or the migration tool crashes while running migrations, Liquibase will not release the lock.
+    3. Sometimes, when a node or the database management tool crashes while running migrations, Liquibase will not release the lock.
        This can happen during some long database operation, or when an admin kills the process.
        ( This cannot happen during normal operation of a node. Only during the migration process.)
        See: <http://www.liquibase.org/documentation/databasechangeloglock_table.html>.
-       The tool provides a "release-lock" command that would forcibly unlock the db migration.
+       The tool provides a "release-lock" command that would forcibly unlock the database migration process.
     4. When a CorDapp that does not is ready to be deployed on a Corda Enterprise production node,
        using this tool, the CorDapp can be "lifted" (``--create-migration-sql-for-cordapp``).
        The reason this is needed is because those CorDapps don't handle this enterprise level concern.
@@ -185,29 +185,29 @@ It has the following command line options:
                                          base-directory, where a ``migration`` folder is created.
     --dry-run                            Output the database migration to the specified output file. The output directory
                                          is the base-directory. You can specify a file name or 'CONSOLE' if you want to send the output to the console.
-    --execute-migration                  This option will run the db migration on the configured database. This is the
+    --execute-migration                  This option will run the database migration on the configured database. This is the
                                          only command that will actually write to the database.    
     --release-lock                       Releases whatever locks are on the database change log table, in case shutdown failed.
    ====================================  =======================================================================
 
 For example::
 
-    java -jar tools-database-migration-3.0.0.jar --base-directory /path/to/node --execute-migration
+    java -jar tools-database-manager-3.0.0.jar --base-directory /path/to/node --execute-migration
 
-.. note:: When running the migration tool, prefer using absolute paths when specifying the "base-directory".
+.. note:: When running the database management tool, prefer using absolute paths when specifying the "base-directory".
 
 
 Examples
 --------
 
 The first time you set up your node, you will want to create the necessary database tables. Run the normal installation
-steps. Using the db migration tool, attempt a dry-run to inspect the output SQL::
+steps. Using the database management tool, attempt a dry-run to inspect the output SQL::
 
-    java -jar tools-database-migration-3.0.0.jar --base-directory /path/to/node --dry-run
+    java -jar tools-database-manager-3.0.0.jar --base-directory /path/to/node --dry-run
 
 The output sql from the above command can be executed directly on the database or this command can be run::
 
-    java -jar tools-database-migration-3.0.0.jar --base-directory /path/to/node --execute-migration
+    java -jar tools-database-manager-3.0.0.jar --base-directory /path/to/node --execute-migration
 
 At this point the node can be started successfully.
 
@@ -223,19 +223,19 @@ Node administrator installing a CorDapp targeted at the open source node
 The open source Corda codebase does not have support for Liquibase, so CorDapps contributed by the OS community
 will not have this concern addressed by their original developers.
 
-To help Corda Enterprise users, we offer support in the migration tool for "lifting" a CorDapp to support Liquibase.
+To help Corda Enterprise users, we offer support in the database management tool for "lifting" a CorDapp to support Liquibase.
 
 These are the steps:
 
 1. Deploy the CorDapp on your node (copy the jar into the ``cordapps`` folder)
 2. Find out the name of the ``MappedSchema`` containing the new contract state entities.
-3. Call the migration tool: ``java -jar tools-database-migration-3.0.0.jar --base-directory /path/to/node --create-migration-sql-for-cordapp com.example.MyMappedSchema``
+3. Call the database management tool: ``java -jar tools-database-manager-3.0.0.jar --base-directory /path/to/node --create-migration-sql-for-cordapp com.example.MyMappedSchema``
    This will generate a file called ``my-mapped-schema.changelog-master.sql`` in a folder called ``migration`` in the ``base-directory``.
    In case you don't specify the actual ``MappedSchema`` name, the tool will generate one SQL file for each schema defined in the CorDapp
 4. Inspect the file(s) to make sure it is correct. This is a standard SQL file with some Liquibase metadata as comments.
 5. Create a jar with the ``migration`` folder (by convention it could be named: ``originalCorDappName-migration.jar``),
    and deploy this jar together with the CorDapp.
-6. To make sure that the new migration will be used, do a dry run with the migration tool and inspect the output file.
+6. To make sure that the new migration will be used, do a dry run with the database management tool and inspect the output file.
 
 
 Node administrator deploying a new version of a CorDapp developed by the OS community
@@ -294,6 +294,6 @@ When seeing problems acquiring the lock, with output like this::
             at liquibase.integration.commandline.Main.main(Main.java:116)
 
 then the advice at `this StackOverflow question <https://stackoverflow.com/questions/15528795/liquibase-lock-reasons>`_
-may be useful. You can run ``java -jar tools-database-migration-3.0.0.jar --base-directory /path/to/node --release-lock`` to force Liquibase to give up the lock.
+may be useful. You can run ``java -jar tools-database-manager-3.0.0.jar --base-directory /path/to/node --release-lock`` to force Liquibase to give up the lock.
 
 

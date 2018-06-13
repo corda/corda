@@ -1,7 +1,7 @@
 Operations Guide
 ================
 
-* :doc:`Database Migration <database-migration>`
+* :doc:`Database Management <database-management>`
 
 * :doc:`Hot-cold Deployment <hot-cold-deployment>`
 

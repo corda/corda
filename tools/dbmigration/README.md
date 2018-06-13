@@ -1,7 +1,7 @@
-Database Migration Tool
+Database Management Tool
 -----------------------
 
-Documentation for this tool can be found [here](http://docs.corda.r3.com/website/releases/docs_head/database-migration.html) 
+Documentation for this tool can be found [here](http://docs.corda.r3.com/website/releases/docs_head/database-management.html) 
 
 
 To build this from the command line in Unix:

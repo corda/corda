@@ -37,7 +37,7 @@ dependencies {
 
 shadowJar {
     transform(de.sebastianboegl.gradle.plugins.shadow.transformers.Log4j2PluginsFileTransformer)
-    archiveName = "migration-tool-${version}.jar"
+    archiveName = "database-manager-${version}.jar"
 }
 
 task buildMigrationTool(dependsOn: shadowJar)
@@ -53,6 +53,6 @@ jar {
 }
 
 publish {
-    name 'tools-database-migration'
+    name 'tools-database-manager'
     disableDefaultJar = true
 }

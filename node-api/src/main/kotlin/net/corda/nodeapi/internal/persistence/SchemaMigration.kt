@@ -175,7 +175,7 @@ class MissingMigrationException(@Suppress("MemberVisibilityCanBePrivate") val ma
 
 class OutstandingDatabaseChangesException(@Suppress("MemberVisibilityCanBePrivate") private val count: Int) : DatabaseMigrationException(errorMessageFor(count)) {
     internal companion object {
-        fun errorMessageFor(count: Int): String = "There are $count outstanding database changes that need to be run. Please use the advanced migration tool. See: https://docs.corda.r3.com/database-migration.html"
+        fun errorMessageFor(count: Int): String = "There are $count outstanding database changes that need to be run. Please use the advanced migration tool. See: https://docs.corda.r3.com/database-management.html"
     }
 }
 
