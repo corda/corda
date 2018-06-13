@@ -69,7 +69,7 @@ task metafix(type: MetaFixerTask) {
         testProjectDir.newFile("build.gradle").writeText(script)
         return GradleRunner.create()
             .withProjectDir(testProjectDir.root)
-            .withArguments(getBasicArgsForTasks("metafix", "--stacktrace"))
+            .withArguments(getBasicArgsForTasks("metafix"))
             .withPluginClasspath()
     }
 
