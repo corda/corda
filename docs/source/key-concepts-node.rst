@@ -11,13 +11,16 @@ Nodes
 
    * *The node's functionality is extended by installing CorDapps in the plugin registry*
 
-Video
------
-.. raw:: html
+.. only:: htmlmode
 
-    <p><a href="https://vimeo.com/214168860">Corda Node, CorDapps and Network</a></p>
-    <iframe src="https://player.vimeo.com/video/214168860" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-    <p></p>
+   Video
+   -----
+   .. raw:: html
+
+       <p><a href="https://vimeo.com/214168860">Corda Node, CorDapps and Network</a></p>
+       <iframe src="https://player.vimeo.com/video/214168860" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+       <p></p>
+
 
 Node architecture
 -----------------

@@ -26,11 +26,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.ByteSequence
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.trace
+import net.corda.core.utilities.*
 import net.corda.node.VersionInfo
 import net.corda.node.internal.LifecycleSupport
 import net.corda.node.internal.artemis.ReactiveArtemisConsumer
@@ -43,15 +39,12 @@ import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.ArtemisAddress
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_CONTROL
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.BRIDGE_NOTIFY
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.NodeAddress
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.ServiceAddress
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -61,12 +54,7 @@ import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient
-import org.apache.activemq.artemis.api.core.client.ClientConsumer
-import org.apache.activemq.artemis.api.core.client.ClientMessage
-import org.apache.activemq.artemis.api.core.client.ClientProducer
-import org.apache.activemq.artemis.api.core.client.ClientSession
-import org.apache.activemq.artemis.api.core.client.ServerLocator
+import org.apache.activemq.artemis.api.core.client.*
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
@@ -167,7 +155,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.
-                connectionTTL = -1
+                connectionTTL = 60000
                 clientFailureCheckPeriod = -1
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
@@ -178,7 +166,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
             // size of 1MB is acknowledged.
-            val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, locator!!.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
+            val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
 
             producerSession = createNewSession()
             bridgeSession = createNewSession()

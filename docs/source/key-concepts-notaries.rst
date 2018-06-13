@@ -7,12 +7,15 @@ Notaries
    * *Notary clusters may optionally also validate transactions*
    * *A network can have several notary clusters, each running a different consensus algorithm*
 
-Video
------
-.. raw:: html
+.. only:: htmlmode
 
-    <iframe src="https://player.vimeo.com/video/214138458" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-    <p></p>
+    Video
+    -----
+    .. raw:: html
+    
+        <iframe src="https://player.vimeo.com/video/214138458" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+        <p></p>
+
 
 Overview
 --------

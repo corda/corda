@@ -8,6 +8,8 @@ Unreleased
 ==========
 * Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems related to database migrations before exiting with a non-zero code.
 
+* Improved documentation PDF quality. Building the documentation now requires ``LaTex`` to be installed on the OS.
+
 * Add ``devModeOptions.allowCompatibilityZone`` to re-enable the use of a compatibility zone and ``devMode``
 
 * Fixed an issue where ``trackBy`` was returning ``ContractStates`` from a transaction that were not being tracked. The
@@ -153,12 +155,15 @@ Version 3.1
 
 * Update the fast-classpath-scanner dependent library version from 2.0.21 to 2.12.3
 
-  * Added `database.hibernateDialect` node configuration option
+  .. note:: Whilst this is not the latest version of this library, that being 2.18.1 at time of writing, versions
+     later than 2.12.3 (including 2.12.4) exhibit a different issue.
+
+* Added `database.hibernateDialect` node configuration option
 
 .. _changelog_r3_v3:
 
 Corda Enterprise 3.0 Developer Preview
-------------------------------
+--------------------------------------
 
 * Fix CORDA-1229. Setter-based serialization was broken with generic types when the property was stored as the raw type, List for example.
 
