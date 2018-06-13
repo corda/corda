@@ -3,6 +3,7 @@ description 'Corda core (deterministic)'
 apply plugin: 'kotlin'
 apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'idea'
 
 evaluationDependsOn(':jdk8u-deterministic')
 evaluationDependsOn(":core")
@@ -197,3 +198,11 @@ publish {
 
 // Must be after publish {} so that the previous install task exists for overwriting.
 task install(overwrite: true, dependsOn: 'publishToMavenLocal')
+
+idea {
+    module {
+        if (project.hasProperty("deterministic_idea_sdk")) {
+            jdkName project.property("deterministic_idea_sdk") as String
+        }
+    }
+}
