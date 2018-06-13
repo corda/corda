@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowSession
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.FlowStateMachine
@@ -13,13 +14,33 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.internal.checkPayloadIs
+import net.corda.node.internal.exceptions.UnknownPeerException
 
 class FlowSessionImpl(
-        override val counterparty: Party,
-        val sourceSessionId: SessionId
+        val partyName: CordaX500Name,
+        val sourceSessionId: SessionId,
+        var resolvedParty: Party? = null
 ) : FlowSession() {
 
-    override fun toString() = "FlowSessionImpl(counterparty=$counterparty, sourceSessionId=$sourceSessionId)"
+    constructor(party: Party, sessionId: SessionId) : this(party.name, sessionId, party)
+
+    override val counterparty: Party get() = resolveLazy()
+
+//    private var resolvedParty: Party? = null
+
+    private fun resolveLazy(): Party {
+        if (resolvedParty == null) {
+            resolvedParty = getFlowStateMachine().serviceHub.networkMapCache.getPeerByLegalName(partyName)
+
+            if (resolvedParty == null) {
+                throw UnknownPeerException("Could no resolve $partyName.")
+            }
+        }
+
+        return resolvedParty!!
+    }
+
+    override fun toString() = "FlowSessionImpl(counterparty=$resolvedParty, sourceSessionId=$sourceSessionId)"
 
     override fun equals(other: Any?): Boolean {
         return (other as? FlowSessionImpl)?.sourceSessionId == sourceSessionId

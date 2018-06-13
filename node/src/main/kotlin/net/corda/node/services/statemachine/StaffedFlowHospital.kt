@@ -127,8 +127,10 @@ class StaffedFlowHospital {
     fun <T: Throwable> flowAffected(flowFiber: FlowFiber, errorType: Class<T>): Boolean {
         mutex.locked {
             patients[flowFiber.id]?.let {
-                val record = it.records.last() as MedicalRecord.KeptInForObservation
-                return record.errors.last().javaClass == errorType
+                val record = it.records.last()
+                if (record is MedicalRecord.KeptInForObservation) {
+                    return record.errors.last().javaClass == errorType
+                }
             }
         }
         return false

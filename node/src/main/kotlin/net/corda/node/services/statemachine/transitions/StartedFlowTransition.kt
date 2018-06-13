@@ -288,7 +288,7 @@ class StartedFlowTransition(
                             is InitiatedSessionState.Live -> {
                                 val sinkSessionId = existingSessionState.initiatedState.peerSinkSessionId
                                 val existingMessage = ExistingSessionMessage(sinkSessionId, sessionMessage)
-                                actions.add(Action.SendExisting(existingSessionState.peerParty, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
+                                actions.add(Action.SendExisting(existingSessionState.peerPartyName, existingMessage, SenderDeduplicationId(deduplicationId, startingState.senderUUID)))
                                 Unit
                             }
                             InitiatedSessionState.Ended -> {

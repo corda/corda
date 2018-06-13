@@ -4,11 +4,13 @@ import co.paralleluniverse.fibers.Suspendable
 import com.esotericsoftware.kryo.KryoException
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.flows.FlowException
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
+import net.corda.node.internal.exceptions.UnknownPeerException
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.ReceivedMessage
@@ -25,6 +27,9 @@ interface FlowMessaging {
      */
     @Suspendable
     fun sendSessionMessage(party: Party, message: SessionMessage, deduplicationId: SenderDeduplicationId)
+
+    @Suspendable
+    fun sendSessionMessage(partyName: CordaX500Name, message: SessionMessage, deduplicationId: SenderDeduplicationId)
 
     /**
      * Start the messaging using the [onMessage] message handler.
@@ -59,6 +64,17 @@ class FlowMessagingImpl(val serviceHub: ServiceHubInternal): FlowMessaging {
             is ExistingSessionMessage -> message.recipientSessionId
         }
         serviceHub.networkService.send(networkMessage, address, sequenceKey = sequenceKey)
+    }
+
+    @Suspendable
+    override fun sendSessionMessage(partyName: CordaX500Name, message: SessionMessage, deduplicationId: SenderDeduplicationId) {
+        val party = serviceHub.networkMapCache.getPeerByLegalName(partyName)
+        if (party != null) {
+            sendSessionMessage(party, message, deduplicationId)
+        } else {
+            log.error("Could not resolve $partyName.")
+            throw UnknownPeerException("Could not resolve $partyName.")
+        }
     }
 
     private fun SessionMessage.additionalHeaders(target: Party): Map<String, String> {

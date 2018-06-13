@@ -12,6 +12,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.OpenFuture
@@ -147,7 +148,8 @@ class SingleThreadedStateMachineManager(
                 mutex.locked {
                     for ((_, flow) in flows) {
                         if (flowHospital.flowAffected(flow.fiber, UnknownPeerException::class.javaObjectType)) {
-                            logger.info("Scheduling flow ${flow.fiber.id} for retry.")
+                            logger.info("Received networkmap update. Scheduling flow ${flow.fiber.id}, which failed due to" +
+                                    " counterparty lookup, for retry.")
                             flow.fiber.scheduleEvent(Event.RetryFlowFromSafePoint)
                         }
                     }
@@ -412,19 +414,13 @@ class SingleThreadedStateMachineManager(
             deduplicationHandler.afterDatabaseTransaction()
             return
         }
-        val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)
-        if (sender != null) {
-            when (sessionMessage) {
-                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, deduplicationHandler, sender)
-                is InitialSessionMessage -> onSessionInit(sessionMessage, message.platformVersion, deduplicationHandler, sender)
-            }
-        } else {
-            logger.error("Unknown peer $peer in $sessionMessage")
-            throw(UnknownPeerException("Could not resolve peer $peer"))
+        when (sessionMessage) {
+            is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, deduplicationHandler, peer)
+            is InitialSessionMessage -> onSessionInit(sessionMessage, message.platformVersion, deduplicationHandler, peer)
         }
     }
 
-    private fun onExistingSessionMessage(sessionMessage: ExistingSessionMessage, deduplicationHandler: DeduplicationHandler, sender: Party) {
+    private fun onExistingSessionMessage(sessionMessage: ExistingSessionMessage, deduplicationHandler: DeduplicationHandler, peer: CordaX500Name) {
         try {
             val recipientId = sessionMessage.recipientSessionId
             val flowId = sessionToFlow[recipientId]
@@ -441,7 +437,12 @@ class SingleThreadedStateMachineManager(
             } else {
                 val flow = mutex.locked { flows[flowId] }
                         ?: throw IllegalStateException("Cannot find fiber corresponding to ID $flowId")
-                flow.fiber.scheduleEvent(Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender))
+                val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)
+                if (sender != null) {
+                    flow.fiber.scheduleEvent(Event.DeliverSessionMessage(sessionMessage, deduplicationHandler, sender))
+                } else {
+                    throw UnknownPeerException("Cannot resolve $peer.")
+                }
             }
         } catch (exception: Exception) {
             logger.error("Exception while routing $sessionMessage", exception)
@@ -449,7 +450,7 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun onSessionInit(sessionMessage: InitialSessionMessage, senderPlatformVersion: Int, deduplicationHandler: DeduplicationHandler, sender: Party) {
+    private fun onSessionInit(sessionMessage: InitialSessionMessage, senderPlatformVersion: Int, deduplicationHandler: DeduplicationHandler, peer: CordaX500Name) {
         fun createErrorMessage(initiatorSessionId: SessionId, message: String): ExistingSessionMessage {
             val errorId = secureRandom.nextLong()
             val payload = RejectSessionMessage(message, errorId)
@@ -459,7 +460,7 @@ class SingleThreadedStateMachineManager(
         val replyError = try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionMessage)
             val initiatedSessionId = SessionId.createRandom(secureRandom)
-            val senderSession = FlowSessionImpl(sender, initiatedSessionId)
+            val senderSession = FlowSessionImpl(peer, initiatedSessionId)
             val flowLogic = initiatedFlowFactory.createFlow(senderSession)
             val initiatedFlowInfo = when (initiatedFlowFactory) {
                 is InitiatedFlowFactory.Core -> FlowInfo(serviceHub.myInfo.platformVersion, "corda")
@@ -480,7 +481,7 @@ class SingleThreadedStateMachineManager(
         }
 
         if (replyError != null) {
-            flowMessaging.sendSessionMessage(sender, replyError, SenderDeduplicationId(DeduplicationId.createRandom(secureRandom), ourSenderUUID))
+            flowMessaging.sendSessionMessage(peer, replyError, SenderDeduplicationId(DeduplicationId.createRandom(secureRandom), ourSenderUUID))
             deduplicationHandler.afterDatabaseTransaction()
         }
     }
@@ -514,7 +515,7 @@ class SingleThreadedStateMachineManager(
         val flowStart = FlowStart.Initiated(peerSession, initiatedSessionId, initiatingMessage, senderCoreFlowVersion, initiatedFlowInfo)
         val ourIdentity = getOurFirstIdentity()
         startFlowInternal(
-                InvocationContext.peer(peerSession.counterparty.name), flowLogic, flowStart, ourIdentity,
+                InvocationContext.peer(peerSession.partyName), flowLogic, flowStart, ourIdentity,
                 initiatingMessageDeduplicationHandler,
                 isStartIdempotent = false
         )
@@ -713,7 +714,7 @@ class SingleThreadedStateMachineManager(
 
     private fun addAndStartFlow(id: StateMachineRunId, flow: Flow) {
         val checkpoint = flow.fiber.snapshot().checkpoint
-        for (sessionId in getFlowSessionIds(checkpoint)) {
+         for (sessionId in getFlowSessionIds(checkpoint)) {
             sessionToFlow[sessionId] = id
         }
         mutex.locked {
