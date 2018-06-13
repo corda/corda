@@ -29,7 +29,7 @@ application development please continue to refer to `the main project documentat
    :maxdepth: 1
 
    hot-cold-deployment
-   database-migration
+   database-management
    corda-firewall
 
 .. toctree::
