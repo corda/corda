@@ -44,9 +44,9 @@ internal class VisualiserView {
     // -23.2031,29.8406,33.0469,64.3209
     val mapImage = ImageView(Image(NetworkMapVisualiser::class.java.getResourceAsStream("Europe.jpg")))
 
-    // val iconImage = Image(NetworkMapVisualiser::class.java.getResourceAsStream("Corda logo.png"))
+    val iconImage = Image(NetworkMapVisualiser::class.java.getResourceAsStream("Corda logo.png"))
 
-    // val titleString = "Corda Network Simulator"
+    val titleString = "Corda Network Simulator"
 
     val backgroundColor: Color = mapImage.image.pixelReader.getColor(0, 0)
 
@@ -101,10 +101,10 @@ internal class VisualiserView {
         stage.height = 768.0
 
         // Apply icon to window bar
-        // stage.getIcons().add(iconImage)
+         stage.getIcons().add(iconImage)
 
         // Add title to window bar
-        // stage.setTitle(titleString)
+        stage.setTitle(titleString)
     }
 
     fun buildScrollPane(backgroundColor: Color, displayStyle: Style): ScrollPane {
