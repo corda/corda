@@ -9,13 +9,13 @@ To work against the Master branch, proceed as follows:
 
 1. Clone the `Corda repository <https://github.com/corda/corda>`_
 
-1. Open a terminal window in the folder where you cloned the Corda repository
+2. Open a terminal window in the folder where you cloned the Corda repository
 
-2. Use the following command to check out the latest master branch:
+3. Use the following command to check out the latest master branch:
 
     ``git checkout master; git pull``
 
-3. Publish Corda to your local Maven repository using the following commands:
+4. Publish Corda to your local Maven repository using the following commands:
 
   * Unix/Mac OSX: ``./gradlew install``
   * Windows: ``gradlew.bat install``
@@ -27,5 +27,5 @@ To work against the Master branch, proceed as follows:
      time may differ. If you are using a Master release and need help debugging an error, then please let us know the
      **commit** you are working from. This will help us ascertain the issue.
 
-4. Update the ``ext.corda_release_version`` property in your CorDapp's root ``build.gradle`` file to match the version
+5. Update the ``ext.corda_release_version`` property in your CorDapp's root ``build.gradle`` file to match the version
    here: https://github.com/corda/corda/blob/master/build.gradle#L7
