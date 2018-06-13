@@ -1,13 +1,13 @@
-Building against Master
-=======================
+Building CorDapps against Master
+================================
 
-It is advisable to develop CorDapps against the most recent Corda stable release. However you may need to build
-against the unstable Master branch if you are using a very recent feature, or are testing a PR on the main codebase.
+It is advisable to develop CorDapps against the most recent Corda stable release. However, you may need to build a CorDapp 
+against the unstable Master branch if your CorDapp uses a very recent feature, or you are using the CorDapp to test a PR 
+on the main codebase.
 
 To work against the Master branch, proceed as follows:
 
-1. Open a terminal window in the folder where you cloned the Corda repository
-   (available `here <https://github.com/corda/corda>`_)
+1. Open a terminal window in the folder where you cloned the `Corda repository <https://github.com/corda/corda>`_
 
 2. Use the following command to check out the latest master branch:
 
@@ -17,11 +17,6 @@ To work against the Master branch, proceed as follows:
 
   * Unix/Mac OSX: ``./gradlew install``
   * Windows: ``gradlew.bat install``
-
-  By default, the Maven local repository is found at:
-
-  * ``~/.m2/repository`` on Unix/Mac OS X
-  * ``%HOMEPATH%\.m2`` on Windows
 
   This step is not necessary when using a stable releases, as the stable releases are published online
 
