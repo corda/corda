@@ -146,3 +146,39 @@ node is running out of memory, you can give it more by running the node like thi
 The example command above would give a 1 gigabyte Java heap.
 
 .. note:: Unfortunately the JVM does not let you limit the total memory usage of Java program, just the heap size.
+
+Backup strategy recommendations
+-------------------------------
+
+Various components of the Corda platform read their configuration from the file system, and persist data to a database or into some files.
+Without a sound backup strategy, losing a machine that hosts one or more components might result in lost data, compromised data integrity, unusable data, lost messages, and/or large downtime.
+
+In order to avoid or mitigate the circumstances described, a backup strategy should include:
+
+Database replication
+++++++++++++++++++++
+
+When properly configured, database replication prevents data loss from occurring in case the database host fails.
+In general, the higher the number of replicas, and the further away they are deployed in terms of regions and availability zones, the more a setup is resilient to disasters.
+The trade-off is that, ideally, replication should happen synchronously, meaning that a high number of replicas and a considerable network latency will impact the performance of the Corda nodes connecting to the cluster.
+
+Database snapshots
+++++++++++++++++++
+
+Database replication is a powerful technique, but it is very sensitive to destructive SQL updates. Whether malicious or unintentional, a SQL statement might compromise data by getting propagated to all replicas.
+Without a rolling snapshots strategy, data loss due to a SQL statement will be irreversible.
+Using snapshots always implies some data loss in case of a disaster, and the trade-off is between highly frequent backups minimising such a loss, and less frequent backups consuming less resources.
+At present, Corda does not offer online updates with regards to transactions, but in the future we might consider this functionality, which would prevent any data loss, even in case of destructive SQL statements.
+Should states in the vault ever be lost, partial or total recovery might be achieved by asking third-party companies and/or notaries to provide all data relevant to the affected legal identity. Be warned, though, that they are not required to do so, and that they might not have all the necessary information even if willing to help.
+
+File backups
+++++++++++++
+
+In terms of files, Corda components read and write information from and to the file-system. Losing these files can lead to acknowledged messages that will never be processed, a large downtime, or, in the worst case, unusable states in the vault.
+
+* The backlog of persistent queues, when lost, might cause acknowledged messages to be lost and never be processed. Snapshots do not really work here, because the backlog changes quite rapidly.
+  When available, a resilient file-system abstraction like Azure Storage Disk or Elastic Block Store might be indicated for this potential issue.
+* Configuration files (e.g., ``node.conf``, ``node-info`` files, etc.), CorDapps binaries and configuration, and database drivers, when lost, can cause downtime until they are restored. Snapshots can be an effective way of avoiding this situation, given that these files change quite rarely.
+* Losing the private key used for signing transactions will make all existing states in a vault unusable with no recovery possible. To mitigate this, ensure your private key is backed up in several places. Also, a clustered node setup would help in this sense, for each node will have a copy of the key on disk.
+
+.. warning:: while backing up a Corda component's directory is enough with the default configuration, Corda allows reading and writing from arbitrary paths through configuration override. In this latter case, please ensure your file backup strategy covers the specified paths.
