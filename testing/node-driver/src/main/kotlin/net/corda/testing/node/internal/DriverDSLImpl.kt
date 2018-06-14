@@ -653,7 +653,9 @@ class DriverDSLImpl(
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
+
             if (waitForAllNodesToFinish) {
+                addShutdownHook { process.destroy() }
                 state.locked {
                     processes += object : Waitable {
                         override fun waitFor() {
