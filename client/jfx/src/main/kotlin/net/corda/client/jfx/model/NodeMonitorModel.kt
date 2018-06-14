@@ -6,6 +6,7 @@ import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
+import net.corda.client.rpc.RPCException
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
@@ -193,18 +194,22 @@ class NodeMonitorModel {
                 val nodeInfo = _connection.proxy.nodeInfo()
                 require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
                 _connection
-            } catch (secEx: ActiveMQException) {
-                // Happens when:
-                // * incorrect credentials provided;
-                // * incorrect endpoint specified;
-                // - no point to retry connecting.
-                throw secEx
-            } catch (th: Throwable) {
-                // Deliberately not logging full stack trace as it will be full of internal stacktraces.
-                logger.info("Exception upon establishing connection: " + th.message)
-                null
+            } catch (throwable: Throwable) {
+                when (throwable) {
+                    is ActiveMQException, is RPCException -> {
+                        // Happens when:
+                        // * incorrect credentials provided;
+                        // * incorrect endpoint specified;
+                        // - no point to retry connecting.
+                        throw throwable
+                    }
+                    else -> {
+                        // Deliberately not logging full stack trace as it will be full of internal stacktraces.
+                        logger.info("Exception upon establishing connection: " + throwable.message)
+                        null
+                    }
+                }
             }
-
             if (connection != null) {
                 logger.info("Connection successfully established with: $nodeHostAndPort")
                 return connection
