@@ -1,3 +1,5 @@
+# SGX Integration
+
 This document is intended as a design description of how we can go about integrating SGX with Corda. As the 
 infrastructure design of SGX is quite involved (detailed elsewhere) but otherwise flexible we can discuss the possible 
 integration points separately, without delving into lower level technical detail.
