@@ -37,6 +37,10 @@ artifacts {
     }
 }
 
+jar {
+    classifier "ignore"
+}
+
 publish {
     name 'tools-network-bootstrapper'
     disableDefaultJar = true
