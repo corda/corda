@@ -5,7 +5,7 @@ Notaries
 
    * *Notary clusters prevent "double-spends"*
    * *Notary clusters are also time-stamping authorities. If a transaction includes a time-window, it can only be notarised during that window*
-   * *Notary clusters may optionally also validate transactions (referenced as "validating" and "non-validating" notaries, respectively)*
+   * *Notary clusters may optionally also validate transactions, in which case they are called "validating" notaries, as opposed to "non-validating"*
    * *A network can have several notary clusters, each running a different consensus algorithm*
 
 .. only:: htmlmode
