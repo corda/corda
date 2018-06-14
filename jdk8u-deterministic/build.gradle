@@ -8,7 +8,7 @@ repositories {
 }
 
 ext {
-    jdk_home = "$buildDir/jdk"
+    jdk_home = "$projectDir/jdk"
 }
 
 configurations {
