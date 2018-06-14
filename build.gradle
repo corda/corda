@@ -84,8 +84,9 @@ buildscript {
 
     ext.deterministic_rt_version = '1.0-SNAPSHOT'
 
-    // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
-    ext.java8_minUpdateVersion = '131'
+    // Update 121 is required for ObjectInputFilter.
+    // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
+    ext.java8_minUpdateVersion = '171'
 
     repositories {
         mavenLocal()
