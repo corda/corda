@@ -8,7 +8,6 @@ import picocli.CommandLine.Option
 import java.io.File
 
 open class GuiSwitch {
-
     @Option(names = ["-h", "--help"], usageHelp = true, description = ["display this help message"])
     var usageHelpRequested: Boolean = false
 
@@ -20,7 +19,6 @@ open class GuiSwitch {
 }
 
 open class CliParser : GuiSwitch() {
-
     @Option(names = ["-n", "--network-name"], description = ["The resource grouping to use"], required = true)
     lateinit var name: String
 
@@ -47,7 +45,6 @@ open class CliParser : GuiSwitch() {
 }
 
 class AzureParser : CliParser() {
-
     companion object {
         val regions = Region.values().map { it.name() to it }.toMap()
     }
@@ -64,5 +61,4 @@ class AzureParser : CliParser() {
     override fun backendOptions(): Map<String, String> {
         return mapOf(Constants.REGION_ARG_NAME to region.name())
     }
-
 }

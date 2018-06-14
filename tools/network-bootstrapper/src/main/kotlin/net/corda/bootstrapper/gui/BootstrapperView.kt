@@ -31,14 +31,11 @@ import kotlin.collections.ArrayList
 import kotlin.reflect.KProperty1
 
 class BootstrapperView : View("Corda Network Builder") {
-
     val YAML_MAPPER = Constants.getContextMapper()
     override val root: VBox by fxml("/views/mainPane.fxml")
 
     val controller: State by inject()
 
-    val openMenuItem: MenuItem by fxid()
-    val openRecentMenuItem: MenuItem by fxid()
     val targetChoiceBox: ChoiceBox<Backend.BackendType> by fxid()
     val nodeTableView: TableView<NodeTemplateInfo> by fxid()
     val templateChoiceBox: ChoiceBox<String> by fxid()
@@ -52,63 +49,50 @@ class BootstrapperView : View("Corda Network Builder") {
         targetChoiceBox.items = backendChoices
         targetChoiceBox.selectionModel.select(Backend.BackendType.LOCAL_DOCKER)
 
-        openMenuItem.action {
-            selectNodeDirectory().thenAcceptAsync({ (notaries: List<FoundNode>, nodes: List<FoundNode>) ->
-                runLater {
-                    controller.foundNodes(nodes)
-                    controller.notaries(notaries)
-                }
-            })
-        }
-
-
         buildButton.run {
             enableWhen { controller.baseDir.isNotNull }
             action {
-                runLater {
-                    controller.clear()
-                    var networkName = "corda-network"
-                    targetChoiceBox.selectionModel.selectedItem?.let { selectedBackEnd ->
-                        val backendParams = when (selectedBackEnd) {
-                            Backend.BackendType.LOCAL_DOCKER -> {
-                                emptyMap()
-                            }
-                            Backend.BackendType.AZURE -> {
-                                val pair = setupAzureRegionOptions()
-                                networkName = pair.second
-                                pair.first
-                            }
+                controller.clear()
+                var networkName = "corda-network"
+                targetChoiceBox.selectionModel.selectedItem?.let { selectedBackEnd ->
+                    val backendParams = when (selectedBackEnd) {
+                        Backend.BackendType.LOCAL_DOCKER -> {
+                            emptyMap()
                         }
+                        Backend.BackendType.AZURE -> {
+                            val pair = setupAzureRegionOptions()
+                            networkName = pair.second
+                            pair.first
+                        }
+                    }
 
-                        val nodeCount = controller.foundNodes.map { it.id to it.count }.toMap()
-                        val result = NetworkBuilder.instance()
-                                .withBasedir(controller.baseDir.get())
-                                .withNetworkName(networkName)
-                                .onNodeStartBuild(controller::onBuild)
-                                .onNodeBuild(controller::addBuiltNode)
-                                .onNodePushStart(controller::addBuiltNode)
-                                .onNodePushed(controller::addPushedNode)
-                                .onNodeInstancesRequested(controller::addInstanceRequests)
-                                .onNodeInstance(controller::addInstance)
-                                .withBackend(selectedBackEnd)
-                                .withNodeCounts(nodeCount)
-                                .withBackendOptions(backendParams)
-                                .build()
+                    val nodeCount = controller.foundNodes.map { it.id to it.count }.toMap()
+                    val result = NetworkBuilder.instance()
+                            .withBasedir(controller.baseDir.get())
+                            .withNetworkName(networkName)
+                            .onNodeStartBuild(controller::onBuild)
+                            .onNodeBuild(controller::addBuiltNode)
+                            .onNodePushStart(controller::addBuiltNode)
+                            .onNodePushed(controller::addPushedNode)
+                            .onNodeInstancesRequested(controller::addInstanceRequests)
+                            .onNodeInstance(controller::addInstance)
+                            .withBackend(selectedBackEnd)
+                            .withNodeCounts(nodeCount)
+                            .withBackendOptions(backendParams)
+                            .build()
 
-                        result.handle { v, t ->
-                            runLater {
-                                if (t != null) {
-                                    GuiUtils.showException("Failed to build network", "Failure due to", t)
-                                } else {
-                                    controller.networkContext.set(v.second)
-                                }
+                    result.handle { v, t ->
+                        runLater {
+                            if (t != null) {
+                                GuiUtils.showException("Failed to build network", "Failure due to", t)
+                            } else {
+                                controller.networkContext.set(v.second)
                             }
                         }
                     }
                 }
             }
         }
-
 
         templateChoiceBox.run {
             enableWhen { controller.networkContext.isNotNull }
@@ -156,11 +140,8 @@ class BootstrapperView : View("Corda Network Builder") {
                             }
                         }
                     }
-
                 }
             }
-
-
         }
 
         nodeTableView.run {
@@ -174,9 +155,8 @@ class BootstrapperView : View("Corda Network Builder") {
             hgrow = Priority.ALWAYS
 
             onMouseClicked = EventHandler<MouseEvent> { _ ->
-                runLater {
-                    infoTextArea.text = YAML_MAPPER.writeValueAsString(translateForPrinting(selectionModel.selectedItem))
-                }
+                val selectedItem: NodeTemplateInfo = selectionModel.selectedItem ?: return@EventHandler
+                infoTextArea.text = YAML_MAPPER.writeValueAsString(translateForPrinting(selectedItem))
             }
         }
     }
@@ -204,17 +184,21 @@ class BootstrapperView : View("Corda Network Builder") {
         return Backend.BackendType.values().toList();
     }
 
-
-    fun selectNodeDirectory(): CompletableFuture<Pair<List<FoundNode>, List<FoundNode>>> {
-        val fileChooser = DirectoryChooser();
-        fileChooser.initialDirectory = File(System.getProperty("user.home"))
-        val file = fileChooser.showDialog(null)
+    @Suppress("UNUSED")
+    fun onOpenClicked() {
+        val chooser = DirectoryChooser()
+        chooser.initialDirectory = File(System.getProperty("user.home"))
+        val file: File = chooser.showDialog(null) ?: return   // Null means user cancelled.
         controller.baseDir.set(file)
-        return processSelectedDirectory(file)
+        processSelectedDirectory(file).thenAcceptAsync({ (notaries: List<FoundNode>, nodes: List<FoundNode>) ->
+            runLater {
+                controller.foundNodes(nodes)
+                controller.notaries(notaries)
+            }
+        })
     }
 
-
-    fun processSelectedDirectory(dir: File): CompletableFuture<Pair<List<FoundNode>, List<FoundNode>>> {
+    private fun processSelectedDirectory(dir: File): CompletableFuture<Pair<List<FoundNode>, List<FoundNode>>> {
         val foundNodes = CompletableFuture.supplyAsync {
             val nodeFinder = NodeFinder(dir)
             nodeFinder.findNodes()
@@ -228,9 +212,7 @@ class BootstrapperView : View("Corda Network Builder") {
         }
     }
 
-
     class NodeTemplateInfo(templateId: String, type: NodeType) {
-
         val templateId: SimpleStringProperty = object : SimpleStringProperty(templateId) {
             override fun toString(): String {
                 return this.get()?.toString() ?: "null"
@@ -243,7 +225,6 @@ class BootstrapperView : View("Corda Network Builder") {
         val instances: MutableList<NodeInstanceEntry> = ArrayList()
         @Volatile
         var numberOfInstancesWaiting: AtomicInteger = AtomicInteger(-1)
-
     }
 
     enum class NodeBuildStatus {
@@ -255,7 +236,6 @@ class BootstrapperView : View("Corda Network Builder") {
     }
 
     class State : Controller() {
-
         val foundNodes = Collections.synchronizedList(ArrayList<FoundNodeTableEntry>()).observable()
         val foundNotaries = Collections.synchronizedList(ArrayList<FoundNode>()).observable()
         val networkContext = SimpleObjectProperty<Context>(null)
@@ -349,7 +329,6 @@ class BootstrapperView : View("Corda Network Builder") {
             foundNode?.numberOfInstancesWaiting?.incrementAndGet()
             foundNode?.status?.set(NodeBuildStatus.INSTANTIATING)
         }
-
     }
 
     data class NodeInstanceEntry(val id: String,
@@ -369,5 +348,4 @@ inline fun <reified S, T> TableView<S>.column(prop: KProperty1<S, ObservableValu
 }
 
 
-data class FoundNodeTableEntry(val id: String,
-                               @Volatile var count: Int = 1)
+data class FoundNodeTableEntry(val id: String, @Volatile var count: Int = 1)
