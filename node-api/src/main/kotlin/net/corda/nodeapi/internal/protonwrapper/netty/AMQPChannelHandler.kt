@@ -145,7 +145,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 // Transfers application packet into the AMQP engine.
                     is SendableMessageImpl -> {
                         val inetAddress = InetSocketAddress(msg.destinationLink.host, msg.destinationLink.port)
-                        require(inetAddress == remoteAddress) {
+                        require(inetAddress.hostName == remoteAddress.hostName) {
                             "Message for incorrect endpoint $inetAddress expected $remoteAddress"
                         }
                         require(CordaX500Name.parse(msg.destinationLegalName) == CordaX500Name.build(remoteCert!!.subjectX500Principal)) {
