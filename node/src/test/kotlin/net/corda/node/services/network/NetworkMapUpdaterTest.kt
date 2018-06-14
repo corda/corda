@@ -81,8 +81,8 @@ class NetworkMapUpdaterTest {
         server.close()
     }
 
-    private fun setUpdater(ourNodeHash: SecureHash? = null, extraNetworkMapKeys: List<UUID> = emptyList()) {
-        updater = NetworkMapUpdater(networkMapCache, fileWatcher, networkMapClient, server.networkParameters.serialize().hash, ourNodeHash, baseDir, extraNetworkMapKeys)
+    private fun setUpdater(ourNodeHash: SecureHash? = null, extraNetworkMapKeys: List<UUID> = emptyList(), netMapClient: NetworkMapClient? = networkMapClient) {
+        updater = NetworkMapUpdater(networkMapCache, fileWatcher, netMapClient, server.networkParameters.serialize().hash, ourNodeHash, baseDir, extraNetworkMapKeys)
     }
 
     @Test
@@ -240,7 +240,7 @@ class NetworkMapUpdaterTest {
 
     @Test
     fun `remove node from filesystem deletes it from network map cache`() {
-        setUpdater()
+        setUpdater(netMapClient = null)
         val fileNodeInfoAndSigned1 = createNodeInfoAndSigned("Info from file 1")
         val fileNodeInfoAndSigned2 = createNodeInfoAndSigned("Info from file 2")
         updater.subscribeToNetworkMap()
