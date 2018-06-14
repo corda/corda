@@ -200,9 +200,9 @@ class Node(
         val user = config.users.first()
         val address = config.nodeInterface
         val targetHost = NetworkHostAndPort(address.host, address.rpcPort)
-        val config = object : CordaRPCClientConfiguration {
-            override val connectionMaxRetryInterval = 10.seconds
-        }
+        val config = CordaRPCClientConfiguration.DEFAULT.copy(
+            connectionMaxRetryInterval = 10.seconds
+        )
         log.info("Establishing RPC connection to ${targetHost.host} on port ${targetHost.port} ...")
         CordaRPCClient(targetHost, config).use(user.username, user.password) {
             log.info("RPC connection to ${targetHost.host}:${targetHost.port} established")

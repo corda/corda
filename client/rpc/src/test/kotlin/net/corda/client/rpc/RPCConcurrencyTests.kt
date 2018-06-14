@@ -10,7 +10,6 @@
 
 package net.corda.client.rpc
 
-import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
@@ -100,10 +99,10 @@ class RPCConcurrencyTests : AbstractRPCTest() {
     private fun RPCDriverDSL.testProxy(): TestProxy<TestOps> {
         return testProxy<TestOps>(
                 TestOpsImpl(pool),
-                clientConfiguration = CordaRPCClientConfigurationImpl.default.copy(
+                clientConfiguration = CordaRPCClientConfiguration.DEFAULT.copy(
                         reapInterval = 100.millis
                 ),
-                serverConfiguration = RPCServerConfiguration.default.copy(
+                serverConfiguration = RPCServerConfiguration.DEFAULT.copy(
                         rpcThreadPoolSize = 4
                 )
         )

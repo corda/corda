@@ -24,9 +24,9 @@ abstract class AbstractScenarioRunner(options: OptionSet) {
                 val retryInterval = 5.seconds
 
                 val client = CordaRPCClient(endpoint,
-                    object : CordaRPCClientConfiguration {
-                        override val connectionMaxRetryInterval = retryInterval
-                    }
+                    CordaRPCClientConfiguration.DEFAULT.copy(
+                        connectionMaxRetryInterval = retryInterval
+                    )
                 )
                 val connection = client.start(user, password)
                 return connection.proxy
