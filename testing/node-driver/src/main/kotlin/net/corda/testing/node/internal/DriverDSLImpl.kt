@@ -653,10 +653,8 @@ class DriverDSLImpl(
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
-
+            addShutdownHook { process.destroy() }
             if (waitForAllNodesToFinish) {
-                // Destroy the child process when the parent terminates so it is not orphaned.
-                addShutdownHook { process.destroy() }
                 state.locked {
                     processes += object : Waitable {
                         override fun waitFor() {
@@ -664,8 +662,6 @@ class DriverDSLImpl(
                         }
                     }
                 }
-            } else {
-                shutdownManager.registerProcessShutdown(process)
             }
             val p2pReadyFuture = addressMustBeBoundFuture(executorService, config.corda.p2pAddress, process)
             return p2pReadyFuture.flatMap {
