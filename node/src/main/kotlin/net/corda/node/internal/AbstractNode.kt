@@ -429,7 +429,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             0 -> null
             1 -> nodeInfosFromDb[0]
             else -> {
-                log.warn("Found more than one node registration with our legal entity, this is only expected if our keypair has been regenerated")
+                log.warn("Found more than one node registration with our legal name, this is only expected if our keypair has been regenerated")
                 nodeInfosFromDb[0]
             }
         }

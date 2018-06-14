@@ -72,10 +72,6 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
 
     @Test
     fun `get nodes by owning key and by name`() {
-        val oldAlice = startNodesWithPort(listOf(ALICE))[0]
-        oldAlice.dispose()
-        val aliceWithNewKeys = startNodesWithPort(listOf(TestIdentity(ALICE_NAME, 77).party))[0]
-        aliceWithNewKeys.dispose()
         val alice = startNodesWithPort(listOf(ALICE))[0]
         val netCache = alice.services.networkMapCache
         val res = netCache.getNodeByLegalIdentity(alice.info.singleIdentity())
@@ -95,6 +91,16 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     // This test has to be done as normal node not mock, because MockNodes don't have addresses.
     @Test
     fun `insert two node infos with the same host and port`() {
+        val aliceNode = startNode(ALICE_NAME)
+        val charliePartyCert = getTestPartyAndCertificate(CHARLIE_NAME, generateKeyPair().public)
+        val aliceCache = aliceNode.services.networkMapCache
+        aliceCache.addNode(aliceNode.info.copy(legalIdentitiesAndCerts = listOf(charliePartyCert)))
+        val res = aliceCache.allNodes.filter { aliceNode.info.addresses[0] in it.addresses }
+        assertEquals(2, res.size)
+    }
+
+    @Test
+    fun `insert two node infos with the same legal name but two keypairs does not prevent startup`() {
         val aliceNode = startNode(ALICE_NAME)
         val charliePartyCert = getTestPartyAndCertificate(CHARLIE_NAME, generateKeyPair().public)
         val aliceCache = aliceNode.services.networkMapCache
