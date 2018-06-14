@@ -1,60 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.ChoiceBox?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.TableView?>
-<?import javafx.scene.control.TextArea?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
-
-<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="646.0" prefWidth="1073.0" xmlns="http://javafx.com/javafx/9.0.4" xmlns:fx="http://javafx.com/fxml/1">
-  <children>
-    <AnchorPane maxHeight="-1.0" maxWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" VBox.vgrow="ALWAYS">
-      <children>
-            <VBox layoutX="71.0" layoutY="14.0" prefHeight="371.0" prefWidth="640.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-               <children>
-                  <HBox alignment="CENTER" prefHeight="59.0" prefWidth="640.0">
-                     <children>
-                        <Button mnemonicParsing="false" onAction="#onOpenClicked" text="Open ..." />
-                        <Label alignment="CENTER" text="Target">
-                           <HBox.margin>
-                              <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-                           </HBox.margin>
-                        </Label>
-                        <ChoiceBox fx:id="targetChoiceBox" prefWidth="150.0">
-                           <HBox.margin>
-                              <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-                           </HBox.margin>
-                        </ChoiceBox>
-                        <Button fx:id="buildButton" mnemonicParsing="false" text="Build">
-                           <HBox.margin>
-                              <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-                           </HBox.margin>
-                        </Button>
-                        <ChoiceBox fx:id="templateChoiceBox" prefWidth="150.0">
-                           <HBox.margin>
-                              <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-                           </HBox.margin>
-                        </ChoiceBox>
-                        <Button fx:id="addInstanceButton" mnemonicParsing="false" text="Add Instance">
-                           <HBox.margin>
-                              <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-                           </HBox.margin>
-                        </Button>
-                     </children>
-                  </HBox>
-                  <HBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="461.0" prefWidth="1014.0" VBox.vgrow="ALWAYS">
-                     <children>
-                        <TableView fx:id="nodeTableView" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="458.0" prefWidth="662.0" HBox.hgrow="ALWAYS" />
-                        <TextArea fx:id="infoTextArea" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="458.0" prefWidth="353.0" HBox.hgrow="ALWAYS" />
-                     </children>
-                  </HBox>
-               </children>
-            </VBox>
-      </children>
-    </AnchorPane>
-  </children>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<VBox prefHeight="768.0" prefWidth="1024.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <HBox alignment="CENTER_LEFT" minHeight="-Infinity" prefHeight="75.0" prefWidth="1073.0" styleClass="top-pane">
+            <children>
+                <ImageView fitHeight="150.0" fitWidth="100.0" pickOnBounds="true" preserveRatio="true">
+                    <image>
+                        <Image url="@cordalogo.png" />
+                    </image>
+                </ImageView>
+                <Pane prefHeight="75.0" prefWidth="21.0" />
+                <Button mnemonicParsing="false" onAction="#onOpenClicked" text="Open nodes ..." />
+                <Button fx:id="buildButton" mnemonicParsing="false" text="Build">
+                    <HBox.margin>
+                        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                    </HBox.margin>
+                </Button>
+                <ToggleButton fx:id="localDockerBtn" mnemonicParsing="false" selected="true" text="Local Docker">
+                    <toggleGroup>
+                        <ToggleGroup fx:id="target" />
+                    </toggleGroup>
+                </ToggleButton>
+                <ToggleButton fx:id="azureBtn" mnemonicParsing="false" text="Azure" toggleGroup="$target" />
+                <ChoiceBox fx:id="templateChoiceBox" prefWidth="150.0">
+                    <HBox.margin>
+                        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                    </HBox.margin>
+                </ChoiceBox>
+                <Button fx:id="addInstanceButton" mnemonicParsing="false" text="Add Instance">
+                    <HBox.margin>
+                        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                    </HBox.margin>
+                </Button>
+            </children>
+        </HBox>
+        <HBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="461.0" prefWidth="1014.0" VBox.vgrow="ALWAYS">
+            <children>
+                <SplitPane dividerPositions="0.6940371456500489" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS">
+                    <items>
+                        <TableView fx:id="nodeTableView" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="458.0" prefWidth="662.0" />
+                        <TextArea fx:id="infoTextArea" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="458.0" prefWidth="353.0" />
+                    </items>
+                </SplitPane>
+            </children>
+        </HBox>
+    </children>
 </VBox>
