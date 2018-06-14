@@ -655,6 +655,7 @@ class DriverDSLImpl(
             val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
 
             if (waitForAllNodesToFinish) {
+                // Destroy the child process when the parent terminates so it is not orphaned.
                 addShutdownHook { process.destroy() }
                 state.locked {
                     processes += object : Waitable {
