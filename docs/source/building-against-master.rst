@@ -9,15 +9,15 @@ To work against a non-release branch, proceed as follows:
 
 1. Clone the `Corda repository <https://github.com/corda/corda>`_
 
-2. Check out the branch or commit you want to work against
+2. Check out the branch or commit of the Corda repository you want to work against
 
-3. Make a note of the ``gradlePluginsVersion`` in the root ``constants.properties`` file
+3. Make a note of the ``gradlePluginsVersion`` in the root ``constants.properties`` file of the Corda repository
     
 4. Clone the `Corda Gradle Plugins repository <https://github.com/corda/corda-gradle-plugins>`_
 
-5. Check out the tag corresponding to the ``gradlePluginsVersion``
+5. Check out the tag of the Corda Gradle Plugins repository corresponding to the ``gradlePluginsVersion``
 
-6. Follow the readme instructions to install this version of the Corda Gradle plugins locally
+6. Follow the instructions in the readme of the Corda Gradle Plugins repository to install this version of the Corda Gradle plugins locally
 
 7. Open a terminal window in the folder where you cloned the Corda repository
 
@@ -33,7 +33,7 @@ To work against a non-release branch, proceed as follows:
      time may differ. If you are using an unstable release and need help debugging an error, then please let us know the
      **commit** you are working from. This will help us ascertain the issue.
      
-9. Make a note of the ``corda_release_version`` in the root ``build.gradle`` file
+9. Make a note of the ``corda_release_version`` in the root ``build.gradle`` file of the Corda repository
 
 10. In your CorDapp's root ``build.gradle`` file:
 
