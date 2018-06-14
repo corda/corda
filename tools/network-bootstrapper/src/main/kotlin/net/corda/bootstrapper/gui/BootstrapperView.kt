@@ -2,14 +2,17 @@ package net.corda.bootstrapper.gui
 
 import com.microsoft.azure.management.resources.fluentcore.arm.Region
 import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.property.SimpleStringProperty
+import javafx.beans.value.ObservableValue
+import javafx.collections.ObservableListBase
 import javafx.collections.transformation.SortedList
 import javafx.event.EventHandler
-import javafx.scene.control.ChoiceDialog
-import javafx.scene.control.TableView.CONSTRAINED_RESIZE_POLICY
-import javafx.scene.control.TextInputDialog
+import javafx.scene.control.*
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.Priority
+import javafx.scene.layout.VBox
 import javafx.stage.DirectoryChooser
+import javafx.util.Callback
 import net.corda.bootstrapper.Constants
 import net.corda.bootstrapper.GuiUtils
 import net.corda.bootstrapper.NetworkBuilder
@@ -22,186 +25,183 @@ import tornadofx.*
 import java.io.File
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.Comparator
 import kotlin.collections.ArrayList
+import kotlin.reflect.KProperty1
 
-class BootstrapperView : View("Network Bootstrapper") {
+class BootstrapperView : View("Corda Network Builder") {
 
     val YAML_MAPPER = Constants.getContextMapper()
-
+    override val root: VBox by fxml("/views/mainPane.fxml")
 
     val controller: State by inject()
 
-    val textarea = textarea {
-        maxWidth = Double.MAX_VALUE
-        maxHeight = Double.MAX_VALUE
+    val openMenuItem: MenuItem by fxid()
+    val openRecentMenuItem: MenuItem by fxid()
+    val targetChoiceBox: ChoiceBox<Backend.BackendType> by fxid()
+    val nodeTableView: TableView<NodeTemplateInfo> by fxid()
+    val templateChoiceBox: ChoiceBox<String> by fxid()
+    val buildButton: Button by fxid()
+    val addInstanceButton: Button by fxid()
+
+    val infoTextArea: TextArea by fxid()
+
+    init {
+        val backendChoices = getAvailableBackends().observable()
+        targetChoiceBox.items = backendChoices
+        targetChoiceBox.selectionModel.select(Backend.BackendType.LOCAL_DOCKER)
+
+        openMenuItem.action {
+            selectNodeDirectory().thenAcceptAsync({ (notaries: List<FoundNode>, nodes: List<FoundNode>) ->
+                runLater {
+                    controller.foundNodes(nodes)
+                    controller.notaries(notaries)
+                }
+            })
+        }
+
+
+        buildButton.run {
+            enableWhen { controller.baseDir.isNotNull }
+            action {
+                runLater {
+                    controller.clear()
+                    var networkName = "corda-network"
+                    targetChoiceBox.selectionModel.selectedItem?.let { selectedBackEnd ->
+                        val backendParams = when (selectedBackEnd) {
+                            Backend.BackendType.LOCAL_DOCKER -> {
+                                emptyMap()
+                            }
+                            Backend.BackendType.AZURE -> {
+                                val pair = setupAzureRegionOptions()
+                                networkName = pair.second
+                                pair.first
+                            }
+                        }
+
+                        val nodeCount = controller.foundNodes.map { it.id to it.count }.toMap()
+                        val result = NetworkBuilder.instance()
+                                .withBasedir(controller.baseDir.get())
+                                .withNetworkName(networkName)
+                                .onNodeStartBuild(controller::onBuild)
+                                .onNodeBuild(controller::addBuiltNode)
+                                .onNodePushStart(controller::addBuiltNode)
+                                .onNodePushed(controller::addPushedNode)
+                                .onNodeInstancesRequested(controller::addInstanceRequests)
+                                .onNodeInstance(controller::addInstance)
+                                .withBackend(selectedBackEnd)
+                                .withNodeCounts(nodeCount)
+                                .withBackendOptions(backendParams)
+                                .build()
+
+                        result.handle { v, t ->
+                            runLater {
+                                if (t != null) {
+                                    GuiUtils.showException("Failed to build network", "Failure due to", t)
+                                } else {
+                                    controller.networkContext.set(v.second)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+        templateChoiceBox.run {
+            enableWhen { controller.networkContext.isNotNull }
+            controller.networkContext.addListener { _, _, newValue ->
+                if (newValue != null) {
+                    items = object : ObservableListBase<String>() {
+                        override fun get(index: Int): String {
+                            return controller.foundNodes[index].id
+                        }
+
+                        override val size: Int
+                            get() = controller.foundNodes.size
+                    }
+                    selectionModel.select(controller.foundNodes[0].id)
+                }
+            }
+        }
+
+        addInstanceButton.run {
+            enableWhen { controller.networkContext.isNotNull }
+            action {
+                templateChoiceBox.selectionModel.selectedItem?.let { nodeToAdd ->
+                    val context = controller.networkContext.value
+                    runLater {
+                        val (_, instantiator, _) = Backend.fromContext(
+                                context,
+                                File(controller.baseDir.get(), Constants.BOOTSTRAPPER_DIR_NAME))
+                        val nodeAdder = NodeAdder(context, NodeInstantiator(instantiator, context))
+                        controller.addInstanceRequest(nodeToAdd)
+                        nodeAdder.addNode(context, nodeToAdd).handleAsync { instanceInfo, t ->
+                            t?.let {
+                                GuiUtils.showException("Failed", "Failed to add node", it)
+                            }
+                            instanceInfo?.let {
+                                runLater {
+                                    controller.addInstance(NodeInstanceEntry(
+                                            it.groupId,
+                                            it.instanceName,
+                                            it.instanceAddress,
+                                            it.reachableAddress,
+                                            it.portMapping[Constants.NODE_P2P_PORT] ?: Constants.NODE_P2P_PORT,
+                                            it.portMapping[Constants.NODE_SSHD_PORT]
+                                                    ?: Constants.NODE_SSHD_PORT))
+                                }
+                            }
+                        }
+                    }
+
+                }
+            }
+
+
+        }
+
+        nodeTableView.run {
+            items = controller.sortedNodes
+            column(NodeTemplateInfo::templateId)
+            column(NodeTemplateInfo::nodeType)
+            column(NodeTemplateInfo::localDockerImageId)
+            column(NodeTemplateInfo::repositoryImageId)
+            column(NodeTemplateInfo::status)
+            columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
+            hgrow = Priority.ALWAYS
+
+            onMouseClicked = EventHandler<MouseEvent> { _ ->
+                runLater {
+                    infoTextArea.text = YAML_MAPPER.writeValueAsString(translateForPrinting(selectionModel.selectedItem))
+                }
+            }
+        }
     }
 
-    override val root = vbox {
+    private fun setupAzureRegionOptions(): Pair<Map<String, String>, String> {
+        var networkName1 = RandomStringUtils.randomAlphabetic(4) + "-network"
+        val textInputDialog = TextInputDialog(networkName1)
+        textInputDialog.title = "Azure Resource Group"
+        networkName1 = textInputDialog.showAndWait().orElseGet { networkName1 }
+        return Pair(mapOf(Constants.REGION_ARG_NAME to ChoiceDialog<Region>(Region.EUROPE_WEST, Region.values().toList().sortedBy { it.name() }).showAndWait().get().name()), networkName1)
+    }
 
-        menubar {
-            menu("File") {
-                item("Open") {
-                    action {
-                        selectNodeDirectory().thenAcceptAsync({ (notaries: List<FoundNode>, nodes: List<FoundNode>) ->
-                            controller.nodes(nodes)
-                            controller.notaries(notaries)
-                        })
-                    }
-                }
-
-                item("Build") {
-                    enableWhen(controller.baseDir.isNotNull)
-                    action {
-                        controller.clear()
-                        val availableBackends = getAvailableBackends()
-                        val backend = ChoiceDialog<Backend.BackendType>(availableBackends.first(), availableBackends).showAndWait()
-                        var networkName = "gui-network"
-                        backend.ifPresent { selectedBackEnd ->
-
-                            val backendParams = when (selectedBackEnd) {
-                                Backend.BackendType.LOCAL_DOCKER -> {
-
-                                    emptyMap<String, String>()
-                                }
-                                Backend.BackendType.AZURE -> {
-                                    val defaultName = RandomStringUtils.randomAlphabetic(4) + "-network"
-                                    val textInputDialog = TextInputDialog(defaultName)
-                                    textInputDialog.title = "Choose Network Name"
-                                    networkName = textInputDialog.showAndWait().orElseGet { defaultName }
-                                    mapOf(Constants.REGION_ARG_NAME to ChoiceDialog<Region>(Region.EUROPE_WEST, Region.values().toList().sortedBy { it.name() }).showAndWait().get().name())
-                                }
-                            }
-
-                            val nodeCount = controller.foundNodes.map { it.id to it.count }.toMap()
-                            val result = NetworkBuilder.instance()
-                                    .withBasedir(controller.baseDir.get())
-                                    .withNetworkName(networkName)
-                                    .onNodeBuild(controller::addBuiltNode)
-                                    .onNodePushed(controller::addPushedNode)
-                                    .onNodeInstance(controller::addInstance)
-                                    .withBackend(selectedBackEnd)
-                                    .withNodeCounts(nodeCount)
-                                    .withBackendOptions(backendParams)
-                                    .build()
-                            result.handle { v, t ->
-                                runLater {
-                                    if (t != null) {
-                                        GuiUtils.showException("Failed to build network", "Failure due to", t)
-                                    } else {
-                                        controller.networkContext.set(v.second)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                item("Add Node") {
-                    enableWhen(controller.networkContext.isNotNull)
-                    action {
-                        val foundNodes = controller.foundNodes.map { it.id }
-                        val nodeToAdd = ChoiceDialog<String>(foundNodes.first(), *foundNodes.toTypedArray()).showAndWait()
-                        val context = controller.networkContext.value
-                        nodeToAdd.ifPresent { node ->
-                            runLater {
-                                val (_, instantiator, _) = Backend.fromContext(
-                                        context,
-                                        File(controller.baseDir.get(), Constants.BOOTSTRAPPER_DIR_NAME))
-                                val nodeAdder = NodeAdder(context, NodeInstantiator(instantiator, context))
-                                nodeAdder.addNode(context, node).handleAsync { instanceInfo, t ->
-                                    t?.let {
-                                        GuiUtils.showException("Failed", "Failed to add node", it)
-                                    }
-                                    instanceInfo?.let {
-                                        runLater {
-                                            controller.addInstance(NodeInstanceTableEntry(
-                                                    it.groupId,
-                                                    it.instanceName,
-                                                    it.instanceAddress,
-                                                    it.reachableAddress,
-                                                    it.portMapping[Constants.NODE_P2P_PORT] ?: Constants.NODE_P2P_PORT,
-                                                    it.portMapping[Constants.NODE_SSHD_PORT]
-                                                            ?: Constants.NODE_SSHD_PORT))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+    private fun translateForPrinting(selectedItem: NodeTemplateInfo): Any {
+        return object {
+            val templateId = selectedItem.templateId.get()
+            val nodeType = selectedItem.nodeType.get()
+            val localDockerImageId = selectedItem.localDockerImageId.get()
+            val repositoryImageId = selectedItem.repositoryImageId.get()
+            val status = selectedItem.status.get()
+            val instances = selectedItem.instances.map { it }
         }
-
-        hbox {
-            vbox {
-                label("Nodes to build")
-                val foundNodesTable = tableview(controller.foundNodes) {
-                    readonlyColumn("ID", FoundNodeTableEntry::id)
-                    column("Count", FoundNodeTableEntry::count).makeEditable()
-                    vgrow = Priority.ALWAYS
-                    hgrow = Priority.ALWAYS
-                }
-                foundNodesTable.columnResizePolicy = CONSTRAINED_RESIZE_POLICY
-                label("Notaries to build")
-                val notaryListView = listview(controller.foundNotaries) {
-                    vgrow = Priority.ALWAYS
-                    hgrow = Priority.ALWAYS
-                }
-                notaryListView.cellFormat { text = it.name }
-                vgrow = Priority.ALWAYS
-                hgrow = Priority.ALWAYS
-            }
-
-            vbox {
-
-                label("Built Nodes")
-                tableview(controller.builtNodes) {
-                    readonlyColumn("ID", BuiltNodeTableEntry::id)
-                    readonlyColumn("LocalImageId", BuiltNodeTableEntry::localImageId)
-                    columnResizePolicy = CONSTRAINED_RESIZE_POLICY
-                    vgrow = Priority.ALWAYS
-                    hgrow = Priority.ALWAYS
-                }
-
-
-                label("Pushed Nodes")
-                tableview(controller.pushedNodes) {
-                    readonlyColumn("ID", PushedNode::name)
-                    readonlyColumn("RemoteImageId", PushedNode::remoteImageName)
-                    columnResizePolicy = CONSTRAINED_RESIZE_POLICY
-                    vgrow = Priority.ALWAYS
-                    hgrow = Priority.ALWAYS
-                }
-                vgrow = Priority.ALWAYS
-                hgrow = Priority.ALWAYS
-            }
-
-            borderpane {
-                top = vbox {
-                    label("Instances")
-                    tableview(controller.nodeInstances) {
-                        onMouseClicked = EventHandler<MouseEvent> { _ ->
-                            textarea.text = YAML_MAPPER.writeValueAsString(selectionModel.selectedItem)
-                        }
-                        readonlyColumn("ID", NodeInstanceTableEntry::id)
-                        readonlyColumn("InstanceId", NodeInstanceTableEntry::nodeInstanceName)
-                        readonlyColumn("Address", NodeInstanceTableEntry::address)
-                        columnResizePolicy = CONSTRAINED_RESIZE_POLICY
-                    }
-                }
-                center = textarea
-                vgrow = Priority.ALWAYS
-                hgrow = Priority.ALWAYS
-            }
-
-            vgrow = Priority.ALWAYS
-            hgrow = Priority.ALWAYS
-        }
-
     }
 
     private fun getAvailableBackends(): List<Backend.BackendType> {
-        return Backend.BackendType.values().toMutableList();
+        return Backend.BackendType.values().toList();
     }
 
 
@@ -227,97 +227,147 @@ class BootstrapperView : View("Network Bootstrapper") {
             notaries to nodes
         }
     }
-}
-
-class State : Controller() {
-
-    val foundNodes = Collections.synchronizedList(ArrayList<FoundNodeTableEntry>()).observable()
-    val builtNodes = Collections.synchronizedList(ArrayList<BuiltNodeTableEntry>()).observable()
-    val pushedNodes = Collections.synchronizedList(ArrayList<PushedNode>()).observable()
-
-    private val backingUnsortedInstances = Collections.synchronizedList(ArrayList<NodeInstanceTableEntry>()).observable()
-    val nodeInstances = SortedList(backingUnsortedInstances, COMPARATOR)
-
-    val foundNotaries = Collections.synchronizedList(ArrayList<FoundNode>()).observable()
-    val networkContext = SimpleObjectProperty<Context>(null)
-
-    fun clear() {
-        builtNodes.clear()
-        pushedNodes.clear()
-        backingUnsortedInstances.clear()
-        networkContext.set(null)
-    }
-
-    fun nodes(nodes: List<FoundNode>) {
-        foundNodes.clear()
-        nodes.forEach { addFoundNode(it) }
-    }
-
-    fun notaries(notaries: List<FoundNode>) {
-        foundNotaries.clear()
-        notaries.forEach { runLater { foundNotaries.add(it) } }
-    }
-
-    var baseDir = SimpleObjectProperty<File>(null)
 
 
-    fun addFoundNode(foundNode: FoundNode) {
-        runLater {
-            foundNodes.add(FoundNodeTableEntry(foundNode.name))
+    class NodeTemplateInfo(templateId: String, type: NodeType) {
+
+        val templateId: SimpleStringProperty = object : SimpleStringProperty(templateId) {
+            override fun toString(): String {
+                return this.get()?.toString() ?: "null"
+            }
         }
+        val nodeType: SimpleObjectProperty<NodeType> = SimpleObjectProperty(type)
+        var localDockerImageId: SimpleStringProperty = SimpleStringProperty()
+        var repositoryImageId: SimpleStringProperty = SimpleStringProperty()
+        var status: SimpleObjectProperty<NodeBuildStatus> = SimpleObjectProperty(NodeBuildStatus.DISCOVERED)
+        val instances: MutableList<NodeInstanceEntry> = ArrayList()
+        @Volatile
+        var numberOfInstancesWaiting: AtomicInteger = AtomicInteger(-1)
+
     }
 
-    fun addBuiltNode(builtNode: BuiltNode) {
-        runLater {
-            builtNodes.add(BuiltNodeTableEntry(builtNode.name, builtNode.localImageId))
+    enum class NodeBuildStatus {
+        DISCOVERED, LOCALLY_BUILDING, LOCALLY_BUILT, REMOTE_PUSHING, REMOTE_PUSHED, INSTANTIATING, INSTANTIATED,
+    }
+
+    enum class NodeType {
+        NODE, NOTARY
+    }
+
+    class State : Controller() {
+
+        val foundNodes = Collections.synchronizedList(ArrayList<FoundNodeTableEntry>()).observable()
+        val foundNotaries = Collections.synchronizedList(ArrayList<FoundNode>()).observable()
+        val networkContext = SimpleObjectProperty<Context>(null)
+
+        val unsortedNodes = Collections.synchronizedList(ArrayList<NodeTemplateInfo>()).observable()
+        val sortedNodes = SortedList(unsortedNodes, Comparator<NodeTemplateInfo> { o1, o2 ->
+            compareValues(o1.nodeType.toString() + o1.templateId, o2.nodeType.toString() + o2.templateId) * -1
+        })
+
+        fun clear() {
+            networkContext.set(null)
         }
-    }
 
-    fun addPushedNode(pushedNode: PushedNode) {
-        runLater {
-            pushedNodes.add(pushedNode)
+        fun foundNodes(nodesToAdd: List<FoundNode>) {
+            foundNodes.clear()
+            nodesToAdd.forEach {
+                runLater {
+                    foundNodes.add(FoundNodeTableEntry(it.name))
+                    unsortedNodes.add(NodeTemplateInfo(it.name, NodeType.NODE))
+                }
+            }
         }
-    }
 
-    fun addInstance(nodeInstance: NodeInstance) {
-        runLater {
-            backingUnsortedInstances.add(NodeInstanceTableEntry(
+        fun notaries(notaries: List<FoundNode>) {
+            foundNotaries.clear()
+            notaries.forEach {
+                runLater {
+                    foundNotaries.add(it)
+                    unsortedNodes.add(NodeTemplateInfo(it.name, NodeType.NOTARY))
+                }
+            }
+
+        }
+
+        var baseDir = SimpleObjectProperty<File>(null)
+
+        fun addBuiltNode(builtNode: BuiltNode) {
+            runLater {
+                val foundNode = unsortedNodes.find { it.templateId.get() == builtNode.name }
+                foundNode?.status?.set(NodeBuildStatus.LOCALLY_BUILT)
+                foundNode?.localDockerImageId?.set(builtNode.localImageId)
+            }
+        }
+
+        fun addPushedNode(pushedNode: PushedNode) {
+            runLater {
+                val foundNode = unsortedNodes.find { it.templateId.get() == pushedNode.name }
+                foundNode?.status?.set(NodeBuildStatus.REMOTE_PUSHED)
+                foundNode?.repositoryImageId?.set(pushedNode.remoteImageName)
+
+            }
+        }
+
+        fun onBuild(nodeBuilding: FoundNode) {
+            val foundNode = unsortedNodes.find { it.templateId.get() == nodeBuilding.name }
+            foundNode?.status?.set(NodeBuildStatus.LOCALLY_BUILDING)
+        }
+
+        fun addInstance(nodeInstance: NodeInstance) {
+            addInstance(NodeInstanceEntry(
                     nodeInstance.name,
                     nodeInstance.nodeInstanceName,
                     nodeInstance.expectedFqName,
                     nodeInstance.reachableAddress,
                     nodeInstance.portMapping[Constants.NODE_P2P_PORT] ?: Constants.NODE_P2P_PORT,
-                    nodeInstance.portMapping[Constants.NODE_SSHD_PORT] ?: Constants.NODE_SSHD_PORT))
+                    nodeInstance.portMapping[Constants.NODE_SSHD_PORT] ?: Constants.NODE_SSHD_PORT)
+            )
         }
-    }
 
-    fun addInstance(nodeInstance: NodeInstanceTableEntry) {
-        runLater {
-            backingUnsortedInstances.add(nodeInstance)
-        }
-    }
-
-    companion object {
-        val COMPARATOR: (NodeInstanceTableEntry, NodeInstanceTableEntry) -> Int = { o1, o2 ->
-            if (o1.id == (o2.id)) {
-                o1.nodeInstanceName.compareTo(o2.nodeInstanceName)
-            } else {
-                o1.id.compareTo(o2.id)
+        fun addInstanceRequests(requests: List<NodeInstanceRequest>) {
+            requests.firstOrNull()?.let { request ->
+                unsortedNodes.find { it.templateId.get() == request.name }?.let {
+                    it.numberOfInstancesWaiting = AtomicInteger(requests.size)
+                    it.status.set(NodeBuildStatus.INSTANTIATING)
+                }
             }
         }
+
+        fun addInstance(nodeInstance: NodeInstanceEntry) {
+            runLater {
+                val foundNode = unsortedNodes.find { it.templateId.get() == nodeInstance.id }
+                foundNode?.instances?.add(nodeInstance)
+                if (foundNode != null && foundNode.instances.size == foundNode.numberOfInstancesWaiting.get()) {
+                    foundNode.status.set(NodeBuildStatus.INSTANTIATED)
+                }
+            }
+        }
+
+        fun addInstanceRequest(nodeToAdd: String) {
+            val foundNode = unsortedNodes.find { it.templateId.get() == nodeToAdd }
+            foundNode?.numberOfInstancesWaiting?.incrementAndGet()
+            foundNode?.status?.set(NodeBuildStatus.INSTANTIATING)
+        }
+
     }
 
+    data class NodeInstanceEntry(val id: String,
+                                 val nodeInstanceName: String,
+                                 val address: String,
+                                 val locallyReachableAddress: String,
+                                 val rpcPort: Int,
+                                 val sshPort: Int)
 
 }
 
+inline fun <reified S, T> TableView<S>.column(prop: KProperty1<S, ObservableValue<T>>, noinline op: TableColumn<S, T>.() -> Unit = {}): TableColumn<S, T> {
+    val column = TableColumn<S, T>(prop.name)
+    column.cellValueFactory = Callback { prop.call(it.value) }
+    addColumnInternal(column)
+    return column.also(op)
+}
+
+
 data class FoundNodeTableEntry(val id: String,
                                @Volatile var count: Int = 1)
-
-data class BuiltNodeTableEntry(val id: String, val localImageId: String)
-
-data class NodeInstanceTableEntry(val id: String,
-                                  val nodeInstanceName: String,
-                                  val address: String,
-                                  val locallyReachableAddress: String,
-                                  val rpcPort: Int,
-                                  val sshPort: Int)

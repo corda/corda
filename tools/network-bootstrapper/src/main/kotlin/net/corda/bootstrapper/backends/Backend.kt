@@ -22,8 +22,16 @@ interface Backend {
     val instantiator: Instantiator
     val volume: Volume
 
-    enum class BackendType {
-        AZURE, LOCAL_DOCKER
+    enum class BackendType(val displayName: String) {
+
+        AZURE("Azure Containers"), LOCAL_DOCKER("Local Docker");
+
+
+        override fun toString(): String {
+            return this.displayName
+        }
+
+
     }
 
     operator fun component1(): ContainerPusher {

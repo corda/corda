@@ -1,11 +1,15 @@
 package net.corda.bootstrapper.gui
 
 import javafx.application.Application
-import tornadofx.App
+import net.corda.bootstrapper.serialization.SerializationEngine
+import tornadofx.*
 
 class Gui : App(BootstrapperView::class) {
     companion object {
         @JvmStatic
-        fun main(args: Array<String>) = Application.launch(Gui::class.java, *args)
+        fun main(args: Array<String>) {
+            SerializationEngine.init()
+            Application.launch(Gui::class.java, *args)
+        }
     }
 }
