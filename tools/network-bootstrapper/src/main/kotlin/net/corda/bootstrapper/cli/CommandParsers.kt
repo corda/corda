@@ -7,20 +7,12 @@ import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.io.File
 
-open class GuiSwitch {
-    @Option(names = ["-h", "--help"], usageHelp = true, description = ["display this help message"])
-    var usageHelpRequested: Boolean = false
+open class CliParser {
+    @Option(names = ["-n", "--network-name"], description = ["The resource grouping to use"])
+    var name: String? = null
 
-    @Option(names = ["-g", "--gui"], description = ["Run in Gui Mode"])
+    @Option(names = ["-g", "--gui"], description = ["Run the graphical user interface"])
     var gui = false
-
-    @CommandLine.Unmatched
-    var unmatched = arrayListOf<String>()
-}
-
-open class CliParser : GuiSwitch() {
-    @Option(names = ["-n", "--network-name"], description = ["The resource grouping to use"], required = true)
-    lateinit var name: String
 
     @Option(names = ["-d", "--nodes-directory"], description = ["The directory to search for nodes in"])
     var baseDirectory = File(System.getProperty("user.dir"))
@@ -28,7 +20,7 @@ open class CliParser : GuiSwitch() {
     @Option(names = ["-b", "--backend"], description = ["The backend to use when instantiating nodes"])
     var backendType: Backend.BackendType = Backend.BackendType.LOCAL_DOCKER
 
-    @Option(names = ["-nodes"], split = ":", description = ["The number of each node to create NodeX:2 will create two instances of NodeX"])
+    @Option(names = ["--nodes"], split = ":", description = ["The number of each node to create. NodeX:2 will create two instances of NodeX"])
     var nodes: MutableMap<String, Int> = hashMapOf()
 
     @Option(names = ["--add", "-a"])
@@ -41,7 +33,6 @@ open class CliParser : GuiSwitch() {
     open fun backendOptions(): Map<String, String> {
         return emptyMap()
     }
-
 }
 
 class AzureParser : CliParser() {

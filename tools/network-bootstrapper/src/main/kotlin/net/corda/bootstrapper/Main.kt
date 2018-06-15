@@ -11,23 +11,24 @@ import net.corda.bootstrapper.gui.Gui
 import net.corda.bootstrapper.serialization.SerializationEngine
 import picocli.CommandLine
 
+val baseArgs = CliParser()
+
 fun main(args: Array<String>) {
     SerializationEngine.init()
-    if (args.isEmpty()) {
-        Application.launch(Gui::class.java, *args)
-    } else if (args.first() == "--help" || args.first() == "-h") {
-        CommandLine.usage(AzureParser(), System.out)
-    } else {
-        val baseArgs = CliParser()
-        CommandLine(baseArgs).parse(*args)
-        val argParser: CliParser = when (baseArgs.backendType) {
-            AZURE -> {
-                val azureArgs = AzureParser()
-                CommandLine(azureArgs).parse(*args)
-                azureArgs
-            }
-            Backend.BackendType.LOCAL_DOCKER -> baseArgs
-        }
-        CommandLineInterface().run(argParser)
+    CommandLine(baseArgs).parse(*args)
+
+    if (baseArgs.gui) {
+        Application.launch(Gui::class.java)
+        return
     }
+
+    val argParser: CliParser = when (baseArgs.backendType) {
+        AZURE -> {
+            val azureArgs = AzureParser()
+            CommandLine(azureArgs).parse(*args)
+            azureArgs
+        }
+        Backend.BackendType.LOCAL_DOCKER -> baseArgs
+    }
+    CommandLineInterface().run(argParser)
 }
