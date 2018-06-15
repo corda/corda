@@ -217,7 +217,7 @@ abstract class FlowLogic<out T> {
      * is offline then message delivery will be retried until it comes back or until the message is older than the
      * network's event horizon time.
      */
-    @Deprecated("Use FlowSession.send()", level = DeprecationLevel.WARNING)
+    @Deprecated("Use FlowgSession.send()", level = DeprecationLevel.WARNING)
     @Suspendable
     open fun send(otherParty: Party, payload: Any) {
         getDeprecatedSessionForParty(otherParty).send(payload)
