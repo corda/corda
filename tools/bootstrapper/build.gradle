@@ -51,6 +51,10 @@ artifacts {
     }
 }
 
+jar {
+    classifier "ignore"
+}
+
 publish {
     disableDefaultJar = true
     name 'corda-tools-network-bootstrapper'

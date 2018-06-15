@@ -29,7 +29,7 @@ private val testGradleUserHome: String get() = testGradleUserHomeValue
     ?: throw AssumptionViolatedException("System property 'test.gradle.user.home' not set.")
 
 fun getGradleArgsForTasks(vararg taskNames: String): MutableList<String> = getBasicArgsForTasks(*taskNames).apply { add("--info") }
-fun getBasicArgsForTasks(vararg taskNames: String): MutableList<String> = mutableListOf(*taskNames, "-g", testGradleUserHome)
+fun getBasicArgsForTasks(vararg taskNames: String): MutableList<String> = mutableListOf(*taskNames, "--stacktrace", "-g", testGradleUserHome)
 
 @Throws(IOException::class)
 fun copyResourceTo(resourceName: String, target: Path) {

@@ -51,7 +51,7 @@ class ArtemisMessagingClient(
             // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
             // would be the default and the two lines below can be deleted.
             connectionTTL = 60000
-            clientFailureCheckPeriod = -1
+            clientFailureCheckPeriod = 30000
             minLargeMessageSize = maxMessageSize
             isUseGlobalPools = nodeSerializationEnv != null
             confirmationWindowSize = this@ArtemisMessagingClient.confirmationWindowSize

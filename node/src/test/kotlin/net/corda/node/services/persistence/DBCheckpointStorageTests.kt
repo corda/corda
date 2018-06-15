@@ -30,6 +30,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.LogHelper
+import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
@@ -165,13 +166,14 @@ class DBCheckpointStorageTests {
 
     @Test
     fun `verify checkpoints compatible`() {
+        val mockServices = MockServices(emptyList(), ALICE.name)
         database.transaction {
             val (id, checkpoint) = newCheckpoint(1)
             checkpointStorage.addCheckpoint(id, checkpoint)
         }
 
         database.transaction {
-            CheckpointVerifier.verifyCheckpointsCompatible(checkpointStorage, emptyList(), 1)
+            CheckpointVerifier.verifyCheckpointsCompatible(checkpointStorage, emptyList(), 1, mockServices, emptyList())
         }
 
         database.transaction {
@@ -181,7 +183,7 @@ class DBCheckpointStorageTests {
 
         Assertions.assertThatThrownBy {
             database.transaction {
-                CheckpointVerifier.verifyCheckpointsCompatible(checkpointStorage, emptyList(), 1)
+                CheckpointVerifier.verifyCheckpointsCompatible(checkpointStorage, emptyList(), 1, mockServices, emptyList())
             }
         }.isInstanceOf(CheckpointIncompatibleException::class.java)
     }

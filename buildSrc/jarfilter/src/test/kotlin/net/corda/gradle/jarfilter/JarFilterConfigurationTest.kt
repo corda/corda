@@ -262,7 +262,7 @@ task jarFilter(type: JarFilterTask) {
         testProjectDir.newFile("build.gradle").writeText(script)
         return GradleRunner.create()
             .withProjectDir(testProjectDir.root)
-            .withArguments(getBasicArgsForTasks("jarFilter", "--stacktrace"))
+            .withArguments(getBasicArgsForTasks("jarFilter"))
             .withPluginClasspath()
     }
 
