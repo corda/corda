@@ -163,14 +163,17 @@ handling, and ensures the Corda service is run at boot.
 11. Provision the required certificates to your node. Contact the network permissioning service or see
     :doc:`permissioning`
 
-12. **SystemD**: You can now start a node and its webserver and set the services to start on boot by running the
+12. Depending on the versions of Corda and of the CorDapps used, database migration scripts might need to run before a node is able to start.
+    For more information refer to :doc:`database-management`
+
+13. **SystemD**: You can now start a node and its webserver and set the services to start on boot by running the
     following ``systemctl`` commands:
 
    * ``sudo systemctl daemon-reload``
    * ``sudo systemctl enable --now corda``
    * ``sudo systemctl enable --now corda-webserver``
 
-12. **Upstart**: You can now start a node and its webserver by running the following commands:
+13. **Upstart**: You can now start a node and its webserver by running the following commands:
 
    * ``sudo start corda``
    * ``sudo start corda-webserver``
@@ -264,11 +267,14 @@ at boot, and means the Corda service stays running with no users connected to th
 10. Provision the required certificates to your node. Contact the network permissioning service or see
     :doc:`permissioning`
 
-11. Run the batch file by clicking on it or from a command prompt
+11. Depending on the versions of Corda and of the CorDapps used, database migration scripts might need to run before a node is able to start.
+    For more information refer to :doc:`database-management`
 
-12. Run ``services.msc`` and verify that a service called ``cordanode1`` is present and running
+12. Run the batch file by clicking on it or from a command prompt
 
-13. Run ``netstat -ano`` and check for the ports you configured in ``node.conf``
+13. Run ``services.msc`` and verify that a service called ``cordanode1`` is present and running
+
+14. Run ``netstat -ano`` and check for the ports you configured in ``node.conf``
 
     * You may need to open the ports on the Windows firewall
 

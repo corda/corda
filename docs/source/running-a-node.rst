@@ -90,3 +90,8 @@ After the nodes are started up, you can use ``docker ps`` command to see how the
    (Community Edition) is enough. Please refer to `Docker CE documentation <https://www.docker.com/community-edition>`_
    and `Docker Compose documentation <https://docs.docker.com/compose/install/>`_ for installation instructions for all
    major operating systems.
+
+Database migrations
+-------------------
+Depending on the versions of Corda and of the CorDapps used, database migration scripts might need to run before a node is able to start.
+For more information refer to :doc:`database-management`.
