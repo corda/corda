@@ -200,7 +200,7 @@ data class NodeConfigurationImpl(
 
     }
 
-    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword))
+    override val rpcOptions: NodeRpcOptions by lazy { initialiseRpcOptions(rpcAddress, rpcSettings, BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword)) }
 
     private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: BrokerRpcSslOptions): NodeRpcOptions {
         return when {
@@ -239,7 +239,12 @@ data class NodeConfigurationImpl(
     override fun validate(): List<String> {
         val errors = mutableListOf<String>()
         errors += validateDevModeOptions()
-        errors += validateRpcOptions(rpcOptions)
+        val rpcSettingsErrors = validateRpcSettings(rpcSettings)
+        errors += rpcSettingsErrors
+        if (rpcSettingsErrors.isEmpty()) {
+            // Forces lazy property to initialise in order to throw exceptions
+            rpcOptions
+        }
         errors += validateTlsCertCrlConfig()
         errors += validateNetworkServices()
         errors += validateH2Settings()
@@ -254,7 +259,7 @@ data class NodeConfigurationImpl(
         return errors
     }
 
-    private fun validateRpcOptions(options: NodeRpcOptions): List<String> {
+    private fun validateRpcSettings(options: NodeRpcSettings): List<String> {
         val errors = mutableListOf<String>()
         if (options.address != null) {
             if (!options.useSsl && options.adminAddress == null) {
