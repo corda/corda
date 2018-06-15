@@ -30,6 +30,7 @@ import org.junit.Test
 import java.sql.SQLException
 import java.time.Duration
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -48,7 +49,7 @@ class RetryFlowMockTest {
         RetryFlow.count = 0
         SendAndRetryFlow.count = 0
         RetryInsertFlow.count = 0
-        KeepSendingFlow.count = 0
+        KeepSendingFlow.count.set(0)
     }
 
     private fun <T> StartedNode<MockNode>.startFlow(logic: FlowLogic<T>): CordaFuture<T> {
@@ -115,7 +116,7 @@ class RetryFlowMockTest {
             }
         })
         // Now short circuit the iterations so the flow finishes soon.
-        KeepSendingFlow.count = count - 2
+        KeepSendingFlow.count.set(count - 2)
         while (nodeA.smm.allStateMachines.size > 0) {
             Thread.sleep(10)
         }
@@ -240,8 +241,7 @@ class ReceiveFlow2(private val other: FlowSession) : FlowLogic<Unit>() {
 @InitiatingFlow
 class KeepSendingFlow(private val i: Int, private val other: Party) : FlowLogic<Unit>() {
     companion object {
-        @Volatile
-        var count = 0
+        val count = AtomicInteger(0)
     }
 
     @Suspendable
@@ -251,7 +251,7 @@ class KeepSendingFlow(private val i: Int, private val other: Party) : FlowLogic<
         do {
             logger.info("Sending... $count")
             session.send("Boo")
-        } while (count++ < i)
+        } while (count.getAndIncrement() < i)
     }
 }
 
