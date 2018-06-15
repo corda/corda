@@ -440,7 +440,8 @@ class NodeVaultService(
                 if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
             }
 
-            query.firstResult = (paging.pageNumber - 1) * paging.pageSize
+            // for MSSQL firstResult must be >= 0
+            query.firstResult = maxOf(0, (paging.pageNumber - 1) * paging.pageSize)
             query.maxResults = paging.pageSize + 1  // detection too many results
 
             // execution
