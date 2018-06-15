@@ -217,7 +217,10 @@ data class NodeConfigurationImpl(
         }
     }
 
-    override val rpcOptions: NodeRpcOptions by lazy { actualRpcSettings.asOptions(BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword)) }
+    override val rpcOptions: NodeRpcOptions
+        get() {
+            return actualRpcSettings.asOptions(BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword))
+        }
 
     private fun validateTlsCertCrlConfig(): List<String> {
         val errors = mutableListOf<String>()
