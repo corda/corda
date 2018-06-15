@@ -285,6 +285,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val smm = makeStateMachineManager(database)
             val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
             val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
+            val cordaServices = installCordaServices(flowStarter)
             val schedulerService = NodeSchedulerService(
                     platformClock,
                     database,
@@ -294,8 +295,20 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     flowLogicRefFactory = flowLogicRefFactory,
                     drainingModePollPeriod = configuration.drainingModePollPeriod,
                     nodeProperties = nodeProperties)
-
             runOnStop += { schedulerService.join() }
+
+            tokenizableServices = nodeServices + cordaServices + schedulerService
+
+            try {
+                verifyCheckpointsCompatible(checkpointStorage, cordappProvider.cordapps, versionInfo.platformVersion, _services, tokenizableServices)
+            } catch (e: CheckpointIncompatibleException) {
+                if (configuration.devMode) {
+                    Node.printWarning(e.message)
+                } else {
+                    throw e
+                }
+            }
+
             (serverThread as? ExecutorService)?.let {
                 runOnStop += {
                     // We wait here, even though any in-flight messages should have been drained away because the
@@ -309,8 +322,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val rpcOps = makeRPCOps(flowStarter, smm)
             startMessagingService(rpcOps)
             installCoreFlows()
-            val cordaServices = installCordaServices(flowStarter)
-            tokenizableServices = nodeServices + cordaServices + schedulerService
+
             registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             startShell()
@@ -670,15 +682,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                              networkParameters: NetworkParameters): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
 
-        try {
-            verifyCheckpointsCompatible(checkpointStorage, cordappProvider.cordapps, versionInfo.platformVersion)
-        } catch (e: CheckpointIncompatibleException) {
-            if (configuration.devMode) {
-                Node.printWarning(e.message)
-            } else {
-                throw e
-            }
-        }
 
         val keyManagementService = makeKeyManagementService(identityService, keyPairs, database)
         _services = ServiceHubInternalImpl(
@@ -694,7 +697,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 nodeProperties,
                 networkParameters,
                 servicesForResolution)
+
         network = makeMessagingService(database, nodeInfo, nodeProperties, networkParameters)
+
         return mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock,
                 services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
