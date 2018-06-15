@@ -100,16 +100,6 @@ class PersistentNetworkMapCacheTest : NodeBasedTest() {
     }
 
     @Test
-    fun `insert two node infos with the same legal name but two keypairs does not prevent startup`() {
-        val aliceNode = startNode(ALICE_NAME)
-        val charliePartyCert = getTestPartyAndCertificate(CHARLIE_NAME, generateKeyPair().public)
-        val aliceCache = aliceNode.services.networkMapCache
-        aliceCache.addNode(aliceNode.info.copy(legalIdentitiesAndCerts = listOf(charliePartyCert)))
-        val res = aliceCache.allNodes.filter { aliceNode.info.addresses[0] in it.addresses }
-        assertEquals(2, res.size)
-    }
-
-    @Test
     fun `restart node with DB map cache`() {
         val alice = startNodesWithPort(listOf(ALICE))[0]
         val partyNodes = alice.services.networkMapCache.allNodes
