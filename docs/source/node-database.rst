@@ -38,10 +38,10 @@ or simply using ``0.0.0.0:0`` to listen on all interfaces.
 
 PostgreSQL
 ----------
-Nodes also have untested support for PostgreSQL 9.6, using PostgreSQL JDBC Driver 42.1.4.
+Nodes can also be configured to use PostgreSQL 9.6, using PostgreSQL JDBC Driver 42.1.4.
 
-.. warning:: This is an experimental community contribution, and is currently untested. We welcome pull requests to add
-   tests and additional support for this feature.
+.. warning:: This is an experimental community contribution. The Corda continuous integration pipeline does not run unit 
+   tests or integration tests of this feature.
 
 Configuration
 ~~~~~~~~~~~~~
