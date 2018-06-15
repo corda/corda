@@ -1,28 +1,10 @@
-apply plugin: 'kotlin'
+apply from: '../../../deterministic.gradle'
 apply plugin: 'idea'
-
-evaluationDependsOn(':jdk8u-deterministic')
-
-def jdkTask = project(':jdk8u-deterministic').assemble
-def deterministic_jdk_home = project(':jdk8u-deterministic').jdk_home
-def deterministic_rt_jar = project(':jdk8u-deterministic').rt_jar
 
 dependencies {
     compileOnly project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
     compileOnly project(path: ':serialization-deterministic', configuration: 'runtimeArtifacts')
     compileOnly "junit:junit:$junit_version"
-}
-
-tasks.withType(AbstractCompile) {
-    dependsOn jdkTask
-}
-
-tasks.withType(JavaCompile) {
-    options.compilerArgs << '-bootclasspath' << deterministic_rt_jar
-}
-
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
-    kotlinOptions.jdkHome = deterministic_jdk_home
 }
 
 idea {
