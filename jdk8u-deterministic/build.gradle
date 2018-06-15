@@ -9,6 +9,7 @@ repositories {
 
 ext {
     jdk_home = "$projectDir/jdk"
+    rt_jar = "$jdk_home/jre/lib/rt.jar".toString()
 }
 
 configurations {

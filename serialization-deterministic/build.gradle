@@ -12,6 +12,7 @@ def javaHome = System.getProperty('java.home')
 def jarBaseName = "corda-${project.name}".toString()
 def jdkTask = project(':jdk8u-deterministic').assemble
 def deterministic_jdk_home = project(':jdk8u-deterministic').jdk_home
+def deterministic_rt_jar = project(':jdk8u-deterministic').rt_jar
 
 configurations {
     runtimeLibraries
@@ -35,7 +36,7 @@ tasks.withType(AbstractCompile) {
 }
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs << "-bootclasspath" << "$deterministic_jdk_home/jre/lib/rt.jar".toString()
+    options.compilerArgs << "-bootclasspath" << deterministic_rt_jar
 }
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
@@ -150,7 +151,7 @@ task metafix(type: MetaFixerTask) {
 task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
     injars metafix
 
-    libraryjars "$deterministic_jdk_home/jre/lib/rt.jar"
+    libraryjars deterministic_rt_jar
 
     configurations.runtimeLibraries.forEach {
         libraryjars it.path, filter: '!META-INF/versions/**'
