@@ -85,7 +85,7 @@ class CashSelectionMSSQLImpl : AbstractCashSelection() {
             sb.append(")")
         }
         sb.append(
-                """
+            """
             ),
             Boundary AS
             (
