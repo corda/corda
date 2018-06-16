@@ -65,3 +65,32 @@ Note that:
 * The ``database.schema`` property is optional
 * The value of ``database.schema`` is not wrapped in double quotes and Postgres always treats it as a lower-case value
   (e.g. ``AliceCorp`` becomes ``alicecorp``)
+
+MSSQL
+----------
+Nodes also have untested support for Microsoft SQL Server 2017, using Microsoft JDBC Driver 6.2 for SQL Server.
+
+.. warning:: This is an experimental community contribution, and is currently untested. We welcome pull requests to add
+   tests and additional support for this feature.
+
+Configuration
+~~~~~~~~~~~~~
+Here is an example node configuration for MSSQL:
+
+.. sourcecode:: groovy
+
+    dataSourceProperties = {
+        dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
+        dataSource.url = "jdbc:sqlserver://[HOST]:[PORT];databaseName=[DATABASE_NAME]"
+        dataSource.user = [USER]
+        dataSource.password = [PASSWORD]
+    }
+    database = {
+        transactionIsolationLevel = READ_COMMITTED
+        schema = [SCHEMA]
+    }
+    jarDirs = ["[FULL_PATH]/sqljdbc_6.2/enu/"]
+
+Note that:
+
+* The ``database.schema`` property is optional and is ignored as of release 3.1.
