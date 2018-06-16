@@ -1,21 +1,15 @@
 package net.corda.node.services.config
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
-import com.typesafe.config.ConfigValueFactory
+import com.typesafe.config.*
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatCode
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Assert.assertNotNull
+import org.assertj.core.api.Assertions.*
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.net.URI
 import java.net.URL
@@ -139,6 +133,17 @@ class NodeConfigurationImplTest {
     }
 
     @Test
+    fun `validation succeeds when compatibilityZoneURL is present and devMode is true and allowCompatibilityZoneURL is set`() {
+        val configuration = testConfiguration.copy(
+                devMode = true,
+                compatibilityZoneURL = URL("https://r3.com"),
+                devModeOptions = DevModeOptions(allowCompatibilityZone = true))
+
+        val errors = configuration.validate()
+        assertThat(errors).isEmpty()
+    }
+
+    @Test
     fun `errors for nested config keys contain path`() {
         var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
         val missingPropertyPath = "rpcSettings.address"
@@ -229,7 +234,7 @@ class NodeConfigurationImplTest {
                 verifierType = VerifierType.InMemory,
                 p2pAddress = NetworkHostAndPort("localhost", 0),
                 messagingServerAddress = null,
-                p2pMessagingRetry = P2PMessagingRetryConfiguration(5.seconds, 3, 1.0),
+                flowTimeout = FlowTimeoutConfiguration(5.seconds, 3, 1.0),
                 notary = null,
                 devMode = true,
                 noLocalShell = false,

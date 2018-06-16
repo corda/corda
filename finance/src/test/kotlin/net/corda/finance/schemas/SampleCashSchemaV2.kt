@@ -17,7 +17,7 @@ object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
             /** product type */
             @Column(name = "ccy_code", length = 3, nullable = false)
             var currency: String,
-            participants: Set<AbstractParty>,
+            participants: Set<AbstractParty?>,
             owner: AbstractParty,
             quantity: Long,
             issuerParty: AbstractParty,
@@ -27,6 +27,6 @@ object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, ve
         @ElementCollection
         @Column(name = "participants", nullable = true)
         @CollectionTable(name = "cash_states_v2_participants", joinColumns = [JoinColumn(name = "output_index", referencedColumnName = "output_index"), JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")])
-        override var participants: MutableSet<AbstractParty>? = null
+        override var participants: MutableSet<AbstractParty?>? = null
     }
 }

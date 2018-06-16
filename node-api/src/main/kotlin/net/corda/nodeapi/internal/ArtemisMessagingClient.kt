@@ -38,8 +38,8 @@ class ArtemisMessagingClient(private val config: SSLConfiguration,
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
             // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
             // would be the default and the two lines below can be deleted.
-            connectionTTL = -1
-            clientFailureCheckPeriod = -1
+            connectionTTL = 60000
+            clientFailureCheckPeriod = 30000
             minLargeMessageSize = maxMessageSize
             isUseGlobalPools = nodeSerializationEnv != null
             addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
@@ -49,7 +49,7 @@ class ArtemisMessagingClient(private val config: SSLConfiguration,
         // using our TLS certificate.
         // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
         // size of 1MB is acknowledged.
-        val session = sessionFactory!!.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, locator.isPreAcknowledge, DEFAULT_ACK_BATCH_SIZE)
+        val session = sessionFactory!!.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
         session.start()
         // Create a general purpose producer.
         val producer = session.createProducer()

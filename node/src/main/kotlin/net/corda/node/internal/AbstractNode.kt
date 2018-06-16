@@ -169,7 +169,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     /** Set to non-null once [start] has been successfully called. */
     open val started get() = _started
-    @Volatile private var _started: StartedNode<AbstractNode>? = null
+    @Volatile
+    private var _started: StartedNode<AbstractNode>? = null
 
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open fun makeRPCOps(flowStarter: FlowStarter, smm: StateMachineManager): CordaRPCOps {
@@ -285,6 +286,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val smm = makeStateMachineManager(database)
             val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
             val flowStarter = FlowStarterImpl(smm, flowLogicRefFactory)
+            val cordaServices = installCordaServices(flowStarter)
             val schedulerService = NodeSchedulerService(
                     platformClock,
                     database,
@@ -294,8 +296,20 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                     flowLogicRefFactory = flowLogicRefFactory,
                     drainingModePollPeriod = configuration.drainingModePollPeriod,
                     nodeProperties = nodeProperties)
-
             runOnStop += { schedulerService.join() }
+
+            tokenizableServices = nodeServices + cordaServices + schedulerService
+
+            try {
+                verifyCheckpointsCompatible(checkpointStorage, cordappProvider.cordapps, versionInfo.platformVersion, _services, tokenizableServices)
+            } catch (e: CheckpointIncompatibleException) {
+                if (configuration.devMode) {
+                    Node.printWarning(e.message)
+                } else {
+                    throw e
+                }
+            }
+
             (serverThread as? ExecutorService)?.let {
                 runOnStop += {
                     // We wait here, even though any in-flight messages should have been drained away because the
@@ -309,8 +323,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             val rpcOps = makeRPCOps(flowStarter, smm)
             startMessagingService(rpcOps)
             installCoreFlows()
-            val cordaServices = installCordaServices(flowStarter)
-            tokenizableServices = nodeServices + cordaServices + schedulerService
+
             registerCordappFlows(smm)
             _services.rpcFlows += cordappLoader.cordapps.flatMap { it.rpcFlows }
             startShell()
@@ -378,7 +391,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 serial = 0
         )
 
-        val nodeInfoFromDb = networkMapCache.getNodeByLegalName(identity.name)
+        val nodeInfoFromDb = getPreviousNodeInfoIfPresent(networkMapCache, identity)
+
 
         val nodeInfo = if (potentialNodeInfo == nodeInfoFromDb?.copy(serial = 0)) {
             // The node info hasn't changed. We use the one from the database to preserve the serial.
@@ -406,6 +420,19 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         }
 
         return Pair(keyPairs, nodeInfo)
+    }
+
+    private fun getPreviousNodeInfoIfPresent(networkMapCache: NetworkMapCacheBaseInternal, identity: PartyAndCertificate): NodeInfo? {
+        val nodeInfosFromDb = networkMapCache.getNodesByLegalName(identity.name)
+
+        return when (nodeInfosFromDb.size) {
+            0 -> null
+            1 -> nodeInfosFromDb[0]
+            else -> {
+                log.warn("Found more than one node registration with our legal name, this is only expected if our keypair has been regenerated")
+                nodeInfosFromDb[0]
+            }
+        }
     }
 
     // Publish node info on startup and start task that sends every day a heartbeat - republishes node info.
@@ -670,15 +697,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                              networkParameters: NetworkParameters): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
 
-        try {
-            verifyCheckpointsCompatible(checkpointStorage, cordappProvider.cordapps, versionInfo.platformVersion)
-        } catch (e: CheckpointIncompatibleException) {
-            if (configuration.devMode) {
-                Node.printWarning(e.message)
-            } else {
-                throw e
-            }
-        }
 
         val keyManagementService = makeKeyManagementService(identityService, keyPairs, database)
         _services = ServiceHubInternalImpl(
@@ -694,7 +712,9 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
                 nodeProperties,
                 networkParameters,
                 servicesForResolution)
+
         network = makeMessagingService(database, nodeInfo, nodeProperties, networkParameters)
+
         return mutableListOf(attachments, network, services.vaultService,
                 services.keyManagementService, services.identityService, platformClock,
                 services.auditService, services.monitoringService, services.networkMapCache, services.schemaService,
@@ -779,7 +799,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
     }
 
     private fun makeCoreNotaryService(notaryConfig: NotaryConfig, database: CordaPersistence): NotaryService {
-        val notaryKey = myNotaryIdentity?.owningKey ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
+        val notaryKey = myNotaryIdentity?.owningKey
+                ?: throw IllegalArgumentException("No notary identity initialized when creating a notary service")
         return notaryConfig.run {
             when {
                 raft != null -> {
@@ -875,7 +896,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             throw ConfigurationException("The name '$singleName' for $id doesn't match what's in the key store: $subject")
         } else if (notaryConfig != null && notaryConfig.isClusterConfig && notaryConfig.serviceLegalName != null && subject != notaryConfig.serviceLegalName) {
             // Note that we're not checking if `notaryConfig.serviceLegalName` is not present for backwards compatibility.
-            throw ConfigurationException("The name of the notary service '${notaryConfig.serviceLegalName}' for $id doesn't match what's in the key store: $subject. "+
+            throw ConfigurationException("The name of the notary service '${notaryConfig.serviceLegalName}' for $id doesn't match what's in the key store: $subject. " +
                     "You might need to adjust the configuration of `notary.serviceLegalName`.")
         }
 
@@ -897,8 +918,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
             log.info("Starting Jolokia agent on HTTP port: $port")
             val libDir = Paths.get(configuration.baseDirectory.toString(), "drivers")
             val jarFilePath = JVMAgentRegistry.resolveAgentJar(
-                    "jolokia-jvm-${NodeBuildProperties.JOLOKIA_AGENT_VERSION}-agent.jar", libDir) ?:
-                    throw Error("Unable to locate agent jar file")
+                    "jolokia-jvm-${NodeBuildProperties.JOLOKIA_AGENT_VERSION}-agent.jar", libDir)
+                    ?: throw Error("Unable to locate agent jar file")
             log.info("Agent jar file: $jarFilePath")
             JVMAgentRegistry.attach("jolokia", "port=$port", jarFilePath)
         }
@@ -934,7 +955,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         override val networkMapUpdater: NetworkMapUpdater get() = this@AbstractNode.networkMapUpdater
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
             require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
-            return cordappServices.getInstance(type) ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
+            return cordappServices.getInstance(type)
+                    ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
         }
 
         override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {

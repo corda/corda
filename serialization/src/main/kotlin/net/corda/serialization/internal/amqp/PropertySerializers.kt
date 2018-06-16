@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.utilities.loggerFor
 import java.io.NotSerializableException
 import java.lang.reflect.Field
@@ -17,6 +18,7 @@ abstract class PropertyReader {
 /**
  * Accessor for those properties of a class that have defined getter functions.
  */
+@KeepForDJVM
 class PublicPropertyReader(private val readMethod: Method?) : PropertyReader() {
     init {
         readMethod?.isAccessible = true
@@ -55,6 +57,7 @@ class PublicPropertyReader(private val readMethod: Method?) : PropertyReader() {
  * Accessor for those properties of a class that do not have defined getter functions. In which case
  * we used reflection to remove the unreadable status from that property whilst it's accessed.
  */
+@KeepForDJVM
 class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader() {
     init {
         loggerFor<PropertySerializer>().warn("Create property Serializer for private property '${field.name}' not "

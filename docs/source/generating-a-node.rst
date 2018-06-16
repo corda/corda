@@ -43,6 +43,8 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
             }
             // No webport property, so no webserver will be created.
             h2Port   10004
+            // Starts an internal SSH server providing a management shell on the node.
+            sshdPort 2223
             // Includes the corda-finance CorDapp on our node.
             cordapps = ["net.corda:corda-finance:$corda_release_version"]
             // Specify a JVM argument to be used when running the node (in this case, extra heap size).
@@ -141,8 +143,26 @@ The webserver JAR will be copied into the node's ``build`` folder with the name 
 The Dockerform task
 -------------------
 
-The ``Dockerform`` is a sister task of ``Cordform``. It has nearly the same syntax and produces very
-similar results - enhanced by an extra file to enable easy spin up of nodes using ``docker-compose``.
+The ``Dockerform`` is a sister task of ``Cordform`` that provides an extra file allowing you to easily spin up 
+nodes using ``docker-compose``. It supports the following configuration options for each node:
+
+* ``name``
+* ``notary``
+* ``cordapps``
+* ``rpcUsers``
+* ``useTestClock``
+
+There is no need to specify the nodes' ports, as every node has a separate container, so no ports conflict will occur. 
+Every node will expose port ``10003`` for RPC connections.
+
+The nodes' webservers will not be started. Instead, you should interact with each node via its shell over SSH 
+(see the :doc:`node configuration options <corda-configuration-file>`). You have to enable the shell by adding the 
+following line to each node's ``node.conf`` file:
+
+    ``sshd { port = 2222 }``
+
+Where ``2222`` is the port you want to open to SSH into the shell.
+
 Below you can find the example task from the `IRS Demo <https://github.com/corda/corda/blob/release-V3.0/samples/irs-demo/cordapp/build.gradle#L111>`_ included in the samples directory of main Corda GitHub repository:
 
 .. sourcecode:: groovy
@@ -168,36 +188,29 @@ Below you can find the example task from the `IRS Demo <https://github.com/corda
         node {
             name "O=Notary Service,L=Zurich,C=CH"
             notary = [validating : true]
-            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }
         node {
             name "O=Bank A,L=London,C=GB"
-            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }
         node {
             name "O=Bank B,L=New York,C=US"
-            cordapps = ["${project(":finance").group}:finance:$corda_release_version"]
+            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }
         node {
             name "O=Regulator,L=Moscow,C=RU"
-            cordapps = ["${project.group}:finance:$corda_release_version"]
+            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }
     }
-
-There is no need to specify the ports, as every node is a separated container, so no ports conflict will occur. Every
-node by default will expose port 10003 which is the default port for RPC connections.
-
-.. warning:: The node webserver is not supported by this task!
-
-.. warning:: Nodes are run without the local shell enabled!
 
 Running the Cordform/Dockerform tasks
 -------------------------------------

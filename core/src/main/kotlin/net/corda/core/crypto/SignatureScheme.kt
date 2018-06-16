@@ -1,5 +1,6 @@
 package net.corda.core.crypto
 
+import net.corda.core.KeepForDJVM
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import java.security.Signature
 import java.security.spec.AlgorithmParameterSpec
@@ -20,6 +21,7 @@ import java.security.spec.AlgorithmParameterSpec
  * @param keySize the private key size (currently used for RSA only).
  * @param desc a human-readable description for this scheme.
  */
+@KeepForDJVM
 data class SignatureScheme(
         val schemeNumberID: Int,
         val schemeCodeName: String,

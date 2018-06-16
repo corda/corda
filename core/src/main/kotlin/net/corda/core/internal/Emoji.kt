@@ -1,8 +1,11 @@
 package net.corda.core.internal
 
+import net.corda.core.DeleteForDJVM
+
 /**
  * A simple wrapper class that contains icons and support for printing them only when we're connected to a terminal.
  */
+@DeleteForDJVM
 object Emoji {
     // Unfortunately only Apple has a terminal that can do colour emoji AND an emoji font installed by default.
     // However the JediTerm java terminal emulator can also do emoji on OS X when using the JetBrains JRE.

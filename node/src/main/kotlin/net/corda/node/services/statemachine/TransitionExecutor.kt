@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.StateMachineRunId
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.TransitionResult
 
@@ -17,6 +18,13 @@ interface TransitionExecutor {
             transition: TransitionResult,
             actionExecutor: ActionExecutor
     ): Pair<FlowContinuation, StateMachineState>
+
+    /**
+     * Called if the normal exit path where the new state is marked as removed via [StateMachineState.isRemoved] is not called.
+     * Currently this only happens via [StateMachineManager.killFlow].  This allows instances of this interface to clean up
+     * any state they are holding for a flow to prevent a memory leak.
+     */
+    fun forceRemoveFlow(id: StateMachineRunId)
 }
 
 /**

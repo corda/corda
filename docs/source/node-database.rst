@@ -6,6 +6,13 @@ Default in-memory database
 By default, nodes store their data in an H2 database. You can connect directly to a running node's database to see its
 stored states, transactions and attachments as follows:
 
+* Enable the H2 database access in the node configuration using the following syntax:
+
+  .. sourcecode:: groovy
+    h2Settings {
+        address: "localhost:0"
+    }
+
 * Download the **last stable** `h2 platform-independent zip <http://www.h2database.com/html/download.html>`_, unzip the zip, and
   navigate in a terminal window to the unzipped folder
 * Change directories to the bin folder: ``cd h2/bin``
@@ -25,12 +32,16 @@ stored states, transactions and attachments as follows:
 You will be presented with a web interface that shows the contents of your node's storage and vault, and provides an
 interface for you to query them using SQL.
 
+The default behaviour is to expose the H2 database on localhost. This can be overridden in the
+node configuration using ``h2Settings.address`` and specifying the address of the network interface to listen on,
+or simply using ``0.0.0.0:0`` to listen on all interfaces.
+
 PostgreSQL
 ----------
-Nodes also have untested support for PostgreSQL 9.6, using PostgreSQL JDBC Driver 42.1.4.
+Nodes can also be configured to use PostgreSQL 9.6, using PostgreSQL JDBC Driver 42.1.4.
 
-.. warning:: This is an experimental community contribution, and is currently untested. We welcome pull requests to add
-   tests and additional support for this feature.
+.. warning:: This is an experimental community contribution. The Corda continuous integration pipeline does not run unit 
+   tests or integration tests of this feature.
 
 Configuration
 ~~~~~~~~~~~~~

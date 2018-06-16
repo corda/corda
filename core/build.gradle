@@ -53,12 +53,6 @@ processSmokeTestResources {
     }
 }
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-}
-
 dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "commons-fileupload:commons-fileupload:$fileupload_version"
@@ -124,7 +118,10 @@ task copyQuasarJar(type: Copy) {
     rename { filename -> "quasar.jar"}
 }
 
-jar.finalizedBy(copyQuasarJar)
+jar {
+    finalizedBy(copyQuasarJar)
+    baseName 'corda-core'
+}
 
 configurations {
     testArtifacts.extendsFrom testRuntime
@@ -153,10 +150,6 @@ task smokeTest(type: Test) {
 
 artifacts {
     testArtifacts testJar
-}
-
-jar {
-    baseName 'corda-core'
 }
 
 scanApi {

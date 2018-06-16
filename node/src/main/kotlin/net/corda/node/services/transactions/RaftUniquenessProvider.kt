@@ -90,8 +90,8 @@ class RaftUniquenessProvider(
     class CommittedState(
             @EmbeddedId
             val id: PersistentStateRef,
-            @Column(name = "consuming_transaction_id", nullable = false)
-            var value: String = "",
+            @Column(name = "consuming_transaction_id", nullable = true)
+            var value: String? = "",
             @Column(name = "raft_log_index", nullable = false)
             var index: Long = 0
     ) : Serializable

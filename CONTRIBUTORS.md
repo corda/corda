@@ -61,12 +61,14 @@ see changes to this list.
 * cncorda
 * Credit Suisse
 * cyrsis
+* Dan Newton (Accenture)
 * Daniel Roig (SEB)
 * Dave Hudson (R3)
 * David John Grundy (Dankse Bank)
 * David Lee (BCS)
 * Dirk Hermans (KBC)
 * Edward Greenwood (State Street)
+* Elendu Uche (APPZONE)
 * Farzad Pezeshkpour (RBS)
 * fracting
 * Frederic Dalibard (Natixis)

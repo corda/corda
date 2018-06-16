@@ -2,6 +2,9 @@ package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
+import net.corda.core.StubOutForDJVM
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
@@ -17,7 +20,9 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.annotation.concurrent.ThreadSafe
 
+@KeepForDJVM
 data class SerializationSchemas(val schema: Schema, val transforms: TransformsSchema)
+@KeepForDJVM
 data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typeDescriptor: Any)
 
 /**
@@ -38,6 +43,7 @@ data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typ
 // TODO: generic types should define restricted type alias with source of the wildcarded version, I think, if we're to generate classes from schema
 // TODO: need to rethink matching of constructor to properties in relation to implementing interfaces and needing those properties etc.
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
+@KeepForDJVM
 @ThreadSafe
 open class SerializerFactory(
         val whitelist: ClassWhitelist,
@@ -48,6 +54,7 @@ open class SerializerFactory(
         val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>>,
         private val customSerializers: MutableList<SerializerFor>,
         val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>) {
+    @DeleteForDJVM
     constructor(whitelist: ClassWhitelist,
                 classCarpenter: ClassCarpenter,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
@@ -58,6 +65,7 @@ open class SerializerFactory(
              customSerializers = CopyOnWriteArrayList(),
              transformsCache = ConcurrentHashMap())
 
+    @DeleteForDJVM
     constructor(whitelist: ClassWhitelist,
                 classLoader: ClassLoader,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
@@ -274,6 +282,7 @@ open class SerializerFactory(
         }
     }
 
+    @StubOutForDJVM
     private fun runCarpentry(schemaAndDescriptor: FactorySchemaAndDescriptor, metaSchema: CarpenterMetaSchema) {
         val mc = MetaCarpenter(metaSchema, classCarpenter)
         try {

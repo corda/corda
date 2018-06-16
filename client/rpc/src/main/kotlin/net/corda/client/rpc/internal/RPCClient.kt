@@ -8,84 +8,50 @@ import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.logElapsedTime
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
 import net.corda.nodeapi.RPCApi
-import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.lang.reflect.Proxy
-import java.time.Duration
-
-/**
- * This configuration may be used to tweak the internals of the RPC client.
- */
-data class CordaRPCClientConfigurationImpl(
-        override val minimumServerProtocolVersion: Int,
-        override val trackRpcCallSites: Boolean,
-        override val reapInterval: Duration,
-        override val observationExecutorPoolSize: Int,
-        override val connectionRetryInterval: Duration,
-        override val connectionRetryIntervalMultiplier: Double,
-        override val connectionMaxRetryInterval: Duration,
-        override val maxReconnectAttempts: Int,
-        override val maxFileSize: Int,
-        override val deduplicationCacheExpiry: Duration
-) : CordaRPCClientConfiguration {
-    companion object {
-        private const val unlimitedReconnectAttempts = -1
-        @JvmStatic
-        val default = CordaRPCClientConfigurationImpl(
-                minimumServerProtocolVersion = 0,
-                trackRpcCallSites = false,
-                reapInterval = 1.seconds,
-                observationExecutorPoolSize = 4,
-                connectionRetryInterval = 5.seconds,
-                connectionRetryIntervalMultiplier = 1.5,
-                connectionMaxRetryInterval = 3.minutes,
-                maxReconnectAttempts = unlimitedReconnectAttempts,
-                /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
-                maxFileSize = 10485760,
-                deduplicationCacheExpiry = 1.days
-        )
-    }
-}
 
 /**
  * This runs on the client JVM
  */
 class RPCClient<I : RPCOps>(
         val transport: TransportConfiguration,
-        val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+        val rpcConfiguration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         val serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT,
         val haPoolTransportConfigurations: List<TransportConfiguration> = emptyList()
 ) {
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: ClientRpcSslOptions? = null,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(rpcConnectorTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
 
     constructor(
             hostAndPort: NetworkHostAndPort,
             sslConfiguration: SSLConfiguration,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(rpcInternalClientTcpTransport(hostAndPort, sslConfiguration), configuration, serializationContext)
 
     constructor(
             haAddressPool: List<NetworkHostAndPort>,
             sslConfiguration: ClientRpcSslOptions? = null,
-            configuration: CordaRPCClientConfiguration = CordaRPCClientConfigurationImpl.default,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
             serializationContext: SerializationContext = SerializationDefaults.RPC_CLIENT_CONTEXT
     ) : this(rpcConnectorTcpTransport(haAddressPool.first(), sslConfiguration),
             configuration, serializationContext, rpcConnectorTcpTransportsFromList(haAddressPool, sslConfiguration))
@@ -109,6 +75,8 @@ class RPCClient<I : RPCOps>(
             } else {
                 ActiveMQClient.createServerLocatorWithoutHA(*haPoolTransportConfigurations.toTypedArray())
             }).apply {
+                connectionTTL = 60000
+                clientFailureCheckPeriod = 30000
                 retryInterval = rpcConfiguration.connectionRetryInterval.toMillis()
                 retryIntervalMultiplier = rpcConfiguration.connectionRetryIntervalMultiplier
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()

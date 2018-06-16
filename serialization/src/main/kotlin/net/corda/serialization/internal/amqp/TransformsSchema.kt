@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformRename
 import org.apache.qpid.proton.amqp.DescribedType
@@ -303,6 +304,7 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
 
     @Suppress("NAME_SHADOWING")
     override fun toString(): String {
+        @KeepForDJVM
         data class Indent(val indent: String) {
             @Suppress("UNUSED") constructor(i: Indent) : this("  ${i.indent}")
 

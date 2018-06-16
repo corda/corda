@@ -1,5 +1,8 @@
+@file:KeepForDJVM
 package net.corda.core.crypto
 
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.parseAsHex
@@ -10,6 +13,7 @@ import java.security.MessageDigest
  * Container for a cryptographically secure hash value.
  * Provides utilities for generating a cryptographic hash using different algorithms (currently only SHA-256 supported).
  */
+@KeepForDJVM
 @CordaSerializable
 sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes). */
@@ -44,13 +48,13 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          * @throws IllegalArgumentException The input string does not contain 64 hexadecimal digits, or it contains incorrectly-encoded characters.
          */
         @JvmStatic
-        fun parse(str: String): SHA256 {
-            return str.toUpperCase().parseAsHex().let {
+        fun parse(str: String?): SHA256 {
+            return str?.toUpperCase()?.parseAsHex()?.let {
                 when (it.size) {
                     32 -> SHA256(it)
                     else -> throw IllegalArgumentException("Provided string is ${it.size} bytes not 32 bytes in hex: $str")
                 }
-            }
+            } ?: throw IllegalArgumentException("Provided string is null")
         }
 
         /**
@@ -77,6 +81,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         /**
          * Generates a random SHA-256 value.
          */
+        @DeleteForDJVM
         @JvmStatic
         fun randomSHA256() = sha256(secureRandomBytes(32))
 
