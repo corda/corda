@@ -26,7 +26,7 @@ class CashSelectionMSSQLImpl : AbstractCashSelection() {
     override fun toString() = "${this::class.qualifiedName} for '$JDBC_DRIVER_NAME'"
 
     /**
-     * This is one MSSQL implementation of the query to select just enough cash states to meet the desired amount.quantity.
+     * This is one MSSQL implementation of the query to select just enough cash states to meet the desired amount.
      * We select the cash states with smaller amounts first so that as the result, we minimize the numbers of
      * unspent cash states in the vault.
      *
