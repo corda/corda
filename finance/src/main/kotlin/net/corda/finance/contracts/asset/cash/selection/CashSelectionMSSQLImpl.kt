@@ -28,7 +28,7 @@ class CashSelectionMSSQLImpl : AbstractCashSelection() {
     /**
      * This is one MSSQL implementation of the query to select just enough cash states to meet the desired amount.
      * We select the cash states with smaller amounts first so that as the result, we minimize the numbers of
-     * unspent cash states in the vault.
+     * unspent cash states remaining in the vault.
      *
      * If there is not enough cash, the query will return an empty resultset, which should signal to the caller
      * of an exception, since the desired amount is assumed to always > 0.
