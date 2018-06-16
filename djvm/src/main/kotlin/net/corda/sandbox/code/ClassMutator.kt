@@ -5,6 +5,7 @@ import net.corda.sandbox.analysis.ClassAndMemberVisitor
 import net.corda.sandbox.references.Class
 import net.corda.sandbox.references.Member
 import net.corda.sandbox.utilities.Processor
+import net.corda.sandbox.utilities.loggerFor
 import org.objectweb.asm.ClassVisitor
 
 /**
@@ -37,6 +38,7 @@ class ClassMutator(
             resultingClass = it.define(currentAnalysisContext(), resultingClass)
         }
         if (clazz != resultingClass) {
+            logger.trace("Type has been mutated {}", clazz)
             hasBeenModified = true
         }
         return super.visitClass(resultingClass)
@@ -52,6 +54,7 @@ class ClassMutator(
             resultingMethod = it.define(currentAnalysisContext(), resultingMethod)
         }
         if (method != resultingMethod) {
+            logger.trace("Method has been mutated {}", method)
             hasBeenModified = true
         }
         return super.visitMethod(clazz, resultingMethod)
@@ -67,6 +70,7 @@ class ClassMutator(
             resultingField = it.define(currentAnalysisContext(), resultingField)
         }
         if (field != resultingField) {
+            logger.trace("Field has been mutated {}", field)
             hasBeenModified = true
         }
         return super.visitField(clazz, resultingField)
@@ -85,6 +89,10 @@ class ClassMutator(
             hasBeenModified = true
         }
         super.visitInstruction(method, emitter, instruction)
+    }
+
+    private companion object {
+        private val logger = loggerFor<ClassMutator>()
     }
 
 }

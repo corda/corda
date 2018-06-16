@@ -1,5 +1,7 @@
 package net.corda.sandbox.costing
 
+import net.corda.sandbox.utilities.loggerFor
+
 /**
  * Cost metric to be used in a sandbox environment. The metric has a threshold and a mechanism for reporting violations.
  * The implementation assumes that each metric is tracked on a per-thread basis, i.e., that each sandbox runs on its own
@@ -37,7 +39,9 @@ open class TypedRuntimeCost<T>(
         val newValue = increment(costValue.get())
         costValue.set(newValue)
         if (thresholdPredicate(newValue)) {
-            throw ThresholdViolationException(errorMessage(currentThread))
+            val message = errorMessage(currentThread)
+            logger.error("Threshold breached; {}", message)
+            throw ThresholdViolationException(message)
         }
     }
 
@@ -48,17 +52,20 @@ open class TypedRuntimeCost<T>(
     private fun getAndCheckThread(): Thread? {
         val currentThread = Thread.currentThread()
         if (filteredThreads.contains(currentThread)) {
+            logger.trace("Thread will not be affected by runtime costing")
             return null
         }
         return currentThread
     }
 
-    companion object {
+    private companion object {
 
         /**
          * A set of threads to which cost accounting will be disabled.
          */
         private val filteredThreads: List<Thread> = emptyList()
+
+        private val logger = loggerFor<RuntimeCost>()
 
     }
 

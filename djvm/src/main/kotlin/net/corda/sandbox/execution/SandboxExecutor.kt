@@ -8,6 +8,7 @@ import net.corda.sandbox.rewiring.LoadedClass
 import net.corda.sandbox.rewiring.SandboxClassLoader
 import net.corda.sandbox.rewiring.SandboxClassLoadingException
 import net.corda.sandbox.source.ClassSource
+import net.corda.sandbox.utilities.loggerFor
 import net.corda.sandbox.validation.ReferenceValidationSummary
 import net.corda.sandbox.validation.ReferenceValidator
 import java.lang.reflect.InvocationTargetException
@@ -49,6 +50,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
             runnableClass: ClassSource,
             input: TInput
     ): ExecutionSummaryWithResult<TOutput?> {
+        logger.trace("Executing {} with input {}...", runnableClass, input)
         val classSources = listOf(runnableClass)
         val context = AnalysisContext.fromConfiguration(configuration.analysisConfiguration, classSources)
         val result = IsolatedRunnable(runnableClass.qualifiedClassName, configuration, context).run {
@@ -63,6 +65,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
                 throw ex.targetException
             }
         }
+        logger.trace("Execution of {} with input {} resulted in {}", runnableClass, input, result)
         when (result.exception) {
             null -> return ExecutionSummaryWithResult(result.output, result.costs)
             else -> throw SandboxException(
@@ -103,10 +106,12 @@ open class SandboxExecutor<in TInput, out TOutput>(
      */
     @Throws(SandboxClassLoadingException::class)
     fun validate(vararg classSources: ClassSource): ReferenceValidationSummary {
+        logger.trace("Validating {}...", classSources)
         val context = AnalysisContext.fromConfiguration(configuration.analysisConfiguration, classSources.toList())
         val result = IsolatedRunnable("Validation", configuration, context).run {
             validate(context, classLoader, classSources.toList())
         }
+        logger.trace("Validation of {} resulted in {}", classSources, result)
         when (result.exception) {
             null -> return result.output!!
             else -> throw result.exception
@@ -166,5 +171,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
             }
         }
     }
+
+    private val logger = loggerFor<SandboxExecutor<TInput, TOutput>>()
 
 }

@@ -1,6 +1,7 @@
 package net.corda.sandbox.analysis
 
 import sandbox.net.corda.sandbox.costing.RuntimeCostAccounter
+import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.PushbackInputStream
 import java.nio.file.Files
@@ -96,6 +97,8 @@ open class Whitelist private constructor(
 
     companion object {
 
+        private val everythingRegex = setOf(".*".toRegex())
+
         /**
          * Empty whitelist.
          */
@@ -105,8 +108,8 @@ open class Whitelist private constructor(
          * Whitelist everything.
          */
         val EVERYTHING: Whitelist = Whitelist(
-                Whitelist(null, setOf(Regex(".*")), emptySet()),
-                setOf(Regex(".*")),
+                Whitelist(null, everythingRegex, emptySet()),
+                everythingRegex,
                 emptySet()
         )
 
@@ -126,8 +129,8 @@ open class Whitelist private constructor(
          * Default whitelist used for testing.
          */
         val TEST = Whitelist.DEFAULT + setOf(
-                Regex("^org/assertj/.*$"),
-                Regex("^org/junit/.*$")
+                "^org/assertj/.*$".toRegex(),
+                "^org/junit/.*$".toRegex()
         )
 
         /**
@@ -135,13 +138,13 @@ open class Whitelist private constructor(
          */
         // TODO The set of pinned classes should eventually be reduced to Whitelist.MINIMAL + <extra>
         val PINNED_CLASSES = Whitelist.DEFAULT + setOf(
-                Regex("^sandbox/java/lang/Object$"),
-                Regex("^${RuntimeCostAccounter.TYPE_NAME}$")
+                "^sandbox/java/lang/Object$".toRegex(),
+                "^${RuntimeCostAccounter.TYPE_NAME}$".toRegex()
         )
 
         private val minimumSet = setOf(
                 // TODO Refine to contain only the bare minimum of classes needed from java/lang
-                Regex("^java/lang/.*$")
+                "^java/lang/.*$".toRegex()
         )
 
         /**
@@ -154,7 +157,7 @@ open class Whitelist private constructor(
          */
         fun fromResource(resourceName: String): Whitelist {
             val inputStream = Whitelist::class.java.getResourceAsStream("/$resourceName")
-                    ?: throw Exception("Cannot find resource \"$resourceName\"")
+                    ?: throw FileNotFoundException("Cannot find resource \"$resourceName\"")
             return fromStream(inputStream)
         }
 
@@ -162,9 +165,6 @@ open class Whitelist private constructor(
          * Load a whitelist from a file.
          */
         fun fromFile(file: Path): Whitelist {
-            if (!Files.exists(file)) {
-                throw Exception("Cannot find file \"$file\"")
-            }
             return Files.newInputStream(file).use(this::fromStream)
         }
 

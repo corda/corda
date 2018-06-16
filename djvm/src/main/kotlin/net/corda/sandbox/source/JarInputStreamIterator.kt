@@ -1,6 +1,5 @@
 package net.corda.sandbox.source
 
-import java.io.IOException
 import java.io.InputStream
 import java.util.jar.JarInputStream
 
@@ -13,7 +12,7 @@ class JarInputStreamIterator(
         inputStream: InputStream
 ) : Iterator<InputStream>, AutoCloseable {
 
-    private var jarInputStream: JarInputStream? = JarInputStream(inputStream)
+    private var jarInputStream: JarInputStream = JarInputStream(inputStream)
 
     private var isDone = false
 
@@ -26,7 +25,7 @@ class JarInputStreamIterator(
             return false
         }
         while (true) {
-            val entry = jarInputStream?.nextEntry
+            val entry = jarInputStream.nextEntry
             if (entry == null) {
                 isDone = true
                 close()
@@ -43,23 +42,16 @@ class JarInputStreamIterator(
      * Return the next class entry in the JAR stream, in the form of an input stream.
      */
     override fun next(): InputStream {
-        return jarInputStream!!
+        if (isDone) {
+            throw NoSuchElementException()
+        }
+        return jarInputStream
     }
 
     /**
      * Close the JAR input stream when it has been traversed.
      */
-    override fun close() {
-        try {
-            jarInputStream?.close()
-        } catch (exception: IOException) {
-            throw exception
-        } finally {
-            isDone = true
-            jarInputStream = null
-
-        }
-    }
+    override fun close() = jarInputStream.use { isDone = true }
 
     /**
      * Check if path is referring to a class file.

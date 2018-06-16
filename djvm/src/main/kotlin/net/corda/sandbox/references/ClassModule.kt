@@ -189,7 +189,7 @@ class ClassModule : AnnotationModule() {
      * Get all classes referenced from a generics signature.
      */
     fun getClassReferencesFromGenericsSignature(signature: String): List<String> {
-        return getTypes(signature.replace(Regex("[<>:]"), ";"))
+        return getTypes(signature.replace(genericTypeSignatureRegex, ";"))
                 .filter { it.contains("/") }
                 .filterOutPrimitiveTypes()
     }
@@ -202,5 +202,7 @@ class ClassModule : AnnotationModule() {
                 .filter { it.length > 1 }
                 .distinct()
     }
+
+    private val genericTypeSignatureRegex = "[<>:]".toRegex()
 
 }

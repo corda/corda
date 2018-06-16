@@ -13,6 +13,8 @@ class ClassResolver(
         private val sandboxPrefix: String
 ) {
 
+    private val complexArrayTypeRegex = "^(\\[+)L(.*);$".toRegex()
+
     /**
      * Classes and packages that are either pinned or already in the sandbox.
      */
@@ -25,7 +27,7 @@ class ClassResolver(
     fun resolve(name: String): String {
         return when {
             name.startsWith("[") && name.endsWith(";") -> {
-                Regex("^(\\[+)L(.*);$").replace(name) {
+                complexArrayTypeRegex.replace(name) {
                     "${it.groupValues[1]}L${resolveName(it.groupValues[2])};"
                 }
             }

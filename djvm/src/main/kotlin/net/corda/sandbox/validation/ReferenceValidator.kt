@@ -9,6 +9,7 @@ import net.corda.sandbox.messages.Message
 import net.corda.sandbox.messages.Severity
 import net.corda.sandbox.references.*
 import net.corda.sandbox.rewiring.SandboxClassLoadingException
+import net.corda.sandbox.utilities.loggerFor
 
 /**
  * Module used to validate all traversable references before instantiating and executing a [SandboxedRunnable].
@@ -41,7 +42,11 @@ class ReferenceValidator(
      */
     fun validate(context: AnalysisContext, analyzer: ClassAndMemberVisitor): ReferenceValidationSummary =
             State(context, analyzer).let { state ->
+                logger.trace("Validating {} references across {} class(es)...",
+                        context.references.size, context.classes.size)
                 context.references.process { validateReference(state, it) }
+                logger.trace("Reference validation completed; {} class(es) and {} message(s)",
+                        context.references.size, context.classes.size)
                 ReferenceValidationSummary(state.context.classes, state.context.messages)
             }
 
@@ -76,18 +81,21 @@ class ReferenceValidator(
     private fun validateReference(state: State, reference: EntityReference) {
         when (reference) {
             is ClassReference -> {
+                logger.trace("Validating class reference {}", reference)
                 val clazz = getClass(state, reference.className)
                 val reason = when (clazz) {
                     null -> Reason(Reason.Code.NON_EXISTENT_CLASS)
                     else -> clazz.let { getReasonFromEntity(it) }
                 }
                 if (reason != null) {
+                    logger.trace("Recorded invalid class reference to {}; reason = {}", reference, reason)
                     state.context.messages.addAll(state.context.references.get(reference).map {
                         referenceToMessage(ReferenceWithLocation(it, reference, reason.description))
                     })
                 }
             }
             is MemberReference -> {
+                logger.trace("Validating member reference {}", reference)
                 // Ensure that the dependent class is loaded and analyzed
                 val clazz = getClass(state, reference.className)
                 val member = state.context.classes.getMember(
@@ -99,6 +107,7 @@ class ReferenceValidator(
                     else -> getReasonFromEntity(state, member)
                 }
                 if (reason != null) {
+                    logger.trace("Recorded invalid member reference to {}; reason = {}", reference, reason)
                     state.context.messages.addAll(state.context.references.get(reference).map {
                         referenceToMessage(ReferenceWithLocation(it, reference, reason.description))
                     })
@@ -123,11 +132,13 @@ class ReferenceValidator(
         }
         var clazz = state.context.classes[name]
         if (clazz == null) {
+            logger.trace("Loading and analyzing referenced class {}...", name)
             val origin = state.context.references.get(ClassReference(name)).firstOrNull()
             state.analyzer.analyze(name, state.context, origin?.className)
             clazz = state.context.classes[name]
         }
         if (clazz == null) {
+            logger.warn("Failed to load class {}", name)
             state.context.messages.add(Message("Referenced class not found; $name", Severity.ERROR))
         }
         clazz?.apply {
@@ -189,6 +200,10 @@ class ReferenceValidator(
                 null
             }
         }
+    }
+
+    private companion object {
+        private val logger = loggerFor<ReferenceValidator>()
     }
 
 }

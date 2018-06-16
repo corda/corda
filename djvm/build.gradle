@@ -1,9 +1,5 @@
-apply plugin: 'java'
-apply plugin: 'kotlin'
-
 buildscript {
     ext.asm_version = '6.2'
-    ext.fast_classpath_scanner_version = '2.18.1'
     ext.picocli_version = '3.0.0-beta-2'
     repositories {
         mavenCentral()
@@ -16,13 +12,13 @@ buildscript {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.slf4j:slf4j-nop:$slf4j_version"
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
 
     // ASM: byte code manipulation library
     compile "org.ow2.asm:asm:$asm_version"
     compile "org.ow2.asm:asm-tree:$asm_version"
-    compile "org.ow2.asm:asm-util:$asm_version"
     compile "org.ow2.asm:asm-commons:$asm_version"
 
     // Classpath scanner
@@ -37,7 +33,7 @@ dependencies {
 }
 
 jar {
-    from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
+    from(configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }) {
         exclude "META-INF/*.SF"
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"

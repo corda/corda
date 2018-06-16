@@ -25,6 +25,6 @@ class RuntimeCost(
     /**
      * Increment the accumulated cost by a long integer.
      */
-    fun increment(incrementBy: Long = 1) = incrementAndCheck({ value -> value + incrementBy })
+    fun increment(incrementBy: Long = 1) = incrementAndCheck { value -> value + incrementBy }
 
 }

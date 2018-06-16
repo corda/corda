@@ -1,5 +1,6 @@
 package net.corda.sandbox.execution
 
+import net.corda.sandbox.utilities.loggerFor
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
@@ -19,17 +20,22 @@ class QueueProcessor<T>(
      * Add an element to the queue.
      */
     fun enqueue(element: T) {
+        logger.trace("Enqueuing {}...", element)
         val key = deduplicationKeyExtractor(element)
         if (key !in seenElements) {
             queue.add(element)
             seenElements.add(key)
+        } else {
+            logger.trace("Skipped {} as it has already been processed", element)
         }
     }
 
     /**
      * Remove one element from the queue.
      */
-    fun dequeue(): T = queue.remove()
+    fun dequeue(): T = queue.remove().apply {
+        logger.trace("Popping {} from the queue...", this)
+    }
 
     /**
      * Check if queue is empty.
@@ -45,5 +51,7 @@ class QueueProcessor<T>(
             action(this, element)
         }
     }
+
+    private val logger = loggerFor<QueueProcessor<T>>()
 
 }

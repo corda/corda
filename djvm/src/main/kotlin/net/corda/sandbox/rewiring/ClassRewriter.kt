@@ -3,6 +3,7 @@ package net.corda.sandbox.rewiring
 import net.corda.sandbox.SandboxConfiguration
 import net.corda.sandbox.analysis.AnalysisContext
 import net.corda.sandbox.code.ClassMutator
+import net.corda.sandbox.utilities.loggerFor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.commons.ClassRemapper
 
@@ -26,6 +27,7 @@ open class ClassRewriter(
      * @param context The context in which the class is being analyzed and processed.
      */
     fun rewrite(reader: ClassReader, context: AnalysisContext): ByteCode {
+        logger.trace("Rewriting class {}...", reader.className)
         val writer = SandboxClassWriter(reader, classLoader)
         val classRemapper = ClassRemapper(writer, remapper)
         val visitor = ClassMutator(
@@ -37,6 +39,10 @@ open class ClassRewriter(
         visitor.analyze(reader, context, options = ClassReader.EXPAND_FRAMES)
         val hasBeenModified = visitor.hasBeenModified
         return ByteCode(writer.toByteArray(), hasBeenModified)
+    }
+
+    private companion object {
+        private val logger = loggerFor<ClassRewriter>()
     }
 
 }

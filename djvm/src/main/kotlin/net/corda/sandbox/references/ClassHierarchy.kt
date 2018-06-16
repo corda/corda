@@ -1,5 +1,7 @@
 package net.corda.sandbox.references
 
+import net.corda.sandbox.utilities.loggerFor
+
 /**
  * Representation of a hierarchy of classes.
  */
@@ -19,6 +21,7 @@ class ClassHierarchy(
      * @param clazz The class to add to the class hierarchy.
      */
     fun add(clazz: Class) {
+        logger.trace("Adding type {} to hierarchy...", clazz)
         ancestorMap.clear()
         classMap[clazz.name] = clazz
     }
@@ -37,6 +40,12 @@ class ClassHierarchy(
      */
     val names: Set<String>
         get() = classMap.keys
+
+    /**
+     * Number of registered classes.
+     */
+    val size: Int
+        get() = classMap.keys.size
 
     /**
      * Get location of class.
@@ -75,6 +84,9 @@ class ClassHierarchy(
                 .filterNotNull()
                 .map { memberModule.getFromClass(it, memberName, signature) }
                 .firstOrNull { it != null }
+                .apply {
+                    logger.trace("Getting rooted member for {}.{}:{} yields {}", className, memberName, signature, this)
+                }
     }
 
     /**
@@ -94,11 +106,13 @@ class ClassHierarchy(
         }
     }
 
-    companion object {
+    private companion object {
 
         private const val OBJECT_NAME = "java/lang/Object"
 
         private const val ARRAY_LENGTH = "length"
+
+        private val logger = loggerFor<ClassHierarchy>()
 
     }
 

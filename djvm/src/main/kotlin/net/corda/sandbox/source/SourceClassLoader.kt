@@ -6,6 +6,7 @@ import net.corda.sandbox.analysis.SourceLocation
 import net.corda.sandbox.messages.Message
 import net.corda.sandbox.messages.Severity
 import net.corda.sandbox.rewiring.SandboxClassLoadingException
+import net.corda.sandbox.utilities.loggerFor
 import org.objectweb.asm.ClassReader
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -37,6 +38,7 @@ open class SourceClassLoader(
     ): ClassReader {
         val originalName = classResolver.reverse(className.replace('.', '/'))
         return try {
+            logger.trace("Opening ClassReader for class {}...", originalName)
             getResourceAsStream("$originalName.class").use {
                 ClassReader(it)
             }
@@ -46,6 +48,7 @@ open class SourceClassLoader(
                     severity = Severity.ERROR,
                     location = SourceLocation(origin ?: "")
             ))
+            logger.error("Failed to open ClassReader for class", exception)
             throw SandboxClassLoadingException(context.messages, context.classes)
         }
     }
@@ -54,6 +57,7 @@ open class SourceClassLoader(
      * Find and load the class with the specified name from the search path.
      */
     override fun findClass(name: String): Class<*> {
+        logger.trace("Finding class {}...", name)
         val originalName = classResolver.reverseNormalized(name)
         return super.findClass(originalName)
     }
@@ -62,11 +66,14 @@ open class SourceClassLoader(
      * Load the class with the specified binary name.
      */
     override fun loadClass(name: String, resolve: Boolean): Class<*> {
+        logger.trace("Loading class {}, resolve={}...", name, resolve)
         val originalName = classResolver.reverseNormalized(name)
         return super.loadClass(originalName, resolve)
     }
 
-    companion object {
+    private companion object {
+
+        private val logger = loggerFor<SourceClassLoader>()
 
         private fun resolvePaths(paths: List<Path>): Array<URL> {
             return paths.map(this::expandPath).flatMap {
@@ -78,6 +85,8 @@ open class SourceClassLoader(
                     Files.isReadable(it) && isJarFile(it) -> listOf(it.toURL())
                     else -> throw IllegalArgumentException("Expected JAR or class file, but found $it")
                 }
+            }.apply {
+                logger.trace("Resolved paths: {}", this)
             }.toTypedArray()
         }
 

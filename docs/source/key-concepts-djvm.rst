@@ -216,7 +216,7 @@ Runtime Costing
 
 The runtime accountant inserts calls to an accounting object before expensive byte code. The goal of this rewrite is to
 deterministically terminate code that has run for an unacceptably long amount of time or used an unacceptable amount of
-memory. Expensive byte code include method invocation, allocation, branches and exception throwing.
+memory. Types of expensive byte code include method invocation, memory allocation, branching and exception throwing.
 
 The cost instrumentation strategy used is a simple one: just counting byte code that are known to be expensive to
 execute. Method size can be limited and jumps count towards the budget, so such a strategy is guaranteed to eventually

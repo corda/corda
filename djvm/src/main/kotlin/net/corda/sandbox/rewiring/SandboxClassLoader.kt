@@ -5,6 +5,7 @@ import net.corda.sandbox.analysis.AnalysisContext
 import net.corda.sandbox.analysis.ClassAndMemberVisitor
 import net.corda.sandbox.source.ClassSource
 import net.corda.sandbox.source.SourceClassLoader
+import net.corda.sandbox.utilities.loggerFor
 import net.corda.sandbox.validation.RuleValidator
 
 /**
@@ -76,12 +77,14 @@ class SandboxClassLoader(
      * @return The resulting <tt>Class</tt> object and its byte code representation.
      */
     fun loadClassAndBytes(source: ClassSource, context: AnalysisContext): LoadedClass {
+        logger.trace("Loading class {}, origin={}...", source.qualifiedClassName, source.origin)
         val name = configuration.analysisConfiguration.classResolver.reverseNormalized(source.qualifiedClassName)
         val resolvedName = configuration.analysisConfiguration.classResolver.resolveNormalized(name)
 
         // Check if the class has already been loaded.
         val loadedClass = loadedClasses[name]
         if (loadedClass != null) {
+            logger.trace("Class {} already loaded", source.qualifiedClassName)
             return loadedClass
         }
 
@@ -91,7 +94,9 @@ class SandboxClassLoader(
         // Analyse the class if not matching the whitelist.
         val readClassName = reader.className
         if (!configuration.analysisConfiguration.whitelist.matches(readClassName)) {
+            logger.trace("Class {} does not match with the whitelist", source.qualifiedClassName)
             if (configuration.analysisConfiguration.analyzePinnedClasses || !pinnedClasses.matches(readClassName)) {
+                logger.trace("Analyzing class {}...", source.qualifiedClassName)
                 analyzer.analyze(reader, context)
             }
         }
@@ -99,6 +104,7 @@ class SandboxClassLoader(
         // Check if the class should be left untouched.
         val qualifiedName = name.replace('.', '/')
         if (pinnedClasses.matches(qualifiedName)) {
+            logger.trace("Class {} is marked as pinned", source.qualifiedClassName)
             val pinnedClasses = LoadedClass(
                     supportingClassLoader.loadClass(name),
                     ByteCode(ByteArray(0), false)
@@ -109,6 +115,7 @@ class SandboxClassLoader(
 
         // Check if any errors were found during analysis.
         if (context.messages.errorCount > 0) {
+            logger.trace("Errors detected after analyzing class {}", source.qualifiedClassName)
             throw SandboxClassLoadingException(context.messages, context.classes)
         }
 
@@ -122,7 +129,14 @@ class SandboxClassLoader(
         val classWithByteCode = LoadedClass(clazz, byteCode)
         loadedClasses[name] = classWithByteCode
 
+        logger.trace("Loaded class {}, bytes={}, isModified={}",
+                source.qualifiedClassName, byteCode.bytes.size, byteCode.isModified)
+
         return classWithByteCode
+    }
+
+    private companion object {
+        private val logger = loggerFor<SandboxClassLoader>()
     }
 
 }

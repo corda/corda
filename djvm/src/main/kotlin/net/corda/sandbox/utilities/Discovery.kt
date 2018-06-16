@@ -14,7 +14,7 @@ object Discovery {
     inline fun <reified T> find(): List<T> {
         val instances = mutableListOf<T>()
         FastClasspathScanner("net/corda/sandbox")
-                .matchClassesImplementing(T::class.java, { clazz ->
+                .matchClassesImplementing(T::class.java) { clazz ->
                     if (!Modifier.isAbstract(clazz.modifiers) && !Modifier.isStatic(clazz.modifiers)) {
                         try {
                             instances.add(clazz.newInstance())
@@ -22,7 +22,7 @@ object Discovery {
                             throw Exception("Unable to instantiate ${clazz.name}", exception)
                         }
                     }
-                })
+                }
                 .scan()
         return instances
     }

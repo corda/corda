@@ -80,7 +80,7 @@ data class SourceLocation(
         }.toString()
     }
 
-    companion object {
+    private companion object {
 
         private val memberFormatter = MemberFormatter()
 
