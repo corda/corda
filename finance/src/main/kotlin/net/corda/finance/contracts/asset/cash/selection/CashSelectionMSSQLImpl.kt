@@ -26,7 +26,7 @@ class CashSelectionMSSQLImpl : AbstractCashSelection() {
     override fun toString() = "${this::class.qualifiedName} for '$JDBC_DRIVER_NAME'"
 
     /**
-     * This is one MSSQL implementation of the query to select just enough cash to meet the desired amount.
+     * This is one MSSQL implementation of the query to select just enough cash states to meet the desired amount.quantity.
      * We select the cash states with smaller amounts first so that as the result, we minimize the numbers of
      * unspent cash states in the vault.
      *
@@ -70,10 +70,8 @@ class CashSelectionMSSQLImpl : AbstractCashSelection() {
             sb.append("""
               AND ccs.issuer_key_hash IN (
             """)
-            (1..onlyFromIssuerParties.size).forEach {
-                sb.append("?,")
-            }
-            // delete the last ,
+            sb.append("?,".repeat(onlyFromIssuerParties.size))
+            // delete the last ","
             sb.deleteCharAt(sb.length - 1)
             sb.append(")")
         }
@@ -81,10 +79,8 @@ class CashSelectionMSSQLImpl : AbstractCashSelection() {
             sb.append("""
               AND ccs.issuer_ref IN (
             """)
-            (1..withIssuerRefs.size).forEach {
-                sb.append("?,")
-            }
-            // delete the last ,
+            sb.append("?,".repeat(withIssuerRefs.size))
+            // delete the last ","
             sb.deleteCharAt(sb.length - 1)
             sb.append(")")
         }
@@ -101,6 +97,7 @@ class CashSelectionMSSQLImpl : AbstractCashSelection() {
             """
         )
         val selectJoin = sb.toString()
+        log.debug { selectJoin }
         connection.prepareStatement(selectJoin).use { psSelectJoin ->
             var pIndex = 0
             psSelectJoin.setString(++pIndex, amount.token.currencyCode)
