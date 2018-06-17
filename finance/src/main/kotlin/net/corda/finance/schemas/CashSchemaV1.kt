@@ -25,7 +25,7 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
     class PersistentCashState(
             /** X500Name of owner party **/
             @Column(name = "owner_name", nullable = true)
-            var owner: AbstractParty,
+            var owner: AbstractParty?,
 
             @Column(name = "pennies", nullable = false)
             var pennies: Long,

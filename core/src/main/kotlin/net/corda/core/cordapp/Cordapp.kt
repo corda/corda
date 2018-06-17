@@ -1,6 +1,8 @@
 package net.corda.core.cordapp
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -25,9 +27,12 @@ import java.net.URL
  * @property serializationWhitelists List of Corda plugin registries
  * @property serializationCustomSerializers List of serializers
  * @property customSchemas List of custom schemas
+ * @property allFlows List of all flow classes
  * @property jarPath The path to the JAR for this CorDapp
+ * @property jarHash Hash of the jar
  */
 @DoNotImplement
+@DeleteForDJVM
 interface Cordapp {
     val name: String
     val contractClassNames: List<String>
@@ -39,6 +44,8 @@ interface Cordapp {
     val serializationWhitelists: List<SerializationWhitelist>
     val serializationCustomSerializers: List<SerializationCustomSerializer<*, *>>
     val customSchemas: Set<MappedSchema>
+    val allFlows: List<Class<out FlowLogic<*>>>
     val jarPath: URL
     val cordappClasses: List<String>
+    val jarHash: SecureHash.SHA256
 }

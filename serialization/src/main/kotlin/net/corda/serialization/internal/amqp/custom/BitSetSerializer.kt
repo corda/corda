@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp.custom
 
+import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.util.*
@@ -13,5 +14,6 @@ class BitSetSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<BitS
 
     override fun fromProxy(proxy: BitSetProxy): BitSet = BitSet.valueOf(proxy.bytes)
 
+    @KeepForDJVM
     data class BitSetProxy(val bytes: ByteArray)
 }

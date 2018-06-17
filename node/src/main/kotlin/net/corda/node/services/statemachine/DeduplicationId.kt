@@ -18,16 +18,16 @@ data class DeduplicationId(val toString: String) {
          * creating IDs in case the message-generating flow logic is replayed on hard failure.
          *
          * A normal deduplication ID consists of:
-         * 1. A deduplication seed set per flow. This is either the flow's ID or in case of an initated flow the
-         *   initiator's session ID.
+         * 1. A deduplication seed set per session. This is the initiator's session ID, with a prefix for initiator
+         *    or initiated.
          * 2. The number of *clean* suspends since the start of the flow.
          * 3. An optional additional index, for cases where several messages are sent as part of the state transition.
          *   Note that care must be taken with this index, it must be a deterministic counter. For example a naive
          *   iteration over a HashMap will produce a different list of indeces than a previous run, causing the
          *   message-id map to change, which means deduplication will not happen correctly.
          */
-        fun createForNormal(checkpoint: Checkpoint, index: Int): DeduplicationId {
-            return DeduplicationId("N-${checkpoint.deduplicationSeed}-${checkpoint.numberOfSuspends}-$index")
+        fun createForNormal(checkpoint: Checkpoint, index: Int, session: SessionState): DeduplicationId {
+            return DeduplicationId("N-${session.deduplicationSeed}-${checkpoint.numberOfSuspends}-$index")
         }
 
         /**

@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.context.InvocationContext
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -50,7 +51,6 @@ data class StateMachineState(
  * @param flowState the state of the flow itself, including the frozen fiber/FlowLogic.
  * @param errorState the "dirtiness" state including the involved errors and their propagation status.
  * @param numberOfSuspends the number of flow suspends due to IO API calls.
- * @param deduplicationSeed the basis seed for the deduplication ID. This is used to produce replayable IDs.
  */
 data class Checkpoint(
         val invocationContext: InvocationContext,
@@ -59,8 +59,7 @@ data class Checkpoint(
         val subFlowStack: List<SubFlow>,
         val flowState: FlowState,
         val errorState: ErrorState,
-        val numberOfSuspends: Int,
-        val deduplicationSeed: String
+        val numberOfSuspends: Int
 ) {
     companion object {
 
@@ -70,9 +69,10 @@ data class Checkpoint(
                 flowLogicClass: Class<FlowLogic<*>>,
                 frozenFlowLogic: SerializedBytes<FlowLogic<*>>,
                 ourIdentity: Party,
-                deduplicationSeed: String
+                deduplicationSeed: String,
+                subFlowVersion: SubFlowVersion
         ): Try<Checkpoint> {
-            return SubFlow.create(flowLogicClass).map { topLevelSubFlow ->
+            return SubFlow.create(flowLogicClass, subFlowVersion).map { topLevelSubFlow ->
                 Checkpoint(
                         invocationContext = invocationContext,
                         ourIdentity = ourIdentity,
@@ -80,8 +80,7 @@ data class Checkpoint(
                         subFlowStack = listOf(topLevelSubFlow),
                         flowState = FlowState.Unstarted(flowStart, frozenFlowLogic),
                         errorState = ErrorState.Clean,
-                        numberOfSuspends = 0,
-                        deduplicationSeed = deduplicationSeed
+                        numberOfSuspends = 0
                 )
             }
         }
@@ -93,13 +92,19 @@ data class Checkpoint(
  */
 sealed class SessionState {
 
+    abstract val deduplicationSeed: String
+
     /**
      * We haven't yet sent the initialisation message
      */
     data class Uninitiated(
             val party: Party,
-            val initiatingSubFlow: SubFlow.Initiating
-    ) : SessionState()
+            val initiatingSubFlow: SubFlow.Initiating,
+            val sourceSessionId: SessionId,
+            val additionalEntropy: Long
+    ) : SessionState() {
+        override val deduplicationSeed: String get() = "R-${sourceSessionId.toLong}-$additionalEntropy"
+    }
 
     /**
      * We have sent the initialisation message but have not yet received a confirmation.
@@ -107,7 +112,8 @@ sealed class SessionState {
      */
     data class Initiating(
             val bufferedMessages: List<Pair<DeduplicationId, ExistingSessionMessagePayload>>,
-            val rejectionError: FlowError?
+            val rejectionError: FlowError?,
+            override val deduplicationSeed: String
     ) : SessionState()
 
     /**
@@ -119,7 +125,8 @@ sealed class SessionState {
             val peerFlowInfo: FlowInfo,
             val receivedMessages: List<DataSessionMessage>,
             val initiatedState: InitiatedSessionState,
-            val errors: List<FlowError>
+            val errors: List<FlowError>,
+            override val deduplicationSeed: String
     ) : SessionState()
 }
 
@@ -230,4 +237,13 @@ sealed class ErrorState {
             return copy(errors = errors + newErrors)
         }
     }
+}
+
+/**
+ * Stored per [SubFlow]. Contains metadata around the version of the code at the Checkpointing moment.
+ */
+sealed class SubFlowVersion {
+    abstract val platformVersion: Int
+    data class CoreFlow(override val platformVersion: Int) : SubFlowVersion()
+    data class CorDappFlow(override val platformVersion: Int, val corDappName: String, val corDappHash: SecureHash) : SubFlowVersion()
 }

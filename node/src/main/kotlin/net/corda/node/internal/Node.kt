@@ -34,8 +34,17 @@ import net.corda.node.serialization.kryo.KryoServerSerializationScheme
 import net.corda.node.services.Permissions
 import net.corda.node.services.api.NodePropertiesStore
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.config.*
-import net.corda.node.services.messaging.*
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.shouldInitCrashShell
+import net.corda.node.services.config.shouldStartLocalShell
+import net.corda.node.services.messaging.ArtemisMessagingServer
+import net.corda.node.services.messaging.InternalRPCMessagingClient
+import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.P2PMessagingClient
+import net.corda.node.services.messaging.RPCServerConfiguration
+import net.corda.node.services.messaging.VerifierMessagingClient
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
@@ -48,7 +57,11 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.serialization.internal.*
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
+import net.corda.serialization.internal.AMQP_RPC_SERVER_CONTEXT
+import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
+import net.corda.serialization.internal.SerializationFactoryImpl
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Scheduler
@@ -193,8 +206,9 @@ open class Node(configuration: NodeConfiguration,
         bridgeControlListener = BridgeControlListener(configuration, serverAddress, networkParameters.maxMessageSize)
 
         printBasicNodeInfo("Advertised P2P messaging addresses", info.addresses.joinToString())
+        val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
         rpcServerAddresses?.let {
-            internalRpcMessagingClient = InternalRPCMessagingClient(configuration, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.loadSslKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal))
+            internalRpcMessagingClient = InternalRPCMessagingClient(configuration, it.admin, MAX_RPC_MESSAGE_SIZE, CordaX500Name.build(configuration.loadSslKeyStore().getCertificate(X509Utilities.CORDA_CLIENT_TLS).subjectX500Principal), rpcServerConfiguration)
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }
@@ -322,15 +336,19 @@ open class Node(configuration: NodeConfiguration,
                                                wellKnownPartyFromAnonymous: (AbstractParty) -> Party?): CordaPersistence {
         val databaseUrl = configuration.dataSourceProperties.getProperty("dataSource.url")
         val h2Prefix = "jdbc:h2:file:"
+
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
-            val h2Port = databaseUrl.substringAfter(";AUTO_SERVER_PORT=", "").substringBefore(';')
-            if (h2Port.isNotBlank()) {
+            val effectiveH2Settings = configuration.effectiveH2Settings
+
+            if(effectiveH2Settings != null && effectiveH2Settings.address != null) {
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val server = org.h2.tools.Server.createTcpServer(
-                        "-tcpPort", h2Port,
+                        "-tcpPort", effectiveH2Settings.address.port.toString(),
                         "-tcpAllowOthers",
                         "-tcpDaemon",
                         "-key", "node", databaseName)
+                // override interface that createTcpServer listens on (which is always 0.0.0.0)
+                System.setProperty("h2.bindAddress", effectiveH2Settings.address.host)
                 runOnStop += server::stop
                 val url = server.start().url
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")

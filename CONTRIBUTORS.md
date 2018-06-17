@@ -11,6 +11,7 @@ see changes to this list.
 * acetheultimate
 * Adrian Fletcher (TD)
 * agoldvarg
+* Ajitha Thayaharan (BCS Technology International)
 * Alberto Arri (R3)
 * amiracam
 * Andras Slemmer (R3)
@@ -60,12 +61,14 @@ see changes to this list.
 * cncorda
 * Credit Suisse
 * cyrsis
+* Dan Newton (Accenture)
 * Daniel Roig (SEB)
 * Dave Hudson (R3)
 * David John Grundy (Dankse Bank)
 * David Lee (BCS)
 * Dirk Hermans (KBC)
 * Edward Greenwood (State Street)
+* Elendu Uche (APPZONE)
 * Farzad Pezeshkpour (RBS)
 * fracting
 * Frederic Dalibard (Natixis)
@@ -73,7 +76,6 @@ see changes to this list.
 * gary-rowe
 * Gavin Thomas (R3)
 * George Marcel Smetana (Bradesco)
-* George Smetana (Bradesco)
 * Giulio Katis (Westpac)
 * Giuseppe Cardone (Intesa Sanpaolo)
 * Guy Hochstetler (R3)
@@ -127,11 +129,13 @@ see changes to this list.
 * Mike Hearn (R3)
 * Mike Ward (R3)
 * Mike Reichelt (US Bank)
+* Mohamed Amine LEGHERABA
 * Mustafa Ozturk (Natixis)
 * Nick Skinner (Northern Trust)
 * Nigel King (R3)
+* Nitesh Solanki (Persistent Systems Limited)
 * Nuam Athaweth (MUFG)
-* Oscar Zibordi de Paiva (Bradesco)
+* Oscar Zibordi de Paiva (Scopus Soluções em TI)
 * OP Financial
 * Patrick Kuo (R3)
 * Pekka Kaipio (OP Financial)
@@ -169,7 +173,7 @@ see changes to this list.
 * Stanly Johnson (Servntire Global)
 * Szymon Sztuka (R3)
 * tb-pq
-* Thiago Rafael Ferreira (Scorpius IT Solutions)
+* Thiago Rafael Ferreira (Scopus Soluções em TI)
 * Thomas O'Donnell (Macquarie)
 * Thomas Schroeter (R3)
 * Tim Swanson (R3)
@@ -182,6 +186,7 @@ see changes to this list.
 * Tudor Malene (R3)
 * Tushar Singh Bora
 * varunkm
+* Venelin Stoykov (INDUSTRIA)
 * verymahler
 * Viktor Kolomeyko (R3)
 * Vipin Bharathan

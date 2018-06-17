@@ -21,6 +21,7 @@ import org.apache.qpid.proton.engine.impl.ProtocolTracer
 import org.apache.qpid.proton.framing.TransportFrame
 import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
+import java.nio.channels.ClosedChannelException
 import java.security.cert.X509Certificate
 
 /**
@@ -102,7 +103,12 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 createAMQPEngine(ctx)
                 onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true, false)))
             } else {
-                badCert = true
+                // This happens when the peer node is closed during SSL establishment.
+                if (evt.cause() is ClosedChannelException) {
+                    log.warn("SSL Handshake closed early.")
+                } else {
+                    badCert = true
+                }
                 log.error("Handshake failure ${evt.cause().message}")
                 if (log.isTraceEnabled) {
                     log.trace("Handshake failure", evt.cause())

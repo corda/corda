@@ -1,5 +1,8 @@
 package net.corda.serialization.internal.carpenter
 
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
+import net.corda.core.StubOutForDJVM
 import net.corda.serialization.internal.amqp.CompositeType
 import net.corda.serialization.internal.amqp.RestrictedType
 import net.corda.serialization.internal.amqp.TypeNotation
@@ -23,6 +26,7 @@ import net.corda.serialization.internal.amqp.TypeNotation
  * in turn look up all of those classes in the [dependsOn] list, remove their dependency on the newly created class,
  * and if that list is reduced to zero know we can now generate a [Schema] for them and carpent them up
  */
+@KeepForDJVM
 data class CarpenterMetaSchema(
         val carpenterSchemas: MutableList<Schema>,
         val dependencies: MutableMap<String, Pair<TypeNotation, MutableList<String>>>,
@@ -47,7 +51,8 @@ data class CarpenterMetaSchema(
     // We could make this an abstract method on TypeNotation but that
     // would mean the amqp package being "more" infected with carpenter
     // specific bits.
-    fun buildFor(target: TypeNotation, cl: ClassLoader) = when (target) {
+    @StubOutForDJVM
+    fun buildFor(target: TypeNotation, cl: ClassLoader): Unit = when (target) {
         is RestrictedType -> target.carpenterSchema(this)
         is CompositeType -> target.carpenterSchema(cl, this, false)
     }
@@ -62,6 +67,7 @@ data class CarpenterMetaSchema(
  * @property cc a reference to the actual class carpenter we're using to constuct classes
  * @property objects a list of carpented classes loaded into the carpenters class loader
  */
+@DeleteForDJVM
 abstract class MetaCarpenterBase(val schemas: CarpenterMetaSchema, val cc: ClassCarpenter) {
     val objects = mutableMapOf<String, Class<*>>()
 
@@ -72,7 +78,7 @@ abstract class MetaCarpenterBase(val schemas: CarpenterMetaSchema, val cc: Class
         // carpented class existing and remove it from their dependency list, If that
         // list is now empty we have no impediment to carpenting that class up
         schemas.dependsOn.remove(newObject.name)?.forEach { dependent ->
-            assert(newObject.name in schemas.dependencies[dependent]!!.second)
+            require(newObject.name in schemas.dependencies[dependent]!!.second)
 
             schemas.dependencies[dependent]?.second?.remove(newObject.name)
 
@@ -91,6 +97,7 @@ abstract class MetaCarpenterBase(val schemas: CarpenterMetaSchema, val cc: Class
         get() = cc.classloader
 }
 
+@DeleteForDJVM
 class MetaCarpenter(schemas: CarpenterMetaSchema, cc: ClassCarpenter) : MetaCarpenterBase(schemas, cc) {
     override fun build() {
         while (schemas.carpenterSchemas.isNotEmpty()) {
@@ -104,6 +111,7 @@ class MetaCarpenter(schemas: CarpenterMetaSchema, cc: ClassCarpenter) : MetaCarp
     }
 }
 
+@DeleteForDJVM
 class TestMetaCarpenter(schemas: CarpenterMetaSchema, cc: ClassCarpenter) : MetaCarpenterBase(schemas, cc) {
     override fun build() {
         if (schemas.carpenterSchemas.isEmpty()) return

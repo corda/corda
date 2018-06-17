@@ -42,6 +42,6 @@ object SampleCommercialPaperSchemaV2 : MappedSchema(schemaFamily = CommercialPap
         @ElementCollection
         @Column(name = "participants")
         @CollectionTable(name = "cp_states_v2_participants", joinColumns = [JoinColumn(name = "output_index", referencedColumnName = "output_index"), JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")])
-        override var participants: MutableSet<AbstractParty>? = null
+        override var participants: MutableSet<AbstractParty?>? = null
     }
 }

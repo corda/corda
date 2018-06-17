@@ -26,7 +26,6 @@ import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.SenderDeduplicationId
 import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.PersistentMap
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.*
@@ -38,7 +37,6 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREF
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.requireMessageSize
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
@@ -46,23 +44,15 @@ import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
-import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
-import java.io.Serializable
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
 
 /**
  * This class implements the [MessagingService] API using Apache Artemis, the successor to their ActiveMQ product.
@@ -106,34 +96,11 @@ class P2PMessagingClient(val config: NodeConfiguration,
     companion object {
         private val log = contextLogger()
 
-        fun createMessageToRedeliver(): PersistentMap<Long, Pair<Message, MessageRecipients>, RetryMessage, Long> {
-            return PersistentMap(
-                    toPersistentEntityKey = { it },
-                    fromPersistentEntity = {
-                        Pair(it.key,
-                                Pair(it.message.deserialize(context = SerializationDefaults.STORAGE_CONTEXT),
-                                        it.recipients.deserialize(context = SerializationDefaults.STORAGE_CONTEXT))
-                        )
-                    },
-                    toPersistentEntity = { _key: Long, (_message: Message, _recipient: MessageRecipients): Pair<Message, MessageRecipients> ->
-                        RetryMessage().apply {
-                            key = _key
-                            message = _message.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
-                            recipients = _recipient.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
-                        }
-                    },
-                    persistentEntityClass = RetryMessage::class.java
-            )
-        }
-
         class NodeClientMessage(override val topic: String, override val data: ByteSequence, override val uniqueMessageId: DeduplicationId, override val senderUUID: String?, override val additionalHeaders: Map<String, String>) : Message {
             override val debugTimestamp: Instant = Instant.now()
             override fun toString() = "$topic#${String(data.bytes)}"
         }
     }
-
-    private val messageMaxRetryCount: Int = config.p2pMessagingRetry.maxRetryCount
-    private val backoffBase: Double = config.p2pMessagingRetry.backoffBase
 
     private class InnerState {
         var started = false
@@ -150,17 +117,12 @@ class P2PMessagingClient(val config: NodeConfiguration,
         fun sendMessage(address: String, message: ClientMessage) = producer!!.send(address, message)
     }
 
-    private val messagesToRedeliver = createMessageToRedeliver()
-
-    private val scheduledMessageRedeliveries = ConcurrentHashMap<Long, ScheduledFuture<*>>()
-
     /** A registration to handle messages of different types */
     data class HandlerRegistration(val topic: String, val callback: Any) : MessageHandlerRegistration
 
     override val myAddress: SingleMessageRecipient = NodeAddress(myIdentity, advertisedAddress)
     override val ourSenderUUID = UUID.randomUUID().toString()
 
-    private val messageRedeliveryDelaySeconds = config.p2pMessagingRetry.messageRedeliveryDelay.seconds
     private val state = ThreadBox(InnerState())
     private val knownQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
     private val delayStartQueues = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
@@ -169,21 +131,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private val deduplicator = P2PMessageDeduplicator(database)
     internal var messagingExecutor: MessagingExecutor? = null
-
-    @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}message_retry")
-    class RetryMessage(
-            @Id
-            @Column(name = "message_id", length = 64, nullable = false)
-            var key: Long = 0,
-
-            @Lob
-            @Column(nullable = false)
-            var message: ByteArray = EMPTY_BYTE_ARRAY,
-            @Lob
-            @Column(nullable = false)
-            var recipients: ByteArray = EMPTY_BYTE_ARRAY
-    ) : Serializable
 
     fun start() {
         state.locked {
@@ -194,8 +141,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
             locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
                 // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
                 // would be the default and the two lines below can be deleted.
-                connectionTTL = -1
-                clientFailureCheckPeriod = -1
+                connectionTTL = 60000
+                clientFailureCheckPeriod = 30000
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
             }
@@ -204,7 +151,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // using our TLS certificate.
             // Note that the acknowledgement of messages is not flushed to the Artermis journal until the default buffer
             // size of 1MB is acknowledged.
-            val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, locator!!.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
+            val createNewSession = { sessionFactory!!.createSession(ArtemisMessagingComponent.NODE_P2P_USER, ArtemisMessagingComponent.NODE_P2P_USER, false, true, true, false, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE) }
 
             producerSession = createNewSession()
             bridgeSession = createNewSession()
@@ -235,8 +182,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
             registerBridgeControl(bridgeSession!!, inboxes.toList())
             enumerateBridges(bridgeSession!!, inboxes.toList())
         }
-
-        resumeMessageRedelivery()
     }
 
     private fun InnerState.registerBridgeControl(session: ClientSession, inboxes: List<String>) {
@@ -322,6 +267,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         }
 
         val queues = session.addressQuery(SimpleString("$PEERS_PREFIX#")).queueNames
+        knownQueues.clear()
         for (queue in queues) {
             val queueQuery = session.queueQuery(queue)
             if (!config.lazyBridgeStart || queueQuery.messageCount > 0) {
@@ -332,12 +278,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
         }
         val startupMessage = BridgeControl.NodeToBridgeSnapshot(myIdentity.toStringShort(), inboxes, requiredBridges)
         sendBridgeControl(startupMessage)
-    }
-
-    private fun resumeMessageRedelivery() {
-        messagesToRedeliver.forEach { retryId, (message, target) ->
-            send(message, target, retryId)
-        }
     }
 
     private val shutdownLatch = CountDownLatch(1)
@@ -507,53 +447,15 @@ class P2PMessagingClient(val config: NodeConfiguration,
     override fun close() = stop()
 
     @Suspendable
-    override fun send(message: Message, target: MessageRecipients, retryId: Long?, sequenceKey: Any) {
+    override fun send(message: Message, target: MessageRecipients, sequenceKey: Any) {
         requireMessageSize(message.data.size, maxMessageSize)
         messagingExecutor!!.send(message, target)
-        retryId?.let {
-            database.transaction {
-                messagesToRedeliver.computeIfAbsent(it, { Pair(message, target) })
-            }
-            scheduledMessageRedeliveries[it] = nodeExecutor.schedule({
-                sendWithRetry(0, message, target, retryId)
-            }, messageRedeliveryDelaySeconds, TimeUnit.SECONDS)
-        }
     }
 
     @Suspendable
     override fun send(addressedMessages: List<MessagingService.AddressedMessage>) {
-        for ((message, target, retryId, sequenceKey) in addressedMessages) {
-            send(message, target, retryId, sequenceKey)
-        }
-    }
-
-    private fun sendWithRetry(retryCount: Int, message: Message, target: MessageRecipients, retryId: Long) {
-        log.trace { "Attempting to retry #$retryCount message delivery for $retryId" }
-        if (retryCount >= messageMaxRetryCount) {
-            log.warn("Reached the maximum number of retries ($messageMaxRetryCount) for message $message redelivery to $target")
-            scheduledMessageRedeliveries.remove(retryId)
-            return
-        }
-
-        val messageWithRetryCount = object : Message by message {
-            override val uniqueMessageId = DeduplicationId("${message.uniqueMessageId.toString}-$retryCount")
-        }
-
-        messagingExecutor!!.send(messageWithRetryCount, target)
-
-        scheduledMessageRedeliveries[retryId] = nodeExecutor.schedule({
-            sendWithRetry(retryCount + 1, message, target, retryId)
-        }, messageRedeliveryDelaySeconds * Math.pow(backoffBase, retryCount.toDouble()).toLong(), TimeUnit.SECONDS)
-    }
-
-    override fun cancelRedelivery(retryId: Long) {
-        database.transaction {
-            messagesToRedeliver.remove(retryId)
-        }
-        scheduledMessageRedeliveries[retryId]?.let {
-            log.trace { "Cancelling message redelivery for retry id $retryId" }
-            if (!it.isDone) it.cancel(true)
-            scheduledMessageRedeliveries.remove(retryId)
+        for ((message, target, sequenceKey) in addressedMessages) {
+            send(message, target, sequenceKey)
         }
     }
 

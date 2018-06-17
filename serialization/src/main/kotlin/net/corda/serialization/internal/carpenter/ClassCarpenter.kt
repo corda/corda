@@ -1,6 +1,9 @@
+@file:DeleteForDJVM
 package net.corda.serialization.internal.carpenter
 
 import com.google.common.base.MoreObjects
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import org.objectweb.asm.ClassWriter
@@ -22,6 +25,7 @@ interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
 
+@DeleteForDJVM
 class CarpenterClassLoader(parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
         ClassLoader(parentClassLoader) {
     fun load(name: String, bytes: ByteArray): Class<*> = defineClass(name, bytes, 0, bytes.size)
@@ -46,6 +50,7 @@ private val moreObjects: String = Type.getInternalName(MoreObjects::class.java)
 private val toStringHelper: String = Type.getInternalName(MoreObjects.ToStringHelper::class.java)
 
 // Allow us to create alternative ClassCarpenters.
+@KeepForDJVM
 interface ClassCarpenter {
     val whitelist: ClassWhitelist
     val classloader: ClassLoader
@@ -96,6 +101,7 @@ interface ClassCarpenter {
  *
  * Equals/hashCode methods are not yet supported.
  */
+@DeleteForDJVM
 class ClassCarpenterImpl(cl: ClassLoader, override val whitelist: ClassWhitelist) : ClassCarpenter {
     constructor(whitelist: ClassWhitelist) : this(Thread.currentThread().contextClassLoader, whitelist)
 
@@ -139,7 +145,7 @@ class ClassCarpenterImpl(cl: ClassLoader, override val whitelist: ClassWhitelist
             }
         }
 
-        assert(schema.name in _loaded)
+        require(schema.name in _loaded)
 
         return _loaded[schema.name]!!
     }

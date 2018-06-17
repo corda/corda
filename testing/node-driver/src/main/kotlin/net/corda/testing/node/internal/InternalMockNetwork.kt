@@ -27,6 +27,7 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.hours
 import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
@@ -385,6 +386,17 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         return node
     }
 
+    fun <N : MockNode> restartNode(node: StartedNode<N>, nodeFactory: (MockNodeArgs) -> N): StartedNode<N> {
+        node.internals.disableDBCloseOnStop()
+        node.dispose()
+        return createNode(
+                InternalMockNodeParameters(legalName = node.internals.configuration.myLegalName, forcedID = node.internals.id),
+                nodeFactory
+        )
+    }
+
+    fun restartNode(node: StartedNode<MockNode>): StartedNode<MockNode> = restartNode(node, defaultFactory)
+
     fun baseDirectory(nodeId: Int): Path = filesystem.getPath("/nodes/$nodeId")
 
     /**
@@ -439,8 +451,7 @@ open class InternalMockNetwork(private val cordappPackages: List<String>,
         messagingNetwork.stop()
     }
 
-    // Test method to block until all scheduled activity, active flows
-    // and network activity has ceased.
+    /** Block until all scheduled activity, active flows and network activity has ceased. */
     fun waitQuiescent() {
         busyLatch.await()
     }
@@ -471,7 +482,8 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(null).whenever(it).compatibilityZoneURL
         doReturn(null).whenever(it).networkServices
         doReturn(VerifierType.InMemory).whenever(it).verifierType
-        doReturn(P2PMessagingRetryConfiguration(5.seconds, 3, backoffBase = 1.0)).whenever(it).p2pMessagingRetry
+        // Set to be long enough so retries don't trigger unless we override it
+        doReturn(FlowTimeoutConfiguration(1.hours, 3, backoffBase = 1.0)).whenever(it).flowTimeout
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
     }

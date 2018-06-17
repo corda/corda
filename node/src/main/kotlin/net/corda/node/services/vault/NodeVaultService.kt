@@ -242,7 +242,7 @@ class NodeVaultService(
             val txIdPredicate = criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>(VaultSchemaV1.VaultTxnNote::txId.name), txnId.toString())
             criteriaQuery.where(txIdPredicate)
             val results = session.createQuery(criteriaQuery).resultList
-            results.asIterable().map { it.note }
+            results.asIterable().map { it.note ?: "" }
         }
     }
 
@@ -408,7 +408,7 @@ class NodeVaultService(
 
     @Throws(VaultQueryException::class)
     private fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean): Vault.Page<T> {
-        log.info("Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting")
+        log.debug { "Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting" }
         return database.transaction {
             // calculate total results where a page specification has been defined
             var totalStates = -1L
@@ -489,11 +489,20 @@ class NodeVaultService(
         return database.transaction {
             mutex.locked {
                 val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
-                val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractStateType, snapshotResults.stateTypes) })
+                val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed()
+                        .filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
+                        .map { filterContractStates(it, contractStateType) })
                 DataFeed(snapshotResults, updates)
             }
         }
     }
+
+    private fun <T : ContractState> filterContractStates(update: Vault.Update<T>, contractStateType: Class<out T>) =
+            update.copy(consumed = filterByContractState(contractStateType, update.consumed),
+                    produced = filterByContractState(contractStateType, update.produced))
+
+    private fun <T : ContractState> filterByContractState(contractStateType: Class<out T>, stateAndRefs: Set<StateAndRef<T>>) =
+            stateAndRefs.filter { contractStateType.isAssignableFrom(it.state.data.javaClass) }.toSet()
 
     private fun getSession() = database.currentOrNew().session
     /**

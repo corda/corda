@@ -1,5 +1,6 @@
 package net.corda.core.schemas
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.serialization.CordaSerializable
@@ -15,6 +16,7 @@ import javax.persistence.MappedSuperclass
  * A contract state that may be mapped to database schemas configured for this node to support querying for,
  * or filtering of, states.
  */
+@KeepForDJVM
 interface QueryableState : ContractState {
     /**
      * Enumerate the schemas this state can export representations of itself as.
@@ -37,6 +39,7 @@ interface QueryableState : ContractState {
  * @param version The version number of this instance within the family.
  * @param mappedTypes The JPA entity classes that the ORM layer needs to be configure with for this schema.
  */
+@KeepForDJVM
 open class MappedSchema(schemaFamily: Class<*>,
                         val version: Int,
                         val mappedTypes: Iterable<Class<*>>) {
@@ -69,6 +72,7 @@ open class MappedSchema(schemaFamily: Class<*>,
  * A super class for all mapped states exported to a schema that ensures the [StateRef] appears on the database row.  The
  * [StateRef] will be set to the correct value by the framework (there's no need to set during mapping generation by the state itself).
  */
+@KeepForDJVM
 @MappedSuperclass
 @CordaSerializable
 class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : StatePersistable
@@ -76,6 +80,7 @@ class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : St
 /**
  * Embedded [StateRef] representation used in state mapping.
  */
+@KeepForDJVM
 @Embeddable
 data class PersistentStateRef(
         @Column(name = "transaction_id", length = 64, nullable = false)
@@ -90,4 +95,44 @@ data class PersistentStateRef(
 /**
  * Marker interface to denote a persistable Corda state entity that will always have a transaction id and index
  */
+@KeepForDJVM
 interface StatePersistable : Serializable
+object MappedSchemaValidator {
+    fun fieldsFromOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
+            schema.mappedTypes.map { entity ->
+                entity.declaredFields.filter { field ->
+                    field.type.enclosingClass != null
+                            && MappedSchema::class.java.isAssignableFrom(field.type.enclosingClass)
+                            && hasJpaAnnotation(field.declaredAnnotations)
+                            && field.type.enclosingClass != schema.javaClass
+                }.map { field -> SchemaCrossReferenceReport(schema.javaClass.name, entity.simpleName, field.type.enclosingClass.name, field.name, field.type.simpleName)}
+            }.flatMap { it.toSet() }
+
+    fun methodsFromOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
+            schema.mappedTypes.map { entity ->
+                entity.declaredMethods.filter { method ->
+                    method.returnType.enclosingClass != null
+                            && MappedSchema::class.java.isAssignableFrom(method.returnType.enclosingClass)
+                            && method.returnType.enclosingClass != schema.javaClass
+                            && hasJpaAnnotation(method.declaredAnnotations)
+                }.map { method -> SchemaCrossReferenceReport(schema.javaClass.name, entity.simpleName, method.returnType.enclosingClass.name, method.name, method.returnType.simpleName)}
+            }.flatMap { it.toSet() }
+
+    fun crossReferencesToOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
+         fieldsFromOtherMappedSchema(schema) + methodsFromOtherMappedSchema(schema)
+
+    /** Returns true if [javax.persistence] annotation expect [javax.persistence.Transient] is found. */
+    private inline fun hasJpaAnnotation(annotations: Array<Annotation>) =
+            annotations.any { annotation -> annotation.toString().startsWith("@javax.persistence.") && annotation !is javax.persistence.Transient }
+
+    class SchemaCrossReferenceReport(private val schema: String, private val entity: String, private val referencedSchema: String,
+                                     private val fieldOrMethod: String, private val fieldOrMethodType: String) {
+
+        override fun toString() = "Cross-reference between MappedSchemas '$schema' and '$referencedSchema'. " +
+                "MappedSchema '${schema.substringAfterLast(".")}' entity '$entity' field '$fieldOrMethod' is of type '$fieldOrMethodType' " +
+                "defined in another MappedSchema '${referencedSchema.substringAfterLast(".")}'."
+
+        fun toWarning() = toString() + " This may cause issues when evolving MappedSchema or migrating its data, " +
+                "ensure JPA entities are defined within the same enclosing MappedSchema."
+    }
+}

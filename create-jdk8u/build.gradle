@@ -1,0 +1,159 @@
+buildscript {
+    Properties constants = new Properties()
+    file("../constants.properties").withInputStream { constants.load(it) }
+
+    ext {
+        artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
+        artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
+        proguard_version = constants.getProperty("proguardVersion")
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven {
+            url "$artifactory_contextUrl/corda-dev"
+        }
+    }
+    dependencies {
+        classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
+        classpath "net.sf.proguard:proguard-gradle:$proguard_version"
+    }
+}
+
+plugins {
+    id 'base'
+    id 'maven-publish'
+}
+apply plugin: 'com.jfrog.artifactory'
+
+/*
+ * This is a nested and independent Gradle project,
+ * and so has its own group and version.
+ *
+ * NOTE: The deterministic APIs are Open Source.
+ */
+group 'net.corda'
+version '1.0-SNAPSHOT'
+
+task cleanJdk(type: Exec) {
+    commandLine 'make', 'clean'
+}
+
+task makeJdk(type: Exec) {
+    // See: https://github.com/corda/openjdk/tree/deterministic-jvm8
+    commandLine 'make'
+}
+
+task runtimeJar(type: Jar, dependsOn: makeJdk) {
+    baseName 'deterministic-rt'
+
+    from(zipTree("libs/rt.jar"))
+    from(zipTree("libs/jce.jar"))
+    from(zipTree("libs/jsse.jar"))
+
+    reproducibleFileOrder = true
+    includeEmptyDirs = false
+}
+
+import proguard.gradle.ProGuardTask
+task validate(type: ProGuardTask) {
+    injars runtimeJar
+
+    dontwarn 'java.lang.invoke.**'
+    dontwarn 'javax.lang.model.**'
+    dontwarn 'jdk.Exported'
+
+    keepattributes '*'
+    dontpreverify
+    dontobfuscate
+    dontoptimize
+    verbose
+
+    keep 'class *'
+}
+runtimeJar.finalizedBy validate
+
+task apiJar(type: Jar, dependsOn: runtimeJar) {
+    baseName 'deterministic-rt'
+    classifier 'api'
+
+    from(zipTree(runtimeJar.outputs.files.singleFile)) {
+        include 'java/'
+        include 'javax/'
+        exclude 'java/awt/'
+        exclude 'java/beans/Weak*.class'
+        exclude 'java/lang/invoke/'
+        exclude 'java/lang/*Thread*.class'
+        exclude 'java/lang/Shutdown*.class'
+        exclude 'java/lang/ref/'
+        exclude 'java/lang/reflect/InvocationHandler.class'
+        exclude 'java/lang/reflect/Proxy*.class'
+        exclude 'java/lang/reflect/Weak*.class'
+        exclude 'java/io/File.class'
+        exclude 'java/io/File$*.class'
+        exclude 'java/io/*FileSystem.class'
+        exclude 'java/io/Filename*.class'
+        exclude 'java/io/FileDescriptor*.class'
+        exclude 'java/io/FileFilter*.class'
+        exclude 'java/io/FilePermission*.class'
+        exclude 'java/io/FileReader*.class'
+        exclude 'java/io/FileSystem*.class'
+        exclude 'java/io/File*Stream*.class'
+        exclude 'java/net/*Content*.class'
+        exclude 'java/net/Host*.class'
+        exclude 'java/net/Inet*.class'
+        exclude 'java/nio/file/Path.class'
+        exclude 'java/nio/file/attribute/'
+        exclude 'java/util/SplittableRandom*.class'
+        exclude 'java/util/Random.class'
+        exclude 'java/util/Random$*.class'
+        exclude 'java/util/WeakHashMap*.class'
+        exclude 'java/util/concurrent/*.class'
+        exclude 'java/util/concurrent/locks/'
+        exclude 'javax/activation/'
+    }
+
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    includeEmptyDirs = false
+}
+
+defaultTasks "build"
+assemble.dependsOn runtimeJar
+assemble.dependsOn apiJar
+clean.dependsOn cleanJdk
+
+artifacts {
+    archives runtimeJar
+    archives apiJar
+}
+
+artifactory {
+    contextUrl = artifactory_contextUrl
+    publish {
+        repository {
+            repoKey = 'corda-dev'
+            username = System.getenv('CORDA_ARTIFACTORY_USERNAME')
+            password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
+            maven = true
+        }
+
+        defaults {
+            publications('mavenJava')
+        }
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId 'deterministic-rt'
+            artifact runtimeJar
+            artifact apiJar
+        }
+    }
+}
+
+task install(dependsOn: publishToMavenLocal)

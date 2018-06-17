@@ -170,8 +170,8 @@ class ClassCarpenterTest {
 
         val iface = cc.build(schema1)
 
-        assert(iface.isInterface)
-        assert(iface.constructors.isEmpty())
+        require(iface.isInterface)
+        require(iface.constructors.isEmpty())
         assertEquals(iface.declaredMethods.size, 1)
         assertEquals(iface.declaredMethods[0].name, "getA")
 

@@ -7,6 +7,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
+import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -74,7 +75,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
 
     init {
         // Verify that this class is immutable (all properties are final)
-        assert(props.none { it is KMutableProperty<*> })
+        require(props.none { it is KMutableProperty<*> })
     }
 
     // Just a utility to help us catch cases where nodes are running out of sync versions.
@@ -109,7 +110,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<T>): T {
-        assert(type.kotlin == klass)
+        require(type.kotlin == klass)
         val numFields = input.readVarInt(true)
         val fieldTypeHash = input.readInt()
 
@@ -460,6 +461,7 @@ fun Kryo.serializationContext(): SerializeAsTokenContext? = context.get(serializ
  * unmodifiable collection to [java.lang.Throwable.suppressedExceptions] which will fail some sentinel identity checks
  * e.g. in [java.lang.Throwable.addSuppressed]
  */
+@DeleteForDJVM
 @ThreadSafe
 class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>(false, true) {
 

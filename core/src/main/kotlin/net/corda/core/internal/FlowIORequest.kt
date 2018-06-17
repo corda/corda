@@ -1,5 +1,6 @@
 package net.corda.core.internal
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowSession
@@ -11,6 +12,7 @@ import java.time.Instant
 /**
  * A [FlowIORequest] represents an IO request of a flow when it suspends. It is persisted in checkpoints.
  */
+@DeleteForDJVM
 sealed class FlowIORequest<out R : Any> {
     /**
      * Send messages to sessions.
@@ -19,13 +21,9 @@ sealed class FlowIORequest<out R : Any> {
      * @property shouldRetrySend specifies whether the send should be retried.
      */
     data class Send(
-            val sessionToMessage: Map<FlowSession, SerializedBytes<Any>>,
-            val shouldRetrySend: Boolean
+            val sessionToMessage: Map<FlowSession, SerializedBytes<Any>>
     ) : FlowIORequest<Unit>() {
-        override fun toString() = "Send(" +
-                "sessionToMessage=${sessionToMessage.mapValues { it.value.hash }}, " +
-                "shouldRetrySend=$shouldRetrySend" +
-                ")"
+        override fun toString() = "Send(sessionToMessage=${sessionToMessage.mapValues { it.value.hash }})"
     }
 
     /**

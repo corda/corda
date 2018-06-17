@@ -21,13 +21,13 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
         val a = A(testA, testB)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
-        assert(obj.obj is A)
+        require(obj.obj is A)
         val amqpObj = obj.obj as A
 
         assertEquals(testA, amqpObj.a)
         assertEquals(testB, amqpObj.b)
         assertEquals(1, obj.envelope.schema.types.size)
-        assert(obj.envelope.schema.types[0] is CompositeType)
+        require(obj.envelope.schema.types[0] is CompositeType)
 
         val amqpSchema = obj.envelope.schema.types[0] as CompositeType
 
@@ -65,13 +65,13 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
         val a = A(testA, testB)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
-        assert(obj.obj is A)
+        require(obj.obj is A)
         val amqpObj = obj.obj as A
 
         assertEquals(testA, amqpObj.a)
         assertEquals(testB, amqpObj.b)
         assertEquals(1, obj.envelope.schema.types.size)
-        assert(obj.envelope.schema.types[0] is CompositeType)
+        require(obj.envelope.schema.types[0] is CompositeType)
 
         val amqpSchema = obj.envelope.schema.types[0] as CompositeType
 

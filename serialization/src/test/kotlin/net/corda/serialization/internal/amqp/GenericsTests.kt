@@ -12,6 +12,7 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.TestIdentity
 import org.junit.Test
+import java.net.URI
 import java.util.*
 import kotlin.test.assertEquals
 
@@ -28,7 +29,7 @@ class GenericsTests {
         const val VERBOSE = true
 
         @Suppress("UNUSED")
-        var localPath = projectRootDir.toUri().resolve(
+        var localPath: URI = projectRootDir.toUri().resolve(
                 "serialization/src/test/resources/net/corda/serialization/internal/amqp")
 
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))

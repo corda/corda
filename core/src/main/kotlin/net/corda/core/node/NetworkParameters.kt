@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
@@ -19,10 +20,11 @@ import java.time.Instant
  * @property epoch Version number of the network parameters. Starting from 1, this will always increment on each new set
  * of parameters.
  * @property whitelistedContractImplementations List of whitelisted jars containing contract code for each contract class.
- *  This will be used by [net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint]. Read more about contract constraints here: <https://docs.corda.net/api-contract-constraints.html>
+ *  This will be used by [net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint]. [You can learn more about contract constraints here](https://docs.corda.net/api-contract-constraints.html).
  * @property eventHorizon Time after which nodes will be removed from the network map if they have not been seen
  * during this period
  */
+@KeepForDJVM
 @CordaSerializable
 data class NetworkParameters(
         val minimumPlatformVersion: Int,
@@ -100,5 +102,6 @@ data class NetworkParameters(
  * @property identity Identity of the notary (note that it can be an identity of the distributed node).
  * @property validating Indicates if the notary is validating.
  */
+@KeepForDJVM
 @CordaSerializable
 data class NotaryInfo(val identity: Party, val validating: Boolean)

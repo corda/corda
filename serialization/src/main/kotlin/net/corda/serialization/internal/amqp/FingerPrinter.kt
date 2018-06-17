@@ -2,6 +2,8 @@ package net.corda.serialization.internal.amqp
 
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
+import net.corda.core.KeepForDJVM
+import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toBase64
 import java.io.NotSerializableException
@@ -11,6 +13,7 @@ import java.util.*
 /**
  * Should be implemented by classes which wish to provide plugable fingerprinting og types for a [SerializerFactory]
  */
+@KeepForDJVM
 interface FingerPrinter {
     /**
      * Return a unique identifier for a type, usually this will take into account the constituent elements
@@ -27,6 +30,7 @@ interface FingerPrinter {
 /**
  * Implementation of the finger printing mechanism used by default
  */
+@KeepForDJVM
 class SerializerFingerPrinter : FingerPrinter {
     private var factory: SerializerFactory? = null
 
@@ -153,7 +157,7 @@ class SerializerFingerPrinter : FingerPrinter {
                             }.putUnencodedChars(type.name).putUnencodedChars(ENUM_HASH)
                         } else {
                             hasher.fingerprintWithCustomSerializerOrElse(factory!!, type, type) {
-                                if (type.objectInstance() != null) {
+                                if (type.kotlinObjectInstance != null) {
                                     // TODO: name collision is too likely for kotlin objects, we need to introduce some reference
                                     // to the CorDapp but maybe reference to the JAR in the short term.
                                     hasher.putUnencodedChars(type.name)

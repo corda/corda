@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
 import tornadofx.*
 import java.io.IOException
@@ -19,7 +20,7 @@ class InstallFactory : Controller() {
             require(nodeController.isPortValid(port)) { "Invalid port $port" }
         }
 
-        val nodeConfig = config.parseAs<NodeConfig>()
+        val nodeConfig = config.parseAs<NodeConfig>(UnknownConfigKeysPolicy.IGNORE::handle)
         nodeConfig.p2pAddress.checkPort()
         nodeConfig.rpcAddress.checkPort()
         nodeConfig.webAddress.checkPort()

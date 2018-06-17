@@ -8,6 +8,7 @@ import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.channels.Channel
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -26,6 +27,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -46,6 +48,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
          */
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
 
+        // If no CorDapp found then it is a Core flow.
+        internal fun createSubFlowVersion(cordapp: Cordapp?, platformVersion: Int): SubFlowVersion {
+            return cordapp?.let { SubFlowVersion.CorDappFlow(platformVersion, it.name, it.jarHash) }
+                    ?: SubFlowVersion.CoreFlow(platformVersion)
+        }
+
         private val log: Logger = LoggerFactory.getLogger("net.corda.flow")
 
         private val SERIALIZER_BLOCKER = Fiber::class.java.getDeclaredField("SERIALIZER_BLOCKER").apply { isAccessible = true }.get(null)
@@ -61,7 +69,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val actionExecutor: ActionExecutor,
             val stateMachine: StateMachine,
             val serviceHub: ServiceHubInternal,
-            val checkpointSerializationContext: SerializationContext
+            val checkpointSerializationContext: SerializationContext,
+            val unfinishedFibers: ReusableLatch
     )
 
     internal var transientValues: TransientReference<TransientValues>? = null
@@ -99,7 +108,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if (value) field = value else throw IllegalArgumentException("Can only set to true")
         }
 
-    /**
+     /**
      * Processes an event by creating the associated transition and executing it using the given executor.
      * Try to avoid using this directly, instead use [processEventsUntilFlowIsResumed] or [processEventImmediately]
      * instead.
@@ -131,8 +140,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
         val eventQueue = getTransientField(TransientValues::eventQueue)
         try {
-            eventLoop@while (true) {
-                val nextEvent = eventQueue.receive()
+            eventLoop@ while (true) {
+                val nextEvent = try {
+                    eventQueue.receive()
+                } catch (interrupted: InterruptedException) {
+                    log.error("Flow interrupted while waiting for events, aborting immediately")
+                    abortFiber()
+                }
                 val continuation = processEvent(transitionExecutor, nextEvent)
                 when (continuation) {
                     is FlowContinuation.Resume -> return continuation.result
@@ -159,7 +173,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      *   processing finished. Purely used for internal invariant checks.
      */
     @Suspendable
-    private fun processEventImmediately(event: Event, isDbTransactionOpenOnEntry: Boolean, isDbTransactionOpenOnExit: Boolean): FlowContinuation {
+    private fun processEventImmediately(
+            event: Event,
+            isDbTransactionOpenOnEntry: Boolean,
+            isDbTransactionOpenOnExit: Boolean): FlowContinuation {
         checkDbTransaction(isDbTransactionOpenOnEntry)
         val transitionExecutor = getTransientField(TransientValues::transitionExecutor)
         val continuation = processEvent(transitionExecutor, event)
@@ -224,6 +241,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         }
 
         recordDuration(startTime)
+        getTransientField(TransientValues::unfinishedFibers).countDown()
     }
 
     @Suspendable
@@ -237,7 +255,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Suspendable
     override fun <R> subFlow(subFlow: FlowLogic<R>): R {
         processEventImmediately(
-                Event.EnterSubFlow(subFlow.javaClass),
+                Event.EnterSubFlow(subFlow.javaClass,
+                        createSubFlowVersion(
+                               serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion
+                        )
+                ),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true
         )
@@ -317,11 +339,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         parkAndSerialize { _, _ ->
             logger.trace { "Suspended on $ioRequest" }
 
+            // Will skip checkpoint if there are any idempotent flows in the subflow stack.
+            val skipPersistingCheckpoint = containsIdempotentFlows() || maySkipCheckpoint
+
             contextTransactionOrNull = transaction.value
             val event = try {
                 Event.Suspend(
                         ioRequest = ioRequest,
-                        maySkipCheckpoint = maySkipCheckpoint,
+                        maySkipCheckpoint = skipPersistingCheckpoint,
                         fiber = this.serialize(context = serializationContext.value)
                 )
             } catch (throwable: Throwable) {
@@ -343,6 +368,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 isDbTransactionOpenOnEntry = false,
                 isDbTransactionOpenOnExit = true
         ))
+    }
+
+    private fun containsIdempotentFlows(): Boolean {
+        val subFlowStack = snapshot().checkpoint.subFlowStack
+        return subFlowStack.any { IdempotentFlow::class.java.isAssignableFrom(it.flowClass) }
     }
 
     @Suspendable

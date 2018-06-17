@@ -25,8 +25,8 @@ class PersistentScheduledFlowRepository(val database: CordaPersistence) : Schedu
     }
 
     private fun fromPersistentEntity(scheduledStateRecord: NodeSchedulerService.PersistentScheduledState): Pair<StateRef, ScheduledStateRef> {
-        val txId = scheduledStateRecord.output.txId ?: throw IllegalStateException("DB returned null SecureHash transactionId")
-        val index = scheduledStateRecord.output.index ?: throw IllegalStateException("DB returned null integer index")
+        val txId = scheduledStateRecord.output.txId
+        val index = scheduledStateRecord.output.index
         return Pair(StateRef(SecureHash.parse(txId), index), ScheduledStateRef(StateRef(SecureHash.parse(txId), index), scheduledStateRecord.scheduledAt))
     }
 

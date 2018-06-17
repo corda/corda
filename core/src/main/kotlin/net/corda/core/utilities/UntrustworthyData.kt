@@ -1,10 +1,9 @@
+@file:KeepForDJVM
 package net.corda.core.utilities
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.KeepForDJVM
 import net.corda.core.flows.FlowException
-import net.corda.core.internal.castIfPossible
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializedBytes
 import java.io.Serializable
 
 /**
@@ -18,11 +17,13 @@ import java.io.Serializable
  * - Are any objects *reachable* from this object mismatched or not what you expected?
  * - Is it suspiciously large or small?
  */
+@KeepForDJVM
 class UntrustworthyData<out T>(@PublishedApi internal val fromUntrustedWorld: T) {
     @Suspendable
     @Throws(FlowException::class)
     fun <R> unwrap(validator: Validator<T, R>) = validator.validate(fromUntrustedWorld)
 
+    @KeepForDJVM
     @FunctionalInterface
     interface Validator<in T, out R> : Serializable {
         @Suspendable
@@ -32,14 +33,3 @@ class UntrustworthyData<out T>(@PublishedApi internal val fromUntrustedWorld: T)
 }
 
 inline fun <T, R> UntrustworthyData<T>.unwrap(validator: (T) -> R): R = validator(fromUntrustedWorld)
-
-fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
-    val payloadData: T = try {
-        val serializer = SerializationDefaults.SERIALIZATION_FACTORY
-        serializer.deserialize(this, type, SerializationDefaults.P2P_CONTEXT)
-    } catch (ex: Exception) {
-        throw IllegalArgumentException("Payload invalid", ex)
-    }
-    return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) } ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a " +
-            "${payloadData.javaClass.name} ($payloadData)")
-}

@@ -37,8 +37,8 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
             @EmbeddedId
             val id: PersistentStateRef,
 
-            @Column(name = "consuming_transaction_id", nullable = false)
-            val consumingTxHash: String
+            @Column(name = "consuming_transaction_id", nullable = true)
+            val consumingTxHash: String?
     ) : Serializable
 
     @Entity
@@ -50,11 +50,11 @@ class PersistentUniquenessProvider(val clock: Clock) : UniquenessProvider, Singl
             @Column(nullable = true)
             val id: Int? = null,
 
-            @Column(name = "consuming_transaction_id", nullable = false)
-            val consumingTxHash: String,
+            @Column(name = "consuming_transaction_id", nullable = true)
+            val consumingTxHash: String?,
 
-            @Column(name = "requesting_party_name", nullable = false)
-            var partyName: String,
+            @Column(name = "requesting_party_name", nullable = true)
+            var partyName: String?,
 
             @Lob
             @Column(name = "request_signature", nullable = false)

@@ -27,6 +27,7 @@ import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
+import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -58,7 +59,6 @@ open class NodeStartup(val args: Array<String>) {
             return false
         }
         val cmdlineOptions = NodeArgsParser().parseOrExit(*args)
-
         // We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
         enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
@@ -129,6 +129,12 @@ open class NodeStartup(val args: Array<String>) {
         try {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: CouldNotCreateDataSourceException) {
+            logger.error(e.message, e.cause)
+            return false
+        } catch (e: CheckpointIncompatibleException) {
+            logger.error(e.message)
+            return false
         } catch (e: Exception) {
             if (e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
                 logger.error("One of the ports required by the Corda node is already in use.")
@@ -153,6 +159,10 @@ open class NodeStartup(val args: Array<String>) {
 
     protected open fun startNode(conf: NodeConfiguration, versionInfo: VersionInfo, startTime: Long, cmdlineOptions: CmdLineOptions) {
         val node = createNode(conf, versionInfo)
+        if (cmdlineOptions.clearNetworkMapCache) {
+            node.clearNetworkMapCache()
+            return
+        }
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
             node.generateAndSaveNodeInfo()

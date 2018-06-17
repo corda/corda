@@ -1,5 +1,6 @@
 package net.corda.core.node.services
 
+import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.AbstractParty
@@ -58,7 +59,7 @@ interface NetworkMapCacheBase {
     /** Tracks changes to the network map cache. */
     val changed: Observable<NetworkMapCache.MapChange>
     /** Future to track completion of the NetworkMapService registration. */
-    val nodeReady: CordaFuture<Void?>
+    @get:DeleteForDJVM val nodeReady: CordaFuture<Void?>
 
     /**
      * Atomically get the current party nodes and a stream of updates. Note that the Observable buffers updates until the

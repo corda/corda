@@ -105,6 +105,7 @@ class CordaPersistence(
     fun createSession(): Connection {
         // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
         _contextDatabase.set(this)
+        currentDBSession().flush()
         return contextTransaction.connection
     }
 
@@ -264,3 +265,5 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
             is SQLException -> true
             else -> cause?.hasSQLExceptionCause() ?: false
         }
+
+class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()

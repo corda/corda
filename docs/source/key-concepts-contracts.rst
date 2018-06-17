@@ -7,12 +7,15 @@ Contracts
    * *Contracts are written in a JVM programming language (e.g. Java or Kotlin)*
    * *Contract execution is deterministic and its acceptance of a transaction is based on the transaction's contents alone*
 
-Video
------
-.. raw:: html
+.. only:: htmlmode
 
-    <iframe src="https://player.vimeo.com/video/214168839" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-    <p></p>
+   Video
+   -----
+   .. raw:: html
+
+       <iframe src="https://player.vimeo.com/video/214168839" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+       <p></p>
+
 
 Transaction verification
 ------------------------

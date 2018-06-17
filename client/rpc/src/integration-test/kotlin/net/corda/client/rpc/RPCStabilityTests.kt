@@ -1,7 +1,6 @@
 package net.corda.client.rpc
 
 import net.corda.client.rpc.internal.RPCClient
-import net.corda.client.rpc.internal.CordaRPCClientConfigurationImpl
 import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.concurrent.fork
@@ -91,7 +90,7 @@ class RPCStabilityTests {
             // This is a less than check because threads from other tests may be shutting down while this test is running.
             // This is therefore a "best effort" check. When this test is run on its own this should be a strict equality.
             // In case of failure we output the threads along with their stacktraces to get an idea what was running at a time.
-            assert(threadsBefore.keys.size >= threadsAfter.keys.size, { "threadsBefore: $threadsBefore\nthreadsAfter: $threadsAfter" })
+            require(threadsBefore.keys.size >= threadsAfter.keys.size, { "threadsBefore: $threadsBefore\nthreadsAfter: $threadsAfter" })
         } finally {
             executor.shutdownNow()
         }
@@ -106,7 +105,7 @@ class RPCStabilityTests {
                 Try.on {
                     startRpcClient<RPCOps>(
                             server.get().broker.hostAndPort!!,
-                            configuration = CordaRPCClientConfigurationImpl.default.copy(minimumServerProtocolVersion = 1)
+                            configuration = CordaRPCClientConfiguration.DEFAULT.copy(minimumServerProtocolVersion = 1)
                     ).get()
                 }
             }
@@ -129,7 +128,7 @@ class RPCStabilityTests {
         rpcDriver {
             fun startAndCloseServer(broker: RpcBrokerHandle) {
                 startRpcServerWithBrokerRunning(
-                        configuration = RPCServerConfiguration.default,
+                        configuration = RPCServerConfiguration.DEFAULT,
                         ops = DummyOps,
                         brokerHandle = broker
                 ).rpcServer.close()
@@ -150,7 +149,7 @@ class RPCStabilityTests {
     @Test
     fun `rpc client close doesnt leak broker resources`() {
         rpcDriver {
-            val server = startRpcServer(configuration = RPCServerConfiguration.default, ops = DummyOps).get()
+            val server = startRpcServer(configuration = RPCServerConfiguration.DEFAULT, ops = DummyOps).get()
             RPCClient<RPCOps>(server.broker.hostAndPort!!).start(RPCOps::class.java, rpcTestUser.username, rpcTestUser.password).close()
             val initial = server.broker.getStats()
             repeat(100) {
@@ -241,7 +240,7 @@ class RPCStabilityTests {
             val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().broker.hostAndPort!!
             serverFollower.unfollow()
             // Set retry interval to 1s to reduce test duration
-            val clientConfiguration = CordaRPCClientConfigurationImpl.default.copy(connectionRetryInterval = 1.seconds)
+            val clientConfiguration = CordaRPCClientConfiguration.DEFAULT.copy(connectionRetryInterval = 1.seconds)
             val clientFollower = shutdownManager.follower()
             val client = startRpcClient<ReconnectOps>(serverPort, configuration = clientConfiguration).getOrThrow()
             clientFollower.unfollow()
@@ -266,7 +265,7 @@ class RPCStabilityTests {
             val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().broker.hostAndPort!!
             serverFollower.unfollow()
             // Set retry interval to 1s to reduce test duration
-            val clientConfiguration = CordaRPCClientConfigurationImpl.default.copy(connectionRetryInterval = 1.seconds, maxReconnectAttempts = 5)
+            val clientConfiguration = CordaRPCClientConfiguration.DEFAULT.copy(connectionRetryInterval = 1.seconds, maxReconnectAttempts = 5)
             val clientFollower = shutdownManager.follower()
             val client = startRpcClient<ReconnectOps>(serverPort, configuration = clientConfiguration).getOrThrow()
             clientFollower.unfollow()
@@ -298,7 +297,7 @@ class RPCStabilityTests {
             val serverPort = startRpcServer<NoOps>(ops = ops).getOrThrow().broker.hostAndPort!!
             serverFollower.unfollow()
 
-            val clientConfiguration = CordaRPCClientConfigurationImpl.default.copy(connectionRetryInterval = 500.millis, maxReconnectAttempts = 1)
+            val clientConfiguration = CordaRPCClientConfiguration.DEFAULT.copy(connectionRetryInterval = 500.millis, maxReconnectAttempts = 1)
             val clientFollower = shutdownManager.follower()
             val client = startRpcClient<NoOps>(serverPort, configuration = clientConfiguration).getOrThrow()
             clientFollower.unfollow()
@@ -453,7 +452,7 @@ class RPCStabilityTests {
                 }
             }
             val server = startRpcServer<TrackSubscriberOps>(
-                    configuration = RPCServerConfiguration.default.copy(
+                    configuration = RPCServerConfiguration.DEFAULT.copy(
                             reapInterval = 100.millis
                     ),
                     ops = trackSubscriberOpsImpl

@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp.custom
 
+import net.corda.core.KeepForDJVM
 import net.corda.serialization.internal.amqp.CustomSerializer
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Duration
@@ -12,5 +13,6 @@ class DurationSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Du
 
     override fun fromProxy(proxy: DurationProxy): Duration = Duration.ofSeconds(proxy.seconds, proxy.nanos.toLong())
 
+    @KeepForDJVM
     data class DurationProxy(val seconds: Long, val nanos: Int)
 }

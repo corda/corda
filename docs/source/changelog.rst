@@ -7,7 +7,35 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* H2 database changes:
+  * The node's H2 database now listens on ``localhost`` by default.
+  * The database server address must also be enabled in the node configuration.
+  * A new ``h2Settings`` configuration block supercedes the ``h2Port`` option.
+
+* Improved documentation PDF quality. Building the documentation now requires ``LaTex`` to be installed on the OS.
+
+* Add ``devModeOptions.allowCompatibilityZone`` to re-enable the use of a compatibility zone and ``devMode``
+
+* Fixed an issue where ``trackBy`` was returning ``ContractStates`` from a transaction that were not being tracked. The
+  unrelated ``ContractStates`` will now be filtered out from the returned ``Vault.Update``.
+
+* Introducing the flow hospital - a component of the node that manages flows that have errored and whether they should
+  be retried from their previous checkpoints or have their errors propagate. Currently it will respond to any error that
+  occurs during the resolution of a received transaction as part of ``FinalityFlow``. In such a scenerio the receiving
+  flow will be parked and retried on node restart. This is to allow the node operator to rectify the situation as otherwise
+  the node will have an incomplete view of the ledger.
+
+* Fixed an issue preventing out of process nodes started by the ``Driver`` from logging to file.
+
+* Fixed an issue with ``CashException`` not being able to deserialise after the introduction of AMQP for RPC.
+
+* Removed -Xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
+
+* New ``killFlow`` RPC for killing stuck flows.
+
 * Shell now kills an ongoing flow when CTRL+C is pressed in the terminal.
+
+* Add check at startup that all persisted Checkpoints are compatible with the current version of the code.
 
 * ``ServiceHub`` and ``CordaRPCOps`` can now safely be used from multiple threads without incurring in database transaction problems.
 
@@ -16,6 +44,13 @@ Unreleased
   and :doc:`permissioning` for details.
 
 * Improved audit trail for ``FinalityFlow`` and related sub-flows.
+
+* Notary client flow retry logic was improved to handle validating flows better. Instead of re-sending flow messages the
+  entire flow is now restarted after a timeout. The relevant node configuration section was renamed from ``p2pMessagingRetry``,
+  to ``flowTimeout`` to reflect the behaviour change.
+
+* The node's configuration is only printed on startup if ``devMode`` is ``true``, avoiding the risk of printing passwords
+  in a production setup.
 
 * ``NodeStartup`` will now only print node's configuration if ``devMode`` is ``true``, avoiding the risk of printing passwords in a production setup.
 
@@ -49,7 +84,10 @@ Unreleased
     The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialise an ``X509Certificate``
     back.
   * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
-  * ``SignedTransaction`` is serialised into its ``txBits`` and ``signatures`` and can be deserialised back
+  * ``WireTransaction`` now nicely outputs into its components: ``id``, ``notary``, ``inputs``, ``attachments``, ``outputs``,
+    ``commands``, ``timeWindow`` and ``privacySalt``. This can be deserialised back.
+  * ``SignedTransaction`` is serialised into ``wire`` (i.e. currently only ``WireTransaction`` tested) and ``signatures``,
+    and can be deserialised back.
 
 * ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
   then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``
@@ -109,6 +147,12 @@ Unreleased
 * Adding a public method to check if a public key satisfies Corda recommended algorithm specs, `Crypto.validatePublicKey(java.security.PublicKey)`.
   For instance, this method will check if an ECC key lies on a valid curve or if an RSA key is >= 2048bits. This might
   be required for extra key validation checks, e.g., for Doorman to check that a CSR key meets the minimum security requirements.
+
+* Table name with a typo changed from ``NODE_ATTCHMENTS_CONTRACTS`` to ``NODE_ATTACHMENTS_CONTRACTS``.
+
+* Node logs a warning for any ``MappedSchema`` containing a JPA entity referencing another JPA entity from a different ``MappedSchema`.
+  The log entry starts with `Cross-reference between MappedSchemas.`.
+  API: Persistence documentation no longer suggests mapping between different schemas.
 
 .. _changelog_v3.1:
 

@@ -1,5 +1,7 @@
 package net.corda.core.serialization
 
+import net.corda.core.KeepForDJVM
+
 /**
  * Allows CorDapps to provide custom serializers for third party libraries where those libraries cannot
  * be recompiled with the -parameters flag rendering their classes natively serializable by Corda. In this case
@@ -9,6 +11,7 @@ package net.corda.core.serialization
  * NOTE: The proxy object should be specified as a separate class. However, this can be defined within the
  * scope of the custom serializer.
  */
+@KeepForDJVM
 interface SerializationCustomSerializer<OBJ, PROXY> {
     /**
      * Should facilitate the conversion of the third party object into the serializable

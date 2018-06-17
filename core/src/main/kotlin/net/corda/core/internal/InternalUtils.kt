@@ -1,28 +1,23 @@
 @file:JvmName("InternalUtils")
-
+@file:KeepForDJVM
 package net.corda.core.internal
 
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
+import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.sha256
-import net.corda.core.crypto.sign
+import net.corda.core.crypto.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.UntrustworthyData
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -37,6 +32,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.reflect.Field
+import java.lang.reflect.Member
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.net.HttpURLConnection
@@ -51,23 +47,11 @@ import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.security.cert.CertPath
-import java.security.cert.CertPathValidator
-import java.security.cert.CertPathValidatorException
-import java.security.cert.PKIXCertPathValidatorResult
-import java.security.cert.PKIXParameters
-import java.security.cert.TrustAnchor
-import java.security.cert.X509Certificate
+import java.security.cert.*
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.*
-import java.util.Spliterator.DISTINCT
-import java.util.Spliterator.IMMUTABLE
-import java.util.Spliterator.NONNULL
-import java.util.Spliterator.ORDERED
-import java.util.Spliterator.SIZED
-import java.util.Spliterator.SORTED
-import java.util.Spliterator.SUBSIZED
+import java.util.Spliterator.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.stream.IntStream
@@ -126,6 +110,7 @@ fun <T> List<T>.noneOrSingle(): T? {
 }
 
 /** Returns a random element in the list, or `null` if empty */
+@DeleteForDJVM
 fun <T> List<T>.randomOrNull(): T? {
     return when (size) {
         0 -> null
@@ -141,7 +126,7 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
     return i
 }
 
-fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
+@DeleteForDJVM fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
 /** Same as [InputStream.readBytes] but also closes the stream. */
 fun InputStream.readFully(): ByteArray = use { it.readBytes() }
@@ -172,6 +157,7 @@ fun Iterable<BigDecimal>.sum(): BigDecimal = fold(BigDecimal.ZERO) { a, b -> a +
  * Returns an Observable that buffers events until subscribed.
  * @see UnicastSubject
  */
+@DeleteForDJVM
 fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
     val subject = UnicastSubject.create<T>()
     val subscription = subscribe(subject)
@@ -179,6 +165,7 @@ fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
 }
 
 /** Copy an [Observer] to multiple other [Observer]s. */
+@DeleteForDJVM
 fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
     val subject = PublishSubject.create<T>()
     subject.subscribe(this)
@@ -187,6 +174,7 @@ fun <T> Observer<T>.tee(vararg teeTo: Observer<T>): Observer<T> {
 }
 
 /** Executes the given code block and returns a [Duration] of how long it took to execute in nanosecond precision. */
+@DeleteForDJVM
 inline fun elapsedTime(block: () -> Unit): Duration {
     val start = System.nanoTime()
     block()
@@ -199,6 +187,7 @@ fun <T> Logger.logElapsedTime(label: String, body: () -> T): T = logElapsedTime(
 
 // TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
 // returns in the IRSSimulationTest. If not, commit the inline back.
+@DeleteForDJVM
 fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
     // Use nanoTime as it's monotonic.
     val now = System.nanoTime()
@@ -226,6 +215,7 @@ fun ByteArrayOutputStream.toInputStreamAndHash(): InputStreamAndHash {
     return InputStreamAndHash(bytes.inputStream(), bytes.sha256())
 }
 
+@KeepForDJVM
 data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHash.SHA256) {
     companion object {
         /**
@@ -233,6 +223,7 @@ data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHa
          * called "z" that contains the given content byte repeated the given number of times.
          * Note that a slightly bigger than numOfExpectedBytes size is expected.
          */
+        @DeleteForDJVM
         fun createInMemoryTestZip(numOfExpectedBytes: Int, content: Byte): InputStreamAndHash {
             require(numOfExpectedBytes > 0)
             val baos = ByteArrayOutputStream()
@@ -286,24 +277,29 @@ inline fun <T, R : Any> Stream<T>.mapNotNull(crossinline transform: (T) -> R?): 
 fun <T> Class<T>.castIfPossible(obj: Any): T? = if (isInstance(obj)) cast(obj) else null
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [Class]. */
+@DeleteForDJVM
 fun <T> Class<*>.staticField(name: String): DeclaredField<T> = DeclaredField(this, name, null)
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) static field of the receiver [KClass]. */
+@DeleteForDJVM
 fun <T> KClass<*>.staticField(name: String): DeclaredField<T> = DeclaredField(java, name, null)
 
 /** Returns a [DeclaredField] wrapper around the declared (possibly non-public) instance field of the receiver object. */
+@DeleteForDJVM
 fun <T> Any.declaredField(name: String): DeclaredField<T> = DeclaredField(javaClass, name, this)
 
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
  */
+@DeleteForDJVM
 fun <T> Any.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = DeclaredField(clazz.java, name, this)
 
 /**
  * Returns a [DeclaredField] wrapper around the (possibly non-public) instance field of the receiver object, but declared
  * in its superclass [clazz].
  */
+@DeleteForDJVM
 fun <T> Any.declaredField(clazz: Class<*>, name: String): DeclaredField<T> = DeclaredField(clazz, name, this)
 
 /** creates a new instance if not a Kotlin object */
@@ -311,10 +307,28 @@ fun <T : Any> KClass<T>.objectOrNewInstance(): T {
     return this.objectInstance ?: this.createInstance()
 }
 
+/** Similar to [KClass.objectInstance] but also works on private objects. */
+val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
+    return try {
+        kotlin.objectInstance
+    } catch (_: Throwable) {
+        val field = try { getDeclaredField("INSTANCE") } catch (_: NoSuchFieldException) { null }
+        field?.let {
+            if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {
+                it.isAccessible = true
+                uncheckedCast(it.get(null))
+            } else {
+                null
+            }
+        }
+    }
+}
+
 /**
  * A simple wrapper around a [Field] object providing type safe read and write access using [value], ignoring the field's
  * visibility.
  */
+@DeleteForDJVM
 class DeclaredField<T>(clazz: Class<*>, name: String, private val receiver: Any?) {
     private val javaField = findField(name, clazz)
     var value: T
@@ -371,26 +385,35 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+@DeleteForDJVM fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
     return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
+@DeleteForDJVM fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
 
 /** Convenience method to get the package name of a class literal. */
-val KClass<*>.packageName: String get() = java.`package`.name
+val KClass<*>.packageName: String get() = java.packageName
+val Class<*>.packageName: String get() = `package`.name
 
 inline val Class<*>.isAbstractClass: Boolean get() = Modifier.isAbstract(modifiers)
 
 inline val Class<*>.isConcreteClass: Boolean get() = !isInterface && !isAbstractClass
 
-fun URI.toPath(): Path = Paths.get(this)
+inline val Member.isPublic: Boolean get() = Modifier.isPublic(modifiers)
 
-fun URL.toPath(): Path = toURI().toPath()
+inline val Member.isStatic: Boolean get() = Modifier.isStatic(modifiers)
 
+inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
+
+@DeleteForDJVM fun URI.toPath(): Path = Paths.get(this)
+
+@DeleteForDJVM fun URL.toPath(): Path = toURI().toPath()
+
+@DeleteForDJVM
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
 
+@DeleteForDJVM
 fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String>): ByteArray {
     return openHttpConnection().run {
         doOutput = true
@@ -403,20 +426,24 @@ fun URL.post(serializedData: OpaqueBytes, vararg properties: Pair<String, String
     }
 }
 
+@DeleteForDJVM
 fun HttpURLConnection.checkOkResponse() {
     if (responseCode != HTTP_OK) {
         throw IOException("Response Code $responseCode: $errorMessage")
     }
 }
 
+@DeleteForDJVM
 val HttpURLConnection.errorMessage: String? get() = errorStream?.let { it.use { it.reader().readText() } }
 
+@DeleteForDJVM
 inline fun <reified T : Any> HttpURLConnection.responseAs(): T {
     checkOkResponse()
     return inputStream.readObject()
 }
 
 /** Analogous to [Thread.join]. */
+@DeleteForDJVM
 fun ExecutorService.join() {
     shutdown() // Do not change to shutdownNow, tests use this method to assert the executor has no more tasks.
     while (!awaitTermination(1, TimeUnit.SECONDS)) {
@@ -498,4 +525,15 @@ fun <T> Iterable<T>.sumByLong(selector: (T) -> Long): Long = this.map { selector
  */
 internal fun SignedTransaction.pushToLoggingContext() {
     MDC.put("tx_id", id.toString())
+}
+
+fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): UntrustworthyData<T> {
+    val payloadData: T = try {
+        val serializer = SerializationDefaults.SERIALIZATION_FACTORY
+        serializer.deserialize(this, type, SerializationDefaults.P2P_CONTEXT)
+    } catch (ex: Exception) {
+        throw IllegalArgumentException("Payload invalid", ex)
+    }
+    return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) }
+            ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a ${payloadData.javaClass.name} ($payloadData)")
 }

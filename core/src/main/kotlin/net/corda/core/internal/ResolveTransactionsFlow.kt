@@ -1,6 +1,7 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.DeleteForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -22,6 +23,7 @@ import kotlin.math.min
  *
  * @return a list of verified [SignedTransaction] objects, in a depth-first order.
  */
+@DeleteForDJVM
 class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
                               private val otherSide: FlowSession) : FlowLogic<Unit>() {
 
@@ -38,6 +40,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
         this.signedTransaction = signedTransaction
     }
 
+    @DeleteForDJVM
     companion object {
         private fun dependencyIDs(stx: SignedTransaction) = stx.inputs.map { it.txhash }.toSet()
 
@@ -47,31 +50,11 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
          * Topologically sorts the given transactions such that dependencies are listed before dependers. */
         @JvmStatic
         fun topologicalSort(transactions: Collection<SignedTransaction>): List<SignedTransaction> {
-            // Construct txhash -> dependent-txs map
-            val forwardGraph = HashMap<SecureHash, HashSet<SignedTransaction>>()
-            transactions.forEach { stx ->
-                stx.inputs.forEach { (txhash) ->
-                    // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is)
-                    forwardGraph.getOrPut(txhash) { LinkedHashSet() }.add(stx)
-                }
+            val sort = TopologicalSort()
+            for (tx in transactions) {
+                sort.add(tx)
             }
-
-            val visited = HashSet<SecureHash>(transactions.size)
-            val result = ArrayList<SignedTransaction>(transactions.size)
-
-            fun visit(transaction: SignedTransaction) {
-                if (transaction.id !in visited) {
-                    visited.add(transaction.id)
-                    forwardGraph[transaction.id]?.forEach(::visit)
-                    result.add(transaction)
-                }
-            }
-
-            transactions.forEach(::visit)
-
-            result.reverse()
-            require(result.size == transactions.size)
-            return result
+            return sort.complete()
         }
     }
 
