@@ -14,34 +14,32 @@ import java.util.*
 
 class CashSelectionMSSQLImpl : AbstractCashSelection() {
     companion object {
-        const val JDBC_DRIVER_NAME = """Microsoft JDBC Driver (\w+.\w+) for SQL Server"""
+        val JDBC_DRIVER_NAME_REGEX = """Microsoft JDBC Driver (\w+.\w+) for SQL Server""".toRegex()
         private val log = contextLogger()
     }
 
     override fun isCompatible(metadata: DatabaseMetaData): Boolean {
-        return  JDBC_DRIVER_NAME.toRegex().matches(metadata.driverName)
-//        return metadata.driverName == JDBC_DRIVER_NAME
+        return  JDBC_DRIVER_NAME_REGEX.matches(metadata.driverName)
     }
 
-    override fun toString() = "${this::class.qualifiedName} for '$JDBC_DRIVER_NAME'"
+    override fun toString() = "${this::class.qualifiedName} for '$JDBC_DRIVER_NAME_REGEX'"
 
-    /**
-     * This is one MSSQL implementation of the query to select just enough cash states to meet the desired amount.
-     * We select the cash states with smaller amounts first so that as the result, we minimize the numbers of
-     * unspent cash states remaining in the vault.
-     *
-     * If there is not enough cash, the query will return an empty resultset, which should signal to the caller
-     * of an exception, since the desired amount is assumed to always > 0.
-     * NOTE: The other two implementations, H2 and PostgresSQL, behave differently in this case - they return
-     * all in the vault instead of nothing. That seems to give the caller an extra burden to verify total returned >= amount.
-     * In addition, extra data fetched results in unnecessary I/O.
-     * Nevertheless, if so desired, we can achieve the same by changing the last FROM clause to
-     *  FROM CTE LEFT JOIN Boundary AS B ON 1 = 1
-     *  WHERE B.seqNo IS NULL OR CTE.seqNo <= B.seqNo
-     *
-     * Common Table Expression and Windowed functions help make the query more readable.
-     * Query plan does index scan on pennies_idx, which may be unavoidable due to the nature of the query.
-     */
+    //      This is one MSSQL implementation of the query to select just enough cash states to meet the desired amount.
+    //      We select the cash states with smaller amounts first so that as the result, we minimize the numbers of
+    //      unspent cash states remaining in the vault.
+    //
+    //      If there is not enough cash, the query will return an empty resultset, which should signal to the caller
+    //      of an exception, since the desired amount is assumed to always > 0.
+    //      NOTE: The other two implementations, H2 and PostgresSQL, behave differently in this case - they return
+    //      all in the vault instead of nothing. That seems to give the caller an extra burden to verify total returned
+    //      >= amount.
+    //      In addition, extra data fetched results in unnecessary I/O.
+    //      Nevertheless, if so desired, we can achieve the same by changing the last FROM clause to
+    //          FROM CTE LEFT JOIN Boundary AS B ON 1 = 1
+    //          WHERE B.seqNo IS NULL OR CTE.seqNo <= B.seqNo
+    //
+    //      Common Table Expression and Windowed functions help make the query more readable.
+    //      Query plan does index scan on pennies_idx, which may be unavoidable due to the nature of the query.
     override fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?, onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean {
         val sb = StringBuilder()
         sb.append( """
