@@ -1,9 +1,12 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.*
+import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Condition
 import org.junit.Test
 import java.io.NotSerializableException
 import java.net.URI
@@ -476,9 +479,10 @@ class EnumEvolvabilityTests {
         val sf = testDefaultFactory()
         assertThatThrownBy {
             SerializationOutput(sf).serialize(C(RejectMultipleRenameTo.A))
-        }.isInstanceOf(NotSerializableException::class.java)
-        .hasToString("Unable to serialize/deserialize net.corda.serialization.internal.amqp.EnumEvolvabilityTests\$RejectMultipleRenameTo: " +
-                "There are multiple transformations to C, which is not allowed")
+        }.isInstanceOfSatisfying(NotSerializableDetailedException::class.java) { ex ->
+            assertThat(ex.reason).isEqualToIgnoringCase("There are multiple transformations to C, which is not allowed")
+            assertThat(ex.message).endsWith(RejectMultipleRenameTo::class.simpleName)
+        }
     }
 
     //
