@@ -142,6 +142,8 @@ class NodeTest {
 
             val node = Node(configuration, rigorousMock<VersionInfo>().also {
                 doReturn(10).whenever(it).platformVersion
+                doReturn("test-vendor").whenever(it).vendor
+                doReturn("1.0").whenever(it).releaseVersion
             }, initialiseSerialization = false)
 
             //this throws an exception with old behaviour
