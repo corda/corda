@@ -1,3 +1,9 @@
+.. highlight:: kotlin
+.. raw:: html
+
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/codesets.js"></script>
+
 Pluggable Serializers for CorDapps
 ==================================
 
@@ -61,44 +67,120 @@ initialisation of all of its properties.
 To be serializable by Corda this would require a custom serializer to be written that can transform the unserializable
 class into a form we can serialize. Continuing the above example, this could be written as follows:
 
-.. sourcecode:: kotlin
+.. container:: codeset
 
-    class ExampleSerializer : SerializationCustomSerializer<Example, ExampleSerializer.Proxy> {
-        /**
-         * This is the actual proxy class that is used as an intermediate representation
-         * of the Example class
-         */
-        data class Proxy(val a: Int, val b: Int)
+    .. sourcecode:: java
 
         /**
-         * This method should be able to take an instance of the type being proxied and
-         * transpose it into that form, instantiating an instance of the Proxy object (it
-         * is this class instance that will be serialized into the byte stream.
+         * The class lacks a public constructor that takes parameters it can associate
+         * with its properties and is thus not serializable by the CORDA serialization
+         * framework.
          */
-        override fun toProxy(obj: Example) = Proxy(obj.a, obj.b)
-
-        /**
-         * This method is used during deserialization. The bytes will have been read
-         * from the serialized blob and an instance of the Proxy class returned, we must
-         * now be able to transform that back into an instance of our original class.
-         *
-         * In our example this requires us to evoke the static *of* method on the
-         * Example class, transforming the serialized properties of the Proxy instance
-         * into a form expected by the construction method of Example.
-         */
-        override fun fromProxy(proxy: Proxy) : Example {
-            val constructorArg = IntArray(2);
-            constructorArg[0] = proxy.a
-            constructorArg[1] = proxy.b
-            return Example.of(constructorArg)
+        static class Example {
+            private Integer a;
+            private Integer b;
+    
+            Integer getA() { return  a; }
+            Integer getB() { return  b; }
+    
+            public Example(List<Integer> l) {
+                this.a = l.get(0);
+                this.b = l.get(1);
+            }
         }
-    }
+    
+        /**
+         * This is the class that will Proxy instances of Example within the serializer
+         */
+        public static class ExampleProxy {
+            /**
+             * These properties will be serialized into the byte stream, this is where we choose how to
+             * represent instances of the object we're proxying. In this example, which is somewhat
+             * contrived, this choice is obvious. In your own classes / 3rd party libraries, however, this
+             * may require more thought.
+             */
+            private Integer proxiedA;
+            private Integer proxiedB;
 
-In the above ``ExampleSerializer`` is the actual serializer that will be loaded by the framework to
-serialize instances of the ``Example`` type.
+            /**
+             * The proxu class itself must be serializable by the framework, it must thus have a constructor that
+             * can be mapped to the properties of the class via getter methods.
+             */
+            public Integer getProxiedA() { return proxiedA; }
+            public Integer getProxiedB() { return  proxiedB; }
 
-``ExampleSerializer.Proxy`` is the intermediate representation used by the framework to represent
-instances of ``Example`` within the wire format.
+            public ExampleProxy(Integer proxiedA, Integer proxiedB) {
+                this.proxiedA = proxiedA;
+                this.proxiedB = proxiedB;
+            }
+        }
+
+        /**
+         * Finally this is the custom serializer that will automatically loaded into the serialization
+         * framework when the CorDapp Jar is scanned at runtime.
+         */
+        public static class ExampleSerializer implements SerializationCustomSerializer<Example, ExampleProxy> {
+
+            /**
+             *  Given an instance of the Example class, create an instance of the proxying object ExampleProxy.
+             *
+             *  Essentially convert Example -> ExampleProxy
+             */
+            public ExampleProxy toProxy(Example obj) {
+                return new ExampleProxy(obj.getA(), obj.getB());
+            }
+
+            /**
+             * Conversely, given an instance of the proxy object, revert that back to an instance of the
+             * type being proxied.
+             *
+             *  Essentially convert ExampleProxy -> Example
+             */
+            public Example fromProxy(ExampleProxy proxy) {
+                List<Integer> l = new ArrayList<Integer>(2);
+                l.add(proxy.getProxiedA());
+                l.add(proxy.getProxiedB());
+                return new Example(l);
+            }
+        }
+
+    .. sourcecode:: kotlin
+
+        class ExampleSerializer : SerializationCustomSerializer<Example, ExampleSerializer.Proxy> {
+            /**
+             * This is the actual proxy class that is used as an intermediate representation
+             * of the Example class
+             */
+            data class Proxy(val a: Int, val b: Int)
+
+            /**
+             * This method should be able to take an instance of the type being proxied and
+             * transpose it into that form, instantiating an instance of the Proxy object (it
+             * is this class instance that will be serialized into the byte stream.
+             */
+            override fun toProxy(obj: Example) = Proxy(obj.a, obj.b)
+
+            /**
+             * This method is used during deserialization. The bytes will have been read
+             * from the serialized blob and an instance of the Proxy class returned, we must
+             * now be able to transform that back into an instance of our original class.
+             *
+             * In our example this requires us to evoke the static "of" method on the
+             * Example class, transforming the serialized properties of the Proxy instance
+             * into a form expected by the construction method of Example.
+             */
+            override fun fromProxy(proxy: Proxy) : Example {
+                val constructorArg = IntArray(2);
+                constructorArg[0] = proxy.a
+                constructorArg[1] = proxy.b
+                return Example.of(constructorArg)
+            }
+        }
+
+In the above examples
+
+- ``ExampleSerializer`` is the actual serializer that will be loaded by the framework to serialize instances of the ``Example`` type.
+- ``ExampleSerializer.Proxy``, in the Kotlin example, and ``ExampleProxy`` in the Jaba example, is the intermediate representation used by the framework to represent instances of ``Example`` within the wire format.
 
 The Proxy Object
 ----------------
