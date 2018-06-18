@@ -427,14 +427,14 @@ public static final class net.corda.core.contracts.AmountTransfer$Companion exte
 ##
 @CordaSerializable
 public interface net.corda.core.contracts.Attachment extends net.corda.core.contracts.NamedByHash
-  public abstract void extractFile(String, java.io.OutputStream)
+  public void extractFile(String, java.io.OutputStream)
   @NotNull
   public abstract java.util.List<net.corda.core.identity.Party> getSigners()
   public abstract int getSize()
   @NotNull
   public abstract java.io.InputStream open()
   @NotNull
-  public abstract java.util.jar.JarInputStream openAsJAR()
+  public java.util.jar.JarInputStream openAsJAR()
 ##
 @DoNotImplement
 @CordaSerializable
@@ -526,7 +526,6 @@ public final class net.corda.core.contracts.ContractAttachment extends java.lang
   public <init>(net.corda.core.contracts.Attachment, String)
   public <init>(net.corda.core.contracts.Attachment, String, java.util.Set<String>)
   public <init>(net.corda.core.contracts.Attachment, String, java.util.Set<String>, String)
-  public void extractFile(String, java.io.OutputStream)
   @NotNull
   public final java.util.Set<String> getAdditionalContracts()
   @NotNull
@@ -544,8 +543,6 @@ public final class net.corda.core.contracts.ContractAttachment extends java.lang
   public final String getUploader()
   @NotNull
   public java.io.InputStream open()
-  @NotNull
-  public java.util.jar.JarInputStream openAsJAR()
   @NotNull
   public String toString()
 ##
@@ -4613,7 +4610,6 @@ public static final class net.corda.core.transactions.ContractUpgradeFilteredTra
 @DoNotImplement
 public final class net.corda.core.transactions.ContractUpgradeLedgerTransaction extends net.corda.core.transactions.FullTransaction implements net.corda.core.transactions.TransactionWithSignatures
   public <init>(java.util.List<? extends net.corda.core.contracts.StateAndRef<? extends net.corda.core.contracts.ContractState>>, net.corda.core.identity.Party, net.corda.core.contracts.Attachment, String, net.corda.core.contracts.Attachment, net.corda.core.crypto.SecureHash, net.corda.core.contracts.PrivacySalt, java.util.List<net.corda.core.crypto.TransactionSignature>, net.corda.core.node.NetworkParameters)
-  public void checkSignaturesAreValid()
   @NotNull
   public final java.util.List<net.corda.core.contracts.StateAndRef<net.corda.core.contracts.ContractState>> component1()
   @NotNull
@@ -4642,8 +4638,6 @@ public final class net.corda.core.transactions.ContractUpgradeLedgerTransaction 
   @NotNull
   public final net.corda.core.contracts.Attachment getLegacyContractAttachment()
   @NotNull
-  public java.util.Set<java.security.PublicKey> getMissingSigners()
-  @NotNull
   public net.corda.core.identity.Party getNotary()
   @NotNull
   public java.util.List<net.corda.core.contracts.TransactionState<net.corda.core.contracts.ContractState>> getOutputs()
@@ -4659,9 +4653,6 @@ public final class net.corda.core.transactions.ContractUpgradeLedgerTransaction 
   public final String getUpgradedContractClassName()
   public int hashCode()
   public String toString()
-  public void verifyRequiredSignatures()
-  public void verifySignaturesExcept(java.util.Collection<? extends java.security.PublicKey>)
-  public void verifySignaturesExcept(java.security.PublicKey...)
 ##
 @DoNotImplement
 @CordaSerializable
@@ -4879,7 +4870,6 @@ public final class net.corda.core.transactions.MissingContractAttachments extend
 @DoNotImplement
 public final class net.corda.core.transactions.NotaryChangeLedgerTransaction extends net.corda.core.transactions.FullTransaction implements net.corda.core.transactions.TransactionWithSignatures
   public <init>(java.util.List<? extends net.corda.core.contracts.StateAndRef<? extends net.corda.core.contracts.ContractState>>, net.corda.core.identity.Party, net.corda.core.identity.Party, net.corda.core.crypto.SecureHash, java.util.List<net.corda.core.crypto.TransactionSignature>)
-  public void checkSignaturesAreValid()
   @NotNull
   public final java.util.List<net.corda.core.contracts.StateAndRef<net.corda.core.contracts.ContractState>> component1()
   @NotNull
@@ -4900,8 +4890,6 @@ public final class net.corda.core.transactions.NotaryChangeLedgerTransaction ext
   @NotNull
   public java.util.List<String> getKeyDescriptions(java.util.Set<? extends java.security.PublicKey>)
   @NotNull
-  public java.util.Set<java.security.PublicKey> getMissingSigners()
-  @NotNull
   public final net.corda.core.identity.Party getNewNotary()
   @NotNull
   public net.corda.core.identity.Party getNotary()
@@ -4913,9 +4901,6 @@ public final class net.corda.core.transactions.NotaryChangeLedgerTransaction ext
   public java.util.List<net.corda.core.crypto.TransactionSignature> getSigs()
   public int hashCode()
   public String toString()
-  public void verifyRequiredSignatures()
-  public void verifySignaturesExcept(java.util.Collection<? extends java.security.PublicKey>)
-  public void verifySignaturesExcept(java.security.PublicKey...)
 ##
 @DoNotImplement
 @CordaSerializable
@@ -4958,7 +4943,6 @@ public final class net.corda.core.transactions.SignedTransaction extends java.la
   public <init>(net.corda.core.transactions.CoreTransaction, java.util.List<net.corda.core.crypto.TransactionSignature>)
   @NotNull
   public final net.corda.core.transactions.FilteredTransaction buildFilteredTransaction(java.util.function.Predicate<Object>)
-  public void checkSignaturesAreValid()
   @NotNull
   public final net.corda.core.serialization.SerializedBytes<net.corda.core.transactions.CoreTransaction> component1()
   @NotNull
@@ -4974,8 +4958,6 @@ public final class net.corda.core.transactions.SignedTransaction extends java.la
   public final java.util.List<net.corda.core.contracts.StateRef> getInputs()
   @NotNull
   public java.util.ArrayList<String> getKeyDescriptions(java.util.Set<? extends java.security.PublicKey>)
-  @NotNull
-  public java.util.Set<java.security.PublicKey> getMissingSigners()
   @Nullable
   public final net.corda.core.identity.Party getNotary()
   @NotNull
@@ -5012,9 +4994,6 @@ public final class net.corda.core.transactions.SignedTransaction extends java.la
   public String toString()
   public final void verify(net.corda.core.node.ServiceHub)
   public final void verify(net.corda.core.node.ServiceHub, boolean)
-  public void verifyRequiredSignatures()
-  public void verifySignaturesExcept(java.util.Collection<? extends java.security.PublicKey>)
-  public void verifySignaturesExcept(java.security.PublicKey...)
   @NotNull
   public final net.corda.core.transactions.SignedTransaction withAdditionalSignature(java.security.KeyPair, net.corda.core.crypto.SignatureMetadata)
   @NotNull
@@ -5115,18 +5094,18 @@ public class net.corda.core.transactions.TransactionBuilder extends java.lang.Ob
 ##
 @DoNotImplement
 public interface net.corda.core.transactions.TransactionWithSignatures extends net.corda.core.contracts.NamedByHash
-  public abstract void checkSignaturesAreValid()
+  public void checkSignaturesAreValid()
   @NotNull
   public abstract java.util.List<String> getKeyDescriptions(java.util.Set<? extends java.security.PublicKey>)
   @NotNull
-  public abstract java.util.Set<java.security.PublicKey> getMissingSigners()
+  public java.util.Set<java.security.PublicKey> getMissingSigners()
   @NotNull
   public abstract java.util.Set<java.security.PublicKey> getRequiredSigningKeys()
   @NotNull
   public abstract java.util.List<net.corda.core.crypto.TransactionSignature> getSigs()
-  public abstract void verifyRequiredSignatures()
-  public abstract void verifySignaturesExcept(java.util.Collection<? extends java.security.PublicKey>)
-  public abstract void verifySignaturesExcept(java.security.PublicKey...)
+  public void verifyRequiredSignatures()
+  public void verifySignaturesExcept(java.util.Collection<? extends java.security.PublicKey>)
+  public void verifySignaturesExcept(java.security.PublicKey...)
 ##
 @DoNotImplement
 @CordaSerializable
