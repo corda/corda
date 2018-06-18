@@ -655,6 +655,9 @@ class DriverDSLImpl(
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
 
+            // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
+            // true because we don't want orphaned processes in the case that the parent process is terminated by the
+            // user, for example when the `tools:explorer:runDemoNodes` gradle task is stopped with CTRL-C.
             shutdownManager.registerProcessShutdown(process)
 
             if (waitForAllNodesToFinish) {
