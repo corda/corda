@@ -21,16 +21,16 @@ Serializers must
  * Inherit from ``net.corda.core.serialization.SerializationCustomSerializer``
  * Provide a proxy class to transform the object to and from
  * Implement the ``toProxy`` and ``fromProxy`` methods
- * Be either included into CorDapp Jar or made known to the running process via ``amqp.custom.serialization.scanSpec``
-   system property. This system property may be necessary to be able to discover custom serializer in the classpath. At a minimum the value
-   of the property should include comma separated set of packages where custom serializers located. Full syntax includes
-   scanning specification as defined by: `<http://github.com/lukehutch/fast-classpath-scanner/wiki/2.-Constructor#scan-spec>`
+ * Be either included into the CorDapp Jar or made known to the running process via the ``amqp.custom.serialization.scanSpec``
+   system property. This system property may be necessary to be able to discover custom serializer in the classpath.
+   At a minimum the value of the property should include comma separated set of packages where custom serializers located.
+   Full syntax includes scanning specification as defined by: `<http://github.com/lukehutch/fast-classpath-scanner/wiki/2.-Constructor#scan-spec>`
 
 Serializers inheriting from ``SerializationCustomSerializer`` have to implement two methods and two types.
 
 Example
 -------
-Consider this example class:
+Consider the following class:
 
 .. sourcecode:: java
 
@@ -38,6 +38,9 @@ Consider this example class:
         private final Int a
         private final Int b
 
+        // Because this is marked private the serialization framework will not
+        // consider it when looking to see which constructor should be used
+        // when serializing instances of this class.
         private Example(Int a, Int b) {
             this.a = a;
             this.b = b;
@@ -52,22 +55,89 @@ Consider this example class:
 Without a custom serializer we cannot serialize this class as there is no public constructor that facilitates the
 initialisation of all of its properties.
 
-To be serializable by Corda this would require a custom serializer as follows:
+.. note:: This is clearly a contrived example, simply making the constructor public would alleviate the issues.
+    However, for the purposes of this example we are assuming that for external reasons this cannot be done.
+
+To be serializable by Corda this would require a custom serializer to be written that can transform the unserializable
+class into a form we can serialize. Continuing the above example, this could be written as follows:
 
 .. sourcecode:: kotlin
 
     class ExampleSerializer : SerializationCustomSerializer<Example, ExampleSerializer.Proxy> {
+        /**
+         * This is the actual proxy class that is used as an intermediate representation
+         * of the Example class
+         */
         data class Proxy(val a: Int, val b: Int)
 
+        /**
+         * This method should be able to take an instance of the type being proxied and
+         * transpose it into that form, instantiating an instance of the Proxy object (it
+         * is this class instance that will be serialized into the byte stream.
+         */
         override fun toProxy(obj: Example) = Proxy(obj.a, obj.b)
 
+        /**
+         * This method is used during deserialization. The bytes will have been read
+         * from the serialized blob and an instance of the Proxy class returned, we must
+         * now be able to transform that back into an instance of our original class.
+         *
+         * In our example this requires us to evoke the static *of* method on the
+         * Example class, transforming the serialized properties of the Proxy instance
+         * into a form expected by the construction method of Example.
+         */
         override fun fromProxy(proxy: Proxy) : Example {
             val constructorArg = IntArray(2);
             constructorArg[0] = proxy.a
             constructorArg[1] = proxy.b
-            return Example.create(constructorArg)
+            return Example.of(constructorArg)
         }
     }
+
+In the above ``ExampleSerializer`` is the actual serializer that will be loaded by the framework to
+serialize instances of the ``Example`` type.
+
+``ExampleSerializer.Proxy`` is the intermediate representation used by the framework to represent
+instances of ``Example`` within the wire format.
+
+The Proxy Object
+----------------
+
+The proxy object should be thought of as an intermediate representation that the serialization framework
+can reason about. One is being written for a class because, for some reason, that class cannot be
+introspected successfully but that framework. It is therefore important to note that the proxy class must
+only contain elements that the framework can reason about.
+
+The proxy class itself is distinct from the proxy serializer. The serializer must refer to the unserializable
+type in the ``toProxy`` and ``fromProxy`` methods.
+
+For example, the first thought a developer may have when implementing a proxy class is to simply *wrap* an
+instance of the object being proxied. This is shown below
+
+.. sourcecode:: kotlin
+
+    class ExampleSerializer : SerializationCustomSerializer<Example, ExampleSerializer.Proxy> {
+        /**
+         * In this example, we are trying to wrap the Example type to make it serializable
+         */
+        data class Proxy(val e: Example)
+
+        override fun toProxy(obj: Example) = Proxy(obj)
+
+        override fun fromProxy(proxy: Proxy) : Example {
+            return proxy.e
+        }
+    }
+
+However, this will not work because what we've created is a recursive loop whereby synthesising a serializer
+for the ``Example`` type requires synthesising one for ``ExampleSerializer.Proxy``. However, that requires
+one for ``Example`` and so on and so forth until we get a ``StackOverflowException``.
+
+The solution, as shown initially, is to create the intermediate form (the Proxy object) purely in terms
+the serialization framework can reason about.
+
+.. important:: When composing a proxy object for a class be aware that everything within that structure will be written
+    into the serialized byte stream.
 
 Whitelisting
 ------------
