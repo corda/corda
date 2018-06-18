@@ -124,6 +124,14 @@ Creating the Deterministic SDK
                  configure IntelliJ to use this location as well. However, you should also be aware that IntelliJ SDKs
                  are available for *all* projects to use.
 
+                 To create this deterministic JDK image, execute the following:
+
+                 .. code-block:: bash
+
+                     $ gradlew jdk8u-deterministic:copyJdk
+
+                 ..
+
     #. While IntelliJ is *not* running, locate the ``config/options/jdk.table.xml`` file in IntelliJ's configuration
        directory. Add an empty ``<jdk>`` section to this file:
 
@@ -133,7 +141,7 @@ Creating the Deterministic SDK
                <name value="1.8 (Deterministic)"/>
                <type value="JavaSDK"/>
                <version value="java version &quot;1.8.0&quot;"/>
-               <homePath value=".. path to your JDK Home directory .."/>
+               <homePath value=".. path to the deterministic JDK directory .."/>
                <roots>
                </roots>
            </jdk>
