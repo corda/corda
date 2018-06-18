@@ -64,13 +64,16 @@ dependencies {
 }
 
 // Run JMeter as server process/agent on current host.
-task(runServer, dependsOn: 'classes', type: JavaExec) {
+task runServer(dependsOn: 'classes', type: JavaExec) {
+    def searchPaths = file("$rootDir/build/search_paths.txt")
+    doFirst {
+        mkdir rootProject.buildDir
+        searchPaths.text = configurations.runtime.files.join(";")
+    }
+
     classpath = sourceSets.main.runtimeClasspath
     main = 'com.r3.corda.jmeter.Launcher'
-    def file = new File("$rootDir/build/search_paths.txt")
-    file.createNewFile()
-    file.text = "${project(':tools:jmeter').configurations.runtime.files.join(";")}"
-    systemProperty "search_paths_file", file.toString()
+    systemProperty "search_paths_file", searchPaths.toString()
     systemProperty "java.rmi.server.hostname", "0.0.0.0"
     systemProperty "jmeter.home", sourceSets.main.resources.getSrcDirs().first().getPath()
     // If you want to debug: jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
@@ -80,7 +83,7 @@ task(runServer, dependsOn: 'classes', type: JavaExec) {
 }
 
 // Just start ssh tunnels, without JMeter.
-task(runSsh, dependsOn: 'classes', type: JavaExec) {
+task runSsh(dependsOn: 'classes', type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'com.r3.corda.jmeter.Ssh'
     if ( project.hasProperty("sshUser") ){
@@ -96,7 +99,7 @@ task(runSsh, dependsOn: 'classes', type: JavaExec) {
 
 // Use the driver to launch 2 local nodes and the notary running the perftestcordapp.
 // To use for development of samplers and flows locally.
-task(runDriver, dependsOn: 'classes', type: JavaExec) {
+task runDriver(dependsOn: 'classes', type: JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     main = 'com.r3.corda.jmeter.StartLocalPerfCorDapp'
     standardInput = System.in
@@ -109,10 +112,12 @@ task(runDriver, dependsOn: 'classes', type: JavaExec) {
 // e.g. ./gradlew tools:jmeter:run -PjmeterHosts="['perf-notary.corda.r3cev.com', 'perf-node-1.corda.r3cev.com']"
 // Each host is paired with local host ports listed in remote_hosts of jmeter.properties
 run {
-    def file = new File("$rootDir/build/search_paths.txt")
-    file.createNewFile()
-    file.text = "${project(':tools:jmeter').configurations.runtime.files.join(";")}"
-    systemProperty "search_paths_file", file.toString()
+    def searchPaths = file("$rootDir/build/search_paths.txt")
+    doFirst {
+        mkdir rootProject.buildDir
+        searchPaths.text = configurations.runtime.files.join(";")
+    }
+    systemProperty "search_paths_file", searchPaths.toString()
     systemProperty "java.rmi.server.hostname", "localhost"
     systemProperty "jmeter.home", sourceSets.main.resources.getSrcDirs().first().getPath()
     // If you want to debug: jvmArgs += "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
@@ -144,14 +149,12 @@ jar {
 // For building a runnable jar with no other dependencies for remote JMeter slave server, that has Corda code on classpath.
 // Run with: java -jar jmeter-corda-<version>.jar
 // No additional args required but will be passed if specified.
-task buildJMeterJAR(type: FatCapsule, dependsOn: 'jar') {
+task buildJMeterJAR(type: FatCapsule) {
     applicationClass 'com.r3.corda.jmeter.Launcher'
     archiveName "jmeter-corda-${corda_release_version}.jar"
-    applicationSource = files(
-            project(':tools:jmeter').jar
-    )
+    applicationSource = jar
     from 'NOTICE' // Copy CDDL notice
-    from("$rootDir/tools/jmeter/build/resources/main") {
+    from("$buildDir/resources/main") {
         include "log4j2.xml"
         include "*.properties"
     }
