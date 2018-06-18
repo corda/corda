@@ -63,7 +63,7 @@ object Utilities {
     /**
      * Get the path of where any generated code will be placed. Create the directory if it does not exist.
      */
-    fun getCodePath(): Path {
+    fun createCodePath(): Path {
         val root = Paths.get("tmp")
                 .resolve("net")
                 .resolve("corda")
@@ -83,21 +83,18 @@ object Utilities {
     /**
      * The path of the executing JAR.
      */
-    val jarPath: String
-        get() = Utilities::class.java.protectionDomain.codeSource.location.toURI().path
+    val jarPath: String = Utilities::class.java.protectionDomain.codeSource.location.toURI().path
 
 
     /**
      * The path of the current working directory.
      */
-    val workingDirectory: Path
-        get() = Paths.get(System.getProperty("user.dir"))
+    val workingDirectory: Path = Paths.get(System.getProperty("user.dir"))
 
     /**
      * The class path for the current execution context.
      */
-    val userClassPath: String
-        get() = System.getProperty("java.class.path")
+    val userClassPath: String = System.getProperty("java.class.path")
 
     /**
      * Get a reference of each concrete class that implements interface or class [T].

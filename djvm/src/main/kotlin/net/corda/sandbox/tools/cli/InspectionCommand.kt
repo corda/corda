@@ -1,7 +1,7 @@
 package net.corda.sandbox.tools.cli
 
 import net.corda.sandbox.source.ClassSource
-import net.corda.sandbox.tools.Utilities.getCodePath
+import net.corda.sandbox.tools.Utilities.createCodePath
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import java.nio.file.Files
@@ -33,7 +33,7 @@ class InspectionCommand : ClassCommand() {
 
         for (classSource in sources) {
             val loadedClass = executor.load(classSource)
-            val sourceClass = getCodePath().resolve("${loadedClass.type.simpleName}.class")
+            val sourceClass = createCodePath().resolve("${loadedClass.type.simpleName}.class")
             val originalClass = Files.createTempFile("sandbox-", ".java")
             val transformedClass = Files.createTempFile("sandbox-", ".java")
 

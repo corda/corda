@@ -19,7 +19,7 @@ class TreeCommand : CommandBase() {
             printError("No classes have been created so far. Run `djvm new` to get started.")
             return false
         }
-        ProcessBuilder("tree", ".").apply {
+        ProcessBuilder("find", ".", "-type", "f").apply {
             inheritIO()
             environment().putAll(System.getenv())
             directory(path.toFile())

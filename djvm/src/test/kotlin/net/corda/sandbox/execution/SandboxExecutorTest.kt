@@ -79,6 +79,41 @@ class SandboxExecutorTest : TestBase() {
     }
 
     @Test
+    fun `can detect breached threshold`() = sandbox(DEFAULT, ExecutionProfile.DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<TestThresholdBreach>(0) }
+                .withMessageContaining("terminated due to excessive use of looping")
+    }
+
+    class TestThresholdBreach : SandboxedRunnable<Int, Int> {
+        private var x = 0
+        override fun run(input: Int): Int? {
+            for (i in 0..1_000_000) {
+                x += 1
+            }
+            return x
+        }
+    }
+
+    @Test
+    fun `can detect stack overflow`() = sandbox(DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<TestStackOverflow>(0) }
+                .withMessageContaining("Stack overflow")
+    }
+
+    class TestStackOverflow : SandboxedRunnable<Int, Int> {
+        override fun run(input: Int): Int? {
+            return a()
+        }
+
+        private fun a(): Int = b()
+        private fun b(): Int = a()
+    }
+
+    @Test
     fun `cannot execute runnable that references non-deterministic code`() = sandbox(DEFAULT) {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)

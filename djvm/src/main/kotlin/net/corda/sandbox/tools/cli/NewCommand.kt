@@ -1,7 +1,7 @@
 package net.corda.sandbox.tools.cli
 
 import net.corda.sandbox.tools.Utilities.baseName
-import net.corda.sandbox.tools.Utilities.getCodePath
+import net.corda.sandbox.tools.Utilities.createCodePath
 import net.corda.sandbox.tools.Utilities.getFiles
 import net.corda.sandbox.tools.Utilities.openOptions
 import picocli.CommandLine.*
@@ -37,7 +37,7 @@ class NewCommand : CommandBase() {
     override fun validateArguments() = files.isNotEmpty()
 
     override fun handleCommand(): Boolean {
-        val codePath = getCodePath()
+        val codePath = createCodePath()
         val files = files.getFiles { codePath.resolve(it) }
         for (file in files) {
             try {

@@ -120,7 +120,6 @@ class ReferenceValidator(
      * Get a class from the class hierarchy by its binary name.
      */
     private fun getClass(state: State, className: String): Class? {
-        val arrayTypeExtractor = Regex("^\\[*L([^;]+);$")
         val name = if (configuration.classModule.isArray(className)) {
             val arrayType = arrayTypeExtractor.find(className)?.groupValues?.get(1)
             when (arrayType) {
@@ -203,7 +202,11 @@ class ReferenceValidator(
     }
 
     private companion object {
+
         private val logger = loggerFor<ReferenceValidator>()
+
+        private val arrayTypeExtractor = "^\\[*L([^;]+);$".toRegex()
+
     }
 
 }

@@ -44,9 +44,9 @@ For a program running on the JVM, non-determinism could be introduced by a range
 
   - **Halting criteria**, *e.g.*, different decisions about when to terminate long running programs.
 
-  - **Hash-codes**, or more specifically ``Object.hashCode()``, which is typically implemented either by returning a pointer address or by assigning the
-    object a random number. This could, for instance, surface as different iteration orders over hash maps and hash
-    sets, or be used as non-pure input into arbitrary expressions.
+  - **Hash-codes**, or more specifically ``Object.hashCode()``, which is typically implemented either by returning a
+    pointer address or by assigning the object a random number. This could, for instance, surface as different iteration
+    orders over hash maps and hash sets, or be used as non-pure input into arbitrary expressions.
 
   - Differences in hardware **floating point arithmetic**.
 
@@ -143,9 +143,8 @@ Only Allow Explicitly Whitelisted Runtime API
 
 Ensures that constant pool references are mapped against a verified subset of the Java runtime libraries. Said subset
 excludes functionality that contract code should not have access to, such as file I/O or external entropy. In future
-versions, this whitelist will be trimmed down to the bare minimum needed, essentially a subset of ``java.lang``, so
-that also the Java runtime libraries themselves will be subjected to the same amount of scrutiny that the rest of the
-code is at the moment.
+versions, this whitelist will be trimmed down to the bare minimum needed so that also the Java runtime libraries
+themselves will be subjected to the same amount of scrutiny that the rest of the code is at the moment.
 
 .. warning::
     Currently, the surface of the whitelist is quite broad and is also incorporating the standard libraries for Kotlin.
@@ -167,6 +166,9 @@ Forbids native methods as these provide the user access into operating system fu
 network requests, general hardware interaction, threading, *etc.* These all constitute sources of non-determinism, and
 allowing such code to be called arbitrarily from the JVM would require deterministic guarantees on the native machine
 code level. This falls out of scope for the DJVM.
+
+Java runtime classes that call into native code and that are needed from within the sandbox environment, can be
+whitelisted explicitly.
 
 
 Disallow Finalizer Methods
@@ -219,16 +221,16 @@ deterministically terminate code that has run for an unacceptably long amount of
 memory. Types of expensive byte code include method invocation, memory allocation, branching and exception throwing.
 
 The cost instrumentation strategy used is a simple one: just counting byte code that are known to be expensive to
-execute. Method size can be limited and jumps count towards the budget, so such a strategy is guaranteed to eventually
-terminate. However it is still possible to construct byte code sequences by hand that take excessive amounts of time to
-execute. The cost instrumentation is designed to ensure that infinite loops are terminated and that if the cost of
-verifying a transaction becomes unexpectedly large (*e.g.*, contains algorithms with complexity exponential in
-transaction size) that all nodes agree precisely on when to quit. It is not intended as a protection against denial of
-service attacks. If a node is sending you transactions that appear designed to simply waste your CPU time then simply
-blocking that node is sufficient to solve the problem, given the lack of global broadcast.
+execute. The methods can be limited in size and jumps count towards the costing budget, allowing us to determine a
+consistent halting criteria. However it is still possible to construct byte code sequences by hand that take excessive
+amounts of time to execute. The cost instrumentation is designed to ensure that infinite loops are terminated and that
+if the cost of verifying a transaction becomes unexpectedly large (*e.g.*, contains algorithms with complexity
+exponential in transaction size) that all nodes agree precisely on when to quit. It is not intended as a protection
+against denial of service attacks. If a node is sending you transactions that appear designed to simply waste your CPU
+time then simply blocking that node is sufficient to solve the problem, given the lack of global broadcast.
 
 The budgets are separate per operation code type, so there is no unified cost model. Additionally the instrumentation is
-high overhead. A more sophisticated design would be to statically calculate byte code costs as much as possible ahead of
+high overhead. A more sophisticated design would be to calculate byte code costs statically as much as possible ahead of
 time, by instrumenting only the entry point of 'accounting blocks', *i.e.*, runs of basic blocks that end with either a
 method return or a backwards jump. Because only an abstract cost matters (this is not a profiler tool) and because the
 limits are expected to bet set relatively high, there is no need to instrument every basic block. Using the max of both
