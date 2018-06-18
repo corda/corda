@@ -76,14 +76,14 @@ class into a form we can serialize. Continuing the above example, this could be 
          * with its properties and is thus not serializable by the CORDA serialization
          * framework.
          */
-        static class Example {
-            private Integer a;
-            private Integer b;
+        class Example {
+            private int a;
+            private int b;
     
-            Integer getA() { return  a; }
-            Integer getB() { return  b; }
+            public int getA() { return  a; }
+            public int getB() { return  b; }
     
-            public Example(List<Integer> l) {
+            public Example(List<int> l) {
                 this.a = l.get(0);
                 this.b = l.get(1);
             }
@@ -92,24 +92,24 @@ class into a form we can serialize. Continuing the above example, this could be 
         /**
          * This is the class that will Proxy instances of Example within the serializer
          */
-        public static class ExampleProxy {
+        public class ExampleProxy {
             /**
              * These properties will be serialized into the byte stream, this is where we choose how to
              * represent instances of the object we're proxying. In this example, which is somewhat
              * contrived, this choice is obvious. In your own classes / 3rd party libraries, however, this
              * may require more thought.
              */
-            private Integer proxiedA;
-            private Integer proxiedB;
+            private int proxiedA;
+            private int proxiedB;
 
             /**
-             * The proxu class itself must be serializable by the framework, it must thus have a constructor that
+             * The proxy class itself must be serializable by the framework, it must thus have a constructor that
              * can be mapped to the properties of the class via getter methods.
              */
-            public Integer getProxiedA() { return proxiedA; }
-            public Integer getProxiedB() { return  proxiedB; }
+            public int getProxiedA() { return proxiedA; }
+            public int getProxiedB() { return  proxiedB; }
 
-            public ExampleProxy(Integer proxiedA, Integer proxiedB) {
+            public ExampleProxy(int proxiedA, int proxiedB) {
                 this.proxiedA = proxiedA;
                 this.proxiedB = proxiedB;
             }
@@ -119,7 +119,7 @@ class into a form we can serialize. Continuing the above example, this could be 
          * Finally this is the custom serializer that will automatically loaded into the serialization
          * framework when the CorDapp Jar is scanned at runtime.
          */
-        public static class ExampleSerializer implements SerializationCustomSerializer<Example, ExampleProxy> {
+        public class ExampleSerializer implements SerializationCustomSerializer<Example, ExampleProxy> {
 
             /**
              *  Given an instance of the Example class, create an instance of the proxying object ExampleProxy.
@@ -137,7 +137,7 @@ class into a form we can serialize. Continuing the above example, this could be 
              *  Essentially convert ExampleProxy -> Example
              */
             public Example fromProxy(ExampleProxy proxy) {
-                List<Integer> l = new ArrayList<Integer>(2);
+                List<int> l = new ArrayList<int>(2);
                 l.add(proxy.getProxiedA());
                 l.add(proxy.getProxiedB());
                 return new Example(l);
@@ -180,7 +180,7 @@ class into a form we can serialize. Continuing the above example, this could be 
 In the above examples
 
 - ``ExampleSerializer`` is the actual serializer that will be loaded by the framework to serialize instances of the ``Example`` type.
-- ``ExampleSerializer.Proxy``, in the Kotlin example, and ``ExampleProxy`` in the Jaba example, is the intermediate representation used by the framework to represent instances of ``Example`` within the wire format.
+- ``ExampleSerializer.Proxy``, in the Kotlin example, and ``ExampleProxy`` in the Java example, is the intermediate representation used by the framework to represent instances of ``Example`` within the wire format.
 
 The Proxy Object
 ----------------
