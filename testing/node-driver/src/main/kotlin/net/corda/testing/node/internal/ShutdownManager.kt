@@ -14,6 +14,11 @@ import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
 class ShutdownManager(private val executorService: ExecutorService) {
+
+    init {
+        addShutdownHook { shutdown() }
+    }
+
     private class State {
         val registeredShutdowns = ArrayList<CordaFuture<() -> Unit>>()
         var isShuttingDown = false
@@ -71,7 +76,6 @@ class ShutdownManager(private val executorService: ExecutorService) {
     fun registerShutdown(shutdown: () -> Unit) = registerShutdown(doneFuture(shutdown))
 
     fun registerProcessShutdown(process: Process) {
-        addShutdownHook { process.destroy() }
         registerShutdown {
             process.destroy()
             /** Wait 5 seconds, then [Process.destroyForcibly] */
