@@ -200,23 +200,27 @@ data class NodeConfigurationImpl(
 
     }
 
-    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword))
+    private val actualRpcSettings: NodeRpcSettings
 
-    private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: BrokerRpcSslOptions): NodeRpcOptions {
-        return when {
-            explicitAddress != null -> {
-                require(settings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
+    init {
+        actualRpcSettings = when {
+            rpcAddress != null -> {
+                require(rpcSettings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
                 logger.warn("Top-level declaration of property 'rpcAddress' is deprecated. Please use 'rpcSettings.address' instead.")
 
-                settings.copy(address = explicitAddress)
+                rpcSettings.copy(address = rpcAddress)
             }
             else -> {
-                settings.address ?: throw ConfigException.Missing("rpcSettings.address")
-                settings
+                rpcSettings.address ?: throw ConfigException.Missing("rpcSettings.address")
+                rpcSettings
             }
-        }.asOptions(fallbackSslOptions)
+        }
     }
 
+    override val rpcOptions: NodeRpcOptions
+        get() {
+            return actualRpcSettings.asOptions(BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword))
+        }
 
     private fun validateTlsCertCrlConfig(): List<String> {
         val errors = mutableListOf<String>()
@@ -239,7 +243,12 @@ data class NodeConfigurationImpl(
     override fun validate(): List<String> {
         val errors = mutableListOf<String>()
         errors += validateDevModeOptions()
-        errors += validateRpcOptions(rpcOptions)
+        val rpcSettingsErrors = validateRpcSettings(rpcSettings)
+        errors += rpcSettingsErrors
+        if (rpcSettingsErrors.isEmpty()) {
+            // Forces lazy property to initialise in order to throw exceptions
+            rpcOptions
+        }
         errors += validateTlsCertCrlConfig()
         errors += validateNetworkServices()
         errors += validateH2Settings()
@@ -254,7 +263,7 @@ data class NodeConfigurationImpl(
         return errors
     }
 
-    private fun validateRpcOptions(options: NodeRpcOptions): List<String> {
+    private fun validateRpcSettings(options: NodeRpcSettings): List<String> {
         val errors = mutableListOf<String>()
         if (options.address != null) {
             if (!options.useSsl && options.adminAddress == null) {
