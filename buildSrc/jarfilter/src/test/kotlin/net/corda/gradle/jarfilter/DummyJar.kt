@@ -88,8 +88,7 @@ class DummyJar(
                     jar.write(arrayOfJunk(DATA_SIZE))
 
                     // One uncompressed text file
-                    val text = """
-Jar: ${_path.toAbsolutePath()}
+                    val text = """Jar: ${_path.toAbsolutePath()}
 Class: ${testClass.name}
 """.toByteArray()
                     jar.putNextEntry(uncompressed("comment.txt", text))

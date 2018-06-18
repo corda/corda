@@ -68,7 +68,7 @@ class NodeTest {
 
     @Test
     fun `generateAndSaveNodeInfo works`() {
-        val configuration = createConfig()
+        val configuration = createConfig(ALICE_NAME)
         val info = VersionInfo(789, "3.0", "SNAPSHOT", "R3")
         configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use { database ->
             val node = Node(configuration, info, initialiseSerialization = false)
@@ -78,7 +78,7 @@ class NodeTest {
 
     @Test
     fun `clear network map cache works`() {
-        val configuration = createConfig()
+        val configuration = createConfig(ALICE_NAME)
         val (nodeInfo, _) = createNodeInfoAndSigned(ALICE_NAME)
         configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
             it.transaction {
@@ -103,6 +103,54 @@ class NodeTest {
         }
     }
 
+    @Test
+    fun `Node can start with multiple keypairs for it's identity`() {
+        val configuration = createConfig(ALICE_NAME)
+        val (nodeInfo1, _) = createNodeInfoAndSigned(ALICE_NAME)
+        val (nodeInfo2, _) = createNodeInfoAndSigned(ALICE_NAME)
+
+
+        val persistentNodeInfo2 = NodeInfoSchemaV1.PersistentNodeInfo(
+                id = 0,
+                hash = nodeInfo2.serialize().hash.toString(),
+                addresses = nodeInfo2.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
+                legalIdentitiesAndCerts = nodeInfo2.legalIdentitiesAndCerts.mapIndexed { idx, elem ->
+                    NodeInfoSchemaV1.DBPartyAndCertificate(elem, isMain = idx == 0)
+                },
+                platformVersion = nodeInfo2.platformVersion,
+                serial = nodeInfo2.serial
+        )
+
+        val persistentNodeInfo1 = NodeInfoSchemaV1.PersistentNodeInfo(
+                id = 0,
+                hash = nodeInfo1.serialize().hash.toString(),
+                addresses = nodeInfo1.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
+                legalIdentitiesAndCerts = nodeInfo1.legalIdentitiesAndCerts.mapIndexed { idx, elem ->
+                    NodeInfoSchemaV1.DBPartyAndCertificate(elem, isMain = idx == 0)
+                },
+                platformVersion = nodeInfo1.platformVersion,
+                serial = nodeInfo1.serial
+        )
+
+        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
+            it.transaction {
+                session.save(persistentNodeInfo1)
+            }
+            it.transaction {
+                session.save(persistentNodeInfo2)
+            }
+
+            val node = Node(configuration, rigorousMock<VersionInfo>().also {
+                doReturn(10).whenever(it).platformVersion
+                doReturn("test-vendor").whenever(it).vendor
+                doReturn("1.0").whenever(it).releaseVersion
+            }, initialiseSerialization = false)
+
+            //this throws an exception with old behaviour
+            node.generateNodeInfo()
+        }
+    }
+
     private fun getAllInfos(database: CordaPersistence): List<NodeInfoSchemaV1.PersistentNodeInfo> {
         return database.transaction {
             val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.PersistentNodeInfo::class.java)
@@ -111,11 +159,10 @@ class NodeTest {
         }
     }
 
-    private fun createConfig(): NodeConfiguration {
+    private fun createConfig(nodeName: CordaX500Name): NodeConfiguration {
         val dataSourceProperties = makeTestDataSourceProperties()
         val databaseConfig = DatabaseConfig()
         val nodeAddress = NetworkHostAndPort("0.1.2.3", 456)
-        val nodeName = CordaX500Name("Manx Blockchain Corp", "Douglas", "IM")
         return rigorousMock<AbstractNodeConfiguration>().also {
             doReturn(null).whenever(it).relay
             doReturn(nodeAddress).whenever(it).p2pAddress

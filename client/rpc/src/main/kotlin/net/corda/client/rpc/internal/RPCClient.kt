@@ -18,16 +18,17 @@ import net.corda.core.context.Trace
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.logElapsedTime
 import net.corda.core.internal.uncheckedCast
+import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.internal.nodeSerializationEnv
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransportsFromList
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcInternalClientTcpTransport
 import net.corda.nodeapi.RPCApi
-import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -84,6 +85,8 @@ class RPCClient<I : RPCOps>(
             } else {
                 ActiveMQClient.createServerLocatorWithoutHA(*haPoolTransportConfigurations.toTypedArray())
             }).apply {
+                connectionTTL = 60000
+                clientFailureCheckPeriod = 30000
                 retryInterval = rpcConfiguration.connectionRetryInterval.toMillis()
                 retryIntervalMultiplier = rpcConfiguration.connectionRetryIntervalMultiplier
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
