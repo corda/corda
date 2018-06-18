@@ -142,7 +142,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
                 // Continue; all warnings and errors are captured in [context.messages]
             }
             context.classes[className]?.apply {
-                context.references.from(className)
+                context.references.referencesFromLocation(className)
                         .map { it.reference }
                         .filterIsInstance<ClassReference>()
                         .distinct()

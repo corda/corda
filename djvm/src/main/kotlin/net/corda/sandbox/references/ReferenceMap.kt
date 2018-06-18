@@ -10,24 +10,27 @@ class ReferenceMap(
         private val classModule: ClassModule
 ) : Iterable<EntityReference> {
 
-    private val entities = ConcurrentLinkedQueue<EntityReference>()
+    private val queueOfReferences = ConcurrentLinkedQueue<EntityReference>()
 
-    private val map: MutableMap<EntityReference, MutableSet<SourceLocation>> = hashMapOf()
+    private val locationsPerReference: MutableMap<EntityReference, MutableSet<SourceLocation>> = hashMapOf()
 
-    private val mapByLocation: MutableMap<String, MutableSet<ReferenceWithLocation>> = hashMapOf()
+    private val referencesPerLocation: MutableMap<String, MutableSet<ReferenceWithLocation>> = hashMapOf()
+
+    private var numberOfReferences = 0
 
     /**
      * Add source location association to a target member.
      */
     fun add(target: EntityReference, location: SourceLocation) {
-        map.getOrPut(target) {
-            entities.add(target)
+        locationsPerReference.getOrPut(target) {
+            queueOfReferences.add(target)
+            numberOfReferences += 1
             hashSetOf()
         }.add(location)
         ReferenceWithLocation(location, target).apply {
-            mapByLocation.getOrPut(location.key(), { hashSetOf() }).add(this)
+            referencesPerLocation.getOrPut(location.key()) { hashSetOf() }.add(this)
             if (location.memberName.isNotBlank()) {
-                mapByLocation.getOrPut(key(location.className), { hashSetOf() }).add(this)
+                referencesPerLocation.getOrPut(key(location.className)) { hashSetOf() }.add(this)
             }
         }
     }
@@ -35,44 +38,35 @@ class ReferenceMap(
     /**
      * Get call-sites and field access locations associated with a target member.
      */
-    fun get(target: EntityReference): Set<SourceLocation> =
-            map.getOrElse(target) { emptySet() }
+    fun locationsFromReference(target: EntityReference): Set<SourceLocation> =
+            locationsPerReference.getOrElse(target) { emptySet() }
 
     /**
      * Look up all references made from a class or a class member.
      */
-    fun from(className: String, memberName: String = "", signature: String = ""): Set<ReferenceWithLocation> {
-        return mapByLocation.getOrElse(key(className, memberName, signature)) { emptySet() }
+    fun referencesFromLocation(
+            className: String, memberName: String = "", signature: String = ""
+    ): Set<ReferenceWithLocation> {
+        return referencesPerLocation.getOrElse(key(className, memberName, signature)) { emptySet() }
     }
-
-    /**
-     * Look up all references made from a specific class.
-     */
-    fun from(clazz: java.lang.Class<*>) = from(classModule.getBinaryClassName(clazz.name))
-
-    /**
-     * Look up all references made from a class member.
-     */
-    fun from(member: MemberReference) = from(member.className, member.memberName, member.signature)
 
     /**
      * The number of member references in the map.
      */
     val size: Int
-        get() = map.keys.size
+        get() = numberOfReferences
 
     /**
      * Get iterator for all the references in the map.
      */
-    override fun iterator(): Iterator<EntityReference> = entities.iterator()
+    override fun iterator(): Iterator<EntityReference> = queueOfReferences.iterator()
 
     /**
      * Iterate over the dynamic collection of references.
      */
     fun process(action: (EntityReference) -> Unit) {
-        while (entities.isNotEmpty()) {
-            val reference = entities.remove()
-            action(reference)
+        while (queueOfReferences.isNotEmpty()) {
+            queueOfReferences.remove().apply(action)
         }
     }
 

@@ -89,7 +89,7 @@ class ReferenceValidator(
                 }
                 if (reason != null) {
                     logger.trace("Recorded invalid class reference to {}; reason = {}", reference, reason)
-                    state.context.messages.addAll(state.context.references.get(reference).map {
+                    state.context.messages.addAll(state.context.references.locationsFromReference(reference).map {
                         referenceToMessage(ReferenceWithLocation(it, reference, reason.description))
                     })
                 }
@@ -108,7 +108,7 @@ class ReferenceValidator(
                 }
                 if (reason != null) {
                     logger.trace("Recorded invalid member reference to {}; reason = {}", reference, reason)
-                    state.context.messages.addAll(state.context.references.get(reference).map {
+                    state.context.messages.addAll(state.context.references.locationsFromReference(reference).map {
                         referenceToMessage(ReferenceWithLocation(it, reference, reason.description))
                     })
                 }
@@ -132,7 +132,7 @@ class ReferenceValidator(
         var clazz = state.context.classes[name]
         if (clazz == null) {
             logger.trace("Loading and analyzing referenced class {}...", name)
-            val origin = state.context.references.get(ClassReference(name)).firstOrNull()
+            val origin = state.context.references.locationsFromReference(ClassReference(name)).firstOrNull()
             state.analyzer.analyze(name, state.context, origin?.className)
             clazz = state.context.classes[name]
         }

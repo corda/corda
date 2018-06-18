@@ -26,7 +26,7 @@ open class AssertiveReferenceMap(private val references: ReferenceMap) {
                     }
                 }
         val reference = ClassReference(clazz)
-        return AssertiveReferenceMapWithEntity(references, reference, references.get(reference))
+        return AssertiveReferenceMapWithEntity(references, reference, references.locationsFromReference(reference))
     }
 
     fun hasMember(owner: String, member: String, signature: String): AssertiveReferenceMapWithEntity {
@@ -40,7 +40,7 @@ open class AssertiveReferenceMap(private val references: ReferenceMap) {
                     }
                 }
         val reference = MemberReference(owner, member, signature)
-        return AssertiveReferenceMapWithEntity(references, reference, references.get(reference))
+        return AssertiveReferenceMapWithEntity(references, reference, references.locationsFromReference(reference))
     }
 
 }
