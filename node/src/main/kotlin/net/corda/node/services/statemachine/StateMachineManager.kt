@@ -86,9 +86,11 @@ interface StateMachineManager {
     val flowHospital: StaffedFlowHospital
 }
 
-// These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call
-// these functions again
 interface StateMachineManagerInternal {
+    fun snapshot(): Set<FlowStateMachineImpl<*>>
+
+    // These must be idempotent! A later failure in the state transition may error the flow state, and a replay may call
+    // these functions again
     fun signalFlowHasStarted(flowId: StateMachineRunId)
     fun addSessionBinding(flowId: StateMachineRunId, sessionId: SessionId)
     fun removeSessionBindings(sessionIds: Set<SessionId>)

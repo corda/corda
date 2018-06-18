@@ -26,6 +26,9 @@ import java.util.*
 
 val Int.MB: Long get() = this * 1024L * 1024L
 
+private val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
+private val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)
+
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: CordaX500Name
     val emailAddress: String
@@ -62,6 +65,9 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val tlsCertCrlDistPoint: URL?
     val tlsCertCrlIssuer: String?
     val effectiveH2Settings: NodeH2Settings?
+    val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
+    val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
+
     fun validate(): List<String>
 
     companion object {
@@ -193,7 +199,9 @@ data class NodeConfigurationImpl(
         private val h2port: Int? = null,
         private val h2Settings: NodeH2Settings? = null,
         // do not use or remove (used by Capsule)
-        private val jarDirs: List<String> = emptyList()
+        private val jarDirs: List<String> = emptyList(),
+        override val flowMonitorPeriodMillis: Duration = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS,
+        override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
@@ -467,5 +475,23 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                                     passwordEncryption = encryption),
                             id = AuthServiceId("NODE_CONFIG"))
         }
+    }
+}
+
+interface A {
+
+    fun blah() {}
+}
+
+interface B {
+
+    fun blah() {}
+}
+
+class C : A, B {
+
+    override fun blah() {
+        super<A>.blah()
+        super<B>.blah()
     }
 }
