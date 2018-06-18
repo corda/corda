@@ -657,7 +657,7 @@ class DriverDSLImpl(
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
             // user, for example when the `tools:explorer:runDemoNodes` gradle task is stopped with CTRL-C.
-            addShutdownHook { process.destroy() }
+            shutdownManager.registerProcessShutdown(process)
 
             if (waitForAllNodesToFinish) {
                 state.locked {

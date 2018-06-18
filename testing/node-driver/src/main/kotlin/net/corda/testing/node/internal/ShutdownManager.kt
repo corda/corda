@@ -7,6 +7,7 @@ import net.corda.core.utilities.Try
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.nodeapi.internal.addShutdownHook
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
@@ -70,6 +71,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
     fun registerShutdown(shutdown: () -> Unit) = registerShutdown(doneFuture(shutdown))
 
     fun registerProcessShutdown(process: Process) {
+        addShutdownHook { process.destroy() }
         registerShutdown {
             process.destroy()
             /** Wait 5 seconds, then [Process.destroyForcibly] */
