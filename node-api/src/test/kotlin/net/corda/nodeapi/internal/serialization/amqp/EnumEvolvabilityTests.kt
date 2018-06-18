@@ -501,9 +501,10 @@ class EnumEvolvabilityTests {
         val sf = testDefaultFactory()
         assertThatThrownBy {
             SerializationOutput(sf).serialize(C(RejectMultipleRenameFrom.A))
-        }.isInstanceOf(NotSerializableException::class.java)
-        .hasToString("Unable to serialize/deserialize net.corda.serialization.internal.amqp.EnumEvolvabilityTests\$RejectMultipleRenameFrom: " +
-                "There are multiple transformations from D, which is not allowed")
+        }.isInstanceOfSatisfying(NotSerializableDetailedException::class.java) { ex ->
+            assertThat(ex.reason).isEqualToIgnoringCase("There are multiple transformations from D, which is not allowed")
+            assertThat(ex.message).endsWith(RejectMultipleRenameFrom::class.simpleName)
+        }
     }
 
     //
