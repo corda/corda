@@ -7,6 +7,8 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ==========
 
+* Added a ``FlowMonitor`` to log information about flows that have been waiting for IO more than a configurable threshold.
+
 * H2 database changes:
   * The node's H2 database now listens on ``localhost`` by default.
   * The database server address must also be enabled in the node configuration.

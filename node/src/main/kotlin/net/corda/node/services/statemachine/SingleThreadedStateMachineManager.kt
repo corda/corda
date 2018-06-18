@@ -142,6 +142,8 @@ class SingleThreadedStateMachineManager(
         }
     }
 
+    override fun snapshot(): Set<FlowStateMachineImpl<*>> = mutex.content.flows.values.map { it.fiber }.toSet()
+
     override fun <A : FlowLogic<*>> findStateMachines(flowClass: Class<A>): List<Pair<A, CordaFuture<*>>> {
         return mutex.locked {
             flows.values.mapNotNull {

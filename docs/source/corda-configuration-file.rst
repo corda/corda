@@ -232,6 +232,10 @@ absolute path to the node's base directory.
                    which indicates that the issuer of the TLS certificate is also the issuer of the CRL.
                    Note: If this parameter is set then the tlsCertCrlDistPoint needs to be set as well.
 
+:flowMonitorPeriodMillis: ``Duration`` of the period suspended flows waiting for IO are logged. Default value is ``60 seconds``.
+
+:flowMonitorSuspensionLoggingThresholdMillis: Threshold ``Duration`` suspended flows waiting for IO need to exceed before they are logged. Default value is ``60 seconds``.
+
 Examples
 --------
 
