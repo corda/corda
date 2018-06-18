@@ -83,6 +83,8 @@ buildscript {
     ext.jcabi_manifests_version = '1.1'
 
     ext.deterministic_rt_version = '1.0-SNAPSHOT'
+    // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
+    // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
 
     // Update 121 is required for ObjectInputFilter.
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).

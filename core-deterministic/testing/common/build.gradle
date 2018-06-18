@@ -1,4 +1,5 @@
 apply plugin: 'kotlin'
+apply plugin: 'idea'
 
 evaluationDependsOn(':jdk8u-deterministic')
 
@@ -21,4 +22,12 @@ tasks.withType(JavaCompile) {
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
     kotlinOptions.jdkHome = deterministic_jdk_home
+}
+
+idea {
+    module {
+        if (project.hasProperty("deterministic_idea_sdk")) {
+            jdkName project.property("deterministic_idea_sdk") as String
+        }
+    }
 }
