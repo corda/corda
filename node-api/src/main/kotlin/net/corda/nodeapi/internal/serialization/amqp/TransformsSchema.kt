@@ -4,8 +4,8 @@ import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformRename
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
-import net.corda.serialization.internal.NotSerializableDetailedException
-import net.corda.serialization.internal.NotSerializableWithReasonException
+import net.corda.nodeapi.internal.serialization.NotSerializableDetailedException
+import net.corda.nodeapi.internal.serialization.NotSerializableWithReasonException
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException

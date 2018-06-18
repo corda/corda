@@ -1,4 +1,4 @@
-package net.corda.serialization.internal
+package net.corda.nodeapi.internal.serialization
 
 import java.io.IOException
 import java.io.NotSerializableException

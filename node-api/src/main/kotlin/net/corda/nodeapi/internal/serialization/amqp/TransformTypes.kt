@@ -4,7 +4,7 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformRename
-import net.corda.serialization.internal.NotSerializableWithReasonException
+import net.corda.nodeapi.internal.serialization.NotSerializableWithReasonException
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 
