@@ -11,9 +11,12 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.*
+import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Condition
 import org.junit.Test
 import java.io.NotSerializableException
 import java.net.URI
@@ -453,6 +456,68 @@ class EnumEvolvabilityTests {
     }
 
     //
+    // In this test we check that multiple transforms of a property are accepted
+    //
+    @CordaSerializationTransformRenames(
+            CordaSerializationTransformRename(from = "A", to = "B"),
+            CordaSerializationTransformRename(from = "B", to = "C")
+    )
+    enum class AcceptMultipleRename { C }
+
+    @Test
+    fun acceptMultipleRename() {
+        data class C(val e: AcceptMultipleRename)
+
+        val sf = testDefaultFactory()
+        SerializationOutput(sf).serialize(C(AcceptMultipleRename.C))
+    }
+
+    //
+    // In this example we will try to rename two different things to the same thing,
+    // which is not allowed
+    //
+    @CordaSerializationTransformRenames(
+            CordaSerializationTransformRename(from = "D", to = "C"),
+            CordaSerializationTransformRename(from = "E", to = "C")
+    )
+    enum class RejectMultipleRenameTo { A, B, C }
+
+    @Test
+    fun rejectMultipleRenameTo() {
+        data class C(val e: RejectMultipleRenameTo)
+
+        val sf = testDefaultFactory()
+        assertThatThrownBy {
+            SerializationOutput(sf).serialize(C(RejectMultipleRenameTo.A))
+        }.isInstanceOfSatisfying(NotSerializableDetailedException::class.java) { ex ->
+            assertThat(ex.reason).isEqualToIgnoringCase("There are multiple transformations to C, which is not allowed")
+            assertThat(ex.message).endsWith(RejectMultipleRenameTo::class.simpleName)
+        }
+    }
+
+    //
+    // In this example we will try to rename two different things from the same thing,
+    // which is not allowed
+    //
+    @CordaSerializationTransformRenames(
+            CordaSerializationTransformRename(from = "D", to = "C"),
+            CordaSerializationTransformRename(from = "D", to = "B")
+    )
+    enum class RejectMultipleRenameFrom { A, B, C }
+
+    @Test
+    fun rejectMultipleRenameFrom() {
+        data class C(val e: RejectMultipleRenameFrom)
+
+        val sf = testDefaultFactory()
+        assertThatThrownBy {
+            SerializationOutput(sf).serialize(C(RejectMultipleRenameFrom.A))
+        }.isInstanceOf(NotSerializableException::class.java)
+        .hasToString("Unable to serialize/deserialize net.corda.serialization.internal.amqp.EnumEvolvabilityTests\$RejectMultipleRenameFrom: " +
+                "There are multiple transformations from D, which is not allowed")
+    }
+
+    //
     // In this example we will have attempted to rename D back to C
     //
     // The life cycle of the class would've looked like this
@@ -544,5 +609,4 @@ class EnumEvolvabilityTests {
             SerializationOutput(sf).serialize(C(RejectBadDefaultToSelf.D))
         }.isInstanceOf(NotSerializableException::class.java)
     }
-
 }

@@ -239,6 +239,16 @@ class NodeConfigurationImplTest {
     }
 
     @Test
+    fun `missing rpcSettings_adminAddress cause a graceful failure`() {
+        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+        rawConfig = rawConfig.withoutPath("rpcSettings.adminAddress")
+
+        val config = rawConfig.parseAsNodeConfiguration()
+
+        assertThat(config.validate().filter { it.contains("rpcSettings.adminAddress") }).isNotEmpty
+    }
+
+    @Test
     fun `compatiilityZoneURL populates NetworkServices`() {
         val compatibilityZoneURL = URI.create("https://r3.com").toURL()
         val configuration = testConfiguration.copy(
