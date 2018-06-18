@@ -151,9 +151,9 @@ Backup strategy recommendations
 -------------------------------
 
 Various components of the Corda platform read their configuration from the file system, and persist data to a database or into some files.
-Without a sound backup strategy, losing a machine that hosts one or more components might result in lost data, compromised data integrity, unusable data, lost messages, and/or large downtime.
+Given that hardware can fail operators of IT infrastructure must have a sound backup strategy in place. Whilst blockchain platforms can sometimes recover some lost data from peers, it is rarely the case that a node can recover its full state in this way because real-world blockchain applications invariably contain private information (eg customer account information). Moreover, this private information must remain in sync with the ledger state. As such, we strongly recommend implementing a comprehensive backup strategy.
 
-In order to avoid or mitigate the circumstances described, a backup strategy should include:
+The following elements of a backup strategy are recommended, with no requirements about their intervals with regards to each other:
 
 Database replication
 ++++++++++++++++++++
@@ -161,6 +161,7 @@ Database replication
 When properly configured, database replication prevents data loss from occurring in case the database host fails.
 In general, the higher the number of replicas, and the further away they are deployed in terms of regions and availability zones, the more a setup is resilient to disasters.
 The trade-off is that, ideally, replication should happen synchronously, meaning that a high number of replicas and a considerable network latency will impact the performance of the Corda nodes connecting to the cluster.
+Synchronous replication is strongly advised to prevent data loss.
 
 Database snapshots
 ++++++++++++++++++
@@ -168,17 +169,16 @@ Database snapshots
 Database replication is a powerful technique, but it is very sensitive to destructive SQL updates. Whether malicious or unintentional, a SQL statement might compromise data by getting propagated to all replicas.
 Without a rolling snapshots strategy, data loss due to a SQL statement will be irreversible.
 Using snapshots always implies some data loss in case of a disaster, and the trade-off is between highly frequent backups minimising such a loss, and less frequent backups consuming less resources.
-At present, Corda does not offer online updates with regards to transactions, but in the future we might consider this functionality, which would prevent any data loss, even in case of destructive SQL statements.
-Should states in the vault ever be lost, partial or total recovery might be achieved by asking third-party companies and/or notaries to provide all data relevant to the affected legal identity. Be warned, though, that they are not required to do so, and that they might not have all the necessary information even if willing to help.
+At present, Corda does not offer online updates with regards to transactions.
+Should states in the vault ever be lost, partial or total recovery might be achieved by asking third-party companies and/or notaries to provide all data relevant to the affected legal identity.
 
 File backups
 ++++++++++++
 
-In terms of files, Corda components read and write information from and to the file-system. Losing these files can lead to acknowledged messages that will never be processed, a large downtime, or, in the worst case, unusable states in the vault.
+Corda components read and write information from and to the file-system. The advice is to backup the entire root directory of the component, plus any external directories and files optionally specified in the configuration.
+If a resilient, synchronously replicated file-system abstraction like Azure Storage Disk or Elastic Block Storage is used, Corda components will benefit from the following:
 
-* The backlog of persistent queues, when lost, might cause acknowledged messages to be lost and never be processed. Snapshots do not really work here, because the backlog changes quite rapidly.
-  When available, a resilient file-system abstraction like Azure Storage Disk or Elastic Block Store might be indicated for this potential issue.
-* Configuration files (e.g., ``node.conf``, ``node-info`` files, etc.), CorDapps binaries and configuration, and database drivers, when lost, can cause downtime until they are restored. Snapshots can be an effective way of avoiding this situation, given that these files change quite rarely.
-* Losing the private key used for signing transactions will make all existing states in a vault unusable with no recovery possible. To mitigate this, ensure your private key is backed up in several places. Also, a clustered node setup would help in this sense, for each node will have a copy of the key on disk.
+* Guaranteed eventual processing of acknowledged client messages, provided that the backlog of persistent queues is not lost irremediably.
+* A timely recovery from deletion or corruption of configuration files (e.g., ``node.conf``, ``node-info`` files, etc.), database drivers, CorDapps binaries and configuration, and certificates directories, provided backups are available to restore from.
 
-.. warning:: while backing up a Corda component's directory is enough with the default configuration, Corda allows reading and writing from arbitrary paths through configuration override. In this latter case, please ensure your file backup strategy covers the specified paths.
+.. warning:: Private keys used to sign transactions should be preserved with the utmost care. The recommendation is at least two separate copies on a storage not connected to the Internet.
