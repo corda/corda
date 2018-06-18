@@ -48,7 +48,7 @@ class WhitelistGenerateCommand : CommandBase() {
         }
         val context = AnalysisContext.fromConfiguration(AnalysisConfiguration(), emptyList())
         for (path in paths) {
-            ClassSource.fromPath(path).forEach {
+            ClassSource.fromPath(path).getStreamIterator().forEach {
                 visitor.analyze(it, context)
             }
         }

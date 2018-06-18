@@ -10,8 +10,6 @@ import net.corda.sandbox.validation.RuleContext
 @Suppress("unused")
 class DisallowOverriddenSandboxPackage : ClassRule() {
 
-    override val applyToRewrite: Boolean = true
-
     override fun validate(context: RuleContext, clazz: Class) = context.validate {
         fail("Cannot load class explicitly defined in the 'sandbox' root package; ${clazz.name}") given
                 (!context.pinnedClasses.matches(clazz.name) && clazz.name.startsWith("sandbox/"))

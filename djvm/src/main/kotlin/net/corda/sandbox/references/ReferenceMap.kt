@@ -20,10 +20,10 @@ class ReferenceMap(
      * Add source location association to a target member.
      */
     fun add(target: EntityReference, location: SourceLocation) {
-        map.getOrPut(target, {
+        map.getOrPut(target) {
             entities.add(target)
             hashSetOf()
-        }).add(location)
+        }.add(location)
         ReferenceWithLocation(location, target).apply {
             mapByLocation.getOrPut(location.key(), { hashSetOf() }).add(this)
             if (location.memberName.isNotBlank()) {
@@ -37,12 +37,6 @@ class ReferenceMap(
      */
     fun get(target: EntityReference): Set<SourceLocation> =
             map.getOrElse(target) { emptySet() }
-
-    /**
-     * Check if any call-sites or field access locations have been registered for a target member.
-     */
-    fun exists(target: EntityReference): Boolean =
-            map[target]?.isNotEmpty() ?: false
 
     /**
      * Look up all references made from a class or a class member.

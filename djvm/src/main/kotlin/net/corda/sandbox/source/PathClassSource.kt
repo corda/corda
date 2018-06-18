@@ -1,5 +1,7 @@
 package net.corda.sandbox.source
 
+import net.corda.sandbox.source.ClassSource.Companion.isClass
+import net.corda.sandbox.source.ClassSource.Companion.isJar
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -9,11 +11,14 @@ import java.nio.file.Path
  *
  * @property path The path of a class source in the file system, a JAR or a class.
  */
-class ClassPathSource(
+class PathClassSource(
         private val path: Path
-) : ClassSource() {
-
-    override fun iterator(): Iterator<InputStream> {
+) {
+    /**
+     * If [path] is a class file, return a single-element iterator with the stream of said class. If [path] is a JAR
+     * file, an iterator traversing over the stream for each class file in the JAR is returned.
+     */
+    fun getStreamIterator(): Iterator<InputStream> {
         return when {
             isClass(path) -> {
                 listOf(Files.newInputStream(path)).iterator()

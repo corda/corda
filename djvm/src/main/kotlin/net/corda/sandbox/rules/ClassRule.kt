@@ -11,13 +11,6 @@ import net.corda.sandbox.validation.RuleContext
 abstract class ClassRule : Rule {
 
     /**
-     * Determine whether the rule should be applied during class rewriting. If `true`, run the rule validation
-     * function when the class is first being loaded and rewired. Otherwise, run the validation at load time within
-     * the sandbox.
-     */
-    open val applyToRewrite: Boolean = false
-
-    /**
      * Called when a class definition is visited.
      *
      * @param context The context in which the rule is to be validated.

@@ -102,11 +102,11 @@ object Utilities {
     inline fun <reified T> find(scanSpec: String = "net/corda/sandbox"): List<Class<*>> {
         val references = mutableListOf<Class<*>>()
         FastClasspathScanner(scanSpec)
-                .matchClassesImplementing(T::class.java, { clazz ->
+                .matchClassesImplementing(T::class.java) { clazz ->
                     if (!Modifier.isAbstract(clazz.modifiers) && !Modifier.isStatic(clazz.modifiers)) {
                         references.add(clazz)
                     }
-                })
+                }
                 .scan()
         return references
     }
