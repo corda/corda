@@ -477,21 +477,3 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
         }
     }
 }
-
-interface A {
-
-    fun blah() {}
-}
-
-interface B {
-
-    fun blah() {}
-}
-
-class C : A, B {
-
-    override fun blah() {
-        super<A>.blah()
-        super<B>.blah()
-    }
-}
