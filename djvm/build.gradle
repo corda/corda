@@ -3,10 +3,16 @@ buildscript {
     ext.picocli_version = '3.0.0-beta-2'
     repositories {
         mavenCentral()
+        jcenter()
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.3'
     }
+}
+
+plugins {
+    id 'com.github.johnrengelman.shadow' version '2.0.3'
 }
 
 dependencies {
@@ -32,13 +38,12 @@ dependencies {
     testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
 jar {
-    from(configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }) {
-        exclude "META-INF/*.SF"
-        exclude "META-INF/*.DSA"
-        exclude "META-INF/*.RSA"
-    }
-    baseName 'corda-djvm'
     manifest {
         attributes(
                 'Main-Class': 'net.corda.sandbox.tools.cli.Program',
@@ -48,7 +53,6 @@ jar {
     }
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
+shadowJar {
+    baseName = "corda-djvm"
 }

@@ -6,12 +6,12 @@ version="$(cat $base_dir/../../build.gradle | sed -n 's/^[ ]*ext\.corda_release_
 
 # Build DJVM JAR
 cd "$base_dir/.."
-../gradlew jar
+../gradlew shadowJar
 
 # Create a symbolic link to the `djvm` utility
 ln -sf "$base_dir/djvm" /usr/local/bin/djvm
 
 # Generate auto-completion file for Bash and ZSH
 cd "$base_dir"
-java -cp "$base_dir/../build/libs/corda-djvm-$version.jar" picocli.AutoComplete \
+java -cp "$base_dir/../build/libs/corda-djvm-$version-all.jar" picocli.AutoComplete \
     -n djvm net.corda.sandbox.tools.cli.Commands -f
