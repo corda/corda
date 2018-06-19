@@ -39,7 +39,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
                                      networkRootTrustStorePassword: String,
                                      private val keyAlias: String,
                                      private val certRole: CertRole,
-                                     private val computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration?) {
+                                     private val computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) {
 
     companion object {
         const val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
@@ -271,21 +271,21 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
         }
         println("Node trust store stored in ${config.trustStoreFile}.")
     }
+}
 
-    private class FixedPeriodLimitedRetrialStrategy(times: Int, private val period: Duration) : (Duration?) -> Duration? {
+private class FixedPeriodLimitedRetrialStrategy(times: Int, private val period: Duration) : (Duration?) -> Duration? {
 
-        init {
-            require(times > 0)
-        }
+    init {
+        require(times > 0)
+    }
 
-        private var counter = times
+    private var counter = times
 
-        override fun invoke(@Suppress("UNUSED_PARAMETER") previousPeriod: Duration?): Duration? {
-            synchronized(this) {
-                val nextPeriod = if (counter > 0) period else null
-                counter--
-                return nextPeriod
-            }
+    override fun invoke(@Suppress("UNUSED_PARAMETER") previousPeriod: Duration?): Duration? {
+        synchronized(this) {
+            val nextPeriod = if (counter > 0) period else null
+            counter--
+            return nextPeriod
         }
     }
 }
