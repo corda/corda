@@ -85,4 +85,10 @@ sealed class FlowIORequest<out R : Any> {
      * Execute the specified [operation], suspend the flow until completion.
      */
     data class ExecuteAsyncOperation<T : Any>(val operation: FlowAsyncOperation<T>) : FlowIORequest<T>()
+
+    /**
+     * Indicates that no actual IO request occurred, and the flow should be resumed immediately.
+     * This is used for performing explicit checkpointing anywhere in a flow.
+     */
+    object ForceCheckpoint : FlowIORequest<Unit>()
 }
