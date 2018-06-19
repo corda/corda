@@ -339,3 +339,41 @@ To delete existing data from the database, run the following SQL:
     ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT ALL ON tables TO "[USER]";
     GRANT ALL ON ALL sequences IN SCHEMA "[SCHEMA]" TO "[USER]";
     ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT ALL ON sequences TO "[USER]";
+
+Guideline for adding support for other databases
+````````````````````````````````````````````````
+
+The Corda distribution can be extended to support other databases without recompilation.
+This assumes that all SQL queries run by Corda are compatible with the database and the JDBC driver doesn't require any custom serialization.
+To add support for another database to a Corda node, the following JAR files must be provisioned:
+
+* JDBC driver compatible with JDBC 4.2
+* Hibernate dialect
+* Liquibase extension for the database management (https://www.liquibase.org)
+* Implementation of database specific Cash Selection SQL query.
+  Class with SQL query needs to extend the ``net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection` class:
+
+  .. sourcecode:: kotlin
+
+      package net.corda.finance.contracts.asset.cash.selection
+      [...]
+      class CashSelectionCustomDatabaseImpl : AbstractCashSelection() {
+            [...]
+      }
+
+  The ``corda-finance`` module contains ``AbstractCashSelection` class, so it needs to be added to your project, e.g. when using Gradle:
+
+  .. sourcecode:: groovy
+
+      compile "com.r3.corda:corda-finance:$corda_version"
+
+  The compiled JAR needs to contain a `resources/META-INF/net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection` file
+  with a class entry to inform the Corda node about the class at startup:
+
+  .. sourcecode:: none
+
+     net.corda.finance.contracts.asset.cash.selection.CashSelectionCustomDatabaseImpl
+
+All additional JAR files need to be copy into ``./drivers`` subdirectory of the node.
+
+.. note:: This is a general guideline. In some cases, it might not be feasible to add support for your desired database without recompiling the Corda source code.
