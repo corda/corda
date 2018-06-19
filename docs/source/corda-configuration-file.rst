@@ -120,7 +120,8 @@ absolute path to the node's base directory.
             The Node operator must provide RPC clients with a truststore containing the certificate they can trust.
             We advise Node operators to not use the P2P keystore for RPC.
             The node ships with a command line argument "--just-generate-rpc-ssl-settings", which generates a secure keystore
-            and truststore that can be used to secure the RPC connection.
+            and truststore that can be used to secure the RPC connection. You can use this if you have no special requirements.
+
 
 :security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
     :doc:`clientrpc` for details.

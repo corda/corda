@@ -192,7 +192,7 @@ open class NodeStartup(val args: Array<String>) {
                             println("The keystore passwords don't match.")
                             continue
                         }
-                        val keyStorePath = saveToKeyStore(conf.baseDirectory / "certificates" / "rpcsslkeystore.jks", keyPair, cert, String(keystorePassword1))
+                        val keyStorePath = saveToKeyStore(conf.baseDirectory / "certificates" / "rpcsslkeystore.jks", keyPair, cert, String(keystorePassword1), "rpcssl")
                         println("The keystore was saved to: $keyStorePath")
                         break
                     }
@@ -205,7 +205,7 @@ open class NodeStartup(val args: Array<String>) {
                             continue
                         }
 
-                        val trustStorePath = saveToTrustStore(conf.baseDirectory / "certificates" / "export" / "rpcssltruststore.jks", cert, String(trustStorePassword1))
+                        val trustStorePath = saveToTrustStore(conf.baseDirectory / "certificates" / "export" / "rpcssltruststore.jks", cert, String(trustStorePassword1), "rpcssl")
                         println("The trustore was saved to: $trustStorePath")
                         println("You need to distribute this file along with the password in a secure way to all Rpc clients.")
                         break

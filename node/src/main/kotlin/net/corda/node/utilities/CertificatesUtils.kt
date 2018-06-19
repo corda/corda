@@ -9,22 +9,22 @@ import javax.security.auth.x500.X500Principal
 
 val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
 
-fun createKeyPairAndSelfSignedCertificate(x500Principal: X500Principal= testName): Pair<KeyPair, X509Certificate> {
+fun createKeyPairAndSelfSignedCertificate(x500Principal: X500Principal = testName): Pair<KeyPair, X509Certificate> {
     val rpcKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
     val selfSignCert = X509Utilities.createSelfSignedCACertificate(x500Principal, rpcKeyPair)
     return Pair(rpcKeyPair, selfSignCert)
 }
 
-fun saveToKeyStore(keyStorePath: Path, rpcKeyPair: KeyPair, selfSignCert: X509Certificate, password: String = "password"): Path {
+fun saveToKeyStore(keyStorePath: Path, rpcKeyPair: KeyPair, selfSignCert: X509Certificate, password: String = "password", alias: String = "Key"): Path {
     val keyStore = loadOrCreateKeyStore(keyStorePath, password)
-    keyStore.addOrReplaceKey("Key", rpcKeyPair.private, password.toCharArray(), arrayOf(selfSignCert))
+    keyStore.addOrReplaceKey(alias, rpcKeyPair.private, password.toCharArray(), arrayOf(selfSignCert))
     keyStore.save(keyStorePath, password)
     return keyStorePath
 }
 
-fun saveToTrustStore(trustStorePath: Path, selfSignCert: X509Certificate, password: String = "password"): Path {
+fun saveToTrustStore(trustStorePath: Path, selfSignCert: X509Certificate, password: String = "password", alias: String = "Key"): Path {
     val trustStore = loadOrCreateKeyStore(trustStorePath, password)
-    trustStore.addOrReplaceCertificate("Key", selfSignCert)
+    trustStore.addOrReplaceCertificate(alias, selfSignCert)
     trustStore.save(trustStorePath, password)
     return trustStorePath
 }
