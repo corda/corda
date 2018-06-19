@@ -26,12 +26,15 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
+import java.io.IOException
 import java.io.StringWriter
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PublicKey
 import java.security.cert.X509Certificate
+import java.time.Duration
+import javax.naming.ServiceUnavailableException
 
 /**
  * Helper for managing the node registration process, which checks for any existing certificates and requests them if
@@ -45,7 +48,8 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
                                      private val networkRootTrustStorePath: Path,
                                      networkRootTrustStorePassword: String,
                                      private val keyAlias: String,
-                                     private val certRole: CertRole) {
+                                     private val certRole: CertRole,
+                                     private val nextIdleDuration: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) {
 
     companion object {
         const val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
@@ -170,12 +174,22 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
     private fun pollServerForCertificates(requestId: String): List<X509Certificate> {
         println("Start polling server for certificate signing approval.")
         // Poll server to download the signed certificate once request has been approved.
+        var idlePeriodDuration: Duration? = null
         while (true) {
-            val (pollInterval, certificates) = certService.retrieveCertificates(requestId)
-            if (certificates != null) {
-                return certificates
+            try {
+                val (pollInterval, certificates) = certService.retrieveCertificates(requestId)
+                if (certificates != null) {
+                    return certificates
+                }
+                Thread.sleep(pollInterval.toMillis())
+            } catch (e: ServiceUnavailableException) {
+                idlePeriodDuration = nextIdleDuration(idlePeriodDuration)
+                if (idlePeriodDuration != null) {
+                    Thread.sleep(idlePeriodDuration.toMillis())
+                } else {
+                    throw UnableToRegisterNodeWithDoormanException()
+                }
             }
-            Thread.sleep(pollInterval.toMillis())
         }
     }
 
@@ -218,7 +232,9 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
     protected open fun onSuccess(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>) {}
 }
 
-class NodeRegistrationHelper(private val config: NodeConfiguration, certService: NetworkRegistrationService, regConfig: NodeRegistrationOption) :
+class UnableToRegisterNodeWithDoormanException : IOException()
+
+class NodeRegistrationHelper(private val config: NodeConfiguration, certService: NetworkRegistrationService, regConfig: NodeRegistrationOption, computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) :
         NetworkRegistrationHelper(config,
                 config.myLegalName,
                 config.emailAddress,
@@ -226,7 +242,8 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
                 regConfig.networkRootTrustStorePath,
                 regConfig.networkRootTrustStorePassword,
                 CORDA_CLIENT_CA,
-                CertRole.NODE_CA) {
+                CertRole.NODE_CA,
+                computeNextIdleDoormanConnectionPollInterval) {
 
     companion object {
         val logger = contextLogger()
@@ -263,5 +280,20 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
             setCertificate(CORDA_ROOT_CA, rootCertificate)
         }
         println("Node trust store stored in ${config.trustStoreFile}.")
+    }
+}
+
+private class FixedPeriodLimitedRetrialStrategy(times: Int, private val period: Duration) : (Duration?) -> Duration? {
+
+    init {
+        require(times > 0)
+    }
+
+    private var counter = times
+
+    override fun invoke(@Suppress("UNUSED_PARAMETER") previousPeriod: Duration?): Duration? {
+        synchronized(this) {
+            return if (counter-- > 0) period else null
+        }
     }
 }

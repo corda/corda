@@ -20,6 +20,7 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
@@ -524,6 +525,11 @@ fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoade
 }
 
 val PublicKey.hash: SecureHash get() = encoded.sha256()
+
+/** Checks if this flow is an idempotent flow. */
+fun Class<out FlowLogic<*>>.isIdempotentFlow(): Boolean {
+    return IdempotentFlow::class.java.isAssignableFrom(this)
+}
 
 /**
  * Extension method for providing a sumBy method that processes and returns a Long
