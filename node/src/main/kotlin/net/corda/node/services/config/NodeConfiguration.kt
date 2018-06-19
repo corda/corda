@@ -277,7 +277,7 @@ data class NodeConfigurationImpl(
             errors += "'rpcSettings.adminAddress': missing"
         }
         if (options.useSsl && options.ssl == null) {
-            errors += "'rpcSettings.ssl': missing (rpcSettings.useSsl=true was set to true)."
+            errors += "'rpcSettings.ssl': missing (rpcSettings.useSsl was set to true)."
         }
         return errors
     }

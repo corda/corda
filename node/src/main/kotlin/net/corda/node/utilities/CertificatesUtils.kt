@@ -5,14 +5,20 @@ import net.corda.nodeapi.internal.crypto.*
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.cert.X509Certificate
+import java.time.Duration
 import javax.security.auth.x500.X500Principal
 
-val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
-
-fun createKeyPairAndSelfSignedCertificate(x500Principal: X500Principal = testName): Pair<KeyPair, X509Certificate> {
+fun createKeyPairAndSelfSignedTLSCertificate(x500Principal: X500Principal): Pair<KeyPair, X509Certificate> {
     val rpcKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val selfSignCert = X509Utilities.createSelfSignedCACertificate(x500Principal, rpcKeyPair)
+    val selfSignCert = createSelfSignedTLSCertificate(x500Principal, rpcKeyPair)
     return Pair(rpcKeyPair, selfSignCert)
+}
+
+fun createSelfSignedTLSCertificate(subject: X500Principal,
+                                  keyPair: KeyPair,
+                                  validityWindow: Pair<Duration, Duration> = X509Utilities.DEFAULT_VALIDITY_WINDOW): X509Certificate {
+    val window = X509Utilities.getCertificateValidityWindow(validityWindow.first, validityWindow.second)
+    return X509Utilities.createCertificate(CertificateType.TLS, subject, keyPair, subject, keyPair.public, window)
 }
 
 fun saveToKeyStore(keyStorePath: Path, rpcKeyPair: KeyPair, selfSignCert: X509Certificate, password: String = "password", alias: String = "Key"): Path {

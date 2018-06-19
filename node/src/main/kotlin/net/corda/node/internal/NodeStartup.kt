@@ -23,7 +23,7 @@ import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
-import net.corda.node.utilities.createKeyPairAndSelfSignedCertificate
+import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.node.utilities.saveToKeyStore
@@ -177,7 +177,7 @@ open class NodeStartup(val args: Array<String>) {
             return
         }
         if (cmdlineOptions.justGenerateRpcSslCerts) {
-            val (keyPair, cert) = createKeyPairAndSelfSignedCertificate(conf.myLegalName.x500Principal)
+            val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(conf.myLegalName.x500Principal)
 
             val console: Console? = System.console()
 
@@ -185,7 +185,7 @@ open class NodeStartup(val args: Array<String>) {
                 // In this case, the JVM is not connected to the console so we need to exit
                 null -> {
                     println("Not connected to console. Exiting")
-                    System.exit(-1)
+                    System.exit(1)
                 }
                 // Otherwise we can proceed normally
                 else -> {
@@ -197,7 +197,7 @@ open class NodeStartup(val args: Array<String>) {
                             continue
                         }
                         val keyStorePath = saveToKeyStore(conf.baseDirectory / "certificates" / "rpcsslkeystore.jks", keyPair, cert, String(keystorePassword1), "rpcssl")
-                        println("The keystore was saved to: $keyStorePath")
+                        println("The keystore was saved to: $keyStorePath .")
                         break
                     }
 
@@ -205,21 +205,22 @@ open class NodeStartup(val args: Array<String>) {
                         val trustStorePassword1 = console.readPassword("Enter the truststore password => ")
                         val trustStorePassword2 = console.readPassword("Re-enter the truststore password => ")
                         if (!trustStorePassword1.contentEquals(trustStorePassword2)) {
-                            println("The trustore passwords don't match.")
+                            println("The truststore passwords don't match.")
                             continue
                         }
 
                         val trustStorePath = saveToTrustStore(conf.baseDirectory / "certificates" / "export" / "rpcssltruststore.jks", cert, String(trustStorePassword1), "rpcssl")
-                        println("The trustore was saved to: $trustStorePath")
-                        println("You need to distribute this file along with the password in a secure way to all Rpc clients.")
+                        println("The truststore was saved to: $trustStorePath .")
+                        println("You need to distribute this file along with the password in a secure way to all RPC clients.")
                         break
                     }
 
                     val dollar = '$'
                     println("""
-                        |The ssl certificates were generated successfully.
                         |
-                        |Add this snippet to the "rpcSettings" sections in your node.conf:
+                        |The SSL certificates were generated successfully.
+                        |
+                        |Add this snippet to the "rpcSettings" section of your node.conf:
                         |       useSsl=true
                         |       ssl {
                         |           keyStorePath=$dollar{baseDirectory}/certificates/rpcsslkeystore.jks

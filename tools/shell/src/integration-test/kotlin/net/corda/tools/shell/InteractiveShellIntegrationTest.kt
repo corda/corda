@@ -12,7 +12,7 @@ import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.shell.toShellConfig
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.core.messaging.ClientRpcSslOptions
-import net.corda.node.utilities.createKeyPairAndSelfSignedCertificate
+import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
 import net.corda.testing.core.ALICE_NAME
@@ -30,6 +30,7 @@ import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import javax.security.auth.x500.X500Principal
 import kotlin.test.assertTrue
 
 class InteractiveShellIntegrationTest {
@@ -37,6 +38,8 @@ class InteractiveShellIntegrationTest {
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
+
+    val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
 
     @Test
     fun `shell should not log in with invalid credentials`() {
@@ -75,7 +78,7 @@ class InteractiveShellIntegrationTest {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
 
-        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
 
@@ -102,11 +105,11 @@ class InteractiveShellIntegrationTest {
     @Test
     fun `shell shoud not log in with invalid truststore`() {
         val user = User("mark", "dadada", setOf("ALL"))
-        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
 
-        val (_, cert1) = createKeyPairAndSelfSignedCertificate()
+        val (_, cert1) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert1)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
@@ -186,7 +189,7 @@ class InteractiveShellIntegrationTest {
                 Permissions.invokeRpc(CordaRPCOps::registeredFlows),
                 Permissions.invokeRpc(CordaRPCOps::nodeInfo)/*all()*/))
 
-        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
