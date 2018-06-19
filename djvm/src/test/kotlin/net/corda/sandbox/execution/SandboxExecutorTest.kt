@@ -1,6 +1,8 @@
 package net.corda.sandbox.execution
 
 import foo.bar.sandbox.MyObject
+import foo.bar.sandbox.testRandom
+import foo.bar.sandbox.toNumber
 import net.corda.sandbox.TestBase
 import net.corda.sandbox.analysis.Whitelist
 import net.corda.sandbox.assertions.AssertionExtensions.withProblem
@@ -111,6 +113,25 @@ class SandboxExecutorTest : TestBase() {
 
         private fun a(): Int = b()
         private fun b(): Int = a()
+    }
+
+
+    @Test
+    fun `can detect illegal references in Kotlin meta-classes`() = sandbox(DEFAULT, ExecutionProfile.DEFAULT) {
+        val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
+        assertThatExceptionOfType(SandboxException::class.java)
+                .isThrownBy { contractExecutor.run<TestKotlinMetaClasses>(0) }
+                .withMessageContaining("foo/bar/sandbox/KotlinClassKt.testRandom()")
+                .withMessageContaining("Invalid reference to class java.util.Random, entity is not whitelisted")
+                .withMessageContaining("Invalid reference to constructor java.util.Random(), entity is not whitelisted")
+                .withMessageContaining("Invalid reference to method java.util.Random.nextInt(), entity is not whitelisted")
+    }
+
+    class TestKotlinMetaClasses : SandboxedRunnable<Int, Int> {
+        override fun run(input: Int): Int? {
+            val someNumber = testRandom()
+            return "12345".toNumber() * someNumber
+        }
     }
 
     @Test
