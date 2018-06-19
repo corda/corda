@@ -23,8 +23,11 @@ import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
+import net.corda.node.utilities.createKeyPairAndSelfSignedCertificate
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
+import net.corda.node.utilities.saveToKeyStore
+import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -33,6 +36,7 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
 import sun.misc.VMSupport
+import java.io.Console
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
@@ -166,6 +170,60 @@ open class NodeStartup(val args: Array<String>) {
         if (cmdlineOptions.justGenerateNodeInfo) {
             // Perform the minimum required start-up logic to be able to write a nodeInfo to disk
             node.generateAndSaveNodeInfo()
+            return
+        }
+        if (cmdlineOptions.justGenerateRpcSslCerts) {
+            val (keyPair, cert) = createKeyPairAndSelfSignedCertificate(conf.myLegalName.x500Principal)
+
+            val console: Console? = System.console()
+
+            when (console) {
+                // In this case, the JVM is not connected to the console so we need to exit
+                null -> {
+                    println("Not connected to console. Exiting")
+                    System.exit(-1)
+                }
+                // Otherwise we can proceed normally
+                else -> {
+                    while (true) {
+                        val keystorePassword1 = console.readPassword("Enter the keystore password => ")
+                        val keystorePassword2 = console.readPassword("Re-enter the keystore password => ")
+                        if (!keystorePassword1.contentEquals(keystorePassword2)) {
+                            println("The keystore passwords don't match.")
+                            continue
+                        }
+                        val keyStorePath = saveToKeyStore(conf.baseDirectory / "certificates" / "rpcsslkeystore.jks", keyPair, cert, String(keystorePassword1))
+                        println("The keystore was saved to: $keyStorePath")
+                        break
+                    }
+
+                    while (true) {
+                        val trustStorePassword1 = console.readPassword("Enter the truststore password => ")
+                        val trustStorePassword2 = console.readPassword("Re-enter the truststore password => ")
+                        if (!trustStorePassword1.contentEquals(trustStorePassword2)) {
+                            println("The trustore passwords don't match.")
+                            continue
+                        }
+
+                        val trustStorePath = saveToTrustStore(conf.baseDirectory / "certificates" / "export" / "rpcssltruststore.jks", cert, String(trustStorePassword1))
+                        println("The trustore was saved to: $trustStorePath")
+                        println("You need to distribute this file along with the password in a secure way to all Rpc clients.")
+                        break
+                    }
+
+                    val dollar = '$'
+                    println("""
+                        |The ssl certificates were generated successfully.
+                        |
+                        |Add this snippet to the "rpcSettings" sections in your node.conf:
+                        |       useSsl=true
+                        |       ssl {
+                        |           keyStorePath=$dollar{baseDirectory}/certificates/rpcsslkeystore.jks
+                        |           keyStorePassword=the_above_password
+                        |       }
+                        |""".trimMargin())
+                }
+            }
             return
         }
         val startedNode = node.start()

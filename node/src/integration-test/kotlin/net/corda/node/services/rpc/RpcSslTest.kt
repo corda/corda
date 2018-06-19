@@ -7,13 +7,13 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.core.messaging.ClientRpcSslOptions
+import net.corda.node.utilities.createKeyPairAndSelfSignedCertificate
+import net.corda.node.utilities.saveToKeyStore
+import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.RandomFree
-import net.corda.testing.internal.createKeyPairAndSelfSignedCertificate
-import net.corda.testing.internal.saveToKeyStore
-import net.corda.testing.internal.saveToTrustStore
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
 import org.apache.activemq.artemis.api.core.ActiveMQException

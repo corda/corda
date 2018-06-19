@@ -14,6 +14,9 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.messaging.InternalRPCMessagingClient
 import net.corda.node.services.messaging.RPCServerConfiguration
+import net.corda.node.utilities.createKeyPairAndSelfSignedCertificate
+import net.corda.node.utilities.saveToKeyStore
+import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
@@ -21,10 +24,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.RandomFree
-import net.corda.testing.internal.createKeyPairAndSelfSignedCertificate
 import net.corda.testing.internal.createNodeSslConfig
-import net.corda.testing.internal.saveToKeyStore
-import net.corda.testing.internal.saveToTrustStore
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.assertj.core.api.Assertions.assertThat

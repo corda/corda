@@ -54,6 +54,8 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
     private val isVersionArg = optionParser.accepts("version", "Print the version and exit")
     private val justGenerateNodeInfoArg = optionParser.accepts("just-generate-node-info",
             "Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then quit")
+    private val justGenerateRpcSslCertsArg = optionParser.accepts("just-generate-rpc-ssl-settings",
+            "Helper to generate the ssl keystore and truststore for a secure RPC connection.")
     private val bootstrapRaftClusterArg = optionParser.accepts("bootstrap-raft-cluster", "Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer addresses), acting as a seed for other nodes to join the cluster.")
     private val clearNetworkMapCache = optionParser.accepts("clear-network-map-cache", "Clears local copy of network map, on node startup it will be restored from server or file system.")
 
@@ -70,6 +72,7 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
         val noLocalShell = optionSet.has(noLocalShellArg)
         val sshdServer = optionSet.has(sshdServerArg)
         val justGenerateNodeInfo = optionSet.has(justGenerateNodeInfoArg)
+        val justGenerateRpcSslCerts = optionSet.has(justGenerateRpcSslCertsArg)
         val bootstrapRaftCluster = optionSet.has(bootstrapRaftClusterArg)
         val networkRootTrustStorePath = optionSet.valueOf(networkRootTrustStorePathArg)
         val networkRootTrustStorePassword = optionSet.valueOf(networkRootTrustStorePasswordArg)
@@ -94,6 +97,7 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
                 noLocalShell,
                 sshdServer,
                 justGenerateNodeInfo,
+                justGenerateRpcSslCerts,
                 bootstrapRaftCluster,
                 unknownConfigKeysPolicy,
                 devMode,
@@ -112,6 +116,7 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val noLocalShell: Boolean,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean,
+                          val justGenerateRpcSslCerts: Boolean,
                           val bootstrapRaftCluster: Boolean,
                           val unknownConfigKeysPolicy: UnknownConfigKeysPolicy,
                           val devMode: Boolean,
