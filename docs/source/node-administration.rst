@@ -176,7 +176,8 @@ File backups
 ++++++++++++
 
 Corda components read and write information from and to the file-system. The advice is to backup the entire root directory of the component, plus any external directories and files optionally specified in the configuration.
-If a resilient, synchronously replicated file-system abstraction like Azure Storage Disk or Elastic Block Storage is used, Corda components will benefit from the following:
+Corda assumes the filesystem is reliable. You must ensure that it is configured to provide this assurance, which means you must configure it to synchronously replicate to your backup/DR site.
+If the above holds, Corda components will benefit from the following:
 
 * Guaranteed eventual processing of acknowledged client messages, provided that the backlog of persistent queues is not lost irremediably.
 * A timely recovery from deletion or corruption of configuration files (e.g., ``node.conf``, ``node-info`` files, etc.), database drivers, CorDapps binaries and configuration, and certificate directories, provided backups are available to restore from.
