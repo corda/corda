@@ -6,6 +6,8 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
@@ -102,8 +104,9 @@ interface ClassCarpenter {
  * Equals/hashCode methods are not yet supported.
  */
 @DeleteForDJVM
-class ClassCarpenterImpl(cl: ClassLoader, override val whitelist: ClassWhitelist) : ClassCarpenter {
-    constructor(whitelist: ClassWhitelist) : this(Thread.currentThread().contextClassLoader, whitelist)
+class ClassCarpenterImpl(cl: ClassLoader = Thread.currentThread().contextClassLoader,
+                         override val whitelist: ClassWhitelist,
+                         private val lenient: Boolean = false) : ClassCarpenter {
 
     // TODO: Generics.
     // TODO: Sandbox the generated code when a security manager is in use.
@@ -439,25 +442,36 @@ class ClassCarpenterImpl(cl: ClassLoader, override val whitelist: ClassWhitelist
         // actually called, which is a bit too dynamic for my tastes.
         val allFields = schema.fieldsIncludingSuperclasses()
         for (itf in schema.interfaces) {
-            itf.methods.forEach {
-                val fieldNameFromItf = when {
-                    it.name.startsWith("get") -> it.name.substring(3).decapitalize()
-                    else -> throw InterfaceMismatchNonGetterException(itf, it)
+            methodLoop@
+            for (method in itf.methods) {
+                val fieldNameFromItf = if (method.name.startsWith("get")) {
+                    method.name.substring(3).decapitalize()
+                } else if (lenient) {
+                    logger.debug { "Ignoring interface $method which is not a getter" }
+                    continue@methodLoop
+                } else {
+                    throw InterfaceMismatchNonGetterException(itf, method)
                 }
 
                 // If we're trying to carpent a class that prior to serialisation / deserialization
                 // was made by a carpenter then we can ignore this (it will implement a plain get
                 // method from SimpleFieldAccess).
-                if (fieldNameFromItf.isEmpty() && SimpleFieldAccess::class.java in schema.interfaces) return@forEach
+                if (fieldNameFromItf.isEmpty() && SimpleFieldAccess::class.java in schema.interfaces) continue@methodLoop
 
                 if ((schema is ClassSchema) and (fieldNameFromItf !in allFields)) {
-                    throw InterfaceMismatchMissingAMQPFieldException(itf, fieldNameFromItf)
+                    if (lenient) {
+                        logger.debug { "Ignoring interface $method which is not backed by an AMQP field" }
+                    } else {
+                        throw InterfaceMismatchMissingAMQPFieldException(itf, fieldNameFromItf)
+                    }
                 }
             }
         }
     }
 
     companion object {
+        private val logger = contextLogger()
+
         @JvmStatic
         @Suppress("UNUSED")
         fun getField(obj: Any, name: String): Any? = obj.javaClass.getMethod("get" + name.capitalize()).invoke(obj)

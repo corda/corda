@@ -50,7 +50,7 @@ class AMQPClientSerializationScheme(
             target == SerializationContext.UseCase.RPCClient || target == SerializationContext.UseCase.P2P)
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
-        return SerializerFactory(context.whitelist, ClassLoader.getSystemClassLoader()).apply {
+        return SerializerFactory(context.whitelist, ClassLoader.getSystemClassLoader(), context.lenientCarpenterEnabled).apply {
             register(RpcClientObservableSerializer)
             register(RpcClientCordaFutureSerializer(this))
             register(RxNotificationSerializer(this))
