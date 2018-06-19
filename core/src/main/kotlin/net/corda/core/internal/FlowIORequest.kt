@@ -90,5 +90,6 @@ sealed class FlowIORequest<out R : Any> {
      * Indicates that no actual IO request occurred, and the flow should be resumed immediately.
      * This is used for performing explicit checkpointing anywhere in a flow.
      */
+    // TODO: consider using an empty FlowAsyncOperation instead
     object ForceCheckpoint : FlowIORequest<Unit>()
 }
