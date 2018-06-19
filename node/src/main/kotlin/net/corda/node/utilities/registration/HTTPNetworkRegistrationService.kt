@@ -26,6 +26,7 @@ import java.net.URL
 import java.security.cert.X509Certificate
 import java.util.*
 import java.util.zip.ZipInputStream
+import javax.naming.ServiceUnavailableException
 
 class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistrationService {
     private val registrationURL = URL("$compatibilityZoneURL/certificate")
@@ -33,6 +34,7 @@ class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistr
     companion object {
         // TODO: Propagate version information from gradle
         const val CLIENT_VERSION = "1.0"
+        private val TRANSIENT_ERROR_STATUS_CODES = setOf(HTTP_BAD_GATEWAY, HTTP_UNAVAILABLE, HTTP_GATEWAY_TIMEOUT)
     }
 
     @Throws(CertificateRequestException::class)
@@ -55,7 +57,8 @@ class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistr
             }
             HTTP_NO_CONTENT -> CertificateResponse(pollInterval, null)
             HTTP_UNAUTHORIZED -> throw CertificateRequestException("Certificate signing request has been rejected: ${conn.errorMessage}")
-            else -> throw IOException("Response Code ${conn.responseCode}: ${conn.errorMessage}")
+            in TRANSIENT_ERROR_STATUS_CODES -> throw ServiceUnavailableException("Could not connect with Doorman. Http response status code was ${conn.responseCode}.")
+            else -> throw IOException("Error while connecting to the Doorman. Http response status code was ${conn.responseCode}.")
         }
     }
 

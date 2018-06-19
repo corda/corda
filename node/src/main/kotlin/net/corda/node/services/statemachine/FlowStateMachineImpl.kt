@@ -264,6 +264,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun <R> subFlow(subFlow: FlowLogic<R>): R {
+        checkpointIfSubflowIdempotent(subFlow.javaClass)
         processEventImmediately(
                 Event.EnterSubFlow(subFlow.javaClass,
                         createSubFlowVersion(
@@ -281,6 +282,21 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnEntry = true,
                     isDbTransactionOpenOnExit = true
             )
+        }
+    }
+
+    /**
+     * If the sub-flow is [IdempotentFlow] we need to perform a checkpoint to make sure any potentially side-effect
+     * generating logic between the last checkpoint and the sub-flow invocation does not get replayed if the
+     * flow restarts.
+     *
+     * We don't checkpoint if the current flow is [IdempotentFlow] as well.
+     */
+    @Suspendable
+    private fun checkpointIfSubflowIdempotent(subFlow: Class<FlowLogic<*>>) {
+        val currentFlow = snapshot().checkpoint.subFlowStack.last().flowClass
+        if (!currentFlow.isIdempotentFlow() && subFlow.isIdempotentFlow()) {
+            suspend(FlowIORequest.ForceCheckpoint, false)
         }
     }
 

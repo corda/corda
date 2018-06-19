@@ -16,22 +16,7 @@ import net.corda.core.flows.UnexpectedFlowEndException
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.toNonEmptySet
-import net.corda.node.services.statemachine.Action
-import net.corda.node.services.statemachine.Checkpoint
-import net.corda.node.services.statemachine.DataSessionMessage
-import net.corda.node.services.statemachine.DeduplicationId
-import net.corda.node.services.statemachine.ExistingSessionMessage
-import net.corda.node.services.statemachine.FlowError
-import net.corda.node.services.statemachine.FlowSessionImpl
-import net.corda.node.services.statemachine.FlowState
-import net.corda.node.services.statemachine.InitialSessionMessage
-import net.corda.node.services.statemachine.InitiatedSessionState
-import net.corda.node.services.statemachine.SenderDeduplicationId
-import net.corda.node.services.statemachine.SessionId
-import net.corda.node.services.statemachine.SessionMap
-import net.corda.node.services.statemachine.SessionState
-import net.corda.node.services.statemachine.StateMachineState
-import net.corda.node.services.statemachine.SubFlow
+import net.corda.node.services.statemachine.*
 
 /**
  * This transition describes what should happen with a specific [FlowIORequest]. Note that at this time the request
@@ -65,6 +50,7 @@ class StartedFlowTransition(
             is FlowIORequest.GetFlowInfo -> getFlowInfoTransition(flowIORequest)
             is FlowIORequest.WaitForSessionConfirmations -> waitForSessionConfirmationsTransition()
             is FlowIORequest.ExecuteAsyncOperation<*> -> executeAsyncOperation(flowIORequest)
+            FlowIORequest.ForceCheckpoint -> executeForceCheckpoint()
         }
     }
 
@@ -410,6 +396,9 @@ class StartedFlowTransition(
             is FlowIORequest.ExecuteAsyncOperation<*> -> {
                 emptyList()
             }
+            FlowIORequest.ForceCheckpoint -> {
+                emptyList()
+            }
         }
     }
 
@@ -435,5 +424,9 @@ class StartedFlowTransition(
             actions.add(Action.ExecuteAsyncOperation(flowIORequest.operation))
             FlowContinuation.ProcessEvents
         }
+    }
+
+    private fun executeForceCheckpoint(): TransitionResult {
+        return builder { resumeFlowLogic(Unit) }
     }
 }

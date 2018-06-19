@@ -62,6 +62,7 @@ open class CashPaymentFlow(
         val anonymousRecipient = txIdentities[recipient] ?: recipient
         progressTracker.currentStep = GENERATING_TX
         val builder = TransactionBuilder(notary = null)
+        logger.info("Generating spend for: ${builder.lockId}")
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
             Cash.generateSpend(serviceHub,
@@ -75,10 +76,13 @@ open class CashPaymentFlow(
         }
 
         progressTracker.currentStep = SIGNING_TX
+        logger.info("Signing transaction for: ${spendTX.lockId}")
         val tx = serviceHub.signInitialTransaction(spendTX, keysForSigning)
 
         progressTracker.currentStep = FINALISING_TX
+        logger.info("Finalising transaction for: ${tx.id}")
         val notarised = finaliseTx(tx, setOf(recipient), "Unable to notarise spend")
+        logger.info("Finalised transaction for: ${notarised.id}")
         return Result(notarised, anonymousRecipient)
     }
 
