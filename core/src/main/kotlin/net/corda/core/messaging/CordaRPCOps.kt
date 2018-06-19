@@ -205,6 +205,14 @@ interface CordaRPCOps : RPCOps {
     fun internalVerifiedTransactionsSnapshot(): List<SignedTransaction>
 
     /**
+     * @suppress Returns the full transaction for the provided ID
+     *
+     * TODO This method should be removed once SGX work is finalised and the design of the corresponding API using [FilteredTransaction] can be started
+     */
+    @Deprecated("This method is intended only for internal use and will be removed from the public API soon.")
+    fun internalFindVerifiedTransaction(txnId: SecureHash): SignedTransaction?
+
+    /**
      * @suppress Returns a data feed of all recorded transactions and an observable of future recorded ones.
      *
      * TODO This method should be removed once SGX work is finalised and the design of the corresponding API using [FilteredTransaction] can be started

@@ -166,6 +166,8 @@ class MultiThreadedStateMachineManager(
         lifeCycle.transition(State.UNSTARTED, State.STARTED)
     }
 
+    override fun snapshot(): Set<FlowStateMachineImpl<*>> = concurrentBox.content.flows.values.map { it.fiber }.toSet()
+
     override fun <A : FlowLogic<*>> findStateMachines(flowClass: Class<A>): List<Pair<A, CordaFuture<*>>> {
         return concurrentBox.content.flows.values.mapNotNull {
             flowClass.castIfPossible(it.fiber.logic)?.let { it to it.stateMachine.resultFuture }
