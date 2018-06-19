@@ -1,6 +1,13 @@
 Release notes
 =============
 
+Unreleased
+----------
+
+Issues Fixed
+~~~~~~~~~~~~
+* Cordform Gradle task (`deployNodes`) doesn't work when `configFile` element was used.
+
 .. _release_notes_v3_1:
 
 Release 3.1
