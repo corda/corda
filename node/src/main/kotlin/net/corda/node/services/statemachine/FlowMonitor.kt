@@ -71,6 +71,7 @@ internal class FlowMonitor constructor(private val retrieveFlows: () -> Set<Flow
                     is FlowIORequest.Sleep -> "to wake up from sleep ending at ${LocalDateTime.ofInstant(request.wakeUpAfter, ZoneId.systemDefault())}"
                     FlowIORequest.WaitForSessionConfirmations -> "for sessions to be confirmed"
                     is FlowIORequest.ExecuteAsyncOperation -> "for asynchronous operation of type ${request.operation::javaClass} to complete"
+                    FlowIORequest.ForceCheckpoint -> "for forcing a checkpoint at an arbitrary point in a flow"
                 }
         )
         message.append(".")
