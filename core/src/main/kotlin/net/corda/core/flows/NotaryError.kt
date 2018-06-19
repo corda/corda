@@ -15,7 +15,7 @@ class NotaryException(
         val error: NotaryError,
         /** Id of the transaction to be notarised. Can be _null_ if an error occurred before the id could be resolved. */
         val txId: SecureHash? = null
-) : FlowException("Unable to notarise transaction${txId ?: " "}: $error")
+) : FlowException("Unable to notarise transaction ${txId ?: "<Unknown>"} : $error")
 
 /** Specifies the cause for notarisation request failure. */
 @CordaSerializable
@@ -27,7 +27,9 @@ sealed class NotaryError {
             /** Specifies which states have already been consumed in another transaction. */
             val consumedStates: Map<StateRef, StateConsumptionDetails>
     ) : NotaryError() {
-        override fun toString() = "One or more input states have been used in another transaction"
+        override fun toString() = "Conflict notarising transaction $txId. " +
+                "Input states have been used in another transactions, count: ${consumedStates.size}, " +
+                "content: ${consumedStates.asSequence().joinToString(limit = 5) { it.key.toString() + "->" + it.value }}"
     }
 
     /** Occurs when time specified in the [TimeWindow] command is outside the allowed tolerance. */

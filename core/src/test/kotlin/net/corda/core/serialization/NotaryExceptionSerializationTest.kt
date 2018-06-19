@@ -10,6 +10,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class NotaryExceptionSerializationTest {
     @Rule
@@ -27,5 +28,6 @@ class NotaryExceptionSerializationTest {
         val instanceOnTheOtherSide = instance.serialize().bytes.deserialize<NotaryException>()
 
         assertEquals(instance.error, instanceOnTheOtherSide.error)
+        assertTrue(instance.error.toString().contains("->"))
     }
 }
