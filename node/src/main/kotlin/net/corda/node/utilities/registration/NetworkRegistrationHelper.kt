@@ -39,7 +39,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
                                      networkRootTrustStorePassword: String,
                                      private val keyAlias: String,
                                      private val certRole: CertRole,
-                                     private val computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) {
+                                     private val nextIdleDuration: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) {
 
     companion object {
         const val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
@@ -173,7 +173,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
                 }
                 Thread.sleep(pollInterval.toMillis())
             } catch (e: ServiceUnavailableException) {
-                idlePeriodDuration = computeNextIdleDoormanConnectionPollInterval.invoke(idlePeriodDuration)
+                idlePeriodDuration = nextIdleDuration(idlePeriodDuration)
                 if (idlePeriodDuration != null) {
                     Thread.sleep(idlePeriodDuration.toMillis())
                 } else {
@@ -283,9 +283,7 @@ private class FixedPeriodLimitedRetrialStrategy(times: Int, private val period: 
 
     override fun invoke(@Suppress("UNUSED_PARAMETER") previousPeriod: Duration?): Duration? {
         synchronized(this) {
-            val nextPeriod = if (counter > 0) period else null
-            counter--
-            return nextPeriod
+            return if (counter-- > 0) period else null
         }
     }
 }
