@@ -7,12 +7,8 @@
  *
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
-apply plugin: 'kotlin'
-
-evaluationDependsOn(':jdk8u-deterministic')
-
-def jdkTask = project(':jdk8u-deterministic').assemble
-def deterministic_jdk_home = project(':jdk8u-deterministic').jdk_home
+apply from: '../../../deterministic.gradle'
+apply plugin: 'idea'
 
 dependencies {
     compileOnly project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
@@ -20,14 +16,10 @@ dependencies {
     compileOnly "junit:junit:$junit_version"
 }
 
-tasks.withType(AbstractCompile) {
-    dependsOn jdkTask
-}
-
-tasks.withType(JavaCompile) {
-    options.compilerArgs << '-bootclasspath' << "$deterministic_jdk_home/jre/lib/rt.jar".toString()
-}
-
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
-    kotlinOptions.jdkHome = deterministic_jdk_home
+idea {
+    module {
+        if (project.hasProperty("deterministic_idea_sdk")) {
+            jdkName project.property("deterministic_idea_sdk") as String
+        }
+    }
 }
