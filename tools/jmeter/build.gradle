@@ -9,7 +9,6 @@
  */
 
 apply plugin: 'kotlin'
-apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'application'
 apply plugin: 'net.corda.plugins.publish-utils'
@@ -65,14 +64,13 @@ dependencies {
 
 // Run JMeter as server process/agent on current host.
 task runServer(dependsOn: 'classes', type: JavaExec) {
-    def searchPaths = file("$rootDir/build/search_paths.txt")
+    def searchPaths = file("$buildDir/search_paths.txt")
     doFirst {
-        mkdir rootProject.buildDir
         searchPaths.text = configurations.runtime.files.join(";")
     }
 
     classpath = sourceSets.main.runtimeClasspath
-    main = 'com.r3.corda.jmeter.Launcher'
+    main = mainClassName
     systemProperty "search_paths_file", searchPaths.toString()
     systemProperty "java.rmi.server.hostname", "0.0.0.0"
     systemProperty "jmeter.home", sourceSets.main.resources.getSrcDirs().first().getPath()
@@ -112,9 +110,8 @@ task runDriver(dependsOn: 'classes', type: JavaExec) {
 // e.g. ./gradlew tools:jmeter:run -PjmeterHosts="['perf-notary.corda.r3cev.com', 'perf-node-1.corda.r3cev.com']"
 // Each host is paired with local host ports listed in remote_hosts of jmeter.properties
 run {
-    def searchPaths = file("$rootDir/build/search_paths.txt")
+    def searchPaths = file("$buildDir/search_paths.txt")
     doFirst {
-        mkdir rootProject.buildDir
         searchPaths.text = configurations.runtime.files.join(";")
     }
     systemProperty "search_paths_file", searchPaths.toString()
@@ -150,7 +147,7 @@ jar {
 // Run with: java -jar jmeter-corda-<version>.jar
 // No additional args required but will be passed if specified.
 task buildJMeterJAR(type: FatCapsule) {
-    applicationClass 'com.r3.corda.jmeter.Launcher'
+    applicationClass mainClassName
     archiveName "jmeter-corda-${corda_release_version}.jar"
     applicationSource = jar
     from 'NOTICE' // Copy CDDL notice
