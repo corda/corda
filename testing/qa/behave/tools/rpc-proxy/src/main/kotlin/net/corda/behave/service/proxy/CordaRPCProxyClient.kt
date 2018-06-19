@@ -122,6 +122,10 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
         TODO("not implemented") 
     }
 
+    override fun internalFindVerifiedTransaction(txnId: SecureHash): SignedTransaction? {
+        TODO("not implemented")
+    }
+
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         TODO("not implemented") 
     }
