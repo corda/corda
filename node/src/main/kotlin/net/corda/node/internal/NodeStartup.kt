@@ -25,6 +25,7 @@ import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
+import net.corda.node.utilities.registration.UnableToRegisterNodeWithDoormanException
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -121,6 +122,9 @@ open class NodeStartup(val args: Array<String>) {
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
+        } catch (e: UnableToRegisterNodeWithDoormanException) {
+            logger.warn("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.")
+            return false
         } catch (e: Exception) {
             logger.error("Exception during node registration", e)
             return false
