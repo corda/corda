@@ -187,7 +187,7 @@ class LinearStateBatchNotariseSampler : AbstractSampler() {
 
     override fun additionalFlowResponseProcessing(context: JavaSamplerContext, sample: SampleResult, response: Any?) {
         if (response is LinearStateBatchNotariseFlow.Result && response.measurements.isNotEmpty()) {
-            measurements.add(response.measurements)
+            measurements.add(LinkedList(response.measurements))
             measurementsSize += response.measurements.size
         }
         this.sample = sample

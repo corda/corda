@@ -136,7 +136,7 @@ class LinearStateBatchNotariseFlow(private val notary: Party,
     }
 
     @CordaSerializable
-    data class Result(val measurements: LinkedList<Measurement>)
+    data class Result(val measurements: List<Measurement>)
 
     @CordaSerializable
     data class Measurement(val start: Instant, val end: Instant, val delay: Duration)
