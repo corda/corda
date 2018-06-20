@@ -117,7 +117,7 @@ With the re-designed network map service the following changes need to be made:
 * The network map is no longer provided by a node and thus the ``networkMapService`` config is ignored. Instead the
   network map is either provided by the compatibility zone (CZ) operator (who operates the doorman) and available
   using the ``compatibilityZoneURL`` config, or is provided using signed node info files which are copied locally.
-  See :doc:`network-map` for more details, and :doc:`setting-up-a-corda-network` on how to use the network
+  See :doc:`network-map` for more details, and :doc:`network-bootstrapper` on how to use the network
   bootstrapper for deploying a local network.
 
 * Configuration for a notary has been simplified. ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses``

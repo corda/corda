@@ -4,6 +4,7 @@ package net.corda.webserver
 
 import com.typesafe.config.ConfigException
 import net.corda.core.internal.div
+import net.corda.core.internal.location
 import net.corda.core.internal.rootCause
 import net.corda.webserver.internal.NodeWebServer
 import org.slf4j.LoggerFactory
@@ -48,7 +49,7 @@ fun main(args: Array<String>) {
         exitProcess(2)
     }
 
-    log.info("Main class: ${WebServerConfig::class.java.protectionDomain.codeSource.location.toURI().path}")
+    log.info("Main class: ${WebServerConfig::class.java.location.toURI().path}")
     val info = ManagementFactory.getRuntimeMXBean()
     log.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
     log.info("Application Args: ${args.joinToString(" ")}")

@@ -81,6 +81,9 @@ fun Path.lastModifiedTime(vararg options: LinkOption): FileTime = Files.getLastM
 /** @see Files.isDirectory */
 fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(this, *options)
 
+/** @see Files.isSameFile */
+fun Path.isSameAs(other: Path): Boolean = Files.isSameFile(this, other)
+
 /**
  * Same as [Files.list] except it also closes the [Stream].
  * @return the output of [block]
