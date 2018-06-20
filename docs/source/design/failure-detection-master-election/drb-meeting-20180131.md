@@ -37,7 +37,7 @@ MN presented a high level summary of the options:
 
 - Zookeeper (recommended option): industry standard widely used and trusted. May be able to leverage clients' incumbent Zookeeper infrastructure
     - Positive: has flexibility for storage and a potential for future proofing; good permissioning capabilities; standalone cluster of Zookeeper servers allows 2 nodes solution rather than 3
-    - Negative: adds deployment complexity due to need for Zookeeper cluster split across datacentres
+    - Negative: adds deployment complexity due to need for Zookeeper cluster split across data centers
 Wrapper library choice for Zookeeper requires some analysis
 
 
@@ -87,7 +87,7 @@ MH: how does failover work with HSMs?
 MN: can replicate realm so failover is trivial
 
 JC: how do we document Enterprise features? Publish design docs? Enterprise fact sheets? R3 Corda marketing material?
-Clear seperation of documentation is required. GT: this is already achieved by having docs.corda.net for open source
+Clear separation of documentation is required. GT: this is already achieved by having docs.corda.net for open source
 Corda and docs.corda.r3.com for enterprise R3 Corda
 
 

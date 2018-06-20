@@ -230,7 +230,7 @@ It can be thought of as a DNS equivalent. If you want to de-list a user, you wou
 It is very likely that your map server won't be entirely standalone, but rather, integrated with whatever your master
 user database is.
 
-The network map server also distributes signed network parameter files and controls the rollout schedule for when they
+The network map server also distributes signed network parameter files and controls the roll-out schedule for when they
 become available for download and opt-in, and when they become enforced. This is again a policy decision you will
 probably choose to place some simple UI or workflow tooling around, in particular to enforce restrictions on who can
 edit the map or the parameters.
@@ -322,7 +322,7 @@ Selecting parameter values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 How to choose the parameters? This is the most complex question facing you as a new zone operator. Some settings may seem
-straightforward and others may involve cost/benefit tradeoffs specific to your business. For example, you could choose
+straightforward and others may involve cost/benefit trade-offs specific to your business. For example, you could choose
 to run a validating notary yourself, in which case you would (in the absence of SGX) see all the users' data. Or you could
 run a non-validating notary, with BFT fault tolerance, which implies recruiting others to take part in the cluster.
 

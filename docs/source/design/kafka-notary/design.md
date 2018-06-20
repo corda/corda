@@ -38,7 +38,7 @@ The notary service should be able to:
 - Notarise more than 1,000 transactions per second, with average 4 inputs per transaction.
 - Notarise a single transaction within 1s (from the service perspective).
 - Tolerate single node crash without affecting service availability.
-- Tolerate single datacenter failure.
+- Tolerate single data center failure.
 - Tolerate single disk failure/corruption.
 
 
@@ -86,7 +86,7 @@ the specific network environment (e.g. the bottleneck could be the replication s
 One advantage of hosting the request log in a separate cluster is that it makes it easier to independently scale the
 number of worker nodes. If, for example, if transaction validation and resolution is required when receiving a
 notarisation request, we might find that a significant number of receivers is required to generate enough incoming
-traffic to the request log. On the flipside, increasing the number of workers adds additional consumers and load on the
+traffic to the request log. On the flip side, increasing the number of workers adds additional consumers and load on the
 request log, so a balance needs to be found.
 
 ## Design Decisions
@@ -183,7 +183,7 @@ Kafka provides various configuration parameters allowing to control producer and
 
 RocksDB is highly tunable as well, providing different table format implementations, compression, bloom filters, compaction styles, and others.
 
-Initial prototype tests showed up to *15,000* TPS for single-input state transactions, or *40,000* IPS (inputs/sec) for 1,000 input transactions. No performance drop observed even after 1.2m transactions were notarised. The tests were run on three 8 core, 28 GB RAM Azure VMs in separate datacenters. 
+Initial prototype tests showed up to *15,000* TPS for single-input state transactions, or *40,000* IPS (inputs/sec) for 1,000 input transactions. No performance drop observed even after 1.2m transactions were notarised. The tests were run on three 8 core, 28 GB RAM Azure VMs in separate data centers. 
 
 With the recent introduction of notarisation request signatures the figures are likely to be much lower, as the request payload size is increased significantly. More tuning and testing required.
 
@@ -210,8 +210,8 @@ Kafka exports a wide range of metrics via JMX. Datadog integration available.
 ### Disaster recovery
 
 Failure modes:
-1. **Single machine or datacenter failure**. No backup/restore procedures are needed – nodes can catch up with the cluster on start. The RocksDB-backed committed state index keeps a pointer to the position of the last applied Kafka record, and it can resume where it left after restart.
-2. **Multi-datacenter disaster leading to data loss**. Out of scope. 
+1. **Single machine or data center failure**. No backup/restore procedures are needed – nodes can catch up with the cluster on start. The RocksDB-backed committed state index keeps a pointer to the position of the last applied Kafka record, and it can resume where it left after restart.
+2. **Multi-data center disaster leading to data loss**. Out of scope. 
 3. **User error**. It is possible for an admin to accidentally delete a topic – Kafka provides tools for that. However, topic deletion has to be explicitly enabled in the configuration (disabled by default). Keeping that option disabled should be a sufficient safeguard.
 4. **Protocol-level corruption**. This covers scenarios when data stored in Kafka gets corrupted and the corruption is replicated to healthy replicas. In general, this is extremely unlikely to happen since Kafka records are immutable. The only such corruption in practical sense could happen due to record deletion during compaction, which would occur if the broker is misconfigured to not retrain records indefinitely. However, compaction is performed asynchronously and local to the broker. In order for all data to be lost, _all_ brokers have to be misconfigured.
 
@@ -223,7 +223,7 @@ In both scenarios the most recent requests will be lost. If data loss only occur
 
 ## Security
 
-* **Communication**. Kafka supports SSL for both client-to-server and server-to-server communication. However, Zookeeper only supports SSL in client-to-server, which means that running Zookeeper across datacenters will require setting up a VPN. For simplicity, we can reuse the same VPN for the Kafka cluster as well. The notary worker nodes can talk to Kafka either via SSL or the VPN.
+* **Communication**. Kafka supports SSL for both client-to-server and server-to-server communication. However, Zookeeper only supports SSL in client-to-server, which means that running Zookeeper across data centers will require setting up a VPN. For simplicity, we can reuse the same VPN for the Kafka cluster as well. The notary worker nodes can talk to Kafka either via SSL or the VPN.
 
 * **Data privacy**. No transaction contents or PII is revealed or stored. 
 

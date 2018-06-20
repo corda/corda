@@ -12,7 +12,7 @@ import net.corda.finance.contracts.Fix
 import java.util.function.Predicate
 
 fun main(args: Array<String>) {
-    // Typealias to make the example coherent.
+    // Type alias to make the example coherent.
     val oracle = Any() as AbstractParty
     val stx = Any() as SignedTransaction
 

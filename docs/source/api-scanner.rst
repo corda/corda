@@ -25,7 +25,7 @@ There are three kinds of breaking change:
 * Removal or modification of existing API, i.e. an existing class, method or field has been either deleted or renamed, or
   its signature somehow altered.
 * Addition of a new method to an interface or abstract class. Types that have been annotated as ``@DoNotImplement`` are
-  excluded from this check. (This annotation is also inherited across subclasses and subinterfaces.)
+  excluded from this check. (This annotation is also inherited across subclasses and sub-interfaces.)
 * Exposure of an internal type via a public API. Internal types are considered to be anything in a ``*.internal.`` package
   or anything in a module that isn't in the stable modules list :ref:`here <internal-apis-and-stability-guarantees>`.
 
@@ -49,7 +49,7 @@ Updating the API
 As a rule, ``api-current.txt`` should only be updated by the release manager for each Corda release.
 
 We do not expect modifications to ``api-current.txt`` as part of normal development. However, we may sometimes need to adjust
-the public API in ways that would not break developers' CorDapps but which would be blocked by the API Stabilty check.
+the public API in ways that would not break developers' CorDapps but which would be blocked by the API Stability check.
 For example, migrating a method from an interface into a superinterface. Any changes to the API summary file should be
 included in the PR, which would then need explicit approval from either `Mike Hearn <https://github.com/mikehearn>`_, `Rick Parker <https://github.com/rick-r3>`_ or `Matthew Nesbit <https://github.com/mnesbit>`_.
 

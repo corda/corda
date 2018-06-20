@@ -376,7 +376,7 @@ and via the versioning APIs.
 * **Observer Nodes**
 
 Adds the facility for transparent forwarding of transactions to some third party observer, such as a regulator. By having
-that entity simply run an Observer node they can simply recieve a stream of digitally signed, de-duplicated reports that
+that entity simply run an Observer node they can simply receive a stream of digitally signed, de-duplicated reports that
 can be used for reporting.
 
 .. _release_notes_v1_0:

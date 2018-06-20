@@ -278,7 +278,7 @@ An example ``web-server.conf`` file is as follow:
     }
     rpcUsers : [{ username=user1, password=letmein, permissions=[ StartFlow.net.corda.protocols.CashProtocol ] }]
 
-Configuring a node where the Corda Comatability Zone's registration and Network Map services exist on different URLs
+Configuring a node where the Corda Compatibility Zone's registration and Network Map services exist on different URLs
 
 .. literalinclude:: example-code/src/main/resources/example-node-with-networkservices.conf
 

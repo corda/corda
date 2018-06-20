@@ -69,15 +69,15 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, lockId: UUID, req
     val (inputs, residual) = gatherOurInputs(serviceHub, lockId, sellAmount, request.notary)
 
     // Build and an output state for the counterparty
-    val transferedFundsOutput = Cash.State(sellAmount, request.counterparty)
+    val transferredFundsOutput = Cash.State(sellAmount, request.counterparty)
 
     val outputs = if (residual > 0L) {
         // Build an output state for the residual change back to us
         val residualAmount = Amount(residual, sellAmount.token)
         val residualOutput = Cash.State(residualAmount, serviceHub.myInfo.singleIdentity())
-        listOf(transferedFundsOutput, residualOutput)
+        listOf(transferredFundsOutput, residualOutput)
     } else {
-        listOf(transferedFundsOutput)
+        listOf(transferredFundsOutput)
     }
     return Pair(inputs, outputs)
     // DOCEND 2
