@@ -98,30 +98,37 @@ The value is a placeholder which is resolved at runtime to a node organization n
 Cordform Gradle task
 ~~~~~~~~~~~~~~~~~~~~
 Cordform task ``deployNodes`` can be modified to override default H2 database settings.
-For each node element add `extraConfig`` with all JDBC/database properties as described in :ref:`Node configuration <standalone_database_config_examples_ref>`.
+For each node element add ``extraConfig`` with all JDBC/database properties as described in :ref:`Node configuration <standalone_database_config_examples_ref>`.
+The task copies JDBC driver JAR files to the ``./drivers`` subdirectory listed by the ``drivers`` property.
+To avoid duplicated definitions of ``extraConfig`` or ``drivers`` properties, they can be defined at the top-level with an ``ext.`` prefix and reused for each node entry as shown in the example below.
 
 .. code:: bash
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+
+        ext.drivers = ['[JDBC_DRIVER_PATH]']
+        ext.extraConfig = [
+                 'dataSourceProperties.dataSource.url' : 'jdbc:sqlserver://[DATABASE].database.windows.net:1433;databaseName=[DATABASE];encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30',
+                 'dataSourceProperties.dataSourceClassName' : 'com.microsoft.sqlserver.jdbc.SQLServerDataSource',
+                 'database.transactionIsolationLevel' : 'READ_COMMITTED',
+                 'database.runMigration' : 'true'
+        ]
         ...
         node {
             ...
-            extraConfig = [
-                    'dataSourceProperties.dataSource.url' : 'jdbc:sqlserver://[DATABASE].database.windows.net:1433;databaseName=[DATABASE];encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30',
-                    'dataSourceProperties.dataSourceClassName' : 'com.microsoft.sqlserver.jdbc.SQLServerDataSource',
-                    'dataSourceProperties.dataSource.user' : '[USER]',
-                    'dataSourceProperties.dataSource.password' : '[PASSWORD]',
-                    'jarDirs' : ['path_to_jdbc_driver_dir'],
-                    'database.transactionIsolationLevel' : 'READ_COMMITTED',
-                    'database.schema' : '[SCHEMA]',
-                    'database.runMigration' : 'true'
+            extraConfig = ext.extraConfig + [
+                     'dataSourceProperties.dataSource.user' : '[USER]',
+                     'dataSourceProperties.dataSource.password' : '[PASSWORD]',
+                     'database.schema' : '[SCHEMA]'
             ]
 
-The Cordform task doesn't create/cleanup the database and doesn't download the required JDBC driver JAR.
+            drivers = ext.drivers
+
+The Cordform task doesn't create/cleanup the database and doesn't download the required JDBC driver JAR, however it can copy already downloaded JDBC driver via the ``drivers`` property.
 Manual database setup is described in :ref:`Node configuration <standalone_database_config_examples_ref>`.
 
 .. note::
-    The Cordform task can be used to deploy nodes distributed with Capsule only, as currently the task doesn't copy JDBC driver JAR files to the ``./drivers`` subdirectory and uses paths from the ``jarDirs`` property instead.
+    To deploy nodes that are distributed with Capsule only, the Cordform task can use the ``jarDirs`` configuration entry instead of the ``drivers`` entry.
 
 DriverDSL
 ~~~~~~~~~
