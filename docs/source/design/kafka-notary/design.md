@@ -97,7 +97,7 @@ state index.
 
 | Heading | Recommendation |
 | ---------------------------------------- | -------------- |
-| [Replication framework](decisions/replicated_storage.md) | Option C |
+| [Replication framework](decisions/replicated-storage.md) | Option C |
 | [Index storage engine](decisions/index-storage.md) | Option A       |
 
 TECHNICAL DESIGN

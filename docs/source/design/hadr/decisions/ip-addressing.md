@@ -2,7 +2,7 @@
 
 ## Background / Context
 
-End-to-end encryption is a desirable potential design feature for the [high availability support](design).
+End-to-end encryption is a desirable potential design feature for the [high availability support](../design.md).
 
 ## Options Analysis
 
