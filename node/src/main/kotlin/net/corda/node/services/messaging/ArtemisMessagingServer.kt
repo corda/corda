@@ -123,6 +123,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             CoreAddressConfiguration().apply {
                 name = queueName
                 queueConfigurations = listOf(queueConfig)
+                addRoutingType(RoutingType.ANYCAST)
             }
         }
         return SecureArtemisConfiguration().apply {
