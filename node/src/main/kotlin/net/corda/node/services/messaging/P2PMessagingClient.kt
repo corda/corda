@@ -49,6 +49,7 @@ import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.requireMessageSize
+import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.Message.HDR_VALIDATED_USER
@@ -183,7 +184,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 inboxes += RemoteInboxAddress(it).queueName
             }
 
-            inboxes.forEach { createQueueIfAbsent(it, producerSession!!) }
+            inboxes.forEach { createQueueIfAbsent(it, producerSession!!, exclusive = true) }
+
             p2pConsumer = P2PMessagingConsumer(inboxes, createNewSession, isDrainingModeOn, drainingModeWasChangedEvents)
 
             val messagingExecutor = MessagingExecutor(
@@ -495,14 +497,14 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val internalTargetQueue = (address as? ArtemisAddress)?.queueName
                     ?: throw IllegalArgumentException("Not an Artemis address")
             state.locked {
-                createQueueIfAbsent(internalTargetQueue, producerSession!!)
+                createQueueIfAbsent(internalTargetQueue, producerSession!!, exclusive = address !is ServiceAddress)
             }
             internalTargetQueue
         }
     }
 
     /** Attempts to create a durable queue on the broker which is bound to an address of the same name. */
-    private fun createQueueIfAbsent(queueName: String, session: ClientSession) {
+    private fun createQueueIfAbsent(queueName: String, session: ClientSession, exclusive: Boolean) {
         fun sendBridgeCreateMessage() {
             val keyHash = queueName.substring(PEERS_PREFIX.length)
             val peers = networkMap.getNodesByOwningKeyIndex(keyHash)
@@ -521,7 +523,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 val queueQuery = session.queueQuery(SimpleString(queueName))
                 if (!queueQuery.isExists) {
                     log.info("Create fresh queue $queueName bound on same address")
-                    session.createQueue(queueName, RoutingType.ANYCAST, queueName, true)
+                    session.createQueue(queueName, RoutingType.ANYCAST, queueName, null, true, false,
+                            ActiveMQDefaultConfiguration.getDefaultMaxQueueConsumers(),
+                            ActiveMQDefaultConfiguration.getDefaultPurgeOnNoConsumers(), exclusive, null)
                     sendBridgeCreateMessage()
                 }
             }
