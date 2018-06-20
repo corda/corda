@@ -3,12 +3,12 @@ package net.corda.core.transactions
 import co.paralleluniverse.strands.Strand
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
-import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -45,9 +45,10 @@ open class TransactionBuilder(
         protected var window: TimeWindow? = null,
         protected var privacySalt: PrivacySalt = PrivacySalt()
 ) {
-    constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
+    constructor(notary: Party) : this(notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid
+            ?: UUID.randomUUID())
 
-    private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
+    private val inputsWithTransactionState = arrayListOf<StateAndRef<*>>()
 
     /**
      * Creates a copy of the builder.
@@ -93,10 +94,12 @@ open class TransactionBuilder(
      *
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      */
-    @Throws(MissingContractAttachments::class)
+    @Throws(TransactionBuildingException::class)
     fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
 
     internal fun toWireTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
+
+        val contractAttachments = determineContractAttachments(services)
 
         // Resolves the AutomaticHashConstraints to HashAttachmentConstraints or WhitelistedByZoneAttachmentConstraint based on a global parameter.
         // The AutomaticHashConstraint allows for less boiler plate when constructing transactions since for the typical case the named contract
@@ -106,14 +109,12 @@ open class TransactionBuilder(
             when {
                 state.constraint !== AutomaticHashConstraint -> state
                 useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters) -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint)
-                else -> services.cordappProvider.getContractAttachmentID(state.contract)?.let {
-                    state.copy(constraint = HashAttachmentConstraint(it))
-                } ?: throw MissingContractAttachments(listOf(state))
+                else -> state.copy(constraint = HashAttachmentConstraint(contractAttachments.get(state.contract)!!))
             }
         }
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + makeContractAttachments(services.cordappProvider), notary, window), privacySalt)
+            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + contractAttachments.values, notary, window), privacySalt)
         }
     }
 
@@ -122,15 +123,59 @@ open class TransactionBuilder(
     }
 
     /**
-     * The attachments added to the current transaction contain only the hashes of the current cordapps.
-     * NOT the hashes of the cordapps that were used when the input states were created ( in case they changed in the meantime)
-     * TODO - review this logic
+     * This method is responsible for selecting the Contract Attachments to be used for the current transaction.
+     *
+     * The logic depends on the input states:
+     *
+     * * For input states with [HashAttachmentConstraint], if the attachment with the "hash" is trusted, then it will be inherited to the output states.
+     * * For input states with [WhitelistedByZoneAttachmentConstraint] or custom [AttachmentConstraint] implementations, then the currently installed cordapp version
      */
-    private fun makeContractAttachments(cordappProvider: CordappProvider): List<AttachmentId> {
-        return (inputsWithTransactionState + outputs).map { state ->
-            cordappProvider.getContractAttachmentID(state.contract)
-                    ?: throw MissingContractAttachments(listOf(state))
-        }.distinct()
+    private fun determineContractAttachments(services: ServicesForResolution): Map<ContractClassName, AttachmentId> {
+        val inputContracts = inputsWithTransactionState.map { inputState ->
+            val constraint = inputState.state.constraint
+            val contractClassName = inputState.state.contract
+
+            // If the input state is a HashConstraint, we check if we have that contract attachment, and if we trust it.
+            val attachment = if (constraint is HashAttachmentConstraint) {
+                val attachment = services.attachments.openAttachment(constraint.attachmentId)
+                if (attachment == null || attachment !is ContractAttachment || !isUploaderTrusted(attachment.uploader)) {
+                    // This should never happen because these are input states that should have been validated already.
+                    throw TransactionBuildingException.MissingContractAttachments(listOf(inputState.state))
+                }
+                constraint.attachmentId
+            } else {
+                // For all other constraint types we set the currently installed CorDapp version.
+                services.cordappProvider.getContractAttachmentID(contractClassName)
+            }
+            contractClassName to attachment
+        }
+
+        val allInputContracts = inputContracts.map { it.first }.toSet()
+
+        // Find output states that have no corresponding input state.
+        // If they are hand-crafted with the HashAttachmentConstraint -for some reason-, then use that hash
+        val outputContracts = outputStates()
+                .filter { state -> state.contract !in allInputContracts }
+                .map { state ->
+                    val constraint = state.constraint
+                    val attachment = if (constraint is HashAttachmentConstraint) {
+                        constraint.attachmentId
+                    } else {
+                        services.cordappProvider.getContractAttachmentID(state.contract)
+                    }
+                    state.contract to attachment
+                }
+
+        // Check that there is only one hash per contract. E.g.: 2 input states with different HashConstraints
+        val grouped = (outputContracts + inputContracts)
+                .groupBy { it.first }
+                .map { (contract, hashesList) ->
+                    val hashes = hashesList.map { it.second }.toSet().filterNotNull()
+                    if (hashes.size != 1) throw TransactionBuildingException.ConflictingAttachmentsRejection(contract)
+                    contract to hashes.single()
+                }
+
+        return grouped.toMap()
     }
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
@@ -149,7 +194,7 @@ open class TransactionBuilder(
         val notary = stateAndRef.state.notary
         require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
         inputs.add(stateAndRef.ref)
-        inputsWithTransactionState.add(stateAndRef.state)
+        inputsWithTransactionState.add(stateAndRef)
         return this
     }
 
