@@ -96,8 +96,6 @@ shadowJar  {
 
     baseName = 'corda-shell-cli'
     classifier = null
-    //version = null
-    //zip64 true
     mainClassName = 'net.corda.tools.shell.StandaloneShellKt'
     mergeServiceFiles()
 }
