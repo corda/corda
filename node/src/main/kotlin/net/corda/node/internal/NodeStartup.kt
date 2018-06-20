@@ -5,11 +5,8 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.Emoji
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
 import net.corda.node.CmdLineOptions
@@ -44,6 +41,7 @@ import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import kotlin.system.exitProcess
 
 /** This class is responsible for starting a Node from command line arguments. */
 open class NodeStartup(val args: Array<String>) {
@@ -179,15 +177,23 @@ open class NodeStartup(val args: Array<String>) {
         if (cmdlineOptions.justGenerateRpcSslCerts) {
             val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(conf.myLegalName.x500Principal)
 
+            val keyStorePath = conf.baseDirectory / "certificates" / "rpcsslkeystore.jks"
+            val trustStorePath = conf.baseDirectory / "certificates" / "export" / "rpcssltruststore.jks"
+
+            if (keyStorePath.exists() || trustStorePath.exists()) {
+                println("Found existing RPC SSL keystores. Command was already run. Exiting..")
+                exitProcess(0)
+            }
+
             val console: Console? = System.console()
 
             when (console) {
-                // In this case, the JVM is not connected to the console so we need to exit
+            // In this case, the JVM is not connected to the console so we need to exit
                 null -> {
                     println("Not connected to console. Exiting")
-                    System.exit(1)
+                    exitProcess(1)
                 }
-                // Otherwise we can proceed normally
+            // Otherwise we can proceed normally
                 else -> {
                     while (true) {
                         val keystorePassword1 = console.readPassword("Enter the keystore password => ")
@@ -196,7 +202,7 @@ open class NodeStartup(val args: Array<String>) {
                             println("The keystore passwords don't match.")
                             continue
                         }
-                        val keyStorePath = saveToKeyStore(conf.baseDirectory / "certificates" / "rpcsslkeystore.jks", keyPair, cert, String(keystorePassword1), "rpcssl")
+                        saveToKeyStore(keyStorePath, keyPair, cert, String(keystorePassword1), "rpcssl")
                         println("The keystore was saved to: $keyStorePath .")
                         break
                     }
@@ -209,7 +215,7 @@ open class NodeStartup(val args: Array<String>) {
                             continue
                         }
 
-                        val trustStorePath = saveToTrustStore(conf.baseDirectory / "certificates" / "export" / "rpcssltruststore.jks", cert, String(trustStorePassword1), "rpcssl")
+                        saveToTrustStore(trustStorePath, cert, String(trustStorePassword1), "rpcssl")
                         println("The truststore was saved to: $trustStorePath .")
                         println("You need to distribute this file along with the password in a secure way to all RPC clients.")
                         break
@@ -231,6 +237,7 @@ open class NodeStartup(val args: Array<String>) {
             }
             return
         }
+
         val startedNode = node.start()
         Node.printBasicNodeInfo("Loaded CorDapps", startedNode.services.cordappProvider.cordapps.joinToString { it.name })
         startedNode.internals.nodeReadyFuture.thenMatch({
