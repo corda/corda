@@ -93,21 +93,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
     // Artemis IO errors
     @Throws(IOException::class, KeyStoreException::class)
     private fun configureAndStartServer() {
-        val addressConfigs = identities.map {
-            val queueName = ArtemisMessagingComponent.RemoteInboxAddress(it).queueName
-            log.info("Configuring address $queueName")
-            val queueConfig = CoreQueueConfiguration().apply {
-                address = queueName
-                name = queueName
-                routingType = RoutingType.ANYCAST
-            }
-            CoreAddressConfiguration().apply {
-                name = queueName
-                queueConfigurations = listOf(queueConfig)
-            }
-        }
-
-        val artemisConfig = createArtemisConfig(addressConfigs)
+        val artemisConfig = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
         activeMQServer = ActiveMQServerImpl(artemisConfig, securityManager).apply {
             // Throw any exceptions which are detected during startup
@@ -125,30 +111,45 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         log.info("P2P messaging server listening on $messagingServerAddress")
     }
 
-    private fun createArtemisConfig(addressConfigs: List<CoreAddressConfiguration>) = SecureArtemisConfiguration().apply {
-        val artemisDir = config.baseDirectory / "artemis"
-        bindingsDirectory = (artemisDir / "bindings").toString()
-        journalDirectory = (artemisDir / "journal").toString()
-        largeMessagesDirectory = (artemisDir / "large-messages").toString()
-        acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config))
-        // Enable built in message deduplication. Note we still have to do our own as the delayed commits
-        // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
-        idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
-        isPersistIDCache = true
-        isPopulateValidatedUser = true
-        journalBufferSize_NIO = maxMessageSize + JOURNAL_HEADER_SIZE // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
-        journalBufferSize_AIO = maxMessageSize + JOURNAL_HEADER_SIZE // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
-        journalFileSize = maxMessageSize + JOURNAL_HEADER_SIZE// The size of each journal file in bytes. Artemis default is 10MiB.
-        managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
-        addressConfigurations = addressConfigs
-
-        // JMX enablement
-        if (config.jmxMonitoringHttpPort != null) {
-            isJMXManagementEnabled = true
-            isJMXUseBrokerName = true
+    private fun createArtemisConfig(): Configuration {
+        val addressConfigs = identities.map {
+            val queueName = ArtemisMessagingComponent.RemoteInboxAddress(it).queueName
+            log.info("Configuring address $queueName")
+            val queueConfig = CoreQueueConfiguration().apply {
+                address = queueName
+                name = queueName
+                routingType = RoutingType.ANYCAST
+            }
+            CoreAddressConfiguration().apply {
+                name = queueName
+                queueConfigurations = listOf(queueConfig)
+            }
         }
+        return SecureArtemisConfiguration().apply {
+            val artemisDir = config.baseDirectory / "artemis"
+            bindingsDirectory = (artemisDir / "bindings").toString()
+            journalDirectory = (artemisDir / "journal").toString()
+            largeMessagesDirectory = (artemisDir / "large-messages").toString()
+            acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config))
+            // Enable built in message deduplication. Note we still have to do our own as the delayed commits
+            // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
+            idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
+            isPersistIDCache = true
+            isPopulateValidatedUser = true
+            journalBufferSize_NIO = maxMessageSize + JOURNAL_HEADER_SIZE // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
+            journalBufferSize_AIO = maxMessageSize + JOURNAL_HEADER_SIZE // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
+            journalFileSize = maxMessageSize + JOURNAL_HEADER_SIZE// The size of each journal file in bytes. Artemis default is 10MiB.
+            managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
+            addressConfigurations = addressConfigs
 
-    }.configureAddressSecurity()
+            // JMX enablement
+            if (config.jmxMonitoringHttpPort != null) {
+                isJMXManagementEnabled = true
+                isJMXUseBrokerName = true
+            }
+
+        }.configureAddressSecurity()
+    }
 
     /**
      * Authenticated clients connecting to us fall in one of the following groups:
