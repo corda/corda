@@ -119,6 +119,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
                 address = queueName
                 name = queueName
                 routingType = RoutingType.ANYCAST
+                isExclusive = true
             }
             CoreAddressConfiguration().apply {
                 name = queueName
