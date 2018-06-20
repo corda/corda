@@ -369,7 +369,7 @@ class ProtonWrapperTests {
         }
         artemisConfig.configureWithDevSSLCertificate()
 
-        val server = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", artemisPort), maxMessageSize, emptyList())
+        val server = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", artemisPort), maxMessageSize)
         val client = ArtemisMessagingClient(artemisConfig, NetworkHostAndPort("localhost", artemisPort), maxMessageSize)
         server.start()
         client.start()
