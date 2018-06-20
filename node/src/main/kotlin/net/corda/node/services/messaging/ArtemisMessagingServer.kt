@@ -55,7 +55,7 @@ import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.RE
 class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val messagingServerAddress: NetworkHostAndPort,
                              private val maxMessageSize: Int,
-                             private val identities: List<PublicKey>) : ArtemisBroker, SingletonSerializeAsToken() {
+                             private val identities: List<PublicKey> = emptyList()) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
     }
