@@ -1,3 +1,9 @@
+.. raw:: html
+
+    <style> .red {color:red} </style>
+
+.. role:: red
+
 Deterministic Corda Modules
 ===========================
 
@@ -86,6 +92,103 @@ The build generates each of Corda's deterministic JARs in six steps:
     This step will fail if ProGuard spots any Java API references that still cannot be satisfied by the deterministic
     ``rt.jar``, and hence it will break the build.
 
+Configuring IntelliJ with a Deterministic SDK
+---------------------------------------------
+
+We would like to configure IntelliJ so that it will highlight uses of non-deterministic Java APIs as :red:`not found`.
+Or, more specifically, we would like IntelliJ to use the ``deterministic-rt.jar`` as a "Module SDK" for deterministic
+modules rather than the ``rt.jar`` from the default project SDK, to make IntelliJ consistent with Gradle.
+
+This is possible, but slightly tricky to configure because IntelliJ will not recognise an SDK containing only the
+``deterministic-rt.jar`` as being valid. It also requires that IntelliJ delegate all build tasks to Gradle, and that
+Gradle be configured to use the Project's SDK.
+
+Creating the Deterministic SDK
+    #. Create a JDK Home directory with the following contents:
+
+        ``jre/lib/rt.jar``
+
+       where ``rt.jar`` here is this renamed artifact:
+
+       .. code-block:: xml
+
+           <dependency>
+               <groupId>net.corda</groupId>
+               <artifactId>deterministic-rt</artifactId>
+               <classifier>api</classifier>
+           </dependency>
+
+       ..
+
+       .. note:: Gradle already creates this JDK in the project's ``jdk8u-deterministic/jdk`` directory, and you could
+                 configure IntelliJ to use this location as well. However, you should also be aware that IntelliJ SDKs
+                 are available for *all* projects to use.
+
+                 To create this deterministic JDK image, execute the following:
+
+                 .. code-block:: bash
+
+                     $ gradlew jdk8u-deterministic:copyJdk
+
+                 ..
+
+    #. While IntelliJ is *not* running, locate the ``config/options/jdk.table.xml`` file in IntelliJ's configuration
+       directory. Add an empty ``<jdk>`` section to this file:
+
+       .. code-block:: xml
+
+           <jdk version="2">
+               <name value="1.8 (Deterministic)"/>
+               <type value="JavaSDK"/>
+               <version value="java version &quot;1.8.0&quot;"/>
+               <homePath value=".. path to the deterministic JDK directory .."/>
+               <roots>
+               </roots>
+           </jdk>
+
+       ..
+
+    #. Open IntelliJ and select ``File/Project Structure/Platform Settings/SDKs``. The "1.8 (Deterministic)" SDK should
+       now be present. Select it and then click on the ``Classpath`` tab. Press the "Add" / "Plus" button to add
+       ``rt.jar`` to the SDK's classpath. Then select the ``Annotations`` tab and include the same JAR(s) as the other
+       SDKs.
+
+Configuring the Corda Project
+    #. Open the root ``build.gradle`` file and define this property:
+
+       .. code-block:: gradle
+
+           buildscript {
+               ext {
+                   ...
+                   deterministic_idea_sdk = '1.8 (Deterministic)'
+                   ...
+               }
+           }
+
+       ..
+
+Configuring IntelliJ
+    #. Go to ``File/Settings/Build, Execution, Deployment/Build Tools/Gradle``, and configure Gradle's JVM to be the
+       project's JVM.
+
+    #. Go to ``File/Settings/Build, Execution, Deployment/Build Tools/Gradle/Runner``, and select these options:
+
+        - Delegate IDE build/run action to Gradle
+        - Run tests using the Gradle Test Runner
+
+    #. Delete all of the ``out`` directories that IntelliJ has previously generated for each module.
+
+    #. Go to ``View/Tool Windows/Gradle`` and click the ``Refresh all Gradle projects`` button.
+
+These steps will enable IntelliJ's presentation compiler to use the deterministic ``rt.jar`` with the following modules:
+
+    - ``core-deterministic``
+    - ``serialization-deterministic``
+    - ``core-deterministic:testing:common``
+
+but still build everything using Gradle with the full JDK.
+
 Testing the Deterministic Modules
 ---------------------------------
 
@@ -108,7 +211,7 @@ The ``testing`` module also has two sub-modules:
 .. _deterministic_annotations:
 
 Applying @KeepForDJVM and @DeleteForDJVM annotations
----------------------------------------------------------
+----------------------------------------------------
 
 Corda developers need to understand how to annotate classes in the ``core`` and ``serialization`` modules correctly
 in order to maintain the deterministic JARs.

@@ -59,7 +59,7 @@ buildscript {
     ext.h2_version = '1.4.197' // Update docs if renamed or removed.
     ext.postgresql_version = '42.1.4'
     ext.rxjava_version = '1.2.4'
-    ext.dokka_version = '0.9.16-eap-2'
+    ext.dokka_version = '0.9.17'
     ext.eddsa_version = '0.2.0'
     ext.dependency_checker_version = '3.1.0'
     ext.commons_collections_version = '4.1'
@@ -83,6 +83,8 @@ buildscript {
     ext.jcabi_manifests_version = '1.1'
 
     ext.deterministic_rt_version = '1.0-SNAPSHOT'
+    // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
+    // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
 
     // Update 121 is required for ObjectInputFilter.
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
@@ -178,7 +180,7 @@ allprojects {
             apiVersion = "1.2"
             jvmTarget = "1.8"
             javaParameters = true   // Useful for reflection.
-            freeCompilerArgs = ['-Xenable-jvm-default']
+            freeCompilerArgs = ['-Xjvm-default=compatibility']
         }
     }
 
@@ -194,6 +196,8 @@ allprojects {
     }
 
     tasks.withType(Test) {
+        failFast = true
+
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
 
@@ -431,6 +435,6 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
 }
 
 wrapper {
-    gradleVersion = "4.4.1"
+    gradleVersion = "4.8"
     distributionType = Wrapper.DistributionType.ALL
 }

@@ -117,9 +117,25 @@ Following the previous example ``PartyB`` node will have additional configuratio
             [...]
             // Grants user1 the ability to start the MyFlow flow.
             rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.net.corda.flows.MyFlow"]]]
-            configFile = "samples/trader-demo/src/main/resources/none-b.conf"
+            configFile = "samples/trader-demo/src/main/resources/node-b.conf"
         }
     }
+
+Cordform parameter `drivers` of the `node` entry lists paths of the files to be copied to the `./drivers` subdirectory of the node.
+To copy the same file to all nodes `ext.drivers` can be defined in the top level and reused for each node via `drivers=ext.drivers``.
+
+.. sourcecode:: groovy
+
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        ext.drivers = ['lib/my_common_jar.jar']
+        [...]
+        node {
+            name "O=PartyB,L=New York,C=US"
+            [...]
+            drivers = ext.drivers + ['lib/my_specific_jar.jar']
+        }
+    }
+
 
 Specifying a custom webserver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
