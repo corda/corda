@@ -29,6 +29,7 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.CordaService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.config.FlowTimeoutConfiguration
@@ -55,6 +56,8 @@ import org.junit.rules.RuleChain
 import org.slf4j.MDC
 import java.security.PublicKey
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 class TimedFlowTestRule(val clusterSize: Int) : ExternalResource() {
 
@@ -154,8 +157,15 @@ class TimedFlowTests {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             val flow = NotaryFlow.Client(issueTx)
+            val progressTracker = flow.progressTracker
+            assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
             val notarySignatures = services.startFlow(flow).resultFuture.get()
             (issueTx + notarySignatures).verifyRequiredSignatures()
+            assertEquals(
+                    ProgressTracker.DONE,
+                    progressTracker.currentStep,
+                    "Ensure the same progress tracker object is re-used after flow restart"
+            )
         }
     }
 
@@ -167,8 +177,15 @@ class TimedFlowTests {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             val flow = FinalityFlow(issueTx)
+            val progressTracker = flow.progressTracker
+
             val stx = services.startFlow(flow).resultFuture.get()
             stx.verifyRequiredSignatures()
+            assertEquals(
+                    ProgressTracker.DONE,
+                    progressTracker.currentStep,
+                    "Ensure the same progress tracker object is re-used after flow restart"
+            )
         }
     }
 
