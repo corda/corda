@@ -249,7 +249,7 @@ class NodeConfigurationImplTest {
     }
 
     @Test
-    fun `compatiilityZoneURL populates NetworkServices`() {
+    fun `compatibilityZoneURL populates NetworkServices`() {
         val compatibilityZoneURL = URI.create("https://r3.com").toURL()
         val configuration = testConfiguration.copy(
                 devMode = false,
