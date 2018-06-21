@@ -5092,6 +5092,9 @@ public class net.corda.core.transactions.TransactionBuilder extends java.lang.Ob
   @NotNull
   public final net.corda.core.transactions.TransactionBuilder withItems(Object...)
 ##
+@CordaSerializable
+public abstract class net.corda.core.transactions.TransactionBuildingException extends net.corda.core.flows.FlowException
+##
 @DoNotImplement
 public interface net.corda.core.transactions.TransactionWithSignatures extends net.corda.core.contracts.NamedByHash
   public void checkSignaturesAreValid()
