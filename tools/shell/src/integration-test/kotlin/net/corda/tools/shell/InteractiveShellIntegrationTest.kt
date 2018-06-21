@@ -36,9 +36,6 @@ import net.corda.testing.driver.internal.RandomFree
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
-import net.corda.testing.internal.createKeyPairAndSelfSignedCertificate
-import net.corda.testing.internal.saveToKeyStore
-import net.corda.testing.internal.saveToTrustStore
 import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
