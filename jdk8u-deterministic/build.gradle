@@ -8,7 +8,7 @@ repositories {
 }
 
 ext {
-    jdk_home = "$projectDir/jdk"
+    jdk_home = "$projectDir/jdk".toString()
     rt_jar = "$jdk_home/jre/lib/rt.jar".toString()
 }
 
@@ -20,12 +20,25 @@ dependencies {
     jdk "net.corda:deterministic-rt:$deterministic_rt_version:api"
 }
 
+task copyVersion(type: Copy) {
+    from processResources
+    into jdk_home
+    eachFile {
+        if (it.sourcePath.startsWith("bin/")) {
+            fileMode = 0755
+        } else {
+            fileMode = 0644
+        }
+    }
+}
+
 task copyJdk(type: Copy) {
     from(configurations.jdk.asPath) {
         rename 'deterministic-rt-(.*).jar', 'rt.jar'
     }
     into "$jdk_home/jre/lib"
 }
+copyJdk.finalizedBy copyVersion
 
 assemble.dependsOn copyJdk
 jar.enabled = false
