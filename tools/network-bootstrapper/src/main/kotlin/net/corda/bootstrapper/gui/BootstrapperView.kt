@@ -51,7 +51,6 @@ class BootstrapperView : View("Corda Network Builder") {
         buildButton.run {
             enableWhen { controller.baseDir.isNotNull }
             action {
-                controller.clear()
                 var networkName = "corda-network"
 
                 val selectedBackEnd = when {
@@ -212,6 +211,7 @@ class BootstrapperView : View("Corda Network Builder") {
     }
 
     private fun processSelectedDirectory(dir: File) {
+        controller.clearAll()
         controller.baseDir.set(dir)
         val foundNodes = CompletableFuture.supplyAsync {
             val nodeFinder = NodeFinder(dir)
@@ -265,6 +265,13 @@ class BootstrapperView : View("Corda Network Builder") {
 
         fun clear() {
             networkContext.set(null)
+        }
+
+        fun clearAll() {
+            networkContext.set(null)
+            foundNodes.clear()
+            foundNotaries.clear()
+            unsortedNodes.clear()
         }
 
         fun foundNodes(nodesToAdd: List<FoundNode>) {
