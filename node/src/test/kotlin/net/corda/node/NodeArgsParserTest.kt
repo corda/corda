@@ -42,6 +42,7 @@ class NodeArgsParserTest {
                 noLocalShell = false,
                 sshdServer = false,
                 justGenerateNodeInfo = false,
+                justGenerateRpcSslCerts = false,
                 bootstrapRaftCluster = false,
                 unknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL,
                 devMode = false,

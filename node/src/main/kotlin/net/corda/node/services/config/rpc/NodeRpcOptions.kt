@@ -8,5 +8,5 @@ interface NodeRpcOptions {
     val adminAddress: NetworkHostAndPort
     val standAloneBroker: Boolean
     val useSsl: Boolean
-    val sslConfig: BrokerRpcSslOptions
+    val sslConfig: BrokerRpcSslOptions?
 }
