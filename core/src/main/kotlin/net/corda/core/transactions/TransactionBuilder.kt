@@ -140,7 +140,7 @@ open class TransactionBuilder(
                 val attachment = services.attachments.openAttachment(constraint.attachmentId)
                 if (attachment == null || attachment !is ContractAttachment || !isUploaderTrusted(attachment.uploader)) {
                     // This should never happen because these are input states that should have been validated already.
-                    throw TransactionBuildingException.MissingContractAttachments(listOf(inputState.state))
+                    throw MissingContractAttachments(listOf(inputState.state))
                 }
                 constraint.attachmentId
             } else {
@@ -171,7 +171,7 @@ open class TransactionBuilder(
                 .groupBy { it.first }
                 .map { (contract, hashesList) ->
                     val hashes = hashesList.map { it.second }.toSet().filterNotNull()
-                    if (hashes.size != 1) throw TransactionBuildingException.ConflictingAttachmentsRejection(contract)
+                    if (hashes.size != 1) throw ConflictingAttachmentsRejection(contract)
                     contract to hashes.single()
                 }
 
