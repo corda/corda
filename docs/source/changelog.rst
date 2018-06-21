@@ -5,7 +5,7 @@ Here's a summary of what's changed in each Corda release. For guidance on how to
 release, see :doc:`upgrade-notes`.
 
 Unreleased
-==========
+----------
 
 * Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
   It retries 10 times with a 1 minute interval in between each try. At the moment this is not configurable.
