@@ -16,7 +16,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.NodeInfo
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
@@ -34,7 +34,7 @@ import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BA
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientSession
-import org.slf4j.MDC
+import org.slf4j.LoggerFactory
 import rx.Subscription
 import java.security.KeyStore
 import java.util.concurrent.locks.ReentrantLock
@@ -88,28 +88,9 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
                              private val maxMessageSize: Int) {
         companion object {
             fun getBridgeName(queueName: String, hostAndPort: NetworkHostAndPort): String = "$queueName -> $hostAndPort"
-            private val log = contextLogger()
         }
 
-        private fun withMDC(block: () -> Unit) {
-            MDC.put("queueName", queueName)
-            MDC.put("target", target.toString())
-            MDC.put("bridgeName", bridgeName)
-            MDC.put("legalNames", legalNames.joinToString(separator = ";") { it.toString() })
-            MDC.put("maxMessageSize", maxMessageSize.toString())
-            block()
-            MDC.clear()
-        }
-
-        private fun logDebugWithMDC(msg: () -> String) {
-            if (log.isDebugEnabled) {
-                withMDC { log.debug(msg()) }
-            }
-        }
-
-        private fun logInfoWithMDC(msg: String) = withMDC { log.info(msg) }
-
-        private fun logWarnWithMDC(msg: String) = withMDC { log.warn(msg) }
+        private val log = LoggerFactory.getLogger("$bridgeName:${legalNames.first()}")
 
         val amqpClient = AMQPClient(listOf(target), legalNames, PEER_USER, PEER_USER, keyStore, keyStorePrivateKeyPassword, trustStore, crlCheckSoftFail,
                 sharedThreadPool = sharedEventGroup, socksProxyConfig = socksProxyConfig, maxMessageSize = maxMessageSize)
@@ -120,13 +101,13 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
         private var connectedSubscription: Subscription? = null
 
         fun start() {
-            logInfoWithMDC("Create new AMQP bridge")
+            log.info("Create new AMQP bridge")
             connectedSubscription = amqpClient.onConnection.subscribe({ x -> onSocketConnected(x.connected) })
             amqpClient.start()
         }
 
         fun stop() {
-            logInfoWithMDC("Stopping AMQP bridge")
+            log.info("Stopping AMQP bridge")
             lock.withLock {
                 synchronized(artemis) {
                     consumer?.apply {
@@ -152,7 +133,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
             lock.withLock {
                 synchronized(artemis) {
                     if (connected) {
-                        logInfoWithMDC("Bridge Connected")
+                        log.info("Bridge Connected")
                         val sessionFactory = artemis.started!!.sessionFactory
                         val session = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
                         this.session = session
@@ -161,7 +142,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
                         consumer.setMessageHandler(this@AMQPBridge::clientArtemisMessageHandler)
                         session.start()
                     } else {
-                        logInfoWithMDC("Bridge Disconnected")
+                        log.info("Bridge Disconnected")
                         consumer?.apply {
                             if (!isClosed) {
                                 close()
@@ -181,7 +162,7 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
 
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
             if (artemisMessage.bodySize > maxMessageSize) {
-                logWarnWithMDC("Message exceeds maxMessageSize network parameter, maxMessageSize: [$maxMessageSize], message size: [${artemisMessage.bodySize}], " +
+                log.warn("Message exceeds maxMessageSize network parameter, maxMessageSize: [$maxMessageSize], message size: [${artemisMessage.bodySize}], " +
                         "dropping message, uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
                 // Ack the message to prevent same message being sent to us again.
                 artemisMessage.acknowledge()
@@ -198,18 +179,18 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, private val socksProxyConf
                     properties[key] = value
                 }
             }
-            logDebugWithMDC { "Bridged Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
+            log.debug { "Bridged Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
             val peerInbox = translateLocalQueueToInboxAddress(queueName)
             val sendableMessage = amqpClient.createMessage(data, peerInbox,
                     legalNames.first().toString(),
                     properties)
             sendableMessage.onComplete.then {
-                logDebugWithMDC { "Bridge ACK ${sendableMessage.onComplete.get()}" }
+                log.debug { "Bridge ACK ${sendableMessage.onComplete.get()}" }
                 lock.withLock {
                     if (sendableMessage.onComplete.get() == MessageStatus.Acknowledged) {
                         artemisMessage.acknowledge()
                     } else {
-                        logInfoWithMDC("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
+                        log.info("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
                         // We need to commit any acknowledged messages before rolling back the failed
                         // (unacknowledged) message.
                         session?.commit()
