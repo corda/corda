@@ -10,7 +10,6 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.Try
-import net.corda.core.utilities.contextLogger
 import java.util.*
 import java.util.function.Predicate
 
@@ -54,8 +53,6 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     private companion object {
-        private val log = contextLogger()
-
         private fun contractClassFor(className: ContractClassName, classLoader: ClassLoader?): Try<Class<out Contract>> {
             return Try.on {
                 (classLoader ?: this::class.java.classLoader)
