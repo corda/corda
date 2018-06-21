@@ -179,4 +179,18 @@ class NodeArgsParserTest {
             assertThat(cmdLineOptions.unknownConfigKeysPolicy).isEqualTo(onUnknownConfigKeyPolicy)
         }
     }
+
+    @Test
+    fun `invalid argument`() {
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            parser.parse("foo")
+        }.withMessageContaining("Unrecognized argument(s): foo")
+    }
+
+    @Test
+    fun `invalid arguments`() {
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            parser.parse("foo", "bar")
+        }.withMessageContaining("Unrecognized argument(s): foo, bar")
+    }
 }
