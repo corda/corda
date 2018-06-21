@@ -38,6 +38,21 @@ class CashSelectionH2ImplTest {
     }
 
     @Test
+    fun `selecting pennies amount larger than max int, which is split across multiple cash states, plus an issuerConstraint of multiple onlyFromParties`() {
+        val node = mockNet.createNode()
+        // The amount has to split across at least two states, probably to trigger the H2 accumulator variable during the
+        // spend operation below.
+        // Issuing Integer.MAX_VALUE will not cause an exception since PersistentCashState.pennies is a long
+        nCopies(2, Integer.MAX_VALUE).map { issueAmount ->
+            node.startFlow(CashIssueFlow(issueAmount.POUNDS, OpaqueBytes.of(1), mockNet.defaultNotaryIdentity))
+        }.transpose().getOrThrow()
+        // The spend must be more than the size of a single cash state to force the accumulator onto the second state.
+        // Also, here we test issuerConstraint with multiple onlyFromParties.
+        val request = CashPaymentFlow.PaymentRequest((Integer.MAX_VALUE + 1L).POUNDS, node.info.legalIdentities[0], true, setOf(node.info.legalIdentities[0], mockNet.defaultNotaryIdentity))
+        node.startFlow(CashPaymentFlow(request)).getOrThrow()
+    }
+
+    @Test
     fun `check does not hold connection over retries`() {
         val bankA = mockNet.createNode(MockNodeParameters(configOverrides = {
             // Tweak connections to be minimal to make this easier (1 results in a hung node during start up, so use 2 connections).
