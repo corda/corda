@@ -9,7 +9,7 @@ import io.netty.handler.ssl.SslHandler
 import io.netty.handler.ssl.SslHandshakeCompletionEvent
 import io.netty.util.ReferenceCountUtil
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.utilities.debug
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.engine.EventProcessor
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
@@ -19,7 +19,7 @@ import org.apache.qpid.proton.engine.ProtonJTransport
 import org.apache.qpid.proton.engine.Transport
 import org.apache.qpid.proton.engine.impl.ProtocolTracer
 import org.apache.qpid.proton.framing.TransportFrame
-import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import java.net.InetSocketAddress
 import java.nio.channels.ClosedChannelException
 import java.security.cert.X509Certificate
@@ -37,18 +37,44 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                                   private val onOpen: (Pair<SocketChannel, ConnectionChange>) -> Unit,
                                   private val onClose: (Pair<SocketChannel, ConnectionChange>) -> Unit,
                                   private val onReceive: (ReceivedMessage) -> Unit) : ChannelDuplexHandler() {
-    private val log = LoggerFactory.getLogger(allowedRemoteLegalNames?.firstOrNull()?.toString() ?: "AMQPChannelHandler")
+    companion object {
+        private val log = contextLogger()
+    }
+
     private lateinit var remoteAddress: InetSocketAddress
     private var localCert: X509Certificate? = null
     private var remoteCert: X509Certificate? = null
     private var eventProcessor: EventProcessor? = null
     private var badCert: Boolean = false
 
+    private fun withMDC(block: () -> Unit) {
+        MDC.put("serverMode", serverMode.toString())
+        MDC.put("remoteAddress", remoteAddress.toString())
+        MDC.put("localCert", localCert?.subjectDN?.toString())
+        MDC.put("remoteCert", remoteCert?.subjectDN?.toString())
+        MDC.put("allowedRemoteLegalNames", allowedRemoteLegalNames?.joinToString(separator = ";") { it.toString() })
+        block()
+        MDC.clear()
+    }
+
+    private fun logDebugWithMDC(msg: () -> String) {
+        if (log.isDebugEnabled) {
+            withMDC { log.debug(msg()) }
+        }
+    }
+
+    private fun logInfoWithMDC(msg: String) = withMDC { log.info(msg) }
+
+    private fun logWarnWithMDC(msg: String) = withMDC { log.warn(msg) }
+
+    private fun logErrorWithMDC(msg: String, ex: Throwable? = null) = withMDC { log.error(msg, ex) }
+
+
     override fun channelActive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
         remoteAddress = ch.remoteAddress() as InetSocketAddress
         val localAddress = ch.localAddress() as InetSocketAddress
-        log.info("New client connection ${ch.id()} from $remoteAddress to $localAddress")
+        logInfoWithMDC("New client connection ${ch.id()} from $remoteAddress to $localAddress")
     }
 
     private fun createAMQPEngine(ctx: ChannelHandlerContext) {
@@ -59,11 +85,11 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         if (trace) {
             transport.protocolTracer = object : ProtocolTracer {
                 override fun sentFrame(transportFrame: TransportFrame) {
-                    log.info("${transportFrame.body}")
+                    logInfoWithMDC("${transportFrame.body}")
                 }
 
                 override fun receivedFrame(transportFrame: TransportFrame) {
-                    log.info("${transportFrame.body}")
+                    logInfoWithMDC("${transportFrame.body}")
                 }
             }
         }
@@ -73,7 +99,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
 
     override fun channelInactive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
-        log.info("Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}")
+        logInfoWithMDC("Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}")
         onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false, badCert)))
         eventProcessor?.close()
         ctx.fireChannelInactive()
@@ -89,29 +115,29 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                     CordaX500Name.build(remoteCert!!.subjectX500Principal)
                 } catch (ex: IllegalArgumentException) {
                     badCert = true
-                    log.error("Certificate subject not a valid CordaX500Name", ex)
+                    logErrorWithMDC("Certificate subject not a valid CordaX500Name", ex)
                     ctx.close()
                     return
                 }
                 if (allowedRemoteLegalNames != null && remoteX500Name !in allowedRemoteLegalNames) {
                     badCert = true
-                    log.error("Provided certificate subject $remoteX500Name not in expected set $allowedRemoteLegalNames")
+                    logErrorWithMDC("Provided certificate subject $remoteX500Name not in expected set $allowedRemoteLegalNames")
                     ctx.close()
                     return
                 }
-                log.info("Handshake completed with subject: $remoteX500Name")
+                logInfoWithMDC("Handshake completed with subject: $remoteX500Name")
                 createAMQPEngine(ctx)
                 onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true, false)))
             } else {
                 // This happens when the peer node is closed during SSL establishment.
                 if (evt.cause() is ClosedChannelException) {
-                    log.warn("SSL Handshake closed early.")
+                    logWarnWithMDC("SSL Handshake closed early.")
                 } else {
                     badCert = true
                 }
-                log.error("Handshake failure ${evt.cause().message}")
+                logErrorWithMDC("Handshake failure ${evt.cause().message}")
                 if (log.isTraceEnabled) {
-                    log.trace("Handshake failure", evt.cause())
+                    withMDC { log.trace("Handshake failure", evt.cause()) }
                 }
                 ctx.close()
             }
@@ -120,9 +146,9 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
 
     @Suppress("OverridingDeprecatedMember")
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-        log.warn("Closing channel due to nonrecoverable exception ${cause.message}")
+        logWarnWithMDC("Closing channel due to nonrecoverable exception ${cause.message}")
         if (log.isTraceEnabled) {
-            log.trace("Pipeline uncaught exception", cause)
+            withMDC { log.trace("Pipeline uncaught exception", cause) }
         }
         ctx.close()
     }
@@ -145,13 +171,12 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 // Transfers application packet into the AMQP engine.
                     is SendableMessageImpl -> {
                         val inetAddress = InetSocketAddress(msg.destinationLink.host, msg.destinationLink.port)
-                        require(inetAddress == remoteAddress) {
-                            "Message for incorrect endpoint $inetAddress expected $remoteAddress"
-                        }
+                       logDebugWithMDC { "Message for endpoint $inetAddress , expected $remoteAddress "}
+
                         require(CordaX500Name.parse(msg.destinationLegalName) == CordaX500Name.build(remoteCert!!.subjectX500Principal)) {
                             "Message for incorrect legal identity ${msg.destinationLegalName} expected ${remoteCert!!.subjectX500Principal}"
                         }
-                        log.debug { "channel write ${msg.applicationProperties["_AMQ_DUPL_ID"]}" }
+                        logDebugWithMDC { "channel write ${msg.applicationProperties["_AMQ_DUPL_ID"]}" }
                         eventProcessor!!.transportWriteMessage(msg)
                     }
                 // A received AMQP packet has been completed and this self-posted packet will be signalled out to the
@@ -169,7 +194,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                     }
                 }
             } catch (ex: Exception) {
-                log.error("Error in AMQP write processing", ex)
+                logErrorWithMDC("Error in AMQP write processing", ex)
                 throw ex
             }
         } finally {
