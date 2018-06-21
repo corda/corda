@@ -17,6 +17,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.core.messaging.ClientRpcSslOptions
+import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
+import net.corda.node.utilities.saveToKeyStore
+import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_RPC_USER
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -41,6 +44,7 @@ import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import javax.security.auth.x500.X500Principal
 
 class RpcSslTest : IntegrationTest() {
     companion object {
@@ -54,6 +58,7 @@ class RpcSslTest : IntegrationTest() {
     @JvmField
     val tempFolder = TemporaryFolder()
 
+    val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
 
     @Test
     fun `RPC client using ssl is able to run a command`() {
@@ -61,7 +66,7 @@ class RpcSslTest : IntegrationTest() {
         var successfulLogin = false
         var failedLogin = false
 
-        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
 
@@ -98,11 +103,11 @@ class RpcSslTest : IntegrationTest() {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
 
-        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
 
-        val (_, cert1) = createKeyPairAndSelfSignedCertificate()
+        val (_, cert1) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert1)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
@@ -140,7 +145,7 @@ class RpcSslTest : IntegrationTest() {
 
     @Test
     fun `The system RPC user can not connect to the rpc broker without the node's key`() {
-        val (keyPair, cert) = createKeyPairAndSelfSignedCertificate()
+        val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val keyStorePath = saveToKeyStore(tempFolder.root.toPath() / "keystore.jks", keyPair, cert)
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
