@@ -124,7 +124,7 @@ The current set of network parameters:
 
 More parameters will be added in future releases to regulate things like allowed port numbers, how long a node can be
 offline before it is evicted from the zone, whether or not IPv6 connectivity is required for zone members, required
-cryptographic algorithms and rollout schedules (e.g. for moving to post quantum cryptography), parameters related to
+cryptographic algorithms and roll-out schedules (e.g. for moving to post quantum cryptography), parameters related to
 SGX and so on.
 
 Network parameters update process
@@ -134,7 +134,7 @@ In case of the need to change network parameters Corda zone operator will start 
 that may lead to this decision: adding a notary, setting new fields that were added to enable smooth network interoperability,
 or a change of the existing compatibility constants is required, for example.
 
-.. note:: A future release may support the notion of phased rollout of network parameter changes.
+.. note:: A future release may support the notion of phased roll-out of network parameter changes.
 
 To synchronize all nodes in the compatibility zone to use the new set of the network parameters two RPC methods are
 provided. The process requires human interaction and approval of the change, so node operators can review the

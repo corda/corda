@@ -38,7 +38,7 @@ pre-existence of an applicable message queue for that peer.
 ## Scope
 
 * Goals:
-  * Allow connection to a Corda node wihout requiring direct incoming connections from external participants.
+  * Allow connection to a Corda node without requiring direct incoming connections from external participants.
   * Allow connections to a Corda node without requiring the node itself to have a public IP address. Separate TLS connection handling from the MQ broker.
 * Non-goals (out of scope):
   * Support for MQ brokers other than Apache Artemis
@@ -50,7 +50,7 @@ For delivery by end Q1 2018.
 Allow connectivity in compliance with DMZ constraints commonly imposed by modern financial institutions; namely: 
 1. Firewalls required between the internet and any device in the DMZ, and between the DMZ and the internal network
 2. Data passing from the internet and the internal network via the DMZ should pass through a clear protocol break in the DMZ.
-3. Only identified IPs and ports are permitted to access devices in the DMZ; this include communications between devices colocated in the DMZ.
+3. Only identified IPs and ports are permitted to access devices in the DMZ; this include communications between devices co-located in the DMZ.
 4. Only a limited number of ports are opened in the firewall (<5) to make firewall operation manageable. These ports must change slowly.
 5. Any DMZ machine is typically multi-homed, with separate network cards handling traffic through the institutional
    firewall vs. to the Internet. (There is usually a further hidden management interface card accessed via a jump box for

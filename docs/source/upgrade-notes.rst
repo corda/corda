@@ -273,7 +273,7 @@ Testing
 * Starting a flow can now be done directly from a node object. Change calls of the form ``node.getServices().startFlow(...)``
   to ``node.startFlow(...)``
 
-* Similarly a tranaction can be executed directly from a node object. Change calls of the form ``node.getDatabase().transaction({ it -> ... })``
+* Similarly a transaction can be executed directly from a node object. Change calls of the form ``node.getDatabase().transaction({ it -> ... })``
   to ``node.transaction({() -> ... })``
 
 * ``startFlow`` now returns a ``CordaFuture``, there is no need to call ``startFlow(...).getResultantFuture()``
@@ -391,7 +391,7 @@ Flow framework
 
   * ``FlowLogic.send``/``FlowLogic.receive``/``FlowLogic.sendAndReceive`` has been replaced by ``FlowSession.send``/
     ``FlowSession.receive``/``FlowSession.sendAndReceive``. The replacement functions do not take a destination
-    parameter, as this is defined implictly by the session used
+    parameter, as this is defined implicitly by the session used
 
   * Initiated flows now take in a ``FlowSession`` instead of ``Party`` in their constructor. If you need to access the
     counterparty identity, it is in the ``counterparty`` property of the flow session

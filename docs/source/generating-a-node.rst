@@ -139,7 +139,7 @@ To copy the same file to all nodes `ext.drivers` can be defined in the top level
 
 Specifying a custom webserver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-By default, any node listing a webport will use the default development webserver, which is not production-ready. You
+By default, any node listing a web port will use the default development webserver, which is not production-ready. You
 can use your own webserver JAR instead by using the ``webserverJar`` argument in a ``Cordform`` ``node`` configuration
 block:
 

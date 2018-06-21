@@ -17,7 +17,7 @@ the `CRaSH`_ shell and supports many of the same features. These features includ
 * Uploading and downloading attachments
 * Issuing SQL queries to the underlying database
 * Viewing JMX metrics and monitoring exports
-* UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnular data
+* UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnar data
 * Shutting the node down.
 
 Permissions

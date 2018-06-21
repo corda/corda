@@ -183,8 +183,8 @@ Next steps
 ----------
 There are a number of improvements we could make to this CorDapp:
 
-* We chould add unit tests, using the contract-test and flow-test frameworks
-* We chould change ``IOUState.value`` from an integer to a proper amount of a given currency
+* We could add unit tests, using the contract-test and flow-test frameworks
+* We could change ``IOUState.value`` from an integer to a proper amount of a given currency
 * We could add an API, to make it easier to interact with the CorDapp
 
 But for now, the biggest priority is to add an ``IOUContract`` imposing constraints on the evolution of each
