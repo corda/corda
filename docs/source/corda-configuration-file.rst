@@ -103,21 +103,25 @@ absolute path to the node's base directory.
         :maxRestartCount: Maximum number of times the flow will restart before resulting in an error.
         :backoffBase: The base of the exponential backoff, `t_{wait} = timeout * backoffBase^{retryCount}`.
 
-:rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of the ``rpcSettings`` block.
+:rpcAddress: (Deprecated) The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of the ``rpcSettings`` block.
 
-:rpcSettings: Options for the RPC server.
+:rpcSettings: Options for the RPC server exposed by the Node.
 
-        :useSsl: (optional) boolean, indicates whether the node should require clients to use SSL for RPC connections, defaulted to ``false``.
+        :address: host and port for the RPC server binding.
+        :adminAddress: host and port for the RPC admin binding (this is the endpoint that the node process will connect to).
         :standAloneBroker: (optional) boolean, indicates whether the node will connect to a standalone broker for RPC, defaulted to ``false``.
-        :address: (optional) host and port for the RPC server binding, if any.
-        :adminAddress: (optional) host and port for the RPC admin binding (only required when ``useSsl`` is ``false``, because the node connects to Artemis using SSL to ensure admin privileges are not accessible outside the node).
-        :ssl: (optional) SSL settings for the RPC server.
+        :useSsl: (optional) boolean, indicates whether or not the node should require clients to use SSL for RPC connections, defaulted to ``false``.
+        :ssl: (mandatory if ``useSsl=true``) SSL settings for the RPC server.
 
-                :keyStorePassword: password for the key store.
-                :trustStorePassword: password for the trust store.
-                :certificatesDirectory: directory in which the stores will be searched, unless absolute paths are provided.
-                :sslKeystore: absolute path to the ssl key store, defaulted to ``certificatesDirectory / "sslkeystore.jks"``.
-                :trustStoreFile: absolute path to the trust store, defaulted to ``certificatesDirectory / "truststore.jks"``.
+                :keyStorePath: Absolute path to the key store containing the RPC SSL certificate.
+                :keyStorePassword: Password for the key store.
+
+        .. note:: The RPC SSL certificate is used by RPC clients to authenticate the connection.
+            The Node operator must provide RPC clients with a truststore containing the certificate they can trust.
+            We advise Node operators to not use the P2P keystore for RPC.
+            The node ships with a command line argument "--just-generate-rpc-ssl-settings", which generates a secure keystore
+            and truststore that can be used to secure the RPC connection. You can use this if you have no special requirements.
+
 
 :security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
     :doc:`clientrpc` for details.
@@ -263,76 +267,16 @@ Simple notary configuration file:
     devMode : false
     compatibilityZoneURL : "https://cz.corda.net"
 
-An example ``web-server.conf`` file is as follow:
-
-.. parsed-literal::
-
-    myLegalName : "O=Notary Service,OU=corda,L=London,C=GB"
-    keyStorePassword : "cordacadevpass"
-    trustStorePassword : "trustpass"
-    rpcSettings = {
-        useSsl = false
-        standAloneBroker = false
-        address : "my-corda-node:10003"
-        adminAddress : "my-corda-node:10004"
-    }
-    rpcUsers : [{ username=user1, password=letmein, permissions=[ StartFlow.net.corda.protocols.CashProtocol ] }]
-
 Configuring a node where the Corda Compatibility Zone's registration and Network Map services exist on different URLs
 
 .. literalinclude:: example-code/src/main/resources/example-node-with-networkservices.conf
 
-Fields
-------
-
-The available config fields are listed below. ``baseDirectory`` is available as a substitution value, containing the absolute
-path to the node's base directory.
-
-:myLegalName: The legal identity of the node acts as a human readable alias to the node's public key and several demos use
-        this to lookup the NodeInfo.
-
-:keyStorePassword: The password to unlock the KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the
-    node certificate and private key.
-
-    .. note:: This is the non-secret value for the development certificates automatically generated during the first node run.
-       Longer term these keys will be managed in secure hardware devices.
-
-:trustStorePassword: The password to unlock the Trust store file (``<workspace>/certificates/truststore.jks``) containing
-    the Corda network root certificate. This is the non-secret value for the development certificates automatically
-    generated during the first node run.
-
-    .. note:: Longer term these keys will be managed in secure hardware devices.
-
-:rpcSettings: Options for the RPC server.
-
-        :useSsl: (optional) boolean, indicates whether the node should require clients to use SSL for RPC connections, defaulted to ``false``.
-        :standAloneBroker: (optional) boolean, indicates whether the node will connect to a standalone broker for RPC, defaulted to ``false``.
-        :address: (optional) host and port for the RPC server binding, if any.
-        :adminAddress: (optional) host and port for the RPC admin binding (only required when ``useSsl`` is ``false``, because the node connects to Artemis using SSL to ensure admin privileges are not accessible outside the node).
-        :ssl: (optional) SSL settings for the RPC client.
-
-                :keyStorePassword: password for the key store.
-                :trustStorePassword: password for the trust store.
-                :certificatesDirectory: directory in which the stores will be searched, unless absolute paths are provided.
-                :sslKeystore: absolute path to the ssl key store, defaulted to ``certificatesDirectory / "sslkeystore.jks"``.
-                :trustStoreFile: absolute path to the trust store, defaulted to ``certificatesDirectory / "truststore.jks"``.
-                :trustStoreFile: absolute path to the trust store, defaulted to ``certificatesDirectory / "truststore.jks"``.
-
-:rpcUsers: A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
-        following fields:
-
-        :username: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
-        :password: The password
-        :permissions: A list of permissions for starting flows via RPC. To give the user the permission to start the flow
-            ``foo.bar.FlowClass``, add the string ``StartFlow.foo.bar.FlowClass`` to the list. If the list
-            contains the string ``ALL``, the user can start any flow via RPC. This value is intended for administrator
-            users and for development.
-
 Fields Override
 ---------------
-JVM options or environmental variables prefixed ``corda.`` can override ``node.conf`` fields.
-Provided system properties also can set value for absent fields in ``node.conf``.
-Example adding/overriding keyStore password when starting Corda node:
+JVM options or environmental variables prefixed with ``corda.`` can override ``node.conf`` fields.
+Provided system properties can also set values for absent fields in ``node.conf``.
+
+This is an example of adding/overriding the keyStore password :
 
 .. sourcecode:: shell
 
