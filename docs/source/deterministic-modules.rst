@@ -37,7 +37,7 @@ Corda Modules
   ``core-deterministic`` and ``serialization-deterministic`` are generated from Corda's ``core`` and ``serialization``
   modules respectively using both `ProGuard <https://www.guardsquare.com/en/proguard>`_ and Corda's ``JarFilter`` Gradle
   plugin. Corda developers configure these tools by applying Corda's ``@KeepForDJVM`` and ``@DeleteForDJVM``
-  annotations to elements of ``core`` and ``serialization`` as described `here <deterministic_annotations_>`_.
+  annotations to elements of ``core`` and ``serialization`` as described :ref:`here <deterministic_annotations>`.
 
 The build generates each of Corda's deterministic JARs in six steps:
 
