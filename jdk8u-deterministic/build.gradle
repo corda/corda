@@ -13,11 +13,14 @@ ext {
 }
 
 configurations {
-    jdk
+    jdk.resolutionStrategy {
+        cacheChangingModulesFor 0, 'seconds'
+    }
 }
 
 dependencies {
-    jdk "net.corda:deterministic-rt:$deterministic_rt_version:api"
+    // Ensure everyone uses the latest SNAPSHOT.
+    jdk "net.corda:deterministic-rt:latest.integration:api"
 }
 
 task copyVersion(type: Copy) {
@@ -33,10 +36,13 @@ task copyVersion(type: Copy) {
 }
 
 task copyJdk(type: Copy) {
+    def jreDirectory = "$jdk_home/jre/lib"
+    outputs.dir jreDirectory
+
     from(configurations.jdk.asPath) {
         rename 'deterministic-rt-(.*).jar', 'rt.jar'
     }
-    into "$jdk_home/jre/lib"
+    into jreDirectory
 }
 copyJdk.finalizedBy copyVersion
 
