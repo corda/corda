@@ -104,7 +104,7 @@ class NodeTest {
     }
 
     @Test
-    fun `Node can start with multiple keypairs for it's identity`() {
+    fun `Node can start with multiple keypairs for its identity`() {
         val configuration = createConfig(ALICE_NAME)
         val (nodeInfo1, _) = createNodeInfoAndSigned(ALICE_NAME)
         val (nodeInfo2, _) = createNodeInfoAndSigned(ALICE_NAME)

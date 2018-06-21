@@ -348,7 +348,7 @@ data class NodeConfigurationImpl(
                 }
             }
 
-            // if compatibiliZoneURL is set then it will be copied into the networkServices field and thus skipping
+            // if compatibilityZoneURL is set then it will be copied into the networkServices field and thus skipping
             // this check by returning above is fine.
             networkServices?.let {
                 if (devModeOptions?.allowCompatibilityZone != true) {

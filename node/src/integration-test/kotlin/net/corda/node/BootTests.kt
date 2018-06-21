@@ -13,7 +13,6 @@ package net.corda.node
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.CordaRuntimeException
-import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.div
@@ -24,8 +23,9 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.nodeapi.exceptions.InternalNodeException
-import net.corda.testing.common.internal.ProjectStructure.projectRootDir
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.NodeParameters
@@ -35,7 +35,6 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.startNode
-import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.ClassRule
 import org.junit.Test
@@ -46,11 +45,11 @@ import java.io.Serializable
 import kotlin.test.assertEquals
 
 class BootTests : IntegrationTest() {
-     companion object {
+    companion object {
         @ClassRule
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
-     }
+    }
 
     @Test
     fun `java deserialization is disabled`() {
