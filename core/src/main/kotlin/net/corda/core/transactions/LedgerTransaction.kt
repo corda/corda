@@ -88,13 +88,8 @@ data class LedgerTransaction @JvmOverloads constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
-        try {
-            verifyConstraints()
-            verifyContracts()
-        } catch (tve: TransactionVerificationException) {
-            log.warn("Transaction $this failed to verify.", tve)
-            throw tve
-        }
+        verifyConstraints()
+        verifyContracts()
     }
 
     /**
