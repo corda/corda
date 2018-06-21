@@ -63,6 +63,7 @@ include 'tools:bootstrapper'
 include 'tools:blobinspector'
 include 'tools:dbmigration'
 include 'tools:shell'
+include 'tools:shell-cli'
 include 'tools:network-bootstrapper'
 include 'example-code'
 project(':example-code').projectDir = file("$settingsDir/docs/source/example-code")

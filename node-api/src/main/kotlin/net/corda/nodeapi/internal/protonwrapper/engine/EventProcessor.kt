@@ -13,7 +13,7 @@ package net.corda.nodeapi.internal.protonwrapper.engine
 import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
-import net.corda.core.utilities.debug
+import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.ReceivedMessageImpl
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
@@ -26,7 +26,7 @@ import org.apache.qpid.proton.engine.*
 import org.apache.qpid.proton.engine.impl.CollectorImpl
 import org.apache.qpid.proton.reactor.FlowController
 import org.apache.qpid.proton.reactor.Handshaker
-import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -40,16 +40,30 @@ import kotlin.concurrent.withLock
  * Everything here is single threaded, because the proton-j library has to be run that way.
  */
 internal class EventProcessor(channel: Channel,
-                              serverMode: Boolean,
-                              localLegalName: String,
-                              remoteLegalName: String,
+                              private val serverMode: Boolean,
+                              private val localLegalName: String,
+                              private val remoteLegalName: String,
                               userName: String?,
                               password: String?) : BaseHandler() {
     companion object {
         private const val FLOW_WINDOW_SIZE = 10
+        private val log = contextLogger()
     }
 
-    private val log = LoggerFactory.getLogger(localLegalName)
+    private fun withMDC(block: () -> Unit) {
+        MDC.put("serverMode", serverMode.toString())
+        MDC.put("localLegalName", localLegalName)
+        MDC.put("remoteLegalName", remoteLegalName)
+        block()
+        MDC.clear()
+    }
+
+    private fun logDebugWithMDC(msg: () -> String) {
+        if (log.isDebugEnabled) {
+            withMDC { log.debug(msg()) }
+        }
+    }
+
     private val lock = ReentrantLock()
     private var pendingExecute: Boolean = false
     private val executor: ScheduledExecutorService = channel.eventLoop()
@@ -104,16 +118,16 @@ internal class EventProcessor(channel: Channel,
     fun processEvents() {
         lock.withLock {
             pendingExecute = false
-            log.debug { "Process Events" }
+            logDebugWithMDC { "Process Events" }
             while (true) {
                 val ev = popEvent() ?: break
-                log.debug { "Process event: $ev" }
+                logDebugWithMDC { "Process event: $ev" }
                 for (handler in handlers) {
                     handler.handle(ev)
                 }
             }
             stateMachine.processTransport()
-            log.debug { "Process Events Done" }
+            logDebugWithMDC { "Process Events Done" }
         }
     }
 
