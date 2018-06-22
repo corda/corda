@@ -7,7 +7,9 @@ dependencies {
     cordaCompile project(":core")
     cordaCompile project(":node-api")
     cordaCompile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaCompile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+
+    testCompile project(":test-utils")
+    testCompile "junit:junit:$junit_version"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
