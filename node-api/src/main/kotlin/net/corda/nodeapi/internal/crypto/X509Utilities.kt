@@ -58,7 +58,7 @@ object X509Utilities {
     const val CORDA_CLIENT_TLS = "cordaclienttls"
     const val CORDA_CLIENT_CA = "cordaclientca"
 
-    private val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
+    val DEFAULT_VALIDITY_WINDOW = Pair(0.millis, 3650.days)
 
     /**
      * Helper function to return the latest out of an instant and an optional date.
