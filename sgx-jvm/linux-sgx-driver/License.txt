@@ -1,4 +1,0 @@
-
-Intel(R) SGX driver is licensed under GNU General Public License, version 2 (GPL-2.0)
-https://opensource.org/licenses/GPL-2.0
-

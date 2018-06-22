@@ -1,8 +1,0 @@
-PSW_VERSION="1.0"
-TARBALL_NAME=sgxpsw_1.0.orig.tar.gz
-
-SGX_PACKAGES_PATH=/opt/intel
-PSW_PKG_NAME=sgxpsw
-
-LIB_DIR=lib64
-BIN_DIR="bin/x64"

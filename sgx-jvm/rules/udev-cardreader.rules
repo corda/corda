@@ -1,1 +1,0 @@
-SUBSYSTEM=="usb", ATTRS{idVendor}=="0c4b", ATTRS{idProduct}=="0400", ACTION=="add", GROUP="cardreader", MODE="0666

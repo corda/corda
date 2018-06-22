@@ -1,5 +1,0 @@
-enclave {
-    trusted {
-        public void noop();
-    };
-};

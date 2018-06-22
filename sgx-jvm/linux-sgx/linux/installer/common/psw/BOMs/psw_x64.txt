@@ -1,4 +1,0 @@
-DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
-<deliverydir>/build/linux/libsgx_uae_service.so	<installdir>/package/lib64/libsgx_uae_service.so	0	main	STP
-<deliverydir>/build/linux/libsgx_urts.so	<installdir>/package/lib64/libsgx_urts.so	0	main	STP
-<deliverydir>/linux/installer/common/psw/installConfig.x64	<installdir>/scripts/installConfig	0	main	STP

@@ -1,9 +1,0 @@
-add_library(avian_codegen_arm
-  assembler.cpp
-  block.cpp
-  context.cpp
-  fixup.cpp
-  multimethod.cpp
-  operations32.cpp
-  operations64.cpp
-)
