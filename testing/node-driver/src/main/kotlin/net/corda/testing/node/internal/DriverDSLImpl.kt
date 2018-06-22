@@ -238,7 +238,8 @@ class DriverDSLImpl(
                 "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
                 "useTestClock" to useTestClock,
                 "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
-                "verifierType" to verifierType.name
+                "verifierType" to verifierType.name,
+                "enterpriseConfiguration.tuning.flowThreadPoolSize" to "1"
         ) + czUrlConfig + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
