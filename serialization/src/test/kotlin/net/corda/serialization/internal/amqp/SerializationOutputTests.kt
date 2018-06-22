@@ -15,12 +15,10 @@ import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.AbstractAttachment
-import net.corda.core.internal.x500Name
 import net.corda.core.serialization.*
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
-import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.isPrimitive
@@ -35,6 +33,7 @@ import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.assertj.core.api.Assertions.*
+import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509v2CRLBuilder
 import org.bouncycastle.cert.jcajce.JcaX509CRLConverter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -657,8 +656,8 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         val scheme = AMQPServerSerializationScheme(emptyList())
         val func = scheme::class.superclasses.single { it.simpleName == "AbstractAMQPSerializationScheme" }
                 .java.getDeclaredMethod("registerCustomSerializers",
-                                        SerializationContext::class.java,
-                                        SerializerFactory::class.java)
+                SerializationContext::class.java,
+                SerializerFactory::class.java)
         func.isAccessible = true
 
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
@@ -1011,7 +1010,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     }
 
     private fun emptyCrl(): X509CRL {
-        val builder = X509v2CRLBuilder(CordaX500Name.build(DEV_INTERMEDIATE_CA.certificate.issuerX500Principal).x500Name, Date())
+        val builder = X509v2CRLBuilder(X500Name("CN=Corda Root CA, O=R3 HoldCo LLC, L=New York, C=US"), Date())
         val provider = BouncyCastleProvider()
         val crlHolder = builder.build(ContentSignerBuilder.build(Crypto.RSA_SHA256, Crypto.generateKeyPair(Crypto.RSA_SHA256).private, provider))
         return JcaX509CRLConverter().setProvider(provider).getCRL(crlHolder)
@@ -1320,12 +1319,12 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     }
 
     interface DataClassByInterface<V> {
-        val v : V
+        val v: V
     }
 
     @Test
     fun dataClassBy() {
-        data class C (val s: String) : DataClassByInterface<String> {
+        data class C(val s: String) : DataClassByInterface<String> {
             override val v: String = "-- $s"
         }
 
@@ -1339,8 +1338,8 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
         try {
             val i2 = DeserializationInput(testDefaultFactory()).deserialize(bytes)
-        } catch (e : NotSerializableException) {
-            throw Error ("Deserializing serialized \$C should not throw")
+        } catch (e: NotSerializableException) {
+            throw Error("Deserializing serialized \$C should not throw")
         }
     }
 }
