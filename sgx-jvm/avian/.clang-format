@@ -1,7 +1,0 @@
----
-BasedOnStyle:  Chromium
-IndentCaseLabels: false
-BreakBeforeBraces: Stroustrup
-AllowShortFunctionsOnASingleLine: false
-BreakBeforeBinaryOperators: true
-...

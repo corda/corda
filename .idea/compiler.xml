@@ -45,6 +45,8 @@
       <module name="capsule-hsm_test" target="1.8" />
       <module name="client_main" target="1.8" />
       <module name="client_test" target="1.8" />
+      <module name="common_main" target="1.8" />
+      <module name="common_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
       <module name="contracts-states_integrationTest" target="1.8" />
@@ -53,6 +55,8 @@
       <module name="corda-core_integrationTest" target="1.8" />
       <module name="corda-core_smokeTest" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />
+      <module name="corda-project-testing_main" target="1.8" />
+      <module name="corda-project-testing_test" target="1.8" />
       <module name="corda-project-tools_main" target="1.8" />
       <module name="corda-project-tools_test" target="1.8" />
       <module name="corda-project_main" target="1.8" />
@@ -73,11 +77,17 @@
       <module name="cordformation_main" target="1.8" />
       <module name="cordformation_runnodes" target="1.8" />
       <module name="cordformation_test" target="1.8" />
+      <module name="core-deterministic-testing_main" target="1.8" />
+      <module name="core-deterministic-testing_test" target="1.8" />
+      <module name="core-deterministic_main" target="1.8" />
+      <module name="core-deterministic_test" target="1.8" />
       <module name="core_extraResource" target="1.8" />
       <module name="core_integrationTest" target="1.8" />
       <module name="core_main" target="1.8" />
       <module name="core_smokeTest" target="1.8" />
       <module name="core_test" target="1.8" />
+      <module name="data_main" target="1.8" />
+      <module name="data_test" target="1.8" />
       <module name="dbmigration_main" target="1.8" />
       <module name="dbmigration_test" target="1.8" />
       <module name="demobench_main" target="1.8" />
@@ -122,6 +132,8 @@
       <module name="graphs_test" target="1.8" />
       <module name="ha-testing_main" target="1.8" />
       <module name="ha-testing_test" target="1.8" />
+      <module name="hsm-tool_main" target="1.8" />
+      <module name="hsm-tool_test" target="1.8" />
       <module name="intellij-plugin_main" target="1.8" />
       <module name="intellij-plugin_test" target="1.8" />
       <module name="irs-demo-cordapp_integrationTest" target="1.8" />
@@ -139,6 +151,10 @@
       <module name="isolated_test" target="1.8" />
       <module name="jackson_main" target="1.8" />
       <module name="jackson_test" target="1.8" />
+      <module name="jarfilter_main" target="1.8" />
+      <module name="jarfilter_test" target="1.8" />
+      <module name="jdk8u-deterministic_main" target="1.8" />
+      <module name="jdk8u-deterministic_test" target="1.8" />
       <module name="jfx_integrationTest" target="1.8" />
       <module name="jfx_main" target="1.8" />
       <module name="jfx_test" target="1.8" />
@@ -200,10 +216,15 @@
       <module name="samples_test" target="1.8" />
       <module name="sandbox_main" target="1.8" />
       <module name="sandbox_test" target="1.8" />
+      <module name="serialization-deterministic_main" target="1.8" />
+      <module name="serialization-deterministic_test" target="1.8" />
       <module name="serialization_main" target="1.8" />
       <module name="serialization_test" target="1.8" />
       <module name="sgx-hsm-tool_main" target="1.8" />
       <module name="sgx-hsm-tool_test" target="1.8" />
+      <module name="shell-cli_integrationTest" target="1.8" />
+      <module name="shell-cli_main" target="1.8" />
+      <module name="shell-cli_test" target="1.8" />
       <module name="shell_integrationTest" target="1.8" />
       <module name="shell_main" target="1.8" />
       <module name="shell_test" target="1.8" />
@@ -239,6 +260,8 @@
       <module name="trader-demo_integrationTest" target="1.8" />
       <module name="trader-demo_main" target="1.8" />
       <module name="trader-demo_test" target="1.8" />
+      <module name="unwanteds_main" target="1.8" />
+      <module name="unwanteds_test" target="1.8" />
       <module name="verifier_integrationTest" target="1.8" />
       <module name="verifier_main" target="1.8" />
       <module name="verifier_test" target="1.8" />

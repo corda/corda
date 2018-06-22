@@ -82,11 +82,6 @@ include 'samples:cordapp-configuration'
 include 'serialization'
 include 'serialization-deterministic'
 include 'cordform-common'
-include 'verify-enclave'
 include 'hsm-tool'
-project(':hsm-tool').with {
-    name = 'sgx-hsm-tool'
-    projectDir = file("$settingsDir/sgx-jvm/hsm-tool")
-}
 include 'launcher'
 include 'node:dist'
