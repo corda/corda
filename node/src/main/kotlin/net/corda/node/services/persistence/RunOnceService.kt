@@ -17,6 +17,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.hibernate.Session
 import java.io.Serializable
+import java.sql.SQLTransientConnectionException
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.temporal.ChronoField
@@ -102,20 +103,25 @@ class RunOnceService(private val database: CordaPersistence, private val machine
             if (running.compareAndSet(false, true)) {
                 try {
                     database.transaction {
-                        val mutualExclusion = getMutualExclusion(session)
+                        try {
+                            val mutualExclusion = getMutualExclusion(session)
 
-                        if (mutualExclusion == null) {
-                            log.error("$machineName PID: $pid failed mutual exclusion update. " +
-                                    "Expected to have a row in $TABLE table. " +
-                                    "Check if another node is running")
-                            System.exit(1)
-                        } else if (mutualExclusion.machineName != machineName || mutualExclusion.pid != pid) {
-                            log.error("Expected $machineName PID: $pid but was ${mutualExclusion.machineName} PID: ${mutualExclusion.pid}. " +
-                                    "Check if another node is running")
+                            if (mutualExclusion == null) {
+                                log.error("$machineName PID: $pid failed mutual exclusion update. " +
+                                        "Expected to have a row in $TABLE table. " +
+                                        "Check if another node is running")
+                                System.exit(1)
+                            } else if (mutualExclusion.machineName != machineName || mutualExclusion.pid != pid) {
+                                log.error("Expected $machineName PID: $pid but was ${mutualExclusion.machineName} PID: ${mutualExclusion.pid}. " +
+                                        "Check if another node is running")
+                                System.exit(1)
+                            }
+
+                            updateTimestamp(session, mutualExclusion!!)
+                        } catch (exception: SQLTransientConnectionException) {
+                            log.error("Database connection down", exception)
                             System.exit(1)
                         }
-
-                        updateTimestamp(session, mutualExclusion!!)
                     }
                 } finally {
                     running.set(false)

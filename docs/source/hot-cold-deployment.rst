@@ -234,7 +234,11 @@ Mutual exclusion
 ----------------
 To avoid accidentally running all hot-cold nodes at the same time, a simple mechanism can be used by adding the following
 section to the configuration files. The mechanism is called *Mutual Exclusion* and it ensures that only one active node
-exists, all others will shut down shortly after starting. A standard configuration example is shown below:
+exists, all others will shut down shortly after starting.
+
+The *Mutual Exclusion* mechanism also acts as database connection checker. A running node will acquire and periodically
+update a mutual exclusion lease which is stored in the database. The node will exit if the database connection is lost.
+A standard configuration example is shown below:
 
 .. sourcecode:: none
 
@@ -253,7 +257,7 @@ exists, all others will shut down shortly after starting. A standard configurati
               used in the mutual exclusion process (signal which corda instance is active and using the database). Default value is the
               machines host name.
 
-:updateInterval: Period(milliseconds) over which the running node updates the mutual exclusion lease.
+:updateInterval: Period(milliseconds) over which the running node updates the mutual exclusion lease. Node will exit if database connection is lost.
 
 :waitInterval: Amount of time(milliseconds) to wait since last mutual exclusion lease update before being able to become
                the active node. This has to be greater than updateInterval.
