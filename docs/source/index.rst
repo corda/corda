@@ -43,8 +43,9 @@ application development please continue to refer to `the main project documentat
    tools-index.rst
    node-internals-index.rst
    component-library-index.rst
-   troubleshooting.rst
+   serialization-index.rst
    json.rst
+   troubleshooting.rst
 
 .. toctree::
    :caption: Operations
@@ -56,6 +57,16 @@ application development please continue to refer to `the main project documentat
    aws-vm.rst
    loadtesting.rst
    certificate-revocation
+
+.. Documentation is not included in the pdf unless it is included in a toctree somewhere
+.. only:: pdfmode
+
+   .. toctree::
+      :caption: Other documentation
+
+      deterministic-modules.rst
+      release-notes.rst
+      changelog.rst
 
 .. only:: htmlmode
 

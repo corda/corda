@@ -60,16 +60,3 @@ directly to the ``megaCorpNode.services.recordTransaction`` method (note that th
 transactions are valid) inside a ``database.transaction``.  All node flows run within a database transaction in the
 nodes themselves, but any time we need to use the database directly from a unit test, you need to provide a database
 transaction as shown here.
-
-.. MockNetwork message manipulation
-.. --------------------------------
-.. The MockNetwork has the ability to manipulate message streams. You can use this to test your flows behaviour on corrupted,
-   or malicious data received.
-
-.. Message modification example in ``TutorialMockNetwork.kt``:
-
-.. .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/tutorial/mocknetwork/TutorialMockNetwork.kt
-    :language: kotlin
-    :start-after: DOCSTART 1
-    :end-before: DOCEND 1
-    :dedent: 8

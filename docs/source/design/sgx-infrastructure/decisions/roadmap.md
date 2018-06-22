@@ -38,7 +38,7 @@ to enforce epochs as mentioned [here](../details/time.md).
 
 #### Advantages
 
-1. We would solve long term secret persistence early, allowing for a longer timeframe for testing upgrades and
+1. We would solve long term secret persistence early, allowing for a longer time frame for testing upgrades and
    reprovisioning before we integrate Corda
 2. Allows "fixed stateful provable computations as a service" product, e.g. HA encryption
 

@@ -119,7 +119,7 @@ These include:
 * When a node would prefer to use a different notary cluster for a given transaction due to privacy or efficiency
   concerns
 
-Before these transactions can be created, the states must first all be repointed to the same notary cluster. This is
+Before these transactions can be created, the states must first all be re-pointed to the same notary cluster. This is
 achieved using a special notary-change transaction that takes:
 
 * A single input state

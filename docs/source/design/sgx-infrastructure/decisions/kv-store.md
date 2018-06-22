@@ -19,7 +19,7 @@ This is a simple choice of technology.
 
 1. Clunky API
 2. No HTTP API
-3. Handrolled protocol
+3. Hand-rolled protocol
 
 ### B. etcd
 
