@@ -284,6 +284,42 @@ absolute path to the node's base directory.
 
 :flowMonitorSuspensionLoggingThresholdMillis: Threshold ``Duration`` suspended flows waiting for IO need to exceed before they are logged. Default value is ``60 seconds``.
 
+:enterpriseConfiguration: Allows fine-grained controls of various features only available in the enterprise version of Corda.
+
+    :tuning: Performance tuning parameters for Corda Enterprise
+
+        :flowThreadPoolSize: The number of threads available to handle flows in parallel. This is the number of flows
+            that can run in parallel doing something and/or holding resources like database connections.
+            A larger number of flows can be suspended, e.g. waiting for reply from a counterparty.
+            When a response arrives, a suspended flow will be woken up if there are any available threads in the thread pool.
+            Otherwise, a currently active flow must be finished or suspended before the suspended flow can be woken
+            up to handle the event. This can have serious performance implications if the flow thread pool is too small,
+            as a flow cannot be suspended while in a database transaction, or without checkpointing its state first.
+            Corda Enterprise allows the node operators to configure the number of threads the state machine manager can use to execute flows in
+            parallel, allowing more than one flow to be active and/or use resources at the same time.
+
+            The default value is 4 times the number of cores available which was found to be working efficiently in
+            performance testing.
+            The ideal value for this parameter depends on a number of factors.
+            The main ones are the hardware the node is running on, the performance profile of the
+            flows, and the database instance backing the node as datastore. Every thread will open a database connection,
+            so for n threads, the database system must have at least n+1 connections available. Also, the database
+            must be able to actually cope with the level of parallelism to make the number of threads worthwhile - if
+            using e.g. H2, any number beyond 8 does not add any substantial benefit due to limitations with its internal
+            architecture.
+
+        :rpcThreadPoolSize: The number of threads handling RPC calls - this defines how many RPC requests can be handled
+            in parallel without queueing. The default value is set to the number of available processor cores.
+            Incoming RPC calls are queued until a thread from this
+            pool is available to handle the connection, prepare any required data and start the requested flow. As this
+            might be a non-trivial amount of work, the size of this pool can be configured in Corda Enterprise.
+            On a multicore machine with a large ``flowThreadPoolSize``, this might need to be increased, to avoid flow
+            threads being idle while the payload is being deserialized and the flow invocation run.
+
+            If there are idling flow threads while rpc calls are queued, it might be worthwhile increasing this number slightly.
+            Valid values for this property are between 4 (that is the number used for the single threaded state machine in
+            open source) and the number of flow threads.
+
 Examples
 --------
 
@@ -310,6 +346,12 @@ Simple notary configuration file:
     }
     devMode : false
     compatibilityZoneURL : "https://cz.corda.net"
+    enterprise : {
+        tuning : {
+            rpcThreadPoolSize = 16
+            flowThreadPoolSize = 256
+        }
+    }
 
 Configuring a node where the Corda Compatibility Zone's registration and Network Map services exist on different URLs
 
