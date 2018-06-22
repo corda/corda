@@ -201,6 +201,7 @@ For example::
 
 .. note:: When running the database management tool, prefer using absolute paths when specifying the "base-directory".
 
+.. warning:: It is good practice for node operators to backup the database before upgrading to a new version.
 
 Examples
 --------
