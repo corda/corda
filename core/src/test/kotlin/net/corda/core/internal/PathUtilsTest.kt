@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
+import java.net.URI
+import java.nio.file.FileSystems
+import java.nio.file.Path
 
 class PathUtilsTest {
     @Rule
@@ -58,5 +62,22 @@ class PathUtilsTest {
         (dir2 / "dir3").createDirectories()
         dir.deleteRecursively()
         assertThat(dir).doesNotExist()
+    }
+
+    @Test
+    fun `copy into zip directory`() {
+        val source: Path = tempFolder.newFile("source.txt").let {
+            it.writeText("Example Text")
+            it.toPath()
+        }
+        val target = File(tempFolder.root, "target.zip")
+        FileSystems.newFileSystem(URI.create("jar:${target.toURI()}"), mapOf("create" to "true")).use { fs ->
+            val dir = fs.getPath("dir").createDirectories()
+            val result = source.copyToDirectory(dir)
+            assertThat(result)
+                .isRegularFile()
+                .hasParent(dir)
+                .hasSameContentAs(source)
+        }
     }
 }
