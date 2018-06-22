@@ -6,6 +6,7 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* Remove all references to the out-of-process transaction verification.
 
 * Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
   It retries 10 times with a 1 minute interval in between each try. At the moment this is not configurable.
