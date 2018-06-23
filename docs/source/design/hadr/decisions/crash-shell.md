@@ -16,9 +16,9 @@ The potential use of a crash shell is relevant to high availability capabilities
 #### Disadvantages
 
 1.    Won’t reliably work if the node is in an unstable state
-2.    Not practical for running hundreds of nodes as our customers arealready trying to do.
+2.    Not practical for running hundreds of nodes as our customers already trying to do.
 3.    Doesn’t mesh with the user access controls of the organisation.
-4.    Doesn’t interface to the existing monitoring andcontrol systems i.e. Nagios, Geneos ITRS, Docker Swarm, etc.
+4.    Doesn’t interface to the existing monitoring and control systems i.e. Nagios, Geneos ITRS, Docker Swarm, etc.
 
 ### 2. Delegate to external tools
 
@@ -27,7 +27,7 @@ The potential use of a crash shell is relevant to high availability capabilities
 1. Doesn’t require change from our customers
 2. Will work even if node is completely stuck
 3. Allows scripted node restart schedules
-4. Doesn’t raise questions about access controllists and audit
+4. Doesn’t raise questions about access control lists and audit
 
 #### Disadvantages
 

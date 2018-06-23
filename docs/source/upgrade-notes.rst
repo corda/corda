@@ -117,7 +117,7 @@ With the re-designed network map service the following changes need to be made:
 * The network map is no longer provided by a node and thus the ``networkMapService`` config is ignored. Instead the
   network map is either provided by the compatibility zone (CZ) operator (who operates the doorman) and available
   using the ``compatibilityZoneURL`` config, or is provided using signed node info files which are copied locally.
-  See :doc:`network-map` for more details, and :doc:`setting-up-a-corda-network` on how to use the network
+  See :doc:`network-map` for more details, and :doc:`network-bootstrapper` on how to use the network
   bootstrapper for deploying a local network.
 
 * Configuration for a notary has been simplified. ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses``
@@ -273,7 +273,7 @@ Testing
 * Starting a flow can now be done directly from a node object. Change calls of the form ``node.getServices().startFlow(...)``
   to ``node.startFlow(...)``
 
-* Similarly a tranaction can be executed directly from a node object. Change calls of the form ``node.getDatabase().transaction({ it -> ... })``
+* Similarly a transaction can be executed directly from a node object. Change calls of the form ``node.getDatabase().transaction({ it -> ... })``
   to ``node.transaction({() -> ... })``
 
 * ``startFlow`` now returns a ``CordaFuture``, there is no need to call ``startFlow(...).getResultantFuture()``
@@ -391,7 +391,7 @@ Flow framework
 
   * ``FlowLogic.send``/``FlowLogic.receive``/``FlowLogic.sendAndReceive`` has been replaced by ``FlowSession.send``/
     ``FlowSession.receive``/``FlowSession.sendAndReceive``. The replacement functions do not take a destination
-    parameter, as this is defined implictly by the session used
+    parameter, as this is defined implicitly by the session used
 
   * Initiated flows now take in a ``FlowSession`` instead of ``Party`` in their constructor. If you need to access the
     counterparty identity, it is in the ``counterparty`` property of the flow session

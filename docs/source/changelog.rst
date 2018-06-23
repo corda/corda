@@ -5,12 +5,17 @@ Here's a summary of what's changed in each Corda release. For guidance on how to
 release, see :doc:`upgrade-notes`.
 
 Unreleased
-==========
+----------
+
+* Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
+  It retries 10 times with a 1 minute interval in between each try. At the moment this is not configurable.
+
+* Added a ``FlowMonitor`` to log information about flows that have been waiting for IO more than a configurable threshold.
 
 * H2 database changes:
   * The node's H2 database now listens on ``localhost`` by default.
   * The database server address must also be enabled in the node configuration.
-  * A new ``h2Settings`` configuration block supercedes the ``h2Port`` option.
+  * A new ``h2Settings`` configuration block supersedes the ``h2Port`` option.
 
 * Improved documentation PDF quality. Building the documentation now requires ``LaTex`` to be installed on the OS.
 
@@ -21,13 +26,13 @@ Unreleased
 
 * Introducing the flow hospital - a component of the node that manages flows that have errored and whether they should
   be retried from their previous checkpoints or have their errors propagate. Currently it will respond to any error that
-  occurs during the resolution of a received transaction as part of ``FinalityFlow``. In such a scenerio the receiving
+  occurs during the resolution of a received transaction as part of ``FinalityFlow``. In such a scenario the receiving
   flow will be parked and retried on node restart. This is to allow the node operator to rectify the situation as otherwise
   the node will have an incomplete view of the ledger.
 
 * Fixed an issue preventing out of process nodes started by the ``Driver`` from logging to file.
 
-* Fixed an issue with ``CashException`` not being able to deserialise after the introduction of AMQP for RPC.
+* Fixed an issue with ``CashException`` not being able to deserialize after the introduction of AMQP for RPC.
 
 * Removed -Xmx VM argument from Explorer's Capsule setup. This helps avoiding out of memory errors.
 
@@ -81,13 +86,13 @@ Unreleased
   * ``SerializedBytes`` is serialised by materialising the bytes into the object it represents, and then serialising that
     object into YAML/JSON
   * ``X509Certificate`` is serialised as an object with key fields such as ``issuer``, ``publicKey``, ``serialNumber``, etc.
-    The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialise an ``X509Certificate``
+    The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialize an ``X509Certificate``
     back.
   * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
   * ``WireTransaction`` now nicely outputs into its components: ``id``, ``notary``, ``inputs``, ``attachments``, ``outputs``,
-    ``commands``, ``timeWindow`` and ``privacySalt``. This can be deserialised back.
+    ``commands``, ``timeWindow`` and ``privacySalt``. This can be deserialized back.
   * ``SignedTransaction`` is serialised into ``wire`` (i.e. currently only ``WireTransaction`` tested) and ``signatures``,
-    and can be deserialised back.
+    and can be deserialized back.
 
 * ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
   then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``
@@ -238,14 +243,14 @@ Version 3.0
    * Cordform (which is the ``deployNodes`` gradle task) does this copying automatically for the demos. The ``NetworkMap``
      parameter is no longer needed.
 
-   * For test deployments we've introduced a bootstrapping tool (see :doc:`setting-up-a-corda-network`).
+   * For test deployments we've introduced a bootstrapping tool (see :doc:`network-bootstrapper`).
 
    * ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` configs have been
      removed. The configuration of notaries has been simplified into a single ``notary`` config object. See
      :doc:`corda-configuration-file` for more details.
 
    * Introducing the concept of network parameters which are a set of constants which all nodes on a network must agree on
-     to correctly interop. These can be retrieved from ``ServiceHub.networkParameters``.
+     to correctly interoperate. These can be retrieved from ``ServiceHub.networkParameters``.
 
    * One of these parameters, ``maxTransactionSize``, limits the size of a transaction, including its attachments, so that
      all nodes have sufficient memory to validate transactions.
@@ -331,7 +336,7 @@ Version 3.0
 * A new function ``checkCommandVisibility(publicKey: PublicKey)`` has been added to ``FilteredTransaction`` to check
   if every command that a signer should receive (e.g. an Oracle) is indeed visible.
 
-* Changed the AMQP serialiser to use the oficially assigned R3 identifier rather than a placeholder.
+* Changed the AMQP serializer to use the officially assigned R3 identifier rather than a placeholder.
 
 * The ``ReceiveTransactionFlow`` can now be told to record the transaction at the same time as receiving it. Using this
   feature, better support for observer/regulator nodes has been added. See :doc:`tutorial-observer-nodes`.
@@ -454,7 +459,7 @@ Release 1.0
   the only functionality left.  You also need to rename your services resource file to the new class name.
   An associated property on ``MockNode`` was renamed from ``testPluginRegistries`` to ``testSerializationWhitelists``.
 
-* Contract Upgrades: deprecated RPC authorisation / deauthorisation API calls in favour of equivalent flows in ContractUpgradeFlow.
+* Contract Upgrades: deprecated RPC authorization / deauthorization API calls in favour of equivalent flows in ContractUpgradeFlow.
   Implemented contract upgrade persistence using JDBC backed persistent map.
 
 * Vault query common attributes (state status and contract state types) are now handled correctly when using composite
@@ -462,7 +467,7 @@ Release 1.0
 
 * Cash selection algorithm is now pluggable (with H2 being the default implementation)
 
-* Removed usage of Requery ORM library (repalced with JPA/Hibernate)
+* Removed usage of Requery ORM library (replaced with JPA/Hibernate)
 
 * Vault Query performance improvement (replaced expensive per query SQL statement to obtain concrete state types
   with single query on start-up followed by dynamic updates using vault state observable))
@@ -654,7 +659,7 @@ Milestone 14
   in the ``test-utils`` modules.
 
 * In Java, ``QueryCriteriaUtilsKt`` has moved to ``QueryCriteriaUtils``. Also ``and`` and ``or`` are now instance methods
-  of ``QueryCrtieria``.
+  of ``QueryCriteria``.
 
 * ``random63BitValue()`` has moved to ``CryptoUtils``
 
@@ -665,12 +670,12 @@ Milestone 14
   in the ``core`` module begin with ``net.corda.core``.
 
 * ``FinalityFlow`` can now be subclassed, and the ``broadcastTransaction`` and ``lookupParties`` function can be
-  overriden in order to handle cases where no single transaction participant is aware of all parties, and therefore
+  overridden in order to handle cases where no single transaction participant is aware of all parties, and therefore
   the transaction must be relayed between participants rather than sent from a single node.
 
 * ``TransactionForContract`` has been removed and all usages of this class have been replaced with usage of
   ``LedgerTransaction``. In particular ``Contract.verify`` and the ``Clauses`` API have been changed and now take a
-  ``LedgerTransaction`` as passed in parameter. The prinicpal consequence of this is that the types of the input and output
+  ``LedgerTransaction`` as passed in parameter. The principal consequence of this is that the types of the input and output
   collections on the transaction object have changed, so it may be necessary to ``map`` down to the ``ContractState``
   sub-properties in existing code.
 
@@ -933,7 +938,7 @@ Milestone 11.0
       such as ``Certificate``.
 
         * There is no longer a need to transform single keys into composite - ``composite`` extension was removed, it is
-          imposible to create ``CompositeKey`` with only one leaf.
+          impossible to create ``CompositeKey`` with only one leaf.
 
         * Constructor of ``CompositeKey`` class is now private. Use ``CompositeKey.Builder`` to create a composite key.
           Keys emitted by the builder are normalised so that it's impossible to create a composite key with only one node.
@@ -1338,7 +1343,7 @@ New features in this release:
     * Compound keys have been added as preparation for merging a distributed RAFT based notary. Compound keys
       are trees of public keys in which interior nodes can have validity thresholds attached, thus allowing
       boolean formulas of keys to be created. This is similar to Bitcoin's multi-sig support and the data model
-      is the same as the InterLedger Crypto-Conditions spec, which should aid interop in future. Read more about
+      is the same as the InterLedger Crypto-Conditions spec, which should aid interoperate in future. Read more about
       key trees in the ":doc:`api-core-types`" article.
     * A new tutorial has been added showing how to use transaction attachments in more detail.
 
@@ -1496,7 +1501,7 @@ Highlights of this release:
 * Upgrades to the notary/consensus service support:
 
     * There is now a way to change the notary controlling a state.
-    * You can pick between validating and non-validating notaries, these let you select your privacy/robustness tradeoff.
+    * You can pick between validating and non-validating notaries, these let you select your privacy/robustness trade-off.
 
 * A new obligation contract that supports bilateral and multilateral netting of obligations, default tracking and
   more.

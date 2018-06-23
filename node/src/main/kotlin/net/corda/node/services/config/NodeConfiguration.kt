@@ -26,6 +26,9 @@ import java.util.*
 
 val Int.MB: Long get() = this * 1024L * 1024L
 
+private val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
+private val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)
+
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: CordaX500Name
     val emailAddress: String
@@ -62,6 +65,9 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val tlsCertCrlDistPoint: URL?
     val tlsCertCrlIssuer: String?
     val effectiveH2Settings: NodeH2Settings?
+    val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
+    val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
+
     fun validate(): List<String>
 
     companion object {
@@ -193,30 +199,36 @@ data class NodeConfigurationImpl(
         private val h2port: Int? = null,
         private val h2Settings: NodeH2Settings? = null,
         // do not use or remove (used by Capsule)
-        private val jarDirs: List<String> = emptyList()
+        private val jarDirs: List<String> = emptyList(),
+        override val flowMonitorPeriodMillis: Duration = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS,
+        override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
 
     }
 
-    override val rpcOptions: NodeRpcOptions = initialiseRpcOptions(rpcAddress, rpcSettings, BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword))
+    private val actualRpcSettings: NodeRpcSettings
 
-    private fun initialiseRpcOptions(explicitAddress: NetworkHostAndPort?, settings: NodeRpcSettings, fallbackSslOptions: BrokerRpcSslOptions): NodeRpcOptions {
-        return when {
-            explicitAddress != null -> {
-                require(settings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
+    init {
+        actualRpcSettings = when {
+            rpcAddress != null -> {
+                require(rpcSettings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
                 logger.warn("Top-level declaration of property 'rpcAddress' is deprecated. Please use 'rpcSettings.address' instead.")
 
-                settings.copy(address = explicitAddress)
+                rpcSettings.copy(address = rpcAddress)
             }
             else -> {
-                settings.address ?: throw ConfigException.Missing("rpcSettings.address")
-                settings
+                rpcSettings.address ?: throw ConfigException.Missing("rpcSettings.address")
+                rpcSettings
             }
-        }.asOptions(fallbackSslOptions)
+        }
     }
 
+    override val rpcOptions: NodeRpcOptions
+        get() {
+            return actualRpcSettings.asOptions()
+        }
 
     private fun validateTlsCertCrlConfig(): List<String> {
         val errors = mutableListOf<String>()
@@ -239,7 +251,12 @@ data class NodeConfigurationImpl(
     override fun validate(): List<String> {
         val errors = mutableListOf<String>()
         errors += validateDevModeOptions()
-        errors += validateRpcOptions(rpcOptions)
+        val rpcSettingsErrors = validateRpcSettings(rpcSettings)
+        errors += rpcSettingsErrors
+        if (rpcSettingsErrors.isEmpty()) {
+            // Forces lazy property to initialise in order to throw exceptions
+            rpcOptions
+        }
         errors += validateTlsCertCrlConfig()
         errors += validateNetworkServices()
         errors += validateH2Settings()
@@ -254,12 +271,13 @@ data class NodeConfigurationImpl(
         return errors
     }
 
-    private fun validateRpcOptions(options: NodeRpcOptions): List<String> {
+    private fun validateRpcSettings(options: NodeRpcSettings): List<String> {
         val errors = mutableListOf<String>()
-        if (options.address != null) {
-            if (!options.useSsl && options.adminAddress == null) {
-                errors += "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
-            }
+        if (options.adminAddress == null) {
+            errors += "'rpcSettings.adminAddress': missing"
+        }
+        if (options.useSsl && options.ssl == null) {
+            errors += "'rpcSettings.ssl': missing (rpcSettings.useSsl was set to true)."
         }
         return errors
     }
@@ -333,13 +351,13 @@ data class NodeRpcSettings(
         val useSsl: Boolean = false,
         val ssl: BrokerRpcSslOptions?
 ) {
-    fun asOptions(fallbackSslOptions: BrokerRpcSslOptions): NodeRpcOptions {
+    fun asOptions(): NodeRpcOptions {
         return object : NodeRpcOptions {
             override val address = this@NodeRpcSettings.address!!
             override val adminAddress = this@NodeRpcSettings.adminAddress!!
             override val standAloneBroker = this@NodeRpcSettings.standAloneBroker
             override val useSsl = this@NodeRpcSettings.useSsl
-            override val sslConfig = this@NodeRpcSettings.ssl ?: fallbackSslOptions
+            override val sslConfig = this@NodeRpcSettings.ssl
 
             override fun toString(): String {
                 return "address: $address, adminAddress: $adminAddress, standAloneBroker: $standAloneBroker, useSsl: $useSsl, sslConfig: $sslConfig"

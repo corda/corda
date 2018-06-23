@@ -192,7 +192,7 @@ open class Node(configuration: NodeConfiguration,
 
         if (!configuration.messagingServerExternal) {
             val brokerBindAddress = configuration.messagingServerAddress ?: NetworkHostAndPort("0.0.0.0", configuration.p2pAddress.port)
-            messageBroker = ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize)
+            messageBroker = ArtemisMessagingServer(configuration, brokerBindAddress, networkParameters.maxMessageSize, info.legalIdentities.map { it.owningKey })
         }
 
         val serverAddress = configuration.messagingServerAddress
@@ -239,7 +239,7 @@ open class Node(configuration: NodeConfiguration,
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(configuration, this.address, adminAddress, sslConfig, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                        ArtemisRpcBroker.withSsl(configuration, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     } else {
                         ArtemisRpcBroker.withoutSsl(configuration, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     }

@@ -115,7 +115,7 @@ object TopupIssuerFlow {
             val txns: List<SignedTransaction> = reserveLimits.map { amount ->
                 // request asset issue
                 logger.info("Requesting currency issue $amount")
-                val txn = issueCashTo(amount, topupRequest.issueToParty, topupRequest.issuerPartyRef)
+                val txn = issueCashTo(amount, topupRequest.issueToParty, topupRequest.issuerPartyRef, topupRequest.notaryParty)
                 progressTracker.currentStep = SENDING_TOP_UP_ISSUE_REQUEST
                 return@map txn.stx
             }
@@ -128,10 +128,8 @@ object TopupIssuerFlow {
         @Suspendable
         private fun issueCashTo(amount: Amount<Currency>,
                                 issueTo: Party,
-                                issuerPartyRef: OpaqueBytes): AbstractCashFlow.Result {
-            // TODO: pass notary in as request parameter
-            val notaryParty = serviceHub.networkMapCache.notaryIdentities.firstOrNull()
-                    ?: throw IllegalArgumentException("Couldn't find any notary in NetworkMapCache")
+                                issuerPartyRef: OpaqueBytes,
+                                notaryParty: Party): AbstractCashFlow.Result {
             // invoke Cash subflow to issue Asset
             progressTracker.currentStep = ISSUING
             val issueCashFlow = CashIssueFlow(amount, issuerPartyRef, notaryParty)

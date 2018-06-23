@@ -28,7 +28,7 @@ End-to-end encryption is a desirable potential design feature for the [float](..
 
 #### Disadvantages
 
-1. Doesn’t actually provide E2E, or define what an encrypted payloadlooks like.
+1. Doesn’t actually provide E2E, or define what an encrypted payload looks like.
 2. Doesn’t address any crypto features that target protecting the AMQP headers.
 
 ### 3. Implement end-to-end encryption
