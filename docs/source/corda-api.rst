@@ -108,5 +108,5 @@ as ``@DoNotImplement``. While we undertake not to remove or modify any of these 
 functionality, the annotation is a warning that we may need to extend them in future versions of Corda.
 Cordapp developers should therefore just use these classes "as is", and *not* attempt to extend or implement any of them themselves.
 
-This annotation is inherited by subclasses and subinterfaces.
+This annotation is inherited by subclasses and sub-interfaces.
 

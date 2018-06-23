@@ -26,7 +26,7 @@ MO set out ground rules for the meeting. RGB asked everyone to confirm they had 
 
 MN outlined the motivation for a Float as responding to organisation’s expectation for a‘fire break’ protocol termination in the DMZ where manipulation and operation can be checked and monitored. 
 
-The meetingwas briefly interrupted by technical difficulties with the GoToMeetingconferencing system.
+The meeting was briefly interrupted by technical difficulties with the GoToMeeting conferencing system.
 
 MN continued to outline how the design was constrained by expected DMZ rules and influenced by currently perceived client expectations – e.g. making the float unidirectional. He gave a prelude to certain design decisions e.g. the use ofAMQP from the outset. 
 
@@ -38,7 +38,7 @@ JC questioned where the TLS connection would terminate. MN outlined the pros and
 
 MH contended that the need to propagate TLS headers etc. through to the node (for reinforcing identity checks etc.) implied a need to terminate on the float. MN agreed but noted that in practice the current node design did not make much use of that feature.
 
-JCquestioned how users would provision a TLS cert on a firewall – MN confirmedusers would be able to do this themselves and were typically familiar withdoing so. 
+JC questioned how users would provision a TLS cert on a firewall – MN confirmed users would be able to do this themselves and were typically familiar with doing so. 
 
 RGB highlighted the distinction between the signing key for the TLS vs. identity certificates, and that this needed to be made clear to users. MN agreed that TLS private keys could be argued to be less critical from a security perspective, particularly when revocation was enabled.
 
@@ -52,11 +52,11 @@ RGB concluded the bridge must effectively trust the firewall or bridge on the or
 
 JC queried whether SASL would allow passing of identity and hence termination at the firewall;MN confirmed this.
 
-MH contented that the TLS implementation was specific to Corda in several ways which may challenge implementation using firewalls, and that typical firewalls(using old OpenSSL etc.) were probably not more secure than R3’s own solutions. RGB pointed out that the design was ultimately driven by client perception ofsecurity (MN: “security theatre”) rather than objective assessment. MH added that implementations would be firewall-specific and not all devices would support forwarding, support for AMQP etc.
+MH contented that the TLS implementation was specific to Corda in several ways which may challenge implementation using firewalls, and that typical firewalls(using old OpenSSL etc.) were probably not more secure than R3’s own solutions. RGB pointed out that the design was ultimately driven by client perception of security (MN: “security theatre”) rather than objective assessment. MH added that implementations would be firewall-specific and not all devices would support forwarding, support for AMQP etc.
 
 RGB proposed messaging to clients that the option existed to terminate on the firewall if it supported the relevant requirements.
 
-MN re-raised the question of key management. RGB asked about the risk implied from the threat of a compromised float. MN said an attacker who compromised a float could establish TLS connections in the name of the compromised party, and couldinspect and alter packets including readable busness data (assuming AMQP serialisation). MH gave an example of a MITM attack where an attacker could swap in their own single-use key allowing them to gain control of (e.g.) a cash asset; the TLS layer is the only current protection against that.
+MN re-raised the question of key management. RGB asked about the risk implied from the threat of a compromised float. MN said an attacker who compromised a float could establish TLS connections in the name of the compromised party, and could inspect and alter packets including readable business data (assuming AMQP serialisation). MH gave an example of a MITM attack where an attacker could swap in their own single-use key allowing them to gain control of (e.g.) a cash asset; the TLS layer is the only current protection against that.
 
 RGB queried whether messages could be signed by senders. MN raised potential threat of traffic analysis, and stated E2E encryption was definitely possible but not for March-April.
 
@@ -88,7 +88,7 @@ MN described alternative options involving onion-routing etc.
 
 JoC questioned whether this would also allow support for load balancing; MN advised this would be too much change in direction in practice.
 
-MH outlined his original reasoning for AMQP (lots of e.g. manageability features, not allof which would be needed at the outset but possibly in future) vs. other options e.g. MQTT. 
+MH outlined his original reasoning for AMQP (lots of e.g. manageability features, not all of which would be needed at the outset but possibly in future) vs. other options e.g. MQTT. 
 
 MO questioned whether the broker would imply performance limitations.
 
@@ -110,7 +110,7 @@ JC queried whether broker providers could be asked to deliver the feature. AB me
 
 JoC noted a distinction in scope for P2P and/or RPC. 
 
-There was discussion of replacing the core protocol with JMS + plugins. RGB drew focus tothe question of when to do so, rather than how. 
+There was discussion of replacing the core protocol with JMS + plugins. RGB drew focus to the question of when to do so, rather than how. 
 
 AB noted Solace have functionality with conceptual similarities to the float, and questioned to what degree the float could be considered non-core technology. MH argued the nature of Corda as a P2P network made the float pretty core to avoiding dedicated network infrastructure. 
 
@@ -124,7 +124,7 @@ DL sought confirmation that the group was happy with the float to act as a Liste
 
 MH requested more detailed proposals going forward on: 
 
-1)    To what degree logs from different components need to be integrated (consensus wasno requirement at this stage)
+1)    To what degree logs from different components need to be integrated (consensus was no requirement at this stage)
 
 2)    Bridge control protocols.
 

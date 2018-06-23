@@ -5,7 +5,7 @@ Software requirements
 ---------------------
 Corda uses industry-standard tools:
 
-* **Oracle JDK 8 JVM** - minimum supported version **8u131**
+* **Oracle JDK 8 JVM** - minimum supported version **8u171**
 * **IntelliJ IDEA** - supported versions **2017.x** and **2018.x**
 * **Git**
 

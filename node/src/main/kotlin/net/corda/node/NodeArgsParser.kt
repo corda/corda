@@ -70,6 +70,7 @@ class NodeArgsParser : AbstractArgsParser<CmdLineOptions>() {
     private val clearNetworkMapCache = optionParser.accepts("clear-network-map-cache", "Clears local copy of network map, on node startup it will be restored from server or file system.")
 
     override fun doParse(optionSet: OptionSet): CmdLineOptions {
+        require(optionSet.nonOptionArguments().isEmpty()) { "Unrecognized argument(s): ${optionSet.nonOptionArguments().joinToString(separator = ", ")}"}
         require(!optionSet.has(baseDirectoryArg) || !optionSet.has(configFileArg)) {
             "${baseDirectoryArg.options()[0]} and ${configFileArg.options()[0]} cannot be specified together"
         }

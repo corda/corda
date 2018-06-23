@@ -66,8 +66,8 @@ the node following failure.
 
 ### Non-goals (out of scope for this design document)
 
-* Be able to distribute a node over more than two datacenters.
-* Be able to distribute a node between datacenters that are very far apart latency-wise (unless you don't care about performance).
+* Be able to distribute a node over more than two data centers.
+* Be able to distribute a node between data centers that are very far apart latency-wise (unless you don't care about performance).
 * Be able to tolerate arbitrary byzantine failures within a node cluster.
 * DR, specifically in the case of the complete failure of a site/datacentre/cluster or region will require a different 
   solution to that specified here. For now DR is only supported where performant synchronous replication is feasible 

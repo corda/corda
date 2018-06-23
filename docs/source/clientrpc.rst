@@ -387,7 +387,7 @@ the error handler upon subscription to an ``Observable``. The call to this ``onE
 happens then the code will terminate existing subscription, closes RPC connection and recursively calls ``performRpcReconnect``
 which will re-subscribe once RPC connection comes back online.
 
-Client code if fed with instances of ``StateMachineInfo`` using call ``clientCode(it)``. Upon re-connec, this code receives
+Client code if fed with instances of ``StateMachineInfo`` using call ``clientCode(it)``. Upon re-connecting, this code receives
 all the items. Some of these items might have already been delivered to client code prior to failover occurred.
 It is down to client code in this case handle those duplicate items as appropriate.
 
