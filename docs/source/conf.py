@@ -241,8 +241,6 @@ latex_documents = [('index', u'corda-developer-site.tex', u'Corda Developer Docu
 _PREAMBLE = r"""
 \usepackage[utf8]{inputenc}
 \usepackage{pmboxdraw}
-\usepackage{enumitem}
-\setlistdepth{999999}
 \DeclareUnicodeCharacter{2514}{\textSFii}
 \DeclareUnicodeCharacter{251C}{\textSFviii}
 \DeclareUnicodeCharacter{2705}{\checkmark}
@@ -261,9 +259,9 @@ latex_elements = {
     # Latex figure (float) alignment
     # 'figure_align': 'htbp',
 
-    'preamble': _PREAMBLE,
+    'maxlistdepth' : '2000',
 
-    'maxlistdepth': 2000,
+    'preamble' : _PREAMBLE,
 
-    'extraclassoptions': 'openany',
+    'extraclassoptions' : 'openany',
 }
