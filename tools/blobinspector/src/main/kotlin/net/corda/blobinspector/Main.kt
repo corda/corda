@@ -41,7 +41,7 @@ fun main(args: Array<String>) {
 
 @Command(
         name = "Blob Inspector",
-        versionProvider = VersionProvider::class,
+        versionProvider = CordaVersionProvider::class,
         mixinStandardHelpOptions = true, // add --help and --version options,
         showDefaultValues = true,
         description = ["Inspect AMQP serialised binary blobs"]
@@ -64,7 +64,9 @@ class Main : Runnable {
     var verbose: Boolean = false
 
     override fun run() {
-        System.setProperty("logLevel", if (verbose) "trace" else "off")
+        if (verbose) {
+            System.setProperty("logLevel", "trace")
+        }
 
         val bytes = source!!.readBytes().run {
             require(size > amqpMagic.size) { "Insufficient bytes for AMQP blob" }
@@ -124,8 +126,13 @@ private class SourceConverter : ITypeConverter<URL> {
     }
 }
 
-private class VersionProvider : IVersionProvider {
-    override fun getVersion(): Array<String> = arrayOf(Manifests.read("Corda-Release-Version"))
+private class CordaVersionProvider : IVersionProvider {
+    override fun getVersion(): Array<String> {
+        return arrayOf(
+                "Version: ${Manifests.read("Corda-Release-Version")}",
+                "Revision: ${Manifests.read("Corda-Revision")}"
+        )
+    }
 }
 
 private enum class FormatType { YAML, JSON }
