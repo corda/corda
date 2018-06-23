@@ -238,6 +238,16 @@ latex_documents = [('index', u'corda-developer-site.tex', u'Corda Developer Docu
 # If false, no module index is generated.
 # latex_domain_indices = True
 
+_PREAMBLE = r"""
+\usepackage[utf8]{inputenc}
+\usepackage{pmboxdraw}
+\usepackage{enumitem}
+\setlistdepth{999999}
+\DeclareUnicodeCharacter{2514}{\textSFii}
+\DeclareUnicodeCharacter{251C}{\textSFviii}
+\DeclareUnicodeCharacter{2705}{\checkmark}
+"""
+
 latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     # 'papersize': 'letterpaper',
@@ -250,6 +260,8 @@ latex_elements = {
 
     # Latex figure (float) alignment
     # 'figure_align': 'htbp',
+
+    'preamble': _PREAMBLE,
 
     'maxlistdepth': 2000,
 
