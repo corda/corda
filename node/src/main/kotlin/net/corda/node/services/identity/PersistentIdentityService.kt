@@ -2,9 +2,7 @@ package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
-import net.corda.core.internal.CertRole
 import net.corda.core.internal.hash
 import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -12,9 +10,12 @@ import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.identity.IdentityServiceUtil.Companion.partiesFromName
+import net.corda.node.services.identity.IdentityServiceUtil.Companion.verifyIdentity
+import net.corda.node.services.identity.IdentityServiceUtil.Companion.verifyPartyOwnsAnonymousIdentity
+import net.corda.node.services.identity.IdentityServiceUtil.Companion.wellKnowPartyFromAnonymous
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -128,36 +129,21 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         return database.transaction {
-
             // Validate the chain first, before we do anything clever with it
-            val identityCertChain = identity.certPath.x509Certificates
-            try {
-                identity.verify(trustAnchor)
-            } catch (e: CertPathValidatorException) {
-                log.warn(e.localizedMessage)
-                log.warn("Path = ")
-                identityCertChain.reversed().forEach {
-                    log.warn(it.subjectX500Principal.toString())
-                }
-                throw e
-            }
-
-            // Ensure we record the first identity of the same name, first
-            val wellKnownCert = identityCertChain.single { CertRole.extract(it)?.isWellKnown ?: false }
-            if (wellKnownCert != identity.certificate) {
-                val idx = identityCertChain.lastIndexOf(wellKnownCert)
-                val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
-                verifyAndRegisterIdentity(PartyAndCertificate(firstPath))
-            }
-
-            log.debug { "Registering identity $identity" }
-            val key = mapToKey(identity)
-            keyToParties.addWithDuplicatesAllowed(key, identity)
-            // Always keep the first party we registered, as that's the well known identity
-            principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
-            val parentId = mapToKey(identityCertChain[1].publicKey)
-            keyToParties[parentId]
+            verifyIdentity(trustAnchor, identity)
+            registerIdentity(identity)
         }
+    }
+
+    private fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
+        val identityCertChain = identity.certPath.x509Certificates
+        log.debug { "Registering identity $identity" }
+        val key = mapToKey(identity)
+        keyToParties.addWithDuplicatesAllowed(key, identity)
+        // Always keep the first party we registered, as that's the well known identity
+        principalToParties.addWithDuplicatesAllowed(identity.name, key, false)
+        val parentId = mapToKey(identityCertChain[1].publicKey)
+        return keyToParties[parentId]
     }
 
     override fun certificateFromKey(owningKey: PublicKey): PartyAndCertificate? = database.transaction { keyToParties[mapToKey(owningKey)] }
@@ -177,24 +163,12 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
     override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        return database.transaction {
-            // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
-            // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
-            // into a party, and from there figure out the well known party.
-            val candidate = partyFromKey(party.owningKey)
-            // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
-            if (candidate != null) {
-                wellKnownPartyFromX500Name(candidate.name)
-            } else {
-                null
-            }
-        }
+        val service = this
+        return database.transaction { wellKnowPartyFromAnonymous(service, party) }
     }
 
     override fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
-    override fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party {
-        return wellKnownPartyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
-    }
+    override fun requireWellKnownPartyFromAnonymous(party: AbstractParty) = IdentityServiceUtil.requireWellKnownPartyFromAnonymous(this, party)
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
@@ -209,11 +183,9 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     @Throws(UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
         database.transaction {
-            val anonymousIdentity = certificateFromKey(anonymousParty.owningKey) ?: throw UnknownAnonymousPartyException("Unknown $anonymousParty")
-            val issuingCert = anonymousIdentity.certPath.certificates[1]
-            require(issuingCert.publicKey == party.owningKey) {
-                "Issuing certificate's public key must match the party key ${party.owningKey.toStringShort()}."
-            }
+            val anonymousIdentity = certificateFromKey(anonymousParty.owningKey)
+                    ?: throw UnknownAnonymousPartyException("Unknown $anonymousParty")
+            verifyPartyOwnsAnonymousIdentity(party, anonymousIdentity)
         }
     }
 }
