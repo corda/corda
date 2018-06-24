@@ -16,7 +16,7 @@ import net.corda.core.serialization.CordaSerializable
 @CordaSerializable
 interface ContractState {
     /**
-     * A _participant_ is any party that should be notified when the state is created or destroyed.
+     * A _participant_ is any party that should be notified when the state is created or consumed.
      *
      * The list of participants is required for certain types of transactions. For example, when changing the notary
      * for this state, every participant has to be involved and approve the transaction
