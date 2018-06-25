@@ -567,7 +567,7 @@ class NodeVaultService(
             }
         }
         if (unknownTypes.isNotEmpty()) {
-            log.warn("There are unknown contract state types in the vault, which will prevent these states from being used. Names are ${unknownTypes.joinToString(", ", "[", "]")}.")
+            log.warn("There are unknown contract state types in the vault, which will prevent these states from being used. The relevant CorDapps must be loaded for these states to be used. The types not on the classpath are ${unknownTypes.joinToString(", ", "[", "]")}.")
         }
         return contractInterfaceToConcreteTypes
     }
