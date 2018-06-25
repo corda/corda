@@ -165,7 +165,8 @@ class NodeVaultService(
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
                 StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter {
-                    isRelevant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet()) }
+                    isRelevant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
+                }
                 StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
             }.map { tx.outRef<ContractState>(it.index) }
 
@@ -191,16 +192,13 @@ class NodeVaultService(
                 else -> throw IllegalArgumentException("Unsupported transaction type: ${tx.javaClass.name}")
             }
             val myKeys by lazy { keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } }) }
-            val (consumedStateAndRefs, producedStates) = ltx.inputs.
-                    zip(ltx.outputs).
-                    filter { (_, output) ->
-                        if (statesToRecord == StatesToRecord.ONLY_RELEVANT) {
-                            isRelevant(output.data, myKeys.toSet())
-                        } else {
-                            true
-                        }
-                    }.
-                    unzip()
+            val (consumedStateAndRefs, producedStates) = ltx.inputs.zip(ltx.outputs).filter { (_, output) ->
+                if (statesToRecord == StatesToRecord.ONLY_RELEVANT) {
+                    isRelevant(output.data, myKeys.toSet())
+                } else {
+                    true
+                }
+            }.unzip()
 
             val producedStateAndRefs = producedStates.map { ltx.outRef<ContractState>(it.data) }
             if (consumedStateAndRefs.isEmpty() && producedStateAndRefs.isEmpty()) {
