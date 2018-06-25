@@ -6,6 +6,7 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* Remove all references to the out-of-process transaction verification.
 
 * The class carpenter has a "lenient" mode where it will, during deserialisation, happily synthesis classes that implement
   interfaces that will have unimplemented methods. This is useful, for example, for object viewers. This can be turned on

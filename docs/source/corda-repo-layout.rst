@@ -23,5 +23,4 @@ The Corda repository comprises the following folders:
   mock network) implementation
 * **tools** contains the explorer which is a GUI front-end for Corda, and also the DemoBench which is a GUI tool that
   allows you to run Corda nodes locally for demonstrations
-* **verifier** allows out-of-node transaction verification, allowing verification to scale horizontally
 * **webserver** is a servlet container for CorDapps that export HTTP endpoints. This server is an RPC client of the node
