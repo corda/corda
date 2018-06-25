@@ -244,7 +244,7 @@ Version 3.0
    * Cordform (which is the ``deployNodes`` gradle task) does this copying automatically for the demos. The ``NetworkMap``
      parameter is no longer needed.
 
-   * For test deployments we've introduced a bootstrapping tool (see :doc:`setting-up-a-corda-network`).
+   * For test deployments we've introduced a bootstrapping tool (see :doc:`network-bootstrapper`).
 
    * ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` configs have been
      removed. The configuration of notaries has been simplified into a single ``notary`` config object. See

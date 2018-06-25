@@ -169,7 +169,7 @@ Significant Changes in 3.0
 
   .. important:: This replaces the Network Map service that was present in Corda 1.0 and Corda 2.0.
 
-  Further information can be found in the :doc:`changelog`, :doc:`network-map` and :doc:`setting-up-a-corda-network` documentation.
+  Further information can be found in the :doc:`changelog`, :doc:`network-map` and :doc:`network-bootstrapper` documentation.
 
 * **Contract Upgrade**
 
