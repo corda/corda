@@ -15,6 +15,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.x500Name
 import net.corda.core.utilities.seconds
 import net.corda.node.NodeRegistrationOption
+import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -46,6 +47,8 @@ class NetworkRegistrationHelperTest {
     private lateinit var config: NodeConfiguration
     private val networkRootTrustStoreFileName = "network-root-truststore.jks"
     private val networkRootTrustStorePassword = "network-root-truststore-password"
+
+    private val versionInfo = VersionInfo(1, "1", "1", "1")
 
     @Before
     fun init() {
@@ -212,7 +215,7 @@ class NetworkRegistrationHelperTest {
                 val request = JcaPKCS10CertificationRequest(it.getArgument<PKCS10CertificationRequest>(0))
                 requests[requestId] = request
                 requestId
-            }.whenever(it).submitRequest(any())
+            }.whenever(it).submitRequest(any(), any())
 
             doAnswer {
                 CertificateResponse(5.seconds, dynamicResponse(requests[it.getArgument(0)]!!))
@@ -220,9 +223,10 @@ class NetworkRegistrationHelperTest {
         }
 
         return when (certRole) {
-            CertRole.NODE_CA -> NodeRegistrationHelper(config, certService, NodeRegistrationOption(config.certificatesDirectory / networkRootTrustStoreFileName, networkRootTrustStorePassword))
+            CertRole.NODE_CA -> NodeRegistrationHelper(config, versionInfo, certService, NodeRegistrationOption(config.certificatesDirectory / networkRootTrustStoreFileName, networkRootTrustStorePassword))
             CertRole.SERVICE_IDENTITY -> NetworkRegistrationHelper(
                     config,
+                    versionInfo,
                     config.myLegalName,
                     config.emailAddress,
                     certService,

@@ -120,7 +120,7 @@ open class NodeStartup(val args: Array<String>) {
             preNetworkRegistration(conf)
             if (cmdlineOptions.nodeRegistrationOption != null) {
                 // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-                registerWithNetwork(conf, cmdlineOptions.nodeRegistrationOption)
+                registerWithNetwork(conf, versionInfo, cmdlineOptions.nodeRegistrationOption)
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
@@ -287,7 +287,7 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Starting as node on ${conf.p2pAddress}")
     }
 
-    protected open fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
+    protected open fun registerWithNetwork(conf: NodeConfiguration, versionInfo: VersionInfo, nodeRegistrationConfig: NodeRegistrationOption) {
         val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException(
                 "compatibilityZoneURL or networkServices must be configured!")
 
@@ -297,7 +297,7 @@ open class NodeStartup(val args: Array<String>) {
         println("*       Registering as a new participant with Corda network      *")
         println("*                                                                *")
         println("******************************************************************")
-        NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
+        NodeRegistrationHelper(conf, versionInfo, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
     }
 
     protected open fun loadConfigFile(cmdlineOptions: CmdLineOptions): Pair<Config, Try<NodeConfiguration>> = cmdlineOptions.loadConfig()
