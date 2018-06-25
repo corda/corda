@@ -15,6 +15,7 @@ import net.corda.node.NodeRegistrationOption
 import net.corda.node.SerialFilter
 import net.corda.node.VersionInfo
 import net.corda.node.defaultSerialFilter
+import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
@@ -135,6 +136,9 @@ open class NodeStartup(val args: Array<String>) {
         try {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: MultipleCordappsForFlowException) {
+            logger.error(e.message)
+            return false
         } catch (e: CouldNotCreateDataSourceException) {
             logger.error(e.message, e.cause)
             return false
