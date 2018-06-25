@@ -1,10 +1,7 @@
 package net.corda.confidential
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.unwrap
@@ -14,6 +11,7 @@ import net.corda.core.utilities.unwrap
  * It turns out to be the same as the wrapper in IdentitySyncFlowTests.
  */
 object IdentitySyncFlowWrapper {
+    @StartableByRPC
     @InitiatingFlow
     class Initiator(val otherParty: Party,
                     val tx: WireTransaction) : FlowLogic<Boolean>() {
