@@ -9,6 +9,10 @@ Unreleased
 
 * Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems related to database migrations before exiting with a non-zero code.
 
+* The class carpenter has a "lenient" mode where it will, during deserialisation, happily synthesis classes that implement
+  interfaces that will have unimplemented methods. This is useful, for example, for object viewers. This can be turned on
+  with ``SerializationContext.withLenientCarpenter``.
+
 * Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
   It retries 10 times with a 1 minute interval in between each try. At the moment this is not configurable.
 
@@ -273,7 +277,7 @@ Corda Enterprise 3.0 Developer Preview
    * Cordform (which is the ``deployNodes`` gradle task) does this copying automatically for the demos. The ``NetworkMap``
      parameter is no longer needed.
 
-   * For test deployments we've introduced a bootstrapping tool (see :doc:`setting-up-a-corda-network`).
+   * For test deployments we've introduced a bootstrapping tool (see :doc:`network-bootstrapper`).
 
    * ``extraAdvertisedServiceIds``, ``notaryNodeAddress``, ``notaryClusterAddresses`` and ``bftSMaRt`` configs have been
      removed. The configuration of notaries has been simplified into a single ``notary`` config object. See

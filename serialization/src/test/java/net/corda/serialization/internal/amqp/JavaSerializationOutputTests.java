@@ -11,7 +11,6 @@
 package net.corda.serialization.internal.amqp;
 
 import net.corda.core.serialization.ConstructorForDeserialization;
-import net.corda.serialization.internal.AllWhitelist;
 import net.corda.core.serialization.SerializedBytes;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.apache.qpid.proton.codec.DecoderImpl;
@@ -23,6 +22,7 @@ import java.io.NotSerializableException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
+import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
 import static org.junit.Assert.assertTrue;
 
 public class JavaSerializationOutputTests {
@@ -186,14 +186,8 @@ public class JavaSerializationOutputTests {
     }
 
     private Object serdes(Object obj) throws NotSerializableException {
-        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
-        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter,
-                fingerPrinter);
-        SerializerFactory factory2 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter,
-                fingerPrinter);
+        SerializerFactory factory1 = testDefaultFactory();
+        SerializerFactory factory2 = testDefaultFactory();
         SerializationOutput ser = new SerializationOutput(factory1);
         SerializedBytes<Object> bytes = ser.serialize(obj, TestSerializationContext.testSerializationContext);
 

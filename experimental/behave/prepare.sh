@@ -50,7 +50,7 @@ curl -L "http://central.maven.org/maven2/org/postgresql/postgresql/42.1.4/postgr
 curl -L "https://github.com/Microsoft/mssql-jdbc/releases/download/v6.2.2/mssql-jdbc-6.2.2.jre8.jar" > ${DRIVERS_DIR}/mssql-jdbc-6.2.2.jre8.jar
 
 # Build Network Bootstrapper
-./gradlew buildBootstrapperJar
+./gradlew tools:bootstrapper:jar
 cp -v $(ls tools/bootstrapper/build/libs/*.jar | tail -n1) ${CORDA_DIR}/network-bootstrapper.jar
 
 # TODO: resolve Doorman/NMS artifacts from new artifactory location.

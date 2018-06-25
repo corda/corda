@@ -15,6 +15,7 @@ import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.amqp.Field
 import net.corda.serialization.internal.amqp.Schema
 import net.corda.serialization.internal.amqp.testutils.serialize
+import net.corda.serialization.internal.amqp.testutils.testName
 
 fun mangleName(name: String) = "${name}__carpenter"
 
@@ -57,7 +58,6 @@ open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
     var factory = SerializerFactoryExternalCarpenter(cc)
 
     fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
-    fun testName(): String = Thread.currentThread().stackTrace[2].methodName
     @Suppress("NOTHING_TO_INLINE")
     inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
 }

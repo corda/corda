@@ -12,13 +12,14 @@ package net.corda.serialization.internal.amqp;
 
 import net.corda.core.serialization.CordaSerializable;
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.serialization.internal.AllWhitelist;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
 
 public class ListsSerializationJavaTest {
 
@@ -136,12 +137,7 @@ public class ListsSerializationJavaTest {
 
     // Have to have own version as Kotlin inline functions cannot be easily called from Java
     private static <T> void assertEqualAfterRoundTripSerialization(T container, Class<T> clazz) throws Exception {
-        EvolutionSerializerGetterBase evolutionSerializerGetter = new EvolutionSerializerGetter();
-        FingerPrinter fingerPrinter = new SerializerFingerPrinter();
-        SerializerFactory factory1 = new SerializerFactory(
-                AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                evolutionSerializerGetter,
-                fingerPrinter);
+        SerializerFactory factory1 = testDefaultFactory();
         SerializationOutput ser = new SerializationOutput(factory1);
         SerializedBytes<Object> bytes = ser.serialize(container, TestSerializationContext.testSerializationContext);
         DeserializationInput des = new DeserializationInput(factory1);
