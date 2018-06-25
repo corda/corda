@@ -95,14 +95,18 @@ fun createDevNodeCa(intermediateCa: CertificateAndKeyPair,
 }
 
 val DEV_INTERMEDIATE_CA: CertificateAndKeyPair get() = DevCaHelper.loadDevCa(X509Utilities.CORDA_INTERMEDIATE_CA)
-
 val DEV_ROOT_CA: CertificateAndKeyPair get() = DevCaHelper.loadDevCa(X509Utilities.CORDA_ROOT_CA)
+const val DEV_CA_PRIVATE_KEY_PASS: String = "cordacadevkeypass"
+const val DEV_CA_KEY_STORE_FILE: String = "cordadevcakeys.jks"
+const val DEV_CA_KEY_STORE_PASS: String = "cordacadevpass"
+const val DEV_CA_TRUST_STORE_FILE: String = "cordatruststore.jks"
+const val DEV_CA_TRUST_STORE_PASS: String = "trustpass"
 
 // We need a class so that we can get hold of the class loader
 internal object DevCaHelper {
     fun loadDevCa(alias: String): CertificateAndKeyPair {
         // TODO: Should be identity scheme
-        val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/cordadevcakeys.jks"), "cordacadevpass")
-        return caKeyStore.getCertificateAndKeyPair(alias, "cordacadevkeypass")
+        val caKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/$DEV_CA_KEY_STORE_FILE"), DEV_CA_KEY_STORE_PASS)
+        return caKeyStore.getCertificateAndKeyPair(alias, DEV_CA_PRIVATE_KEY_PASS)
     }
 }

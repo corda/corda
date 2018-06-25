@@ -156,7 +156,7 @@ object X509Utilities {
 
         val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)
                 .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(subjectPublicKeyInfo))
-                .addExtension(Extension.basicConstraints, certificateType.isCA, BasicConstraints(certificateType.isCA))
+                .addExtension(Extension.basicConstraints, true, BasicConstraints(certificateType.isCA))
                 .addExtension(Extension.keyUsage, false, certificateType.keyUsage)
                 .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
 
