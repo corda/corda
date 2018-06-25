@@ -22,6 +22,7 @@ import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.CompatibilityZoneParams
+import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
@@ -77,7 +78,7 @@ class NodeRegistrationTest {
 
     @Test
     fun `node registration correct root cert`() {
-        val compatibilityZone = CompatibilityZoneParams(
+        val compatibilityZone = SharedCompatibilityZoneParams(
                 URL("http://$serverHostAndPort"),
                 publishNotaries = { server.networkParameters = testNetworkParameters(it) },
                 rootCert = DEV_ROOT_CA.certificate)
@@ -86,14 +87,13 @@ class NodeRegistrationTest {
                 compatibilityZone = compatibilityZone,
                 initialiseSerialization = false,
                 notarySpecs = listOf(NotarySpec(notaryName)),
-                extraCordappPackagesToScan = listOf("net.corda.finance")
+                extraCordappPackagesToScan = listOf("net.corda.finance"),
+                notaryCustomOverrides = mapOf("devMode" to false)
         ) {
-            val nodes = listOf(
-                    startNode(providedName = aliceName),
-                    startNode(providedName = genevieveName),
-                    defaultNotaryNode
+            val (alice, genevieve) = listOf(
+                    startNode(providedName = aliceName, customOverrides = mapOf("devMode" to false)),
+                    startNode(providedName = genevieveName, customOverrides = mapOf("devMode" to false))
             ).transpose().getOrThrow()
-            val (alice, genevieve) = nodes
 
             assertThat(registrationHandler.idsPolled).containsOnly(
                     aliceName.organisation,

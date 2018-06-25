@@ -5987,7 +5987,7 @@ public final class net.corda.testing.driver.DriverParameters extends java.lang.O
   @NotNull
   public final java.util.List<net.corda.testing.node.NotarySpec> component9()
   @NotNull
-  public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters)
+  public final net.corda.testing.driver.DriverParameters copy(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean)
   public boolean equals(Object)
   @NotNull
   public final net.corda.testing.driver.PortAllocation getDebugPortAllocation()

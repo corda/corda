@@ -196,9 +196,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         val (identity, identityKeyPair) = obtainIdentity(notaryConfig = null)
         val identityService = makeIdentityService(identity.certificate)
 
-        networkMapClient = configuration.compatibilityZoneURL?.let { NetworkMapClient(it, identityService.trustRoot) }
-        val networkParameteresReader = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory)
-        val networkParameters = networkParameteresReader.networkParameters
+        networkMapClient = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, identityService.trustRoot) }
+
+        val networkParametersReader = NetworkParametersReader(identityService.trustRoot, networkMapClient, configuration.baseDirectory)
+        val networkParameters = networkParametersReader.networkParameters
         check(networkParameters.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
@@ -266,7 +267,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
         networkMapUpdater = NetworkMapUpdater(services.networkMapCache,
                 NodeInfoWatcher(configuration.baseDirectory, getRxIoScheduler(), Duration.ofMillis(configuration.additionalNodeInfoPollingFrequencyMsec)),
                 networkMapClient,
-                networkParameteresReader.hash,
+                networkParametersReader.hash,
                 configuration.baseDirectory)
         runOnStop += networkMapUpdater::close
 

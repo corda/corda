@@ -188,8 +188,10 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Starting as node on ${conf.p2pAddress}")
     }
 
-    open protected fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
-        val compatibilityZoneURL = conf.compatibilityZoneURL!!
+    protected open fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
+        val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException(
+                "compatibilityZoneURL or networkServices must be configured!")
+
         println()
         println("******************************************************************")
         println("*                                                                *")

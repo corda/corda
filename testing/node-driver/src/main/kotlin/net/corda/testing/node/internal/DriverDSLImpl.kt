@@ -24,6 +24,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.node.NodeRegistrationOption
+import net.corda.node.internal.ConfigurationException
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.internal.StartedNode
@@ -93,7 +94,8 @@ class DriverDSLImpl(
         val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>,
         val compatibilityZone: CompatibilityZoneParams?,
-        val networkParameters: NetworkParameters
+        val networkParameters: NetworkParameters,
+        val notaryCustomOverrides: Map<String, Any?>
 ) : InternalDriverDSL {
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
@@ -114,7 +116,7 @@ class DriverDSLImpl(
 
     interface Waitable {
         @Throws(InterruptedException::class)
-        fun waitFor(): Unit
+        fun waitFor()
     }
 
     class State {
@@ -201,7 +203,7 @@ class DriverDSLImpl(
         }
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
-            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.url)
+            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.doormanURL())
         } else {
             doneFuture(Unit)
         }
@@ -226,20 +228,28 @@ class DriverDSLImpl(
         val rpcAdminAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
-        val czUrlConfig = if (compatibilityZone != null) mapOf("compatibilityZoneURL" to compatibilityZone.url.toString()) else emptyMap()
+        val czUrlConfig = when (compatibilityZone) {
+            null -> emptyMap()
+            is SharedCompatibilityZoneParams ->
+                mapOf("compatibilityZoneURL" to compatibilityZone.doormanURL().toString())
+            is SplitCompatibilityZoneParams ->
+                mapOf("networkServices.doormanURL" to compatibilityZone.doormanURL().toString(),
+                        "networkServices.networkMapURL" to compatibilityZone.networkMapURL().toString())
+        }
+
+        val overrides = configOf(
+                "myLegalName" to name.toString(),
+                "p2pAddress" to p2pAddress.toString(),
+                "rpcSettings.address" to rpcAddress.toString(),
+                "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
+                "useTestClock" to useTestClock,
+                "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
+                "verifierType" to verifierType.name
+        ) + czUrlConfig + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
-                configOverrides = configOf(
-                        "myLegalName" to name.toString(),
-                        "p2pAddress" to p2pAddress.toString(),
-                        "rpcSettings.address" to rpcAddress.toString(),
-                        "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
-                        "webAddress" to webAddress.toString(),
-                        "useTestClock" to useTestClock,
-                        "rpcUsers" to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
-                        "verifierType" to verifierType.name
-                ) + czUrlConfig + customOverrides
+                configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
         ))
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap)
     }
@@ -252,7 +262,8 @@ class DriverDSLImpl(
                 configOverrides = configOf(
                         "p2pAddress" to "localhost:1222", // required argument, not really used
                         "compatibilityZoneURL" to compatibilityZoneURL.toString(),
-                        "myLegalName" to providedName.toString())
+                        "myLegalName" to providedName.toString(),
+                        "devMode" to false)
         ))
 
         config.corda.certificatesDirectory.createDirectories()
@@ -270,7 +281,8 @@ class DriverDSLImpl(
                 config
             }
         } else {
-            startOutOfProcessMiniNode(config,
+            startOutOfProcessMiniNode(
+                    config,
                     "--initial-registration",
                     "--network-root-truststore=${rootTruststorePath.toAbsolutePath()}",
                     "--network-root-truststore-password=$rootTruststorePassword").map { config }
@@ -414,7 +426,7 @@ class DriverDSLImpl(
                 startNotaryIdentityGeneration()
             } else {
                 // With a root cert specified we delegate generation of the notary identities to the CZ.
-                startAllNotaryRegistrations(compatibilityZone.rootCert, compatibilityZone.url)
+                startAllNotaryRegistrations(compatibilityZone.rootCert, compatibilityZone.doormanURL())
             }
             notaryInfosFuture.map { notaryInfos ->
                 compatibilityZone.publishNotaries(notaryInfos)
@@ -425,7 +437,7 @@ class DriverDSLImpl(
         networkMapAvailability = notaryInfosFuture.map { it.second }
 
         _notaries = notaryInfosFuture.map { (notaryInfos, localNetworkMap) ->
-            val listOfFutureNodeHandles = startNotaries(localNetworkMap)
+            val listOfFutureNodeHandles = startNotaries(localNetworkMap, notaryCustomOverrides)
             notaryInfos.zip(listOfFutureNodeHandles) { (identity, validating), nodeHandlesFuture ->
                 NotaryHandle(identity, validating, nodeHandlesFuture)
             }
@@ -501,10 +513,10 @@ class DriverDSLImpl(
         return (0 until spec.cluster!!.clusterSize).map { spec.name.copy(organisation = "${spec.name.organisation}-$it") }
     }
 
-    private fun startNotaries(localNetworkMap: LocalNetworkMap?): List<CordaFuture<List<NodeHandle>>> {
+    private fun startNotaries(localNetworkMap: LocalNetworkMap?, customOverrides: Map<String, Any?>): List<CordaFuture<List<NodeHandle>>> {
         return notarySpecs.map {
             when (it.cluster) {
-                null -> startSingleNotary(it, localNetworkMap)
+                null -> startSingleNotary(it, localNetworkMap, customOverrides)
                 is ClusterSpec.Raft,
                     // DummyCluster is used for testing the notary communication path, and it does not matter
                     // which underlying consensus algorithm is used, so we just stick to Raft
@@ -518,13 +530,13 @@ class DriverDSLImpl(
     // generating the configs for the nodes, probably making use of Any.toConfig()
     private fun NotaryConfig.toConfigMap(): Map<String, Any> = mapOf("notary" to toConfig().root().unwrapped())
 
-    private fun startSingleNotary(spec: NotarySpec, localNetworkMap: LocalNetworkMap?): CordaFuture<List<NodeHandle>> {
+    private fun startSingleNotary(spec: NotarySpec, localNetworkMap: LocalNetworkMap?, customOverrides: Map<String, Any?>): CordaFuture<List<NodeHandle>> {
         return startRegisteredNode(
                 spec.name,
                 localNetworkMap,
                 spec.rpcUsers,
                 spec.verifierType,
-                customOverrides = NotaryConfig(spec.validating).toConfigMap()
+                customOverrides = NotaryConfig(spec.validating).toConfigMap() + customOverrides
         ).map { listOf(it) }
     }
 
@@ -634,7 +646,7 @@ class DriverDSLImpl(
                 monitorPort,
                 systemProperties,
                 cordappPackages,
-                "200m",
+                "512m",
                 *extraCmdLineFlag
         )
 
@@ -995,7 +1007,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     jmxPolicy = defaultParameters.jmxPolicy,
                     notarySpecs = defaultParameters.notarySpecs,
                     compatibilityZone = null,
-                    networkParameters = defaultParameters.networkParameters
+                    networkParameters = defaultParameters.networkParameters,
+                    notaryCustomOverrides = defaultParameters.notaryCustomOverrides
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1014,15 +1027,49 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
 
 /**
  * Internal API to enable testing of the network map service and node registration process using the internal driver.
- * @property url The base CZ URL for registration and network map updates
+ *
  * @property publishNotaries Hook for a network map server to capture the generated [NotaryInfo] objects needed for
  * creating the network parameters. This is needed as the network map server is expected to distribute it. The callback
  * will occur on a different thread to the driver-calling thread.
  * @property rootCert If specified then the nodes will register themselves with the doorman service using [url] and expect
  * the registration response to be rooted at this cert. If not specified then no registration is performed and the dev
  * root cert is used as normal.
+ *
+ * @see SharedCompatibilityZoneParams
+ * @see SplitCompatibilityZoneParams
  */
-data class CompatibilityZoneParams(val url: URL, val publishNotaries: (List<NotaryInfo>) -> Unit, val rootCert: X509Certificate? = null)
+sealed class CompatibilityZoneParams(
+        val publishNotaries: (List<NotaryInfo>) -> Unit,
+        val rootCert: X509Certificate? = null
+) {
+    abstract fun networkMapURL(): URL
+    abstract fun doormanURL(): URL
+}
+
+/**
+ * Represent network management services, network map and doorman, running on the same URL
+ */
+class SharedCompatibilityZoneParams(
+        private val url: URL,
+        publishNotaries: (List<NotaryInfo>) -> Unit,
+        rootCert: X509Certificate? = null
+) : CompatibilityZoneParams(publishNotaries, rootCert) {
+    override fun doormanURL() = url
+    override fun networkMapURL() = url
+}
+
+/**
+ * Represent network management services, network map and doorman, running on different URLs
+ */
+class SplitCompatibilityZoneParams(
+        private val doormanURL: URL,
+        private val networkMapURL: URL,
+        publishNotaries: (List<NotaryInfo>) -> Unit,
+        rootCert: X509Certificate? = null
+) : CompatibilityZoneParams(publishNotaries, rootCert) {
+    override fun doormanURL() = doormanURL
+    override fun networkMapURL() = networkMapURL
+}
 
 fun <A> internalDriver(
         isDebug: Boolean = DriverParameters().isDebug,
@@ -1039,6 +1086,7 @@ fun <A> internalDriver(
         jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
         networkParameters: NetworkParameters = DriverParameters().networkParameters,
         compatibilityZone: CompatibilityZoneParams? = null,
+        notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1055,7 +1103,8 @@ fun <A> internalDriver(
                     extraCordappPackagesToScan = extraCordappPackagesToScan,
                     jmxPolicy = jmxPolicy,
                     compatibilityZone = compatibilityZone,
-                    networkParameters = networkParameters
+                    networkParameters = networkParameters,
+                    notaryCustomOverrides = notaryCustomOverrides
             ),
             coerce = { it },
             dsl = dsl,
