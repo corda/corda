@@ -6,7 +6,6 @@ import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.client.rpc.RPCException
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
@@ -22,7 +21,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
-import org.apache.activemq.artemis.api.core.ActiveMQException
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
@@ -125,7 +123,7 @@ class NodeMonitorModel {
             }
         }
 
-        val stateMachines = performRpcReconnect(nodeHostAndPort, username, password)
+        val stateMachines = performRpcReconnect(nodeHostAndPort, username, password, shouldRetry = false)
 
         // Extract the flow tracking stream
         // TODO is there a nicer way of doing this? Stream of streams in general results in code like this...
@@ -146,9 +144,9 @@ class NodeMonitorModel {
         futureProgressTrackerUpdates.startWith(currentProgressTrackerUpdates).flatMap { it }.retry().subscribe(progressTrackingSubject)
     }
 
-    private fun performRpcReconnect(nodeHostAndPort: NetworkHostAndPort, username: String, password: String): List<StateMachineInfo> {
+    private fun performRpcReconnect(nodeHostAndPort: NetworkHostAndPort, username: String, password: String, shouldRetry: Boolean): List<StateMachineInfo> {
 
-        val connection = establishConnectionWithRetry(nodeHostAndPort, username, password)
+        val connection = establishConnectionWithRetry(nodeHostAndPort, username, password, shouldRetry)
         val proxy = connection.proxy
 
         val (stateMachineInfos, stateMachineUpdatesRaw) = proxy.stateMachinesFeed()
@@ -166,7 +164,7 @@ class NodeMonitorModel {
                     // force closing the connection to avoid propagation of notification to the server side.
                     connection.forceClose()
                     // Perform re-connect.
-                    performRpcReconnect(nodeHostAndPort, username, password)
+                    performRpcReconnect(nodeHostAndPort, username, password, shouldRetry = true)
                 })
 
         retryableStateMachineUpdatesSubscription.set(subscription)
@@ -176,7 +174,7 @@ class NodeMonitorModel {
         return stateMachineInfos
     }
 
-    private fun establishConnectionWithRetry(nodeHostAndPort: NetworkHostAndPort, username: String, password: String): CordaRPCConnection {
+    private fun establishConnectionWithRetry(nodeHostAndPort: NetworkHostAndPort, username: String, password: String, shouldRetry: Boolean): CordaRPCConnection {
 
         val retryInterval = 5.seconds
 
@@ -195,21 +193,15 @@ class NodeMonitorModel {
                 require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
                 _connection
             } catch (throwable: Throwable) {
-                when (throwable) {
-                    is ActiveMQException, is RPCException -> {
-                        // Happens when:
-                        // * incorrect credentials provided;
-                        // * incorrect endpoint specified;
-                        // - no point to retry connecting.
-                        throw throwable
-                    }
-                    else -> {
-                        // Deliberately not logging full stack trace as it will be full of internal stacktraces.
-                        logger.info("Exception upon establishing connection: " + throwable.message)
-                        null
-                    }
+                if (shouldRetry) {
+                    // Deliberately not logging full stack trace as it will be full of internal stacktraces.
+                    logger.info("Exception upon establishing connection: " + throwable.message)
+                    null
+                } else {
+                    throw throwable
                 }
             }
+
             if (connection != null) {
                 logger.info("Connection successfully established with: $nodeHostAndPort")
                 return connection
