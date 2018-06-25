@@ -3,14 +3,15 @@ package net.corda.serialization.internal.amqp;
 import com.google.common.collect.ImmutableList;
 import net.corda.core.contracts.ContractState;
 import net.corda.core.identity.AbstractParty;
-import net.corda.serialization.internal.AllWhitelist;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
-import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import java.io.NotSerializableException;
 import java.util.List;
+
+import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 abstract class JavaNestedInheritenceTestsBase {
     class DummyState implements ContractState {
@@ -33,38 +34,32 @@ class TemplateWrapper<T> {
 public class JavaNestedInheritenceTests extends JavaNestedInheritenceTestsBase {
     @Test
     public void serializeIt() {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+        SerializerFactory factory = testDefaultFactory();
 
         SerializationOutput ser = new SerializationOutput(factory);
 
-        Assertions.assertThatThrownBy(() -> ser.serialize(new DummyState(), TestSerializationContext.testSerializationContext)).isInstanceOf(
+        assertThatThrownBy(() -> ser.serialize(new DummyState(), TestSerializationContext.testSerializationContext)).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }
 
     @Test
     public void serializeIt2() {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+        SerializerFactory factory = testDefaultFactory();
 
         SerializationOutput ser = new SerializationOutput(factory);
-        Assertions.assertThatThrownBy(() -> ser.serialize(new Wrapper (new DummyState()), TestSerializationContext.testSerializationContext)).isInstanceOf(
+        assertThatThrownBy(() -> ser.serialize(new Wrapper (new DummyState()), TestSerializationContext.testSerializationContext)).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }
 
     @Test
-    public void serializeIt3() throws NotSerializableException {
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+    public void serializeIt3() {
+        SerializerFactory factory1 = testDefaultFactory();
 
         SerializationOutput ser = new SerializationOutput(factory1);
 
-        Assertions.assertThatThrownBy(() -> ser.serialize(new TemplateWrapper<ContractState> (new DummyState()), TestSerializationContext.testSerializationContext)).isInstanceOf(
+        assertThatThrownBy(() -> ser.serialize(new TemplateWrapper<ContractState> (new DummyState()), TestSerializationContext.testSerializationContext)).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }

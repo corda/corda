@@ -7,6 +7,7 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.rootMessage
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
@@ -33,7 +34,7 @@ fun main(args: Array<String>) {
         if (main.verbose) {
             throwable.printStackTrace()
         } else {
-            System.err.println("*ERROR*: ${throwable.rootMessage ?: "Use --verbose for more details"}")
+            System.err.println("*ERROR*: ${throwable.rootMessage}. Use --verbose for more details")
         }
         exitProcess(1)
     }
@@ -91,7 +92,8 @@ class Main : Runnable {
         }
         val mapper = JacksonSupport.createNonRpcMapper(factory, fullParties)
 
-        val deserialized = bytes.deserialize<Any>()
+        // Deserialise with the lenient carpenter as we only care for the AMQP field getters
+        val deserialized = bytes.deserialize<Any>(context = SerializationFactory.defaultFactory.defaultContext.withLenientCarpenter())
         println(deserialized.javaClass.name)
         mapper.writeValue(System.out, deserialized)
     }
