@@ -119,24 +119,28 @@ abstract class EvolutionSerializer(
             val constructorArgs = arrayOfNulls<Any?>(constructor.parameters.size)
 
             // Java doesn't care about nullability unless it's a primitive in which
-            // case it can't be referenced
+            // case it can't be referenced. Unfortunately whilst Kotlin does apply
+            // Nullability annotations we cannot use them here as they aren't
+            // retained at runtime so we cannot rely on the absence of
+            // any particular NonNullable annotation type to indicate cross
+            // compiler nullability
             val isKotlin = (new.type.javaClass.declaredAnnotations.any {
                         it.annotationClass.qualifiedName == "kotlin.Metadata"
             })
 
             constructor.parameters.withIndex().forEach {
-                readersAsSerialized[it.value.name!!]?.apply {
-                    this.resultsIndex = it.index
-                } ?: // If there is no value in the byte stream to map to the parameter of the constructor
-                        // this is ok IFF it's a Kotlin class and the parameter is non nullable OR
-                        // its a Java class and the parameter is anything but an unboxed primitive.
-                        // Otherwise we throw the error and leave
+                if ((readersAsSerialized[it.value.name!!] ?.apply { this.resultsIndex = it.index }) == null) {
+                    // If there is no value in the byte stream to map to the parameter of the constructor
+                    // this is ok IFF it's a Kotlin class and the parameter is non nullable OR
+                    // its a Java class and the parameter is anything but an unboxed primitive.
+                    // Otherwise we throw the error and leave
                     if ((isKotlin && !it.value.type.isMarkedNullable)
-                        || (!isKotlin && isJavaPrimitive(it.value.type.jvmErasure.java))
-                ) {
-                    throw NotSerializableException(
-                            "New parameter \"${it.value.name}\" is mandatory, should be nullable for evolution to work, " +
-                                    "isKotlinClass=$isKotlin type=${it.value.type}")
+                            || (!isKotlin && isJavaPrimitive(it.value.type.jvmErasure.java))
+                    ) {
+                        throw NotSerializableException(
+                                "New parameter \"${it.value.name}\" is mandatory, should be nullable for evolution " +
+                                        "to work, isKotlinClass=$isKotlin type=${it.value.type}")
+                    }
                 }
             }
             return EvolutionSerializerViaConstructor(new.type, factory, readersAsSerialized, constructor, constructorArgs)
