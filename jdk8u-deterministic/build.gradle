@@ -23,28 +23,25 @@ dependencies {
     jdk "net.corda:deterministic-rt:latest.integration:api"
 }
 
-task copyVersion(type: Copy) {
-    from processResources
-    into jdk_home
-    eachFile {
-        if (it.sourcePath.startsWith("bin/")) {
-            fileMode = 0755
-        } else {
-            fileMode = 0644
-        }
-    }
-}
-
 task copyJdk(type: Copy) {
-    def jreDirectory = "$jdk_home/jre/lib"
-    outputs.dir jreDirectory
+    outputs.dir jdk_home
 
     from(configurations.jdk.asPath) {
         rename 'deterministic-rt-(.*).jar', 'rt.jar'
     }
-    into jreDirectory
+    into "$jdk_home/jre/lib"
+
+    doLast {
+        def eol = System.getProperty('line.separator')
+        file("$jdk_home/release").write "JAVA_VERSION=\"1.8.0_172\"$eol"
+        mkdir "$jdk_home/bin"
+        file("$jdk_home/bin/javac").with {
+            write "#!/bin/sh\necho \"javac 1.8.0_172\"\n"
+            setExecutable true, false
+            return
+        }
+    }
 }
-copyJdk.finalizedBy copyVersion
 
 assemble.dependsOn copyJdk
 jar.enabled = false
