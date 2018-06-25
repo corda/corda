@@ -1,10 +1,8 @@
 package net.corda.serialization.internal.amqp;
 
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.serialization.internal.AllWhitelist;
 import net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
-import net.corda.serialization.internal.carpenter.ClassCarpenterImpl;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -18,7 +16,7 @@ public class JavaEvolutionTests {
     public final ExpectedException exception = ExpectedException.none();
 
     // Class as it was when it was serialized and written to disk. Uncomment
-    // if the test referencing the object needs regenerating.
+    // if the test referencing the object needs regeneraThrowableting.
     /*
     static class N1 {
         private String word;
@@ -62,11 +60,7 @@ public class JavaEvolutionTests {
         public float getWibble() { return wibble; }
     }
 
-    SerializerFactory factory = new SerializerFactory(
-            AllWhitelist.INSTANCE,
-            new ClassCarpenterImpl(AllWhitelist.INSTANCE),
-            new EvolutionSerializerGetter(),
-            new SerializerFingerPrinter());
+    SerializerFactory factory = AMQPTestUtilsKt.testDefaultFactory();
 
     @Test
     public void testN1AddsNullableInt() throws IOException {
