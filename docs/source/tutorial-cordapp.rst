@@ -418,7 +418,7 @@ be moved to another machine open its config file and change the Artemis messagin
 where the node will run (e.g. ``p2pAddress="10.18.0.166:10007"``).
 
 These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
-(see :doc:`setting-up-a-corda-network` for more information on this and how to built it) to update the files and have
+(see :doc:`network-bootstrapper` for more information on this and how to built it) to update the files and have
 them distributed locally.
 
 ``java -jar network-bootstrapper.jar kotlin-source/build/nodes``
