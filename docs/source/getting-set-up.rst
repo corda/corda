@@ -151,6 +151,8 @@ Download a sample project
 3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
 4. Checkout the branch for Corda Enterprise 3.0.0 by running ``git checkout release-enterprise-V3``
 
+.. _resolve-corda-enterprise-binaries:
+
 Resolve Corda Enterprise binaries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Corda Enterprise binaries are not available in a publicly accessible Maven repository.

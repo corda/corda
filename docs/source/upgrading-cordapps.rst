@@ -75,6 +75,8 @@ As long as both the ``InitiatingFlow`` and the ``InitiatedBy`` flows conform to 
 be implemented in any way you see fit (including adding proprietary business logic that is not shared with other
 parties).
 
+.. _upgrading-cordapps-backwards-incompatible-flow-changes:
+
 What constitutes a non-backwards compatible flow change?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 A flow can become backwards-incompatible in two main ways:
@@ -253,6 +255,8 @@ flow.
 Flows which are not an ``InitiatingFlow`` or ``InitiatedBy`` flow, or inlined subflows that are not called from an
 ``InitiatingFlow`` or ``InitiatedBy`` flow, can be updated without consideration of backwards-compatibility. Flows of
 this type include utility flows for querying the vault and flows for reaching out to external systems.
+
+.. _upgrading-cordapps-flow-drains:
 
 Flow drains
 ~~~~~~~~~~~

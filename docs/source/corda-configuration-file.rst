@@ -45,6 +45,8 @@ Here are the contents of the ``reference.conf`` file:
 .. literalinclude:: ../../node/src/main/resources/reference.conf
     :language: javascript
 
+.. _corda-configuration-file-fields:
+
 Fields
 ------
 The available config fields are listed below. ``baseDirectory`` is available as a substitution value and contains the

@@ -13,4 +13,5 @@ Nodes
    shell
    node-database
    node-administration
+   node-operations-upgrading
    out-of-process-verification
