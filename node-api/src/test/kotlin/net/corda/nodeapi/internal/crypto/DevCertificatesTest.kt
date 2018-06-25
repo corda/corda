@@ -26,7 +26,7 @@ class DevCertificatesTest {
         val newTrustRoot = newTrustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
         val newTrustAnchor = TrustAnchor(newTrustRoot, null)
 
-        val oldNodeCaKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("old-certificates/$OLD_NODE_DEV_KEYSTORE_FILE_NAME"), OLD_DEV_KEYSTORE_PASS)
+        val oldNodeCaKeyStore = loadKeyStore(javaClass.classLoader.getResourceAsStream("regression-test/$OLD_NODE_DEV_KEYSTORE_FILE_NAME"), OLD_DEV_KEYSTORE_PASS)
         val oldX509Certificates = oldNodeCaKeyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA).map {
             it as X509Certificate
         }.toTypedArray()
