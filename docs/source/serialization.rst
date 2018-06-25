@@ -564,6 +564,11 @@ without the supporting classes being present on the classpath.  This can be usef
 be able to use reflection over the deserialized data, for scripting languages that run on the JVM, and also for
 ensuring classes not on the classpath can be deserialized without loading potentially malicious code.
 
+If the original class implements some interfaces then the carpenter will make sure that all of the interface methods are
+backed by feilds. If that's not the case then an exception will be thrown during deserialization. This check can
+be turned off with ``SerializationContext.withLenientCarpenter``. This can be useful if only the field getters are needed,
+say in an object viewer.
+
 Possible future enhancements include:
 
     #.  Java singleton support.  We will add support for identifying classes which are singletons and identifying the

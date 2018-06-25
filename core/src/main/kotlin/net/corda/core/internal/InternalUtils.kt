@@ -24,6 +24,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -396,12 +397,19 @@ fun <T, U : T> uncheckedCast(obj: T) = obj as U
 fun <K, V> Iterable<Pair<K, V>>.toMultiMap(): Map<K, List<V>> = this.groupBy({ it.first }) { it.second }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-@DeleteForDJVM fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
+@DeleteForDJVM
+fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
     return toWireTransactionWithContext(services, serializationContext)
 }
 
 /** Provide access to internal method for AttachmentClassLoaderTests */
-@DeleteForDJVM fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext) = toLedgerTransactionWithContext(services, serializationContext)
+@DeleteForDJVM
+fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
+    return toLedgerTransactionWithContext(services, serializationContext)
+}
+
+/** Returns the location of this class. */
+val Class<*>.location: URL get() = protectionDomain.codeSource.location
 
 /** Convenience method to get the package name of a class literal. */
 val KClass<*>.packageName: String get() = java.packageName

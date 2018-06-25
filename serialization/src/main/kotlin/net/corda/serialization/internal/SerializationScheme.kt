@@ -40,7 +40,8 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val objectReferencesEnabled: Boolean,
                                                               override val useCase: SerializationContext.UseCase,
                                                               override val encoding: SerializationEncoding?,
-                                                              override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist) : SerializationContext {
+                                                              override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
+                                                              override val lenientCarpenterEnabled: Boolean = false) : SerializationContext {
     private val builder = AttachmentsClassLoaderBuilder(properties, deserializationClassLoader)
 
     /**
@@ -61,6 +62,8 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
     override fun withoutReferences(): SerializationContext {
         return copy(objectReferencesEnabled = false)
     }
+
+    override fun withLenientCarpenter(): SerializationContext = copy(lenientCarpenterEnabled = true)
 
     override fun withClassLoader(classLoader: ClassLoader): SerializationContext {
         return copy(deserializationClassLoader = classLoader)

@@ -18,6 +18,7 @@ import net.corda.core.StubOutForDJVM
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
@@ -63,40 +64,43 @@ open class SerializerFactory(
         private val serializersByType: MutableMap<Type, AMQPSerializer<Any>>,
         val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>>,
         private val customSerializers: MutableList<SerializerFor>,
-        val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>) {
+        val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>
+) {
     @DeleteForDJVM
     constructor(whitelist: ClassWhitelist,
                 classCarpenter: ClassCarpenter,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
                 fingerPrinter: FingerPrinter = SerializerFingerPrinter()
-    ) : this(whitelist, classCarpenter, evolutionSerializerGetter, fingerPrinter,
-             serializersByType = ConcurrentHashMap(),
-             serializersByDescriptor = ConcurrentHashMap(),
-             customSerializers = CopyOnWriteArrayList(),
-             transformsCache = ConcurrentHashMap())
+    ) : this(
+            whitelist,
+            classCarpenter,
+            evolutionSerializerGetter,
+            fingerPrinter,
+            ConcurrentHashMap(),
+            ConcurrentHashMap(),
+            CopyOnWriteArrayList(),
+            ConcurrentHashMap()
+    )
 
     @DeleteForDJVM
     constructor(whitelist: ClassWhitelist,
                 classLoader: ClassLoader,
+                lenientCarpenter: Boolean = false,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
                 fingerPrinter: FingerPrinter = SerializerFingerPrinter()
-    ) : this(whitelist, ClassCarpenterImpl(classLoader, whitelist), evolutionSerializerGetter, fingerPrinter,
-             serializersByType = ConcurrentHashMap(),
-             serializersByDescriptor = ConcurrentHashMap(),
-             customSerializers = CopyOnWriteArrayList(),
-             transformsCache = ConcurrentHashMap())
+    ) : this(whitelist, ClassCarpenterImpl(classLoader, whitelist, lenientCarpenter), evolutionSerializerGetter, fingerPrinter)
 
     init {
         fingerPrinter.setOwner(this)
     }
 
-    val classloader: ClassLoader
-        get() = classCarpenter.classloader
+    val classloader: ClassLoader get() = classCarpenter.classloader
 
-    private fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: AMQPSerializer<Any>,
-                                       schemas: SerializationSchemas) = evolutionSerializerGetter.getEvolutionSerializer(this, typeNotation, newSerializer, schemas)
-
-    private val logger = loggerFor<SerializerFactory>()
+    private fun getEvolutionSerializer(typeNotation: TypeNotation,
+                                       newSerializer: AMQPSerializer<Any>,
+                                       schemas: SerializationSchemas): AMQPSerializer<Any> {
+        return evolutionSerializerGetter.getEvolutionSerializer(this, typeNotation, newSerializer, schemas)
+    }
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -390,6 +394,8 @@ open class SerializerFactory(
     }
 
     companion object {
+        private val logger = contextLogger()
+
         fun isPrimitive(type: Type): Boolean = primitiveTypeName(type) != null
 
         fun primitiveTypeName(type: Type): String? {
@@ -479,4 +485,3 @@ open class SerializerFactory(
         override fun toString(): String = "?"
     }
 }
-

@@ -446,7 +446,7 @@ val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out F
 
 val Class<out FlowLogic<*>>.appName: String
     get() {
-        val jarFile = protectionDomain.codeSource.location.toPath()
+        val jarFile = location.toPath()
         return if (jarFile.isRegularFile() && jarFile.toString().endsWith(".jar")) {
             jarFile.fileName.toString().removeSuffix(".jar")
         } else {
