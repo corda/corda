@@ -138,6 +138,7 @@ class TimedFlowTests {
             assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
             val notarySignatures = services.startFlow(flow).resultFuture.get()
             (issueTx + notarySignatures).verifyRequiredSignatures()
+            mockNet.waitQuiescent() // The result future completes just before the progress tracker is set to done
             assertEquals(
                     ProgressTracker.DONE,
                     progressTracker.currentStep,
@@ -158,6 +159,7 @@ class TimedFlowTests {
 
             val stx = services.startFlow(flow).resultFuture.get()
             stx.verifyRequiredSignatures()
+            mockNet.waitQuiescent() // The result future completes just before the progress tracker is set to done
             assertEquals(
                     ProgressTracker.DONE,
                     progressTracker.currentStep,
