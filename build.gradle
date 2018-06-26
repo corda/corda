@@ -417,7 +417,8 @@ bintrayConfig {
             'corda-bridgeserver',
             'corda-ptflows',
             'jmeter-corda',
-            'tools-database-manager'
+            'tools-database-manager',
+            'InstallerPublication'
     ]
     license {
         name = 'Apache-2.0'
