@@ -41,6 +41,9 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
 
     private fun verifyInstalledCordapps(attachmentStorage: AttachmentStorage) {
 
+        // This will invoke the lazy flowCordappMap property, thus triggering the MultipleCordappsForFlow check.
+        cordappLoader.flowCordappMap
+
         if (whitelistedContractImplementations.isEmpty()) {
             log.warn("The network parameters don't specify any whitelisted contract implementations. Please contact your zone operator. See https://docs.corda.net/network-map.html")
             return
