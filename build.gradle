@@ -356,6 +356,7 @@ bintrayConfig {
             'corda-serialization',
             'corda-serialization-deterministic',
             'corda-tools-blob-inspector',
+            'corda-tools-explorer',
             'corda-tools-network-bootstrapper'
     ]
     license {
