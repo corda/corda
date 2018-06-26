@@ -33,28 +33,29 @@ dependencies {
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "org.apache.logging.log4j:log4j-1.2-api:$log4j_version"
     compile "org.apache.logging.log4j:log4j-core:$log4j_version"
 
     // JMeter
     ext.jmVersion = "3.3"
 
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_components', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_core', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_ftp', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_functions', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_http', version: "$jmVersion"
-    compile group: 'org.apache.jmeter', name: 'ApacheJMeter_java', version: "$jmVersion" // 'compile' because we extend Java sampler.
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_jdbc', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_jms', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_junit', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_ldap', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_mail', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_mongodb', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_native', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_tcp', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_config', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter', version: "$jmVersion"
-    runtime group: 'org.apache.jmeter', name: 'jorphan', version: "$jmVersion"
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_components', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_core', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_ftp', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_functions', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_http', version: jmVersion
+    compile group: 'org.apache.jmeter', name: 'ApacheJMeter_java', version: jmVersion // 'compile' because we extend Java sampler.
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_jdbc', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_jms', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_junit', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_ldap', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_mail', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_mongodb', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_native', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_tcp', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_config', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter', version: jmVersion
+    runtime group: 'org.apache.jmeter', name: 'jorphan', version: jmVersion
     //For Azure SQL and SQL Server support in persistence
     runtime group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '6.2.1.jre8'
 
@@ -151,7 +152,7 @@ task buildJMeterJAR(type: FatCapsule) {
     archiveName "jmeter-corda-${corda_release_version}.jar"
     applicationSource = jar
     from 'NOTICE' // Copy CDDL notice
-    from("$buildDir/resources/main") {
+    from(processResources) {
         include "log4j2.xml"
         include "*.properties"
     }
@@ -166,6 +167,7 @@ task buildJMeterJAR(type: FatCapsule) {
         jvmArgs = ['-Xms512m', '-Xmx512m', '-XX:+UseG1GC']
     }
 }
+assemble.dependsOn buildJMeterJAR
 
 artifacts {
     runtimeArtifacts buildJMeterJAR
