@@ -42,7 +42,7 @@ open class CashPaymentFlow(
 
     constructor(amount: Amount<Currency>, recipient: Party, anonymous: Boolean, notary: Party) : this(amount, recipient, anonymous, tracker(), notary=notary)
 
-    constructor(request: PaymentRequest) : this(request.amount, request.recipient, request.anonymous, tracker(), request.issuerConstraint)
+    constructor(request: PaymentRequest) : this(request.amount, request.recipient, request.anonymous, tracker(), request.issuerConstraint, request.notary)
 
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
@@ -83,5 +83,6 @@ open class CashPaymentFlow(
     class PaymentRequest(amount: Amount<Currency>,
                          val recipient: Party,
                          val anonymous: Boolean,
-                         val issuerConstraint: Set<Party> = emptySet()) : AbstractRequest(amount)
+                         val issuerConstraint: Set<Party> = emptySet(),
+                         val notary: Party? = null) : AbstractRequest(amount)
 }
