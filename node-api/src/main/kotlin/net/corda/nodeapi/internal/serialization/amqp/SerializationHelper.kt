@@ -570,3 +570,18 @@ fun Class<*>.objectInstance() =
                 }
             }
         }
+
+fun isJavaPrimitive(type: Class<*>) = type in JavaPrimitiveTypes.primativeTypes
+
+private object JavaPrimitiveTypes {
+    val primativeTypes = hashSetOf<Class<*>>(
+    Boolean::class.java,
+    Char::class.java,
+    Byte::class.java,
+    Short::class.java,
+    Int::class.java,
+    Long::class.java,
+    Float::class.java,
+    Double::class.java,
+    Void::class.java)
+}
