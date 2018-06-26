@@ -24,6 +24,7 @@ import java.util.*
  * @param recipient the party to pay the currency to.
  * @param issuerConstraint if specified, the payment will be made using only cash issued by the given parties.
  * @param anonymous whether to anonymous the recipient party. Should be true for normal usage, but may be false
+ * @param notary if not specified, the first notary of the network map is selected
  * for testing purposes.
  */
 @StartableByRPC
@@ -54,7 +55,7 @@ open class CashPaymentFlow(
         }
         val anonymousRecipient = txIdentities[recipient] ?: recipient
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(notary = notary)
+        val builder = TransactionBuilder(notary = notary ?: serviceHub.networkMapCache.notaryIdentities.first())
         logger.info("Generating spend for: ${builder.lockId}")
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
