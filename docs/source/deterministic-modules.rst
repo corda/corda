@@ -104,54 +104,60 @@ This is possible, but slightly tricky to configure because IntelliJ will not rec
 Gradle be configured to use the Project's SDK.
 
 Creating the Deterministic SDK
-    #. Create a JDK Home directory with the following contents:
+    Gradle creates a suitable JDK image in the project's ``jdk8u-deterministic/jdk`` directory, and you can
+    configure IntelliJ to use this location for this SDK. However, you should also be aware that IntelliJ SDKs
+    are available for *all* projects to use.
 
-        ``jre/lib/rt.jar``
+    To create this JDK image, execute the following:
 
-       where ``rt.jar`` here is this renamed artifact:
+    .. code-block:: bash
 
-       .. code-block:: xml
+        $ gradlew jdk8u-deterministic:copyJdk
 
-           <dependency>
-               <groupId>net.corda</groupId>
-               <artifactId>deterministic-rt</artifactId>
-               <classifier>api</classifier>
-           </dependency>
+    ..
 
-       ..
+    Now select ``File/Project Structure/Platform Settings/SDKs`` and add a new JDK SDK with the
+    ``jdk8u-deterministic/jdk`` directory as its home. Rename this SDK to something like "1.8 (Deterministic)".
 
-       .. note:: Gradle already creates this JDK in the project's ``jdk8u-deterministic/jdk`` directory, and you could
-                 configure IntelliJ to use this location as well. However, you should also be aware that IntelliJ SDKs
-                 are available for *all* projects to use.
+    This *should* be sufficient for IntelliJ. However, if IntelliJ realises that this SDK does not contain a
+    full JDK then you will need to configure the new SDK by hand:
 
-                 To create this deterministic JDK image, execute the following:
+        #. Create a JDK Home directory with the following contents:
 
-                 .. code-block:: bash
+            ``jre/lib/rt.jar``
 
-                     $ gradlew jdk8u-deterministic:copyJdk
+           where ``rt.jar`` here is this renamed artifact:
 
-                 ..
+           .. code-block:: xml
 
-    #. While IntelliJ is *not* running, locate the ``config/options/jdk.table.xml`` file in IntelliJ's configuration
-       directory. Add an empty ``<jdk>`` section to this file:
+               <dependency>
+                   <groupId>net.corda</groupId>
+                   <artifactId>deterministic-rt</artifactId>
+                   <classifier>api</classifier>
+               </dependency>
 
-       .. code-block:: xml
+           ..
 
-           <jdk version="2">
-               <name value="1.8 (Deterministic)"/>
-               <type value="JavaSDK"/>
-               <version value="java version &quot;1.8.0&quot;"/>
-               <homePath value=".. path to the deterministic JDK directory .."/>
-               <roots>
-               </roots>
-           </jdk>
+        #. While IntelliJ is *not* running, locate the ``config/options/jdk.table.xml`` file in IntelliJ's configuration
+           directory. Add an empty ``<jdk>`` section to this file:
 
-       ..
+           .. code-block:: xml
 
-    #. Open IntelliJ and select ``File/Project Structure/Platform Settings/SDKs``. The "1.8 (Deterministic)" SDK should
-       now be present. Select it and then click on the ``Classpath`` tab. Press the "Add" / "Plus" button to add
-       ``rt.jar`` to the SDK's classpath. Then select the ``Annotations`` tab and include the same JAR(s) as the other
-       SDKs.
+               <jdk version="2">
+                   <name value="1.8 (Deterministic)"/>
+                   <type value="JavaSDK"/>
+                   <version value="java version &quot;1.8.0&quot;"/>
+                   <homePath value=".. path to the deterministic JDK directory .."/>
+                   <roots>
+                   </roots>
+               </jdk>
+
+           ..
+
+        #. Open IntelliJ and select ``File/Project Structure/Platform Settings/SDKs``. The "1.8 (Deterministic)" SDK
+           should now be present. Select it and then click on the ``Classpath`` tab. Press the "Add" / "Plus" button to
+           add ``rt.jar`` to the SDK's classpath. Then select the ``Annotations`` tab and include the same JAR(s) as
+           the other SDKs.
 
 Configuring the Corda Project
     #. Open the root ``build.gradle`` file and define this property:
