@@ -508,7 +508,11 @@ internal inline fun <T> ifThrowsAppend(strToAppendFn: () -> String, block: () ->
     try {
         return block()
     } catch (th: Throwable) {
-        th.setMessage("${strToAppendFn()} -> ${th.message}")
+        if (th is AMQPNotSerializableException) {
+            th.classHierarchy.add(strToAppendFn())
+        } else {
+            th.setMessage("${strToAppendFn()} -> ${th.message}")
+        }
         throw th
     }
 }

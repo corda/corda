@@ -81,6 +81,9 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
     private fun <R> des(generator: () -> R): R {
         try {
             return generator()
+        } catch (amqp : AMQPNotSerializableException) {
+            amqp.log("Deserialize", logger)
+            throw NotSerializableException(amqp.mitigation)
         } catch (nse: NotSerializableException) {
             throw nse
         } catch (t: Throwable) {
@@ -150,7 +153,8 @@ class DeserializationInput @JvmOverloads constructor(private val serializerFacto
                         val serializer = serializerFactory.get(obj.descriptor, schemas)
                         if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) {
                                     !isSubClassOf(type) && !materiallyEquivalentTo(type)
-                                }) {
+                                }
+                        ) {
                             throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
                                     "expected to be of type $type but was ${serializer.type}")
                         }
