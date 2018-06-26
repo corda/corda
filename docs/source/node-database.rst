@@ -65,3 +65,8 @@ Note that:
 * The ``database.schema`` property is optional
 * The value of ``database.schema`` is not wrapped in double quotes and Postgres always treats it as a lower-case value
   (e.g. ``AliceCorp`` becomes ``alicecorp``)
+* If you provide a custom ``database.schema``, its value must either match the ``dataSource.user`` value to end up
+  on the standard schema search path according to the
+  `PostgreSQL documentation <https://www.postgresql.org/docs/9.3/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_, or
+  the schema search path must be set explicitly for the user.
+
