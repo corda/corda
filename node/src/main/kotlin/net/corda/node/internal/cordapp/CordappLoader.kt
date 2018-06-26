@@ -184,7 +184,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
                     .asSequence()
                     // This is to only scan classes from test folders.
                     .filter { url ->
-                        listOf("main", "production/classes").none { url.toString().contains("$it/$resource") } || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { scanPackage.startsWith(it) }
+                         !url.toString().contains("main/$resource")  || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { scanPackage.startsWith(it) }
                     }
                     .map { url ->
                         if (url.protocol == "jar") {

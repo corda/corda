@@ -455,8 +455,7 @@ data class NodeH2Settings(
 )
 
 enum class VerifierType {
-    InMemory,
-    OutOfProcess
+    InMemory
 }
 
 enum class CertChainPolicyType {

@@ -90,7 +90,6 @@ The following modules are available but we do not commit to their stability or c
 * **net.corda.tools.explorer**: a GUI front-end for Corda
 * **net.corda.tools.graphs**: utilities to infer project dependencies
 * **net.corda.tools.loadtest**: Corda load tests
-* **net.corda.verifier**: allows out-of-node transaction verification, allowing verification to scale horizontally
 * **net.corda.webserver**: is a servlet container for CorDapps that export HTTP endpoints. This server is an RPC client of the node
 * **net.corda.sandbox-creator**: sandbox utilities
 * **net.corda.quasar.hook**: agent to hook into Quasar and provide types exclusion lists
