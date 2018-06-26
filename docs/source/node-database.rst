@@ -304,6 +304,7 @@ To set up a database schema, use the following SQL:
     ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT ALL ON tables TO "[USER]";
     GRANT ALL ON ALL sequences IN SCHEMA "[SCHEMA]" TO "[USER]";
     ALTER DEFAULT privileges IN SCHEMA "[SCHEMA]" GRANT ALL ON sequences TO "[USER]";
+    ALTER ROLE "[USER]" SET search_path = "[SCHEMA]";
 
 Example node configuration for PostgreSQL:
 
@@ -323,6 +324,10 @@ Example node configuration for PostgreSQL:
 Note that:
 
 * The ``database.schema`` property is optional
+* If you provide a custom ``database.schema``, its value must either match the ``dataSource.user`` value to end up
+  on the standard schema search path according to the
+  `PostgreSQL documentation <https://www.postgresql.org/docs/9.3/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_, or
+  the schema search path must be set explicitly via the ``ALTER ROLE "[USER]" SET search_path = "[SCHEMA]"`` statement.
 * The value of ``database.schema`` is automatically wrapped in double quotes to preserve case-sensitivity
   (e.g. `AliceCorp` becomes `"AliceCorp"`, without quotes PostgresSQL would treat the value as `alicecorp`),
   this behaviour differs from Corda Open Source where the value is not wrapped in double quotes
