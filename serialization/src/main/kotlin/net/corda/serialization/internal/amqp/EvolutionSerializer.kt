@@ -14,6 +14,7 @@ import java.lang.reflect.Type
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.javaType
+import kotlin.reflect.jvm.jvmErasure
 
 
 /**
@@ -117,12 +118,29 @@ abstract class EvolutionSerializer(
                 readersAsSerialized: Map<String, OldParam>): AMQPSerializer<Any> {
             val constructorArgs = arrayOfNulls<Any?>(constructor.parameters.size)
 
+            // Java doesn't care about nullability unless it's a primitive in which
+            // case it can't be referenced. Unfortunately whilst Kotlin does apply
+            // Nullability annotations we cannot use them here as they aren't
+            // retained at runtime so we cannot rely on the absence of
+            // any particular NonNullable annotation type to indicate cross
+            // compiler nullability
+            val isKotlin = (new.type.javaClass.declaredAnnotations.any {
+                        it.annotationClass.qualifiedName == "kotlin.Metadata"
+            })
+
             constructor.parameters.withIndex().forEach {
-                readersAsSerialized[it.value.name!!]?.apply {
-                    this.resultsIndex = it.index
-                } ?: if (!it.value.type.isMarkedNullable) {
-                    throw NotSerializableException(
-                            "New parameter ${it.value.name} is mandatory, should be nullable for evolution to work")
+                if ((readersAsSerialized[it.value.name!!] ?.apply { this.resultsIndex = it.index }) == null) {
+                    // If there is no value in the byte stream to map to the parameter of the constructor
+                    // this is ok IFF it's a Kotlin class and the parameter is non nullable OR
+                    // its a Java class and the parameter is anything but an unboxed primitive.
+                    // Otherwise we throw the error and leave
+                    if ((isKotlin && !it.value.type.isMarkedNullable)
+                            || (!isKotlin && isJavaPrimitive(it.value.type.jvmErasure.java))
+                    ) {
+                        throw NotSerializableException(
+                                "New parameter \"${it.value.name}\" is mandatory, should be nullable for evolution " +
+                                        "to work, isKotlinClass=$isKotlin type=${it.value.type}")
+                    }
                 }
             }
             return EvolutionSerializerViaConstructor(new.type, factory, readersAsSerialized, constructor, constructorArgs)
@@ -151,8 +169,10 @@ abstract class EvolutionSerializer(
          * @param factory the [SerializerFactory] associated with the serialization
          * context this serializer is being built for
          */
-        fun make(old: CompositeType, new: ObjectSerializer,
-                 factory: SerializerFactory): AMQPSerializer<Any> {
+        fun make(old: CompositeType,
+                 new: ObjectSerializer,
+                 factory: SerializerFactory
+        ): AMQPSerializer<Any> {
             // The order in which the properties were serialised is important and must be preserved
             val readersAsSerialized = LinkedHashMap<String, OldParam>()
             old.fields.forEach {
