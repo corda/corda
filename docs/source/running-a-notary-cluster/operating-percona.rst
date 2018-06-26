@@ -117,10 +117,12 @@ When all nodes of the cluster are down, manual intervention is needed to bring
 the cluster back up. On the node with the most advanced replication index,
 ``set safe_to_bootstrap: 1`` in the file ``grastate.dat`` in the data directory.
 You can use ``SHOW GLOBAL STATUS LIKE 'wsrep_last_committed';`` to find out the
-sequence number of the last committed transaction.  Start the first node using
+sequence number of the last committed transaction. Or, if MySQL is down, use
+``mysqld_safe --wsrep-recover``. This command prints the recovered position.
+Once you have found the most advanced node, start that node using
 ``/etc/init.d/mysql bootstrap-pxc``. Bring back one node at a time and watch
-the logs. If a SST is required, the first node can only
-serve as a donor for one node a time.
+the logs. If a SST is required, the first node can only serve as a donor for
+one node a time.
 
 See the documentation of the safe to bootstrap feature. Similar to restoring
 from backup, restarting the entire cluster is an operation that deserves
