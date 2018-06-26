@@ -127,11 +127,6 @@ distributions {
                 into 'cordapps'
                 fileMode = 0444
             }
-            from(project(':samples:bank-of-corda-demo').jar) {
-                rename 'bank-of-corda-demo-(.*)', 'bank-of-corda.jar'
-                into 'cordapps'
-                fileMode = 0444
-            }
         }
     }
 }
