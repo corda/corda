@@ -99,8 +99,10 @@ class StaticInitialisationOfSerializedObjectTest {
 
     // Version of a serializer factory that will allow the class carpenter living on the
     // factory to have a different whitelist applied to it than the factory
-    class TestSerializerFactory(wl1: ClassWhitelist, wl2: ClassWhitelist) :
-            SerializerFactory(wl1, ClassLoader.getSystemClassLoader()) {
+    class TestSerializerFactory(
+            wl1: ClassWhitelist,
+            wl2: ClassWhitelist
+    ) : SerializerFactory(wl1, ClassLoader.getSystemClassLoader()) {
         override val classCarpenter = ClassCarpenter(ClassLoader.getSystemClassLoader(), wl2)
     }
 

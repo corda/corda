@@ -40,13 +40,18 @@ data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typ
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @ThreadSafe
 open class SerializerFactory(
-        val whitelist: ClassWhitelist,
-        cl: ClassLoader,
-        private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter()) {
+    val whitelist: ClassWhitelist,
+    cl: ClassLoader,
+    private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter()
+) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<SerializerFor>()
     private val transformsCache = ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>()
+
+    init {
+        fingerPrinter.setOwner(this)
+    }
 
     open val classCarpenter = ClassCarpenter(cl, whitelist)
 
