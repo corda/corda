@@ -114,10 +114,10 @@ interface ClassCarpenter {
  * Equals/hashCode methods are not yet supported.
  */
 @DeleteForDJVM
-class ClassCarpenterImpl(cl: ClassLoader = Thread.currentThread().contextClassLoader,
-                         override val whitelist: ClassWhitelist,
-                         private val lenient: Boolean = false) : ClassCarpenter {
-
+class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: ClassWhitelist,
+                         cl: ClassLoader = Thread.currentThread().contextClassLoader,
+                         private val lenient: Boolean = false
+) : ClassCarpenter {
     // TODO: Generics.
     // TODO: Sandbox the generated code when a security manager is in use.
     // TODO: Generate equals/hashCode.

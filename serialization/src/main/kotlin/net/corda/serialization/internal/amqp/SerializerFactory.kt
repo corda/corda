@@ -88,7 +88,7 @@ open class SerializerFactory(
                 lenientCarpenter: Boolean = false,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
                 fingerPrinter: FingerPrinter = SerializerFingerPrinter()
-    ) : this(whitelist, ClassCarpenterImpl(classLoader, whitelist, lenientCarpenter), evolutionSerializerGetter, fingerPrinter)
+    ) : this(whitelist, ClassCarpenterImpl(whitelist, classLoader, lenientCarpenter), evolutionSerializerGetter, fingerPrinter)
 
     init {
         fingerPrinter.setOwner(this)
