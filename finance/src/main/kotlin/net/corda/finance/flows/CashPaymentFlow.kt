@@ -40,7 +40,7 @@ open class CashPaymentFlow(
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
     constructor(amount: Amount<Currency>, recipient: Party, anonymous: Boolean) : this(amount, recipient, anonymous, tracker())
 
-    constructor(amount: Amount<Currency>, recipient: Party, anonymous: Boolean, notary: Party) : this(amount, recipient, anonymous, tracker(), notary=notary)
+    constructor(amount: Amount<Currency>, recipient: Party, anonymous: Boolean, notary: Party) : this(amount, recipient, anonymous, tracker(), notary = notary)
 
     constructor(request: PaymentRequest) : this(request.amount, request.recipient, request.anonymous, tracker(), request.issuerConstraint, request.notary)
 
