@@ -27,11 +27,15 @@ import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.crypto.save
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
+import kotlin.math.min
 
 fun configOf(vararg pairs: Pair<String, Any?>): Config = ConfigFactory.parseMap(mapOf(*pairs))
 operator fun Config.plus(overrides: Map<String, Any?>): Config = ConfigFactory.parseMap(overrides).withFallback(this)
 
 object ConfigHelper {
+
+    // 30 is a temporary max to prevent issues with max server-side allowed database connections, until we switch to proper pooling.
+    private const val FLOW_THREAD_POOL_SIZE_MAX = 30
 
     const val CORDA_PROPERTY_PREFIX = "corda."
 
@@ -51,7 +55,8 @@ object ConfigHelper {
 
         // Detect the number of cores
         val coreCount = Runtime.getRuntime().availableProcessors()
-        val multiThreadingConfig = configOf("enterpriseConfiguration.tuning.flowThreadPoolSize" to (coreCount * 4).toString(),
+        val flowThreadPoolSize = min(2 * coreCount, FLOW_THREAD_POOL_SIZE_MAX)
+        val multiThreadingConfig = configOf("enterpriseConfiguration.tuning.flowThreadPoolSize" to flowThreadPoolSize.toString(),
                 "enterpriseConfiguration.tuning.rpcThreadPoolSize" to (coreCount).toString())
 
         val systemOverrides = systemProperties().cordaEntriesOnly()
