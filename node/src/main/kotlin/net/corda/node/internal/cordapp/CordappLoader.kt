@@ -50,7 +50,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         cordapps.flatMap { corDapp -> corDapp.allFlows.map { flow -> flow to corDapp } }
                 .groupBy { it.first }
                 .mapValues {
-                    if(it.value.size > 1) { throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow ${it.value.first().first.name}: [ ${it.value.map { it.second.name }.joinToString()} ].")  }
+                    if(it.value.size > 1) { throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow ${it.value.first().first.name}: [ ${it.value.joinToString { it.second.name }} ].")  }
                     it.value.single().second
                 }
     }
