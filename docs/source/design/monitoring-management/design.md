@@ -232,7 +232,7 @@ In general, the requirements outlined in this design are cross-cutting concerns 
             * `FlowErrorAuditEvent` (unused)
             * `SystemAuditEvent` (unused)
 * Modules impacted
-    * All modules packaged and shipped as part of a Corda distribution (as published to Artifactory / Maven): *core, node, node-api, node-driver, finance, confidential-identities, test-common, test-utils, verifier, webserver, jackson, jfx, mock, rpc*
+    * All modules packaged and shipped as part of a Corda distribution (as published to Artifactory / Maven): *core, node, node-api, node-driver, finance, confidential-identities, test-common, test-utils, webserver, jackson, jfx, mock, rpc*
 
 ### Functional
 
@@ -458,7 +458,6 @@ Corda subsystem components:
 | NotaryService              | RaftNonValidatingNotaryService           | as above                                 |
 | NotaryService              | BFTNonValidatingNotaryService            | Logging coverage (info, debug)           |
 | Doorman                    | DoormanServer (Enterprise only)          | Some logging (info, warn, error), and use of `println` |
-| TransactionVerifierService | OutOfProcessTransactionVerifierService (Enterprise only) | some logging (info)                      |
 |                            |                                          |                                          |
 
 Corda core flows:

@@ -6,6 +6,7 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* Remove all references to the out-of-process transaction verification.
 
 * Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems related to database migrations before exiting with a non-zero code.
 
