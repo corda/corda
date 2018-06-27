@@ -33,7 +33,7 @@ class LoginView : View(WINDOW_TITLE) {
         }
     }
 
-    fun login(): NodeMonitorModel? {
+    tailrec fun login(): NodeMonitorModel? {
         var nodeModel: NodeMonitorModel? = null
         val status = Dialog<LoginStatus>().apply {
             dialogPane = root
