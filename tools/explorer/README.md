@@ -32,13 +32,16 @@ The Participant nodes are only able to spend cash (eg. move cash).
 
     ./gradlew tools:explorer:runDemoNodes
 
-**These Corda nodes will be created on the following port on localhost.**
+**These Corda nodes will be created on localhost:**
 
-   * Notary -> 20005            (Does not accept logins)
-   * UK Bank Plc -> 20011       (*Issuer node*)
-   * USA Bank Corp -> 20008     (*Issuer node*)
-   * Alice -> 20017
-   * Bob -> 20014
+   * Notary (Does not accept logins)
+   * UK Bank Plc (*Issuer node*)
+   * USA Bank Corp (*Issuer node*)
+   * Alice
+   * Bob
+   
+Check the gradle output for the ports of the nodes - when they are ready to be used, a list of started nodes along
+with their respective RPC ports will be printed.
 
 Explorer login credentials to the Issuer nodes are defaulted to ``manager`` and ``test``.
 Explorer login credentials to the Participant nodes are defaulted to ``user1`` and ``test``.
