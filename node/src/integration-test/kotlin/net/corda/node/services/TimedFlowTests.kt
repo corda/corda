@@ -177,7 +177,7 @@ class TimedFlowTests {
     private fun getDoneFuture(progressTracker: ProgressTracker): Future<ProgressTracker.Change> {
         return progressTracker.changes.takeFirst {
             it.progressTracker.currentStep == ProgressTracker.DONE
-        }.timeout(30, TimeUnit.SECONDS).bufferUntilSubscribed().toBlocking().toFuture()
+        }.bufferUntilSubscribed().toBlocking().toFuture()
     }
 
     @CordaService
