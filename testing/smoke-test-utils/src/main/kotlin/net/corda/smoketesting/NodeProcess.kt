@@ -8,6 +8,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.asContextEnv
+import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.common.internal.testNetworkParameters
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -67,11 +68,8 @@ class NodeProcess(
             }
 
             init {
-                try {
-                    Class.forName("net.corda.node.Corda")
-                    throw Error("Smoke test has the node in its classpath. Please remove the offending dependency.")
-                } catch (e: ClassNotFoundException) {
-                    // If the class can't be found then we're good!
+                checkNotOnClasspath("net.corda.node.Corda") {
+                    "Smoke test has the node in its classpath. Please remove the offending dependency."
                 }
             }
         }
