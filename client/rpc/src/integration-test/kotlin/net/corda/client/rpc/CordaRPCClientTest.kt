@@ -237,7 +237,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
                 .joinToString(pathSeparator)
 
         // Create a Cash.State object for the StandaloneCashRpcClient to get
-        node.services.startFlow(CashIssueFlow(100.POUNDS, OpaqueBytes.of(1), identity), InvocationContext.shell())
+        node.services.startFlow(CashIssueFlow(100.POUNDS, OpaqueBytes.of(1), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
         val outOfProcessRpc = ProcessUtilities.startJavaProcess<StandaloneCashRpcClient>(
                 classpath = classpathWithoutFinance,
                 arguments = listOf(node.internals.configuration.rpcOptions.address.toString(), financeLocation)
@@ -282,7 +282,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
             assertThat(state.javaClass.name).isEqualTo("net.corda.finance.contracts.asset.Cash${'$'}State")
             assertThat(state.amount.quantity).isEqualTo(10000)
             assertThat(state.amount.token.product).isEqualTo(Currency.getInstance("GBP"))
-            // This particular check assures us that the Cash.State that we have hasn't been carpented.
+            // This particular check assures us that the Cash.State we have hasn't been carpented.
             assertThat(state.participants).isEqualTo(listOf(state.owner))
         }
     }
