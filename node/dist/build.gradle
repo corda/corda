@@ -85,6 +85,7 @@ if (isLinux || isMac) {
             })
 
             commandLine = [
+                    '/usr/bin/env',
                     'javapackager',
                     '-deploy',
                     '-nosign',
@@ -120,7 +121,8 @@ if (isLinux || isMac) {
     task buildNode(type: Copy, dependsOn: [buildLauncher, project(':docs').tasks['makeDocs'], project(':node').tasks['jar']]) {
         description 'Build stand-alone Corda Node distribution'
 
-        into(outputDir)
+        def dir = file("$outputDir/corda-enterprise")
+        into(dir)
 
         from(buildLauncher.launcherBinDir) {
             into("launcher")
@@ -142,15 +144,11 @@ if (isLinux || isMac) {
             into(".")
         }
 
-        from(project(':docs').buildDir) {
-            into("docs")
-        }
-
         doLast {
-            new File("${outputDir}/cordapps").mkdirs()
-            new File("${outputDir}/drivers").mkdirs()
+            new File("${dir}/cordapps").mkdirs()
+            new File("${dir}/drivers").mkdirs()
             println("Stand-alone Corda Node application available at:")
-            println("${outputDir}")
+            println("${dir}")
         }
     }
 
@@ -161,7 +159,7 @@ if (isLinux || isMac) {
         destinationDir = file(tarballDir)
         extension = "tar.bz2"
 
-        doLast{
+        doLast {
             println("Distribution tarball available at:")
             println("${tarballDir}/${baseName}.${extension}")
         }
