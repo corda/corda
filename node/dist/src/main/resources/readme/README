@@ -1,9 +1,24 @@
-Welcome to Corda Enterprise!
+Welcome to Corda Enterprise 3.0!
 
-This is a distributon package containing the Java Runtime Environment for convenience.
+This is a distributon package containing a bundled JVM. This is the only supported build of Corda Enterprise, so
+please do not attempt to change the included JVM for a different one - JVM updates will be shipped part of the
+regular Enterprise update cycle.
 
-To start a node, please edit supplied node.conf file so it contains appropriate data for your organization. More - https://docs.corda.net/corda-configuration-file.html
+Documentation: https://docs.corda.r3.com
+
+To start a node, please rename example-node.conf file and edit its contents so it contains appropriate data for
+your organization. Learn more here: https://docs.corda.r3.com/corda-configuration-file.html
+
+Don't:
+
+* Lose your private keys.
+* Set devMode = true in production (devMode is ON by default and must be disabled in the config file).
+* Use H2 as your database in production.
+* Forget to set up database backups or replication.
+* Place your database physically far from the node.
 
 Your CordApps should be placed in cordapps directory, from which they will be loaded automatically.
 
-Linux/Mac: main executable file is ./bin/corda
+JDBC drivers can be placed in the drivers directory.
+
+To start the node, run ./bin/corda
