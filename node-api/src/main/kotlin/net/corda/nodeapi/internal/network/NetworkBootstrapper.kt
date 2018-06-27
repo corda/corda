@@ -87,7 +87,7 @@ class NetworkBootstrapper
             val numParallelProcesses = Runtime.getRuntime().availableProcessors()
             val timePerNode = 40.seconds // On the test machine, generating the node info takes 7 seconds for a single node.
             val tExpected = maxOf(timePerNode, timePerNode * nodeDirs.size.toLong() / numParallelProcesses.toLong())
-            val warningTimer = Timer("WarnOnSlowMachines", false).schedule(tExpected.toMillis()) {
+            val warningTimer = Timer("WarnOnSlowMachines", true).schedule(tExpected.toMillis()) {
                 println("... still waiting. If this is taking longer than usual, check the node logs.")
             }
             val executor = Executors.newFixedThreadPool(numParallelProcesses)
