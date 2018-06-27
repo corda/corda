@@ -40,6 +40,7 @@ see changes to this list.
 * BMO
 * Bob Crozier (AIA)
 * Bogdan Paunescu (R3)
+* Bruno Carvalhal
 * C-Otto
 * Cais Manai (R3)
 * Carl Worrall (BCS)
