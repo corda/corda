@@ -34,8 +34,8 @@ repositories {
     flatDir {
         dirs 'libs'
     }
+    jcenter()
     maven {
-        jcenter()
         url 'http://www.sparetimelabs.com/maven2'
     }
 }
