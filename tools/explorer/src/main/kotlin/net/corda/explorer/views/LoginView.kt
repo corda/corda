@@ -27,11 +27,14 @@ class LoginView : View(WINDOW_TITLE) {
     private val port by objectProperty(SettingsModel::portProperty)
     private val fullscreen by objectProperty(SettingsModel::fullscreenProperty)
 
-    fun login(host: String, port: Int, username: String, password: String) {
-        getModel<NodeMonitorModel>().register(NetworkHostAndPort(host, port), username, password)
+    fun login(host: String, port: Int, username: String, password: String): NodeMonitorModel {
+        return getModel<NodeMonitorModel>().apply {
+            register(NetworkHostAndPort(host, port), username, password)
+        }
     }
 
-    fun login() {
+    fun login(): NodeMonitorModel? {
+        var nodeModel: NodeMonitorModel? = null
         val status = Dialog<LoginStatus>().apply {
             dialogPane = root
             setResultConverter {
@@ -39,7 +42,7 @@ class LoginView : View(WINDOW_TITLE) {
                     ButtonBar.ButtonData.OK_DONE -> try {
                         root.isDisable = true
                         // TODO : Run this async to avoid UI lockup.
-                        login(hostTextField.text, portProperty.value, usernameTextField.text, passwordTextField.text)
+                        nodeModel = login(hostTextField.text, portProperty.value, usernameTextField.text, passwordTextField.text)
                         if (!rememberMe.value) {
                             username.value = ""
                             host.value = ""
@@ -64,12 +67,13 @@ class LoginView : View(WINDOW_TITLE) {
                         initOwner(root.scene.window)
                     }.showAndWait().get()
                     if (button == ButtonType.OK) {
+                        nodeModel?.close()
                         exitProcess(0)
                     }
                 }
             }
         }.showAndWait().get()
-        if (status != LoginStatus.loggedIn) login()
+        return if (status == LoginStatus.loggedIn) nodeModel else login()
     }
 
     init {
