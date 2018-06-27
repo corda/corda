@@ -48,7 +48,7 @@ class CashIssueAndPaymentFlow(val amount: Amount<Currency>,
     @Suspendable
     override fun call(): Result {
         subFlow(CashIssueFlow(amount, issueRef, notary))
-        return subFlow(CashPaymentFlow(amount, recipient, anonymous))
+        return subFlow(CashPaymentFlow(amount, recipient, anonymous, notary))
     }
 
     @CordaSerializable

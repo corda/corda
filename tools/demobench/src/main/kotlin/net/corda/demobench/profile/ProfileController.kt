@@ -125,7 +125,7 @@ class ProfileController : Controller() {
             // Now extract all of the plugins from the ZIP file,
             // and copy them to a temporary location.
             StreamSupport.stream(fs.rootDirectories.spliterator(), false)
-                    .flatMap { Files.find(it, 3, BiPredicate { p, attr -> p.inCordappsDir() && p.isCordapp() && attr.isRegularFile }) }
+                    .flatMap { Files.find(it, 3, BiPredicate { p, attr -> p.inCordappsDir && p.isCordapp && attr.isRegularFile }) }
                     .forEach { cordapp ->
                         val config = nodeIndex[cordapp.getName(0).toString()] ?: return@forEach
 
