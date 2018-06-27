@@ -153,6 +153,8 @@ class NewTransaction : Fragment() {
         }
     }
 
+    private fun selectNotary(): Party = notaries.first().value!!
+
     private fun newTransactionDialog(window: Window) = Dialog<AbstractCashFlow.AbstractRequest>().apply {
         dialogPane = root
         initOwner(window)
@@ -162,8 +164,8 @@ class NewTransaction : Fragment() {
             val issueRef = if (issueRef.value != null) OpaqueBytes.of(issueRef.value) else defaultRef
             when (it) {
                 executeButton -> when (transactionTypeCB.value) {
-                    CashTransaction.Issue -> IssueAndPaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.party, notaries.first().value!!, anonymous)
-                    CashTransaction.Pay -> PaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.party, anonymous = anonymous)
+                    CashTransaction.Issue -> IssueAndPaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.party, selectNotary(), anonymous)
+                    CashTransaction.Pay -> PaymentRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.party, anonymous = anonymous, notary = selectNotary())
                     CashTransaction.Exit -> ExitRequest(Amount.fromDecimal(amount.value, currencyChoiceBox.value), issueRef)
                     else -> null
                 }

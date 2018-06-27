@@ -25,7 +25,6 @@ class CordappController : Controller() {
 
     private val jvm by inject<JVMConfig>()
     private val cordappDir: Path = jvm.applicationDir.resolve(NodeConfig.cordappDirName)
-    private val bankOfCorda: Path = cordappDir.resolve("bank-of-corda.jar")
     private val finance: Path = cordappDir.resolve("corda-finance.jar")
 
     /**
@@ -40,11 +39,6 @@ class CordappController : Controller() {
             finance.copyToDirectory(config.cordappsDir, StandardCopyOption.REPLACE_EXISTING)
             log.info("Installed 'Finance' cordapp")
         }
-        // Nodes cannot issue cash unless they contain the "Bank of Corda" cordapp.
-        if (config.nodeConfig.issuableCurrencies.isNotEmpty() && bankOfCorda.exists()) {
-            bankOfCorda.copyToDirectory(config.cordappsDir, StandardCopyOption.REPLACE_EXISTING)
-            log.info("Installed 'Bank of Corda' cordapp")
-        }
     }
 
     /**
@@ -54,14 +48,12 @@ class CordappController : Controller() {
     fun useCordappsFor(config: HasCordapps): List<Path> {
         if (!config.cordappsDir.isDirectory()) return emptyList()
         return config.cordappsDir.walk(1) { paths ->
-            paths
-                    .filter(Path::isCordapp)
-                    .filter { !bankOfCorda.endsWith(it.fileName) }
-                    .filter { !finance.endsWith(it.fileName) }
-                    .toList()
+            paths.filter(Path::isCordapp)
+                 .filter { !finance.endsWith(it.fileName) }
+                 .toList()
         }
     }
 }
 
-fun Path.isCordapp(): Boolean = this.isReadable && this.fileName.toString().endsWith(".jar")
-fun Path.inCordappsDir(): Boolean = (this.parent != null) && this.parent.endsWith("cordapps/")
+val Path.isCordapp: Boolean get() = this.isReadable && this.fileName.toString().endsWith(".jar")
+val Path.inCordappsDir: Boolean get() = (this.parent != null) && this.parent.endsWith("cordapps/")

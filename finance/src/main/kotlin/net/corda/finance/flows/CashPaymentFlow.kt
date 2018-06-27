@@ -34,6 +34,7 @@ import java.util.*
  * @param recipient the party to pay the currency to.
  * @param issuerConstraint if specified, the payment will be made using only cash issued by the given parties.
  * @param anonymous whether to anonymous the recipient party. Should be true for normal usage, but may be false
+ * @param notary if not specified, the first notary of the network map is selected
  * for testing purposes.
  */
 @StartableByRPC
@@ -42,14 +43,17 @@ open class CashPaymentFlow(
         val recipient: Party,
         val anonymous: Boolean,
         progressTracker: ProgressTracker,
-        val issuerConstraint: Set<Party> = emptySet()) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
+        val issuerConstraint: Set<Party> = emptySet(),
+        val notary: Party? = null) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
     constructor(amount: Amount<Currency>, recipient: Party) : this(amount, recipient, true, tracker())
 
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
     constructor(amount: Amount<Currency>, recipient: Party, anonymous: Boolean) : this(amount, recipient, anonymous, tracker())
 
-    constructor(request: PaymentRequest) : this(request.amount, request.recipient, request.anonymous, tracker(), request.issuerConstraint)
+    constructor(amount: Amount<Currency>, recipient: Party, anonymous: Boolean, notary: Party) : this(amount, recipient, anonymous, tracker(), notary = notary)
+
+    constructor(request: PaymentRequest) : this(request.amount, request.recipient, request.anonymous, tracker(), request.issuerConstraint, request.notary)
 
     @Suspendable
     override fun call(): AbstractCashFlow.Result {
@@ -61,7 +65,7 @@ open class CashPaymentFlow(
         }
         val anonymousRecipient = txIdentities[recipient] ?: recipient
         progressTracker.currentStep = GENERATING_TX
-        val builder = TransactionBuilder(notary = null)
+        val builder = TransactionBuilder(notary = notary ?: serviceHub.networkMapCache.notaryIdentities.first())
         logger.info("Generating spend for: ${builder.lockId}")
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
@@ -90,5 +94,6 @@ open class CashPaymentFlow(
     class PaymentRequest(amount: Amount<Currency>,
                          val recipient: Party,
                          val anonymous: Boolean,
-                         val issuerConstraint: Set<Party> = emptySet()) : AbstractRequest(amount)
+                         val issuerConstraint: Set<Party> = emptySet(),
+                         val notary: Party? = null) : AbstractRequest(amount)
 }

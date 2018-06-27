@@ -21,6 +21,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.TrustedAuthorityNotaryService
 import net.corda.core.internal.notary.UniquenessProvider
@@ -55,8 +56,9 @@ import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.slf4j.MDC
 import java.security.PublicKey
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
 class TimedFlowTestRule(val clusterSize: Int) : ExternalResource() {
@@ -159,13 +161,11 @@ class TimedFlowTests {
             val flow = NotaryFlow.Client(issueTx)
             val progressTracker = flow.progressTracker
             assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
+            val progressTrackerDone = getDoneFuture(progressTracker)
+
             val notarySignatures = services.startFlow(flow).resultFuture.get()
             (issueTx + notarySignatures).verifyRequiredSignatures()
-            assertEquals(
-                    ProgressTracker.DONE,
-                    progressTracker.currentStep,
-                    "Ensure the same progress tracker object is re-used after flow restart"
-            )
+            progressTrackerDone.get()
         }
     }
 
@@ -178,14 +178,12 @@ class TimedFlowTests {
             }
             val flow = FinalityFlow(issueTx)
             val progressTracker = flow.progressTracker
+            assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
+            val progressTrackerDone = getDoneFuture(flow.progressTracker)
 
             val stx = services.startFlow(flow).resultFuture.get()
             stx.verifyRequiredSignatures()
-            assertEquals(
-                    ProgressTracker.DONE,
-                    progressTracker.currentStep,
-                    "Ensure the same progress tracker object is re-used after flow restart"
-            )
+            progressTrackerDone.get()
         }
     }
 
@@ -196,6 +194,13 @@ class TimedFlowTests {
                     block()
                 }
         )
+    }
+
+    /** Returns a future that completes when the [progressTracker] reaches the [ProgressTracker.DONE] step. */
+    private fun getDoneFuture(progressTracker: ProgressTracker): Future<ProgressTracker.Change> {
+        return progressTracker.changes.takeFirst {
+            it.progressTracker.currentStep == ProgressTracker.DONE
+        }.bufferUntilSubscribed().toBlocking().toFuture()
     }
 
     @CordaService
