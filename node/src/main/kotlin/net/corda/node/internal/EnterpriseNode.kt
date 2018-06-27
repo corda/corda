@@ -39,9 +39,9 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 open class EnterpriseNode(configuration: NodeConfiguration,
-                     versionInfo: VersionInfo,
-                     initialiseSerialization: Boolean = true,
-                     cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
+                          versionInfo: VersionInfo,
+                          initialiseSerialization: Boolean = true,
+                          cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
 ) : Node(configuration, versionInfo, initialiseSerialization, cordappLoader) {
     companion object {
         private val logger by lazy { loggerFor<EnterpriseNode>() }
@@ -80,6 +80,15 @@ R/ /___  /_/ / /  / /_/ / /_/ /    B|______ |  \_|    |    |______ |    \_ |    
 R\____/     /_/   \__,_/\__,_/     W____________________________________________________________________________
 D""".trimStart()
 
+            val license = """
+*************************************************************************************************************************************
+*  All rights reserved.                                                                                                             *
+*  This software is proprietary to and embodies the confidential technology of R3 LLC (“R3”).                                       *
+*  Possession, use, duplication or dissemination of the software is authorized only pursuant to a valid written license from R3.    *
+*  IF YOU DO NOT HAVE A VALID WRITTEN LICENSE WITH R3, DO NOT USE THIS SOFTWARE.                                                    *
+*************************************************************************************************************************************
+"""
+
             // Now replace the R, B and W letters with their colour code escapes to make the banner prettier.
             if (Ansi.isEnabled()) {
                 val red = Ansi.ansi().fgBrightRed().toString()
@@ -89,26 +98,28 @@ D""".trimStart()
                 val colourLogo = logo.replace("R", red).replace("B", blue).replace("W", white).replace("D", default)
                 val banner =
                         colourLogo +
-                        System.lineSeparator() +
-                        (
-                                if (Emoji.hasEmojiTerminal)
-                                    "${Emoji.CODE_LIGHTBULB}  "
-                                else
-                                    "Tip: "
-                        ) +
-                        Ansi.ansi().bold().a(tip).reset() +
-                        System.lineSeparator()
+                                System.lineSeparator() +
+                                (
+                                        if (Emoji.hasEmojiTerminal)
+                                            "${Emoji.CODE_LIGHTBULB}  "
+                                        else
+                                            "Tip: "
+                                        ) +
+                                Ansi.ansi().bold().a(tip).reset() +
+                                System.lineSeparator()
 
                 println(banner)
+                println(license)
             } else {
                 println(logo.replace("R", "").replace("B", "").replace("W", "").replace("D", ""))
             }
         }
 
-        private val tip: String get() {
-            val tips = javaClass.getResourceAsStream("tips.txt").bufferedReader().use { it.readLines() }
-            return tips[(Math.random() * tips.size).toInt()]
-        }
+        private val tip: String
+            get() {
+                val tips = javaClass.getResourceAsStream("tips.txt").bufferedReader().use { it.readLines() }
+                return tips[(Math.random() * tips.size).toInt()]
+            }
 
         override fun createNode(conf: NodeConfiguration, versionInfo: VersionInfo) = EnterpriseNode(conf, versionInfo)
 
