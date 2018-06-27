@@ -7,7 +7,7 @@ Introduction
 ------------
 The Corda bridge/float component is designed for enterprise deployments and acts as an application level
 firewall and protocol break on all internet facing endpoints. The ``corda-bridgeserver.jar`` encapsulates the peer
-network functionality of the basic Corda node, so that this can be operated separately from the security sensitive
+network functionality of the basic Corda Enterprise node, so that this can be operated separately from the security sensitive
 JVM runtime of the node. This gives separation of functionality and ensures that the legal identity keys are not
 used in the same process as the internet TLS connections. Also, it adds support for enterprise deployment requirements,
 such as High Availability (HA) and SOCKS proxy support.

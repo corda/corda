@@ -30,11 +30,8 @@ The Bridge configuration file uses the HOCON format which is superset of JSON. P
 
 Defaults
 --------
-A set of default configuration options are loaded from the built-in resource file ``/bridge/src/main/resources/bridgedefault.conf``.
-This file can be found in the ``:bridge`` gradle module of the `Enterprise Corda repository <https://github.com/corda/enterprise>`_. Any
-options you do not specify in your own ``bridge.conf`` file will use these defaults.
-
-Here are the contents of the ``bridgedefault.conf`` file:
+A set of default configuration options are loaded from the built-in resource file. Any options you do not specify in
+your own ``bridge.conf`` file will use these defaults:
 
 .. literalinclude:: ../../bridge/src/main/resources/bridgedefault.conf
     :language: javascript
@@ -105,7 +102,7 @@ absolute path to the bridge's base directory.
 
         :trustStoreFile: The path to the TrustStore file to use in outgoing ``TLS/AMQP 1.0`` connections.
 
-        :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL provider is unavailable.
+        :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
 
    :socksProxyConfig:  This section is optionally present if outgoing peer connections should go via a SOCKS4, or SOCKS5 proxy:
 
@@ -133,7 +130,7 @@ absolute path to the bridge's base directory.
 
         :trustStoreFile: The path to the TrustStore file to use in inbound ``TLS/AMQP 1.0`` connections.
 
-        :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL provider is unavailable.
+        :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
 
 :bridgeInnerConfig:  This section is required for ``BridgeInner`` mode and configures the tunnel connection to the ``FloatOuter`` (s) in the DMZ. The section should be absent in ``SenderReceiver`` and ``FloatOuter`` modes:
 
@@ -154,7 +151,7 @@ absolute path to the bridge's base directory.
 
             :trustStoreFile: The path to the TrustStore file to use in control tunnel connections.
 
-            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL provider is unavailable.
+            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
             
         :customFloatOuterSSLConfiguration: The keys and certificates for the ``FloatOuter`` are provisioned dynamically from the ``BridgeInner`` over the control tunnel and are not loaded from disk in the DMZ.
             By default, they are taken from (``<workspace>/certificates/sslkeystore.jks``)
@@ -168,7 +165,7 @@ absolute path to the bridge's base directory.
 
             :trustStoreFile: The path to the TrustStore file to use in the ``FloatOuter`` when it activates the peer listening socket.
 
-            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL provider is unavailable.
+            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
 
 :floatOuterConfig:   This section is required for ``FloatOuter`` mode and configures the control tunnel listening socket. It should be absent for ``SenderReceiver`` and ``BridgeInner`` modes:
 
@@ -188,7 +185,7 @@ absolute path to the bridge's base directory.
 
             :trustStoreFile: The path to the TrustStore file to use in control tunnel connections.
 
-            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL provider is unavailable.
+            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
             
 :haConfig: Optionally the ``SenderReceiver`` and ``BridgeInner`` modes can be run in a hot-warm configuration, which determines the active instance using an external master election service.
     Currently, only Zookeeper can be used as master elector. Eventually other electors may be supported e.g. ``etcd``. This configuration section controls these options:
