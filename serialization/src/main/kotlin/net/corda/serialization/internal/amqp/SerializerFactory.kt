@@ -74,11 +74,11 @@ open class SerializerFactory(
 
     @DeleteForDJVM
     constructor(whitelist: ClassWhitelist,
-                classLoader: ClassLoader,
+                carpenterClassLoader: ClassLoader,
                 lenientCarpenter: Boolean = false,
                 evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
                 fingerPrinter: FingerPrinter = SerializerFingerPrinter()
-    ) : this(whitelist, ClassCarpenterImpl(whitelist, classLoader, lenientCarpenter), evolutionSerializerGetter, fingerPrinter)
+    ) : this(whitelist, ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenter), evolutionSerializerGetter, fingerPrinter)
 
     init {
         fingerPrinter.setOwner(this)
