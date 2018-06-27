@@ -43,6 +43,7 @@ import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.statemachine.interceptors.*
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.node.utilities.injectOldProgressTracker
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.serialization.internal.SerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
@@ -377,7 +378,10 @@ class MultiThreadedStateMachineManager(
             for (sessionId in getFlowSessionIds(currentState.checkpoint)) {
                 sessionToFlow.remove(sessionId)
             }
-            if (flow != null) addAndStartFlow(flowId, flow)
+            if (flow != null) {
+                injectOldProgressTracker(currentState.flowLogic.progressTracker, flow.fiber.logic)
+                addAndStartFlow(flowId, flow)
+            }
             // Deliver all the external events from the old flow instance.
             val unprocessedExternalEvents = mutableListOf<ExternalEvent>()
             do {
