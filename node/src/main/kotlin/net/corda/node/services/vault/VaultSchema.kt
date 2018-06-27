@@ -11,7 +11,6 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
-import java.io.Serializable
 import java.time.Instant
 import java.util.*
 import javax.persistence.*
@@ -154,7 +153,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
 
             @Column(name = "note", nullable = true)
             var note: String?
-    ) : Serializable {
+    ) {
         constructor(txId: String, note: String) : this(0, txId, note)
     }
 }

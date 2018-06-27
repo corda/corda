@@ -5,6 +5,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.toHexString
+import org.hibernate.annotations.Immutable
 import java.io.Serializable
 import javax.persistence.Column
 import javax.persistence.Embeddable
@@ -82,6 +83,7 @@ class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : St
  */
 @KeepForDJVM
 @Embeddable
+@Immutable
 data class PersistentStateRef(
         @Column(name = "transaction_id", length = 64, nullable = false)
         var txId: String,
@@ -96,7 +98,8 @@ data class PersistentStateRef(
  * Marker interface to denote a persistable Corda state entity that will always have a transaction id and index
  */
 @KeepForDJVM
-interface StatePersistable : Serializable
+interface StatePersistable
+
 object MappedSchemaValidator {
     fun fieldsFromOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
             schema.mappedTypes.map { entity ->
