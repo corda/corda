@@ -10,6 +10,7 @@ import javafx.stage.Stage
 import jfxtras.resources.JFXtrasFontRoboto
 import joptsimple.OptionParser
 import net.corda.client.jfx.model.Models
+import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.observableValue
 import net.corda.core.utilities.contextLogger
 import net.corda.explorer.model.CordaViewModel
@@ -21,6 +22,7 @@ import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.App
 import tornadofx.addStageIcon
 import tornadofx.find
+import kotlin.system.exitProcess
 
 /**
  * Main class for Explorer, you will need Tornado FX to run the explorer.
@@ -34,6 +36,8 @@ class Main : App(MainView::class) {
     }
 
     override fun start(stage: Stage) {
+        var nodeModel: NodeMonitorModel? = null
+
         // Login to Corda node
         super.start(stage)
         stage.minHeight = 600.0
@@ -43,27 +47,29 @@ class Main : App(MainView::class) {
             val button = Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to exit Corda explorer?").apply {
                 initOwner(stage.scene.window)
             }.showAndWait().get()
-            if (button != ButtonType.OK) it.consume()
+            if (button == ButtonType.OK) {
+                nodeModel?.close()
+            } else {
+                it.consume()
+            }
         }
 
         val hostname = parameters.named["host"]
         val port = asInteger(parameters.named["port"])
         val username = parameters.named["username"]
         val password = parameters.named["password"]
-        var isLoggedIn = false
 
         if ((hostname != null) && (port != null) && (username != null) && (password != null)) {
             try {
-                loginView.login(hostname, port, username, password)
-                isLoggedIn = true
+                nodeModel = loginView.login(hostname, port, username, password)
             } catch (e: Exception) {
                 ExceptionDialog(e).apply { initOwner(stage.scene.window) }.showAndWait()
             }
         }
 
-        if (!isLoggedIn) {
+        if (nodeModel == null) {
             stage.hide()
-            loginView.login()
+            nodeModel = loginView.login()
             stage.show()
         }
     }
@@ -84,7 +90,7 @@ class Main : App(MainView::class) {
             runInFxApplicationThread {
                 // [showAndWait] need to be in the FX thread.
                 ExceptionDialog(throwable).showAndWait()
-                System.exit(1)
+                exitProcess(1)
             }
         }
         // Do this first before creating the notification bar, so it can autosize itself properly.
