@@ -180,7 +180,7 @@ class RPCClientProxyHandler(
                 ThreadFactoryBuilder().setNameFormat("rpc-client-reaper-%d").setDaemon(true).build()
         )
         sendExecutor = Executors.newSingleThreadExecutor(
-                ThreadFactoryBuilder().setNameFormat("rpc-client-sender-%d").build()
+                ThreadFactoryBuilder().setNameFormat("rpc-client-sender-%d").setDaemon(true).build()
         )
         reaperScheduledFuture = reaperExecutor!!.scheduleAtFixedRate(
                 this::reapObservablesAndNotify,
