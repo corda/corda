@@ -133,8 +133,12 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
     }
 
     protected fun loadValue(key: K): V? {
-        val result = currentDBSession().find(persistentEntityClass, toPersistentEntityKey(key))
-        return result?.apply { currentDBSession().detach(result) }?.let(fromPersistentEntity)?.second
+        val session = currentDBSession()
+        // IMPORTANT: The flush is needed because detach() makes the queue of unflushed entries invalid w.r.t. Hibernate internal state if the found entity is unflushed.
+        // We want the detach() so that we rely on our cache memory management and don't retain strong references in the Hibernate session.
+        session.flush()
+        val result = session.find(persistentEntityClass, toPersistentEntityKey(key))
+        return result?.apply { session.detach(result) }?.let(fromPersistentEntity)?.second
     }
 
     operator fun contains(key: K) = get(key) != null

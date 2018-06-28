@@ -12,6 +12,7 @@ package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
 import net.corda.core.cordapp.Cordapp
@@ -119,8 +120,16 @@ open class NodeStartup(val args: Array<String>) {
         } catch (e: UnknownConfigurationKeysException) {
             logger.error(e.message)
             return false
+        } catch (e: ConfigException.IO) {
+            println("""
+                Unable to load the node config file from '${cmdlineOptions.configFile}'.
+
+                Try experimenting with the --base-directory flag to change which directory the node
+                is looking in, or use the --config-file flag to specify it explicitly.
+            """.trimIndent())
+            return false
         } catch (e: Exception) {
-            logger.error("Exception during node configuration", e)
+            logger.error("Unexpected error whilst reading node configuration", e)
             return false
         }
         val errors = conf.validate()
