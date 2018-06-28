@@ -187,7 +187,7 @@ D""".trimStart()
         log.info("Multi-threaded state machine manager with ${configuration.enterpriseConfiguration.tuning.flowThreadPoolSize} threads.")
         return Executors.newFixedThreadPool(
                 configuration.enterpriseConfiguration.tuning.flowThreadPoolSize,
-                ThreadFactoryBuilder().setNameFormat("flow-executor-%d").setThreadFactory(::FastThreadLocalThread).build()
+                ThreadFactoryBuilder().setNameFormat("flow-worker").setThreadFactory(::FastThreadLocalThread).build()
         )
     }
 
