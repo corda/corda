@@ -12,37 +12,46 @@ import java.util.concurrent.TimeUnit.SECONDS
 class NodeRPC(config: NodeConfigWrapper, start: (NodeConfigWrapper, CordaRPCOps) -> Unit, invoke: (CordaRPCOps) -> Unit) : AutoCloseable {
     private companion object {
         private val log = contextLogger()
-        val oneSecond = SECONDS.toMillis(1)
+        private val oneSecond = SECONDS.toMillis(1)
     }
 
     private val rpcClient = CordaRPCClient(NetworkHostAndPort("localhost", config.nodeConfig.rpcAddress.port))
+    @Volatile
     private var rpcConnection: CordaRPCConnection? = null
-    private val timer = Timer()
+    private val timer = Timer("DemoBench NodeRPC (${config.key})", true)
+    @Volatile
+    private var timerThread: Thread? = null
 
     init {
         val setupTask = object : TimerTask() {
             override fun run() {
-                try {
-                    val user = config.nodeConfig.rpcUsers[0]
-                    val connection = rpcClient.start(user.username, user.password)
-                    rpcConnection = connection
-                    val ops = connection.proxy
+                // Grab the timer's thread so that we know which one to interrupt.
+                // This looks like the simplest way of getting the thread. (Ugh)
+                timerThread = Thread.currentThread()
 
-                    // Cancel the "setup" task now that we've created the RPC client.
-                    this.cancel()
-
-                    // Run "start-up" task, now that the RPC client is ready.
-                    start(config, ops)
-
-                    // Schedule a new task that will refresh the display once per second.
-                    timer.schedule(object : TimerTask() {
-                        override fun run() {
-                            invoke(ops)
-                        }
-                    }, 0, oneSecond)
+                val user = config.nodeConfig.rpcUsers[0]
+                val ops: CordaRPCOps = try {
+                    rpcClient.start(user.username, user.password).let { connection ->
+                        rpcConnection = connection
+                        connection.proxy
+                    }
                 } catch (e: Exception) {
                     log.warn("Node '{}' not ready yet (Error: {})", config.nodeConfig.myLegalName, e.message)
+                    return
                 }
+
+                // Cancel the "setup" task now that we've created the RPC client.
+                cancel()
+
+                // Run "start-up" task, now that the RPC client is ready.
+                start(config, ops)
+
+                // Schedule a new task that will refresh the display once per second.
+                timer.schedule(object : TimerTask() {
+                    override fun run() {
+                        invoke(ops)
+                    }
+                }, 0, oneSecond)
             }
         }
 
@@ -53,9 +62,11 @@ class NodeRPC(config: NodeConfigWrapper, start: (NodeConfigWrapper, CordaRPCOps)
     override fun close() {
         timer.cancel()
         try {
+            // No need to notify the node because it's also shutting down.
             rpcConnection?.forceClose()
         } catch (e: Exception) {
             log.error("Failed to close RPC connection (Error: {})", e.message)
         }
+        timerThread?.interrupt()
     }
 }
