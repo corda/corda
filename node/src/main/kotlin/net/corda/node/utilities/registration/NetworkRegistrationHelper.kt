@@ -97,9 +97,6 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
         onSuccess(keyPair, certificates)
         // All done, clean up temp files.
         requestIdStore.deleteIfExists()
-
-        println("Successfully registered Corda node with compatibility zone, node identity keys and certificates are stored in '${config.certificatesDirectory}', it is advised to backup the private keys and certificates.")
-        println("Corda node will now terminate.")
     }
 
     private fun validateCertificates(registeringPublicKey: PublicKey, certificates: List<X509Certificate>) {
