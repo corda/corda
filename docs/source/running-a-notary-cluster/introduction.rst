@@ -6,11 +6,11 @@ About the HA Notary Installation
 ================================
 
 In this chapter you'll learn how to set up, configure and start a highly
-available (HA) Corda Notary from scratch. If you're targeting an environment
-with doorman and network map, you require the registration tool. If you don't
-require the doorman and network map, and you don't want to join an existing
-network, the bootstrapper allows you to set up a cluster of nodes from a set of
-configuration files.
+available (HA) Corda Enterprise Notary from scratch. If you're targeting an
+environment with doorman and network map, you require the registration tool. If
+you don't require the doorman and network map, and you don't want to join an
+existing network, the bootstrapper allows you to set up a cluster of nodes from
+a set of configuration files.
 
 The HA Notary relies on a Percona/XtraDB (Percona) cluster. How to set up Percona
 is described below.
@@ -102,7 +102,7 @@ Prerequisites
 =============
 
 * Java runtime
-* Corda JAR
+* Corda Enterprise JAR
 * Notary Health-Check JAR
 * Bootstrapper JAR (only required when setting up network without doorman and network map)
 * Network Registration tool (only required when setting up a network with doorman and network map)

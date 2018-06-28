@@ -16,6 +16,14 @@ Install PMM Server on a single machine of your cluster.
 
 .. code:: sh
 
+   docker create \
+     -v /opt/prometheus/data \
+     -v /opt/consul-data \
+     -v /var/lib/mysql \
+     -v /var/lib/grafana \
+     --name pmm-data \
+     percona/pmm-server:latest /bin/true
+
    docker run -d \
      -p 80:80 \
      --volumes-from pmm-data \
