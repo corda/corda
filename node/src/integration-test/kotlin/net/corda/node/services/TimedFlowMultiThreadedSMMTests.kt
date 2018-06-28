@@ -69,7 +69,7 @@ class TimedFlowMultiThreadedSMMTests : IntegrationTest() {
                 portAllocation = RandomFree)) {
 
             val configOverrides = mapOf("flowTimeout" to mapOf(
-                    "timeout" to Duration.ofSeconds(1),
+                    "timeout" to Duration.ofSeconds(3),
                     "maxRestartCount" to 2,
                     "backoffBase" to 1.0
             ))
