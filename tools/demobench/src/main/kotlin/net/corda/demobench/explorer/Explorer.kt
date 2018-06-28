@@ -12,6 +12,7 @@ import net.corda.demobench.readErrorLines
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.util.concurrent.Executors
 
@@ -123,7 +124,7 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
 
 class ExplorerController : Controller() {
     private val jvm by inject<JVMConfig>()
-    private val explorerPath = jvm.applicationDir.resolve("explorer").resolve("node-explorer.jar")
+    private val explorerPath: Path = jvm.applicationDir.resolve("explorer").resolve("node-explorer.jar")
 
     init {
         log.info("Explorer JAR: $explorerPath")
