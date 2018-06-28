@@ -118,19 +118,21 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             if (value) field = value else throw IllegalArgumentException("Can only set to true")
         }
 
-     /**
+    /**
      * Processes an event by creating the associated transition and executing it using the given executor.
      * Try to avoid using this directly, instead use [processEventsUntilFlowIsResumed] or [processEventImmediately]
      * instead.
      */
     @Suspendable
     private fun processEvent(transitionExecutor: TransitionExecutor, event: Event): FlowContinuation {
+        setLoggingContext()
         val stateMachine = getTransientField(TransientValues::stateMachine)
         val oldState = transientState!!.value
         val actionExecutor = getTransientField(TransientValues::actionExecutor)
         val transition = stateMachine.transition(event, oldState)
         val (continuation, newState) = transitionExecutor.executeTransition(this, oldState, event, transition, actionExecutor)
         transientState = TransientReference(newState)
+        setLoggingContext()
         return continuation
     }
 
@@ -206,6 +208,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         context.pushToLoggingContext()
         MDC.put("flow-id", id.uuid.toString())
         MDC.put("fiber-id", this.getId().toString())
+        MDC.put("thread-id", Thread.currentThread().id.toString())
     }
 
     @Suspendable
@@ -363,6 +366,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val serializationContext = TransientReference(getTransientField(TransientValues::checkpointSerializationContext))
         val transaction = extractThreadLocalTransaction()
         parkAndSerialize { _, _ ->
+            setLoggingContext()
             logger.trace { "Suspended on $ioRequest" }
 
             // Will skip checkpoint if there are any idempotent flows in the subflow stack.
@@ -389,7 +393,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             require(continuation == FlowContinuation.ProcessEvents)
             unpark(SERIALIZER_BLOCKER)
         }
-        setLoggingContext()
         return uncheckedCast(processEventsUntilFlowIsResumed(
                 isDbTransactionOpenOnEntry = false,
                 isDbTransactionOpenOnExit = true
