@@ -230,11 +230,13 @@ absolute path to the node's base directory.
             .. note:: This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.
 
 :tlsCertCrlDistPoint: CRL distribution point (i.e. URL) for the TLS certificate. Default value is NULL, which indicates no CRL availability for the TLS certificate.
-                      Note: If crlCheckSoftFail is FALSE (meaning that there is the strict CRL checking mode) this value needs to be set.
+
+                      .. note:: This needs to be set if crlCheckSoftFail is false (i.e. strict CRL checking is on).
 
 :tlsCertCrlIssuer: CRL issuer (given in the X500 name format) for the TLS certificate. Default value is NULL,
                    which indicates that the issuer of the TLS certificate is also the issuer of the CRL.
-                   Note: If this parameter is set then the tlsCertCrlDistPoint needs to be set as well.
+
+                   .. note:: If this parameter is set then `tlsCertCrlDistPoint` needs to be set as well.
 
 :flowMonitorPeriodMillis: ``Duration`` of the period suspended flows waiting for IO are logged. Default value is ``60 seconds``.
 
@@ -281,3 +283,22 @@ This is an example of adding/overriding the keyStore password :
 .. sourcecode:: shell
 
     java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar
+
+CRL Configuration
+-----------------
+R3 provides an endpoint serving an empty certificate revocation list for the TLS-level certificates.
+This is intended for deployments that do not provide a CRL infrastructure but still require a strict CRL mode checking.
+In such a case use the following URL in `tlsCertCrlDistPoint` option configuration:
+
+    .. sourcecode:: kotlin
+
+        "https://crl.cordaconnect.org/cordatls.crl"
+
+Together with the above configuration `tlsCertCrlIssuer` option needs to be set to the following value:
+
+    .. sourcecode:: kotlin
+
+        "C=US, L=New York, O=R3 HoldCo LLC, OU=Corda, CN=Corda Root CA"
+
+This set-up ensures that the TLS-level certificates are embedded with the CRL distribution point referencing the CRL issued by R3.
+In cases where a proprietary CRL infrastructure is provided those values need to be changed accordingly.
