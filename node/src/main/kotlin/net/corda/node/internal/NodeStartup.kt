@@ -328,6 +328,13 @@ open class NodeStartup(val args: Array<String>) {
         println("*                                                                *")
         println("******************************************************************")
         NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
+
+        // Minimal changes to make registration tool create node identity.
+        // TODO: Move node identity generation logic from node to registration helper.
+        createNode(conf, getVersionInfo()).generateAndSaveNodeInfo()
+
+        println("Successfully registered Corda node with compatibility zone, node identity keys and certificates are stored in '${conf.certificatesDirectory}', it is advised to backup the private keys and certificates.")
+        println("Corda node will now terminate.")
     }
 
     protected open fun loadConfigFile(cmdlineOptions: CmdLineOptions): Pair<Config, Try<NodeConfiguration>> = cmdlineOptions.loadConfig()
