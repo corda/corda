@@ -1,12 +1,12 @@
 Welcome to Corda Enterprise 3.0!
 
-This is a distributon package containing a bundled JVM. This is the only supported build of Corda Enterprise, so
-please do not attempt to change the included JVM for a different one - JVM updates will be shipped part of the
+This is a distribution package containing a bundled JVM. This is the only supported build of Corda Enterprise, so
+please do not attempt to change the included JVM for a different one - JVM updates will be shipped as part of the
 regular Enterprise update cycle.
 
 Documentation: https://docs.corda.r3.com
 
-To start a node, please rename example-node.conf file and edit its contents so it contains appropriate data for
+To start a node, please rename the example-node.conf file and edit its contents so that it contains appropriate data for
 your organization. Learn more here: https://docs.corda.r3.com/corda-configuration-file.html
 
 Don't:
@@ -17,7 +17,7 @@ Don't:
 * Forget to set up database backups or replication.
 * Place your database physically far from the node.
 
-Your CordApps should be placed in cordapps directory, from which they will be loaded automatically.
+Your CorDapps should be placed in the cordapps directory, from which they will be loaded automatically.
 
 JDBC drivers can be placed in the drivers directory.
 
