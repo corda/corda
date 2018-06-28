@@ -290,7 +290,7 @@ To delete existing data from the database, run the following SQL:
 .. _postgres_ref:
 
 PostgreSQL
-````````````````````````
+``````````
 Corda has been tested on PostgreSQL 9.6 database, using PostgreSQL JDBC Driver 42.1.4.
 
 To set up a database schema, use the following SQL:
