@@ -50,7 +50,7 @@ data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val mess
 /**
  * This model exposes raw event streams to and from the node.
  */
-class NodeMonitorModel {
+class NodeMonitorModel : AutoCloseable {
 
     private val retryableStateMachineUpdatesSubject = PublishSubject.create<StateMachineUpdate>()
     private val stateMachineUpdatesSubject = PublishSubject.create<StateMachineUpdate>()
@@ -59,6 +59,7 @@ class NodeMonitorModel {
     private val stateMachineTransactionMappingSubject = PublishSubject.create<StateMachineTransactionMapping>()
     private val progressTrackingSubject = PublishSubject.create<ProgressTrackingEvent>()
     private val networkMapSubject = PublishSubject.create<MapChange>()
+    private var rpcConnection: CordaRPCConnection? = null
 
     val stateMachineUpdates: Observable<StateMachineUpdate> = stateMachineUpdatesSubject
     val vaultUpdates: Observable<Vault.Update<ContractState>> = vaultUpdatesSubject
@@ -93,6 +94,17 @@ class NodeMonitorModel {
      * And calling `CordaRPCOps.equals()` results in (unhandled) remote call.
      */
     class CordaRPCOpsWrapper(val cordaRPCOps: CordaRPCOps)
+
+    /**
+     * Disconnects from the Corda node for a clean client shutdown.
+     */
+    override fun close() {
+        try {
+            rpcConnection?.notifyServerAndClose()
+        } catch (e: Exception) {
+            logger.error("Error closing RPC connection to node", e)
+        }
+    }
 
     /**
      * Register for updates to/from a given vault.
@@ -155,9 +167,10 @@ class NodeMonitorModel {
     }
 
     private fun performRpcReconnect(nodeHostAndPort: NetworkHostAndPort, username: String, password: String, shouldRetry: Boolean): List<StateMachineInfo> {
-
-        val connection = establishConnectionWithRetry(nodeHostAndPort, username, password, shouldRetry)
-        val proxy = connection.proxy
+        val proxy = establishConnectionWithRetry(nodeHostAndPort, username, password, shouldRetry).let { connection ->
+            rpcConnection = connection
+            connection.proxy
+        }
 
         val (stateMachineInfos, stateMachineUpdatesRaw) = proxy.stateMachinesFeed()
 
@@ -172,7 +185,7 @@ class NodeMonitorModel {
                     // It is good idea to close connection to properly mark the end of it. During re-connect we will create a new
                     // client and a new connection, so no going back to this one. Also the server might be down, so we are
                     // force closing the connection to avoid propagation of notification to the server side.
-                    connection.forceClose()
+                    rpcConnection?.forceClose()
                     // Perform re-connect.
                     performRpcReconnect(nodeHostAndPort, username, password, shouldRetry = true)
                 })
@@ -185,18 +198,17 @@ class NodeMonitorModel {
     }
 
     private fun establishConnectionWithRetry(nodeHostAndPort: NetworkHostAndPort, username: String, password: String, shouldRetry: Boolean): CordaRPCConnection {
-
         val retryInterval = 5.seconds
 
+        val client = CordaRPCClient(
+            nodeHostAndPort,
+            CordaRPCClientConfiguration.DEFAULT.copy(
+                connectionMaxRetryInterval = retryInterval
+            )
+        )
         do {
             val connection = try {
                 logger.info("Connecting to: $nodeHostAndPort")
-                val client = CordaRPCClient(
-                        nodeHostAndPort,
-                        CordaRPCClientConfiguration.DEFAULT.copy(
-                                connectionMaxRetryInterval = retryInterval
-                        )
-                )
                 val _connection = client.start(username, password)
                 // Check connection is truly operational before returning it.
                 val nodeInfo = _connection.proxy.nodeInfo()
@@ -205,7 +217,7 @@ class NodeMonitorModel {
             } catch (throwable: Throwable) {
                 if (shouldRetry) {
                     // Deliberately not logging full stack trace as it will be full of internal stacktraces.
-                    logger.info("Exception upon establishing connection: " + throwable.message)
+                    logger.info("Exception upon establishing connection: {}", throwable.message)
                     null
                 } else {
                     throw throwable
