@@ -42,8 +42,6 @@ The most important fields regarding network configuration are:
   is the hostname *that must be externally resolvable by other nodes in the network*. In the above configuration this is the
   resolvable name of a machine in a VPN.
 * ``rpcAddress``: The address to which Artemis will bind for RPC calls.
-* ``webAddress``: The address the webserver should bind. Note that the port must be distinct from that of ``p2pAddress``
-  and ``rpcAddress`` if they are on the same machine.
 * ``notary.serviceLegalName``: The name of the notary service, required to setup distributed notaries with the network-bootstrapper.
 
 Starting the nodes
@@ -54,8 +52,6 @@ be found in :doc:`network-bootstrapper`.
 
 Once that's done you may now start the nodes in any order. You should see a banner, some log lines and eventually
 ``Node started up and registered``, indicating that the node is fully started.
-
-.. TODO: Add a better way of polling for startup. A programmatic way of determining whether a node is up is to check whether it's ``webAddress`` is bound.
 
 In terms of process management there is no prescribed method. You may start the jars by hand or perhaps use systemd and friends.
 
