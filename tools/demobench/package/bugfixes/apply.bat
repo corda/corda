@@ -29,14 +29,14 @@ if exist "%BUILDDIR%" rmdir /s /q "%BUILDDIR%"
 mkdir "%BUILDDIR%"
 
 for /r "%SOURCEDIR%" %%j in (*.java) do (
-    "%JAVA_HOME%\bin\javac" -O -d "%BUILDDIR%" "%%j"
+    javac -O -d "%BUILDDIR%" "%%j"
     if ERRORLEVEL 1 (
         @echo "Failed to compile %%j"
         exit /b 1
     )
 )
 
-"%JAVA_HOME%\bin\jar" uvf %1 -C "%BUILDDIR%" .
+jar uvf %1 -C "%BUILDDIR%" .
 if ERRORLEVEL 1 (
     @echo "Failed to update %1"
     exit /b 1

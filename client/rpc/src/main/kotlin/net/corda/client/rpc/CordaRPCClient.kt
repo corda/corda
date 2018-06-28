@@ -305,7 +305,7 @@ class CordaRPCClient private constructor(
             effectiveSerializationEnv
         } catch (e: IllegalStateException) {
             try {
-                AMQPClientSerializationScheme.initialiseSerialization(classLoader)
+                AMQPClientSerializationScheme.initialiseSerialization()
             } catch (e: IllegalStateException) {
                 // Race e.g. two of these constructed in parallel, ignore.
             }

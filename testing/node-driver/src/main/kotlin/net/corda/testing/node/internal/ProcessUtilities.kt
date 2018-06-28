@@ -11,16 +11,17 @@
 package net.corda.testing.node.internal
 
 import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import java.io.File.pathSeparator
 import java.nio.file.Path
 
 object ProcessUtilities {
     inline fun <reified C : Any> startJavaProcess(
             arguments: List<String>,
-            classpath: String = defaultClassPath,
             jdwpPort: Int? = null,
             extraJvmArguments: List<String> = emptyList()
     ): Process {
-        return startJavaProcessImpl(C::class.java.name, arguments, classpath, jdwpPort, extraJvmArguments, null, null)
+        return startJavaProcessImpl(C::class.java.name, arguments, defaultClassPath, jdwpPort, extraJvmArguments, null, null)
     }
 
     fun startCordaProcess(

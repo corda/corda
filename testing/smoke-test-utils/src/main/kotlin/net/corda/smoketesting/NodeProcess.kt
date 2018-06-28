@@ -18,7 +18,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.asContextEnv
-import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.common.internal.testNetworkParameters
 import java.io.File
 import java.nio.file.Path
@@ -76,15 +75,18 @@ class NodeProcess(
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
             val defaultNetworkParameters = run {
                 AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
-                    // TODO There are no notaries in the network parameters for smoke test nodes. If this is required then we would
+                    // There are no notaries in the network parameters for smoke test nodes. If this is required then we would
                     // need to introduce the concept of a "network" which predefines the notaries, like the driver and MockNetwork
                     NetworkParametersCopier(testNetworkParameters())
                 }
             }
 
             init {
-                checkNotOnClasspath("net.corda.node.Corda") {
-                    "Smoke test has the node in its classpath. Please remove the offending dependency."
+                try {
+                    Class.forName("net.corda.node.Corda")
+                    throw Error("Smoke test has the node in its classpath. Please remove the offending dependency.")
+                } catch (e: ClassNotFoundException) {
+                    // If the class can't be found then we're good!
                 }
             }
         }
