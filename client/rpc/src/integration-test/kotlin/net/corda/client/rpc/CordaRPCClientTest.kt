@@ -63,6 +63,10 @@ import kotlin.test.assertTrue
 class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
     companion object {
         val rpcUser = User("user1", "test", permissions = setOf(all()))
+
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
     }
 
     private lateinit var node: StartedNode<Node>
@@ -72,11 +76,6 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
 
     private fun login(username: String, password: String, externalTrace: Trace? = null, impersonatedActor: Actor? = null) {
         connection = client.start(username, password, externalTrace, impersonatedActor)
-    }
-    companion object {
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
     }
 
     @Before
