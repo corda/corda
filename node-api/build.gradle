@@ -89,6 +89,10 @@ shadowJar {
     baseName jar.baseName
     configurations = [project.configurations.shadow]
     classifier ""
+    // The 'LICENSE' file gets pulled in from multiple dependencies when generating the shadow JAR,
+    // and there's also a folder called 'license' being placed in the JAR. On case-insensitive file
+    // systems, the folder and file end up clashing, causing an error when trying to build the JAR.
+    relocate 'META-INF/LICENSE', 'META-INF/LICENCE-2'
     dependencies {
         include(dependency("org.apache.curator:curator-client:${curator_version}"))
         include(dependency("org.apache.curator:curator-recipes:${curator_version}"))
