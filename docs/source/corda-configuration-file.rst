@@ -286,7 +286,7 @@ This is an example of adding/overriding the keyStore password :
 
 CRL Configuration
 -----------------
-R3 provides an endpoint serving an empty certificate revocation list for the TLS-level certificates.
+The Corda Network provides an endpoint serving an empty certificate revocation list for the TLS-level certificates.
 This is intended for deployments that do not provide a CRL infrastructure but still require a strict CRL mode checking.
 In such a case use the following URL in `tlsCertCrlDistPoint` option configuration:
 
