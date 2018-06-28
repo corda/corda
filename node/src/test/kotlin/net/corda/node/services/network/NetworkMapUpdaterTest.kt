@@ -186,7 +186,7 @@ class NetworkMapUpdaterTest {
             sequence(
                     expect { update: ParametersUpdateInfo ->
                         assertEquals(update.updateDeadline, updateDeadline)
-                        assertEquals(update.description,"Test update")
+                        assertEquals(update.description, "Test update")
                         assertEquals(update.hash, newParameters.serialize().hash)
                         assertEquals(update.parameters, newParameters)
                     }
@@ -204,7 +204,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
         val newHash = newParameters.serialize().hash
         val keyPair = Crypto.generateKeyPair()
-        updater.acceptNewNetworkParameters(newHash, { hash -> hash.serialize().sign(keyPair)})
+        updater.acceptNewNetworkParameters(newHash, { hash -> hash.serialize().sign(keyPair) })
         verify(networkMapClient).ackNetworkParametersUpdate(any())
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
@@ -312,6 +312,39 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, never()).removeNode(myInfo)
         assertThat(nodeInfoMap.keys).containsOnly(signedOtherInfo.raw.hash)
         assertThat(networkMapCache.allNodeHashes).containsExactlyInAnyOrder(signedMyInfo.raw.hash, signedOtherInfo.raw.hash)
+    }
+
+    @Test
+    fun `network map updater removes the correct node info after node info changes`() {
+        setUpdater()
+
+        val builder = TestNodeInfoBuilder()
+
+        builder.addIdentity(CordaX500Name("Test", "London", "GB"))
+
+        val signedNodeInfo1 = builder.buildWithSigned(1).signed
+        val signedNodeInfo2 = builder.buildWithSigned(2).signed
+
+        // Test adding new node.
+        networkMapClient.publish(signedNodeInfo1)
+        // Not subscribed yet.
+        verify(networkMapCache, times(0)).addNode(any())
+
+        updater.subscribeToNetworkMap()
+
+        // TODO: Remove sleep in unit test.
+        Thread.sleep(2L * cacheExpiryMs)
+        verify(networkMapCache, times(1)).addNode(signedNodeInfo1.verified())
+        assert(networkMapCache.allNodeHashes.size == 1)
+        networkMapClient.publish(signedNodeInfo2)
+        nodeInfoMap.remove(signedNodeInfo1.raw.hash)
+        Thread.sleep(2L * cacheExpiryMs)
+        scheduler.advanceTimeBy(10, TimeUnit.SECONDS)
+
+        verify(networkMapCache, times(1)).addNode(signedNodeInfo2.verified())
+        verify(networkMapCache, times(1)).removeNode(signedNodeInfo1.verified())
+
+        assert(networkMapCache.allNodeHashes.size == 1)
     }
 
     private fun createMockNetworkMapCache(): NetworkMapCacheInternal {
