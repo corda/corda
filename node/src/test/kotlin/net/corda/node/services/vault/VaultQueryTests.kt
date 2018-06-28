@@ -1848,7 +1848,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST2")
-            sleep(1000)
+            services.clock.advanceBy(1.seconds)
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST3")
             // 2 unconsumed states with same external ID
 
