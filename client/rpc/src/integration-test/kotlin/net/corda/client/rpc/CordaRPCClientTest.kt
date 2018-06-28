@@ -10,36 +10,29 @@
 
 package net.corda.client.rpc
 
-import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.context.*
-import net.corda.core.contracts.FungibleAsset
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.flatMap
-import net.corda.core.internal.location
-import net.corda.core.internal.toPath
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.*
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
-import net.corda.finance.POUNDS
 import net.corda.finance.USD
-import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions.Companion.all
-import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.core.*
 import net.corda.testing.node.User
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.internal.NodeBasedTest
-import net.corda.testing.node.internal.ProcessUtilities
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
@@ -48,10 +41,6 @@ import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test
 import rx.subjects.PublishSubject
-import java.io.File.pathSeparator
-import java.net.URLClassLoader
-import java.nio.file.Paths
-import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -60,11 +49,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
-    companion object {
-        val rpcUser = User("user1", "test", permissions = setOf(all()))
-    }
-
+class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance.contracts", CashSchemaV1::class.packageName)) {
+    private val rpcUser = User("user1", "test", permissions = setOf(all())
+    )
     private lateinit var node: StartedNode<Node>
     private lateinit var identity: Party
     private lateinit var client: CordaRPCClient
@@ -83,7 +70,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
     override fun setUp() {
         super.setUp()
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address, CordaRPCClientConfiguration.DEFAULT.copy(
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!, CordaRPCClientConfiguration.DEFAULT.copy(
             maxReconnectAttempts = 5
         ))
         identity = node.info.identityFromX500Name(ALICE_NAME)
@@ -115,6 +102,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
 
     @Test
     fun `shutdown command stops the node`() {
+
         val nodeIsShut: PublishSubject<Unit> = PublishSubject.create()
         val latch = CountDownLatch(1)
         var successful = false
@@ -161,6 +149,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
     }
 
     private class CloseableExecutor(private val delegate: ScheduledExecutorService) : AutoCloseable, ScheduledExecutorService by delegate {
+
         override fun close() {
             delegate.shutdown()
         }
@@ -239,70 +228,19 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
             )
         }
     }
+}
 
-    // WireTransaction stores its components as blobs which are deserialised in its constructor. This test makes sure
-    // the extra class loader given to the CordaRPCClient is used in this deserialisation, as otherwise any WireTransaction
-    // containing Cash.State objects are not receivable by the client.
-    //
-    // We run the client in a separate process, without the finance module on its system classpath to ensure that the
-    // additional class loader that we give it is used. Cash.State objects are used as they can't be synthesised fully
-    // by the carpenter, and thus avoiding any false-positive results.
-    @Test
-    fun `additional class loader used by WireTransaction when it deserialises its components`() {
-        val financeLocation = Cash::class.java.location.toPath().toString()
-        val classpathWithoutFinance = ProcessUtilities.defaultClassPath
-                .split(pathSeparator)
-                .filter { financeLocation !in it }
-                .joinToString(pathSeparator)
+private fun checkShellNotification(info: StateMachineInfo) {
+    val context = info.invocationContext
+    assertThat(context.origin).isInstanceOf(InvocationOrigin.Shell::class.java)
+}
 
-        // Create a Cash.State object for the StandaloneCashRpcClient to get
-        node.services.startFlow(CashIssueFlow(100.POUNDS, OpaqueBytes.of(1), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
-        val outOfProcessRpc = ProcessUtilities.startJavaProcess<StandaloneCashRpcClient>(
-                classpath = classpathWithoutFinance,
-                arguments = listOf(node.internals.configuration.rpcOptions.address.toString(), financeLocation)
-        )
-        assertThat(outOfProcessRpc.waitFor()).isZero()  // i.e. no exceptions were thrown
-    }
-
-    private fun checkShellNotification(info: StateMachineInfo) {
-        val context = info.invocationContext
-        assertThat(context.origin).isInstanceOf(InvocationOrigin.Shell::class.java)
-    }
-
-    private fun checkRpcNotification(info: StateMachineInfo,
-                                     rpcUsername: String,
-                                     historicalIds: MutableSet<Trace.InvocationId>,
-                                     externalTrace: Trace?,
-                                     impersonatedActor: Actor?) {
-        val context = info.invocationContext
-        assertThat(context.origin).isInstanceOf(InvocationOrigin.RPC::class.java)
-        assertThat(context.externalTrace).isEqualTo(externalTrace)
-        assertThat(context.impersonatedActor).isEqualTo(impersonatedActor)
-        assertThat(context.actor?.id?.value).isEqualTo(rpcUsername)
-        assertThat(historicalIds).doesNotContain(context.trace.invocationId)
-        historicalIds.add(context.trace.invocationId)
-    }
-
-    private object StandaloneCashRpcClient {
-        @JvmStatic
-        fun main(args: Array<String>) {
-            checkNotOnClasspath("net.corda.finance.contracts.asset.Cash") {
-                "The finance module cannot be on the system classpath"
-            }
-            val address = NetworkHostAndPort.parse(args[0])
-            val financeClassLoader = URLClassLoader(arrayOf(Paths.get(args[1]).toUri().toURL()))
-            val rpcUser = CordaRPCClientTest.rpcUser
-            val client = createCordaRPCClientWithSslAndClassLoader(address, classLoader = financeClassLoader)
-            val state = client.use(rpcUser.username, rpcUser.password) {
-                // financeClassLoader should be allowing the Cash.State to materialise
-                @Suppress("DEPRECATION")
-                it.proxy.internalVerifiedTransactionsSnapshot()[0].tx.outputsOfType<FungibleAsset<*>>()[0]
-            }
-            assertThat(state.javaClass.name).isEqualTo("net.corda.finance.contracts.asset.Cash${'$'}State")
-            assertThat(state.amount.quantity).isEqualTo(10000)
-            assertThat(state.amount.token.product).isEqualTo(Currency.getInstance("GBP"))
-            // This particular check assures us that the Cash.State we have hasn't been carpented.
-            assertThat(state.participants).isEqualTo(listOf(state.owner))
-        }
-    }
+private fun checkRpcNotification(info: StateMachineInfo, rpcUsername: String, historicalIds: MutableSet<Trace.InvocationId>, externalTrace: Trace?, impersonatedActor: Actor?) {
+    val context = info.invocationContext
+    assertThat(context.origin).isInstanceOf(InvocationOrigin.RPC::class.java)
+    assertThat(context.externalTrace).isEqualTo(externalTrace)
+    assertThat(context.impersonatedActor).isEqualTo(impersonatedActor)
+    assertThat(context.actor?.id?.value).isEqualTo(rpcUsername)
+    assertThat(historicalIds).doesNotContain(context.trace.invocationId)
+    historicalIds.add(context.trace.invocationId)
 }

@@ -34,8 +34,9 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
          * Currently these are loaded from the classpath of the node which includes the cordapp directory - at some
          * point these will also be loaded and run from the attachment store directly, allowing contracts to be
          * sent across, and run, from the network from within a sandbox environment.
-         */
-        // TODO: Implement the contract sandbox loading of the contract attachments
+         *
+         * TODO: Implement the contract sandbox loading of the contract attachments
+         * */
         val contract: ContractClassName,
         /** Identity of the notary that ensures the state is not used as an input to a transaction more than once */
         val notary: Party,

@@ -11,7 +11,7 @@ if "%DIRNAME%" == "" set DIRNAME=.
 call %DIRNAME%\..\..\gradlew -PpackageType=exe javapackage %*
 if ERRORLEVEL 1 goto Fail
 @echo
-@echo Wrote installer to %DIRNAME%build\javapackage\bundles\
+@echo Wrote installer to %DIRNAME%\build\javapackage\bundles\
 @echo
 goto end
 
