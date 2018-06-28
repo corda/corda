@@ -49,7 +49,7 @@ class NodeMonitorModel : AutoCloseable {
     private val stateMachineTransactionMappingSubject = PublishSubject.create<StateMachineTransactionMapping>()
     private val progressTrackingSubject = PublishSubject.create<ProgressTrackingEvent>()
     private val networkMapSubject = PublishSubject.create<MapChange>()
-    private lateinit var rpcConnection: CordaRPCConnection
+    private var rpcConnection: CordaRPCConnection? = null
 
     val stateMachineUpdates: Observable<StateMachineUpdate> = stateMachineUpdatesSubject
     val vaultUpdates: Observable<Vault.Update<ContractState>> = vaultUpdatesSubject
@@ -89,12 +89,10 @@ class NodeMonitorModel : AutoCloseable {
      * Disconnects from the Corda node for a clean client shutdown.
      */
     override fun close() {
-        if (::rpcConnection.isInitialized) {
-            try {
-                rpcConnection.forceClose()
-            } catch (e: Exception) {
-                logger.error("Error closing RPC connection to node", e)
-            }
+        try {
+            rpcConnection?.forceClose()
+        } catch (e: Exception) {
+            logger.error("Error closing RPC connection to node", e)
         }
     }
 
@@ -159,8 +157,10 @@ class NodeMonitorModel : AutoCloseable {
     }
 
     private fun performRpcReconnect(nodeHostAndPort: NetworkHostAndPort, username: String, password: String, shouldRetry: Boolean): List<StateMachineInfo> {
-        rpcConnection = establishConnectionWithRetry(nodeHostAndPort, username, password, shouldRetry)
-        val proxy = rpcConnection.proxy
+        val proxy = establishConnectionWithRetry(nodeHostAndPort, username, password, shouldRetry).let { connection ->
+            rpcConnection = connection
+            connection.proxy
+        }
 
         val (stateMachineInfos, stateMachineUpdatesRaw) = proxy.stateMachinesFeed()
 
@@ -175,7 +175,7 @@ class NodeMonitorModel : AutoCloseable {
                     // It is good idea to close connection to properly mark the end of it. During re-connect we will create a new
                     // client and a new connection, so no going back to this one. Also the server might be down, so we are
                     // force closing the connection to avoid propagation of notification to the server side.
-                    rpcConnection.forceClose()
+                    rpcConnection?.forceClose()
                     // Perform re-connect.
                     performRpcReconnect(nodeHostAndPort, username, password, shouldRetry = true)
                 })
