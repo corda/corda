@@ -69,9 +69,6 @@ It's reproduced here as an example of both ways you can do this for a couple of 
    expression that will work with Corda is ``Runnable r = (Runnable & Serializable) () -> System.out.println("Hello World");``, or
    ``Callable<String> c = (Callable<String> & Serializable) () -> "Hello World";``.
 
-.. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are
-   likely.
-
 .. _amqp_ref:
 
 AMQP
@@ -83,8 +80,6 @@ Corda serialisation is currently used for:
 
     #.  Peer-to-peer networking.
     #.  Persisted messages, like signed transactions and states.
-
-.. note:: At present, the Kryo-based format is still used by the RPC framework on both the client and server side. However, it is planned that the RPC framework will move to the AMQP framework soon.
 
 For the checkpointing of flows Corda uses a private scheme that is subject to change. It is currently based on the Kryo
 framework, but this may not be true in future.
