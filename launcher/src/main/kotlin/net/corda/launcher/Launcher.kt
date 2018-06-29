@@ -9,17 +9,19 @@ import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
 
-    if(args.isEmpty()) {
+    if (args.isEmpty()) {
         println("Usage: launcher <main-class-name> [args]")
         exitProcess(0)
     }
 
     // TODO: --base-directory is specific of the Node app, it should be controllable by a config property
-    val nodeBaseDir = Paths.get(Settings.WORKING_DIR)
-            .resolve(getBaseDirectory(args) ?: ".")
+    // we must use this directory for loading classpath components
+    //but it must be resolved relative to the CWD the user has launched the script from as they may use a relative path
+    val nodeBaseDirFromArgs = Paths.get(Settings.WORKING_DIR)
+            .resolve(getBaseDirectoryFromArgs(args) ?: ".")
             .toAbsolutePath()
 
-    val appClassLoader = setupClassLoader(nodeBaseDir)
+    val appClassLoader = setupClassLoader(nodeBaseDirFromArgs)
 
     val appMain = try {
         appClassLoader
@@ -39,12 +41,28 @@ fun main(args: Array<String>) {
     // e.g. if JDBC driver was not found, remove once Corda started by Capsule is no longer in use
     System.setProperty("corda-distribution.tarball", "true")
 
+    val argsWithBaseDir = fixBaseDirArg(args, nodeBaseDirFromArgs)
+
     try {
-        appMain.invoke(null, args.sliceArray(1..args.lastIndex))
+        appMain.invoke(null, argsWithBaseDir.sliceArray(1..argsWithBaseDir.lastIndex))
     } catch (e: Exception) {
         e.printStackTrace()
         exitProcess(1)
     }
+}
+
+@Suppress("unchecked")
+private fun fixBaseDirArg(args: Array<String>, nodeBaseDirFromArgs: Path): Array<String> {
+    val baseDirIdx = args.indexOf("--base-directory")
+    if (baseDirIdx != -1){
+        args[baseDirIdx+1] = nodeBaseDirFromArgs.toString()
+        return args
+    }
+
+    val argsWithBaseDir = args.copyOf(args.size + 2)
+    argsWithBaseDir[argsWithBaseDir.lastIndex - 1] = "--base-directory"
+    argsWithBaseDir[argsWithBaseDir.lastIndex] = nodeBaseDirFromArgs.toString()
+    return argsWithBaseDir as Array<String>
 }
 
 private fun setupClassLoader(nodeBaseDir: Path): ClassLoader {
@@ -53,7 +71,7 @@ private fun setupClassLoader(nodeBaseDir: Path): ClassLoader {
     val appClassLoader = (sysClassLoader as? Loader) ?: {
         println("WARNING: failed to override system classloader")
         Loader(sysClassLoader)
-    } ()
+    }()
 
     // Lookup plugins and extend classpath
     val pluginURLs = Settings.PLUGINS.flatMap {
@@ -73,12 +91,13 @@ private fun setupClassLoader(nodeBaseDir: Path): ClassLoader {
     return appClassLoader
 }
 
-private fun getBaseDirectory(args: Array<String>): String? {
+private fun getBaseDirectoryFromArgs(args: Array<String>): String? {
     val idx = args.indexOf("--base-directory")
     return if (idx != -1 && idx < args.lastIndex) {
         args[idx + 1]
     } else null
 }
+
 
 private fun Path.jarFiles(): List<Path> {
     return Files.newDirectoryStream(this).filter { it.toString().endsWith(".jar") }
