@@ -53,7 +53,7 @@ buildscript {
     ext.crash_version = 'cadb53544fbb3c0fb901445da614998a6a419488'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.0'
-    ext.shadow_version = '2.0.2'
+    ext.shadow_version = '2.0.4'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
