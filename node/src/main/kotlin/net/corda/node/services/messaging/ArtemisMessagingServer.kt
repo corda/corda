@@ -13,14 +13,18 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pAcceptorTcpTransport
 import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
 import net.corda.nodeapi.internal.ArtemisMessageSizeChecksInterceptor
+import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.JOURNAL_HEADER_SIZE
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.requireOnDefaultFileSystem
+import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.Configuration
+import org.apache.activemq.artemis.core.config.CoreAddressConfiguration
+import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
 import org.apache.activemq.artemis.core.security.Role
@@ -29,6 +33,7 @@ import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import java.io.IOException
 import java.security.KeyStoreException
+import java.security.PublicKey
 import javax.annotation.concurrent.ThreadSafe
 import javax.security.auth.login.AppConfigurationEntry
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.REQUIRED
@@ -49,7 +54,8 @@ import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.RE
 @ThreadSafe
 class ArtemisMessagingServer(private val config: NodeConfiguration,
                              private val messagingServerAddress: NetworkHostAndPort,
-                             private val maxMessageSize: Int) : ArtemisBroker, SingletonSerializeAsToken() {
+                             private val maxMessageSize: Int,
+                             private val identities: List<PublicKey> = emptyList()) : ArtemisBroker, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
     }
@@ -105,29 +111,47 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         log.info("P2P messaging server listening on $messagingServerAddress")
     }
 
-    private fun createArtemisConfig() = SecureArtemisConfiguration().apply {
-        val artemisDir = config.baseDirectory / "artemis"
-        bindingsDirectory = (artemisDir / "bindings").toString()
-        journalDirectory = (artemisDir / "journal").toString()
-        largeMessagesDirectory = (artemisDir / "large-messages").toString()
-        acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config))
-        // Enable built in message deduplication. Note we still have to do our own as the delayed commits
-        // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
-        idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
-        isPersistIDCache = true
-        isPopulateValidatedUser = true
-        journalBufferSize_NIO = maxMessageSize + JOURNAL_HEADER_SIZE // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
-        journalBufferSize_AIO = maxMessageSize + JOURNAL_HEADER_SIZE // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
-        journalFileSize = maxMessageSize + JOURNAL_HEADER_SIZE// The size of each journal file in bytes. Artemis default is 10MiB.
-        managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
-
-        // JMX enablement
-        if (config.jmxMonitoringHttpPort != null) {
-            isJMXManagementEnabled = true
-            isJMXUseBrokerName = true
+    private fun createArtemisConfig(): Configuration {
+        val addressConfigs = identities.map {
+            val queueName = ArtemisMessagingComponent.RemoteInboxAddress(it).queueName
+            log.info("Configuring address $queueName")
+            val queueConfig = CoreQueueConfiguration().apply {
+                address = queueName
+                name = queueName
+                routingType = RoutingType.ANYCAST
+                isExclusive = true
+            }
+            CoreAddressConfiguration().apply {
+                name = queueName
+                queueConfigurations = listOf(queueConfig)
+                addRoutingType(RoutingType.ANYCAST)
+            }
         }
+        return SecureArtemisConfiguration().apply {
+            val artemisDir = config.baseDirectory / "artemis"
+            bindingsDirectory = (artemisDir / "bindings").toString()
+            journalDirectory = (artemisDir / "journal").toString()
+            largeMessagesDirectory = (artemisDir / "large-messages").toString()
+            acceptorConfigurations = mutableSetOf(p2pAcceptorTcpTransport(NetworkHostAndPort(messagingServerAddress.host, messagingServerAddress.port), config))
+            // Enable built in message deduplication. Note we still have to do our own as the delayed commits
+            // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
+            idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
+            isPersistIDCache = true
+            isPopulateValidatedUser = true
+            journalBufferSize_NIO = maxMessageSize + JOURNAL_HEADER_SIZE // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
+            journalBufferSize_AIO = maxMessageSize + JOURNAL_HEADER_SIZE // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
+            journalFileSize = maxMessageSize + JOURNAL_HEADER_SIZE// The size of each journal file in bytes. Artemis default is 10MiB.
+            managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
+            addressConfigurations = addressConfigs
 
-    }.configureAddressSecurity()
+            // JMX enablement
+            if (config.jmxMonitoringHttpPort != null) {
+                isJMXManagementEnabled = true
+                isJMXUseBrokerName = true
+            }
+
+        }.configureAddressSecurity()
+    }
 
     /**
      * Authenticated clients connecting to us fall in one of the following groups:

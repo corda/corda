@@ -94,6 +94,7 @@ class DriverDSLImpl(
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean
 ) : InternalDriverDSL {
+
     private var _executorService: ScheduledExecutorService? = null
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
@@ -669,6 +670,12 @@ class DriverDSLImpl(
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
             val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, cordappPackages, maximumHeapSize)
+
+            // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
+            // true because we don't want orphaned processes in the case that the parent process is terminated by the
+            // user, for example when the `tools:explorer:runDemoNodes` gradle task is stopped with CTRL-C.
+            shutdownManager.registerProcessShutdown(process)
+
             if (waitForAllNodesToFinish) {
                 state.locked {
                     processes += object : Waitable {
@@ -677,8 +684,6 @@ class DriverDSLImpl(
                         }
                     }
                 }
-            } else {
-                shutdownManager.registerProcessShutdown(process)
             }
             val p2pReadyFuture = addressMustBeBoundFuture(executorService, config.corda.p2pAddress, process)
             return p2pReadyFuture.flatMap {
@@ -750,6 +755,7 @@ class DriverDSLImpl(
                 Permissions.invokeRpc(CordaRPCOps::stateMachineRecordedTransactionMappingFeed),
                 Permissions.invokeRpc(CordaRPCOps::nodeInfoFromParty),
                 Permissions.invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
+                Permissions.invokeRpc(CordaRPCOps::internalFindVerifiedTransaction),
                 Permissions.invokeRpc("vaultQueryBy"),
                 Permissions.invokeRpc("vaultTrackBy"),
                 Permissions.invokeRpc(CordaRPCOps::registeredFlows)

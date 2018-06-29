@@ -42,7 +42,7 @@ class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
 
     private companion object {
-        val pageSpecification = PageSpecification(1, 1)
+        private val pageSpecification = PageSpecification(1, 1)
     }
 
     private val nodeController by inject<NodeController>()
@@ -86,7 +86,7 @@ class NodeTerminalView : Fragment() {
         root.children.add(stack)
         root.isVisible = true
 
-        SwingUtilities.invokeLater({
+        SwingUtilities.invokeLater {
             val r3pty = R3Pty(config.nodeConfig.myLegalName, TerminalSettingsProvider(), Dimension(160, 80), onExit)
             pty = r3pty
 
@@ -112,7 +112,7 @@ class NodeTerminalView : Fragment() {
                     rpc?.close()
                 }
             }
-        })
+        }
     }
 
     /*
@@ -181,9 +181,9 @@ class NodeTerminalView : Fragment() {
     }
 
     private fun launchRPC(config: NodeConfigWrapper) = NodeRPC(
-            config = config,
-            start = this::initialise,
-            invoke = this::pollCashBalances
+        config = config,
+        start = ::initialise,
+        invoke = ::pollCashBalances
     )
 
     private fun initialise(config: NodeConfigWrapper, ops: CordaRPCOps) {
@@ -234,8 +234,8 @@ class NodeTerminalView : Fragment() {
     private fun pollCashBalances(ops: CordaRPCOps) {
         try {
             val cashBalances = ops.getCashBalances().entries.joinToString(
-                    separator = ", ",
-                    transform = { e -> e.value.toString() }
+                separator = ", ",
+                transform = { e -> e.value.toString() }
             )
 
             Platform.runLater {
@@ -252,21 +252,18 @@ class NodeTerminalView : Fragment() {
         header.isDisable = true
         subscriptions.forEach {
             // Don't allow any exceptions here to halt tab destruction.
-            try {
-                it.unsubscribe()
-            } catch (e: Exception) {
-            }
+            ignoreExceptions { it.unsubscribe() }
         }
-        webServer.close()
-        explorer.close()
-        viewer.close()
-        rpc?.close()
+        ignoreExceptions { webServer.close() }
+        ignoreExceptions { explorer.close() }
+        ignoreExceptions { viewer.close() }
+        ignoreExceptions { rpc?.close() }
     }
 
     fun destroy() {
         if (!isDestroyed) {
             shutdown()
-            pty?.close()
+            ignoreExceptions { pty?.close() }
             isDestroyed = true
         }
     }
@@ -277,6 +274,10 @@ class NodeTerminalView : Fragment() {
         Platform.runLater {
             swingTerminal.requestFocus()
         }
+    }
+
+    private fun ignoreExceptions(op: () -> Unit) {
+        try { op() } catch (e: Exception) {}
     }
 
     class TerminalSettingsProvider : DefaultSettingsProvider() {

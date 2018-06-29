@@ -1,6 +1,5 @@
 apply plugin: 'kotlin'
 apply plugin: 'java'
-apply plugin: 'application'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'com.jfrog.artifactory'
@@ -61,7 +60,7 @@ dependencies {
     // Manifests: for reading stuff from the manifest file.
     compile "com.jcabi:jcabi-manifests:1.1"
     
-    // For logging.
+    // For logging, required for ANSIProgressRenderer.
     compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
 
     // Unit testing helpers.
@@ -80,19 +79,13 @@ dependencies {
     integrationTestCompile project(':node-driver')
 }
 
-mainClassName = 'net.corda.tools.shell.StandaloneShellKt'
-
-jar {
-    baseName 'corda-shell'
-}
-
-processResources {
-    from file("$rootDir/config/dev/log4j2.xml")
-}
-
 task integrationTest(type: Test) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+jar {
+    baseName 'corda-shell'
 }
 
 publish {

@@ -11,6 +11,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.TrustedAuthorityNotaryService
 import net.corda.core.internal.notary.UniquenessProvider
@@ -19,11 +20,12 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.CordaService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.StartedNode
+import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
@@ -42,7 +44,10 @@ import org.junit.BeforeClass
 import org.junit.Test
 import org.slf4j.MDC
 import java.security.PublicKey
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertNotEquals
 
 class TimedFlowTests {
     companion object {
@@ -131,8 +136,13 @@ class TimedFlowTests {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             val flow = NotaryFlow.Client(issueTx)
+            val progressTracker = flow.progressTracker
+            assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
+            val progressTrackerDone = getDoneFuture(progressTracker)
+
             val notarySignatures = services.startFlow(flow).resultFuture.get()
             (issueTx + notarySignatures).verifyRequiredSignatures()
+            progressTrackerDone.get()
         }
     }
 
@@ -144,8 +154,13 @@ class TimedFlowTests {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
             val flow = FinalityFlow(issueTx)
+            val progressTracker = flow.progressTracker
+            assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
+            val progressTrackerDone = getDoneFuture(flow.progressTracker)
+
             val stx = services.startFlow(flow).resultFuture.get()
             stx.verifyRequiredSignatures()
+            progressTrackerDone.get()
         }
     }
 
@@ -156,6 +171,13 @@ class TimedFlowTests {
                     block()
                 }
         )
+    }
+
+    /** Returns a future that completes when the [progressTracker] reaches the [ProgressTracker.DONE] step. */
+    private fun getDoneFuture(progressTracker: ProgressTracker): Future<ProgressTracker.Change> {
+        return progressTracker.changes.takeFirst {
+            it.progressTracker.currentStep == ProgressTracker.DONE
+        }.bufferUntilSubscribed().toBlocking().toFuture()
     }
 
     @CordaService

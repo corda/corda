@@ -4,14 +4,15 @@ import com.google.common.collect.ImmutableList;
 import net.corda.core.contracts.ContractState;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.serialization.internal.AllWhitelist;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
-import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import java.io.NotSerializableException;
 import java.util.List;
+
+import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OuterClass1 {
     protected SerializationOutput ser;
@@ -19,13 +20,9 @@ class OuterClass1 {
     DeserializationInput desRegen;
 
     OuterClass1() {
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+        SerializerFactory factory1 = testDefaultFactory();
 
-        SerializerFactory factory2 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+        SerializerFactory factory2 = testDefaultFactory();
 
         this.ser = new SerializationOutput(factory1);
         this.desExisting = new DeserializationInput(factory1);
@@ -59,13 +56,9 @@ class OuterClass2 {
     DeserializationInput desRegen;
 
     OuterClass2() {
-        SerializerFactory factory1 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+        SerializerFactory factory1 = testDefaultFactory();
 
-        SerializerFactory factory2 = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+        SerializerFactory factory2 = testDefaultFactory();
 
         this.ser = new SerializationOutput(factory1);
         this.desExisting = new DeserializationInput(factory1);
@@ -104,9 +97,7 @@ abstract class AbstractClass2 {
     protected SerializationOutput ser;
 
     AbstractClass2() {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+        SerializerFactory factory = testDefaultFactory();
 
         this.ser = new SerializationOutput(factory);
     }
@@ -134,9 +125,7 @@ abstract class AbstractClass3 {
 
 class Inherator5 extends AbstractClass3 {
     public void run() throws NotSerializableException {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+        SerializerFactory factory = testDefaultFactory();
 
         SerializationOutput ser = new SerializationOutput(factory);
         ser.serialize(new DummyState(), TestSerializationContext.testSerializationContext);
@@ -154,9 +143,7 @@ class Inherator6 extends AbstractClass3 {
     }
 
     public void run() throws NotSerializableException {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+        SerializerFactory factory = testDefaultFactory();
 
         SerializationOutput ser = new SerializationOutput(factory);
         ser.serialize(new Wrapper(new DummyState()), TestSerializationContext.testSerializationContext);
@@ -166,57 +153,57 @@ class Inherator6 extends AbstractClass3 {
 public class JavaNestedClassesTests {
     @Test
     public void publicNested() {
-        Assertions.assertThatThrownBy(() -> new OuterClass1().run()).isInstanceOf(
+        assertThatThrownBy(() -> new OuterClass1().run()).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }
 
     @Test
     public void privateNested() {
-        Assertions.assertThatThrownBy(() -> new OuterClass2().run()).isInstanceOf(
+        assertThatThrownBy(() -> new OuterClass2().run()).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }
 
     @Test
     public void publicNestedInherited() {
-        Assertions.assertThatThrownBy(() -> new Inherator1().run()).isInstanceOf(
+        assertThatThrownBy(() -> new Inherator1().run()).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
 
-        Assertions.assertThatThrownBy(() -> new Inherator1().iRun()).isInstanceOf(
+        assertThatThrownBy(() -> new Inherator1().iRun()).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }
 
     @Test
     public void protectedNestedInherited() {
-        Assertions.assertThatThrownBy(() -> new Inherator2().run()).isInstanceOf(
+        assertThatThrownBy(() -> new Inherator2().run()).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
 
-        Assertions.assertThatThrownBy(() -> new Inherator2().iRun()).isInstanceOf(
+        assertThatThrownBy(() -> new Inherator2().iRun()).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }
 
     @Test
     public void abstractNested() {
-        Assertions.assertThatThrownBy(() -> new Inherator4().run()).isInstanceOf(
+        assertThatThrownBy(() -> new Inherator4().run()).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }
 
     @Test
     public void abstractNestedFactoryOnNested() {
-        Assertions.assertThatThrownBy(() -> new Inherator5().run()).isInstanceOf(
+        assertThatThrownBy(() -> new Inherator5().run()).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }
 
     @Test
     public void abstractNestedFactoryOnNestedInWrapper() {
-        Assertions.assertThatThrownBy(() -> new Inherator6().run()).isInstanceOf(
+        assertThatThrownBy(() -> new Inherator6().run()).isInstanceOf(
                 NotSerializableException.class).hasMessageContaining(
                 "has synthetic fields and is likely a nested inner class");
     }

@@ -107,6 +107,8 @@ internal class CordaRPCOpsImpl(
         return snapshot
     }
 
+    override fun internalFindVerifiedTransaction(txnId: SecureHash): SignedTransaction? = services.validatedTransactions.getTransaction(txnId)
+
     @Suppress("OverridingDeprecatedMember")
     override fun internalVerifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return services.validatedTransactions.track()

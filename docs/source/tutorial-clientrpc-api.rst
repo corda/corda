@@ -48,7 +48,7 @@ Observables are described in further detail in :doc:`clientrpc`
 The graph will be defined as follows:
 
 * Each transaction is a vertex, represented by printing ``NODE <txhash>``
-* Each input-output relationship is an edge, represented by prining ``EDGE <txhash> <txhash>``
+* Each input-output relationship is an edge, represented by printing ``EDGE <txhash> <txhash>``
 
 .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/ClientRpcTutorial.kt
     :language: kotlin

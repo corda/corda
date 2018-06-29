@@ -1,13 +1,14 @@
 package net.corda.serialization.internal.amqp;
 
-import net.corda.serialization.internal.AllWhitelist;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 import java.io.NotSerializableException;
 import java.lang.reflect.Field;
 import java.util.Map;
+
+import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
+import static org.junit.Assert.*;
 
 public class JavaPrivatePropertyTests {
     static class C {
@@ -76,10 +77,8 @@ public class JavaPrivatePropertyTests {
     }
 
     @Test
-    public void singlePrivateBooleanWithConstructor() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+    public void singlePrivateBooleanWithConstructor() throws NotSerializableException {
+        SerializerFactory factory = testDefaultFactory();
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
 
@@ -89,10 +88,8 @@ public class JavaPrivatePropertyTests {
     }
 
     @Test
-    public void singlePrivateBooleanWithNoConstructor() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+    public void singlePrivateBooleanWithNoConstructor() throws NotSerializableException {
+        SerializerFactory factory = testDefaultFactory();
 
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
@@ -104,10 +101,8 @@ public class JavaPrivatePropertyTests {
     }
 
     @Test
-    public void testCapitilsationOfIs() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+    public void testCapitilsationOfIs() throws NotSerializableException {
+        SerializerFactory factory = testDefaultFactory();
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
 
@@ -120,10 +115,8 @@ public class JavaPrivatePropertyTests {
     }
 
     @Test
-    public void singlePrivateIntWithBoolean() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+    public void singlePrivateIntWithBoolean() throws NotSerializableException {
+        SerializerFactory factory = testDefaultFactory();
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
 
@@ -136,9 +129,7 @@ public class JavaPrivatePropertyTests {
 
     @Test
     public void singlePrivateWithConstructor() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE, ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+        SerializerFactory factory = testDefaultFactory();
 
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
@@ -166,10 +157,7 @@ public class JavaPrivatePropertyTests {
     @Test
     public void singlePrivateWithConstructorAndGetter()
             throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        SerializerFactory factory = new SerializerFactory(AllWhitelist.INSTANCE,
-                ClassLoader.getSystemClassLoader(),
-                new EvolutionSerializerGetter(),
-                new SerializerFingerPrinter());
+        SerializerFactory factory = testDefaultFactory();
 
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);

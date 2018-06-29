@@ -1,5 +1,6 @@
 package net.corda.core.messaging
 
+import net.corda.core.CordaInternal
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.ContractState
@@ -193,6 +194,15 @@ interface CordaRPCOps : RPCOps {
      */
     @Deprecated("This method is intended only for internal use and will be removed from the public API soon.")
     fun internalVerifiedTransactionsSnapshot(): List<SignedTransaction>
+
+    /**
+     * @suppress Returns the full transaction for the provided ID
+     *
+     * TODO This method should be removed once SGX work is finalised and the design of the corresponding API using [FilteredTransaction] can be started
+     */
+    @CordaInternal
+    @Deprecated("This method is intended only for internal use and will be removed from the public API soon.")
+    fun internalFindVerifiedTransaction(txnId: SecureHash): SignedTransaction?
 
     /**
      * @suppress Returns a data feed of all recorded transactions and an observable of future recorded ones.

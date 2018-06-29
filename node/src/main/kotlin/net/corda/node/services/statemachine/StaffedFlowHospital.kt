@@ -206,8 +206,8 @@ class StaffedFlowHospital {
                 if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this)) {
                     return Diagnosis.DISCHARGE
                 } else {
-                    val errorMsg = "Maximum number of retries reached for flow ${flowFiber.snapshot().flowLogic.javaClass}." +
-                            "If the flow involves notarising a transaction, this usually means that the notary is being overloaded and" +
+                    val errorMsg = "Maximum number of retries reached for flow ${flowFiber.snapshot().flowLogic.javaClass}. " +
+                            "If the flow involves notarising a transaction, this usually means that the notary is being overloaded and " +
                             "unable to service requests fast enough. Please try again later."
                     newError.setMessage(errorMsg)
                     log.warn(errorMsg)

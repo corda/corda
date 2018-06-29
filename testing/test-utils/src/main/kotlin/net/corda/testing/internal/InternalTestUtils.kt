@@ -1,6 +1,5 @@
 package net.corda.testing.internal
 
-import com.nhaarman.mockito_kotlin.doAnswer
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
@@ -19,7 +18,6 @@ import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
-import java.security.cert.X509Certificate
 import javax.security.auth.x500.X500Principal
 
 @Suppress("unused")
@@ -140,25 +138,4 @@ fun createNodeSslConfig(path: Path, name: CordaX500Name = CordaX500Name("MegaCor
     trustStore.save(sslConfig.trustStoreFile, sslConfig.trustStorePassword)
 
     return sslConfig
-}
-
-fun createKeyPairAndSelfSignedCertificate(): Pair<KeyPair, X509Certificate> {
-    val rpcKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-    val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
-    val selfSignCert = X509Utilities.createSelfSignedCACertificate(testName, rpcKeyPair)
-    return Pair(rpcKeyPair, selfSignCert)
-}
-
-fun saveToKeyStore(keyStorePath: Path, rpcKeyPair: KeyPair, selfSignCert: X509Certificate, password: String = "password"): Path {
-    val keyStore = loadOrCreateKeyStore(keyStorePath, password)
-    keyStore.addOrReplaceKey("Key", rpcKeyPair.private, password.toCharArray(), arrayOf(selfSignCert))
-    keyStore.save(keyStorePath, password)
-    return keyStorePath
-}
-
-fun saveToTrustStore(trustStorePath: Path, selfSignCert: X509Certificate, password: String = "password"): Path {
-    val trustStore = loadOrCreateKeyStore(trustStorePath, password)
-    trustStore.addOrReplaceCertificate("Key", selfSignCert)
-    trustStore.save(trustStorePath, password)
-    return trustStorePath
 }

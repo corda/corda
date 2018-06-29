@@ -50,7 +50,7 @@ Note the following:
 * a vault update API is internally used by transaction recording flows.
 * the vault database schemas are directly accessible via JDBC for customer joins and queries
 
-Section 8 of the `Technical white paper`_ describes features of the vault yet to be implemented including private key managament, state splitting and merging, asset re-issuance and node event scheduling.
+Section 8 of the `Technical white paper`_ describes features of the vault yet to be implemented including private key management, state splitting and merging, asset re-issuance and node event scheduling.
 
 .. _`Technical white paper`: _static/corda-technical-whitepaper.pdf
 

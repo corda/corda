@@ -2,14 +2,12 @@ package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
 import net.corda.core.crypto.Crypto
-import net.corda.core.internal.Emoji
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
 import net.corda.node.CmdLineOptions
@@ -18,13 +16,18 @@ import net.corda.node.NodeRegistrationOption
 import net.corda.node.SerialFilter
 import net.corda.node.VersionInfo
 import net.corda.node.defaultSerialFilter
+import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
+import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
+import net.corda.node.utilities.saveToKeyStore
+import net.corda.node.utilities.saveToTrustStore
+import net.corda.node.utilities.registration.UnableToRegisterNodeWithDoormanException
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -33,12 +36,14 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.bridge.SLF4JBridgeHandler
 import sun.misc.VMSupport
+import java.io.Console
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
+import kotlin.system.exitProcess
 
 /** This class is responsible for starting a Node from command line arguments. */
 open class NodeStartup(val args: Array<String>) {
@@ -102,8 +107,16 @@ open class NodeStartup(val args: Array<String>) {
         } catch (e: UnknownConfigurationKeysException) {
             logger.error(e.message)
             return false
+        } catch (e: ConfigException.IO) {
+            println("""
+                Unable to load the node config file from '${cmdlineOptions.configFile}'.
+
+                Try experimenting with the --base-directory flag to change which directory the node
+                is looking in, or use the --config-file flag to specify it explicitly.
+            """.trimIndent())
+            return false
         } catch (e: Exception) {
-            logger.error("Exception during node configuration", e)
+            logger.error("Unexpected error whilst reading node configuration", e)
             return false
         }
         val errors = conf.validate()
@@ -121,6 +134,9 @@ open class NodeStartup(val args: Array<String>) {
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
+        } catch (e: UnableToRegisterNodeWithDoormanException) {
+            logger.warn("Node registration service is unavailable. Perhaps try to perform the initial registration again after a while.")
+            return false
         } catch (e: Exception) {
             logger.error("Exception during node registration", e)
             return false
@@ -129,6 +145,9 @@ open class NodeStartup(val args: Array<String>) {
         try {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: MultipleCordappsForFlowException) {
+            logger.error(e.message)
+            return false
         } catch (e: CouldNotCreateDataSourceException) {
             logger.error(e.message, e.cause)
             return false
@@ -168,6 +187,70 @@ open class NodeStartup(val args: Array<String>) {
             node.generateAndSaveNodeInfo()
             return
         }
+        if (cmdlineOptions.justGenerateRpcSslCerts) {
+            val (keyPair, cert) = createKeyPairAndSelfSignedTLSCertificate(conf.myLegalName.x500Principal)
+
+            val keyStorePath = conf.baseDirectory / "certificates" / "rpcsslkeystore.jks"
+            val trustStorePath = conf.baseDirectory / "certificates" / "export" / "rpcssltruststore.jks"
+
+            if (keyStorePath.exists() || trustStorePath.exists()) {
+                println("Found existing RPC SSL keystores. Command was already run. Exiting..")
+                exitProcess(0)
+            }
+
+            val console: Console? = System.console()
+
+            when (console) {
+            // In this case, the JVM is not connected to the console so we need to exit
+                null -> {
+                    println("Not connected to console. Exiting")
+                    exitProcess(1)
+                }
+            // Otherwise we can proceed normally
+                else -> {
+                    while (true) {
+                        val keystorePassword1 = console.readPassword("Enter the keystore password => ")
+                        val keystorePassword2 = console.readPassword("Re-enter the keystore password => ")
+                        if (!keystorePassword1.contentEquals(keystorePassword2)) {
+                            println("The keystore passwords don't match.")
+                            continue
+                        }
+                        saveToKeyStore(keyStorePath, keyPair, cert, String(keystorePassword1), "rpcssl")
+                        println("The keystore was saved to: $keyStorePath .")
+                        break
+                    }
+
+                    while (true) {
+                        val trustStorePassword1 = console.readPassword("Enter the truststore password => ")
+                        val trustStorePassword2 = console.readPassword("Re-enter the truststore password => ")
+                        if (!trustStorePassword1.contentEquals(trustStorePassword2)) {
+                            println("The truststore passwords don't match.")
+                            continue
+                        }
+
+                        saveToTrustStore(trustStorePath, cert, String(trustStorePassword1), "rpcssl")
+                        println("The truststore was saved to: $trustStorePath .")
+                        println("You need to distribute this file along with the password in a secure way to all RPC clients.")
+                        break
+                    }
+
+                    val dollar = '$'
+                    println("""
+                        |
+                        |The SSL certificates were generated successfully.
+                        |
+                        |Add this snippet to the "rpcSettings" section of your node.conf:
+                        |       useSsl=true
+                        |       ssl {
+                        |           keyStorePath=$dollar{baseDirectory}/certificates/rpcsslkeystore.jks
+                        |           keyStorePassword=the_above_password
+                        |       }
+                        |""".trimMargin())
+                }
+            }
+            return
+        }
+
         val startedNode = node.start()
         Node.printBasicNodeInfo("Loaded CorDapps", startedNode.services.cordappProvider.cordapps.joinToString { it.name })
         startedNode.internals.nodeReadyFuture.thenMatch({
@@ -202,7 +285,7 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Revision: ${versionInfo.revision}")
         val info = ManagementFactory.getRuntimeMXBean()
         logger.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
-        logger.info("Main class: ${NodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
+        logger.info("Main class: ${NodeConfiguration::class.java.location.toURI().path}")
         logger.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
         logger.info("Application Args: ${args.joinToString(" ")}")
         logger.info("bootclasspath: ${info.bootClassPath}")
@@ -228,6 +311,13 @@ open class NodeStartup(val args: Array<String>) {
         println("*                                                                *")
         println("******************************************************************")
         NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
+
+        // Minimal changes to make registration tool create node identity.
+        // TODO: Move node identity generation logic from node to registration helper.
+        createNode(conf, getVersionInfo()).generateAndSaveNodeInfo()
+
+        println("Successfully registered Corda node with compatibility zone, node identity keys and certificates are stored in '${conf.certificatesDirectory}', it is advised to backup the private keys and certificates.")
+        println("Corda node will now terminate.")
     }
 
     protected open fun loadConfigFile(cmdlineOptions: CmdLineOptions): Pair<Config, Try<NodeConfiguration>> = cmdlineOptions.loadConfig()

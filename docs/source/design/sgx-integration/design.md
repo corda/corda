@@ -48,7 +48,7 @@ Let's assume that both A and B are happy with T2, except Node A hasn't establish
 to prove the validity of T2 to A without revealing the details of T1.
 
 The following diagram shows an overview of how this can be achieved. Note that the diagram is highly oversimplified 
-and is meant to communicate the high-level dataflow relevant to Corda.
+and is meant to communicate the high-level data flow relevant to Corda.
 
 ![SGX Provisioning](SgxProvisioning.png "SGX Provisioning")
 

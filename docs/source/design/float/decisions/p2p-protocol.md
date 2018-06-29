@@ -16,7 +16,7 @@ Under this option, P2P messaging will follow the [Advanced Message Queuing Proto
 
 1. As we have described in our marketing materials.
 2. Well-defined standard.
-3. Supportfor packet level flow control and explicit delivery acknowledgement.
+3. Support for packet level flow control and explicit delivery acknowledgement.
 4. Will allow eventual swap out of Artemis for other brokers.
 
 #### Disadvantages
@@ -25,7 +25,7 @@ Under this option, P2P messaging will follow the [Advanced Message Queuing Proto
 2. No support for secure MAC in packets frames.
 3. No defined encryption mode beyond creating custom payload encryption and custom headers.
 4. No standardised support for queue creation/enumeration, or deletion.
-5. Use of broker durable queues and autonomousbridge transfers does not align with checkpoint timing, so that independent replication of the DB and Artemis data risks causing problems. (Writing to the DB doesn’t work currently and is probably also slow).
+5. Use of broker durable queues and autonomous bridge transfers does not align with checkpoint timing, so that independent replication of the DB and Artemis data risks causing problems. (Writing to the DB doesn’t work currently and is probably also slow).
 
 ### 2. Develop a custom protocol
 

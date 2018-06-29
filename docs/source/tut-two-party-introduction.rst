@@ -1,12 +1,6 @@
 Hello, World! Pt.2 - Contract constraints
 =========================================
 
-.. toctree::
-    :maxdepth: 1
-
-    tut-two-party-contract
-    tut-two-party-flow
-
 .. note:: This tutorial extends the CorDapp built during the :doc:`Hello, World tutorial <hello-world-introduction>`.
 
 In the Hello, World tutorial, we built a CorDapp allowing us to model IOUs on ledger. Our CorDapp was made up of two
@@ -22,3 +16,9 @@ In this tutorial, we'll write a contract to imposes rules on how an ``IOUState``
 will require some small changes to the flow we defined in the previous tutorial.
 
 We'll start by writing the contract.
+
+.. toctree::
+   :maxdepth: 1
+
+   tut-two-party-contract
+   tut-two-party-flow

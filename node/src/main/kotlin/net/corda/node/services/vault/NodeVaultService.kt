@@ -2,21 +2,54 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.OwnableState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.*
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.tee
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.*
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.StatesNotAvailableException
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.VaultQueryException
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
+import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
+import net.corda.core.node.services.vault.MAX_PAGE_SIZE
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
+import net.corda.core.node.services.vault.builder
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.transactions.*
-import net.corda.core.utilities.*
+import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.CoreTransaction
+import net.corda.core.transactions.FullTransaction
+import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.NonEmptySet
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.toHexString
+import net.corda.core.utilities.toNonEmptySet
+import net.corda.core.utilities.trace
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.*
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
+import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -132,7 +165,8 @@ class NodeVaultService(
             val ourNewStates = when (statesToRecord) {
                 StatesToRecord.NONE -> throw AssertionError("Should not reach here")
                 StatesToRecord.ONLY_RELEVANT -> tx.outputs.withIndex().filter {
-                    isRelevant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet()) }
+                    isRelevant(it.value.data, keyManagementService.filterMyKeys(tx.outputs.flatMap { it.data.participants.map { it.owningKey } }).toSet())
+                }
                 StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
             }.map { tx.outRef<ContractState>(it.index) }
 
@@ -158,16 +192,13 @@ class NodeVaultService(
                 else -> throw IllegalArgumentException("Unsupported transaction type: ${tx.javaClass.name}")
             }
             val myKeys by lazy { keyManagementService.filterMyKeys(ltx.outputs.flatMap { it.data.participants.map { it.owningKey } }) }
-            val (consumedStateAndRefs, producedStates) = ltx.inputs.
-                    zip(ltx.outputs).
-                    filter { (_, output) ->
-                        if (statesToRecord == StatesToRecord.ONLY_RELEVANT) {
-                            isRelevant(output.data, myKeys.toSet())
-                        } else {
-                            true
-                        }
-                    }.
-                    unzip()
+            val (consumedStateAndRefs, producedStates) = ltx.inputs.zip(ltx.outputs).filter { (_, output) ->
+                if (statesToRecord == StatesToRecord.ONLY_RELEVANT) {
+                    isRelevant(output.data, myKeys.toSet())
+                } else {
+                    true
+                }
+            }.unzip()
 
             val producedStateAndRefs = producedStates.map { ltx.outRef<ContractState>(it.data) }
             if (consumedStateAndRefs.isEmpty() && producedStateAndRefs.isEmpty()) {
@@ -393,7 +424,7 @@ class NodeVaultService(
                 if (!seen) {
                     val contractInterfaces = deriveContractInterfaces(concreteType)
                     contractInterfaces.map {
-                        val contractInterface = contractStateTypeMappings.getOrPut(it.name, { mutableSetOf() })
+                        val contractInterface = contractStateTypeMappings.getOrPut(it.name) { mutableSetOf() }
                         contractInterface.add(concreteType.name)
                     }
                 }
@@ -461,7 +492,7 @@ class NodeVaultService(
                             if (!paging.isDefault && index == paging.pageSize) // skip last result if paged
                                 return@forEachIndexed
                             val vaultState = result[0] as VaultSchemaV1.VaultStates
-                            val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
+                            val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId), vaultState.stateRef!!.index)
                             stateRefs.add(stateRef)
                             statesMeta.add(Vault.StateMetadata(stateRef,
                                     vaultState.contractStateClassName,
@@ -519,13 +550,24 @@ class NodeVaultService(
         val distinctTypes = results.map { it }
 
         val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableSet<String>>()
+        val unknownTypes = mutableSetOf<String>()
         distinctTypes.forEach { type ->
-            val concreteType: Class<ContractState> = uncheckedCast(Class.forName(type))
-            val contractInterfaces = deriveContractInterfaces(concreteType)
-            contractInterfaces.map {
-                val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name, { mutableSetOf() })
-                contractInterface.add(concreteType.name)
+            val concreteType: Class<ContractState>? = try {
+                uncheckedCast(Class.forName(type))
+            } catch (e: ClassNotFoundException) {
+                unknownTypes += type
+                null
             }
+            concreteType?.let {
+                val contractInterfaces = deriveContractInterfaces(it)
+                contractInterfaces.map {
+                    val contractInterface = contractInterfaceToConcreteTypes.getOrPut(it.name) { mutableSetOf() }
+                    contractInterface.add(it.name)
+                }
+            }
+        }
+        if (unknownTypes.isNotEmpty()) {
+            log.warn("There are unknown contract state types in the vault, which will prevent these states from being used. The relevant CorDapps must be loaded for these states to be used. The types not on the classpath are ${unknownTypes.joinToString(", ", "[", "]")}.")
         }
         return contractInterfaceToConcreteTypes
     }

@@ -5,7 +5,7 @@ Software requirements
 ---------------------
 Corda uses industry-standard tools:
 
-* **Oracle JDK 8 JVM** - minimum supported version **8u131**
+* **Oracle JDK 8 JVM** - minimum supported version **8u171**
 * **IntelliJ IDEA** - supported versions **2017.x** and **2018.x**
 * **Git**
 
@@ -75,12 +75,12 @@ IntelliJ
 Download a sample project
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 1. Open a command prompt
-2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
+2. Clone the ``cordapp-example`` repo by running ``git clone https://github.com/corda/cordapp-example``
 3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
 
 Run from the command prompt
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-1. From the cordapp-example folder, deploy the nodes by running ``gradlew deployNodes``
+1. From the ``cordapp-example`` folder, deploy the nodes by running ``gradlew deployNodes``
 2. Start the nodes by running ``call kotlin-source/build/nodes/runnodes.bat``
 3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
 4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
@@ -129,12 +129,12 @@ IntelliJ
 Download a sample project
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 1. Open a terminal
-2. Clone the CorDapp example repo by running ``git clone https://github.com/corda/cordapp-example``
+2. Clone the ``cordapp-example`` repo by running ``git clone https://github.com/corda/cordapp-example``
 3. Move into the ``cordapp-example`` folder by running ``cd cordapp-example``
 
 Run from the terminal
 ^^^^^^^^^^^^^^^^^^^^^
-1. From the cordapp-example folder, deploy the nodes by running ``./gradlew deployNodes``
+1. From the ``cordapp-example`` folder, deploy the nodes by running ``./gradlew deployNodes``
 2. Start the nodes by running ``kotlin-source/build/nodes/runnodes``. Do not click while 7 additional terminal windows start up.
 3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
 4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
@@ -159,31 +159,11 @@ Run from IntelliJ
 7. Wait until the run windows displays the message ``Webserver started up in XX.X sec``
 8. Test the CorDapp is running correctly by visiting the front end at http://localhost:10009/web/example/
 
-Corda source code
------------------
-
-The Corda platform source code is available here:
-
-    https://github.com/corda/corda.git
-
-A CorDapp template that you can use as the basis for your own CorDapps is available in both Java and Kotlin versions:
-
-    https://github.com/corda/cordapp-template-java.git
-
-    https://github.com/corda/cordapp-template-kotlin.git
-
-And a list of simple sample CorDapps for you to explore basic concepts is available here:
-
-	https://www.corda.net/samples/
-
-You can clone these repos to your local machine by running the command ``git clone [repo URL]``.
-
 Next steps
 ----------
-The best way to check that everything is working fine is by taking a deeper look at the
-:doc:`example CorDapp <tutorial-cordapp>`.
+First, explore the example CorDapp you just ran :doc:`here <tutorial-cordapp>`.
 
-Next, you should read through :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
+Next, read through :doc:`Corda Key Concepts <key-concepts>` to understand how Corda works.
 
 By then, you'll be ready to start writing your own CorDapps. Learn how to do this in the
 :doc:`Hello, World tutorial <hello-world-introduction>`. You may want to refer to the API documentation, the
