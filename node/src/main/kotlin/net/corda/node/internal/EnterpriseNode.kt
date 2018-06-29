@@ -83,7 +83,7 @@ D""".trimStart()
             val license = """
 *************************************************************************************************************************************
 *  All rights reserved.                                                                                                             *
-*  This software is proprietary to and embodies the confidential technology of R3 LLC (“R3”).                                       *
+*  This software is proprietary to and embodies the confidential technology of R3 LLC ("R3").                                       *
 *  Possession, use, duplication or dissemination of the software is authorized only pursuant to a valid written license from R3.    *
 *  IF YOU DO NOT HAVE A VALID WRITTEN LICENSE WITH R3, DO NOT USE THIS SOFTWARE.                                                    *
 *************************************************************************************************************************************
