@@ -8,7 +8,6 @@ buildscript {
     }
     dependencies {
         classpath "com.github.jengelman.gradle.plugins:shadow:$shadow_version"
-        classpath 'de.sebastianboegl.gradle.plugins:shadow-log4j-transformer:2.1.1'
     }
 }
 
@@ -21,9 +20,11 @@ mainClassName = 'net.corda.tools.shell.StandaloneShellKt'
 
 dependencies {
     compile project(':tools:shell')
-    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
+    compile group: 'org.slf4j', name: 'slf4j-simple', version: slf4j_version
 
-    testCompile project(':test-utils')
+    testCompile(project(':test-utils')) {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+    }
 }
 
 processResources {
@@ -31,9 +32,6 @@ processResources {
 }
 
 shadowJar  {
-    //transform(de.sebastianboegl.gradle.plugins.shadow.transformers.Log4j2PluginsFileTransformer)
-    archiveName = "shell-cli-${version}.jar"
-
     mergeServiceFiles()
 }
 
@@ -47,9 +45,10 @@ artifacts {
 
 jar {
     classifier "ignore"
+    enabled = false
 }
 
 publish {
-    name 'corda-tools-shell-cli'
     disableDefaultJar = true
+    name 'corda-tools-shell-cli'
 }
