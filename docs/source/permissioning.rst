@@ -13,7 +13,8 @@ Every Corda node is a part of a network (also called a zone), and networks are *
 zone, a node needs a signed X.509 certificate from the network operator. Production deployments require a secure certificate authority.
 The issued certificates take the form of three keystores in a node's ``<workspace>/certificates/`` folder:
 
-* ``network-root-truststore.jks``, which stores the network/zone operator's public keys and certificates
+* ``network-root-truststore.jks``, the network/zone operator's public keys and certificates as provided by them with a standard password. Can be deleted after initial registration
+* ``truststore.jks``, the network/zone operator's public keys and certificates in keystore with a locally configurable password as protection against certain attacks
 * ``nodekeystore.jks``, which stores the node’s identity keypairs and certificates
 * ``sslkeystore.jks``, which stores the node’s TLS keypairs and certificates
 
