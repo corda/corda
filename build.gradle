@@ -342,7 +342,7 @@ bintrayConfig {
             'corda-node-driver',
             'corda-confidential-identities',
             'corda-shell',
-            'tools-shell-cli',
+            'corda-tools-shell-cli',
             'corda-serialization',
             'corda-serialization-deterministic',
             'corda-tools-blob-inspector',

@@ -50,6 +50,6 @@ jar {
 }
 
 publish {
-    name 'tools-shell-cli'
+    name 'corda-tools-shell-cli'
     disableDefaultJar = true
 }
