@@ -15,8 +15,6 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.declaredField
-import net.corda.core.internal.div
-import net.corda.core.internal.read
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.CordaSerializable
@@ -26,7 +24,15 @@ import net.corda.finance.EUR
 import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.flows.ConfigHolder.Companion.supportedCurrencies
+import java.io.BufferedReader
 import java.io.IOException
+import java.io.InputStream
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.Files
+import java.nio.file.OpenOption
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 
 // TODO Until apps have access to their own config, we'll hack things by first getting the baseDirectory, read the node.conf
@@ -35,6 +41,13 @@ import java.util.*
 class ConfigHolder(services: AppServiceHub) : SingletonSerializeAsToken() {
     companion object {
         val supportedCurrencies = listOf(USD, GBP, CHF, EUR)
+
+        // TODO: ENT-2040 - After GA, the Finance app should be fully decoupled from use of internal APIs on both OS and ENT!
+        private operator fun Path.div(other: String): Path = resolve(other)
+        private operator fun String.div(other: String): Path = Paths.get(this) / other
+        private fun Path.inputStream(vararg options: OpenOption): InputStream = Files.newInputStream(this, *options)
+        private fun Path.reader(charset: Charset = UTF_8): BufferedReader = Files.newBufferedReader(this, charset)
+        private inline fun <R> Path.read(vararg options: OpenOption, block: (InputStream) -> R): R = inputStream(*options).use(block)
     }
 
     val issuableCurrencies: List<Currency>

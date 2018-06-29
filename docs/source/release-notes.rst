@@ -99,6 +99,8 @@ The following lists known issues identified in this release. We will endeavour t
 
 * Doorman crashes ungracefully when started with incorrect or no program arguments. Should display a meaningful message instead. [ENT-1661]
 
+* The finance CorDapp from Open Source versions 3.0 and 3.1 cannot be loaded on Enterprise 3.0 GA. Use the Enterprise CorDapp on any Open Source nodes in a mixed network instead, or use contract whitelisting. [ENT-2040]
+
 * Exception when starting a Corda node against a non-H2 database the first time. [ENT-1635]
 
   This means the :ref:`database schema management <database_migration_ref>` process should be performed but the exception is confusing.
