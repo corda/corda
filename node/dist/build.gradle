@@ -7,6 +7,8 @@ evaluationDependsOn(":launcher")
 ext {
     outputDir = "$buildDir/corda"
     tarballDir = "$buildDir/distribution"
+    tarballBaseName = 'corda-enterprise-distribution'
+    tarballExtension = "tar.bz2"
 }
 
 def tmpDir = "${buildDir}/tmp/"
@@ -20,6 +22,11 @@ sourceSets {
     binFiles {
         resources {
             srcDir file('src/main/resources/bin')
+        }
+    }
+    installerFiles {
+        resources {
+            srcDir file('src/main/resources/installer')
         }
     }
     readmeFiles {
@@ -153,17 +160,53 @@ if (isLinux || isMac) {
     }
 
     task buildCordaTarball(type: Tar, dependsOn: [buildNode]) {
+
         from outputDir
         compression = Compression.BZIP2
-        baseName = 'corda-enterprise-distribution'
+        baseName = tarballBaseName
         destinationDir = file(tarballDir)
-        extension = "tar.bz2"
+        extension = tarballExtension
 
         doLast {
             println("Distribution tarball available at:")
-            println("${tarballDir}/${baseName}.${extension}")
+            println("${tarballDir}/${archiveName}")
         }
     }
+
+    task prepareInstallerEnvironment(type: Copy, dependsOn: buildCordaTarball) {
+        into(tarballDir)
+        from(sourceSets.installerFiles.resources) {
+            into("installer")
+        }
+    }
+
+    task embedLicense(type: Exec, dependsOn: [prepareInstallerEnvironment]) {
+        commandLine "bash", "-c", "sed -i -e '/QQ_LICENSE_FILE_QQ/{r src/main/resources/license/LICENSE' -e 'd}' $tarballDir/installer/installer.sh"
+    }
+
+    task embedTarball(type: Exec, dependsOn: [embedLicense]) {
+        commandLine "bash", "-c", "cat ${tarballDir}/${buildCordaTarball.archiveName} >> $tarballDir/installer/installer.sh"
+    }
+
+    task buildInstaller(dependsOn: [embedTarball])
+
+    apply plugin: 'maven-publish'
+    apply plugin: 'java'
+
+    def installerFile = file("$tarballDir/installer/installer.sh")
+    def installerArtifact = artifacts.add("archives", installerFile) {
+        type "sh"
+        builtBy(buildInstaller)
+    }
+
+    publishing {
+        publications {
+            InstallerPublication(MavenPublication) {
+                artifact installerArtifact
+            }
+        }
+    }
+
 } else {
     println("Not running on *nix, disabling distribution generation")
 }
