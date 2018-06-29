@@ -106,7 +106,7 @@ Linux and MacOS
 
 .. code:: bash
 
-    ./shell [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+    java -jar corda-tools-shell-cli-VERSION_NUMBER.jar [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
              --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
              --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
 
@@ -115,7 +115,7 @@ Windows
 
 .. code:: bash
 
-    shell.bat [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+     java -jar corda-tools-shell-cli-VERSION_NUMBER.jar [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
              --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
              --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
 
