@@ -101,15 +101,15 @@ class that binds it to the network layer.
 
 Here is an extract from the ``NodeInterestRates.Oracle`` class and supporting types:
 
-.. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/contracts/FinanceTypes.kt
-    :language: kotlin
-    :start-after: DOCSTART 1
-    :end-before: DOCEND 1
+.. sourcecode:: kotlin
 
-.. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/contracts/FinanceTypes.kt
-    :language: kotlin
-    :start-after: DOCSTART 2
-    :end-before: DOCEND 2
+    @CordaSerializable
+    data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
+
+.. sourcecode:: kotlin
+
+    /** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */
+    data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 
 .. sourcecode:: kotlin
 
@@ -166,11 +166,40 @@ parameter and ``CommandData`` classes.
 
 Let's see how the ``sign`` method for ``NodeInterestRates.Oracle`` is written:
 
-.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
-   :language: kotlin
-   :start-after: DOCSTART 1
-   :end-before: DOCEND 1
-   :dedent: 8
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+        fun sign(ftx: FilteredTransaction): TransactionSignature {
+            ftx.verify()
+            // Performing validation of obtained filtered components.
+            fun commandValidator(elem: Command<*>): Boolean {
+                require(services.myInfo.legalIdentities.first().owningKey in elem.signers && elem.value is Fix) {
+                    "Oracle received unknown command (not in signers or not Fix)."
+                }
+                val fix = elem.value as Fix
+                val known = knownFixes[fix.of]
+                if (known == null || known != fix)
+                    throw UnknownFix(fix.of)
+                return true
+            }
+
+            fun check(elem: Any): Boolean {
+                return when (elem) {
+                    is Command<*> -> commandValidator(elem)
+                    else -> throw IllegalArgumentException("Oracle received data of different type than expected.")
+                }
+            }
+
+            require(ftx.checkWithFun(::check))
+            ftx.checkCommandVisibility(services.myInfo.legalIdentities.first().owningKey)
+            // It all checks out, so we can return a signature.
+            //
+            // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered
+            // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
+            // an invalid transaction the signature is worthless.
+            return services.createSignature(ftx, services.myInfo.legalIdentities.first().owningKey)
+        }
 
 Here we can see that there are several steps:
 
@@ -192,20 +221,55 @@ Binding to the network
 The first step is to create the oracle as a service by annotating its class with ``@CordaService``.  Let's see how that's
 done:
 
-.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
-   :language: kotlin
-   :start-after: DOCSTART 3
-   :end-before: DOCEND 3
-   :dedent: 4
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+        @CordaService
+        class Oracle(private val services: AppServiceHub) : SingletonSerializeAsToken() {
+            private val mutex = ThreadBox(InnerState())
+
+            init {
+                // Set some default fixes to the Oracle, so we can smoothly run the IRS Demo without uploading fixes.
+                // This is required to avoid a situation where the runnodes version of the demo isn't in a good state
+                // upon startup.
+                addDefaultFixes()
+            }
 
 The Corda node scans for any class with this annotation and initialises them. The only requirement is that the class provide
 a constructor with a single parameter of type ``ServiceHub``.
 
-.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
-   :language: kotlin
-   :start-after: DOCSTART 2
-   :end-before: DOCEND 2
-   :dedent: 4
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+        @InitiatedBy(RatesFixFlow.FixSignFlow::class)
+        class FixSignHandler(private val otherPartySession: FlowSession) : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                val request = otherPartySession.receive<RatesFixFlow.SignRequest>().unwrap { it }
+                val oracle = serviceHub.cordaService(Oracle::class.java)
+                otherPartySession.send(oracle.sign(request.ftx))
+            }
+        }
+
+        @InitiatedBy(RatesFixFlow.FixQueryFlow::class)
+        class FixQueryHandler(private val otherPartySession: FlowSession) : FlowLogic<Unit>() {
+            object RECEIVED : ProgressTracker.Step("Received fix request")
+            object SENDING : ProgressTracker.Step("Sending fix response")
+
+            override val progressTracker = ProgressTracker(RECEIVED, SENDING)
+
+            @Suspendable
+            override fun call() {
+                val request = otherPartySession.receive<RatesFixFlow.QueryRequest>().unwrap { it }
+                progressTracker.currentStep = RECEIVED
+                val oracle = serviceHub.cordaService(Oracle::class.java)
+                val answers = oracle.query(request.queries)
+                progressTracker.currentStep = SENDING
+                otherPartySession.send(answers)
+            }
+        }
 
 These two flows leverage the oracle to provide the querying and signing operations. They get reference to the oracle,
 which will have already been initialised by the node, using ``ServiceHub.cordaService``. Both flows are annotated with
@@ -219,11 +283,41 @@ We mentioned the client sub-flow briefly above.  They are the mechanism that cli
 use to interact with your oracle.  Typically there will be one for querying and one for signing.  Let's take a look at
 those for ``NodeInterestRates.Oracle``.
 
-.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/flows/RatesFixFlow.kt
-   :language: kotlin
-   :start-after: DOCSTART 1
-   :end-before: DOCEND 1
-   :dedent: 4
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+        @InitiatingFlow
+        class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
+            @Suspendable
+            override fun call(): Fix {
+                val oracleSession = initiateFlow(oracle)
+                // TODO: add deadline to receive
+                val resp = oracleSession.sendAndReceive<List<Fix>>(QueryRequest(listOf(fixOf)))
+
+                return resp.unwrap {
+                    val fix = it.first()
+                    // Check the returned fix is for what we asked for.
+                    check(fix.of == fixOf)
+                    fix
+                }
+            }
+        }
+
+        @InitiatingFlow
+        class FixSignFlow(val tx: TransactionBuilder, val oracle: Party,
+                          val partialMerkleTx: FilteredTransaction) : FlowLogic<TransactionSignature>() {
+            @Suspendable
+            override fun call(): TransactionSignature {
+                val oracleSession = initiateFlow(oracle)
+                val resp = oracleSession.sendAndReceive<TransactionSignature>(SignRequest(partialMerkleTx))
+                return resp.unwrap { sig ->
+                    check(oracleSession.counterparty.owningKey.isFulfilledBy(listOf(sig.by)))
+                    tx.toWireTransaction(serviceHub).checkSignature(sig)
+                    sig
+                }
+            }
+        }
 
 You'll note that the ``FixSignFlow`` requires a ``FilterTransaction`` instance which includes only ``Fix`` commands.
 You can find a further explanation of this in :doc:`key-concepts-oracles`. Below you will see how to build such a
@@ -238,11 +332,22 @@ The oracle is invoked through sub-flows to query for values, add them to the tra
 the transaction signed by the oracle.  Following on from the above examples, this is all encapsulated in a sub-flow
 called ``RatesFixFlow``.  Here's the ``call`` method of that flow.
 
-.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/flows/RatesFixFlow.kt
-   :language: kotlin
-   :start-after: DOCSTART 2
-   :end-before: DOCEND 2
-   :dedent: 4
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+        @Suspendable
+        override fun call(): TransactionSignature {
+            progressTracker.currentStep = progressTracker.steps[1]
+            val fix = subFlow(FixQueryFlow(fixOf, oracle))
+            progressTracker.currentStep = WORKING
+            checkFixIsNearExpected(fix)
+            tx.addCommand(fix, oracle.owningKey)
+            beforeSigning(fix)
+            progressTracker.currentStep = SIGNING
+            val mtx = tx.toWireTransaction(serviceHub).buildFilteredTransaction(Predicate { filtering(it) })
+            return subFlow(FixSignFlow(tx, oracle, mtx))
+        }
 
 As you can see, this:
 
@@ -255,11 +360,31 @@ As you can see, this:
 
 Here's an example of it in action from ``FixingFlow.Fixer``.
 
-.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/flows/FixingFlow.kt
-   :language: kotlin
-   :start-after: DOCSTART 1
-   :end-before: DOCEND 1
-   :dedent: 4
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+        val addFixing = object : RatesFixFlow(ptx, handshake.payload.oracle, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
+            @Suspendable
+            override fun beforeSigning(fix: Fix) {
+                newDeal.generateFix(ptx, StateAndRef(txState, handshake.payload.ref), fix)
+
+                // We set the transaction's time-window: it may be that none of the contracts need this!
+                // But it can't hurt to have one.
+                ptx.setTimeWindow(serviceHub.clock.instant(), 30.seconds)
+            }
+
+            @Suspendable
+            override fun filtering(elem: Any): Boolean {
+                return when (elem) {
+                // Only expose Fix commands in which the oracle is on the list of requested signers
+                // to the oracle node, to avoid leaking privacy
+                    is Command<*> -> handshake.payload.oracle.owningKey in elem.signers && elem.value is Fix
+                    else -> false
+                }
+            }
+        }
+        val sig = subFlow(addFixing)
 
 .. note::
     When overriding be careful when making the sub-class an anonymous or inner class (object declarations in Kotlin),
@@ -271,24 +396,55 @@ Testing
 
 The ``MockNetwork`` allows the creation of ``MockNode`` instances, which are simplified nodes which can be used for
 testing (see :doc:`api-testing`). When creating the ``MockNetwork`` you supply a list of packages to scan for CorDapps.
-Make sure the packages you provide include your oracle service, and it automatically be installed in the test nodes.
+Make sure the packages you provide include your oracle service, and it will automatically be installed in the test nodes.
 Then you can create an oracle node on the ``MockNetwork`` and insert any initialisation logic you want to use. In this
 case, our ``Oracle`` service is in the ``net.corda.irs.api`` package, so the following test setup will install
 the service in each node. Then an oracle node with an oracle service which is initialised with some data is created on
 the mock network:
 
-.. literalinclude:: ../../samples/irs-demo/cordapp/src/test/kotlin/net/corda/irs/api/OracleNodeTearOffTests.kt
-   :language: kotlin
-   :start-after: DOCSTART 1
-   :end-before: DOCEND 1
-   :dedent: 4
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+        fun setUp() {
+            mockNet = MockNetwork(cordappPackages = listOf("net.corda.finance.contracts", "net.corda.irs"))
+            aliceNode = mockNet.createPartyNode(ALICE_NAME)
+            oracleNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME)).apply {
+                transaction {
+                    services.cordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
+                }
+            }
+        }
 
 You can then write tests on your mock network to verify the nodes interact with your Oracle correctly.
 
-.. literalinclude:: ../../samples/irs-demo/cordapp/src/test/kotlin/net/corda/irs/api/OracleNodeTearOffTests.kt
-   :language: kotlin
-   :start-after: DOCSTART 2
-   :end-before: DOCEND 2
-   :dedent: 4
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+        @Test
+        fun verify_that_the_oracle_signs_the_transaction_if_the_interest_rate_within_allowed_limit() {
+            // Create a partial transaction
+            val tx = TransactionBuilder(DUMMY_NOTARY)
+                    .withItems(TransactionState(1000.DOLLARS.CASH issuedBy dummyCashIssuer.party ownedBy alice.party, Cash.PROGRAM_ID, DUMMY_NOTARY))
+            // Specify the rate we wish to get verified by the oracle
+            val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
+
+            // Create a new flow for the fix
+            val flow = FilteredRatesFlow(tx, oracle, fixOf, BigDecimal("0.675"), BigDecimal("0.1"))
+            // Run the mock network and wait for a result
+            mockNet.runNetwork()
+            val future = aliceNode.startFlow(flow)
+            mockNet.runNetwork()
+            future.getOrThrow()
+
+            // We should now have a valid rate on our tx from the oracle.
+            val fix = tx.toWireTransaction(aliceNode.services).commands.map { it  }.first()
+            assertEquals(fixOf, (fix.value as Fix).of)
+            // Check that the response contains the valid rate, which is within the supplied tolerance
+            assertEquals(BigDecimal("0.678"), (fix.value as Fix).value)
+            // Check that the transaction has been signed by the oracle
+            assertContains(fix.signers, oracle.owningKey)
+        }
 
 See `here <https://github.com/corda/corda/samples/irs-demo/cordapp/src/test/kotlin/net/corda/irs/api/OracleNodeTearOffTests.kt>`_ for more examples.

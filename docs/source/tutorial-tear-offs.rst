@@ -1,3 +1,9 @@
+.. highlight:: kotlin
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
 Transaction tear-offs
 =====================
 
@@ -41,13 +47,42 @@ transaction components is exactly the same. Note that unlike ``WireTransaction``
         :end-before: DOCEND 3
         :dedent: 4
 
-The following code snippet is taken from ``NodeInterestRates.kt`` and implements a signing part of an Oracle.
+The following code snippet is taken from the IRS Demo and implements a signing part of an Oracle.
 
-.. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
-    :language: kotlin
-    :start-after: DOCSTART 1
-    :end-before: DOCEND 1
-    :dedent: 8
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+            fun sign(ftx: FilteredTransaction): TransactionSignature {
+                ftx.verify()
+                // Performing validation of obtained filtered components.
+                fun commandValidator(elem: Command<*>): Boolean {
+                    require(services.myInfo.legalIdentities.first().owningKey in elem.signers && elem.value is Fix) {
+                        "Oracle received unknown command (not in signers or not Fix)."
+                    }
+                    val fix = elem.value as Fix
+                    val known = knownFixes[fix.of]
+                    if (known == null || known != fix)
+                        throw UnknownFix(fix.of)
+                    return true
+                }
+
+                fun check(elem: Any): Boolean {
+                    return when (elem) {
+                        is Command<*> -> commandValidator(elem)
+                        else -> throw IllegalArgumentException("Oracle received data of different type than expected.")
+                    }
+                }
+
+                require(ftx.checkWithFun(::check))
+                ftx.checkCommandVisibility(services.myInfo.legalIdentities.first().owningKey)
+                // It all checks out, so we can return a signature.
+                //
+                // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered
+                // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
+                // an invalid transaction the signature is worthless.
+                return services.createSignature(ftx, services.myInfo.legalIdentities.first().owningKey)
+            }
 
 .. note:: The way the ``FilteredTransaction`` is constructed ensures that after signing of the root hash it's impossible to add or remove
     components (leaves). However, it can happen that having transaction with multiple commands one party reveals only subset of them to the Oracle.

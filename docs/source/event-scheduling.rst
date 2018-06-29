@@ -67,11 +67,15 @@ Let's take an example of the interest rate swap fixings for our scheduled events
 
 .. container:: codeset
 
-    .. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/contract/IRS.kt
-        :language: kotlin
-        :start-after: DOCSTART 1
-        :end-before: DOCEND 1
-        :dedent: 8
+    .. code-block:: kotlin
+
+        override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
+            val nextFixingOf = nextFixingOf() ?: return null
+
+            // This is perhaps not how we should determine the time point in the business day, but instead expect the schedule to detail some of these aspects
+            val instant = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name, source = floatingLeg.indexSource, date = nextFixingOf.forDay).fromTime!!
+            return ScheduledActivity(flowLogicRefFactory.create("net.corda.irs.flows.FixingFlow\$FixingRoleDecider", thisStateRef), instant)
+        }
 
 The first thing this does is establish if there are any remaining fixings.  If there are none, then it returns ``null``
 to indicate that there is no activity to schedule.  Otherwise it calculates the ``Instant`` at which the interest rate
