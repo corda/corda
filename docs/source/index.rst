@@ -55,7 +55,6 @@ application development please continue to refer to `the main project documentat
    corda-networks-index.rst
    azure-vm.rst
    aws-vm.rst
-   loadtesting.rst
    certificate-revocation
 
 .. Documentation is not included in the pdf unless it is included in a toctree somewhere
