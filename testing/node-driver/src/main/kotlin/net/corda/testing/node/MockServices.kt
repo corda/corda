@@ -37,7 +37,6 @@ import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.internal.MockTransactionStorage
 import net.corda.testing.services.MockAttachmentStorage
-import org.junit.Test
 import java.security.KeyPair
 import java.sql.Connection
 import java.time.Clock
