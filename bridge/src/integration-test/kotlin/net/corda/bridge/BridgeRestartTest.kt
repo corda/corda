@@ -12,11 +12,13 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_BANK_B_NAME
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.internalDriver
+import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -24,9 +26,13 @@ import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
-class BridgeRestartTest {
+class BridgeRestartTest : IntegrationTest() {
     companion object {
         val pingStarted = ConcurrentHashMap<StateMachineRunId, OpenFuture<Unit>>()
+
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 
     @StartableByRPC
