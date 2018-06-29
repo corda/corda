@@ -241,9 +241,19 @@ latex_documents = [('index', u'corda-developer-site.tex', u'Corda Developer Docu
 _PREAMBLE = r"""
 \usepackage[utf8]{inputenc}
 \usepackage{pmboxdraw}
+\usepackage{pifont}
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
 \DeclareUnicodeCharacter{2514}{\textSFii}
 \DeclareUnicodeCharacter{251C}{\textSFviii}
-\DeclareUnicodeCharacter{2705}{\checkmark}
+\DeclareUnicodeCharacter{2705}{\cmark}
+\DeclareUnicodeCharacter{274E}{\xmark}
+\DeclareUnicodeCharacter{1F4A1}{ }
+\DeclareUnicodeCharacter{26A0}{ }
+\DeclareUnicodeCharacter{200D}{ }
+\DeclareUnicodeCharacter{FE0F}{ }
+\DeclareUnicodeCharacter{1F469}{ }
+\DeclareUnicodeCharacter{1F4BB}{ }
 """
 
 latex_elements = {
