@@ -79,7 +79,7 @@ class IdentitySyncFlowWrapperTests {
         val bob: Party = bobNode.info.singleIdentity()
         val charlie: Party = charlieNode.info.singleIdentity()
         val notary = mockNet.defaultNotaryIdentity
-        bobNode.registerInitiatedFlow(IdentitySyncFlowTests.Receive::class.java)
+        bobNode.registerInitiatedFlow(IdentitySyncFlowWrapper.Receive::class.java)
         // Charlie issues then pays some cash to a new confidential identity
         val anonymous = true
         val ref = OpaqueBytes.of(0x01)
@@ -97,7 +97,7 @@ class IdentitySyncFlowWrapperTests {
 
         // Run the flow to sync up the identities, and confirm Charlie's confidential identity doesn't leak
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
-        aliceNode.services.startFlow(IdentitySyncFlowTests.Initiator(bob, payTx.tx)).resultFuture.getOrThrow()
+        aliceNode.services.startFlow(IdentitySyncFlowWrapper.Initiator(bob, payTx.tx)).resultFuture.getOrThrow()
         assertNull(bobNode.database.transaction { bobNode.services.identityService.wellKnownPartyFromAnonymous(confidentialIdentity) })
     }
 
