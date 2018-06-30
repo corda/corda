@@ -1,17 +1,14 @@
 package net.corda.node.services.identity
 
-import net.corda.core.contracts.PartyAndReference
-import net.corda.core.identity.*
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.UnknownAnonymousPartyException
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.node.services.identity.IdentityServiceUtil.Companion.partiesFromName
-import net.corda.node.services.identity.IdentityServiceUtil.Companion.requireWellKnownPartyFromAnonymous
 import net.corda.node.services.identity.IdentityServiceUtil.Companion.verifyIdentity
-import net.corda.node.services.identity.IdentityServiceUtil.Companion.verifyPartyOwnsAnonymousIdentity
-import net.corda.node.services.identity.IdentityServiceUtil.Companion.wellKnowPartyFromAnonymous
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -24,9 +21,8 @@ import javax.annotation.concurrent.ThreadSafe
  *
  * @param identities initial set of identities for the service, typically only used for unit tests.
  */
-// TODO There is duplicated logic between this and PersistentIdentityService
 @ThreadSafe
-class InMemoryIdentityService(identities: List<out PartyAndCertificate> = emptyList(),
+class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(),
                               override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
     companion object {
         private val log = contextLogger()
@@ -66,12 +62,7 @@ class InMemoryIdentityService(identities: List<out PartyAndCertificate> = emptyL
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToParties.values)
 
-    override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]?.party
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = principalToParties[name]?.party
-    override fun wellKnownPartyFromAnonymous(party: AbstractParty) = wellKnowPartyFromAnonymous(this, party)
-
-    override fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
-    override fun requireWellKnownPartyFromAnonymous(party: AbstractParty) = requireWellKnownPartyFromAnonymous(this, party)
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         val results = LinkedHashSet<Party>()
@@ -79,12 +70,5 @@ class InMemoryIdentityService(identities: List<out PartyAndCertificate> = emptyL
             partiesFromName(query, exactMatch, x500name, results, partyAndCertificate.party)
         }
         return results
-    }
-
-    @Throws(UnknownAnonymousPartyException::class)
-    override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
-        val anonymousIdentity = keyToParties[anonymousParty.owningKey]
-                ?: throw UnknownAnonymousPartyException("Unknown $anonymousParty")
-        verifyPartyOwnsAnonymousIdentity(party, anonymousIdentity)
     }
 }

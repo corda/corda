@@ -1,6 +1,5 @@
 package net.corda.node.services.identity
 
-import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.*
 import net.corda.core.internal.hash
@@ -12,8 +11,6 @@ import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.identity.IdentityServiceUtil.Companion.partiesFromName
 import net.corda.node.services.identity.IdentityServiceUtil.Companion.verifyIdentity
-import net.corda.node.services.identity.IdentityServiceUtil.Companion.verifyPartyOwnsAnonymousIdentity
-import net.corda.node.services.identity.IdentityServiceUtil.Companion.wellKnowPartyFromAnonymous
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -37,7 +34,6 @@ import javax.persistence.Lob
  * @param trustRoot certificate from the zone operator for identity on the network.
  * @param caCertificates list of additional certificates.
  */
-// TODO There is duplicated logic between this and InMemoryIdentityService
 @ThreadSafe
 class PersistentIdentityService(override val trustRoot: X509Certificate,
                                 private val database: CordaPersistence,
@@ -160,15 +156,9 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = database.transaction { keyToParties.allPersisted().map { it.second }.asIterable() }
 
-    override fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
-    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
-        val service = this
-        return database.transaction { wellKnowPartyFromAnonymous(service, party) }
-    }
 
-    override fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
-    override fun requireWellKnownPartyFromAnonymous(party: AbstractParty) = IdentityServiceUtil.requireWellKnownPartyFromAnonymous(this, party)
+    override fun wellKnownPartyFromAnonymous(party: AbstractParty) = database.transaction { super.wellKnownPartyFromAnonymous(party) }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
@@ -181,11 +171,6 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     }
 
     @Throws(UnknownAnonymousPartyException::class)
-    override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
-        database.transaction {
-            val anonymousIdentity = certificateFromKey(anonymousParty.owningKey)
-                    ?: throw UnknownAnonymousPartyException("Unknown $anonymousParty")
-            verifyPartyOwnsAnonymousIdentity(party, anonymousIdentity)
-        }
-    }
+    override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = database.transaction { super.assertOwnership(party, anonymousParty) }
+
 }
