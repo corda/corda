@@ -50,7 +50,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
 import org.junit.rules.ExternalResource
-import java.lang.Thread.sleep
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -208,7 +208,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             vaultFiller.fillWithSomeTestLinearStates(3, "ABC")
             val dealStates = vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789"))
             // Total unconsumed states = 10 + 1 + 2 + 3 + 3 = 19
-            sleep(delay)
+            services.clock.advanceBy(Duration.ofMillis(delay))
 
             // consume some states
             vaultFiller.consumeLinearStates(linearStatesXYZ.states.toList())
@@ -1817,12 +1817,11 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     // specifying Query on Linear state attributes
     @Test
     fun `unconsumed linear heads for linearId between two timestamps`() {
-        val start = Instant.now()
-        val end = start.plus(1, ChronoUnit.SECONDS)
-
         database.transaction {
+            val start = services.clock.instant()
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST")
-            sleep(1000)
+            services.clock.advanceBy(1.seconds)
+            val end = services.clock.instant()
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST")
             // 2 unconsumed states with same external ID
             val recordedBetweenExpression = TimeCondition(TimeInstantType.RECORDED, builder { between(start, end) })
@@ -1853,13 +1852,12 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     // specifying Query on Linear state attributes
     @Test
     fun `unconsumed linear heads for linearId between two timestamps for a given external id`() {
-        val start = Instant.now()
-        val end = start.plus(6, ChronoUnit.SECONDS) //Enterprise: extended timeout for TC
-
         database.transaction {
+            val start = services.clock.instant()
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST1")
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST2")
-            sleep(1000)
+            services.clock.advanceBy(1.seconds)
+            val end = services.clock.instant()
             vaultFiller.fillWithSomeTestLinearStates(1, "TEST3")
             // 2 unconsumed states with same external ID
 

@@ -66,9 +66,9 @@ buildscript {
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.spring_jdbc_version ='5.0.0.RELEASE'
     ext.shiro_version = '1.4.0'
+    ext.shadow_version = '2.0.4'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.liquibase_version = '3.5.3'
-    ext.shadow_version = '2.0.2'
     ext.hikari_version = '2.5.1'
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
@@ -398,7 +398,7 @@ bintrayConfig {
             'corda-confidential-identities',
             'corda-launcher',
             'corda-shell',
-            'corda-shell-cli',
+            'corda-tools-shell-cli',
             'corda-serialization',
             'corda-serialization-deterministic',
             'corda-tools-blob-inspector',
