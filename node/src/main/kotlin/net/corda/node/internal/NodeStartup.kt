@@ -188,8 +188,10 @@ open class NodeStartup(val args: Array<String>) {
         return !(!cmdlineOptions.isRegistration || compatibilityZoneURL == null)
     }
 
-    open protected fun registerWithNetwork(conf: NodeConfiguration, networkRootTruststorePath: Path, networkRootTruststorePassword: String) {
-        val compatibilityZoneURL = conf.compatibilityZoneURL!!
+    protected open fun registerWithNetwork(conf: NodeConfiguration, networkRootTruststorePath: Path, networkRootTruststorePassword: String) {
+        val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException(
+                "compatibilityZoneURL or networkServices must be configured!")
+
         println()
         println("******************************************************************")
         println("*                                                                *")

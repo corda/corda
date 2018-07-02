@@ -464,6 +464,7 @@ private fun mockNodeConfiguration(): NodeConfiguration {
         doReturn(true).whenever(it).devMode
         doReturn(null).whenever(it).compatibilityZoneURL
         doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
+        doReturn(null).whenever(it).networkServices
         doReturn(VerifierType.InMemory).whenever(it).verifierType
         doReturn(5).whenever(it).messageRedeliveryDelaySeconds
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec

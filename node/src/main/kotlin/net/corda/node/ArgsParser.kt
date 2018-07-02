@@ -91,11 +91,14 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val noLocalShell: Boolean,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean,
-                          val bootstrapRaftCluster: Boolean) {
+                          val bootstrapRaftCluster: Boolean
+) {
     fun loadConfig(): NodeConfiguration {
         val config = ConfigHelper.loadConfig(baseDirectory, configFile).parseAsNodeConfiguration()
         if (isRegistration) {
-            requireNotNull(config.compatibilityZoneURL) { "Compatibility Zone Url must be provided in registration mode." }
+            require(config.compatibilityZoneURL != null || config.networkServices != null) {
+                "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
+            }
             requireNotNull(networkRootTruststorePath) { "Network root trust store path must be provided in registration mode." }
             requireNotNull(networkRootTruststorePassword) { "Network root trust store password must be provided in registration mode." }
         }
