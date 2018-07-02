@@ -76,6 +76,11 @@ However, you can also generate them manually for more control. The ``X509Utiliti
 required public/private keypairs and certificates using Bouncy Castle. You can find it in the `Corda repository
 <https://github.com/corda/corda/blob/master/node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto/X509Utilities.kt>`__.
 
+.. note:: Corda allows any expiry time to be set in identity certificates. However, we recommend that the expiry time
+   is set so far in the future that the certificate will effectively never expire. Certificate expiration has been
+   responsible for causing many outages in the past, and is not an effective way to phase out old algorithms either.
+   It's better and safer not to use it.
+
 Certificate role extension
 --------------------------
 
