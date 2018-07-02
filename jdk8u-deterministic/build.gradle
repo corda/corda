@@ -8,23 +8,39 @@ repositories {
 }
 
 ext {
-    jdk_home = "$projectDir/jdk"
+    jdk_home = "$projectDir/jdk".toString()
     rt_jar = "$jdk_home/jre/lib/rt.jar".toString()
 }
 
 configurations {
-    jdk
+    jdk.resolutionStrategy {
+        cacheChangingModulesFor 0, 'seconds'
+    }
 }
 
 dependencies {
-    jdk "net.corda:deterministic-rt:$deterministic_rt_version:api"
+    // Ensure everyone uses the latest SNAPSHOT.
+    jdk "net.corda:deterministic-rt:latest.integration:api"
 }
 
 task copyJdk(type: Copy) {
+    outputs.dir jdk_home
+
     from(configurations.jdk.asPath) {
         rename 'deterministic-rt-(.*).jar', 'rt.jar'
     }
     into "$jdk_home/jre/lib"
+
+    doLast {
+        def eol = System.getProperty('line.separator')
+        file("$jdk_home/release").write "JAVA_VERSION=\"1.8.0_172\"$eol"
+        mkdir "$jdk_home/bin"
+        file("$jdk_home/bin/javac").with {
+            write "#!/bin/sh\necho \"javac 1.8.0_172\"\n"
+            setExecutable true, false
+            return
+        }
+    }
 }
 
 assemble.dependsOn copyJdk

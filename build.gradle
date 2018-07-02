@@ -22,20 +22,6 @@ buildscript {
     ext.capsule_version = '1.0.1'
 
     ext.asm_version = '5.0.4'
-
-    /*
-     * TODO Upgrade to version 2.4 for large message streaming support
-     *
-     * Due to a memory leak in the connection handling code in Artemis, we are
-     * temporarily downgrading to version 2.2.0.
-     *
-     * The memory leak essentially triggers an out-of-memory exception within
-     * less than 10 seconds and can take down a node if a non-TLS connection is
-     * attempted against the P2P port.
-     *
-     * The issue has been reported to upstream:
-     * https://issues.apache.org/jira/browse/ARTEMIS-1559
-     */
     ext.artemis_version = '2.5.0'
     ext.jackson_version = '2.9.5'
     ext.jetty_version = '9.4.7.v20170914'
@@ -67,6 +53,7 @@ buildscript {
     ext.crash_version = 'cadb53544fbb3c0fb901445da614998a6a419488'
     ext.jsr305_version = constants.getProperty("jsr305Version")
     ext.shiro_version = '1.4.0'
+    ext.shadow_version = '2.0.4'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
@@ -81,8 +68,8 @@ buildscript {
     ext.snappy_version = '0.4'
     ext.fast_classpath_scanner_version = '2.12.3'
     ext.jcabi_manifests_version = '1.1'
+    ext.picocli_version = '3.0.0'
 
-    ext.deterministic_rt_version = '1.0-SNAPSHOT'
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
     // ext.deterministic_idea_sdk = '1.8 (Deterministic)'
 
@@ -153,6 +140,10 @@ allprojects {
     apply plugin: 'jacoco'
     apply plugin: 'org.owasp.dependencycheck'
     apply plugin: 'kotlin-allopen'
+
+    // This line works around a serious performance regression in the Kotlin 1.2.50 gradle plugin, it's fixed in 1.2.51
+    // TODO: Remove when we upgrade past Kotlin 1.2.51
+    inspectClassesForKotlinIC.enabled = false
 
     allOpen {
         annotations(
@@ -351,9 +342,11 @@ bintrayConfig {
             'corda-node-driver',
             'corda-confidential-identities',
             'corda-shell',
+            'corda-tools-shell-cli',
             'corda-serialization',
             'corda-serialization-deterministic',
             'corda-tools-blob-inspector',
+            'corda-tools-explorer',
             'corda-tools-network-bootstrapper'
     ]
     license {
@@ -435,6 +428,6 @@ if(file('corda-docs-only-build').exists() || (System.getenv('CORDA_DOCS_ONLY_BUI
 }
 
 wrapper {
-    gradleVersion = "4.8"
+    gradleVersion = "4.8.1"
     distributionType = Wrapper.DistributionType.ALL
 }

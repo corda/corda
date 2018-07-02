@@ -118,7 +118,7 @@ All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` op
 All ``QueryCriteria`` implementations provide an explicitly specifiable set of common attributes:
 
 1. State status attribute (``Vault.StateStatus``), which defaults to filtering on UNCONSUMED states.
-   When chaining several criterias using AND / OR, the last value of this attribute will override any previous
+   When chaining several criteria using AND / OR, the last value of this attribute will override any previous
 2. Contract state types (``<Set<Class<out ContractState>>``), which will contain at minimum one type (by default this
    will be ``ContractState`` which resolves to all state types). When chaining several criteria using ``and`` and
    ``or`` operators, all specified contract state types are combined into a single set

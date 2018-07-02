@@ -7,6 +7,7 @@ import net.corda.client.jackson.JacksonSupport
 import net.corda.core.internal.isRegularFile
 import net.corda.core.internal.rootMessage
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironmentImpl
 import net.corda.core.serialization.internal._contextSerializationEnv
@@ -33,7 +34,7 @@ fun main(args: Array<String>) {
         if (main.verbose) {
             throwable.printStackTrace()
         } else {
-            System.err.println("*ERROR*: ${throwable.rootMessage ?: "Use --verbose for more details"}")
+            System.err.println("*ERROR*: ${throwable.rootMessage}. Use --verbose for more details")
         }
         exitProcess(1)
     }
@@ -41,7 +42,7 @@ fun main(args: Array<String>) {
 
 @Command(
         name = "Blob Inspector",
-        versionProvider = VersionProvider::class,
+        versionProvider = CordaVersionProvider::class,
         mixinStandardHelpOptions = true, // add --help and --version options,
         showDefaultValues = true,
         description = ["Inspect AMQP serialised binary blobs"]
@@ -64,7 +65,9 @@ class Main : Runnable {
     var verbose: Boolean = false
 
     override fun run() {
-        System.setProperty("logLevel", if (verbose) "trace" else "off")
+        if (verbose) {
+            System.setProperty("logLevel", "trace")
+        }
 
         val bytes = source!!.readBytes().run {
             require(size > amqpMagic.size) { "Insufficient bytes for AMQP blob" }
@@ -89,7 +92,8 @@ class Main : Runnable {
         }
         val mapper = JacksonSupport.createNonRpcMapper(factory, fullParties)
 
-        val deserialized = bytes.deserialize<Any>()
+        // Deserialise with the lenient carpenter as we only care for the AMQP field getters
+        val deserialized = bytes.deserialize<Any>(context = SerializationFactory.defaultFactory.defaultContext.withLenientCarpenter())
         println(deserialized.javaClass.name)
         mapper.writeValue(System.out, deserialized)
     }
@@ -124,8 +128,13 @@ private class SourceConverter : ITypeConverter<URL> {
     }
 }
 
-private class VersionProvider : IVersionProvider {
-    override fun getVersion(): Array<String> = arrayOf(Manifests.read("Corda-Release-Version"))
+private class CordaVersionProvider : IVersionProvider {
+    override fun getVersion(): Array<String> {
+        return arrayOf(
+                "Version: ${Manifests.read("Corda-Release-Version")}",
+                "Revision: ${Manifests.read("Corda-Revision")}"
+        )
+    }
 }
 
 private enum class FormatType { YAML, JSON }

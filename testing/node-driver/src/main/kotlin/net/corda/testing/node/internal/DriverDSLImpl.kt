@@ -739,6 +739,7 @@ class DriverDSLImpl(
                 Permissions.invokeRpc(CordaRPCOps::stateMachineRecordedTransactionMappingFeed),
                 Permissions.invokeRpc(CordaRPCOps::nodeInfoFromParty),
                 Permissions.invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
+                Permissions.invokeRpc(CordaRPCOps::internalFindVerifiedTransaction),
                 Permissions.invokeRpc("vaultQueryBy"),
                 Permissions.invokeRpc("vaultTrackBy"),
                 Permissions.invokeRpc(CordaRPCOps::registeredFlows)

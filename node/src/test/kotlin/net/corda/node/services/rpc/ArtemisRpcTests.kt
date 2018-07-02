@@ -14,6 +14,9 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.messaging.InternalRPCMessagingClient
 import net.corda.node.services.messaging.RPCServerConfiguration
+import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
+import net.corda.node.utilities.saveToKeyStore
+import net.corda.node.utilities.saveToTrustStore
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration
@@ -21,10 +24,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.RandomFree
-import net.corda.testing.internal.createKeyPairAndSelfSignedCertificate
 import net.corda.testing.internal.createNodeSslConfig
-import net.corda.testing.internal.saveToKeyStore
-import net.corda.testing.internal.saveToTrustStore
 import org.apache.activemq.artemis.api.core.ActiveMQConnectionTimedOutException
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.assertj.core.api.Assertions.assertThat
@@ -33,6 +33,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Path
+import javax.security.auth.x500.X500Principal
 
 class ArtemisRpcTests {
     private val ports: PortAllocation = RandomFree
@@ -49,9 +50,11 @@ class ArtemisRpcTests {
     @JvmField
     val tempFolder = TemporaryFolder()
 
+    val testName = X500Principal("CN=Test,O=R3 Ltd,L=London,C=GB")
+
     @Test
     fun rpc_with_ssl_enabled() {
-        val (rpcKeyPair, selfSignCert) = createKeyPairAndSelfSignedCertificate()
+        val (rpcKeyPair, selfSignCert) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val keyStorePath = saveToKeyStore(tempFile("rpcKeystore.jks"), rpcKeyPair, selfSignCert)
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
         val trustStorePath = saveToTrustStore(tempFile("rpcTruststore.jks"), selfSignCert)
@@ -66,7 +69,7 @@ class ArtemisRpcTests {
 
     @Test
     fun rpc_with_no_ssl_on_client_side_and_ssl_on_server_side() {
-        val (rpcKeyPair, selfSignCert) = createKeyPairAndSelfSignedCertificate()
+        val (rpcKeyPair, selfSignCert) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val keyStorePath = saveToKeyStore(tempFile("rpcKeystore.jks"), rpcKeyPair, selfSignCert)
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")
         // here client sslOptions are passed null (as in, do not use SSL)
@@ -77,12 +80,12 @@ class ArtemisRpcTests {
 
     @Test
     fun rpc_client_certificate_untrusted_to_server() {
-        val (rpcKeyPair, selfSignCert) = createKeyPairAndSelfSignedCertificate()
+        val (rpcKeyPair, selfSignCert) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val keyStorePath = saveToKeyStore(tempFile("rpcKeystore.jks"), rpcKeyPair, selfSignCert)
 
         // create another keypair and certificate and add that to the client truststore
         // the ssl connection should not
-        val (_, selfSignCert1) = createKeyPairAndSelfSignedCertificate()
+        val (_, selfSignCert1) = createKeyPairAndSelfSignedTLSCertificate(testName)
         val trustStorePath = saveToTrustStore(tempFile("rpcTruststore.jks"), selfSignCert1)
 
         val brokerSslOptions = BrokerRpcSslOptions(keyStorePath, "password")

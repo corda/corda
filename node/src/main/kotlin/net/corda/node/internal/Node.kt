@@ -44,7 +44,6 @@ import net.corda.node.services.messaging.InternalRPCMessagingClient
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.P2PMessagingClient
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.node.services.messaging.VerifierMessagingClient
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.utilities.AddressUtils
@@ -125,10 +124,7 @@ open class Node(configuration: NodeConfiguration,
     }
 
     override val log: Logger get() = staticLog
-    override fun makeTransactionVerifierService(): TransactionVerifierService = when (configuration.verifierType) {
-        VerifierType.OutOfProcess -> throw IllegalArgumentException("OutOfProcess verifier not supported") //verifierMessagingClient!!.verifierService
-        VerifierType.InMemory -> InMemoryTransactionVerifierService(numberOfWorkers = 4)
-    }
+    override fun makeTransactionVerifierService(): TransactionVerifierService = InMemoryTransactionVerifierService(numberOfWorkers = 4)
 
     private val sameVmNodeNumber = sameVmNodeCounter.incrementAndGet() // Under normal (non-test execution) it will always be "1"
 
@@ -212,10 +208,6 @@ open class Node(configuration: NodeConfiguration,
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
         }
-        verifierMessagingClient = when (configuration.verifierType) {
-            VerifierType.OutOfProcess -> throw IllegalArgumentException("OutOfProcess verifier not supported") //VerifierMessagingClient(configuration, serverAddress, services.monitoringService.metrics, /*networkParameters.maxMessageSize*/MAX_FILE_SIZE)
-            VerifierType.InMemory -> null
-        }
         require(info.legalIdentities.size in 1..2) { "Currently nodes must have a primary address and optionally one serviced address" }
         val serviceIdentity: PublicKey? = if (info.legalIdentities.size == 1) null else info.legalIdentities[1].owningKey
         return P2PMessagingClient(
@@ -239,7 +231,7 @@ open class Node(configuration: NodeConfiguration,
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(configuration, this.address, adminAddress, sslConfig, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                        ArtemisRpcBroker.withSsl(configuration, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     } else {
                         ArtemisRpcBroker.withoutSsl(configuration, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     }
@@ -310,10 +302,6 @@ open class Node(configuration: NodeConfiguration,
         internalRpcMessagingClient?.run {
             runOnStop += this::close
             init(rpcOps, securityManager)
-        }
-        verifierMessagingClient?.run {
-            runOnStop += this::stop
-            start()
         }
         (network as P2PMessagingClient).apply {
             runOnStop += this::stop
@@ -414,11 +402,10 @@ open class Node(configuration: NodeConfiguration,
     }
 
     private var internalRpcMessagingClient: InternalRPCMessagingClient? = null
-    private var verifierMessagingClient: VerifierMessagingClient? = null
+
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
         internalRpcMessagingClient?.start(rpcBroker!!.serverControl)
-        verifierMessagingClient?.start2()
         (network as P2PMessagingClient).run()
     }
 

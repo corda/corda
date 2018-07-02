@@ -94,7 +94,7 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `Simple AMPQ Client to Server connection works`() {
+    fun `Simple AMPQ Client to Server connection works and soft fail is enabled`() {
         val crlCheckSoftFail = true
         val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
@@ -126,8 +126,61 @@ class CertificateRevocationListNodeTests {
     }
 
     @Test
-    fun `AMPQ Client to Server connection fails when client's certificate is revoked`() {
+    fun `Simple AMPQ Client to Server connection works and soft fail is disabled`() {
+        val crlCheckSoftFail = false
+        val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
+        amqpServer.use {
+            amqpServer.start()
+            val receiveSubs = amqpServer.onReceive.subscribe {
+                assertEquals(BOB_NAME.toString(), it.sourceLegalName)
+                assertEquals(P2P_PREFIX + "Test", it.topic)
+                assertEquals("Test", String(it.payload))
+                it.complete(true)
+            }
+            val (amqpClient, _) = createClient(serverPort, crlCheckSoftFail)
+            amqpClient.use {
+                val serverConnected = amqpServer.onConnection.toFuture()
+                val clientConnected = amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val serverConnect = serverConnected.get()
+                assertEquals(true, serverConnect.connected)
+                val clientConnect = clientConnected.get()
+                assertEquals(true, clientConnect.connected)
+                val msg = amqpClient.createMessage("Test".toByteArray(),
+                        P2P_PREFIX + "Test",
+                        ALICE_NAME.toString(),
+                        emptyMap())
+                amqpClient.write(msg)
+                assertEquals(MessageStatus.Acknowledged, msg.onComplete.get())
+                receiveSubs.unsubscribe()
+            }
+        }
+    }
+
+    @Test
+    fun `AMPQ Client to Server connection fails when client's certificate is revoked and soft fail is enabled`() {
         val crlCheckSoftFail = true
+        val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
+        amqpServer.use {
+            amqpServer.start()
+            amqpServer.onReceive.subscribe {
+                it.complete(true)
+            }
+            val (amqpClient, clientCert) = createClient(serverPort, crlCheckSoftFail)
+            revokedNodeCerts.add(clientCert.serialNumber)
+            amqpClient.use {
+                val serverConnected = amqpServer.onConnection.toFuture()
+                amqpClient.onConnection.toFuture()
+                amqpClient.start()
+                val serverConnect = serverConnected.get()
+                assertEquals(false, serverConnect.connected)
+            }
+        }
+    }
+
+    @Test
+    fun `AMPQ Client to Server connection fails when client's certificate is revoked and soft fail is disabled`() {
+        val crlCheckSoftFail = false
         val (amqpServer, _) = createServer(serverPort, crlCheckSoftFail = crlCheckSoftFail)
         amqpServer.use {
             amqpServer.start()

@@ -31,7 +31,6 @@ apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
 
 dependencies {
-
     compile "com.microsoft.azure:azure:1.8.0"
     compile "com.github.docker-java:docker-java:3.0.6"
 
@@ -50,8 +49,8 @@ dependencies {
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
     compile "no.tornado:tornadofx:$tornadofx_version"
 
+    // ControlsFX: Extra controls for JavaFX.
     compile "org.controlsfx:controlsfx:$controlsfx_version"
-
 }
 
 shadowJar {

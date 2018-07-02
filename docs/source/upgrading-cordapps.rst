@@ -71,7 +71,7 @@ The ``InitiatedBy`` flow does the opposite:
 * Receives a ``String``
 * Sends a ``CustomType``
 
-As long as both the ``IntiatingFlow`` and the ``InitiatedBy`` flows conform to the sequence of actions, the flows can
+As long as both the ``InitiatingFlow`` and the ``InitiatedBy`` flows conform to the sequence of actions, the flows can
 be implemented in any way you see fit (including adding proprietary business logic that is not shared with other
 parties).
 
@@ -81,7 +81,7 @@ A flow can become backwards-incompatible in two main ways:
 
 * The sequence of ``send`` and ``receive`` calls changes:
 
-  * A ``send`` or ``receive`` is added or removed from either the ``InitatingFlow`` or ``InitiatedBy`` flow
+  * A ``send`` or ``receive`` is added or removed from either the ``InitiatingFlow`` or ``InitiatedBy`` flow
   * The sequence of ``send`` and ``receive`` calls changes
 
 * The types of the ``send`` and ``receive`` calls changes
@@ -112,7 +112,7 @@ If you shut down all nodes and upgrade them all at the same time, any incompatib
 
 In situations where some nodes may still be using previous versions of a flow and thus new versions of your flow may
 talk to old versions, the updated flows need to be backwards-compatible. This will be the case for almost any real
-deployment in which you cannot easily coordinate the rollout of new code across the network.
+deployment in which you cannot easily coordinate the roll-out of new code across the network.
 
 How do I ensure flow backwards-compatibility?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

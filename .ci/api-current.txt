@@ -6331,7 +6331,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public final net.corda.testing.services.MockAttachmentStorage getAttachments()
   @NotNull
-  public java.time.Clock getClock()
+  public net.corda.testing.node.TestClock getClock()
   @NotNull
   public net.corda.core.node.services.ContractUpgradeService getContractUpgradeService()
   @NotNull

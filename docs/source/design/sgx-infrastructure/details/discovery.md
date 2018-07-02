@@ -75,13 +75,13 @@ This may be done in the following steps:
 4. Find an alive host that has the channel in its active set for the measurement
 
 1 may be done by maintaining a channel -> measurements map in etcd. This mapping would effectively define the enclave
-deployment and would be the central place to control incremental rollout or rollbacks.
+deployment and would be the central place to control incremental roll-out or rollbacks.
 
 2 requires storing of additional metadata per advertised channel, namely a datastructure describing the enclave's trust
 predicate. A similar datastructure is provided by the discovering entity - these two predicates can then be used to
 filter measurements based on trust.
 
-3 is where we may want to introduce more control if we want to support incremental rollout/canary deployments.
+3 is where we may want to introduce more control if we want to support incremental roll-out/canary deployments.
 
 4 is where various (non-MVP) optimisation considerations come to mind. We could add a loadbalancer, do autoscaling based
 on load (although Kubernetes already provides support for this), could have a preference for looping back to the same

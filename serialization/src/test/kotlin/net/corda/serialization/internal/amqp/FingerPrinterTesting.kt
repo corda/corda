@@ -46,8 +46,8 @@ class FingerPrinterTestingTests {
         val factory = SerializerFactory(
                 AllWhitelist,
                 ClassLoader.getSystemClassLoader(),
-                EvolutionSerializerGetterTesting(),
-                FingerPrinterTesting())
+                evolutionSerializerGetter = EvolutionSerializerGetterTesting(),
+                fingerPrinter = FingerPrinterTesting())
 
         val blob = TestSerializationOutput(VERBOSE, factory).serializeAndReturnSchema(C(1, 2L))
 

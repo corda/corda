@@ -81,7 +81,7 @@ The deployment process will start and typically takes 8-10 minutes to complete.
 
 Once deployed click 'Resources Groups', select the resource group you defined in Step 1 above and click 'Overview' to see the virtual machine details. The names of your VMs will be pre-fixed with the resource prefix value you defined in Step 1 above.
 
-The Newtork Map Service node is suffixed nm0. The Notary node is suffixed not0. Your Corda participant nodes are suffixed node0, node1, node2 etc. Note down the **Public IP address** for your Corda nodes. You will need these to connect to UI screens via your web browser:
+The Network Map Service node is suffixed nm0. The Notary node is suffixed not0. Your Corda participant nodes are suffixed node0, node1, node2 etc. Note down the **Public IP address** for your Corda nodes. You will need these to connect to UI screens via your web browser:
 
 .. image:: resources/azure_ip.png
   :width: 300px

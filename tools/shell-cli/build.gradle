@@ -1,0 +1,54 @@
+description 'Corda Shell CLI'
+
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "com.github.jengelman.gradle.plugins:shadow:$shadow_version"
+    }
+}
+
+apply plugin: 'application'
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+mainClassName = 'net.corda.tools.shell.StandaloneShellKt'
+
+dependencies {
+    compile project(':tools:shell')
+    compile group: 'org.slf4j', name: 'slf4j-simple', version: slf4j_version
+
+    testCompile(project(':test-utils')) {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+    }
+}
+
+processResources {
+    from file("$rootDir/config/dev/log4j2.xml")
+}
+
+shadowJar  {
+    mergeServiceFiles()
+}
+
+task buildShellCli(dependsOn: shadowJar)
+
+artifacts {
+    publish shadowJar {
+        classifier ""
+    }
+}
+
+jar {
+    classifier "ignore"
+    enabled = false
+}
+
+publish {
+    disableDefaultJar = true
+    name 'corda-tools-shell-cli'
+}

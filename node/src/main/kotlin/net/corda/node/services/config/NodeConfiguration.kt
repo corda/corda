@@ -227,7 +227,7 @@ data class NodeConfigurationImpl(
 
     override val rpcOptions: NodeRpcOptions
         get() {
-            return actualRpcSettings.asOptions(BrokerRpcSslOptions(baseDirectory / "certificates" / "nodekeystore.jks", keyStorePassword))
+            return actualRpcSettings.asOptions()
         }
 
     private fun validateTlsCertCrlConfig(): List<String> {
@@ -273,10 +273,11 @@ data class NodeConfigurationImpl(
 
     private fun validateRpcSettings(options: NodeRpcSettings): List<String> {
         val errors = mutableListOf<String>()
-        if (options.address != null) {
-            if (!options.useSsl && options.adminAddress == null) {
-                errors += "'rpcSettings.adminAddress': missing. Property is mandatory when 'rpcSettings.useSsl' is false (default)."
-            }
+        if (options.adminAddress == null) {
+            errors += "'rpcSettings.adminAddress': missing"
+        }
+        if (options.useSsl && options.ssl == null) {
+            errors += "'rpcSettings.ssl': missing (rpcSettings.useSsl was set to true)."
         }
         return errors
     }
@@ -350,13 +351,13 @@ data class NodeRpcSettings(
         val useSsl: Boolean = false,
         val ssl: BrokerRpcSslOptions?
 ) {
-    fun asOptions(fallbackSslOptions: BrokerRpcSslOptions): NodeRpcOptions {
+    fun asOptions(): NodeRpcOptions {
         return object : NodeRpcOptions {
             override val address = this@NodeRpcSettings.address!!
             override val adminAddress = this@NodeRpcSettings.adminAddress!!
             override val standAloneBroker = this@NodeRpcSettings.standAloneBroker
             override val useSsl = this@NodeRpcSettings.useSsl
-            override val sslConfig = this@NodeRpcSettings.ssl ?: fallbackSslOptions
+            override val sslConfig = this@NodeRpcSettings.ssl
 
             override fun toString(): String {
                 return "address: $address, adminAddress: $adminAddress, standAloneBroker: $standAloneBroker, useSsl: $useSsl, sslConfig: $sslConfig"
@@ -370,8 +371,7 @@ data class NodeH2Settings(
 )
 
 enum class VerifierType {
-    InMemory,
-    OutOfProcess
+    InMemory
 }
 
 enum class CertChainPolicyType {
