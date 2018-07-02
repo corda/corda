@@ -68,7 +68,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
             val portNotBoundChecks = nodes.flatMap {
                 listOf(
                         it.internals.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
-                        it.internals.configuration.rpcOptions.address?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
+                        it.internals.configuration.rpcOptions.address.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
                 )
             }.filterNotNull()
             nodes.clear()

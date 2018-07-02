@@ -13,6 +13,7 @@ data class ShellConfiguration(
         val hostAndPort: NetworkHostAndPort,
         val ssl: ClientRpcSslOptions? = null,
         val nodeSslConfig: SSLConfiguration? = null,
+        // TODO sollecitom here, if not null
         val sshdPort: Int? = null,
         val sshHostKeyDirectory: Path? = null,
         val noLocalShell: Boolean = false) {

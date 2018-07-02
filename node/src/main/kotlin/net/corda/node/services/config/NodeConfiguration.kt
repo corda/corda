@@ -32,6 +32,7 @@ private val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration =
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: CordaX500Name
     val emailAddress: String
+    // TODO sollecitom here
     val jmxMonitoringHttpPort: Int?
     val dataSourceProperties: Properties
     val rpcUsers: List<User>
@@ -45,7 +46,9 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val flowTimeout: FlowTimeoutConfiguration
     val notary: NotaryConfig?
     val additionalNodeInfoPollingFrequencyMsec: Long
+    // TODO sollecitom here (if NetworkHostAndPort is null)
     val p2pAddress: NetworkHostAndPort
+    // TODO sollecitom here (up to 2 ports) (if standalone broker is false)
     val rpcOptions: NodeRpcOptions
     val messagingServerAddress: NetworkHostAndPort?
     val messagingServerExternal: Boolean
@@ -64,6 +67,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val extraNetworkMapKeys: List<UUID>
     val tlsCertCrlDistPoint: URL?
     val tlsCertCrlIssuer: String?
+    // TODO sollecitom here, if not null
     val effectiveH2Settings: NodeH2Settings?
     val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
     val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS

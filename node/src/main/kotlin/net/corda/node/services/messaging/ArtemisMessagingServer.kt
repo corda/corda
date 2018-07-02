@@ -1,5 +1,6 @@
 package net.corda.node.services.messaging
 
+import io.netty.channel.unix.Errors
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.div
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -9,6 +10,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_P2P_ROLE
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.PEER_ROLE
+import net.corda.node.internal.errors.PortBindingException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pAcceptorTcpTransport
 import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
@@ -104,12 +106,21 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
 
-        activeMQServer.start()
+        try {
+            activeMQServer.start()
+        } catch (e: Errors.NativeIoException) {
+            if (e.isPortBindingError()) {
+                throw PortBindingException(config.p2pAddress.port)
+            }
+            throw e
+        }
         activeMQServer.remotingService.addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
         activeMQServer.remotingService.addIncomingInterceptor(AmqpMessageSizeChecksInterceptor(maxMessageSize))
         // Config driven switch between legacy CORE bridges and the newer AMQP protocol bridges.
         log.info("P2P messaging server listening on $messagingServerAddress")
     }
+
+    private fun Errors.NativeIoException.isPortBindingError() = message?.contains("Address already in use") ?: false
 
     private fun createArtemisConfig(): Configuration {
         val addressConfigs = identities.map {
