@@ -1,6 +1,29 @@
 Release notes
 =============
 
+.. _release_notes_v3_2:
+
+Release 3.2
+-----------
+
+As Corda deployments move toward production this minor release of the open sauce platform brings
+several fixes that address issues with a node's interactions with the defined compatibility zone.
+This will ensure Corda nodes will be free to interact with the upcoming network platforms from
+R3 and any other privately deployed compatibility zone.
+
+To support the ongoing move toward usability, testing, and deployment, 3.2 is releasing the
+Network Bootstrapper <docs ref> to facilitate the simple creation of more dynamic ad-hoc testing
+environments.
+
+Finally, the Blob Inspector <docs ref> brings the ability to inspect serializes Corda Blobs at the
+command line, meaning those serialized Network Parameters and Node Info files are suddenly a lot
+easier to understand and debug.
+
+Issues Fixed
+~~~~~~~~~~~~
+
+<fill me in>
+
 .. _release_notes_v3_1:
 
 Release 3.1
