@@ -43,6 +43,26 @@ Optionally run the node's webserver as well by opening a terminal window in the 
 
 .. warning:: The node webserver is for testing purposes only and will be removed soon.
 
+Command-line options
+~~~~~~~~~~~~~~~~~~~~
+The node can optionally be started with the following command-line options:
+
+* ``base-directory`` - the path to the node's base directory
+* ``config-file`` - the path to the node's configuration file
+* ``logging-level`` - the logging level
+* ``log-to-console`` - whether to log to the console as well as a file
+* ``sshd`` - whether to enable the SSHD server for node administration
+* ``no-local-shell`` - whether to disable the local shell
+* ``initial-registration`` - whether to start the registration process with the permissioning server
+* ``network-root-truststore`` - the path to the network root trust store if performing initial registration
+* ``network-root-truststore-password`` - the password for the network root trust store if performing initial registration
+* ``on-unknown-config-keys`` - how to behave if unrecognised node configuration options are found
+* ``dev-mode`` - whether to run the node in developer mode
+* ``version`` - print the Corda version instead of starting the node
+* ``just-generate-node-info`` - generate the node's ``nodeInfo``, save it to disk and quit
+* ``bootstrap-raft-cluster`` - whether the node should bootstrap a RAFT cluster
+* ``clear-network-map-cache`` - whether to clear the local copy of the network map cache
+
 Enabling remote debugging
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 To enable remote debugging of the node, run the following from the terminal window:
@@ -51,8 +71,11 @@ To enable remote debugging of the node, run the following from the terminal wind
 
 This command line will start the debugger on port 5005 and pause the process awaiting debugger attachment.
 
-Starting all nodes at once from the command line (native)
----------------------------------------------------------
+Starting all nodes at once from the command line
+------------------------------------------------
+
+Native
+~~~~~~
 If you created your nodes using ``deployNodes``, a ``runnodes`` shell script (or batch file on Windows) will have been
 generated to allow you to quickly start up all nodes and their webservers. ``runnodes`` should only be used for testing
 purposes.
@@ -69,8 +92,8 @@ If you receive an ``OutOfMemoryError`` exception when interacting with the nodes
 Java heap memory available to them, which you can do when running them individually. See
 :ref:`starting-an-individual-corda-node`.
 
-Starting all nodes at once from the command line (docker-compose)
------------------------------------------------------------------
+docker-compose
+~~~~~~~~~~~~~~
 If you created your nodes using ``Dockerform``, the ``docker-compose.yml`` file and corresponding ``Dockerfile`` for
 nodes has been created and configured appropriately. Navigate to ``build/nodes`` directory and run ``docker-compose up``
 command. This will startup nodes inside new, internal network.
