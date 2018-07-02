@@ -2,6 +2,8 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.nodeapi.internal.serialization.carpenter.getTypeAsClass
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.io.NotSerializableException
@@ -16,10 +18,8 @@ import kotlin.reflect.jvm.javaType
  *
  * @property oldReaders A linked map representing the properties of the object as they were serialized. Note
  * this may contain properties that are no longer needed by the class. These *must* be read however to ensure
- * any refferenced objects in the object stream are captured properly
- * @property kotlinConstructor
- * @property constructorArgs used to hold the properties as sent to the object's constructor. Passed in as a
- * pre populated array as properties not present on the old constructor must be initialised in the factory
+ * any referenced objects in the object stream are captured properly
+ * @property kotlinConstructor reference to the constructor used to instantiate an instance of the class.
  */
 abstract class EvolutionSerializer(
         clazz: Type,
@@ -39,15 +39,21 @@ abstract class EvolutionSerializer(
      * @param property object to read the actual property value
      */
     data class OldParam(var resultsIndex: Int, val property: PropertySerializer) {
-        fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput, new: Array<Any?>) =
-                property.readProperty(obj, schemas, input).apply {
-                    if(resultsIndex >= 0) {
-                        new[resultsIndex] = this
-                    }
-                }
+        fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput,
+                         new: Array<Any?>
+        ) = property.readProperty(obj, schemas, input).apply {
+            if(resultsIndex >= 0) {
+                new[resultsIndex] = this
+            }
+        }
+        override fun toString(): String {
+            return "resultsIndex = $resultsIndex property = ${property.name}"
+        }
     }
 
     companion object {
+        val logger = contextLogger()
+
         /**
          * Unlike the generic deserialization case where we need to locate the primary constructor
          * for the object (or our best guess) in the case of an object whose structure has changed
@@ -63,22 +69,37 @@ abstract class EvolutionSerializer(
 
             if (!isConcrete(clazz)) return null
 
-            val oldArgumentSet = oldArgs.map { Pair(it.key as String?, it.value.property.resolvedType) }
-
+            val oldArgumentSet = oldArgs.map { Pair(it.key as String?, it.value.property.resolvedType.asClass()) }
             var maxConstructorVersion = Integer.MIN_VALUE
             var constructor: KFunction<Any>? = null
+
             clazz.kotlin.constructors.forEach {
                 val version = it.findAnnotation<DeprecatedConstructorForDeserialization>()?.version ?: Integer.MIN_VALUE
-                if (oldArgumentSet.containsAll(it.parameters.map { v -> Pair(v.name, v.type.javaType) }) &&
-                        version > maxConstructorVersion) {
+
+                if (version > maxConstructorVersion &&
+                        oldArgumentSet.containsAll(it.parameters.map { v -> Pair(v.name, v.type.javaType.asClass()) })
+                ) {
                     constructor = it
                     maxConstructorVersion = version
+
+                    with(logger) {
+                        info("Select annotated constructor version=$version nparams=${it.parameters.size}")
+                        debug{"  params=${it.parameters}"}
+                    }
+                } else if (version != Integer.MIN_VALUE){
+                    with(logger) {
+                        info("Ignore annotated constructor version=$version nparams=${it.parameters.size}")
+                        debug{"  params=${it.parameters}"}
+                    }
                 }
             }
 
             // if we didn't get an exact match revert to existing behaviour, if the new parameters
             // are not mandatory (i.e. nullable) things are fine
-            return constructor ?: constructorForDeserialization(type)
+            return constructor ?: run {
+                logger.info("Failed to find annotated historic constructor")
+                constructorForDeserialization(type)
+            }
         }
 
         private fun makeWithConstructor(
