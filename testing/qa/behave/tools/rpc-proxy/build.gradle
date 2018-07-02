@@ -47,8 +47,8 @@ dependencies {
 
     compile project(':finance')
     compileOnly project(':node-api')
-    compile project(':core')
-    compile project(':client:rpc')
+    rpcProxyCompile project(':core')
+    rpcProxyCompile project(':client:rpc')
 
     // includes jetty/jersey dependencies used by RPCProxyServer
     compile project(':webserver')
