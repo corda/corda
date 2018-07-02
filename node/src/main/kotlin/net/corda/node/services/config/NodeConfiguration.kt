@@ -46,7 +46,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val flowTimeout: FlowTimeoutConfiguration
     val notary: NotaryConfig?
     val additionalNodeInfoPollingFrequencyMsec: Long
-    // TODO sollecitom here (if NetworkHostAndPort is null)
     val p2pAddress: NetworkHostAndPort
     // TODO sollecitom here (up to 2 ports) (if standalone broker is false)
     val rpcOptions: NodeRpcOptions
