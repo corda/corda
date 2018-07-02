@@ -78,21 +78,6 @@ data class NetworkParameters(
                 whitelistedContractImplementations = whitelistedContractImplementations,
                 eventHorizon = eventHorizon)
     }
-
-    override fun toString(): String {
-        return """NetworkParameters {
-  minimumPlatformVersion=$minimumPlatformVersion
-  notaries=$notaries
-  maxMessageSize=$maxMessageSize
-  maxTransactionSize=$maxTransactionSize
-  whitelistedContractImplementations {
-    ${whitelistedContractImplementations.entries.joinToString("\n    ")}
-  }
-  eventHorizon=$eventHorizon
-  modifiedTime=$modifiedTime
-  epoch=$epoch
-}"""
-    }
 }
 
 /**
