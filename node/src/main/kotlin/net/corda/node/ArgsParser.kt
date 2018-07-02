@@ -104,14 +104,17 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val noLocalShell: Boolean,
                           val sshdServer: Boolean,
                           val justGenerateNodeInfo: Boolean,
-                          val bootstrapRaftCluster: Boolean) {
+                          val bootstrapRaftCluster: Boolean
+) {
     fun loadConfig(): NodeConfiguration {
         val config = ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(
                 mapOf("noLocalShell" to this.noLocalShell)
         )).parseAsNodeConfiguration()
 
         if (nodeRegistrationConfig != null) {
-            requireNotNull(config.compatibilityZoneURL) { "Compatibility Zone Url must be provided in registration mode." }
+            require(config.compatibilityZoneURL != null || config.networkServices != null) {
+                "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
+            }
         }
 
         return config

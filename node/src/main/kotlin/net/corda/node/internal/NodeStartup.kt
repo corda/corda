@@ -188,8 +188,20 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Starting as node on ${conf.p2pAddress}")
     }
 
+<<<<<<< HEAD
     open protected fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
         val compatibilityZoneURL = conf.compatibilityZoneURL!!
+=======
+    private fun shouldRegisterWithNetwork(cmdlineOptions: CmdLineOptions, conf: NodeConfiguration): Boolean {
+        val compatibilityZoneURL = conf.compatibilityZoneURL
+        return !(!cmdlineOptions.isRegistration || compatibilityZoneURL == null)
+    }
+
+    protected open fun registerWithNetwork(conf: NodeConfiguration, networkRootTruststorePath: Path, networkRootTruststorePassword: String) {
+        val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException(
+                "compatibilityZoneURL or networkServices must be configured!")
+
+>>>>>>> f7aa2f829... CORDA-1510 - Allow Doorman and NetworkMap to be configured independently  (#3485)
         println()
         println("******************************************************************")
         println("*                                                                *")
