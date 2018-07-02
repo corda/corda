@@ -22,7 +22,6 @@ dependencies {
     // Configure these by hand. It should be a minimal subset of dependencies,
     // and without any obviously non-deterministic ones such as Hibernate.
     runtimeLibraries project(path: ':core-deterministic', configuration: 'runtimeArtifacts')
-    runtimeLibraries "io.github.lukehutch:fast-classpath-scanner:$fast_classpath_scanner_version"
     runtimeLibraries "org.apache.qpid:proton-j:$protonj_version"
     runtimeLibraries "org.iq80.snappy:snappy:$snappy_version"
 }

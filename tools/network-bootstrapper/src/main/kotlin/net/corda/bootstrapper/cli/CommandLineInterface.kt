@@ -17,7 +17,7 @@ class CommandLineInterface {
     fun run(parsedArgs: CliParser) {
         val baseDir = parsedArgs.baseDirectory
         val cacheDir = File(baseDir, Constants.BOOTSTRAPPER_DIR_NAME)
-        val networkName = parsedArgs.name
+        val networkName = parsedArgs.name ?: "corda-network"
         val objectMapper = Constants.getContextMapper()
         val contextFile = File(cacheDir, "$networkName.yaml")
         if (parsedArgs.isNew()) {

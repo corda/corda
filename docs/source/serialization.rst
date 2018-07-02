@@ -79,8 +79,6 @@ Corda serialisation is currently used for:
     #.  Peer-to-peer networking.
     #.  Persisted messages, like signed transactions and states.
 
-.. note:: At present, the Kryo-based format is still used by the RPC framework on both the client and server side. However, it is planned that the RPC framework will move to the AMQP framework soon.
-
 For the checkpointing of flows Corda uses a private scheme that is subject to change. It is currently based on the Kryo
 framework, but this may not be true in future.
 

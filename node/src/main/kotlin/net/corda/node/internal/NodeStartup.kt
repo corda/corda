@@ -2,6 +2,7 @@ package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
 import net.corda.core.crypto.Crypto
@@ -15,6 +16,7 @@ import net.corda.node.NodeRegistrationOption
 import net.corda.node.SerialFilter
 import net.corda.node.VersionInfo
 import net.corda.node.defaultSerialFilter
+import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
@@ -105,8 +107,16 @@ open class NodeStartup(val args: Array<String>) {
         } catch (e: UnknownConfigurationKeysException) {
             logger.error(e.message)
             return false
+        } catch (e: ConfigException.IO) {
+            println("""
+                Unable to load the node config file from '${cmdlineOptions.configFile}'.
+
+                Try experimenting with the --base-directory flag to change which directory the node
+                is looking in, or use the --config-file flag to specify it explicitly.
+            """.trimIndent())
+            return false
         } catch (e: Exception) {
-            logger.error("Exception during node configuration", e)
+            logger.error("Unexpected error whilst reading node configuration", e)
             return false
         }
         val errors = conf.validate()
@@ -135,6 +145,9 @@ open class NodeStartup(val args: Array<String>) {
         try {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: MultipleCordappsForFlowException) {
+            logger.error(e.message)
+            return false
         } catch (e: CouldNotCreateDataSourceException) {
             logger.error(e.message, e.cause)
             return false
@@ -298,6 +311,13 @@ open class NodeStartup(val args: Array<String>) {
         println("*                                                                *")
         println("******************************************************************")
         NodeRegistrationHelper(conf, versionInfo, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
+
+        // Minimal changes to make registration tool create node identity.
+        // TODO: Move node identity generation logic from node to registration helper.
+        createNode(conf, getVersionInfo()).generateAndSaveNodeInfo()
+
+        println("Successfully registered Corda node with compatibility zone, node identity keys and certificates are stored in '${conf.certificatesDirectory}', it is advised to backup the private keys and certificates.")
+        println("Corda node will now terminate.")
     }
 
     protected open fun loadConfigFile(cmdlineOptions: CmdLineOptions): Pair<Config, Try<NodeConfiguration>> = cmdlineOptions.loadConfig()

@@ -227,6 +227,23 @@ Also, the property `rpcPort` is now deprecated, so it would be preferable to sub
 
 Equivalent changes should be performed on classes extending ``CordformDefinition``.
 
+* Certificate Revocation List (CRL) support:
+
+    The newly added feature of certificate revocation (see :doc:`certificate-revocation`) introduces few changes to the node configuration.
+    In the configuration file it is required to explicitly specify what mode of the CRL check the node should apply. For that purpose the `crlCheckSoftFail`
+    parameter is now expected to be set explicitly in the node's SSL configuration.
+    Setting the `crlCheckSoftFail` to true, relaxes the CRL checking policy. In this mode, the SSL communication
+    will fail only when the certificate revocation status can be checked and the certificate is revoked. Otherwise it will succeed.
+    If `crlCheckSoftFail` is false, then the SSL failure will occur also if the certificate revocation status cannot be checked (e.g. due to a network failure).
+
+    Older versions of Corda do not have CRL distribution points embedded in the SSL certificates.
+    As such, in order to be able to reuse node and SSL certificates generated in those versions of Corda, the `crlCheckSoftFail` needs
+    to be set to true. This is required due to the fact that node and SSL certificates produced in the older versions of Corda miss attributes
+    required for the CRL check process. In this mode, if the CRL is unavailable for whatever reason, the check will still pass and the SSL connection will be allowed.
+
+    .. note:: The support for the mitigating this issue and being able to use the `strict` mode (i.e. with `crlCheckSoftFail` = false)
+    of the CRL checking with the certificates generated in the previous versions of Corda is going to be added in the near future.
+
 Testing
 ^^^^^^^
 
