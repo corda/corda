@@ -23,7 +23,7 @@ $(document).ready(function() {
             $(el).children(".highlight-kotlin")[0].style.display = "block";
         }
         else{
-            // Don't display kotlin by default
+            // By default show Java, not Kotlin
             $(el).children(".highlight-kotlin")[0].style.display = "none";
         }
         c.insertBefore(el);
