@@ -15,7 +15,7 @@ import org.objectweb.asm.Opcodes.*
  * This Visitor is applied to the byte-code repeatedly until it has removed
  * everything that is no longer wanted.
  */
-class ClassTransformer private constructor (
+class FilterTransformer private constructor (
     visitor: ClassVisitor,
     logger: Logger,
     kotlinMetadata: MutableMap<String, List<String>>,
@@ -26,7 +26,7 @@ class ClassTransformer private constructor (
     private val unwantedFields: MutableSet<FieldElement>,
     private val deletedMethods: MutableSet<MethodElement>,
     private val stubbedMethods: MutableSet<MethodElement>
-) : KotlinAwareVisitor(ASM6, visitor, logger, kotlinMetadata), Repeatable<ClassTransformer> {
+) : KotlinAwareVisitor(ASM6, visitor, logger, kotlinMetadata), Repeatable<FilterTransformer> {
     constructor(
         visitor: ClassVisitor,
         logger: Logger,
@@ -62,7 +62,7 @@ class ClassTransformer private constructor (
         name.startsWith("$className\$${method.visibleName}\$")
     }
 
-    override fun recreate(visitor: ClassVisitor) = ClassTransformer(
+    override fun recreate(visitor: ClassVisitor) = FilterTransformer(
         visitor = visitor,
         logger = logger,
         kotlinMetadata = kotlinMetadata,
