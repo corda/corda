@@ -8,27 +8,25 @@ Expected Outcome
 ~~~~~~~~~~~~~~~~
 
 You will go from a set of configuration files to a fully functional Corda network.
-The network map will be advertising the service identity of the Notary.  Every
-notary replica has obtained its own identity and the shared service identity
+The network map will be advertising the service identity of the notary. Every
+notary worker has obtained its own identity and the shared service identity
 from the doorman. 
 
-Using the registration tool, you will obtain the serivce identity of your notary
-cluster and distribute it to the keystores of all replicas of your notary
-cluster.
+Using the registration tool, you will obtain the service identity of your notary
+cluster and distribute it to the keystores of all worker nodes.
 
 The individual node identity is used by the messaging layer to route requests to
-individual notary replicas. The notary replicas sign using the service identity
-private key.
+specific workers. The workers sign transactions using the service identity private key.
 
-========  =========================== ===========================
-Host      Individual identity         Service identity
-========  =========================== ===========================
-notary-1  O=Replica 1, L=London, C=GB O=HA Notary, L=London, C=GB
-notary-2  O=Replica 2, L=London, C=GB O=HA Notary, L=London, C=GB
-notary-3  O=Replica 3, L=London, C=GB O=HA Notary, L=London, C=GB
-========  =========================== ===========================
+========  ========================== ===========================
+Host      Individual identity        Service identity
+========  ========================== ===========================
+notary-1  O=Worker 1, L=London, C=GB O=HA Notary, L=London, C=GB
+notary-2  O=Worker 2, L=London, C=GB O=HA Notary, L=London, C=GB
+notary-3  O=Worker 3, L=London, C=GB O=HA Notary, L=London, C=GB
+========  ========================== ===========================
 
-The notaries will be visible and available on the network. To list available notary
+The notary workers will be visible and available on the network. To list available notary
 identities using the Corda node shell
 
 .. code:: sh
@@ -43,7 +41,7 @@ CorDapp developers should select the notary service identity from the network ma
 
   serviceHub.networkMapCache.getNotary(CordaX500Name("HA Notary", "London", "GB"))
 
-Every notary replica's keystore contains the private key of the replica and the
+Every notary worker's keystore contains the private key of the replica and the
 private key of the notary service (with aliases ``identity-private-key`` and
 ``distributed-notary-private key`` in the keystore). We're going to create and
 populate the node's keystores later in this tutorial.
@@ -52,7 +50,7 @@ The Notary, the Doorman and the Network Map
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The notary is an essential component of every Corda network, therefore the
-Notary identity needs to be created first, before other nodes can join the
+notary identity needs to be created first, before other nodes can join the
 network, since the Notary identity is part of the network parameters.
 Adding a Corda notary to an existing network is covered in
 the network services documentation (TBD where this is hosted). Removing a notary from a network
@@ -76,9 +74,9 @@ Registering with the Doorman
 Obtaining the individual Node Identities
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Write the configuration files for your replicas as described in :doc:`installing-the-notary-service`.
+Write the configuration files for your notary nodes as described in :doc:`installing-the-notary-service`.
 
-Register all the notary replicas with the doorman using the ``--initial-registration``  flag.
+Register all the nodes with the doorman using the ``--initial-registration``  flag.
 
 .. code:: sh
 
@@ -91,7 +89,7 @@ Obtaining the distributed Service Identity
 
 Once you completed the initial registration for all notary nodes, you can use
 the registration tool to submit the certificate signing request (CSR) for the
-service identity of your notary cluster.  Read the documentation about the
+service identity of your notary cluster. Read the documentation about the
 `registration tool <https://github.com/corda/network-services/tree/master/registration-tool>`__
 for detailed instructions.
 

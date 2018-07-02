@@ -54,7 +54,7 @@ Configuration
 Configure the MySQL Root Password (if necessary)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Some distros allow root access to the database through a Unix domain socket, others
+Some distributions allow root access to the database through a Unix domain socket, others
 require you to find the temporary password in the log file and change it upon
 first login.
 

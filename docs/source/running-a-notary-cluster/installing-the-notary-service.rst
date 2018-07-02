@@ -4,7 +4,7 @@ Setting up the Notary Service
 
 In the previous section of this tutorial we set up a Percona cluster.
 
-On top of the Percona cluster we're deploying three Corda Enterprise Notary nodes ``notary-{1,2,3}`` and
+On top of the Percona cluster we're deploying three notary worker nodes ``notary-{1,2,3}`` and
 a single regular Corda node ``node-1`` that runs the notary health-check CorDapp.
 
 If you're deploying VMs in your environment you might need to adjust the host names accordingly.
