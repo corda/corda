@@ -19,7 +19,7 @@ import java.io.InputStream
 
 /**
  * Base class for removing unwanted elements from [kotlin.Metadata] annotations.
- * This is used by [ClassTransformer] for [JarFilterTask].
+ * This is used by [FilterTransformer] for [JarFilterTask].
  */
 internal abstract class MetadataTransformer<out T : MessageLite>(
     private val logger: Logger,
