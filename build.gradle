@@ -69,7 +69,6 @@ buildscript {
     ext.shadow_version = '2.0.4'
     ext.artifactory_plugin_version = constants.getProperty('artifactoryPluginVersion')
     ext.liquibase_version = '3.5.3'
-    ext.shadow_version = '2.0.2'
     ext.hikari_version = '2.5.1'
     ext.artifactory_contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
     ext.snake_yaml_version = constants.getProperty('snakeYamlVersion')
