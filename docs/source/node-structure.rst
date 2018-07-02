@@ -19,7 +19,7 @@ A Corda node has the following structure:
     ├── logs                    // The node logs
     ├── network-parameters      // The network parameters automatically downloaded from the network map server
     ├── node.conf               // The node's configuration files
-    ├── persistence.mv.db       // The node's database
+    ├── persistence.mv.db       // The node's database (present when the node uses the embedded H2 database instance)
     └── shell-commands          // Custom shell commands defined by the node owner
 
 The node is configured by editing its ``node.conf`` file (see :doc:`corda-configuration-file`). You install CorDapps on

@@ -7,17 +7,17 @@ Handcrafting a node
 -------------------
 A node can be created manually by creating a folder that contains the following items:
 
-* The Corda JAR
+* The Corda Enterprise JAR
 
-    * Can be downloaded from https://r3.bintray.com/corda/net/corda/corda/ (under /VERSION_NUMBER/corda-VERSION_NUMBER.jar)
+    * The binary ``corda-VERSION_NUMBER.jar`` provided to your organisation.
 
 * A node configuration file entitled ``node.conf``, configured as per :doc:`corda-configuration-file`
 
 * A folder entitled ``cordapps`` containing any CorDapp JARs you want the node to load
 
-* **Optional:** A webserver JAR entitled ``corda-webserver.jar`` that will connect to the node via RPC
+* **Optional:** A webserver JAR entitled ``corda-webserver-VERSION_NUMBER.jar`` that will connect to the node via RPC
 
-    * The (deprecated) default webserver can be downloaded from http://r3.bintray.com/corda/net/corda/corda-webserver/ (under /VERSION_NUMBER/corda-VERSION_NUMBER.jar)
+    * The (deprecated) default webserver is available to you for testing and should not be used in a production environment.
     * A Spring Boot alternative can be found here: https://github.com/corda/spring-webserver
 
 The remaining files and folders described in :doc:`node-structure` will be generated at runtime.
@@ -79,6 +79,8 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
             rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.net.corda.flows.MyFlow"]]]
         }
     }
+
+Ensure Corda Enterprise binaries are available on your machine as described in :ref:`Getting Set Up <resolve-corda-enterprise-binaries>`.
 
 Running this task will create three nodes in the ``build/nodes`` folder:
 

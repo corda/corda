@@ -24,11 +24,10 @@ handling, and ensures the Corda service is run at boot.
 
    ``mkdir /opt/corda; chown corda:corda /opt/corda``
 
-3. Download the `Corda jar <https://r3.bintray.com/corda/net/corda/corda/>`_
-   (under ``/VERSION_NUMBER/corda-VERSION_NUMBER.jar``) and place it in ``/opt/corda``
+3. Place the Enterprise Corda JAR ``corda-VERSION_NUMBER.jar`` in ``/opt/corda``
 
-4. (Optional) Download the `Corda webserver jar <http://r3.bintray.com/corda/net/corda/corda-webserver/>`_
-   (under ``/VERSION_NUMBER/corda-VERSION_NUMBER.jar``) and place it in ``/opt/corda``
+4. (Optional) Copy the Corda webserver JAR provided to your organization
+   (under ``/corda-webserver-VERSION_NUMBER.jar``) and place it in ``/opt/corda``
 
 5. Create a directory called ``cordapps`` in ``/opt/corda`` and save your CorDapp jar file to it. Alternatively, download one of
    our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``cordapps`` directory
@@ -191,11 +190,11 @@ at boot, and means the Corda service stays running with no users connected to th
 
    * Oracle Java 8. The supported versions are listed in :doc:`getting-set-up`
 
-1. Create a Corda directory and download the Corda jar. Replace ``VERSION_NUMBER`` with the desired version. Here's an
-   example using PowerShell::
+1. Create a Corda directory and copy the Enterprise Corda JAR ``corda-VERSION_NUMBER.jar``.
+   Replace ``VERSION_NUMBER`` with the desired version. Here's an example using PowerShell::
 
         mkdir C:\Corda
-        wget http://jcenter.bintray.com/net/corda/corda/VERSION_NUMBER/corda-VERSION_NUMBER.jar -OutFile C:\Corda\corda.jar
+        copy PATH_TO_CORDA_JAR/corda-VERSION_NUMBER.jar C:\Corda\corda.jar
 
 2. Create a directory called ``cordapps`` in ``C:\Corda\`` and save your CorDapp jar file to it. Alternatively,
    download one of our `sample CorDapps <https://www.corda.net/samples/>`_ to the ``cordapps`` directory
