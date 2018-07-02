@@ -4359,7 +4359,7 @@ public interface net.corda.core.schemas.QueryableState extends net.corda.core.co
   @NotNull
   public abstract Iterable<net.corda.core.schemas.MappedSchema> supportedSchemas()
 ##
-public interface net.corda.core.schemas.StatePersistable extends java.io.Serializable
+public interface net.corda.core.schemas.StatePersistable
 ##
 public interface net.corda.core.serialization.ClassWhitelist
   public abstract boolean hasListed(Class<?>)
