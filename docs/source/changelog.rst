@@ -6,7 +6,7 @@ Changelog
 Version 3.2
 -----------
 
-* Doorman and NetworkMap url's can now be configured individually rather than being assumed to be
+* Doorman and NetworkMap URLs can now be configured individually rather than being assumed to be
   the same server. Current ``compatibilityZoneURL`` configurations remain valid. See both :doc:`corda-configuration-file`
   and :doc:`permissioning` for details.
 
