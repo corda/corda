@@ -113,7 +113,7 @@ To delete existing data from the database, run the following SQL:
     DROP TABLE IF EXISTS [SCHEMA].dummy_linear_state_parts;
     DROP TABLE IF EXISTS [SCHEMA].dummy_linear_states_v2_parts;
     DROP TABLE IF EXISTS [SCHEMA].dummy_deal_states_parts;
-    DROP TABLE IF EXISTS [SCHEMA].node_attchments_contracts;
+    DROP TABLE IF EXISTS [SCHEMA].node_attachments_contracts;
     DROP TABLE IF EXISTS [SCHEMA].node_attachments;
     DROP TABLE IF EXISTS [SCHEMA].node_checkpoints;
     DROP TABLE IF EXISTS [SCHEMA].node_transactions;
