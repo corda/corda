@@ -8,7 +8,7 @@ if [ "${HELP_REQUESTED}" == "YES" ]
 then
     echo "usage: ./installer.sh <--help> <--accept-license>"
     echo "--help: display this help printout"
-    echo "--accept-license: accept the license agreement without further user input"
+    echo "--accept-license: confirm possession of a valid license without further user input"
     exit 0
 fi
 
@@ -18,10 +18,10 @@ then
     echo "skipping license as already accepted"
 else
     echo "Preparing License"
-    less -E << EOF
+    more << EOF
     QQ_LICENSE_FILE_QQ
 EOF
-    read -p "Do you agree with the license terms [yes/No]? " answer
+    read -p "Do you have a valid license and agree with the license terms [yes/No]? " answer
 
     while true
     do

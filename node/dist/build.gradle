@@ -1,3 +1,5 @@
+import org.gradle.internal.jvm.Jvm
+
 description 'Package Node as stand-alone application'
 
 evaluationDependsOn(":node")
@@ -58,6 +60,8 @@ def isLinux = System.properties['os.name'].toLowerCase().contains('linux')
 def isMac = System.properties['os.name'].toLowerCase().contains('mac')
 if (isLinux || isMac) {
     println("Detected *nix system, enabling distribution creation")
+
+
     task buildLauncher(type: Exec, dependsOn: [copyLauncherLibs]) {
         description 'Build Launcher executable'
 
@@ -81,6 +85,11 @@ if (isLinux || isMac) {
         workingDir project.projectDir
 
         doFirst {
+            def currentJvmPathContainsOpenJDK = Jvm.current().javaHome.absolutePath.toLowerCase().contains("openjdk")
+            if (currentJvmPathContainsOpenJDK) {
+                throw new BuildCancelledException("Building installer using an openJDK JDK")
+            }
+
             def launcherLib = copyLauncherLibs.destinationDir
             def srcfiles = []
             def launcherClasspath = []
@@ -148,6 +157,10 @@ if (isLinux || isMac) {
         }
 
         from(sourceSets.readmeFiles.resources) {
+            into(".")
+        }
+
+        from(file("src/main/resources/license/LICENSE")) {
             into(".")
         }
 
