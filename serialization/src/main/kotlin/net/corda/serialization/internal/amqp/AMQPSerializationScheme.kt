@@ -54,9 +54,8 @@ abstract class AbstractAMQPSerializationScheme(
     constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, ConcurrentHashMap())
 
     // TODO: This method of initialisation for the Whitelist and plugin serializers will have to change
-    // when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest way
+    //       when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest way
     companion object {
-
         const val SCAN_SPEC_PROP_NAME = "amqp.custom.serialization.scanSpec"
 
         private val serializationWhitelists: List<SerializationWhitelist> by lazy {
@@ -64,25 +63,30 @@ abstract class AbstractAMQPSerializationScheme(
         }
 
         private val customSerializers: List<SerializationCustomSerializer<*, *>> by lazy {
-
             val scanSpec: String? = System.getProperty(SCAN_SPEC_PROP_NAME)
 
             if (scanSpec == null) {
                 emptyList()
             } else {
-                FastClasspathScanner(scanSpec).addClassLoader(this::class.java.classLoader).scan()
+                scanClasspathForSerializers(scanSpec)
+            }
+        }
+
+        @StubOutForDJVM
+        private fun scanClasspathForSerializers(scanSpec: String): List<SerializationCustomSerializer<*, *>> =
+            this::class.java.classLoader.let { cl ->
+                FastClasspathScanner(scanSpec).addClassLoader(cl).scan()
                         .getNamesOfClassesImplementing(SerializationCustomSerializer::class.java)
-                        .mapNotNull { this::class.java.classLoader.loadClass(it).asSubclass(SerializationCustomSerializer::class.java) }
+                        .map { cl.loadClass(it).asSubclass(SerializationCustomSerializer::class.java) }
                         .filterNot { Modifier.isAbstract(it.modifiers) }
                         .map { it.kotlin.objectOrNewInstance() }
             }
-        }
 
         @DeleteForDJVM
         val List<Cordapp>.customSerializers get() = flatMap { it.serializationCustomSerializers }.toSet()
     }
 
-    // Parameter "context" is unused directy but passed in by reflection. Removing it will cause failures.
+    // Parameter "context" is unused directly but passed in by reflection. Removing it will cause failures.
     private fun registerCustomSerializers(context: SerializationContext, factory: SerializerFactory) {
         with(factory) {
             register(publicKeySerializer)
