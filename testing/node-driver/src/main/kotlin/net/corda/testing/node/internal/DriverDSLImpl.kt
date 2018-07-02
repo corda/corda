@@ -134,10 +134,8 @@ class DriverDSLImpl(
         if (inMemoryDB && corda.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")) {
             val jdbcUrl = "jdbc:h2:mem:persistence${inMemoryCounter++};DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100"
             corda.dataSourceProperties.setProperty("dataSource.url", jdbcUrl)
-            println("IM ENHANCING THE DATASOURCE URL OMG!")
             NodeConfig(typesafe = typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)), corda = corda)
         } else {
-            println("NO ENHANCING FOR YOU!")
             this
         }
     }
