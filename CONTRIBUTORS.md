@@ -28,7 +28,7 @@ see changes to this list.
 * Arnaud Stevens (Natixis)
 * Arun Battu (BNY Mellon)
 * Austin Moothart (R3)
-* balajimore
+* Balaji Bhanudas More (Synechron)
 * Barry Childe (HSBC)
 * Barry Flower (Westpac)
 * Bart van den Bosch (KBC)

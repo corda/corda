@@ -157,7 +157,9 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
     @Test
     fun `test purge mid-way in a single transaction`() {
         // Writes intentionally do not check the database first, so purging between read and write changes behaviour
-        val remapped = mapOf(Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.Fail) to Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.SuccessButErrorOnCommit, Outcome.SuccessButErrorOnCommit))
+        // Also, a purge after write causes the subsequent read to flush to the database, causing the read to generate a constraint violation when single threaded (in same database transaction).
+        val remapped = mapOf(Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.Fail) to Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.SuccessButErrorOnCommit, Outcome.SuccessButErrorOnCommit),
+                Scenario(true, ReadOrWrite.Write, ReadOrWrite.Read, Outcome.SuccessButErrorOnCommit, Outcome.Success) to Scenario(true, ReadOrWrite.Write, ReadOrWrite.Read, Outcome.SuccessButErrorOnCommit, Outcome.SuccessButErrorOnCommit))
         scenario = remapped[scenario] ?: scenario
         prepopulateIfRequired()
         val map = createMap()

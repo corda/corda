@@ -13,14 +13,15 @@ Every Corda node is a part of a network (also called a zone), and networks are *
 zone, a node needs a signed X.509 certificate from the network operator. Production deployments require a secure certificate authority.
 The issued certificates take the form of three keystores in a node's ``<workspace>/certificates/`` folder:
 
-* ``network-root-truststore.jks``, which stores the network/zone operator's public keys and certificates
+* ``network-root-truststore.jks``, the network/zone operator's public keys and certificates as provided by them with a standard password. Can be deleted after initial registration
+* ``truststore.jks``, the network/zone operator's public keys and certificates in keystore with a locally configurable password as protection against certain attacks
 * ``nodekeystore.jks``, which stores the node’s identity keypairs and certificates
 * ``sslkeystore.jks``, which stores the node’s TLS keypairs and certificates
 
 Most users will join an existing network such as the main Corda network or the Corda TestNet. You can also build your
 own networks. During development, no network is required because you can use the included tools to pre-create
 and pre-distribute the certificates and map files that would normally be provided dynamically by the network. Effectively
-the bootstrapper tool creates a private semi-static network for you.
+the :doc:`bootstrapper tool <network-bootstrapper>` creates a private semi-static network for you.
 
 Certificate hierarchy
 ---------------------
@@ -72,9 +73,8 @@ certificates must obey the following restrictions:
 
 The required identity and TLS keys/certificates will be automatically generated for you by the node on first run.
 However, you can also generate them manually for more control. The ``X509Utilities`` class shows how to generate the
-required public/private keypairs and certificates using Bouncy Castle. You can find the ``X509Utilities`` in the `Corda
-repository <https://github.com/corda/corda>`__, under
-``/node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto/X509Utilities.kt``.
+required public/private keypairs and certificates using Bouncy Castle. You can find it in the `Corda repository
+<https://github.com/corda/corda/blob/master/node-api/src/main/kotlin/net/corda/nodeapi/internal/crypto/X509Utilities.kt>`__.
 
 Certificate role extension
 --------------------------
@@ -140,7 +140,7 @@ The following information from the node configuration file is needed to generate
 
 * **devMode** must be set to false
 
-* **networkServices or compatibilityZoneURL** The Corda compatibility zone services must be configured. This must be either:
+* **networkServices** or **compatibilityZoneURL** The Corda compatibility zone services must be configured. This must be either:
 
   * **compatibilityZoneURL** The Corda compatibility zone network management service root URL.
   * **networkServices** Replaces the ``compatibilityZoneURL`` when the doorman and network map services
@@ -172,7 +172,7 @@ Think twice before going down this route:
 1. It isn't necessary for testing.
 2. It isn't necessary for adding another layer of permissioning or 'know your customer' requirements onto your app.
 
-**Testing.** Creating a production-ready zone isn't necessary for testing as you can use the *network bootstrapper*
+**Testing.** Creating a production-ready zone isn't necessary for testing as you can use the :doc:`network bootstrapper <network-bootstrapper>`
 tool to create all the certificates, keys, and distribute the needed map files to run many nodes. The bootstrapper can
 create a network locally on your desktop/laptop but it also knows how to automate cloud providers via their APIs and
 using Docker. In this way you can bring up a simulation of a real Corda network with different nodes on different
@@ -277,8 +277,9 @@ Setting zone parameters
 Zone parameters are stored in a file containing a Corda AMQP serialised ``SignedDataWithCert<NetworkParameters>``
 object. It is easy to create such a file with a small Java or Kotlin program. The ``NetworkParameters`` object is a
 simple data holder that could be read from e.g. a config file, or settings from a database. Signing and saving the
-resulting file is just a few lines of code. A full example can be found in ``NetworkParametersCopier.kt`` in the source
-tree, but a flavour of it looks like this:
+resulting file is just a few lines of code. A full example can be found in `NetworkParametersCopier.kt
+<https://github.com/corda/corda/blob/master/node-api/src/main/kotlin/net/corda/nodeapi/internal/network/NetworkParametersCopier.kt>`__,
+but a flavour of it looks like this:
 
 .. container:: codeset
 

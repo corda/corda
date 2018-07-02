@@ -63,8 +63,8 @@ is designed to make this possible by:
 
 * Having permissioned networks, meaning that participants are aware of who they are dealing with in every single
   transaction
-* All code contracts are backed by a legal document describing the contract's intended behavior which can be relied
-  upon to resolve conflicts
+* All code contracts should include a ``LegalProseReference`` link to the legal document describing the contract's intended behavior
+  which can be relied upon to resolve conflicts
 
 Build vs. re-use
 ----------------

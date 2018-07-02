@@ -46,7 +46,7 @@ class FieldRemovalTest {
 
     private fun <T: R, R: Any> transform(type: Class<in T>, asType: Class<out R>): Class<out R> {
         val bytecode = type.bytecode.execute({ writer ->
-            ClassTransformer(
+            FilterTransformer(
                 visitor = writer,
                 logger = logger,
                 removeAnnotations = emptySet(),

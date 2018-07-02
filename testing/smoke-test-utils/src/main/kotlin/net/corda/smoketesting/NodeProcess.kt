@@ -61,7 +61,7 @@ class NodeProcess(
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
             val defaultNetworkParameters = run {
                 AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
-                    // There are no notaries in the network parameters for smoke test nodes. If this is required then we would
+                    // TODO There are no notaries in the network parameters for smoke test nodes. If this is required then we would
                     // need to introduce the concept of a "network" which predefines the notaries, like the driver and MockNetwork
                     NetworkParametersCopier(testNetworkParameters())
                 }

@@ -211,7 +211,7 @@ open class JarFilterTask : DefaultTask() {
             private fun transform(inBytes: ByteArray): ByteArray {
                 var reader = ClassReader(inBytes)
                 var writer = ClassWriter(COMPUTE_MAXS)
-                var transformer = ClassTransformer(
+                var transformer = FilterTransformer(
                     visitor = writer,
                     logger = logger,
                     removeAnnotations = toDescriptors(forRemove),
