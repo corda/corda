@@ -54,7 +54,7 @@ abstract class AbstractAMQPSerializationScheme(
     constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, ConcurrentHashMap())
 
     // TODO: This method of initialisation for the Whitelist and plugin serializers will have to change
-    //       when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest way
+    // when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest way
     companion object {
         const val SCAN_SPEC_PROP_NAME = "amqp.custom.serialization.scanSpec"
 
