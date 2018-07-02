@@ -76,7 +76,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         get() {
             val commandKeys = commands.flatMap { it.signers }.toSet()
             // TODO: prevent notary field from being set if there are no inputs and no time-window.
-            return if (notary != null && (inputs.isNotEmpty() || timeWindow != null)) {
+            return if (notary != null && (inputs.isNotEmpty() || references.isNotEmpty() || timeWindow != null)) {
                 commandKeys + notary.owningKey
             } else {
                 commandKeys
