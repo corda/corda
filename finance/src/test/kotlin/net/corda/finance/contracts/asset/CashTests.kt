@@ -197,7 +197,7 @@ class CashTests {
         // Test generation works.
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` miniCorp.ref(12, 34), owner = AnonymousParty(alice.publicKey), notary = dummyNotary.party)
-        }.toWireTransaction(miniCorpServices)
+        }.toWireTransactionNew(miniCorpServices)
         assertTrue(tx.inputs.isEmpty())
         val s = tx.outputsOfType<Cash.State>().single()
         assertEquals(100.DOLLARS `issued by` miniCorp.ref(12, 34), s.amount)
@@ -213,7 +213,7 @@ class CashTests {
         val amount = 100.DOLLARS `issued by` miniCorp.ref(12, 34)
         val tx: WireTransaction = TransactionBuilder(notary = null).apply {
             Cash().generateIssue(this, amount, owner = AnonymousParty(alice.publicKey), notary = dummyNotary.party)
-        }.toWireTransaction(miniCorpServices)
+        }.toWireTransactionNew(miniCorpServices)
         assertTrue(tx.inputs.isEmpty())
         assertEquals(tx.outputs[0], tx.outputs[0])
     }
@@ -511,7 +511,7 @@ class CashTests {
         val tx = TransactionBuilder(dummyNotary.party)
         val payChangeTo = serviceHub.keyManagementService.freshKeyAndCert(miniCorp.identity, false).party
         Cash().generateExit(tx, Amount(amount.quantity, Issued(issuer.ref(depositRef), amount.token)), cashStates, payChangeTo)
-        return tx.toWireTransaction(serviceHub)
+        return tx.toWireTransactionNew(serviceHub)
     }
 
     private fun makeSpend(services: ServiceHub, amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
@@ -520,7 +520,7 @@ class CashTests {
         database.transaction {
             Cash.generateSpend(services, tx, amount, ourIdentity, dest)
         }
-        return tx.toWireTransaction(services)
+        return tx.toWireTransactionNew(services)
     }
 
     /**
@@ -828,7 +828,7 @@ class CashTests {
             )
             Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
         }
-        val wtx = tx.toWireTransaction(ourServices)
+        val wtx = tx.toWireTransactionNew(ourServices)
         fun out(i: Int) = wtx.getOutput(i) as Cash.State
         assertEquals(4, wtx.outputs.size)
         assertEquals(80.DOLLARS, out(0).amount.withoutIssuer())

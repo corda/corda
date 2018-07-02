@@ -67,7 +67,7 @@ class AttachmentsClassLoaderStaticContractTests {
     @Test
     fun `test serialization of WireTransaction with statically loaded contract`() {
         val tx = AttachmentDummyContract().generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
-        val wireTransaction = tx.toWireTransaction(serviceHub)
+        val wireTransaction = tx.toWireTransactionNew(serviceHub)
         val bytes = wireTransaction.serialize()
         val copiedWireTransaction = bytes.deserialize()
 

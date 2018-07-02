@@ -8,6 +8,11 @@ import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 
 
+/**
+ * Base class for exceptions thrown during transaction building.
+ */
+@CordaSerializable
+@KeepForDJVM
 sealed class TransactionBuildingException(message: String) : FlowException(message)
 
 /**
@@ -17,10 +22,18 @@ sealed class TransactionBuildingException(message: String) : FlowException(messa
  */
 @CordaSerializable
 @KeepForDJVM
-class MissingContractAttachments(val states: List<TransactionState<ContractState>>)
-    : TransactionBuildingException("Cannot find contract attachments for ${states.map { it.contract }.distinct()}. " +
-        "See https://docs.corda.net/api-contract-constraints.html#debugging")
+class MissingContractAttachments(val states: List<TransactionState<ContractState>>, wrappedException: FlowException? = null) : TransactionBuildingException(
+        if(wrappedException== null) {
+            "Cannot find contract attachments for ${states.map { it.contract }.distinct()}. See https://docs.corda.net/api-contract-constraints.html#debugging"
+        }else{
+            "Found error when building transaction: ${wrappedException.message}"
+        }){
+    constructor(states: List<TransactionState<ContractState>>) : this(states, null)
+}
 
+/**
+ * Thrown when there are multiple different JARs providing a contract during building a transaction.
+ */
 @CordaSerializable
 @KeepForDJVM
 class ConflictingAttachmentsRejection(contractClassName: ContractClassName)

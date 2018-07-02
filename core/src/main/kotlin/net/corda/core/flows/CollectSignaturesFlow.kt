@@ -46,7 +46,7 @@ import java.security.PublicKey
  *     val issueCommand = Command(Agreement.Commands.Issue(), state.participants)
  *
  *     builder.withItems(state, issueCommand)
- *     builder.toWireTransaction().toLedgerTransaction(serviceHub).verify()
+ *     builder.toWireTransactionNew().toLedgerTransaction(serviceHub).verify()
  *
  *     // Transaction creator signs transaction.
  *     val ptx = serviceHub.signInitialTransaction(builder)

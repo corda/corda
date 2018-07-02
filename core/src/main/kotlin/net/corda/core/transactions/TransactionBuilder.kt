@@ -14,6 +14,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import java.security.PublicKey
@@ -94,12 +95,28 @@ open class TransactionBuilder(
      *
      * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      */
+    @Throws(MissingContractAttachments::class)
+    @Deprecated("Please use the new method that throws better exceptions.", replaceWith = ReplaceWith("toWireTransactionNew"))
+    fun toWireTransaction(services: ServicesForResolution): WireTransaction {
+        try {
+            return toWireTransactionNew(services)
+        } catch (e: TransactionBuildingException) {
+            throw MissingContractAttachments(states = emptyList(), wrappedException = e)
+        }
+    }
+
+    /**
+     * Generates a [WireTransaction] from this builder and resolves any [AutomaticHashConstraint] on contracts to
+     * [HashAttachmentConstraint].
+     *
+     * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
+     */
     @Throws(TransactionBuildingException::class)
-    fun toWireTransaction(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
+    fun toWireTransactionNew(services: ServicesForResolution): WireTransaction = toWireTransactionWithContext(services)
 
     internal fun toWireTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext? = null): WireTransaction {
 
-        val contractAttachments = determineContractAttachments(services)
+        val contractAttachments: Map<ContractClassName, AttachmentId> = determineContractAttachments(services)
 
         // Resolves the AutomaticHashConstraints to HashAttachmentConstraints or WhitelistedByZoneAttachmentConstraint based on a global parameter.
         // The AutomaticHashConstraint allows for less boiler plate when constructing transactions since for the typical case the named contract
@@ -109,12 +126,12 @@ open class TransactionBuilder(
             when {
                 state.constraint !== AutomaticHashConstraint -> state
                 useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters) -> state.copy(constraint = WhitelistedByZoneAttachmentConstraint)
-                else -> state.copy(constraint = HashAttachmentConstraint(contractAttachments.get(state.contract)!!))
+                else -> state.copy(constraint = HashAttachmentConstraint(contractAttachments[state.contract]!!))
             }
         }
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
-            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + contractAttachments.values, notary, window), privacySalt)
+            WireTransaction(WireTransaction.createComponentGroups(inputStates(), resolvedOutputs, commands, attachments + contractAttachments.values.distinct(), notary, window), privacySalt)
         }
     }
 
@@ -123,12 +140,17 @@ open class TransactionBuilder(
     }
 
     /**
-     * This method is responsible for selecting the Contract Attachments to be used for the current transaction.
+     * This method is responsible for selecting the contract attachments to be used for the current transaction.
      *
      * The logic depends on the input states:
      *
-     * * For input states with [HashAttachmentConstraint], if the attachment with the "hash" is trusted, then it will be inherited to the output states.
-     * * For input states with [WhitelistedByZoneAttachmentConstraint] or custom [AttachmentConstraint] implementations, then the currently installed cordapp version
+     * * For input states with [HashAttachmentConstraint], if the attachment with the hash is installed by the current node, then it will be inherited to the output states.
+     * * For input states with [WhitelistedByZoneAttachmentConstraint] or custom [AttachmentConstraint] implementations, then the currently installed cordapp version is used.
+     *
+     * It is called *before* the [AutomaticConstraint] on output states is transformed into a real constraint.
+     *
+     * For outputs states, the only case (so far) that can really affect the contract jar selection is manually setting a specific HashConstraint on an output state.
+     * The other constraints won't point to an actual jar version, but to some rules that the jar needs to obey.
      */
     private fun determineContractAttachments(services: ServicesForResolution): Map<ContractClassName, AttachmentId> {
         val inputContracts = inputsWithTransactionState.map { inputState ->
@@ -179,7 +201,7 @@ open class TransactionBuilder(
     }
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
-    fun toLedgerTransaction(services: ServiceHub) = toWireTransaction(services).toLedgerTransaction(services)
+    fun toLedgerTransaction(services: ServiceHub) = toWireTransactionNew(services).toLedgerTransaction(services)
 
     internal fun toLedgerTransactionWithContext(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
         return toWireTransactionWithContext(services, serializationContext).toLedgerTransaction(services)
@@ -266,7 +288,7 @@ open class TransactionBuilder(
      * [ServiceHub.signInitialTransaction] instead.
      */
     fun toSignedTransaction(keyManagementService: KeyManagementService, publicKey: PublicKey, signatureMetadata: SignatureMetadata, services: ServicesForResolution): SignedTransaction {
-        val wtx = toWireTransaction(services)
+        val wtx = toWireTransactionNew(services)
         val signableData = SignableData(wtx.id, signatureMetadata)
         val sig = keyManagementService.sign(signableData, publicKey)
         return SignedTransaction(wtx, listOf(sig))

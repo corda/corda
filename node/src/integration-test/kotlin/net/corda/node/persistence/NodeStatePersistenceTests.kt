@@ -124,7 +124,7 @@ class SendMessageFlow(private val message: Message, private val notary: Party) :
         val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CONTRACT_PROGRAM_ID), txCommand)
 
         progressTracker.currentStep = VERIFYING_TRANSACTION
-        txBuilder.toWireTransaction(serviceHub).toLedgerTransaction(serviceHub).verify()
+        txBuilder.toWireTransactionNew(serviceHub).toLedgerTransaction(serviceHub).verify()
 
         progressTracker.currentStep = SIGNING_TRANSACTION
         val signedTx = serviceHub.signInitialTransaction(txBuilder)

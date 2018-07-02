@@ -53,7 +53,7 @@ object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
 
 /**
  * This [AttachmentConstraint] is a convenience class that will be automatically resolved to a [HashAttachmentConstraint].
- * The resolution occurs in [TransactionBuilder.toWireTransaction] and uses the [TransactionState.contract] value
+ * The resolution occurs in [TransactionBuilder.toWireTransactionNew] and uses the [TransactionState.contract] value
  * to find a corresponding loaded [Cordapp] that contains such a contract, and then uses that [Cordapp] as the
  * [Attachment].
  *
