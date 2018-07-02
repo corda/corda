@@ -114,7 +114,7 @@ Notes for development use
 
 When running in dev mode, Hibernate statistics are also available via the Jolkia interface. These are disabled otherwise
 due to expensive run-time costs. They can be turned on and off explicitly regardless of dev mode via the
-``exportHibernateJMXStatistics`` flag on the :ref:`database configuration <databaseConfiguration>`.
+``exportHibernateJMXStatistics`` flag on the :ref:`database configuration <database_properties_ref>`.
 
 When starting Corda nodes using Cordformation runner (see :doc:`running-a-node`), you should see a startup message similar to the following:
 **Jolokia: Agent started with URL http://127.0.0.1:7005/jolokia/**
