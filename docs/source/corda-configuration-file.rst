@@ -72,6 +72,8 @@ absolute path to the node's base directory.
                   If this parameter is set to `false` the rigorous CRL checking takes place, meaning that each certificate in the
                   certificate path being checked needs to have the CRL distribution point extension set and pointing to a URL serving a valid CRL.
 
+.. _databaseConfiguration:
+
 :database: Database configuration:
 
         :serverNameTablePrefix: Prefix string to apply to all the database tables. The default is no prefix.
