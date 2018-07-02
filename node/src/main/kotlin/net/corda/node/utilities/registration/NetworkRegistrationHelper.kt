@@ -5,7 +5,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
-import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.crypto.CertificateType
@@ -33,7 +32,6 @@ import javax.naming.ServiceUnavailableException
  */
 // TODO: Use content signer instead of keypairs.
 open class NetworkRegistrationHelper(private val config: SSLConfiguration,
-                                     private val versionInfo: VersionInfo,
                                      private val myLegalName: CordaX500Name,
                                      private val emailAddress: String,
                                      private val certService: NetworkRegistrationService,
@@ -83,7 +81,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
 
         val keyPair = nodeKeyStore.loadOrCreateKeyPair(SELF_SIGNED_PRIVATE_KEY)
 
-        val requestId = submitOrResumeCertificateSigningRequest(keyPair, versionInfo)
+        val requestId = submitOrResumeCertificateSigningRequest(keyPair)
 
         val certificates = try {
             pollServerForCertificates(requestId)
@@ -188,7 +186,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
      * @param keyPair Public Private key pair generated for SSL certification.
      * @return Request ID return from the server.
      */
-    private fun submitOrResumeCertificateSigningRequest(keyPair: KeyPair, versionInfo: VersionInfo): String {
+    private fun submitOrResumeCertificateSigningRequest(keyPair: KeyPair): String {
         // Retrieve request id from file if exists, else post a request to server.
         return if (!requestIdStore.exists()) {
             val request = X509Utilities.createCertificateSigningRequest(myLegalName.x500Principal, emailAddress, keyPair, certRole)
@@ -206,7 +204,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
             println("$writer")
             // Post request to signing server via http.
             println("Submitting certificate signing request to Corda certificate signing server.")
-            val requestId = certService.submitRequest(request, versionInfo)
+            val requestId = certService.submitRequest(request)
             // Persists request ID to file in case of node shutdown.
             requestIdStore.writeLines(listOf(requestId))
             println("Successfully submitted request to Corda certificate signing server, request ID: $requestId.")
@@ -223,9 +221,8 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
 
 class UnableToRegisterNodeWithDoormanException : IOException()
 
-class NodeRegistrationHelper(private val config: NodeConfiguration, private val versionInfo: VersionInfo, certService: NetworkRegistrationService, regConfig: NodeRegistrationOption, computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) :
+class NodeRegistrationHelper(private val config: NodeConfiguration, certService: NetworkRegistrationService, regConfig: NodeRegistrationOption, computeNextIdleDoormanConnectionPollInterval: (Duration?) -> Duration? = FixedPeriodLimitedRetrialStrategy(10, Duration.ofMinutes(1))) :
         NetworkRegistrationHelper(config,
-                versionInfo,
                 config.myLegalName,
                 config.emailAddress,
                 certService,

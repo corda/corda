@@ -48,8 +48,6 @@ class NetworkRegistrationHelperTest {
     private val networkRootTrustStoreFileName = "network-root-truststore.jks"
     private val networkRootTrustStorePassword = "network-root-truststore-password"
 
-    private val versionInfo = VersionInfo(1, "1", "1", "1")
-
     @Before
     fun init() {
         val baseDirectory = fs.getPath("/baseDir").createDirectories()
@@ -215,7 +213,7 @@ class NetworkRegistrationHelperTest {
                 val request = JcaPKCS10CertificationRequest(it.getArgument<PKCS10CertificationRequest>(0))
                 requests[requestId] = request
                 requestId
-            }.whenever(it).submitRequest(any(), any())
+            }.whenever(it).submitRequest(any())
 
             doAnswer {
                 CertificateResponse(5.seconds, dynamicResponse(requests[it.getArgument(0)]!!))
@@ -223,10 +221,9 @@ class NetworkRegistrationHelperTest {
         }
 
         return when (certRole) {
-            CertRole.NODE_CA -> NodeRegistrationHelper(config, versionInfo, certService, NodeRegistrationOption(config.certificatesDirectory / networkRootTrustStoreFileName, networkRootTrustStorePassword))
+            CertRole.NODE_CA -> NodeRegistrationHelper(config, certService, NodeRegistrationOption(config.certificatesDirectory / networkRootTrustStoreFileName, networkRootTrustStorePassword))
             CertRole.SERVICE_IDENTITY -> NetworkRegistrationHelper(
                     config,
-                    versionInfo,
                     config.myLegalName,
                     config.emailAddress,
                     certService,

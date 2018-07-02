@@ -268,8 +268,7 @@ class DriverDSLImpl(
             executorService.fork {
                 NodeRegistrationHelper(
                         config.corda,
-                        versionInfo,
-                        HTTPNetworkRegistrationService(compatibilityZoneURL),
+                        HTTPNetworkRegistrationService(compatibilityZoneURL, versionInfo),
                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
                 ).buildKeystore()
                 config

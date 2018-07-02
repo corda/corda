@@ -310,7 +310,7 @@ open class NodeStartup(val args: Array<String>) {
         println("*       Registering as a new participant with Corda network      *")
         println("*                                                                *")
         println("******************************************************************")
-        NodeRegistrationHelper(conf, versionInfo, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
+        NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL, versionInfo), nodeRegistrationConfig).buildKeystore()
 
         // Minimal changes to make registration tool create node identity.
         // TODO: Move node identity generation logic from node to registration helper.

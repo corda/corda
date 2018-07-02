@@ -19,7 +19,7 @@ import java.util.*
 import java.util.zip.ZipInputStream
 import javax.naming.ServiceUnavailableException
 
-class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistrationService {
+class HTTPNetworkRegistrationService(compatibilityZoneURL: URL, val versionInfo: VersionInfo) : NetworkRegistrationService {
     private val registrationURL = URL("$compatibilityZoneURL/certificate")
 
     companion object {
@@ -51,7 +51,7 @@ class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistr
         }
     }
 
-    override fun submitRequest(request: PKCS10CertificationRequest, versionInfo: VersionInfo): String {
+    override fun submitRequest(request: PKCS10CertificationRequest): String {
         return String(registrationURL.post(OpaqueBytes(request.encoded), "Client-Version" to "${versionInfo.platformVersion}"))
     }
 }
