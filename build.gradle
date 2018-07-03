@@ -208,13 +208,6 @@ allprojects {
         // Prevent the project from creating temporary files outside of the build directory.
         systemProperty 'java.io.tmpdir', buildDir.absolutePath
 
-        // Ensures that "net.corda.testing.amqp.enable" is passed correctly from Gradle command line
-        // down to JVM executing unit test. It looks like we are running unit tests in the forked mode
-        // and all the "-D" parameters passed to Gradle not making it to unit test level
-        // TODO: Remove once we fully switched to AMQP
-        final AMQP_ENABLE_PROP_NAME = "net.corda.testing.amqp.enable"
-        systemProperty(AMQP_ENABLE_PROP_NAME, System.getProperty(AMQP_ENABLE_PROP_NAME))
-
          // relational database provider to be used by node
         final DATABASE_PROVIDER = "custom.databaseProvider"
         final DATASOURCE_URL = "corda.dataSourceProperties.dataSource.url"
