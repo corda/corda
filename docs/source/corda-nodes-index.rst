@@ -14,4 +14,5 @@ Nodes
    node-database
    node-administration
    node-operations-upgrading
+   node-operations-upgrade-cordapps
    out-of-process-verification
