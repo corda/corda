@@ -78,6 +78,7 @@ We look forward to seeing what you can do with Corda!
       design/kafka-notary/design.md
       design/monitoring-management/design.md
       design/sgx-integration/design.md
+      design/sgx-infrastructure/design.md
 
    .. toctree::
       :caption: Participate
