@@ -22,10 +22,6 @@ $(document).ready(function() {
             // In this case, display Kotlin by default
             $(el).children(".highlight-kotlin")[0].style.display = "block";
         }
-        else{
-            // By default show Java, not Kotlin
-            $(el).children(".highlight-kotlin")[0].style.display = "none";
-        }
         c.insertBefore(el);
     });
 });

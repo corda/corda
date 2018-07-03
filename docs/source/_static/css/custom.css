@@ -122,6 +122,11 @@ a:visited {
     background: #263673;
 }
 
+.codeset > .highlight-kotlin {
+    display: none;
+}
+
+
 /* Notification boxes */
 
 .wy-alert.wy-alert-warning .wy-alert-title,
