@@ -6,6 +6,9 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* The Corda JPA entities are no longer "java.io.Serializable". This is a mild binary compatibility break, but affects only clients who relied on this fact.
+  Relying on Serializable is very unlikely as java serialization is disabled.
+
 * Remove all references to the out-of-process transaction verification.
 
 * The class carpenter has a "lenient" mode where it will, during deserialisation, happily synthesis classes that implement
