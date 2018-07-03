@@ -6,17 +6,24 @@ disadvantage is the inability to view the contents in a human-friendly manner. T
 by allowing the contents of a binary blob file (or URL end-point) to be output in either YAML or JSON. It uses
 ``JacksonSupport`` to do this (see :doc:`json`).
 
-The latest version of the tool can be downloaded from `here <https://www.corda.net/downloads/>`_.
+The tool is distributed as part of |release| in the form of runnable JAR "|jar_name|".
+
+.. |jar_name| replace:: corda-tools-blob-inspector-|version|.jar
 
 To run simply pass in the file or URL as the first parameter:
 
-``java -jar blob-inspector.jar <file or URL>``
+.. parsed-literal::
+
+    > java -jar |jar_name| <file or URL>
+
+..
+
 
 Use the ``--help`` flag for a full list of command line options.
 
-When inspecting your custom data structures, there's no need to include the jars containing the class definitions for them
+When inspecting your custom data structures, there is no need to include the jars containing the class definitions for them
 in the classpath. The blob inspector (or rather the serialization framework) is able to synthesis any classes found in the
-blob that aren't on the classpath.
+blob that are not on the classpath.
 
 SerializedBytes
 ~~~~~~~~~~~~~~~

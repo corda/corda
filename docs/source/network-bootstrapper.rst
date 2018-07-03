@@ -24,13 +24,18 @@ You can find out more about network maps and network parameters from :doc:`netwo
 Bootstrapping a test network
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The bootstrapper can be downloaded from https://downloads.corda.net/network-bootstrapper-VERSION.jar, where ``VERSION``
-is the Corda version.
+The bootstrapper is distributed as part of |release| in the form of runnable JAR file "|jar_name|".
+
+.. |jar_name| replace:: corda-tools-network-bootstrapper-|version|.jar
 
 Create a directory containing a node config file, ending in "_node.conf", for each node you want to create. Then run the
 following command:
 
-``java -jar network-bootstrapper-VERSION.jar --dir <nodes-root-dir>``
+.. parsed-literal::
+
+    > java -jar |jar_name| --dir <nodes-root-dir>
+
+..
 
 For example running the command on a directory containing these files:
 
@@ -47,7 +52,7 @@ alongside the configuration files in the directory.
 
 The directory can also contain CorDapp JARs which will be copied to each node's ``cordapps`` directory.
 
-You can also have the node directories containing their "node.conf" files already laid out. The previous example would be:
+You can also have the node directories containing their ``node.conf`` files already laid out. The previous example would be:
 
 .. sourcecode:: none
 
@@ -68,10 +73,10 @@ This tool only bootstraps a network. It cannot dynamically update if a new node 
 one has changed something in their node-info, e.g. their P2P address. For this the new node-info file will need to be placed
 in the other nodes' ``additional-node-infos`` directory. A simple way to do this is to use `rsync <https://en.wikipedia.org/wiki/Rsync>`_.
 However, if it's known beforehand the set of nodes that will eventually form part of the network then all the node directories
-can be pregenerated in the bootstrap and only started when needed.
+can be pre-generated in the bootstrap and only started when needed.
 
 Running the bootstrapper again on the same network will allow a new node to be added or an existing one to have its updated
-node-info re-distributed. However this comes at the expense of having to temporarily collect the node directories back
+node-info re-distributed. However, this comes at the expense of having to temporarily collect the node directories back
 together again under a common parent directory.
 
 Whitelisting contracts
