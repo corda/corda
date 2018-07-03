@@ -43,7 +43,8 @@ class SanitiseConstructorTest {
     )
 
     private fun checkClassWithLongParameter(longClass: String, initialCount: Int) {
-        val longConstructor = isConstructor(longClass, hasParam(Long::class))
+        val longConstructor = isConstructor(longClass, Long::class)
+
         classLoaderFor(testProject.sourceJar).use { cl ->
             cl.load<HasLong>(longClass).apply {
                 getDeclaredConstructor(Long::class.java).newInstance(BIG_NUMBER).also {
@@ -92,7 +93,8 @@ class SanitiseConstructorTest {
     )
 
     private fun checkClassWithIntParameter(intClass: String, initialCount: Int) {
-        val intConstructor = isConstructor(intClass, hasParam(Int::class))
+        val intConstructor = isConstructor(intClass, Int::class)
+
         classLoaderFor(testProject.sourceJar).use { cl ->
             cl.load<HasInt>(intClass).apply {
                 getDeclaredConstructor(Int::class.java).newInstance(NUMBER).also {
@@ -105,6 +107,7 @@ class SanitiseConstructorTest {
                 val primary = kotlin.primaryConstructor ?: throw AssertionError("primary constructor missing")
                 assertThat(primary.call(NUMBER).intData()).isEqualTo(NUMBER)
 
+                //assertThat("", constructors, hasItem(isConstructor(""))
                 newInstance().also {
                     assertEquals(0, it.intData())
                 }
@@ -141,7 +144,8 @@ class SanitiseConstructorTest {
     )
 
     private fun checkClassWithStringParameter(stringClass: String, initialCount: Int) {
-        val stringConstructor = isConstructor(stringClass, hasParam(String::class))
+        val stringConstructor = isConstructor(stringClass, String::class)
+
         classLoaderFor(testProject.sourceJar).use { cl ->
             cl.load<HasString>(stringClass).apply {
                 getDeclaredConstructor(String::class.java).newInstance(MESSAGE).also {

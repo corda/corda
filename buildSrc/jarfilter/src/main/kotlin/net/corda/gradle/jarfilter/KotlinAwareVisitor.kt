@@ -57,7 +57,7 @@ abstract class KotlinAwareVisitor(
             KOTLIN_CLASS -> processClassMetadata(d1, d2)
             KOTLIN_FILE, KOTLIN_MULTIFILE_PART -> processPackageMetadata(d1, d2)
             KOTLIN_SYNTHETIC -> {
-                logger.info("-- synthetic class ignored")
+                logger.debug("-- synthetic class ignored")
                 emptyList()
             }
             else -> {
@@ -65,7 +65,7 @@ abstract class KotlinAwareVisitor(
                  * For class-kind=4 (i.e. "multi-file"), we currently
                  * expect d1=[list of multi-file-part classes], d2=null.
                  */
-                logger.info("-- unsupported class-kind {}", classKind)
+                logger.debug("-- unsupported class-kind {}", classKind)
                 emptyList()
             }
         }
@@ -134,13 +134,14 @@ abstract class KotlinAfterProcessor(
     }
 
     /**
-     * Do nothing after we have parsed [kotlin.Metadata].
+     * Do nothing immediately after we have parsed [kotlin.Metadata].
      */
     final override fun processKotlinAnnotation() {}
 }
 
 /**
- *
+ * Loads the ProtoBuf data from the [kotlin.Metadata] annotation
+ * and then processes it before visiting the rest of the class.
  */
 abstract class KotlinBeforeProcessor(
     api: Int,

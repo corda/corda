@@ -17,7 +17,7 @@ fun isFunction(name: Matcher<in String>, returnType: Matcher<in String>, vararg 
 }
 
 fun isFunction(name: String, returnType: KClass<*>, vararg parameters: KClass<*>): Matcher<KFunction<*>> {
-    return isFunction(equalTo(name), matches(returnType), *parameters.map(::hasParam).toTypedArray())
+    return isFunction(equalTo(name), matches(returnType), *parameters.toMatchers())
 }
 
 fun isConstructor(returnType: Matcher<in String>, vararg parameters: Matcher<in KParameter>): Matcher<KFunction<*>> {
@@ -25,11 +25,11 @@ fun isConstructor(returnType: Matcher<in String>, vararg parameters: Matcher<in 
 }
 
 fun isConstructor(returnType: KClass<*>, vararg parameters: KClass<*>): Matcher<KFunction<*>> {
-    return isConstructor(matches(returnType), *parameters.map(::hasParam).toTypedArray())
+    return isConstructor(matches(returnType), *parameters.toMatchers())
 }
 
-fun isConstructor(returnType: String, vararg parameters: Matcher<in KParameter>): Matcher<KFunction<*>> {
-    return isConstructor(equalTo(returnType), *parameters)
+fun isConstructor(returnType: String, vararg parameters: KClass<*>): Matcher<KFunction<*>> {
+    return isConstructor(equalTo(returnType), *parameters.toMatchers())
 }
 
 fun hasParam(type: Matcher<in String>): Matcher<KParameter> = KParameterMatcher(type)
@@ -43,6 +43,8 @@ fun isProperty(name: Matcher<in String>, type: Matcher<in String>): Matcher<KPro
 fun isClass(name: String): Matcher<KClass<*>> = KClassMatcher(equalTo(name))
 
 fun matches(type: KClass<*>): Matcher<in String> = equalTo(type.qualifiedName)
+
+private fun Array<out KClass<*>>.toMatchers() = map(::hasParam).toTypedArray()
 
 /**
  * Matcher logic for a Kotlin [KFunction] object. Also applicable to constructors.
