@@ -11,7 +11,16 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sign
-import net.corda.core.flows.*
+import net.corda.core.flows.ContractUpgradeFlow
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.NotaryChangeFlow
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.StartableByService
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -23,14 +32,31 @@ import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.messaging.*
-import net.corda.core.node.*
-import net.corda.core.node.services.*
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.FlowHandleImpl
+import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.FlowProgressHandleImpl
+import net.corda.core.messaging.RPCOps
+import net.corda.core.node.AppServiceHub
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
+import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.CordaService
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.*
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.days
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.minutes
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
 import net.corda.node.internal.CheckpointVerifier.verifyCheckpointsCompatible
@@ -45,21 +71,61 @@ import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.services.ContractUpgradeHandler
 import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
-import net.corda.node.services.api.*
-import net.corda.node.services.config.*
+import net.corda.node.services.api.CheckpointStorage
+import net.corda.node.services.api.DummyAuditService
+import net.corda.node.services.api.FlowStarter
+import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.node.services.api.MonitoringService
+import net.corda.node.services.api.NetworkMapCacheBaseInternal
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.api.NodePropertiesStore
+import net.corda.node.services.api.SchedulerService
+import net.corda.node.services.api.SchemaService
+import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.StartedNodeServices
+import net.corda.node.services.api.VaultServiceInternal
+import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.config.BFTSMaRtConfiguration
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
+import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.shell.toShellConfig
+import net.corda.node.services.config.shouldInitCrashShell
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
-import net.corda.node.services.network.*
-import net.corda.node.services.persistence.*
+import net.corda.node.services.network.NetworkMapCacheImpl
+import net.corda.node.services.network.NetworkMapClient
+import net.corda.node.services.network.NetworkMapUpdater
+import net.corda.node.services.network.NodeInfoWatcher
+import net.corda.node.services.network.PersistentNetworkMapCache
+import net.corda.node.services.persistence.AbstractPartyDescriptor
+import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
+import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.persistence.DBTransactionMappingStorage
+import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.node.services.persistence.NodePropertiesPersistentStore
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.statemachine.*
-import net.corda.node.services.transactions.*
+import net.corda.node.services.statemachine.ExternalEvent
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
+import net.corda.node.services.statemachine.FlowMonitor
+import net.corda.node.services.statemachine.SingleThreadedStateMachineManager
+import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.statemachine.StateMachineManagerInternal
+import net.corda.node.services.statemachine.appName
+import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
+import net.corda.node.services.transactions.BFTNonValidatingNotaryService
+import net.corda.node.services.transactions.BFTSMaRt
+import net.corda.node.services.transactions.RaftNonValidatingNotaryService
+import net.corda.node.services.transactions.RaftUniquenessProvider
+import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.services.upgrade.ContractUpgradeServiceImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
@@ -368,7 +434,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration,
 
     open fun startShell() {
         if (configuration.shouldInitCrashShell()) {
-            InteractiveShell.startShellInternal(configuration.toShellConfig(), cordappLoader.appClassLoader)
+            val shellConfiguration = configuration.toShellConfig()
+            shellConfiguration.sshHostKeyDirectory?.let {
+                log.info("Binding Shell SSHD server on port $it.")
+            }
+            InteractiveShell.startShellInternal(shellConfiguration, cordappLoader.appClassLoader)
         }
     }
 

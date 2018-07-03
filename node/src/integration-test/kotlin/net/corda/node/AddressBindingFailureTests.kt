@@ -2,7 +2,7 @@ package net.corda.node
 
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.errors.AddressBindingException
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
@@ -51,8 +51,6 @@ class AddressBindingFailureTests {
             }
         }
     }
-
-    // Jolokia logs the failed port binding correctly
 
     @Test
     fun `H2 address`() {

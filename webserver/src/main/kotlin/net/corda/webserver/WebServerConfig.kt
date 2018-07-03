@@ -26,7 +26,6 @@ class WebServerConfig(override val baseDirectory: Path, val config: Config) : No
         }
         throw Exception("Missing rpc address property. Either 'rpcSettings' or 'rpcAddress' must be specified.")
     }
-    // TODO sollecitom here
     val webAddress: NetworkHostAndPort by config
     val runAs: User
 

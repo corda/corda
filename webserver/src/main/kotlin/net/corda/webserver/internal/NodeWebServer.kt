@@ -4,6 +4,7 @@ import com.google.common.html.HtmlEscapers.htmlEscaper
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.RPCException
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.contextLogger
 import net.corda.webserver.WebServerConfig
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.Writer
 import java.lang.reflect.InvocationTargetException
+import java.net.BindException
 import java.nio.file.NoSuchFileException
 import java.util.*
 import javax.servlet.http.HttpServletRequest
@@ -95,7 +97,11 @@ class NodeWebServer(val config: WebServerConfig) {
         server.connectors = arrayOf<Connector>(connector)
 
         server.handler = handlerCollection
-        server.start()
+        try {
+            server.start()
+        } catch (e: BindException) {
+            throw AddressBindingException(address)
+        }
         log.info("Starting webserver on address $address")
         return server
     }

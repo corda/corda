@@ -6,7 +6,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_SECURITY_CONFIG
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.RPC_SECURITY_CONFIG
-import net.corda.node.internal.errors.AddressBindingException
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.SSLConfiguration

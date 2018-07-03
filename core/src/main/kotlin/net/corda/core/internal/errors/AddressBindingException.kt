@@ -1,4 +1,4 @@
-package net.corda.node.internal.errors
+package net.corda.core.internal.errors
 
 import net.corda.core.utilities.NetworkHostAndPort
 import java.net.BindException
