@@ -17,7 +17,9 @@ import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Test
+import kotlin.test.assertEquals
 
+// A dummy reference state contract.
 internal class RefState : Contract {
     companion object {
         val CONTRACT_ID = "net.corda.core.flows.RefState"
@@ -33,6 +35,7 @@ internal class RefState : Contract {
     class Update : CommandData
 }
 
+// A flow to create a reference state.
 internal class CreateRefState : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
@@ -46,6 +49,7 @@ internal class CreateRefState : FlowLogic<SignedTransaction>() {
     }
 }
 
+// A flow to update a specific reference state.
 internal class UpdateRefState(val stateAndRef: StateAndRef<ReferenceState>) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
@@ -60,6 +64,7 @@ internal class UpdateRefState(val stateAndRef: StateAndRef<ReferenceState>) : Fl
     }
 }
 
+// A set of flows to share a stateref with all other nodes in the mock network.
 internal object ShareRefState {
     @InitiatingFlow
     class Initiator(val stateAndRef: StateAndRef<ReferenceState>) : FlowLogic<Unit>() {
@@ -87,6 +92,7 @@ internal object ShareRefState {
     }
 }
 
+// A flow to use a reference state in another transaction.
 internal class UseRefState(val linearId: UniqueIdentifier) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
@@ -105,7 +111,10 @@ internal class UseRefState(val linearId: UniqueIdentifier) : FlowLogic<SignedTra
 
 
 class WithReferencedStatesFlowTests {
-    private val mockNet = InternalMockNetwork(listOf("net.corda.core.flows", "net.corda.testing.contracts"), threadPerNode = true)
+    private val mockNet = InternalMockNetwork(
+            cordappPackages = listOf("net.corda.core.flows", "net.corda.testing.contracts"),
+            threadPerNode = true
+    )
     private val nodes = (0..1).map { mockNet.createPartyNode() }
 
     @After
@@ -115,31 +124,30 @@ class WithReferencedStatesFlowTests {
 
     @Test
     fun test() {
-        // Create reference state.
+        // 1. Create reference state.
         val newRefTx = nodes[0].services.startFlow(CreateRefState()).resultFuture.getOrThrow()
-        println(newRefTx.tx)
         val newRefState = newRefTx.tx.outRefsOfType<RefState.State>().single()
 
-        // Share it with others.
+        // 2. Share it with others.
         nodes[0].services.startFlow(ShareRefState.Initiator(newRefState)).resultFuture.getOrThrow()
 
-        // Update the reference state but don't share the update.
+        // 3. Update the reference state but don't share the update.
         val updatedRefTx = nodes[0].services.startFlow(UpdateRefState(newRefState)).resultFuture.getOrThrow()
-        println(updatedRefTx.tx)
         val updatedRefState = updatedRefTx.tx.outRefsOfType<RefState.State>().single()
 
-        // Try to use the old reference state. This will throw a NotaryException.
+        // 4. Try to use the old reference state. This will throw a NotaryException.
         val useRefTx = nodes[1].services.startFlow(WithReferencedStatesFlow(UseRefState(newRefState.state.data.linearId))).resultFuture
 
-        // Give the UseRefState flow time to fail. We can't `GetOrThrow`
-        // now because then we won't be able to get the result later on.
+        // 5. Give the UseRefState flow time to fail. We can't "GetOrThrow" now because then we won't be able to get
+        // the result later on.
         Thread.sleep(500)
 
-        // Share the update reference state.
+        // 6. Share the update reference state.
         nodes[0].services.startFlow(ShareRefState.Initiator(updatedRefState)).resultFuture.getOrThrow()
 
-        // Wait for the update to be stored by other nodes.
-        println((useRefTx.getOrThrow() as SignedTransaction).tx)
+        // 7. Check that we have a valid signed transaction with the updated reference state.
+        val result = useRefTx.getOrThrow() as SignedTransaction
+        assertEquals(updatedRefState.ref, result.tx.references.single())
     }
 
 }
