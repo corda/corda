@@ -26,8 +26,6 @@ World tutorials, and can be read in any order.
    tutorial-building-transactions
    flow-state-machines
    flow-testing
-   running-a-notary
-   running-a-notary-cluster/toctree
    oracles
    tutorial-custom-notary
    tutorial-tear-offs
