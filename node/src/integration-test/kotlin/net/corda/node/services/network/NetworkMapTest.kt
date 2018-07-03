@@ -8,6 +8,7 @@ import net.corda.core.internal.exists
 import net.corda.core.internal.list
 import net.corda.core.internal.readObject
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
@@ -167,6 +168,23 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
 
             notaryNode.onlySees(notaryNode.nodeInfo, bobNode.nodeInfo)
             bobNode.onlySees(notaryNode.nodeInfo, bobNode.nodeInfo)
+        }
+    }
+
+    @Test
+    fun `test node heartbeat`() {
+        internalDriver(
+                portAllocation = portAllocation,
+                compatibilityZone = compatibilityZone,
+                initialiseSerialization = false,
+                systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString())
+        ) {
+            val aliceNode = startNode(providedName = ALICE_NAME).getOrThrow()
+            assertThat(networkMapServer.networkMapHashes()).contains(aliceNode.nodeInfo.serialize().hash)
+            networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
+            assertThat(networkMapServer.networkMapHashes()).doesNotContain(aliceNode.nodeInfo.serialize().hash)
+            Thread.sleep(2000)
+            assertThat(networkMapServer.networkMapHashes()).contains(aliceNode.nodeInfo.serialize().hash)
         }
     }
 

@@ -1847,7 +1847,8 @@ public @interface net.corda.core.messaging.RPCReturnsObservables
   @org.jetbrains.annotations.NotNull public abstract net.corda.core.messaging.FlowProgressHandle startTrackedFlow(net.corda.core.flows.FlowLogic)
 ##
 @net.corda.core.serialization.CordaSerializable public final class net.corda.core.node.NetworkParameters extends java.lang.Object
-  public <init>(int, List, int, int, java.time.Instant, int, Map)
+  @net.corda.core.serialization.DeprecatedConstructorForDeserialization public <init>(int, List, int, int, java.time.Instant, int, Map)
+  public <init>(int, List, int, int, java.time.Instant, int, Map, java.time.Duration)
   public final int component1()
   @org.jetbrains.annotations.NotNull public final List component2()
   public final int component3()
