@@ -1,0 +1,37 @@
+# Base image from (http://phusion.github.io/baseimage-docker)
+FROM openjdk:8u151-jre-alpine
+
+RUN apk upgrade --update && \
+    apk add --update --no-cache bash iputils && \
+    rm -rf /var/cache/apk/* && \
+    # Add user to run the app && \
+    addgroup corda && \
+    adduser -G corda -D -s /bin/bash corda && \
+    # Create /opt/corda directory && \
+    mkdir -p /opt/corda/plugins && \
+    mkdir -p /opt/corda/logs && \
+    mkdir -p /opt/corda/additional-node-infos && \
+    mkdir -p /opt/node-setup
+
+# Copy corda files
+ADD --chown=corda:corda corda.jar               /opt/corda/corda.jar
+ADD --chown=corda:corda node.conf               /opt/corda/node.conf
+ADD --chown=corda:corda cordapps/               /opt/corda/cordapps
+
+# Copy node info watcher script
+ADD --chown=corda:corda node_info_watcher.sh    /opt/corda/
+
+COPY run-corda.sh /run-corda.sh
+
+RUN chmod +x /run-corda.sh && \
+    chmod +x /opt/corda/node_info_watcher.sh && \
+    sync && \
+    chown -R corda:corda /opt/corda
+
+# Working directory for Corda
+WORKDIR /opt/corda
+ENV HOME=/opt/corda
+USER corda
+
+# Start it
+CMD ["/run-corda.sh"]
