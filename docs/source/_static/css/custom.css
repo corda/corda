@@ -129,7 +129,7 @@ a:visited {
     background: #263673;
 }
 
-.codeset > .highlight-java {
+.codeset > .highlight-kotlin {
     display: none;
 }
 

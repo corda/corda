@@ -33,6 +33,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.node.NodeRegistrationOption
+import net.corda.node.VersionInfo
 import net.corda.node.internal.ConfigurationException
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
@@ -265,6 +266,7 @@ class DriverDSLImpl(
                         "devMode" to false)
         ))
 
+        val versionInfo = VersionInfo(1, "1", "1", "1")
         config.corda.certificatesDirectory.createDirectories()
         // Create network root truststore.
         val rootTruststorePath = config.corda.certificatesDirectory / "network-root-truststore.jks"
@@ -278,7 +280,7 @@ class DriverDSLImpl(
             executorService.fork {
                 NodeRegistrationHelper(
                         config.corda,
-                        HTTPNetworkRegistrationService(compatibilityZoneURL),
+                        HTTPNetworkRegistrationService(compatibilityZoneURL, versionInfo),
                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
                 ).buildKeystore()
                 config

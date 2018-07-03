@@ -15,6 +15,7 @@ import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.post
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.seconds
+import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import okhttp3.CacheControl
 import okhttp3.Headers
@@ -28,12 +29,10 @@ import java.util.*
 import java.util.zip.ZipInputStream
 import javax.naming.ServiceUnavailableException
 
-class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistrationService {
+class HTTPNetworkRegistrationService(compatibilityZoneURL: URL, val versionInfo: VersionInfo) : NetworkRegistrationService {
     private val registrationURL = URL("$compatibilityZoneURL/certificate")
 
     companion object {
-        // TODO: Propagate version information from gradle
-        const val CLIENT_VERSION = "1.0"
         private val TRANSIENT_ERROR_STATUS_CODES = setOf(HTTP_BAD_GATEWAY, HTTP_UNAVAILABLE, HTTP_GATEWAY_TIMEOUT)
     }
 
@@ -63,7 +62,7 @@ class HTTPNetworkRegistrationService(compatibilityZoneURL: URL) : NetworkRegistr
     }
 
     override fun submitRequest(request: PKCS10CertificationRequest): String {
-        return String(registrationURL.post(OpaqueBytes(request.encoded), "Client-Version" to CLIENT_VERSION))
+        return String(registrationURL.post(OpaqueBytes(request.encoded), "Client-Version" to "${versionInfo.platformVersion}"))
     }
 }
 

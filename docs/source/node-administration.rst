@@ -75,7 +75,7 @@ formats for accessing MBeans, and provides client libraries to work with that pr
 
 Here are a few ways to build dashboards and extract monitoring data for a node:
 
-* `hawtio <https://hawt.io>`_ is a web based console that connects directly to JVM's that have been instrumented with a
+* `hawtio <http://hawt.io>`_ is a web based console that connects directly to JVM's that have been instrumented with a
   jolokia agent. This tool provides a nice JMX dashboard very similar to the traditional JVisualVM / JConsole MBbeans original.
 * `JMX2Graphite <https://github.com/logzio/jmx2graphite>`_ is a tool that can be pointed to /monitoring/json and will
   scrape the statistics found there, then insert them into the Graphite monitoring tool on a regular basis. It runs
