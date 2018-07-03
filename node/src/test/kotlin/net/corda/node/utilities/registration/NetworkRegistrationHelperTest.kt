@@ -15,6 +15,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.x500Name
 import net.corda.core.utilities.seconds
 import net.corda.node.NodeRegistrationOption
+import net.corda.node.VersionInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
