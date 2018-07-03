@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="info">
+    <Properties>
+        <Property name="logLevel">off</Property>
+    </Properties>
     <Appenders>
         <Console name="STDOUT" target="SYSTEM_OUT" ignoreExceptions="false">
             <PatternLayout pattern="[%C{1}.%M] %m%n"/>
