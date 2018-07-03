@@ -1,5 +1,6 @@
 package net.corda.gradle.jarfilter
 
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.deserialization.Flags.*
@@ -31,6 +32,7 @@ class SanitisingTransformer(visitor: ClassVisitor, logger: Logger, private val u
 
     var isModified: Boolean = false
         private set
+    override val level: LogLevel = LogLevel.DEBUG
 
     private var className: String = "(unknown)"
     private var primaryConstructor: MethodElement? = null
@@ -48,7 +50,7 @@ class SanitisingTransformer(visitor: ClassVisitor, logger: Logger, private val u
             if (!IS_SECONDARY.get(constructor.flags)) {
                 val signature = getJvmConstructorSignature(constructor, nameResolver, typeTable) ?: break
                 primaryConstructor = MethodElement("<init>", signature.drop("<init>".length))
-                logger.debug("Class {} has primary constructor {}", className, signature)
+                logger.log(level, "Class {} has primary constructor {}", className, signature)
                 break
             }
         }

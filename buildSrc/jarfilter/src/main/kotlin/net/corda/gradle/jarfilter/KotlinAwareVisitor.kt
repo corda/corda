@@ -1,5 +1,6 @@
 package net.corda.gradle.jarfilter
 
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import org.jetbrains.kotlin.load.java.JvmAnnotationNames.*
 import org.objectweb.asm.AnnotationVisitor
@@ -26,6 +27,7 @@ abstract class KotlinAwareVisitor(
     private var classKind: Int = 0
 
     open val hasUnwantedElements: Boolean get() = kotlinMetadata.isNotEmpty()
+    protected open val level: LogLevel = LogLevel.INFO
 
     protected abstract fun processClassMetadata(d1: List<String>, d2: List<String>): List<String>
     protected abstract fun processPackageMetadata(d1: List<String>, d2: List<String>): List<String>
@@ -38,7 +40,7 @@ abstract class KotlinAwareVisitor(
 
     protected fun processMetadata() {
         if (kotlinMetadata.isNotEmpty()) {
-            logger.debug("- Examining Kotlin @Metadata[k={}]", classKind)
+            logger.log(level, "- Examining Kotlin @Metadata[k={}]", classKind)
             val d1 = kotlinMetadata.remove(METADATA_DATA_FIELD_NAME)
             val d2 = kotlinMetadata.remove(METADATA_STRINGS_FIELD_NAME)
             if (d1 != null && d1.isNotEmpty() && d2 != null) {
@@ -57,7 +59,7 @@ abstract class KotlinAwareVisitor(
             KOTLIN_CLASS -> processClassMetadata(d1, d2)
             KOTLIN_FILE, KOTLIN_MULTIFILE_PART -> processPackageMetadata(d1, d2)
             KOTLIN_SYNTHETIC -> {
-                logger.debug("-- synthetic class ignored")
+                logger.log(level,"-- synthetic class ignored")
                 emptyList()
             }
             else -> {
@@ -65,7 +67,7 @@ abstract class KotlinAwareVisitor(
                  * For class-kind=4 (i.e. "multi-file"), we currently
                  * expect d1=[list of multi-file-part classes], d2=null.
                  */
-                logger.debug("-- unsupported class-kind {}", classKind)
+                logger.log(level,"-- unsupported class-kind {}", classKind)
                 emptyList()
             }
         }
