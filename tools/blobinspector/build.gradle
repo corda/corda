@@ -1,0 +1,29 @@
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+dependencies {
+    compile project(':client:jackson')
+    compile project(':node-api')
+    compile 'info.picocli:picocli:3.0.0'
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "com.jcabi:jcabi-manifests:$jcabi_manifests_version"
+
+    testCompile project(':test-utils')
+    testCompile "junit:junit:$junit_version"
+}
+
+jar {
+    from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+    baseName 'blobinspector'
+    manifest {
+        attributes(
+                'Automatic-Module-Name': 'net.corda.blobinspector',
+                'Main-Class': 'net.corda.blobinspector.MainKt'
+        )
+    }
+}

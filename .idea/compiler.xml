@@ -10,6 +10,8 @@
       <module name="bank-of-corda-demo_integrationTest" target="1.8" />
       <module name="bank-of-corda-demo_main" target="1.8" />
       <module name="bank-of-corda-demo_test" target="1.8" />
+      <module name="blobinspector_main" target="1.8" />
+      <module name="blobinspector_test" target="1.8" />
       <module name="bootstrapper_main" target="1.8" />
       <module name="bootstrapper_test" target="1.8" />
       <module name="buildSrc_main" target="1.8" />
@@ -152,6 +154,8 @@
       <module name="testing-test-common_test" target="1.8" />
       <module name="testing-test-utils_main" target="1.8" />
       <module name="testing-test-utils_test" target="1.8" />
+      <module name="tools-blobinspector_main" target="1.8" />
+      <module name="tools-blobinspector_test" target="1.8" />
       <module name="tools_main" target="1.8" />
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />
