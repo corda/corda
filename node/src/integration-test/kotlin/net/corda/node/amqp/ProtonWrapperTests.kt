@@ -18,6 +18,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.node.services.config.EnterpriseConfiguration
+import net.corda.node.services.config.MutualExclusionConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer

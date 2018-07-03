@@ -17,9 +17,9 @@ import net.corda.bridge.services.api.ServiceStateSupport
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.crypto.KEYSTORE_TYPE
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
 import org.slf4j.LoggerFactory
@@ -31,7 +31,7 @@ import java.security.KeyStore
 import java.util.*
 
 class BridgeAMQPListenerServiceImpl(val conf: BridgeConfiguration,
-                                    val maxMessageSize: Int,
+                                    val maximumMessageSize: Int,
                                     val auditService: BridgeAuditService,
                                     private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeAMQPListenerService, ServiceStateSupport by stateHelper {
     companion object {
@@ -61,16 +61,17 @@ class BridgeAMQPListenerServiceImpl(val conf: BridgeConfiguration,
         val keyStore = loadKeyStoreAndWipeKeys(keyStoreBytes, keyStorePassword)
         val trustStore = loadKeyStoreAndWipeKeys(trustStoreBytes, trustStorePassword)
         val bindAddress = conf.inboundConfig!!.listeningAddress
+        val amqpConfiguration = object : AMQPConfiguration {
+            override val keyStore: KeyStore = keyStore
+            override val keyStorePrivateKeyPassword: CharArray = keyStorePrivateKeyPassword
+            override val trustStore: KeyStore = trustStore
+            override val crlCheckSoftFail: Boolean = conf.crlCheckSoftFail
+            override val maxMessageSize: Int = maximumMessageSize
+            override val trace: Boolean = conf.enableAMQPPacketTrace
+        }
         val server = AMQPServer(bindAddress.host,
                 bindAddress.port,
-                PEER_USER,
-                PEER_USER,
-                keyStore,
-                keyStorePrivateKeyPassword,
-                trustStore,
-                conf.crlCheckSoftFail,
-                maxMessageSize,
-                conf.enableAMQPPacketTrace)
+                amqpConfiguration)
         onConnectSubscription = server.onConnection.subscribe(_onConnection)
         onConnectAuditSubscription = server.onConnection.subscribe({
             if (it.connected) {

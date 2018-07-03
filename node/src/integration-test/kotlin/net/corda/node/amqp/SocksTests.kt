@@ -24,16 +24,15 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.*
+import net.corda.node.services.config.EnterpriseConfiguration
+import net.corda.node.services.config.MutualExclusionConfiguration
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
-import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
-import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyVersion
+import net.corda.nodeapi.internal.protonwrapper.netty.*
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -43,6 +42,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.security.KeyStore
 import kotlin.test.assertEquals
 
 class SocksTests {
@@ -281,7 +281,6 @@ class SocksTests {
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(NetworkHostAndPort("0.0.0.0", artemisPort)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
-            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
         }
         artemisConfig.configureWithDevSSLCertificate()
@@ -304,20 +303,20 @@ class SocksTests {
 
         val clientTruststore = clientConfig.loadTrustStore().internal
         val clientKeystore = clientConfig.loadSslKeyStore().internal
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = clientKeystore
+            override val keyStorePrivateKeyPassword: CharArray = clientConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = clientTruststore
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = MAX_MESSAGE_SIZE
+            override val socksProxyConfig: SocksProxyConfig? = SocksProxyConfig(SocksProxyVersion.SOCKS5, NetworkHostAndPort("127.0.0.1", socksPort), null, null)
+        }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
                         NetworkHostAndPort("localhost", serverPort2),
                         NetworkHostAndPort("localhost", artemisPort)),
                 setOf(ALICE_NAME, CHARLIE_NAME),
-                PEER_USER,
-                PEER_USER,
-                clientKeystore,
-                clientConfig.keyStorePassword,
-                clientTruststore, true,
-                MAX_MESSAGE_SIZE,
-                socksProxyConfig = SocksProxyConfig(SocksProxyVersion.SOCKS5,
-                        NetworkHostAndPort("127.0.0.1", socksPort), null, null)
-                )
+                amqpConfig)
     }
 
     private fun createSharedThreadsClient(sharedEventGroup: EventLoopGroup, id: Int): AMQPClient {
@@ -331,21 +330,20 @@ class SocksTests {
 
         val clientTruststore = clientConfig.loadTrustStore().internal
         val clientKeystore = clientConfig.loadSslKeyStore().internal
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = clientKeystore
+            override val keyStorePrivateKeyPassword: CharArray = clientConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = clientTruststore
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = MAX_MESSAGE_SIZE
+            override val socksProxyConfig: SocksProxyConfig? = SocksProxyConfig(SocksProxyVersion.SOCKS5, NetworkHostAndPort("127.0.0.1", socksPort), null, null)
+        }
+
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort)),
                 setOf(ALICE_NAME),
-                PEER_USER,
-                PEER_USER,
-                clientKeystore,
-                clientConfig.keyStorePassword,
-                clientTruststore,
-                true,
-                MAX_MESSAGE_SIZE,
-                true,
-                sharedEventGroup,
-                socksProxyConfig = SocksProxyConfig(SocksProxyVersion.SOCKS5,
-                        NetworkHostAndPort("127.0.0.1", socksPort), null, null)
-                )
+                amqpConfig,
+                sharedEventGroup)
     }
 
     private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME): AMQPServer {
@@ -359,15 +357,16 @@ class SocksTests {
 
         val serverTruststore = serverConfig.loadTrustStore().internal
         val serverKeystore = serverConfig.loadSslKeyStore().internal
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = serverKeystore
+            override val keyStorePrivateKeyPassword: CharArray = serverConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = serverTruststore
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = MAX_MESSAGE_SIZE
+        }
         return AMQPServer(
                 "0.0.0.0",
                 port,
-                PEER_USER,
-                PEER_USER,
-                serverKeystore,
-                serverConfig.keyStorePassword,
-                serverTruststore,
-                true,
-                MAX_MESSAGE_SIZE)
+                amqpConfig)
     }
 }

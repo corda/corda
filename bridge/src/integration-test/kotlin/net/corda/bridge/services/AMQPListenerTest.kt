@@ -22,11 +22,11 @@ import net.corda.core.internal.div
 import net.corda.core.internal.readAll
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
@@ -35,6 +35,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.security.KeyStore
 import kotlin.test.assertEquals
 
 class AMQPListenerTest {
@@ -87,16 +88,17 @@ class AMQPListenerTest {
         clientConfig.createBridgeKeyStores(DUMMY_BANK_B_NAME)
         val clientKeyStore = clientConfig.loadSslKeyStore().internal
         val clientTrustStore = clientConfig.loadTrustStore().internal
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = clientKeyStore
+            override val keyStorePrivateKeyPassword: CharArray = clientConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = clientTrustStore
+            override val maxMessageSize: Int = maxMessageSize
+            override val trace: Boolean = true
+        }
         // create and connect a real client
         val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", 10005)),
                 setOf(DUMMY_BANK_A_NAME),
-                PEER_USER,
-                PEER_USER,
-                clientKeyStore,
-                clientConfig.keyStorePassword,
-                clientTrustStore,
-                true,
-                maxMessageSize = maxMessageSize)
+                amqpConfig)
 
         amqpClient.start()
         // Should see events to show we got a valid connection
@@ -158,16 +160,17 @@ class AMQPListenerTest {
         clientKeyStore.setPrivateKey("TLS_CERT", clientKeys.private, listOf(clientCert))
         val clientTrustStore = X509KeyStore("password")
         clientTrustStore.setCertificate("TLS_ROOT", clientCert)
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = clientKeyStore.internal
+            override val keyStorePrivateKeyPassword: CharArray = "password".toCharArray()
+            override val trustStore: KeyStore = clientTrustStore.internal
+            override val maxMessageSize: Int = maxMessageSize
+            override val trace: Boolean = true
+        }
         // create and connect a real client
         val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", 10005)),
                 setOf(DUMMY_BANK_A_NAME),
-                PEER_USER,
-                PEER_USER,
-                clientKeyStore.internal,
-                "password",
-                clientTrustStore.internal,
-                true,
-                maxMessageSize = maxMessageSize)
+                amqpConfig)
         amqpClient.start()
         val connectionEvent = connectionFollower.next()
         assertEquals(false, connectionEvent.connected)

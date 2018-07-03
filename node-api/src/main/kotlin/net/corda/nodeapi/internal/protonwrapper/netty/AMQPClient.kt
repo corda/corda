@@ -30,8 +30,8 @@ import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImp
 import net.corda.nodeapi.internal.requireMessageSize
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.net.InetSocketAddress
 import java.lang.Long.min
+import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -148,10 +148,10 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         override fun initChannel(ch: SocketChannel) {
             val pipeline = ch.pipeline()
-            val socksConfig = parent.socksProxyConfig
+            val socksConfig = conf.socksProxyConfig
             if (socksConfig != null) {
                 val proxyAddress = InetSocketAddress(socksConfig.proxyAddress.host, socksConfig.proxyAddress.port)
-                val proxy = when (parent.socksProxyConfig!!.version) {
+                val proxy = when (conf.socksProxyConfig!!.version) {
                     SocksProxyVersion.SOCKS4 -> {
                         Socks4ProxyHandler(proxyAddress, socksConfig.userName)
                     }

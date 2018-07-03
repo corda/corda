@@ -55,5 +55,9 @@ interface AMQPConfiguration {
      * but currently that is deferred to Artemis and the bridge code.
      */
     val maxMessageSize: Int
+
+    @JvmDefault
+    val socksProxyConfig: SocksProxyConfig?
+        get() = null
 }
 

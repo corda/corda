@@ -27,8 +27,8 @@ import net.corda.nodeapi.internal.bridging.AMQPBridgeManager.AMQPBridge.Companio
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
-import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
+import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -48,7 +48,8 @@ import kotlin.concurrent.withLock
  *  The Netty thread pool used by the AMQPBridges is also shared and managed by the AMQPBridgeManager.
  */
 @VisibleForTesting
-class AMQPBridgeManager(config: NodeSSLConfiguration, maxMessageSize: Int, private val artemisMessageClientFactory: () -> ArtemisSessionProvider) : BridgeManager {
+class AMQPBridgeManager(config: NodeSSLConfiguration, socksProxyConfig: SocksProxyConfig? = null,
+                        maxMessageSize: Int, private val artemisMessageClientFactory: () -> ArtemisSessionProvider) : BridgeManager {
 
     private val lock = ReentrantLock()
     private val bridgeNameToBridgeMap = mutableMapOf<String, AMQPBridge>()
@@ -56,14 +57,16 @@ class AMQPBridgeManager(config: NodeSSLConfiguration, maxMessageSize: Int, priva
     private class AMQPConfigurationImpl private constructor(override val keyStore: KeyStore,
                                                             override val keyStorePrivateKeyPassword: CharArray,
                                                             override val trustStore: KeyStore,
+                                                            override val socksProxyConfig: SocksProxyConfig?,
                                                             override val maxMessageSize: Int) : AMQPConfiguration {
-        constructor(config: NodeSSLConfiguration, maxMessageSize: Int) : this(config.loadSslKeyStore().internal,
+        constructor(config: NodeSSLConfiguration, socksProxyConfig: SocksProxyConfig?, maxMessageSize: Int) : this(config.loadSslKeyStore().internal,
                 config.keyStorePassword.toCharArray(),
                 config.loadTrustStore().internal,
+                socksProxyConfig,
                 maxMessageSize)
     }
 
-    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, maxMessageSize)
+    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, socksProxyConfig, maxMessageSize)
     private var sharedEventLoopGroup: EventLoopGroup? = null
     private var artemis: ArtemisSessionProvider? = null
 
