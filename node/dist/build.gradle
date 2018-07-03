@@ -1,5 +1,8 @@
 import org.gradle.internal.jvm.Jvm
 
+apply plugin: 'net.corda.plugins.publish-utils'
+
+
 description 'Package Node as stand-alone application'
 
 evaluationDependsOn(":node")
@@ -203,22 +206,19 @@ if (isLinux || isMac) {
 
     task buildInstaller(dependsOn: [embedTarball])
 
-    apply plugin: 'maven-publish'
-    apply plugin: 'java'
-
     def installerFile = file("$tarballDir/installer/installer.sh")
-    def installerArtifact = artifacts.add("archives", installerFile) {
+
+    def installerArtifact = artifacts.add("publish", installerFile) {
         type "sh"
         builtBy(buildInstaller)
     }
 
-    publishing {
-        publications {
-            InstallerPublication(MavenPublication) {
-                artifact installerArtifact
-            }
-        }
+    publish {
+        name 'corda-installer'
+        disableDefaultJar = true
     }
+
+
 
 } else {
     println("Not running on *nix, disabling distribution generation")
