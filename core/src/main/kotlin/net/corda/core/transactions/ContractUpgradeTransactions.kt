@@ -56,7 +56,7 @@ data class ContractUpgradeWireTransaction(
                 "outputs can only be obtained from a resolved ContractUpgradeLedgerTransaction")
 
     /** ContractUpgradeWireTransactions should not contain reference input states. */
-    override val references: List<StateRef> = emptyList()
+    override val references: List<StateRef> get() = emptyList()
 
     override val id: SecureHash by lazy {
         val componentHashes = serializedComponents.mapIndexed { index, component ->

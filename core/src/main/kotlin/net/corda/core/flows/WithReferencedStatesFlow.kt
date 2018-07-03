@@ -32,6 +32,8 @@ class WithReferencedStatesFlow<T : Any>(val flowLogic: FlowLogic<T>) : FlowLogic
             val futures = stateRefs.map { stateRef ->
                 services.vaultService.whenConsumed(stateRef).toCompletableFuture()
             }
+            // CompletableFuture.allOf() returns a CompletableFuture<Void!>!. Returning a CordaFuture<Void>
+            // breaks the state machine manager, so instead, we return a CordaFuture<Unit>, which works.
             return CompletableFuture.allOf(*futures.toTypedArray()).thenApply { Unit }.asCordaFuture()
         }
     }
