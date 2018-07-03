@@ -59,10 +59,17 @@ Database access
 When running a node backed with a H2 database, the node can be configured to expose the database over a socket
 (see :doc:`node-database-access-h2`).
 
-Note that in production, exposing the database via the node is not recommended.
+Note that in a production set up, it is highly recommended to use an enterprise grade database, and access to the
+database should be via the usual database tools mechanisms, including access control and restrictions.
 
 Monitoring your node
 --------------------
+
+There are two ways to monitor performance and health of a node in Corda Enterprise:
+
+
+Monitoring via Jolokia
+++++++++++++++++++++++
 
 Like most Java servers, the node can be configured to export various useful metrics and management operations via the industry-standard
 `JMX infrastructure <https://en.wikipedia.org/wiki/Java_Management_Extensions>`_. JMX is a standard API
@@ -99,18 +106,20 @@ The following JMX statistics are exported:
 * JVM statistics: classloading, garbage collection, memory, runtime, threading, operating system
 
 Notes for production use
-++++++++++++++++++++++++
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 When using Jolokia monitoring in production, it is recommended to use a Jolokia agent that reads the metrics from the node
 and pushes them to the metrics storage, rather than exposing a port on the production machine/process to the internet.
 
 Also ensure to have restrictive Jolokia access policy in place for access to production nodes. The Jolokia access is controlled
-via a file called ``jolokia-access.xml``.
-Several Jolokia policy based security configuration files (``jolokia-access.xml``) are available for dev, test, and prod
-environments under ``/config/<env>``.
+via a file called ``jolokia-access.xml``. For a production node, the following should be a good starting point, limiting
+access to reads from localhost:
 
-Notes for development use
-+++++++++++++++++++++++++
+    .. literalinclude:: ../../config/prod/jolokia-access.xml
+          :language: xml
+
+Notes for development/test use
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When running in dev mode, Hibernate statistics are also available via the Jolkia interface. These are disabled otherwise
 due to expensive run-time costs. They can be turned on and off explicitly regardless of dev mode via the
@@ -122,10 +131,26 @@ When starting Corda nodes using Cordformation runner (see :doc:`running-a-node`)
 When starting Corda nodes using the `DriverDSL`, you should see a startup message in the logs similar to the following:
 **Starting out-of-process Node USA Bank Corp, debug port is not enabled, jolokia monitoring port is 7005 {}**
 
-
 The following diagram illustrates Corda flow metrics visualized using `hawtio <https://hawt.io>`_ :
 
 .. image:: resources/hawtio-jmx.png
+
+Monitoring via Graphite
++++++++++++++++++++++++
+
+Corda nodes alternatively support publishing metrics collected via the Codahale metrics library directly to a graphite
+server. This needs to be configured in the node configuration file::
+
+  graphiteOptions = {
+    prefix = "<node specific prefix>"
+    server = <host name of the graphite server>
+    port = <write port on the graphite server>
+  }
+
+The prefix should clearly indicate the node where the metrics are coming from, as this will be the top level discrimator
+in the graphite metric hierarchy.
+The graphite server must be running with python pickle transport enabled. Please refer to the documentation on
+https://graphiteapp.org on how to install and run a graphite server.
 
 Memory usage and tuning
 -----------------------
