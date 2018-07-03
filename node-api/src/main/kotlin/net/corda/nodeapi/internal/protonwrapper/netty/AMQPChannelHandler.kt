@@ -23,6 +23,7 @@ import org.slf4j.MDC
 import java.net.InetSocketAddress
 import java.nio.channels.ClosedChannelException
 import java.security.cert.X509Certificate
+import javax.net.ssl.SSLException
 
 /**
  *  An instance of AMQPChannelHandler sits inside the netty pipeline and controls the socket level lifecycle.
@@ -48,13 +49,17 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     private var badCert: Boolean = false
 
     private fun withMDC(block: () -> Unit) {
-        MDC.put("serverMode", serverMode.toString())
-        MDC.put("remoteAddress", remoteAddress.toString())
-        MDC.put("localCert", localCert?.subjectDN?.toString())
-        MDC.put("remoteCert", remoteCert?.subjectDN?.toString())
-        MDC.put("allowedRemoteLegalNames", allowedRemoteLegalNames?.joinToString(separator = ";") { it.toString() })
-        block()
-        MDC.clear()
+        val oldMDC = MDC.getCopyOfContextMap()
+        try {
+            MDC.put("serverMode", serverMode.toString())
+            MDC.put("remoteAddress", remoteAddress.toString())
+            MDC.put("localCert", localCert?.subjectDN?.toString())
+            MDC.put("remoteCert", remoteCert?.subjectDN?.toString())
+            MDC.put("allowedRemoteLegalNames", allowedRemoteLegalNames?.joinToString(separator = ";") { it.toString() })
+            block()
+        } finally {
+            MDC.setContextMap(oldMDC)
+        }
     }
 
     private fun logDebugWithMDC(msg: () -> String) {
@@ -129,9 +134,12 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                 createAMQPEngine(ctx)
                 onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true, false)))
             } else {
+                val cause = evt.cause()
                 // This happens when the peer node is closed during SSL establishment.
-                if (evt.cause() is ClosedChannelException) {
+                if (cause is ClosedChannelException) {
                     logWarnWithMDC("SSL Handshake closed early.")
+                } else if (cause is SSLException && cause.message == "handshake timed out") { // Sadly the exception thrown by Netty wrapper requires that we check the message.
+                    logWarnWithMDC("SSL Handshake timed out")
                 } else {
                     badCert = true
                 }
