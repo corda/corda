@@ -14,27 +14,15 @@ The node services represent the various sub functions of the Corda node.
 Some are directly accessible to contracts and flows through the 
 ``ServiceHub``, whilst others are the framework internals used to host 
 the node functions. Any public service interfaces are defined in the 
-``:core`` gradle project in the 
-``src/main/kotlin/net/corda/core/node/services`` folder. The 
-``ServiceHub`` interface exposes functionality suitable for flows. 
-The implementation code for all standard services lives in the gradle 
-``:node`` project under the ``src/main/kotlin/net/corda/node/services`` 
-folder. The ``src/main/kotlin/net/corda/node/services/api`` folder 
-contains declarations for internal only services and for interoperation 
-between services. 
+``net.corda.core.node.services`` package. The ``ServiceHub`` interface exposes
+functionality suitable for flows.
+The implementation code for all standard services lives in the ``net.corda.node.services`` package.
 
 All the services are constructed in the ``AbstractNode`` ``start`` 
-method (and the extension in ``Node``). They may also register a 
-shutdown handler during initialisation, which will be called in reverse 
-order to the start registration sequence when the ``Node.stop`` 
-is called. 
+method. They may also register a shutdown handler during initialisation,
+which will be called in reverse order to the start registration sequence when the ``Node.stop`` is called.
 
-For unit testing a number of non-persistent, memory only services are
-defined in the ``:node`` and ``:test-utils`` projects. The 
-``:test-utils`` project also provides an in-memory networking simulation 
-to allow unit testing of flows and service functions. 
-
-The roles of the individual services are described below. 
+The roles of the individual services are described below.
 
 Key management and identity services
 ------------------------------------
@@ -43,15 +31,15 @@ InMemoryIdentityService
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``InMemoryIdentityService`` implements the ``IdentityService`` 
-interface and provides a store of remote mappings between ``CompositeKey`` 
+interface and provides a store of remote mappings between ``PublicKey``
 and remote ``Parties``. It is automatically populated from the 
-``NetworkMapCache`` updates and is used when translating ``CompositeKey`` 
+``NetworkMapCache`` updates and is used when translating ``PublicKey``
 exposed in transactions into fully populated ``Party`` identities. This 
 service is also used in the default JSON mapping of parties in the web 
 server, thus allowing the party names to be used to refer to other nodes' 
 legal identities. In the future the Identity service will be made 
 persistent and extended to allow anonymised session keys to be used in 
-flows where the well-known ``CompositeKey`` of nodes need to be hidden 
+flows where the well-known ``PublicKey`` of nodes need to be hidden
 to non-involved parties. 
 
 PersistentKeyManagementService and E2ETestKeyManagementService
@@ -95,7 +83,7 @@ of this component, because the ``ArtemisMessagingServer`` is responsible
 for configuring the network ports (based upon settings in ``node.conf``) 
 and the service configures the security settings of the ``ArtemisMQ`` 
 middleware and acts to form bridges between node mailbox queues based 
-upon connection details advertised by the ``NetworkMapService``. The 
+upon connection details advertised by the ``NetworkMapCache``. The
 ``ArtemisMQ`` broker is configured to use TLS1.2 with a custom 
 ``TrustStore`` containing a Corda root certificate and a ``KeyStore`` 
 with a certificate and key signed by a chain back to this root 
@@ -105,13 +93,13 @@ each other it is essential that the entire set of nodes are able to
 authenticate against each other and thus typically that they share a 
 common root certificate. Also note that the address configuration 
 defined for the server is the basis for the address advertised in the 
-NetworkMapService and thus must be externally connectable by all nodes 
+``NetworkMapCache`` and thus must be externally connectable by all nodes
 in the network. 
 
-NodeMessagingClient
-~~~~~~~~~~~~~~~~~~~
+P2PMessagingClient
+~~~~~~~~~~~~~~~~~~
 
-The ``NodeMessagingClient`` is the implementation of the 
+The ``P2PMessagingClient`` is the implementation of the
 ``MessagingService`` interface operating across the ``ArtemisMQ`` 
 middleware layer. It typically connects to the local ``ArtemisMQ`` 
 hosted within the ``ArtemisMessagingServer`` service. However, the 
@@ -133,20 +121,13 @@ services of authorised nodes provided by the remote
 specific advertised services e.g. a Notary service, or an Oracle 
 service. Also, this service allows mapping of friendly names, or 
 ``Party`` identities to the full ``NodeInfo`` which is used in the 
-``StateMachineManager`` to convert between the ``CompositeKey``, or 
+``StateMachineManager`` to convert between the ``PublicKey``, or
 ``Party`` based addressing used in the flows/contracts and the 
 physical host and port information required for the physical 
 ``ArtemisMQ`` messaging layer.
 
 Storage and persistence related services
 ----------------------------------------
-
-StorageServiceImpl
-~~~~~~~~~~~~~~~~~~
-
-The ``StorageServiceImpl`` service simply hold references to the various 
-persistence related services and provides a single grouped interface on 
-the ``ServiceHub``. 
 
 DBCheckpointStorage
 ~~~~~~~~~~~~~~~~~~~
@@ -247,40 +228,7 @@ a reference to the state that triggered the event. The flow can then
 begin whatever action is required. Note that the scheduled activity 
 occurs in all nodes holding the state in their Vault, it may therefore 
 be required for the flow to exit early if the current node is not 
-the intended initiator. 
-
-Notary flow implementation services
------------------------------------
-
-PersistentUniquenessProvider, InMemoryUniquenessProvider and RaftUniquenessProvider
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-These variants of ``UniquenessProvider`` service are used by the notary 
-flows to track consumed states and thus reject double-spend 
-scenarios. The ``InMemoryUniquenessProvider`` is for unit testing only, 
-the default being the ``PersistentUniquenessProvider`` which records the 
-changes to the DB. When the Raft based notary is active the states are 
-tracked by the whole cluster using a ``RaftUniquenessProvider``. Outside 
-of the notary flows themselves this service should not be accessed 
-by any CorDapp components. 
-
-NotaryService (SimpleNotaryService, ValidatingNotaryService, RaftValidatingNotaryService)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``NotaryService`` is an abstract base class for the various concrete 
-implementations of the Notary server flow. By default, a node does 
-not run any ``NotaryService`` server component. For that you need to specify the ``notary`` config.
-The node may then participate in controlling state uniqueness when contacted by nodes
-using the ``NotaryFlow.Client`` ``subFlow``. The 
-``SimpleNotaryService`` only offers protection against double spend, but 
-does no further verification. The ``ValidatingNotaryService`` checks 
-that proposed transactions are correctly signed by all keys listed in 
-the commands and runs the contract verify to ensure that the rules of 
-the state transition are being followed. The 
-``RaftValidatingNotaryService`` further extends the flow to operate 
-against a cluster of nodes running shared consensus state across the 
-RAFT protocol (note this requires the additional configuration of the 
-``notaryClusterAddresses`` property). 
+the intended initiator.
 
 Vault related services
 ----------------------
