@@ -26,7 +26,7 @@ data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
 class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     private val objectHistory: MutableList<Any> = mutableListOf()
 
-    internal companion object {
+    companion object {
         private val BYTES_NEEDED_TO_PEEK: Int = 23
 
         fun peekSize(bytes: ByteArray): Int {
@@ -48,6 +48,23 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
             }
             return size + BYTES_NEEDED_TO_PEEK
         }
+
+        @Throws(NotSerializableException::class)
+        fun getEnvelope(bytes: ByteSequence): Envelope {
+            // Check that the lead bytes match expected header
+            val headerSize = AmqpHeaderV1_0.size
+            if (bytes.take(headerSize) != AmqpHeaderV1_0) {
+                throw NotSerializableException("Serialization header does not match.")
+            }
+
+            val data = Data.Factory.create()
+            val size = data.decode(ByteBuffer.wrap(bytes.bytes, bytes.offset + headerSize, bytes.size - headerSize))
+            if (size.toInt() != bytes.size - headerSize) {
+                throw NotSerializableException("Unexpected size of data")
+            }
+
+            return Envelope.get(data)
+        }
     }
 
     @Throws(NotSerializableException::class)
@@ -56,23 +73,6 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory) {
     @Throws(NotSerializableException::class)
     inline internal fun <reified T : Any> deserializeAndReturnEnvelope(bytes: SerializedBytes<T>): ObjectAndEnvelope<T> =
             deserializeAndReturnEnvelope(bytes, T::class.java)
-
-    @Throws(NotSerializableException::class)
-    internal fun getEnvelope(bytes: ByteSequence): Envelope {
-        // Check that the lead bytes match expected header
-        val headerSize = AmqpHeaderV1_0.size
-        if (bytes.take(headerSize) != AmqpHeaderV1_0) {
-            throw NotSerializableException("Serialization header does not match.")
-        }
-
-        val data = Data.Factory.create()
-        val size = data.decode(ByteBuffer.wrap(bytes.bytes, bytes.offset + headerSize, bytes.size - headerSize))
-        if (size.toInt() != bytes.size - headerSize) {
-            throw NotSerializableException("Unexpected size of data")
-        }
-
-        return Envelope.get(data)
-    }
 
     @Throws(NotSerializableException::class)
     private fun <R> des(generator: () -> R): R {

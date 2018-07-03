@@ -2,15 +2,17 @@ package net.corda.nodeapi.internal.serialization
 
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.util.DefaultClassResolver
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.node.services.statemachine.DataSessionMessage
 import net.corda.nodeapi.internal.serialization.amqp.DeserializationInput
 import net.corda.nodeapi.internal.serialization.amqp.Envelope
-import net.corda.nodeapi.internal.serialization.amqp.SerializerFactory
 import net.corda.nodeapi.internal.serialization.kryo.KryoHeaderV0_1
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.amqpSpecific
 import net.corda.testing.internal.kryoSpecific
-import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -27,8 +29,7 @@ class ListsSerializationTest {
 
         fun <T : Any> verifyEnvelope(serBytes: SerializedBytes<T>, envVerBody: (Envelope) -> Unit) =
                 amqpSpecific("AMQP specific envelope verification") {
-                    val context = SerializationFactory.defaultFactory.defaultContext
-                    val envelope = DeserializationInput(SerializerFactory(context.whitelist, context.deserializationClassLoader)).getEnvelope(serBytes)
+                    val envelope = DeserializationInput.getEnvelope(serBytes)
                     envVerBody(envelope)
                 }
     }

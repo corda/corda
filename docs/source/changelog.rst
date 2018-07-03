@@ -1,10 +1,36 @@
 Changelog
 =========
 
+Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
+release, see :doc:`upgrade-notes`.
+
 .. _changelog_v3.2:
 
 Version 3.2
 -----------
+
+* New tool: the BlobInspector command line tool for decoding Network Parameters and Network Map serialised bnary blobs
+
+* Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
+
+  * ``Instant`` and ``Date`` objects are serialised as ISO-8601 formatted strings rather than timestamps
+  * ``PublicKey`` objects are serialised and looked up according to their Base58 encoded string
+  * ``Party`` objects can be deserialised by looking up their public key, in addition to their name
+  * ``NodeInfo`` objects are serialised as an object and can be looked up using the same mechanism as ``Party``
+  * ``NetworkHostAndPort`` serialised according to its ``toString()``
+  * ``PartyAndCertificate`` is serialised as the name
+  * ``SerializedBytes`` is serialised by materialising the bytes into the object it represents, and then serialising that
+    object into YAML/JSON
+  * ``X509Certificate`` is serialised as an object with key fields such as ``issuer``, ``publicKey``, ``serialNumber``, etc.
+    The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialise an ``X509Certificate``
+    back.
+  * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
+
+* ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
+  then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``
+  the ``certPath`` is serialised.
+
+* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used
 
 * Doorman and NetworkMap URLs can now be configured individually rather than being assumed to be
   the same server. Current ``compatibilityZoneURL`` configurations remain valid. See both :doc:`corda-configuration-file`

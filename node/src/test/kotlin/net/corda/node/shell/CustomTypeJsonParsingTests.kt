@@ -28,7 +28,6 @@ class CustomTypeJsonParsingTests {
         objectMapper = ObjectMapper()
         val simpleModule = SimpleModule()
         simpleModule.addDeserializer(UniqueIdentifier::class.java, InteractiveShell.UniqueIdentifierDeserializer)
-        simpleModule.addDeserializer(UUID::class.java, InteractiveShell.UUIDDeserializer)
         objectMapper.registerModule(simpleModule)
     }
 
