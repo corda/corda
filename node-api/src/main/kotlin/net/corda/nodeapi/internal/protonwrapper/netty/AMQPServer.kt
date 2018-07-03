@@ -33,7 +33,6 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.net.BindException
 import java.net.InetSocketAddress
-import java.security.KeyStore
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -46,14 +45,7 @@ import kotlin.concurrent.withLock
  */
 class AMQPServer(val hostName: String,
                  val port: Int,
-                 private val userName: String?,
-                 private val password: String?,
-                 private val keyStore: KeyStore,
-                 private val keyStorePrivateKeyPassword: CharArray,
-                 private val trustStore: KeyStore,
-                 private val crlCheckSoftFail: Boolean,
-                 private val maxMessageSize: Int,
-                 private val trace: Boolean = false) : AutoCloseable {
+                 private val configuration: AMQPConfiguration) : AutoCloseable {
 
     companion object {
         init {
@@ -72,36 +64,26 @@ class AMQPServer(val hostName: String,
     private var serverChannel: Channel? = null
     private val clientChannels = ConcurrentHashMap<InetSocketAddress, SocketChannel>()
 
-    constructor(hostName: String,
-                port: Int,
-                userName: String?,
-                password: String?,
-                keyStore: KeyStore,
-                keyStorePrivateKeyPassword: String,
-                trustStore: KeyStore,
-                crlCheckSoftFail: Boolean,
-                maxMessageSize: Int,
-                trace: Boolean = false) : this(hostName, port, userName, password, keyStore, keyStorePrivateKeyPassword.toCharArray(), trustStore, crlCheckSoftFail, maxMessageSize, trace)
-
     private class ServerChannelInitializer(val parent: AMQPServer) : ChannelInitializer<SocketChannel>() {
         private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         private val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        private val conf = parent.configuration
 
         init {
-            keyManagerFactory.init(parent.keyStore, parent.keyStorePrivateKeyPassword)
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(parent.trustStore, parent.crlCheckSoftFail))
+            keyManagerFactory.init(conf.keyStore, conf.keyStorePrivateKeyPassword)
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.crlCheckSoftFail))
         }
 
         override fun initChannel(ch: SocketChannel) {
             val pipeline = ch.pipeline()
             val handler = createServerSslHelper(keyManagerFactory, trustManagerFactory)
             pipeline.addLast("sslHandler", handler)
-            if (parent.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
+            if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(true,
                     null,
-                    parent.userName,
-                    parent.password,
-                    parent.trace,
+                    conf.userName,
+                    conf.password,
+                    conf.trace,
                     {
                         parent.clientChannels[it.first.remoteAddress()] = it.first
                         parent._onConnection.onNext(it.second)
@@ -169,7 +151,7 @@ class AMQPServer(val hostName: String,
                       destinationLegalName: String,
                       destinationLink: NetworkHostAndPort,
                       properties: Map<String, Any?>): SendableMessage {
-        requireMessageSize(payload.size, maxMessageSize)
+        requireMessageSize(payload.size, configuration.maxMessageSize)
         val dest = InetSocketAddress(destinationLink.host, destinationLink.port)
         require(dest in clientChannels.keys) {
             "Destination not available"

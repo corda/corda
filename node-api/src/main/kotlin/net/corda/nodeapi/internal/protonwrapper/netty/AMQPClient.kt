@@ -32,7 +32,6 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.net.InetSocketAddress
 import java.lang.Long.min
-import java.security.KeyStore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -61,16 +60,8 @@ data class SocksProxyConfig(val version: SocksProxyVersion, val proxyAddress: Ne
  */
 class AMQPClient(val targets: List<NetworkHostAndPort>,
                  val allowedRemoteLegalNames: Set<CordaX500Name>,
-                 private val userName: String?,
-                 private val password: String?,
-                 private val keyStore: KeyStore,
-                 private val keyStorePrivateKeyPassword: String,
-                 private val trustStore: KeyStore,
-                 private val crlCheckSoftFail: Boolean,
-                 private val maxMessageSize: Int,
-                 private val trace: Boolean = false,
-                 private val sharedThreadPool: EventLoopGroup? = null,
-                 private val socksProxyConfig: SocksProxyConfig? = null) : AutoCloseable {
+                 private val configuration: AMQPConfiguration,
+                 private val sharedThreadPool: EventLoopGroup? = null) : AutoCloseable {
     companion object {
         init {
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE)
@@ -148,10 +139,11 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
     private class ClientChannelInitializer(val parent: AMQPClient) : ChannelInitializer<SocketChannel>() {
         private val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         private val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        private val conf = parent.configuration
 
         init {
-            keyManagerFactory.init(parent.keyStore, parent.keyStorePrivateKeyPassword.toCharArray())
-            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(parent.trustStore, parent.crlCheckSoftFail))
+            keyManagerFactory.init(conf.keyStore, conf.keyStorePrivateKeyPassword)
+            trustManagerFactory.init(initialiseTrustStoreAndEnableCrlChecking(conf.trustStore, conf.crlCheckSoftFail))
         }
 
         override fun initChannel(ch: SocketChannel) {
@@ -178,12 +170,12 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
             val target = parent.currentTarget
             val handler = createClientSslHelper(target, keyManagerFactory, trustManagerFactory)
             pipeline.addLast("sslHandler", handler)
-            if (parent.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
+            if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(false,
                     parent.allowedRemoteLegalNames,
-                    parent.userName,
-                    parent.password,
-                    parent.trace,
+                    conf.userName,
+                    conf.password,
+                    conf.trace,
                     {
                         parent.retryInterval = MIN_RETRY_INTERVAL // reset to fast reconnect if we connect properly
                         parent._onConnection.onNext(it.second)
@@ -251,7 +243,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                       topic: String,
                       destinationLegalName: String,
                       properties: Map<String, Any?>): SendableMessage {
-        requireMessageSize(payload.size, maxMessageSize)
+        requireMessageSize(payload.size, configuration.maxMessageSize)
         return SendableMessageImpl(payload, topic, destinationLegalName, currentTarget, properties)
     }
 

@@ -57,11 +57,15 @@ internal class ConnectionStateMachine(private val serverMode: Boolean,
     }
 
     private fun withMDC(block: () -> Unit) {
-        MDC.put("serverMode", serverMode.toString())
-        MDC.put("localLegalName", localLegalName)
-        MDC.put("remoteLegalName", remoteLegalName)
-        block()
-        MDC.clear()
+        val oldMDC = MDC.getCopyOfContextMap()
+        try {
+            MDC.put("serverMode", serverMode.toString())
+            MDC.put("localLegalName", localLegalName)
+            MDC.put("remoteLegalName", remoteLegalName)
+            block()
+        } finally {
+            MDC.setContextMap(oldMDC)
+        }
     }
 
     private fun logDebugWithMDC(msg: () -> String) {
