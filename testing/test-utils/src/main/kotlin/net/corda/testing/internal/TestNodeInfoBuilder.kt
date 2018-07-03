@@ -41,7 +41,7 @@ class TestNodeInfoBuilder(private val intermediateAndRoot: Pair<CertificateAndKe
 
     fun build(serial: Long = 1, platformVersion: Int = 1): NodeInfo {
         return NodeInfo(
-                listOf(NetworkHostAndPort("my.${identitiesAndPrivateKeys[0].first.party.name.organisation}.com", 1234)),
+                listOf(NetworkHostAndPort("my.${identitiesAndPrivateKeys[0].first.party.name.organisation.replace(' ', '-')}.com", 1234)),
                 identitiesAndPrivateKeys.map { it.first },
                 platformVersion,
                 serial

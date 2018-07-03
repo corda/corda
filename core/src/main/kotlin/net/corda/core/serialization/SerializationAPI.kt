@@ -184,7 +184,8 @@ object SerializationDefaults {
 /**
  * Convenience extension method for deserializing a ByteSequence, utilising the defaults.
  */
-inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): T {
+inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
+                                                      context: SerializationContext = serializationFactory.defaultContext): T {
     return serializationFactory.deserialize(this, T::class.java, context)
 }
 
@@ -193,31 +194,40 @@ inline fun <reified T : Any> ByteSequence.deserialize(serializationFactory: Seri
  * It might be helpful to know [SerializationContext] to use the same encoding in the reply.
  */
 inline fun <reified T : Any> ByteSequence.deserializeWithCompatibleContext(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
-                                                                       context: SerializationContext = serializationFactory.defaultContext): ObjectWithCompatibleContext<T> {
+                                                                           context: SerializationContext = serializationFactory.defaultContext): ObjectWithCompatibleContext<T> {
     return serializationFactory.deserializeWithCompatibleContext(this, T::class.java, context)
 }
 
 /**
  * Convenience extension method for deserializing SerializedBytes with type matching, utilising the defaults.
  */
-inline fun <reified T : Any> SerializedBytes<T>.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): T {
+inline fun <reified T : Any> SerializedBytes<T>.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
+                                                            context: SerializationContext = serializationFactory.defaultContext): T {
     return serializationFactory.deserialize(this, T::class.java, context)
 }
 
 /**
  * Convenience extension method for deserializing a ByteArray, utilising the defaults.
  */
-inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): T = this.sequence().deserialize(serializationFactory, context)
+inline fun <reified T : Any> ByteArray.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
+                                                   context: SerializationContext = serializationFactory.defaultContext): T {
+    require(isNotEmpty()) { "Empty bytes" }
+    return this.sequence().deserialize(serializationFactory, context)
+}
 
 /**
  * Convenience extension method for deserializing a JDBC Blob, utilising the defaults.
  */
-inline fun <reified T : Any> Blob.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): T = this.getBytes(1, this.length().toInt()).deserialize(serializationFactory, context)
+inline fun <reified T : Any> Blob.deserialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
+                                              context: SerializationContext = serializationFactory.defaultContext): T {
+    return this.getBytes(1, this.length().toInt()).deserialize(serializationFactory, context)
+}
 
 /**
  * Convenience extension method for serializing an object of type T, utilising the defaults.
  */
-fun <T : Any> T.serialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory, context: SerializationContext = serializationFactory.defaultContext): SerializedBytes<T> {
+fun <T : Any> T.serialize(serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
+                          context: SerializationContext = serializationFactory.defaultContext): SerializedBytes<T> {
     return serializationFactory.serialize(this, context)
 }
 
