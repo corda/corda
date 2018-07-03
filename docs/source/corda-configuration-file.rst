@@ -169,7 +169,16 @@ path to the node's base directory.
     interfaces, and then by sending an IP discovery request to the network map service. Set to ``false`` to disable.
 
 :compatibilityZoneURL: The root address of Corda compatibility zone network management services, it is used by the Corda node to register with the network and
-    obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information.
+    obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information. Cannot be
+    set at the same time as the ``networkServices`` option.
+
+:networkServices: If the Corda compatibility zone services, both network map and registration (doorman), are not running on the same endpoint
+    and thus have different URLs then this option should be used in place of the ``compatibilityZoneURL`` setting.
+
+    :doormanURL: Root address of the network registration service.
+    :networkMapURL: Root address of the network map service.
+
+.. note:: Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.
 
 :jvmArgs: An optional list of JVM args, as strings, which replace those inherited from the command line when launching via ``corda.jar``
     only. e.g. ``jvmArgs = [ "-Xmx220m", "-Xms220m", "-XX:+UseG1GC" ]``
