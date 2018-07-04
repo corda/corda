@@ -411,28 +411,31 @@ For more information on the client RPC interface and how to build an RPC client 
 
 Running nodes across machines
 -----------------------------
-The nodes can be split across different machines and configured to communicate across the network.
+The nodes can be configured to communicate as a network even when distributed across several machines:
 
-After deploying the nodes, navigate to the build folder (``kotlin-source/build/nodes``) and for each node that needs to
-be moved to another machine open its config file and change the Artemis messaging address to the IP address of the machine
-where the node will run (e.g. ``p2pAddress="10.18.0.166:10007"``).
+* Deploy the nodes as usual:
 
-These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
-(see :doc:`network-bootstrapper` for more information on this and how to built it) to update the files and have
-them distributed locally.
+  * Unix/Mac OSX: ``./gradlew deployNodes``
+  * Windows: ``gradlew.bat deployNodes``
 
-``java -jar network-bootstrapper.jar kotlin-source/build/nodes``
+* Navigate to the build folder (``kotlin-source/build/nodes``)
+* For each node, open its config file and change ``localhost`` in its ``p2pAddress`` to the IP address of the machine
+  where the node will be run (e.g. ``p2pAddress="10.18.0.166:10007"``)
+* These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
+  (see :doc:`network-bootstrapper`) to update the files and have them distributed locally:
 
-Once that's done move the node folders to their designated machines (e.g. using a USB key). It is important that none of the
-nodes - including the notary - end up on more than one machine. Each computer should also have a copy of ``runnodes``
-and ``runnodes.bat``.
+  ``java -jar network-bootstrapper.jar kotlin-source/build/nodes``
 
-For example, you may end up with the following layout:
+* Move the node folders to their designated machines (e.g. using a USB key). It is important that none of the
+  nodes - including the notary - end up on more than one machine. Each computer should also have a copy of ``runnodes``
+  and ``runnodes.bat``.
 
-* Machine 1: ``Notary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
-* Machine 2: ``PartyB``, ``PartyC``, ``runnodes``, ``runnodes.bat``
+  For example, you may end up with the following layout:
 
-After starting each node, the nodes will be able to see one another and agree IOUs among themselves.
+  * Machine 1: ``Notary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
+  * Machine 2: ``PartyB``, ``PartyC``, ``runnodes``, ``runnodes.bat``
+
+* After starting each node, the nodes will be able to see one another and agree IOUs among themselves.
 
 .. note:: If you are using H2 and wish to use the same ``h2port`` value for all the nodes, then only assign them that
    value after the nodes have been moved to their machines. The initial bootstrapping process requires access to the nodes'
