@@ -13,7 +13,6 @@ import java.io.File
 
 class CommandLineInterface {
 
-
     fun run(parsedArgs: CliParser) {
         val baseDir = parsedArgs.baseDirectory
         val cacheDir = File(baseDir, Constants.BOOTSTRAPPER_DIR_NAME)
@@ -37,7 +36,7 @@ class CommandLineInterface {
                     .build().getOrThrow()
             persistContext(contextFile, objectMapper, context)
         } else {
-            val context = setupContextFromExisting(contextFile, objectMapper, networkName)
+            val context = setupContextFromExisting(contextFile, objectMapper)
             val (_, instantiator, _) = Backend.fromContext(context, cacheDir)
             val nodeAdder = NodeAdder(context, NodeInstantiator(instantiator, context))
             parsedArgs.nodesToAdd.map {
@@ -48,7 +47,7 @@ class CommandLineInterface {
 
     }
 
-    private fun setupContextFromExisting(contextFile: File, objectMapper: ObjectMapper, networkName: String): Context {
+    private fun setupContextFromExisting(contextFile: File, objectMapper: ObjectMapper): Context {
         return contextFile.let {
             if (it.exists()) {
                 it.inputStream().use {

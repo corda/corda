@@ -13,7 +13,7 @@ public class JavaGenericsTest {
         private final Integer v;
 
         private Inner(Integer v) { this.v = v; }
-        public Integer getV() { return v; }
+        Integer getV() { return v; }
     }
 
     private static class A<T> {
@@ -25,7 +25,7 @@ public class JavaGenericsTest {
 
     @Test
     public void basicGeneric() throws NotSerializableException {
-        A a1 = new A(1);
+        A a1 = new A<>(1);
 
         SerializerFactory factory = testDefaultFactory();
 
@@ -66,7 +66,7 @@ public class JavaGenericsTest {
 
     @Test
     public void forceWildcard() throws NotSerializableException {
-        SerializedBytes<?> bytes = forceWildcardSerialize(new A(new Inner(29)));
+        SerializedBytes<?> bytes = forceWildcardSerialize(new A<>(new Inner(29)));
         Inner i = (Inner)forceWildcardDeserialize(bytes).getT();
         assertEquals(29, i.getV());
     }
@@ -75,7 +75,7 @@ public class JavaGenericsTest {
     public void forceWildcardSharedFactory() throws NotSerializableException {
         SerializerFactory factory = testDefaultFactory();
 
-        SerializedBytes<?> bytes = forceWildcardSerializeFactory(new A(new Inner(29)), factory);
+        SerializedBytes<?> bytes = forceWildcardSerializeFactory(new A<>(new Inner(29)), factory);
         Inner i = (Inner)forceWildcardDeserializeFactory(bytes, factory).getT();
 
         assertEquals(29, i.getV());

@@ -60,7 +60,7 @@ class NodeTest {
     fun `generateAndSaveNodeInfo works`() {
         val configuration = createConfig(ALICE_NAME)
         val platformVersion = 789
-        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use { database ->
+        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
             val node = Node(configuration, rigorousMock<VersionInfo>().also {
                 doReturn(platformVersion).whenever(it).platformVersion
             }, initialiseSerialization = false)

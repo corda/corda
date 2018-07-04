@@ -41,7 +41,6 @@ import org.junit.Test
 import org.junit.rules.ExpectedException
 import org.junit.rules.ExternalResource
 import java.time.Duration
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
@@ -103,7 +102,7 @@ open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
     override val bob = TestIdentity(BOB_NAME, 80)
     override val cashNotary = TestIdentity(CordaX500Name("Cash Notary Service", "Zurich", "CH"), 21)
     override val charlie = TestIdentity(CHARLIE_NAME, 90)
-    override val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
+    final override val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
     override val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
     override val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
     override val DUMMY_OBLIGATION_ISSUER = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).party
@@ -133,7 +132,7 @@ open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
                 cordappPackages,
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                 megaCorp,
-                moreKeys = DUMMY_NOTARY_KEY)
+                moreKeys = *arrayOf(DUMMY_NOTARY_KEY))
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
@@ -151,7 +150,7 @@ open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
     }
 }
 
-class VaultQueryRollbackRule(val vaultQueryParties: VaultQueryParties) : ExternalResource() {
+class VaultQueryRollbackRule(private val vaultQueryParties: VaultQueryParties) : ExternalResource() {
 
     lateinit var transaction: DatabaseTransaction
 
