@@ -6,8 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
-* The Corda JPA entities are no longer "java.io.Serializable". This is a mild binary compatibility break, but affects only clients who relied on this fact.
-  Relying on Serializable is very unlikely as java serialization is disabled.
+* The Corda JPA entities no longer implement java.io.Serializable, as this was causing persistence errors in obscure cases.
+  Java serialization is disabled globally in the node, but in the unlikely event you were relying on these types being Java serializable please contact us.
 
 * Remove all references to the out-of-process transaction verification.
 
