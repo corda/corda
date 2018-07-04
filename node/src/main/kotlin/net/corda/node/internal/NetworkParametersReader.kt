@@ -22,8 +22,8 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
     }
 
     sealed class Error(message: String) : Exception(message) {
-        class ParamsNotConfigured : Error("Couldn't find network parameters file and compatibility zone wasn't configured/isn't reachable")
-        class NetworkMapNotConfigured : Error("Node hasn't been configured to connect to a network map from which to get the network parameters")
+        class ParamsNotConfigured : Error("Couldn't find network parameters file and compatibility zone wasn't configured/isn't reachable.")
+        class NetworkMapNotConfigured : Error("Node hasn't been configured to connect to a network map from which to get the network parameters.")
         class OldParamsAndUpdate : Error(
                 "Both network parameters and network parameters update files don't match" +
                 "parameters advertised by network map. Please update node to use correct network parameters file."
