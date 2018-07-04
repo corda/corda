@@ -523,6 +523,12 @@ class SingleThreadedStateMachineManager(
             isStartIdempotent: Boolean
     ): CordaFuture<FlowStateMachine<A>> {
         val flowId = StateMachineRunId.createRandom()
+        val deduplicationSeed = when (flowStart) {
+            FlowStart.Explicit -> flowId.uuid.toString()
+            is FlowStart.Initiated ->
+                "${flowStart.initiatingMessage.initiatorSessionId.toLong}-" +
+                        "${flowStart.initiatingMessage.initiationEntropy}"
+        }
 
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)
@@ -534,7 +540,7 @@ class SingleThreadedStateMachineManager(
 
         val flowCorDappVersion = createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
 
-        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, flowCorDappVersion).getOrThrow()
+        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, deduplicationSeed, flowCorDappVersion).getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
                 checkpoint = initialCheckpoint,

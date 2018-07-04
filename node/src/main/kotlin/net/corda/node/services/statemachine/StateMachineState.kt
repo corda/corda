@@ -69,6 +69,7 @@ data class Checkpoint(
                 flowLogicClass: Class<FlowLogic<*>>,
                 frozenFlowLogic: SerializedBytes<FlowLogic<*>>,
                 ourIdentity: Party,
+                @Suppress("UNUSED_PARAMETER") deduplicationSeed: String,
                 subFlowVersion: SubFlowVersion
         ): Try<Checkpoint> {
             return SubFlow.create(flowLogicClass, subFlowVersion).map { topLevelSubFlow ->
