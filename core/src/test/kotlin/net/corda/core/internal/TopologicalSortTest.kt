@@ -21,7 +21,7 @@ import rx.Observable
 import java.util.*
 
 class TopologicalSortTest {
-    class DummyTransaction constructor(
+    class DummyTransaction(
             override val id: SecureHash,
             override val inputs: List<StateRef>,
             @Suppress("CanBeParameter") private val numberOfOutputs: Int,
