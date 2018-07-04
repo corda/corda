@@ -419,14 +419,14 @@ The nodes can be configured to communicate as a network even when distributed ac
   * Windows: ``gradlew.bat deployNodes``
 
 * Navigate to the build folder (``kotlin-source/build/nodes``)
-* For each node, open its config file and change ``localhost`` in its ``p2pAddress`` to the IP address of the machine
+* For each node, open its ``node.conf`` file and change ``localhost`` in its ``p2pAddress`` to the IP address of the machine
   where the node will be run (e.g. ``p2pAddress="10.18.0.166:10007"``)
 * These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
   (see :doc:`network-bootstrapper`) to update the files and have them distributed locally:
 
   ``java -jar network-bootstrapper.jar kotlin-source/build/nodes``
 
-* Move the node folders to their designated machines (e.g. using a USB key). It is important that none of the
+* Move the node folders to their individual machines (e.g. using a USB key). It is important that none of the
   nodes - including the notary - end up on more than one machine. Each computer should also have a copy of ``runnodes``
   and ``runnodes.bat``.
 
@@ -435,11 +435,14 @@ The nodes can be configured to communicate as a network even when distributed ac
   * Machine 1: ``Notary``, ``PartyA``, ``runnodes``, ``runnodes.bat``
   * Machine 2: ``PartyB``, ``PartyC``, ``runnodes``, ``runnodes.bat``
 
-* After starting each node, the nodes will be able to see one another and agree IOUs among themselves.
+* After starting each node, the nodes will be able to see one another and agree IOUs among themselves
 
-.. note:: If you are using H2 and wish to use the same ``h2port`` value for all the nodes, then only assign them that
-   value after the nodes have been moved to their machines. The initial bootstrapping process requires access to the nodes'
-   databases and if they share the same H2 port then the process will fail.
+.. warning:: The bootstrapper must be run **after** the ``node.conf`` files have been modified, but **before** the nodes 
+   are distributed across machines. Otherwise, the nodes will not be able to communicate.
+
+.. note:: If you are using H2 and wish to use the same ``h2port`` value for two or more nodes, you must only assign them that
+   value after the nodes have been moved to their individual machines. The initial bootstrapping process requires access to the 
+   nodes' databases and if two nodes share the same H2 port, the process will fail.
 
 Testing and debugging
 ---------------------
