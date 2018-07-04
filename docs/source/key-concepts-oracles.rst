@@ -77,7 +77,7 @@ below the current one together. It’s visible on the example image below, where
    :scale: 35%
    :align: center
 
-The transaction has three input states, two output state, two commands, one attachment, a notary and a time-window.
+The transaction has three input states, two output states, two commands, one attachment, a notary and a time-window.
 Notice that if a tree is not a full binary tree, leaves are padded to the nearest
 power of 2 with zero hash (since finding a pre-image of sha256(x) == 0 is hard computational task) - marked light
 green above. Finally, the hash of the root is the identifier of the transaction, it's also used for signing and
@@ -97,10 +97,10 @@ obtained belongs to that particular transaction.
 In the example above, we are assuming that only the first command and the time-window should be visible to the Oracle.
 Blue nodes and ``H(c2)`` are provided to the Oracle service, while the black ones are omitted. ``H(c2)`` is required, so
 that the Oracle can compute ``H(commandData)`` without being to able to see the second command, but at the same time
-ensuring Command1 is part of the transaction. It is highlighted that all signers visible, so as to have a proof that
+ensuring ``CommandData1`` is part of the transaction. It is highlighted that all signers visible, so as to have a proof that
 no related command (that the Oracle should see) is maliciously filtered out. Additionally, hashes of sub-trees
 (violet nodes) are also provided in the current Corda protocol. The latter is required for special cases, i.e., when
-a component group is empty.
+required to know if a component group is empty or not.
 
 Having all of the aforementioned data, one can calculate the root of the top tree and compare it with original
 transaction identifier - we have a proof that this command and time-window belong to this transaction.
