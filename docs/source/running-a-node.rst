@@ -112,7 +112,7 @@ Starting all nodes at once on a remote machine from the command line
 
 By default, ``Cordform`` expects the nodes it generates to be run on the same machine where they were generated.
 In order to run the nodes remotely, the nodes can be deployed locally and then copied to a remote server.
-Additional steps may be required in case generated addresses in the node configuration are incorrect for the remote machine (e.g. ``localhost`` cannot be used).
+If after copying the nodes to the remote machine you encounter errors related to ``localhost`` resolution, you will additionally need to follow the steps below.
 
 To create nodes locally and run on a remote machine perform the following steps:
 
