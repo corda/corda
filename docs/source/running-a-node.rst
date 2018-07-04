@@ -110,10 +110,9 @@ After the nodes are started up, you can use ``docker ps`` command to see how the
 Starting all nodes at once on a remote machine from the command line
 --------------------------------------------------------------------
 
-Corda Gradle plugin ``Cordform`` allows you to generate a set of node on the same machine where they are run.
-In some cases this may be not feasible as a machine to run the nodes may not have access to Maven repositories or may not be a development environment.
+By default, ``Cordform`` expects the nodes it generates to be run on the same machine where they were generated.
 In order to run the nodes remotely, the nodes can be deployed locally and then copied to a remote server.
-Additional steps may be required in case generated addresses are not localhost or a specific IP needs to be used on the remote machine.
+Additional steps may be required in case generated addresses in the node configuration are incorrect for the remote machine (e.g. ``localhost`` cannot be used).
 
 To create nodes locally and run on a remote machine perform the following steps:
 
