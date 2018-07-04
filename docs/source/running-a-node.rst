@@ -47,21 +47,22 @@ Command-line options
 ~~~~~~~~~~~~~~~~~~~~
 The node can optionally be started with the following command-line options:
 
-* ``base-directory`` - the path to the node's base directory
-* ``config-file`` - the path to the node's configuration file
-* ``logging-level`` - the logging level
-* ``log-to-console`` - whether to log to the console as well as a file
-* ``sshd`` - whether to enable the SSHD server for node administration
-* ``no-local-shell`` - whether to disable the local shell
-* ``initial-registration`` - whether to start the registration process with the permissioning server
-* ``network-root-truststore`` - the path to the network root trust store if performing initial registration
-* ``network-root-truststore-password`` - the password for the network root trust store if performing initial registration
-* ``on-unknown-config-keys`` - how to behave if unrecognised node configuration options are found
-* ``dev-mode`` - whether to run the node in developer mode
-* ``version`` - print the Corda version instead of starting the node
-* ``just-generate-node-info`` - generate the node's ``nodeInfo``, save it to disk and quit
-* ``bootstrap-raft-cluster`` - whether the node should bootstrap a RAFT cluster
-* ``clear-network-map-cache`` - whether to clear the local copy of the network map cache
+* ``--base-directory``: The node working directory where all the files are kept (default: ``.``)
+* ``--bootstrap-raft-cluster``: Bootstraps Raft cluster. The node forms a single node cluster (ignoring otherwise configured peer 
+  addresses), acting as a seed for other nodes to join the cluster
+* ``--config-file``: The path to the config file (default: ``node.conf``)                          
+* ``--help``
+* ``--initial-registration``: Start initial node registration with Corda network to obtain certificate from the permissioning 
+  server      
+* ``--just-generate-node-info``: Perform the node start-up task necessary to generate its nodeInfo, save it to disk, then 
+  quit          
+* ``--log-to-console``: If set, prints logging to the console as well as to a file
+* ``--logging-level <[ERROR,WARN,INFO, DEBUG,TRACE]>``: Enable logging at this level and higher (default: INFO)
+* ``--network-root-truststore``: Network root trust store obtained from network operator
+* ``--network-root-truststore-password``: Network root trust store password obtained from network operator
+* ``--no-local-shell``: Do not start the embedded shell locally
+* ``--sshd``: Enables SSHD server for node administration
+* ``--version``: Print the version and exit
 
 Enabling remote debugging
 ~~~~~~~~~~~~~~~~~~~~~~~~~
