@@ -72,8 +72,10 @@ To enable remote debugging of the node, run the following from the terminal wind
 
 This command line will start the debugger on port 5005 and pause the process awaiting debugger attachment.
 
-Starting all nodes at once from the command line
-------------------------------------------------
+Starting all nodes at once on a local machine from the command line
+-------------------------------------------------------------------
+
+.. _starting-all-nodes-at-once:
 
 Native
 ~~~~~~
@@ -104,3 +106,30 @@ After the nodes are started up, you can use ``docker ps`` command to see how the
    (Community Edition) is enough. Please refer to `Docker CE documentation <https://www.docker.com/community-edition>`_
    and `Docker Compose documentation <https://docs.docker.com/compose/install/>`_ for installation instructions for all
    major operating systems.
+
+Starting all nodes at once on a remote machine from the command line
+--------------------------------------------------------------------
+
+By default, ``Cordform`` expects the nodes it generates to be run on the same machine where they were generated.
+In order to run the nodes remotely, the nodes can be deployed locally and then copied to a remote server.
+If after copying the nodes to the remote machine you encounter errors related to ``localhost`` resolution, you will additionally need to follow the steps below.
+
+To create nodes locally and run on a remote machine perform the following steps:
+
+1. Configure Cordform task and deploy the nodes locally as described in :doc:`generating-a-node`.
+
+2. Copy the generated directory structure to a remote machine using e.g. Secure Copy.
+
+3. Optionally, bootstrap the network on the remote machine.
+
+   This is optional step when a remote machine doesn't accept ``localhost`` addresses, or the generated nodes are configured to run on another host's IP address.
+
+   If required change host addresses in top level configuration files ``[NODE NAME]_node.conf`` for entries ``p2pAddress`` , ``rpcSettings.address`` and  ``rpcSettings.adminAddress``.
+
+   Run the network bootstrapper tool to regenerate the nodes network map (see for more explanation :doc:`network-bootstrapper`):
+
+   ``java -jar corda-tools-network-bootstrapper-Master.jar --dir <nodes-root-dir>``
+
+4. Run nodes on the remote machine using :ref:`runnodes command <starting-all-nodes-at-once>`.
+
+The above steps create a test deployment as ``deployNodes`` Gradle task would do on a local machine.
