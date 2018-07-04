@@ -31,6 +31,7 @@ application development please continue to refer to `the main project documentat
    hot-cold-deployment
    database-management
    corda-firewall
+   sizing-and-performance
 
 .. toctree::
    :caption: Development
