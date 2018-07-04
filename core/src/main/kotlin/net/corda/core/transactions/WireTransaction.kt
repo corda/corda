@@ -49,14 +49,14 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.", ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
-    @DeleteForDJVM
-    constructor(inputs: List<StateRef>,
-                attachments: List<SecureHash>,
-                outputs: List<TransactionState<ContractState>>,
-                commands: List<Command<*>>,
-                notary: Party?,
-                timeWindow: TimeWindow?,
-                privacySalt: PrivacySalt = PrivacySalt()
+    @JvmOverloads constructor(
+            inputs: List<StateRef>,
+            attachments: List<SecureHash>,
+            outputs: List<TransactionState<ContractState>>,
+            commands: List<Command<*>>,
+            notary: Party?,
+            timeWindow: TimeWindow?,
+            privacySalt: PrivacySalt = PrivacySalt()
     ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow), privacySalt)
 
     init {
@@ -76,7 +76,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         get() {
             val commandKeys = commands.flatMap { it.signers }.toSet()
             // TODO: prevent notary field from being set if there are no inputs and no time-window.
-            return if (notary != null && (inputs.isNotEmpty() || timeWindow != null)) {
+            return if (notary != null && (inputs.isNotEmpty() || references.isNotEmpty() || timeWindow != null)) {
                 commandKeys + notary.owningKey
             } else {
                 commandKeys
@@ -133,8 +133,11 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val resolvedInputs = inputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
+        val resolvedReferences = references.map { ref ->
+            resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
+        }
         val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
-        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters)
+        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters, resolvedReferences)
         checkTransactionSize(ltx, networkParameters?.maxTransactionSize ?: 10485760)
         return ltx
     }
@@ -150,6 +153,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         // Check attachments size first as they are most likely to go over the limit. With ContractAttachment instances
         // it's likely that the same underlying Attachment CorDapp will occur more than once so we dedup on the attachment id.
         ltx.attachments.distinctBy { it.id }.forEach { minus(it.size) }
+        minus(ltx.references.serialize().size)
         minus(ltx.inputs.serialize().size)
         minus(ltx.commands.serialize().size)
         minus(ltx.outputs.serialize().size)
@@ -239,15 +243,18 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
          * Creating list of [ComponentGroup] used in one of the constructors of [WireTransaction] required
          * for backwards compatibility purposes.
          */
+        @JvmOverloads
         @CordaInternal
         fun createComponentGroups(inputs: List<StateRef>,
                                   outputs: List<TransactionState<ContractState>>,
                                   commands: List<Command<*>>,
                                   attachments: List<SecureHash>,
                                   notary: Party?,
-                                  timeWindow: TimeWindow?): List<ComponentGroup> {
+                                  timeWindow: TimeWindow?,
+                                  references: List<StateRef> = emptyList()): List<ComponentGroup> {
             val componentGroupMap: MutableList<ComponentGroup> = mutableListOf()
             if (inputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(INPUTS_GROUP.ordinal, inputs.map { it.serialize() }))
+            if (references.isNotEmpty()) componentGroupMap.add(ComponentGroup(REFERENCES_GROUP.ordinal, references.map { it.serialize() }))
             if (outputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(OUTPUTS_GROUP.ordinal, outputs.map { it.serialize() }))
             // Adding commandData only to the commands group. Signers are added in their own group.
             if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(COMMANDS_GROUP.ordinal, commands.map { it.value.serialize() }))
@@ -265,6 +272,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     override fun toString(): String {
         val buf = StringBuilder()
         buf.appendln("Transaction:")
+        for (reference in references) buf.appendln("${Emoji.rightArrow}REFS:      $reference")
         for (input in inputs) buf.appendln("${Emoji.rightArrow}INPUT:      $input")
         for ((data) in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:     $data")
         for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")

@@ -17,9 +17,10 @@ class TopologicalSort {
      * Add a transaction to the to-be-sorted set of transactions.
      */
     fun add(stx: SignedTransaction) {
-        for (input in stx.inputs) {
-            // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is)
-            forwardGraph.getOrPut(input.txhash) { LinkedHashSet() }.add(stx)
+        val stateRefs = stx.references + stx.inputs
+        stateRefs.forEach { (txhash) ->
+            // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is).
+            forwardGraph.getOrPut(txhash) { LinkedHashSet() }.add(stx)
         }
         transactions.add(stx)
     }

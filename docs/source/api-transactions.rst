@@ -36,6 +36,7 @@ A transaction consists of six types of components:
 
   * 0+ input states
   * 0+ output states
+  * 0+ reference input states
 
 * 1+ commands
 * 0+ attachments
@@ -89,6 +90,35 @@ A ``StateRef`` uniquely identifies an input state, allowing the notary to mark i
 The ``StateRef`` links an input state back to the transaction that created it. This means that transactions form
 "chains" linking each input back to an original issuance transaction. This allows nodes verifying the transaction
 to "walk the chain" and verify that each input was generated through a valid sequence of transactions.
+
+Reference input states
+~~~~~~~~~~~~~~~~~~~~~~
+
+A reference input state is a ``ContractState`` which can be referred to in a transaction by the contracts of input and
+output states but whose contract is not executed as part of the transaction verification process and is not consumed
+when the transaction is committed to the ledger but is checked for "current-ness". In other words, the contract logic
+isn't run for the referencing transaction only. It's still a normal state when it occurs in an input or output position.
+
+Reference data states enable many parties to "reuse" the same state in their transactions as reference data whilst
+still allowing the reference data state owner the capability to update the state.
+
+A reference input state is added to a transaction as a ``ReferencedStateAndRef``. A ``ReferencedStateAndRef`` can be
+obtained from a ``StateAndRef`` by calling the ``StateAndRef.referenced()`` method which returns a
+``ReferencedStateAndRef``.
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+:language: kotlin
+        :start-after: DOCSTART 55
+            :end-before: DOCEND 55
+            :dedent: 8
+
+        .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+:language: java
+            :start-after: DOCSTART 55
+            :end-before: DOCEND 55
+            :dedent: 12
 
 Output states
 ^^^^^^^^^^^^^
@@ -298,6 +328,7 @@ We can add components to the builder using the ``TransactionBuilder.withItems`` 
 ``withItems`` takes a ``vararg`` of objects and adds them to the builder based on their type:
 
 * ``StateAndRef`` objects are added as input states
+* ``ReferencedStateAndRef`` objects are added as reference input states
 * ``TransactionState`` and ``StateAndContract`` objects are added as output states
 
   * Both ``TransactionState`` and ``StateAndContract`` are wrappers around a ``ContractState`` output that link the

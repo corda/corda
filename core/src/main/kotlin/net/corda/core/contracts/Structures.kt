@@ -135,6 +135,10 @@ interface LinearState : ContractState {
 }
 // DOCEND 2
 
+/** Interface to mark states as eligible to be used as reference input states */
+@KeepForDJVM
+interface ReferenceState : LinearState
+
 @KeepForDJVM
 interface SchedulableState : ContractState {
     /**
@@ -169,8 +173,15 @@ data class StateRef(val txhash: SecureHash, val index: Int) {
 @KeepForDJVM
 @CordaSerializable
 // DOCSTART 7
-data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef)
+data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef) {
+    /** For adding [StateAndRef]s as references to a [TransactionBuilder]. */
+    fun referenced() = ReferencedStateAndRef(this)
+}
 // DOCEND 7
+
+/** A wrapper for a [StateAndRef] indicating that it should be added to a transaction as a reference input state. */
+@CordaSerializable
+data class ReferencedStateAndRef<out T : ContractState>(val stateAndRef: StateAndRef<T>)
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */
 inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filterStatesOfType(): List<StateAndRef<T>> {

@@ -42,12 +42,11 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
 
     @DeleteForDJVM
     companion object {
-        private fun dependencyIDs(stx: SignedTransaction) = stx.inputs.map { it.txhash }.toSet()
+        private fun dependencyIDs(stx: SignedTransaction) = stx.inputs.map { it.txhash }.toSet() + stx.references.map { it.txhash }.toSet()
 
         private const val RESOLUTION_PAGE_SIZE = 100
 
-        /**
-         * Topologically sorts the given transactions such that dependencies are listed before dependers. */
+        /** Topologically sorts the given transactions such that dependencies are listed before dependers. */
         @JvmStatic
         fun topologicalSort(transactions: Collection<SignedTransaction>): List<SignedTransaction> {
             val sort = TopologicalSort()
@@ -61,7 +60,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     @CordaSerializable
     class ExcessivelyLargeTransactionGraph : FlowException()
 
-    /** Transaction for fetch attachments for */
+    /** Transaction to fetch attachments for. */
     private var signedTransaction: SignedTransaction? = null
 
     // TODO: Figure out a more appropriate DOS limit here, 5000 is simply a very bad guess.
@@ -146,8 +145,8 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             for (stx in downloads)
                 check(resultQ.putIfAbsent(stx.id, stx) == null)   // Assert checks the filter at the start.
 
-            // Add all input states to the work queue.
-            val inputHashes = downloads.flatMap { it.inputs }.map { it.txhash }
+            // Add all input states and reference input states to the work queue.
+            val inputHashes = downloads.flatMap { it.inputs + it.references }.map { it.txhash }
             nextRequests.addAll(inputHashes)
 
             limitCounter = limitCounter exactAdd nextRequests.size

@@ -256,6 +256,10 @@ public class FlowCookbookJava {
             ------------------------------------------*/
             progressTracker.setCurrentStep(OTHER_TX_COMPONENTS);
 
+            // Reference input states are constructed from StateAndRefs.
+            // DOCSTART 55
+            ReferencedStateAndRef referenceState = ourStateAndRef.referenced();
+            // DOCEND 55
             // Output states are constructed from scratch.
             // DOCSTART 22
             DummyState ourOutputState = new DummyState();

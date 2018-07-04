@@ -33,6 +33,7 @@ data class NotaryChangeWireTransaction(
         val serializedComponents: List<OpaqueBytes>
 ) : CoreTransaction() {
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
+    override val references: List<StateRef> = emptyList()
     override val notary: Party = serializedComponents[NOTARY.ordinal].deserialize()
     /** Identity of the notary service to reassign the states to.*/
     val newNotary: Party = serializedComponents[NEW_NOTARY.ordinal].deserialize()
@@ -98,6 +99,8 @@ data class NotaryChangeLedgerTransaction(
     init {
         checkEncumbrances()
     }
+
+    override val references: List<StateAndRef<ContractState>> = emptyList()
 
     /** We compute the outputs on demand by applying the notary field modification to the inputs */
     override val outputs: List<TransactionState<ContractState>>
