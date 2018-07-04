@@ -9,3 +9,4 @@ Serialization
    cordapp-custom-serializers
    serialization-default-evolution.rst
    serialization-enum-evolution.rst
+   blob-inspector
