@@ -268,6 +268,9 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
  *     empty as notaries are defined by [notarySpecs].
  * @property notaryCustomOverrides Extra settings that need to be passed to the notary.
+ * @property initialiseSerialization Indicates whether to initialized the serialization subsystem.
+ * @property inMemoryDB Whether to use in-memory H2 for new nodes rather then on-disk (has no effect if node is configured
+ *     in any way to use database other than H2).
  */
 @Suppress("unused")
 data class DriverParameters(
