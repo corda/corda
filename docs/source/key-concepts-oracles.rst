@@ -97,8 +97,8 @@ obtained belongs to that particular transaction.
 In the example above, we are assuming that only the first command and the time-window should be visible to the Oracle.
 Blue nodes and ``H(c2)`` are provided to the Oracle service, while the black ones are omitted. ``H(c2)`` is required, so
 that the Oracle can compute ``H(commandData)`` without being to able to see the second command, but at the same time
-ensuring ``CommandData1`` is part of the transaction. It is highlighted that all signers visible, so as to have a proof that
-no related command (that the Oracle should see) is maliciously filtered out. Additionally, hashes of sub-trees
+ensuring ``CommandData1`` is part of the transaction. It is highlighted that all signers are visible, so as to have a proof that
+no related command (that the Oracle should see) has been maliciously filtered out. Additionally, hashes of sub-trees
 (violet nodes) are also provided in the current Corda protocol. The latter is required for special cases, i.e., when
 required to know if a component group is empty or not.
 
