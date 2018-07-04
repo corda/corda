@@ -25,6 +25,7 @@ import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.time.Duration
 import javax.naming.ServiceUnavailableException
+import javax.security.auth.x500.X500Principal
 
 /**
  * Helper for managing the node registration process, which checks for any existing certificates and requests them if
@@ -43,13 +44,14 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
 
     companion object {
         const val SELF_SIGNED_PRIVATE_KEY = "Self Signed Private Key"
+        val logger = contextLogger()
     }
 
     private val requestIdStore = config.certificatesDirectory / "certificate-request-id.txt"
     // TODO: Use different password for private key.
     private val privateKeyPassword = config.keyStorePassword
     private val rootTrustStore: X509KeyStore
-    private val rootCert: X509Certificate
+    protected val rootCert: X509Certificate
 
     init {
         require(networkRootTrustStorePath.exists()) {
@@ -78,6 +80,14 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
             println("Certificate already exists, Corda node will now terminate...")
             return
         }
+        val tlsCrlIssuerCert = validateAndGetTlsCrlIssuerCert()
+        if (tlsCrlIssuerCert == null && !config.crlCheckSoftFail) {
+            logger.error("""The CRL issuer for the TLS certificate neither matches the root certificate nor
+                | is present in the truststore.
+                | The SSL communication will fail if the `crlCheckSoftFail` is set to false
+                | and the CRL issuer's certificate is not in the truststore. Corda node will now terminate...""".trimMargin())
+            return
+        }
 
         val keyPair = nodeKeyStore.loadOrCreateKeyPair(SELF_SIGNED_PRIVATE_KEY)
 
@@ -94,7 +104,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
         }
         validateCertificates(keyPair.public, certificates)
         storePrivateKeyWithCertificates(nodeKeyStore, keyPair, certificates, keyAlias)
-        onSuccess(keyPair, certificates)
+        onSuccess(keyPair, certificates, tlsCrlIssuerCert?.let { X500Name.getInstance(it.subjectX500Principal.encoded) })
         // All done, clean up temp files.
         requestIdStore.deleteIfExists()
     }
@@ -216,7 +226,9 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
         }
     }
 
-    protected open fun onSuccess(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>) {}
+    protected open fun onSuccess(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>, tlsCrlCertificateIssuer: X500Name?) {}
+
+    protected open fun validateAndGetTlsCrlIssuerCert(): X509Certificate? = null
 }
 
 class UnableToRegisterNodeWithDoormanException : IOException()
@@ -236,12 +248,12 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
         val logger = contextLogger()
     }
 
-    override fun onSuccess(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>) {
-        createSSLKeystore(nodeCAKeyPair, certificates)
+    override fun onSuccess(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>, tlsCrlCertificateIssuer: X500Name?) {
+        createSSLKeystore(nodeCAKeyPair, certificates, tlsCrlCertificateIssuer)
         createTruststore(certificates.last())
     }
 
-    private fun createSSLKeystore(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>) {
+    private fun createSSLKeystore(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>, tlsCertCrlIssuer: X500Name?) {
         config.loadSslKeyStore(createNew = true).update {
             println("Generating SSL certificate for node messaging service.")
             val sslKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
@@ -252,7 +264,7 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
                     config.myLegalName.x500Principal,
                     sslKeyPair.public,
                     crlDistPoint = config.tlsCertCrlDistPoint?.toString(),
-                    crlIssuer = if (config.tlsCertCrlIssuer != null) X500Name(config.tlsCertCrlIssuer) else null)
+                    crlIssuer = tlsCertCrlIssuer)
             logger.info("Generated TLS certificate: $sslCert")
             setPrivateKey(CORDA_CLIENT_TLS, sslKeyPair.private, listOf(sslCert) + certificates)
         }
@@ -267,6 +279,34 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
             setCertificate(CORDA_ROOT_CA, rootCertificate)
         }
         println("Node trust store stored in ${config.trustStoreFile}.")
+    }
+
+    override fun validateAndGetTlsCrlIssuerCert(): X509Certificate? {
+        val tlsCertCrlIssuerPrincipal = X500Principal(config.tlsCertCrlIssuer)
+        if (principalMatchesCertificatePrincipal(tlsCertCrlIssuerPrincipal, rootCert)) {
+            return rootCert
+        }
+        return if (config.trustStoreFile.exists()) {
+            findMatchingCertificate(tlsCertCrlIssuerPrincipal, config.loadTrustStore())
+        } else {
+            null
+        }
+    }
+
+    private fun findMatchingCertificate(principal: X500Principal, trustStore: X509KeyStore): X509Certificate? {
+        trustStore.aliases().forEach {
+            val certificate = trustStore.getCertificate(it)
+            if (principalMatchesCertificatePrincipal(principal, certificate)) {
+                return certificate
+            }
+        }
+        return null
+    }
+
+    private fun principalMatchesCertificatePrincipal(principal: X500Principal, certificate: X509Certificate): Boolean {
+        val subjectX500Name = certificate.subjectX500Principal.toOrderedX500Name()
+        val principalX500Name = principal.toOrderedX500Name()
+        return subjectX500Name == principalX500Name
     }
 }
 

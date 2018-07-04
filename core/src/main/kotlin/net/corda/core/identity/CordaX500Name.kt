@@ -3,13 +3,10 @@ package net.corda.core.identity
 import com.google.common.collect.ImmutableSet
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.LegalNameValidator
+import net.corda.core.internal.attributesMap
 import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.internal.x500Name
 import net.corda.core.serialization.CordaSerializable
-import org.bouncycastle.asn1.ASN1Encodable
-import org.bouncycastle.asn1.ASN1ObjectIdentifier
-import org.bouncycastle.asn1.x500.AttributeTypeAndValue
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
 import java.util.*
 import javax.security.auth.x500.X500Principal
@@ -86,29 +83,16 @@ data class CordaX500Name(val commonName: String?,
 
         @JvmStatic
         fun build(principal: X500Principal): CordaX500Name {
-            val x500Name = X500Name.getInstance(principal.encoded)
-            val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = x500Name.rdNs
-                    .flatMap { it.typesAndValues.asList() }
-                    .groupBy(AttributeTypeAndValue::getType, AttributeTypeAndValue::getValue)
-                    .mapValues {
-                        require(it.value.size == 1) { "Duplicate attribute ${it.key}" }
-                        it.value[0]
-                    }
-
-            // Supported attribute checks.
-            (attrsMap.keys - supportedAttributes).let { unsupported ->
-                require(unsupported.isEmpty()) {
-                    "The following attribute${if (unsupported.size > 1) "s are" else " is"} not supported in Corda: " +
-                            unsupported.map { BCStyle.INSTANCE.oidToDisplayName(it) }
-                }
-            }
-
+            val attrsMap = principal.attributesMap(supportedAttributes)
             val CN = attrsMap[BCStyle.CN]?.toString()
             val OU = attrsMap[BCStyle.OU]?.toString()
-            val O = attrsMap[BCStyle.O]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
-            val L = attrsMap[BCStyle.L]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an L attribute")
+            val O = attrsMap[BCStyle.O]?.toString()
+                    ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
+            val L = attrsMap[BCStyle.L]?.toString()
+                    ?: throw IllegalArgumentException("Corda X.500 names must include an L attribute")
             val ST = attrsMap[BCStyle.ST]?.toString()
-            val C = attrsMap[BCStyle.C]?.toString() ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
+            val C = attrsMap[BCStyle.C]?.toString()
+                    ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
             return CordaX500Name(CN, OU, O, L, ST, C)
         }
 
