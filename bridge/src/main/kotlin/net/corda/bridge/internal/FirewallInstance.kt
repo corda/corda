@@ -10,9 +10,9 @@
 
 package net.corda.bridge.internal
 
-import net.corda.bridge.BridgeVersionInfo
+import net.corda.bridge.FirewallVersionInfo
 import net.corda.bridge.services.api.*
-import net.corda.bridge.services.audit.LoggingBridgeAuditService
+import net.corda.bridge.services.audit.LoggingFirewallAuditService
 import net.corda.bridge.services.supervisors.BridgeSupervisorServiceImpl
 import net.corda.bridge.services.supervisors.FloatSupervisorServiceImpl
 import net.corda.bridge.services.util.ServiceStateCombiner
@@ -36,9 +36,9 @@ import net.corda.serialization.internal.SerializationFactoryImpl
 import rx.Subscription
 import java.util.concurrent.atomic.AtomicBoolean
 
-class BridgeInstance(val conf: BridgeConfiguration,
-                     val versionInfo: BridgeVersionInfo,
-                     private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : ServiceLifecycleSupport, ServiceStateSupport by stateHelper {
+class FirewallInstance(val conf: FirewallConfiguration,
+                       val versionInfo: FirewallVersionInfo,
+                       private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : ServiceLifecycleSupport, ServiceStateSupport by stateHelper {
     companion object {
         val log = contextLogger()
     }
@@ -47,7 +47,7 @@ class BridgeInstance(val conf: BridgeConfiguration,
     private var shutdownHook: ShutdownHook? = null
 
     private var maxMessageSize: Int = -1
-    private lateinit var bridgeAuditService: BridgeAuditService
+    private lateinit var firewallAuditService: FirewallAuditService
     private var bridgeSupervisorService: BridgeSupervisorService? = null
     private var floatSupervisorService: FloatSupervisorService? = null
     private var statusFollower: ServiceStateCombiner? = null
@@ -69,7 +69,7 @@ class BridgeInstance(val conf: BridgeConfiguration,
             val classloader = this.javaClass.classLoader
             nodeSerializationEnv = SerializationEnvironmentImpl(
                     SerializationFactoryImpl().apply {
-                        registerScheme(AMQPBridgeSerializationScheme(emptyList()))
+                        registerScheme(AMQPFirewallSerializationScheme(emptyList()))
                     },
                     p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader))
         }
@@ -101,8 +101,8 @@ class BridgeInstance(val conf: BridgeConfiguration,
         log.info("Shutdown complete")
     }
 
-    private val _exitFuture = openFuture<BridgeInstance>()
-    val onExit: CordaFuture<BridgeInstance> get() = _exitFuture
+    private val _exitFuture = openFuture<FirewallInstance>()
+    val onExit: CordaFuture<FirewallInstance> get() = _exitFuture
 
     private fun retrieveNetworkParameters() {
         val networkParamsFile = conf.baseDirectory / NETWORK_PARAMS_FILE_NAME
@@ -114,16 +114,16 @@ class BridgeInstance(val conf: BridgeConfiguration,
 
     private fun createServices() {
         require(maxMessageSize > 0) { "maxMessageSize not initialised" }
-        bridgeAuditService = LoggingBridgeAuditService(conf)
-        when (conf.bridgeMode) {
-        // In the SenderReceiver mode the inbound and outbound message paths are run from within a single bridge process.
+        firewallAuditService = LoggingFirewallAuditService(conf)
+        when (conf.firewallMode) {
+        // In the SenderReceiver mode the inbound and outbound message paths are run from within a single firewall process.
         // The process thus contains components that listen for bridge control messages on Artemis.
         // The process can then initiates TLS/AMQP 1.0 connections to remote peers and transfers the outbound messages.
         // The process also runs a TLS/AMQP 1.0 server socket, which is can receive connections and messages from peers,
         // validate the messages and then forwards the packets to the Artemis inbox queue of the node.
-            BridgeMode.SenderReceiver -> {
-                floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, bridgeAuditService)
-                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, bridgeAuditService, floatSupervisorService!!.amqpListenerService)
+            FirewallMode.SenderReceiver -> {
+                floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService)
+                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService, floatSupervisorService!!.amqpListenerService)
             }
         // In the BridgeInner mode the process runs the full outbound message path as in the SenderReceiver mode, but the inbound path is split.
         // This 'Bridge Inner/Bridge Controller' process runs the more trusted portion of the inbound path.
@@ -131,8 +131,8 @@ class BridgeInstance(val conf: BridgeConfiguration,
         // Also the the 'Bridge Inner' does more complete validation of inbound messages and ensures that they correspond to legitimate
         // node inboxes, before transferring the message to Artemis. Potentially it might carry out deeper checks of received packets.
         // However, the 'Bridge Inner' is not directly exposed to the internet, or peers and does not host the TLS/AMQP 1.0 server socket.
-            BridgeMode.BridgeInner -> {
-                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, bridgeAuditService, null)
+            FirewallMode.BridgeInner -> {
+                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService, null)
             }
         // In the FloatOuter mode this process runs a minimal AMQP proxy that is designed to run in a DMZ zone.
         // The process holds the minimum data necessary to act as the TLS/AMQP 1.0 receiver socket and tries
@@ -146,18 +146,18 @@ class BridgeInstance(val conf: BridgeConfiguration,
         // be validated against the keys/certificates sent across the control tunnel. Inbound messages are given basic checks that do not require
         // holding potentially sensitive information and are then forwarded across the control tunnel to the 'Bridge Inner' process for more
         // complete validation checks.
-            BridgeMode.FloatOuter -> {
-                floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, bridgeAuditService)
+            FirewallMode.FloatOuter -> {
+                floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService)
             }
         }
-        statusFollower = ServiceStateCombiner(listOf(bridgeAuditService, floatSupervisorService, bridgeSupervisorService).filterNotNull())
+        statusFollower = ServiceStateCombiner(listOf(firewallAuditService, floatSupervisorService, bridgeSupervisorService).filterNotNull())
         statusSubscriber = statusFollower!!.activeChange.subscribe({
             stateHelper.active = it
         }, { log.error("Error in state change", it) })
     }
 
     private fun startServices() {
-        bridgeAuditService.start()
+        firewallAuditService.start()
         bridgeSupervisorService?.start()
         floatSupervisorService?.start()
     }
@@ -166,7 +166,7 @@ class BridgeInstance(val conf: BridgeConfiguration,
         stateHelper.active = false
         floatSupervisorService?.stop()
         bridgeSupervisorService?.stop()
-        bridgeAuditService.stop()
+        firewallAuditService.stop()
         statusSubscriber?.unsubscribe()
         statusSubscriber = null
         statusFollower = null

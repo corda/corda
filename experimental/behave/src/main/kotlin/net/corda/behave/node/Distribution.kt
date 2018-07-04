@@ -126,7 +126,7 @@ class Distribution private constructor(
         CORDA_OS(setOf("corda", "corda-webserver", "corda-finance")),
         // bridge-server not available in Enterprise Dev Previews
         // migration-tool not published in Enterprise Dev Previews
-        CORDA_ENTERPRISE(setOf("corda", "corda-webserver", "corda-finance", "corda-bridgeserver", "migration-tool"))
+        CORDA_ENTERPRISE(setOf("corda", "corda-webserver", "corda-finance", "corda-firewall", "migration-tool"))
     }
 
     companion object {

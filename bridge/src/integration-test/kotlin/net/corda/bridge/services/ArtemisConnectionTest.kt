@@ -46,7 +46,7 @@ class ArtemisConnectionTest {
 
     @Test
     fun `Basic lifecycle test`() {
-        val configResource = "/net/corda/bridge/singleprocess/bridge.conf"
+        val configResource = "/net/corda/bridge/singleprocess/firewall.conf"
         createNetworkParams(tempFolder.root.toPath())
         val bridgeConfig = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)

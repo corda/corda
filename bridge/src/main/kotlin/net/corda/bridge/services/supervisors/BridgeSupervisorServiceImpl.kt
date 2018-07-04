@@ -24,9 +24,9 @@ import net.corda.core.utilities.contextLogger
 import org.slf4j.LoggerFactory
 import rx.Subscription
 
-class BridgeSupervisorServiceImpl(val conf: BridgeConfiguration,
+class BridgeSupervisorServiceImpl(val conf: FirewallConfiguration,
                                   maxMessageSize: Int,
-                                  val auditService: BridgeAuditService,
+                                  val auditService: FirewallAuditService,
                                   inProcessAMQPListenerService: BridgeAMQPListenerService?,
                                   private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeSupervisorService, ServiceStateSupport by stateHelper {
     companion object {
@@ -51,7 +51,7 @@ class BridgeSupervisorServiceImpl(val conf: BridgeConfiguration,
         artemisService = BridgeArtemisConnectionServiceImpl(conf, maxMessageSize, auditService)
         senderService = DirectBridgeSenderService(conf, maxMessageSize, auditService, haService, artemisService)
         filterService = SimpleMessageFilterService(conf, auditService, artemisService, senderService)
-        receiverService = if (conf.bridgeMode == BridgeMode.SenderReceiver) {
+        receiverService = if (conf.firewallMode == FirewallMode.SenderReceiver) {
             InProcessBridgeReceiverService(conf, auditService, haService, inProcessAMQPListenerService!!, filterService)
         } else {
             require(inProcessAMQPListenerService == null) { "Should not have an in process instance of the AMQPListenerService" }

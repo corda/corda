@@ -13,8 +13,8 @@ package net.corda.bridge.services
 import com.nhaarman.mockito_kotlin.*
 import net.corda.bridge.createPartialMock
 import net.corda.bridge.services.api.BridgeArtemisConnectionService
-import net.corda.bridge.services.api.BridgeConfiguration
 import net.corda.bridge.services.api.BridgeSenderService
+import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.filter.SimpleMessageFilterService
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
@@ -38,7 +38,7 @@ class FilterServiceTest {
 
     @Test
     fun `Basic function tests`() {
-        val conf = rigorousMock<BridgeConfiguration>().also {
+        val conf = rigorousMock<FirewallConfiguration>().also {
             doReturn(ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList()).whenever(it).whitelistedHeaders
         }
         val auditService = TestAuditService()
@@ -109,7 +109,7 @@ class FilterServiceTest {
 
     @Test
     fun `Rejection tests`() {
-        val conf = rigorousMock<BridgeConfiguration>().also {
+        val conf = rigorousMock<FirewallConfiguration>().also {
             doReturn(ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList()).whenever(it).whitelistedHeaders
         }
         val auditService = TestAuditService()

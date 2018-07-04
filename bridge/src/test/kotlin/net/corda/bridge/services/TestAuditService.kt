@@ -10,13 +10,13 @@
 
 package net.corda.bridge.services
 
-import net.corda.bridge.services.api.BridgeAuditService
+import net.corda.bridge.services.api.FirewallAuditService
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.net.InetSocketAddress
 
-class TestAuditService() : BridgeAuditService, TestServiceBase() {
+class TestAuditService() : FirewallAuditService, TestServiceBase() {
     enum class AuditEvent {
         SUCCESSFUL_CONNECTION,
         FAILED_CONNECTION,

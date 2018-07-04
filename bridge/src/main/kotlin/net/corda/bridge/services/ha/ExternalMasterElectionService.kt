@@ -10,9 +10,9 @@
 
 package net.corda.bridge.services.ha
 
-import net.corda.bridge.services.api.BridgeAuditService
-import net.corda.bridge.services.api.BridgeConfiguration
 import net.corda.bridge.services.api.BridgeMasterService
+import net.corda.bridge.services.api.FirewallAuditService
+import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.api.ServiceStateSupport
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
@@ -25,8 +25,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
-class ExternalMasterElectionService(val conf: BridgeConfiguration,
-                                    val auditService: BridgeAuditService,
+class ExternalMasterElectionService(val conf: FirewallConfiguration,
+                                    val auditService: FirewallAuditService,
                                     private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeMasterService, ServiceStateSupport by stateHelper {
 
     private var haElector: ZkLeader? = null

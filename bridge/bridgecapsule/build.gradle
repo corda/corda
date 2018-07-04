@@ -15,7 +15,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'com.jfrog.artifactory'
 
-description 'Corda bridge server capsule'
+description 'Corda firewall server capsule'
 
 configurations {
     runtimeArtifacts
@@ -73,17 +73,17 @@ sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
 jar {
-    baseName 'corda-bridgeserver'
+    baseName 'corda-firewall'
 }
 
-task buildBridgeServerJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
-    applicationClass 'net.corda.bridge.Bridge'
-    archiveName "corda-bridgeserver-${corda_release_version}.jar"
+task buildFirewallJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
+    applicationClass 'net.corda.bridge.Firewall'
+    archiveName "corda-firewall-${corda_release_version}.jar"
     applicationSource = files(
             project(':bridge').configurations.runtime,
             project(':bridge').jar,
             "$rootDir/config/dev/log4j2.xml",
-            "$rootDir/bridge/build/resources/main/reference.conf"
+            "$rootDir/bridge/build/resources/main/firewalldefault.conf"
     )
     from 'NOTICE' // Copy CDDL notice
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
@@ -91,7 +91,7 @@ task buildBridgeServerJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
     capsuleManifest {
         applicationVersion = corda_release_version
         javaAgents = []
-        systemProperties['visualvm.display.name'] = 'Corda Bridge Server'
+        systemProperties['visualvm.display.name'] = 'Corda Firewall Server'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
         caplets = []
@@ -105,8 +105,8 @@ task buildBridgeServerJar(type: FatCapsule, dependsOn: project(':bridge').jar) {
 
 processSmokeTestResources {
     
-    from(project.tasks['buildBridgeServerJar']) {
-        rename 'corda-bridgeserver-(.*)', 'corda-bridgeserver.jar'
+    from(project.tasks['buildFirewallJar']) {
+        rename 'corda-firewall-(.*)', 'corda-firewall.jar'
         into "net/corda/bridge/smoketest"
     }
 }
@@ -117,8 +117,8 @@ task smokeTest(type: Test) {
 }
 
 artifacts {
-    runtimeArtifacts buildBridgeServerJar
-    publish buildBridgeServerJar {
+    runtimeArtifacts buildFirewallJar
+    publish buildFirewallJar {
         classifier ""
     }
 }

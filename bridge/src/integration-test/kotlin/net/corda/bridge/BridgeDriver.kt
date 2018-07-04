@@ -1,31 +1,27 @@
 package net.corda.bridge
 
 import com.typesafe.config.ConfigFactory
-import net.corda.bridge.services.api.BridgeConfiguration
+import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.config.BridgeConfigHelper
-import net.corda.bridge.services.config.parseAsBridgeConfiguration
+import net.corda.bridge.services.config.parseAsFirewallConfiguration
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.getOrThrow
 import net.corda.nodeapi.internal.DEV_CA_KEY_STORE_PASS
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.loadKeyStore
-import net.corda.testing.driver.NodeHandle
 import net.corda.testing.node.internal.*
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
 
 
 data class BridgeHandle(
         val baseDirectory: Path,
         val process: Process,
-        val configuration: BridgeConfiguration,
+        val configuration: FirewallConfiguration,
         val bridgePort: Int,
         val brokerPort: Int,
         val debugPort: Int?
@@ -33,7 +29,7 @@ data class BridgeHandle(
 
 fun startBridgeProcess(bridgePath: Path, debugPort: Int?): Process {
     return ProcessUtilities.startCordaProcess(
-            className = "net.corda.bridge.Bridge",
+            className = "net.corda.bridge.Firewall",
             arguments = listOf("--base-directory", bridgePath.toString()),
             jdwpPort = debugPort,
             extraJvmArguments = listOf(),
@@ -47,7 +43,7 @@ fun DriverDSLImpl.startBridge(nodeName: CordaX500Name, bridgePort: Int, brokerPo
     val bridgeFolder = File("$nodeDirectory-bridge")
     bridgeFolder.mkdirs()
     createNetworkParams(bridgeFolder.toPath())
-    val initialConfig = ConfigFactory.parseResources(ConfigTest::class.java, "/net/corda/bridge/singleprocess/bridge.conf")
+    val initialConfig = ConfigFactory.parseResources(ConfigTest::class.java, "/net/corda/bridge/singleprocess/firewall.conf")
     val portConfig = ConfigFactory.parseMap(
             mapOf(
                     "outboundConfig" to mapOf(
@@ -59,8 +55,8 @@ fun DriverDSLImpl.startBridge(nodeName: CordaX500Name, bridgePort: Int, brokerPo
             )
     )
     val config = ConfigFactory.parseMap(configOverrides).withFallback(portConfig).withFallback(initialConfig)
-    writeConfig(bridgeFolder.toPath(), "bridge.conf", config)
-    val bridgeConfig = BridgeConfigHelper.loadConfig(bridgeFolder.toPath()).parseAsBridgeConfiguration()
+    writeConfig(bridgeFolder.toPath(), "firewall.conf", config)
+    val bridgeConfig = BridgeConfigHelper.loadConfig(bridgeFolder.toPath()).parseAsFirewallConfiguration()
     val nodeCertificateDirectory = nodeDirectory / "certificates"
     val bridgeDebugPort = if (isDebug) debugPortAllocation.nextPort() else null
     return pollUntilTrue("$nodeName keystore creation") {

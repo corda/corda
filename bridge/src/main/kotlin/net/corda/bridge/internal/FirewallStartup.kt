@@ -13,9 +13,9 @@ package net.corda.bridge.internal
 import com.jcabi.manifests.Manifests
 import joptsimple.OptionException
 import net.corda.bridge.ArgsParser
-import net.corda.bridge.BridgeVersionInfo
 import net.corda.bridge.CmdLineOptions
-import net.corda.bridge.services.api.BridgeConfiguration
+import net.corda.bridge.FirewallVersionInfo
+import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.utilities.contextLogger
@@ -29,7 +29,7 @@ import java.nio.file.Path
 import java.util.*
 import kotlin.system.exitProcess
 
-class BridgeStartup(val args: Array<String>) {
+class FirewallStartup(val args: Array<String>) {
     companion object {
         // lazy init the logging, because the logging levels aren't configured until we have parsed some options.
         private val log by lazy { contextLogger() }
@@ -37,14 +37,14 @@ class BridgeStartup(val args: Array<String>) {
     }
 
     /**
-     * @return true if the bridge startup was successful. This value is intended to be the exit code of the process.
+     * @return true if the firewalls startup was successful. This value is intended to be the exit code of the process.
      */
     fun run(): Boolean {
         val startTime = System.currentTimeMillis()
         val (argsParser, cmdlineOptions) = parseArguments()
 
-        // We do the single bridge check before we initialise logging so that in case of a double-bridge start it
-        // doesn't mess with the running bridge's logs.
+        // We do the single firewall check before we initialise logging so that in case of a double-firewall start it
+        // doesn't mess with the running firewall's logs.
         enforceSingleBridgeIsRunning(cmdlineOptions.baseDirectory)
 
         initLogging(cmdlineOptions)
@@ -66,26 +66,26 @@ class BridgeStartup(val args: Array<String>) {
         val conf = try {
             loadConfigFile(cmdlineOptions)
         } catch (e: Exception) {
-            log.error("Exception during bridge configuration", e)
+            log.error("Exception during firewall configuration", e)
             return false
         }
 
         try {
             logStartupInfo(versionInfo, cmdlineOptions, conf)
         } catch (e: Exception) {
-            log.error("Exception during bridge registration", e)
+            log.error("Exception during firewall registration", e)
             return false
         }
 
-        val bridge = try {
+        val firewall = try {
             cmdlineOptions.baseDirectory.createDirectories()
-            startBridge(conf, versionInfo, startTime)
+            startFirewall(conf, versionInfo, startTime)
         } catch (e: Exception) {
             if (e.message?.startsWith("Unknown named curve:") == true) {
-                log.error("Exception during bridge startup - ${e.message}. " +
+                log.error("Exception during firewall startup - ${e.message}. " +
                         "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             } else {
-                log.error("Exception during bridge startup", e)
+                log.error("Exception during firewall startup", e)
             }
             return false
         }
@@ -93,23 +93,23 @@ class BridgeStartup(val args: Array<String>) {
         if (System.getProperties().containsKey("WAIT_KEY_FOR_EXIT")) {
             System.`in`.read() // Inside IntelliJ we can't forward CTRL-C, so debugging shutdown is a nightmare. So allow -DWAIT_KEY_FOR_EXIT flag for key based quit.
         } else {
-            bridge.onExit.get()
+            firewall.onExit.get()
         }
 
-        log.info("bridge shutting down")
-        bridge.stop()
+        log.info("firewall shutting down")
+        firewall.stop()
 
         return true
     }
 
-    fun logStartupInfo(versionInfo: BridgeVersionInfo, cmdlineOptions: CmdLineOptions, conf: BridgeConfiguration) {
+    fun logStartupInfo(versionInfo: FirewallVersionInfo, cmdlineOptions: CmdLineOptions, conf: FirewallConfiguration) {
         log.info("Vendor: ${versionInfo.vendor}")
         log.info("Release: ${versionInfo.releaseVersion}")
         log.info("Platform Version: ${versionInfo.platformVersion}")
         log.info("Revision: ${versionInfo.revision}")
         val info = ManagementFactory.getRuntimeMXBean()
         log.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
-        log.info("Main class: ${BridgeStartup::class.java.protectionDomain.codeSource.location.toURI().path}")
+        log.info("Main class: ${FirewallStartup::class.java.protectionDomain.codeSource.location.toURI().path}")
         log.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
         log.info("Application Args: ${args.joinToString(" ")}")
         log.info("bootclasspath: ${info.bootClassPath}")
@@ -121,16 +121,16 @@ class BridgeStartup(val args: Array<String>) {
         if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
             log.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
         }
-        log.info("Starting as bridge mode of ${conf.bridgeMode}")
+        log.info("Starting as firewall mode of ${conf.firewallMode}")
     }
 
-    protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): BridgeConfiguration = cmdlineOptions.loadConfig()
+    protected fun loadConfigFile(cmdlineOptions: CmdLineOptions): FirewallConfiguration = cmdlineOptions.loadConfig()
 
-    protected fun getVersionInfo(): BridgeVersionInfo {
+    protected fun getVersionInfo(): FirewallVersionInfo {
         // Manifest properties are only available if running from the corda jar
         fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
-        return BridgeVersionInfo(
+        return FirewallVersionInfo(
                 manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
                 manifestValue("Corda-Release-Version") ?: "Unknown",
                 manifestValue("Corda-Revision") ?: "Unknown",
@@ -143,14 +143,14 @@ class BridgeStartup(val args: Array<String>) {
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
         // twice with the same directory: that's a user error and we should bail out.
-        val pidFile = (baseDirectory / "bridge-process-id").toFile()
+        val pidFile = (baseDirectory / "firewall-process-id").toFile()
         pidFile.createNewFile()
         pidFile.deleteOnExit()
         val pidFileRw = RandomAccessFile(pidFile, "rw")
         val pidFileLock = pidFileRw.channel.tryLock()
         if (pidFileLock == null) {
-            println("It appears there is already a bridge running with the specified data directory $baseDirectory")
-            println("Shut that other bridge down and try again. It may have process ID ${pidFile.readText()}")
+            println("It appears there is already a firewall running with the specified data directory $baseDirectory")
+            println("Shut that other firewall down and try again. It may have process ID ${pidFile.readText()}")
             System.exit(1)
         }
         // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
@@ -204,11 +204,11 @@ class BridgeStartup(val args: Array<String>) {
         SLF4JBridgeHandler.install()
     }
 
-    fun startBridge(conf: BridgeConfiguration, versionInfo: BridgeVersionInfo, startTime: Long): BridgeInstance {
-        val bridge = BridgeInstance(conf, versionInfo)
-        bridge.start()
+    fun startFirewall(conf: FirewallConfiguration, versionInfo: FirewallVersionInfo, startTime: Long): FirewallInstance {
+        val firewall = FirewallInstance(conf, versionInfo)
+        firewall.start()
         val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-        log.info("Bridge started up and registered in $elapsed sec")
-        return bridge
+        log.info("Firewall started up and registered in $elapsed sec")
+        return firewall
     }
 }

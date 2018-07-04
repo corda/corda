@@ -17,7 +17,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import java.nio.file.Path
 
-enum class BridgeMode {
+enum class FirewallMode {
     /**
      * The Bridge/Float is run as a single process with both AMQP sending and receiving functionality.
      */
@@ -71,8 +71,8 @@ interface BridgeInboundConfiguration {
 }
 
 /**
- * Details of the target control ports of available [BridgeMode.FloatOuter] processes from the perspective of the [BridgeMode.BridgeInner] process.
- * Required for [BridgeMode.BridgeInner] mode.
+ * Details of the target control ports of available [FirewallMode.FloatOuter] processes from the perspective of the [FirewallMode.BridgeInner] process.
+ * Required for [FirewallMode.BridgeInner] mode.
  */
 interface BridgeInnerConfiguration {
     val floatAddresses: List<NetworkHostAndPort>
@@ -91,8 +91,8 @@ interface BridgeHAConfig {
 }
 
 /**
- * Details of the listening port for a [BridgeMode.FloatOuter] process and of the certificate that the [BridgeMode.BridgeInner] should present.
- * Required for [BridgeMode.FloatOuter] mode.
+ * Details of the listening port for a [FirewallMode.FloatOuter] process and of the certificate that the [FirewallMode.BridgeInner] should present.
+ * Required for [FirewallMode.FloatOuter] mode.
  */
 interface FloatOuterConfiguration {
     val floatAddress: NetworkHostAndPort
@@ -101,8 +101,8 @@ interface FloatOuterConfiguration {
     val customSSLConfiguration: BridgeSSLConfiguration?
 }
 
-interface BridgeConfiguration : NodeSSLConfiguration {
-    val bridgeMode: BridgeMode
+interface FirewallConfiguration : NodeSSLConfiguration {
+    val firewallMode: FirewallMode
     val outboundConfig: BridgeOutboundConfiguration?
     val inboundConfig: BridgeInboundConfiguration?
     val bridgeInnerConfig: BridgeInnerConfiguration?

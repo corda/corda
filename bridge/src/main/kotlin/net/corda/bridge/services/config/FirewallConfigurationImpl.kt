@@ -23,7 +23,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 
-fun Config.parseAsBridgeConfiguration(): BridgeConfiguration = parseAs<BridgeConfigurationImpl>()
+fun Config.parseAsFirewallConfiguration(): FirewallConfiguration = parseAs<FirewallConfigurationImpl>()
 
 data class BridgeSSLConfigurationImpl(override val keyStorePassword: String,
                                       override val trustStorePassword: String,
@@ -53,7 +53,7 @@ data class FloatOuterConfigurationImpl(override val floatAddress: NetworkHostAnd
 
 data class BridgeHAConfigImpl(override val haConnectionString: String, override val haPriority: Int = 10, override val haTopic: String = "/bridge/ha") : BridgeHAConfig
 
-data class BridgeConfigurationImpl(
+data class FirewallConfigurationImpl(
         override val baseDirectory: Path,
         override val certificatesDirectory: Path = baseDirectory / "certificates",
         override val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
@@ -61,7 +61,7 @@ data class BridgeConfigurationImpl(
         override val crlCheckSoftFail: Boolean,
         override val keyStorePassword: String,
         override val trustStorePassword: String,
-        override val bridgeMode: BridgeMode,
+        override val firewallMode: FirewallMode,
         override val networkParametersPath: Path,
         override val outboundConfig: BridgeOutboundConfigurationImpl?,
         override val inboundConfig: BridgeInboundConfigurationImpl?,
@@ -74,13 +74,13 @@ data class BridgeConfigurationImpl(
         override val politeShutdownPeriod: Int = 1000,
         override val p2pConfirmationWindowSize: Int = 1048576,
         override val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList()
-) : BridgeConfiguration {
+) : FirewallConfiguration {
     init {
-        if (bridgeMode == BridgeMode.SenderReceiver) {
+        if (firewallMode == FirewallMode.SenderReceiver) {
             require(inboundConfig != null && outboundConfig != null) { "Missing required configuration" }
-        } else if (bridgeMode == BridgeMode.BridgeInner) {
+        } else if (firewallMode == FirewallMode.BridgeInner) {
             require(bridgeInnerConfig != null && outboundConfig != null) { "Missing required configuration" }
-        } else if (bridgeMode == BridgeMode.FloatOuter) {
+        } else if (firewallMode == FirewallMode.FloatOuter) {
             require(inboundConfig != null && floatOuterConfig != null) { "Missing required configuration" }
         }
     }

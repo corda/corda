@@ -76,8 +76,8 @@ class BridgeSmokeTest {
             override val crlCheckSoftFail: Boolean = true
         }
         artemisConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
-        copyBridgeResource("corda-bridgeserver.jar")
-        copyBridgeResource("bridge.conf")
+        copyBridgeResource("corda-firewall.jar")
+        copyBridgeResource("firewall.conf")
         createNetworkParams(tempFolder.root.toPath())
         val (artemisServer, artemisClient) = createArtemis()
         val zkServer = TestingServer(11105, false)
@@ -143,7 +143,7 @@ class BridgeSmokeTest {
         val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
         val builder = ProcessBuilder()
                 .command(javaPath.toString(), "-Dcapsule.log=verbose",
-                        "-jar", "corda-bridgeserver.jar")
+                        "-jar", "corda-firewall.jar")
                 .directory(baseDirectory.toFile())
                 .inheritIO()
 

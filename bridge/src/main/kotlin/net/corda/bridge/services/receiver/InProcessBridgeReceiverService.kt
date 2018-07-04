@@ -19,8 +19,8 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import rx.Subscription
 
-class InProcessBridgeReceiverService(val conf: BridgeConfiguration,
-                                     val auditService: BridgeAuditService,
+class InProcessBridgeReceiverService(val conf: FirewallConfiguration,
+                                     val auditService: FirewallAuditService,
                                      haService: BridgeMasterService,
                                      val amqpListenerService: BridgeAMQPListenerService,
                                      val filterService: IncomingMessageFilterService,

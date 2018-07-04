@@ -10,7 +10,7 @@ import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.amqpMagic
 import java.util.concurrent.ConcurrentHashMap
 
-class AMQPBridgeSerializationScheme(
+class AMQPFirewallSerializationScheme(
         cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
         serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
 ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {

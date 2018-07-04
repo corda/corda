@@ -68,7 +68,7 @@ class TunnelControlTest {
 
     @Test
     fun `Basic tunnel life cycle test`() {
-        val bridgeConfigResource = "/net/corda/bridge/withfloat/bridge/bridge.conf"
+        val bridgeConfigResource = "/net/corda/bridge/withfloat/bridge/firewall.conf"
         val bridgePath = tempFolder.root.toPath() / "bridge"
         bridgePath.createDirectories()
         val maxMessageSize = createNetworkParams(bridgePath)
@@ -89,7 +89,7 @@ class TunnelControlTest {
         haService.start()
         assertEquals(false, bridgeProxiedReceiverService.active)
 
-        val floatConfigResource = "/net/corda/bridge/withfloat/float/bridge.conf"
+        val floatConfigResource = "/net/corda/bridge/withfloat/float/firewall.conf"
         val floatPath = tempFolder.root.toPath() / "float"
         floatPath.createDirectories()
         createNetworkParams(floatPath)
@@ -146,7 +146,7 @@ class TunnelControlTest {
 
     @Test
     fun `Inbound message test`() {
-        val bridgeConfigResource = "/net/corda/bridge/withfloat/bridge/bridge.conf"
+        val bridgeConfigResource = "/net/corda/bridge/withfloat/bridge/firewall.conf"
         val bridgePath = tempFolder.root.toPath() / "bridge"
         bridgePath.createDirectories()
         val maxMessageSize = createNetworkParams(bridgePath)
@@ -170,7 +170,7 @@ class TunnelControlTest {
         haService.start()
         assertEquals(false, bridgeStateFollower.next())
 
-        val floatConfigResource = "/net/corda/bridge/withfloat/float/bridge.conf"
+        val floatConfigResource = "/net/corda/bridge/withfloat/float/firewall.conf"
         val floatPath = tempFolder.root.toPath() / "float"
         floatPath.createDirectories()
         createNetworkParams(floatPath)

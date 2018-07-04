@@ -33,9 +33,9 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 
-class FloatControlListenerService(val conf: BridgeConfiguration,
+class FloatControlListenerService(val conf: FirewallConfiguration,
                                   val maximumMessageSize: Int,
-                                  val auditService: BridgeAuditService,
+                                  val auditService: FirewallAuditService,
                                   val amqpListener: BridgeAMQPListenerService,
                                   private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : FloatControlService, ServiceStateSupport by stateHelper {
     companion object {
