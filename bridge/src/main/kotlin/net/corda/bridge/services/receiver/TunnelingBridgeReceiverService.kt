@@ -27,6 +27,7 @@ import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.ConnectionChange
 import rx.Subscription
 import java.io.ByteArrayOutputStream
@@ -36,7 +37,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
-                                     val maxMessageSize: Int,
+                                     val maximumMessageSize: Int,
                                      val auditService: BridgeAuditService,
                                      haService: BridgeMasterService,
                                      val filterService: IncomingMessageFilterService,
@@ -52,9 +53,6 @@ class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
     private var amqpControlClient: AMQPClient? = null
     private val controlLinkSSLConfiguration: SSLConfiguration
     private val floatListenerSSLConfiguration: SSLConfiguration
-    private val controlLinkKeyStore: KeyStore
-    private val controLinkKeyStorePrivateKeyPassword: String
-    private val controlLinkTrustStore: KeyStore
     private val expectedCertificateSubject: CordaX500Name
     private val secureRandom: SecureRandom = newSecureRandom()
 
@@ -62,9 +60,6 @@ class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
         statusFollower = ServiceStateCombiner(listOf(auditService, haService, filterService))
         controlLinkSSLConfiguration = conf.bridgeInnerConfig?.customSSLConfiguration ?: conf
         floatListenerSSLConfiguration = conf.bridgeInnerConfig?.customFloatOuterSSLConfiguration ?: conf
-        controlLinkKeyStore = controlLinkSSLConfiguration.loadSslKeyStore().internal
-        controLinkKeyStorePrivateKeyPassword = controlLinkSSLConfiguration.keyStorePassword
-        controlLinkTrustStore = controlLinkSSLConfiguration.loadTrustStore().internal
         expectedCertificateSubject = conf.bridgeInnerConfig!!.expectedCertificateSubject
     }
 
@@ -73,16 +68,23 @@ class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
         statusSubscriber = statusFollower.activeChange.subscribe({
             if (it) {
                 val floatAddresses = conf.bridgeInnerConfig!!.floatAddresses
+                val controlLinkKeyStore = controlLinkSSLConfiguration.loadSslKeyStore().internal
+                val controLinkKeyStorePrivateKeyPassword = controlLinkSSLConfiguration.keyStorePassword
+                val controlLinkTrustStore = controlLinkSSLConfiguration.loadTrustStore().internal
+                val amqpConfig = object : AMQPConfiguration {
+                    override val userName: String? = null
+                    override val password: String? = null
+                    override val keyStore: KeyStore = controlLinkKeyStore
+                    override val keyStorePrivateKeyPassword: CharArray = controLinkKeyStorePrivateKeyPassword.toCharArray()
+                    override val trustStore: KeyStore = controlLinkTrustStore
+                    override val crlCheckSoftFail: Boolean = conf.crlCheckSoftFail
+                    override val maxMessageSize: Int = maximumMessageSize
+                    override val trace: Boolean = conf.enableAMQPPacketTrace
+
+                }
                 val controlClient = AMQPClient(floatAddresses,
                         setOf(expectedCertificateSubject),
-                        null,
-                        null,
-                        controlLinkKeyStore,
-                        controLinkKeyStorePrivateKeyPassword,
-                        controlLinkTrustStore,
-                        conf.crlCheckSoftFail,
-                        maxMessageSize,
-                        conf.enableAMQPPacketTrace)
+                        amqpConfig)
                 connectSubscriber = controlClient.onConnection.subscribe({ onConnectToControl(it) }, { log.error("Connection event error", it) })
                 receiveSubscriber = controlClient.onReceive.subscribe({ onFloatMessage(it) }, { log.error("Receive event error", it) })
                 amqpControlClient = controlClient

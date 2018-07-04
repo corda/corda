@@ -16,13 +16,17 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.*
+import net.corda.node.services.config.EnterpriseConfiguration
+import net.corda.node.services.config.MutualExclusionConfiguration
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import net.corda.nodeapi.internal.bridging.AMQPBridgeManager
 import net.corda.nodeapi.internal.bridging.BridgeManager
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
@@ -35,6 +39,7 @@ import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.security.KeyStore
 import java.util.*
 import kotlin.system.measureNanoTime
 import kotlin.system.measureTimeMillis
@@ -280,7 +285,6 @@ class AMQPBridgeTest {
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(targetAdress).whenever(it).p2pAddress
             doReturn("").whenever(it).jmxMonitoringHttpPort
-            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
         }
         artemisConfig.configureWithDevSSLCertificate()
@@ -302,16 +306,16 @@ class AMQPBridgeTest {
         }
         serverConfig.configureWithDevSSLCertificate()
 
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = serverConfig.loadSslKeyStore().internal
+            override val keyStorePrivateKeyPassword: CharArray = serverConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = serverConfig.loadTrustStore().internal
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = maxMessageSize
+        }
         return AMQPServer("0.0.0.0",
                 amqpPort,
-                ArtemisMessagingComponent.PEER_USER,
-                ArtemisMessagingComponent.PEER_USER,
-                serverConfig.loadSslKeyStore().internal,
-                serverConfig.keyStorePassword,
-                serverConfig.loadTrustStore().internal,
-                crlCheckSoftFail = true,
-                trace = true,
-                maxMessageSize = maxMessageSize
+                amqpConfig
         )
     }
 }
