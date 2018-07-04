@@ -74,6 +74,7 @@ task predeterminise(type: ProGuardTask, dependsOn: project(':core-deterministic'
     dontpreverify
     dontobfuscate
     dontoptimize
+    dontnote
     printseeds
     verbose
 
@@ -114,6 +115,7 @@ task determinise(type: ProGuardTask) {
     keepattributes '*'
     keepdirectories
     dontobfuscate
+    dontnote
     printseeds
     verbose
 
@@ -152,7 +154,6 @@ task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
 defaultTasks "determinise"
 determinise.finalizedBy metafix
 metafix.finalizedBy checkDeterminism
-assemble.dependsOn checkDeterminism
 
 def deterministicJar = metafix.outputs.files.singleFile
 artifacts {
