@@ -67,7 +67,7 @@ class AttachmentTests {
         bobNode.registerInitiatedFlow(FetchAttachmentsResponse::class.java)
         // Insert an attachment into node zero's store directly.
         val id = aliceNode.database.transaction {
-            aliceNode.attachments.importAttachment(fakeAttachment().inputStream())
+            aliceNode.attachments.importAttachment(fakeAttachment().inputStream(), "test", null)
         }
 
         // Get node one to run a flow to fetch it and insert it.
@@ -120,7 +120,7 @@ class AttachmentTests {
         val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.
         val id = aliceNode.database.transaction {
-            aliceNode.attachments.importAttachment(attachment.inputStream())
+            aliceNode.attachments.importAttachment(attachment.inputStream(), "test", null)
         }
 
         // Corrupt its store.

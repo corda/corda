@@ -8,6 +8,8 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
+@file:Suppress("DEPRECATION")
+
 package net.corda.test.spring
 
 import net.corda.core.concurrent.CordaFuture

@@ -107,7 +107,7 @@ class PrivatePropertyTests {
             @ConstructorForDeserialization
             constructor() : this(0, 0)
 
-            fun setA(a: Int, b: Int) { this.a = a }
+            fun setA(a: Int, @Suppress("UNUSED_PARAMETER") b: Int) { this.a = a }
             fun getA() = a
         }
 

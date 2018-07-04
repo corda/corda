@@ -39,7 +39,6 @@ task metadata(type: ProGuardTask) {
 
     keepattributes '*'
     dontoptimize
-    printseeds
     verbose
 
     dontwarn 'com.sun.jna.**'
@@ -47,6 +46,7 @@ task metadata(type: ProGuardTask) {
     dontwarn 'org.jetbrains.kotlin.com.intellij.**'
     dontwarn 'org.jetbrains.kotlin.com.google.j2objc.annotations.**'
     dontwarn 'org.jetbrains.kotlin.com.google.errorprone.annotations.**'
+    dontnote
 
     keep 'class org.jetbrains.kotlin.load.java.JvmAnnotationNames { *; }'
     keep 'class org.jetbrains.kotlin.metadata.** { *; }', includedescriptorclasses: true
@@ -68,6 +68,7 @@ task validate(type: ProGuardTask) {
     verbose
 
     dontwarn 'org.jetbrains.kotlin.com.google.errorprone.annotations.**'
+    dontnote
 
     keep 'class *'
 }
@@ -77,5 +78,4 @@ artifacts {
 }
 
 defaultTasks "metadata"
-assemble.dependsOn metadata
 metadata.finalizedBy validate

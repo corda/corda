@@ -8,6 +8,8 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
+@file:Suppress("UNUSED_VARIABLE")
+
 package net.corda.docs.tutorial.tearoffs
 
 import net.corda.core.contracts.Command

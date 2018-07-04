@@ -34,7 +34,7 @@ dependencies {
     compile project(':finance')
 
     // ObjectWeb Asm: a library for synthesising and working with JVM bytecode.
-    compile "org.ow2.asm:asm:5.0.4"
+    compile "org.ow2.asm:asm:$asm_version"
 
     compile "com.google.guava:guava:$guava_version"
 

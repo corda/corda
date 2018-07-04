@@ -23,7 +23,7 @@ class Context(val networkName: String, val backendType: Backend.BackendType, bac
     var extraParams = ConcurrentHashMap<String, String>(backendOptions)
 
     private fun registerNode(name: String, nodeInstanceRequest: NodeInstanceRequest) {
-        nodes.computeIfAbsent(name, { _ -> ConcurrentHashSet() }).add(nodeInstanceRequest.toPersistable())
+        nodes.computeIfAbsent(name) { ConcurrentHashSet() }.add(nodeInstanceRequest.toPersistable())
     }
 
     fun registerNode(request: NodeInstanceRequest) {
@@ -53,7 +53,7 @@ class Context(val networkName: String, val backendType: Backend.BackendType, bac
                     nodeInstanceRequest.actualX500,
                     nodeInstanceRequest.localImageId,
                     nodeInstanceRequest.remoteImageName,
-                    nodeInstanceRequest.nodeConfig.rpcOptions.address!!.port,
+                    nodeInstanceRequest.nodeConfig.rpcOptions.address.port,
                     nodeInstanceRequest.expectedFqName,
                     "",
                     ""
@@ -62,8 +62,7 @@ class Context(val networkName: String, val backendType: Backend.BackendType, bac
         }
     }
 
-    fun NodeInstanceRequest.toPersistable(): PersistableNodeInstance {
+    private fun NodeInstanceRequest.toPersistable(): PersistableNodeInstance {
         return fromInstanceRequest(this)
     }
 }
-

@@ -156,7 +156,7 @@ class ResolveTransactionsFlowTest {
         }
         // TODO: this operation should not require an explicit transaction
         val id = megaCorpNode.transaction {
-            megaCorpNode.services.attachments.importAttachment(makeJar())
+            megaCorpNode.services.attachments.importAttachment(makeJar(), "test", null)
         }
         val stx2 = makeTransactions(withAttachment = id).second
         val p = TestFlow(stx2, megaCorp)
@@ -211,6 +211,7 @@ class ResolveTransactionsFlowTest {
         }
     }
 
+    @Suppress("unused")
     @InitiatedBy(TestFlow::class)
     private class TestResponseFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
         @Suspendable

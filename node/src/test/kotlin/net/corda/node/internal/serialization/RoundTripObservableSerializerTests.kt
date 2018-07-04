@@ -19,7 +19,6 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Test
 import rx.Notification
 import rx.Observable
-import rx.Subscription
 import rx.subjects.UnicastSubject
 import java.time.Instant
 import java.util.*
@@ -38,7 +37,7 @@ class RoundTripObservableSerializerTests {
                 .maximumSize(100)
                 .build()
 
-        subMap.put(id, ObservableSubscription(mock<Subscription>()))
+        subMap.put(id, ObservableSubscription(mock()))
 
         return subMap
     }
@@ -48,7 +47,7 @@ class RoundTripObservableSerializerTests {
     })
 
     private fun createRpcObservableMap(): Cache<Trace.InvocationId, UnicastSubject<Notification<*>>> {
-        val onObservableRemove = RemovalListener<Trace.InvocationId, UnicastSubject<Notification<*>>> { key, value, cause ->
+        val onObservableRemove = RemovalListener<Trace.InvocationId, UnicastSubject<Notification<*>>> { key, _, _ ->
             val observableId = key!!
 
             observablesToReap.locked { observables.add(observableId) }
@@ -85,7 +84,7 @@ class RoundTripObservableSerializerTests {
 
 
         // What we're actually going to serialize then deserialize
-        val obs = Observable.create<Int>({ 12 })
+        val obs = Observable.create<Int> { Math.random() }
 
         val serverSerializationContext = RpcServerObservableSerializer.createContext(
                 serializationContext, serverObservableContext)
@@ -95,6 +94,6 @@ class RoundTripObservableSerializerTests {
 
 
         val blob = SerializationOutput(serverSerializer).serialize(obs, serverSerializationContext)
-        val obs2 = DeserializationInput(clientSerializer).deserialize(blob, clientSerializationContext)
+        DeserializationInput(clientSerializer).deserialize(blob, clientSerializationContext)
     }
 }

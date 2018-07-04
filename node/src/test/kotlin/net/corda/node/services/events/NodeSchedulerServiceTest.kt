@@ -10,22 +10,8 @@
 
 package net.corda.node.services.events
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.argForWhich
-import com.nhaarman.mockito_kotlin.doAnswer
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.eq
-import com.nhaarman.mockito_kotlin.same
-import com.nhaarman.mockito_kotlin.timeout
-import com.nhaarman.mockito_kotlin.verify
-import com.nhaarman.mockito_kotlin.verifyNoMoreInteractions
-import com.nhaarman.mockito_kotlin.whenever
-import junit.framework.Assert.fail
-import net.corda.core.contracts.SchedulableState
-import net.corda.core.contracts.ScheduledActivity
-import net.corda.core.contracts.ScheduledStateRef
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
+import com.nhaarman.mockito_kotlin.*
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
@@ -46,11 +32,7 @@ import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.spectator
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.TestClock
-import org.junit.After
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import org.slf4j.Logger
@@ -61,6 +43,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.fail
 
 open class NodeSchedulerServiceTestBase {
     protected class Event(time: Instant) {
@@ -97,7 +80,7 @@ open class NodeSchedulerServiceTestBase {
         doLookup(transactionStates).whenever(it).loadState(any())
     }
 
-    protected val traces = Collections.synchronizedList(mutableListOf<ScheduledStateRef>())
+    private val traces = Collections.synchronizedList(mutableListOf<ScheduledStateRef>())
 
     @Before
     fun resetTraces() {
@@ -108,7 +91,7 @@ open class NodeSchedulerServiceTestBase {
         doReturn(false).whenever(it).isTraceEnabled
         doAnswer {
             traces += it.getArgument<ScheduledStateRef>(1)
-        }.whenever(it).trace(eq(NodeSchedulerService.schedulingAsNextFormat), any<Object>())
+        }.whenever(it).trace(eq(NodeSchedulerService.schedulingAsNextFormat), any<Any>())
     }
 
     protected fun assertWaitingFor(ssr: ScheduledStateRef) {
@@ -283,7 +266,7 @@ class NodeSchedulerServiceTest : NodeSchedulerServiceTestBase() {
 class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
     private val databaseConfig: DatabaseConfig = DatabaseConfig()
 
-    fun createScheduler(db: CordaPersistence): NodeSchedulerService {
+    private fun createScheduler(db: CordaPersistence): NodeSchedulerService {
         return NodeSchedulerService(
                 testClock,
                 db,
@@ -295,7 +278,7 @@ class NodeSchedulerPersistenceTest : NodeSchedulerServiceTestBase() {
                 log = log).apply { start() }
     }
 
-    fun transactionStateMock(logicRef: FlowLogicRef, time: Instant): TransactionState<*> {
+    private fun transactionStateMock(logicRef: FlowLogicRef, time: Instant): TransactionState<*> {
         return rigorousMock<TransactionState<SchedulableState>>().also {
             doReturn(rigorousMock<SchedulableState>().also {
                 doReturn(ScheduledActivity(logicRef, time)).whenever(it).nextScheduledActivity(any(), any())

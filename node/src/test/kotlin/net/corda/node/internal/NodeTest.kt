@@ -70,7 +70,7 @@ class NodeTest {
     fun `generateAndSaveNodeInfo works`() {
         val configuration = createConfig(ALICE_NAME)
         val info = VersionInfo(789, "3.0", "SNAPSHOT", "R3")
-        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use { database ->
+        configureDatabase(configuration.dataSourceProperties, configuration.database, { null }, { null }).use {
             val node = Node(configuration, info, initialiseSerialization = false)
             assertEquals(node.generateNodeInfo(), node.generateNodeInfo())  // Node info doesn't change (including the serial)
         }

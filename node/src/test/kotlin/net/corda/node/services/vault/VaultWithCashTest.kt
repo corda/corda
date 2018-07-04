@@ -75,7 +75,7 @@ class VaultWithCashTest {
     private val servicesKey = generateKeyPair()
     lateinit var services: MockServices
     private lateinit var vaultFiller: VaultFiller
-    lateinit var issuerServices: MockServices
+    private lateinit var issuerServices: MockServices
     val vaultService: VaultService get() = services.vaultService
     lateinit var database: CordaPersistence
     private lateinit var notaryServices: MockServices
@@ -88,7 +88,7 @@ class VaultWithCashTest {
                 cordappPackages,
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                 TestIdentity(MEGA_CORP.name, servicesKey),
-                moreKeys = dummyNotary.keyPair)
+                moreKeys = *arrayOf(dummyNotary.keyPair))
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
@@ -141,7 +141,7 @@ class VaultWithCashTest {
                 database.transaction {
                     // A tx that spends our money.
                     val spendTXBuilder = TransactionBuilder(DUMMY_NOTARY)
-                    Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, BOB)
+                    Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, services.myInfo.legalIdentitiesAndCerts.single(), BOB)
                     val spendPTX = services.signInitialTransaction(spendTXBuilder, freshKey)
                     notaryServices.addSignature(spendPTX)
                 }
@@ -189,7 +189,7 @@ class VaultWithCashTest {
         val first = backgroundExecutor.fork {
             database.transaction {
                 val txn1Builder = TransactionBuilder(DUMMY_NOTARY)
-                Cash.generateSpend(services, txn1Builder, 60.DOLLARS, BOB)
+                Cash.generateSpend(services, txn1Builder, 60.DOLLARS, services.myInfo.legalIdentitiesAndCerts.single(), BOB)
                 val ptxn1 = notaryServices.signInitialTransaction(txn1Builder)
                 val txn1 = services.addSignature(ptxn1, freshKey)
                 println("txn1: ${txn1.id} spent ${((txn1.tx.outputs[0].data) as Cash.State).amount}")
@@ -220,7 +220,7 @@ class VaultWithCashTest {
         val second = backgroundExecutor.fork {
             database.transaction {
                 val txn2Builder = TransactionBuilder(DUMMY_NOTARY)
-                Cash.generateSpend(services, txn2Builder, 80.DOLLARS, BOB)
+                Cash.generateSpend(services, txn2Builder, 80.DOLLARS, services.myInfo.legalIdentitiesAndCerts.single(), BOB)
                 val ptxn2 = notaryServices.signInitialTransaction(txn2Builder)
                 val txn2 = services.addSignature(ptxn2, freshKey)
                 println("txn2: ${txn2.id} spent ${((txn2.tx.outputs[0].data) as Cash.State).amount}")
@@ -344,7 +344,7 @@ class VaultWithCashTest {
         database.transaction {
             // A tx that spends our money.
             val spendTXBuilder = TransactionBuilder(DUMMY_NOTARY)
-            Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, BOB)
+            Cash.generateSpend(services, spendTXBuilder, 80.DOLLARS, services.myInfo.legalIdentitiesAndCerts.single(), BOB)
             val spendPTX = notaryServices.signInitialTransaction(spendTXBuilder)
             val spendTX = services.addSignature(spendPTX, freshKey)
             services.recordTransactions(spendTX)

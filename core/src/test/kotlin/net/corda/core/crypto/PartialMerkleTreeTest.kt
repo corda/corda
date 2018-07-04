@@ -30,6 +30,7 @@ import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
 import net.corda.testing.internal.TEST_TX_TIME
+import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
@@ -274,7 +275,7 @@ class PartialMerkleTreeTest {
             timeWindow: TimeWindow? = null,
             attachments: List<SecureHash> = emptyList()
     ): WireTransaction {
-        return WireTransaction(
+        return createWireTransaction(
                 inputs = testTx.inputs,
                 attachments = attachments,
                 outputs = testTx.outputs,
