@@ -76,7 +76,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
                         Transactional.Committed(value)
                     } else {
                         // Some database transactions, including us, writing, with readers seeing whatever is in the database and writers seeing the (in memory) value.
-                        Transactional.InFlight(this, key, { loadValue(key) }).apply { alsoWrite(value) }
+                        Transactional.InFlight(this, key, _readerValueLoader = { loadValue(key) }).apply { alsoWrite(value) }
                     }
                 }
 
@@ -146,13 +146,13 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
     }
 
     // Helpers to know if transaction(s) are currently writing the given key.
-    protected fun weAreWriting(key: K): Boolean = pendingKeys.get(key)?.contains(contextTransaction) ?: false
-    protected fun anyoneWriting(key: K): Boolean = pendingKeys.get(key)?.isNotEmpty() ?: false
+    protected fun weAreWriting(key: K): Boolean = pendingKeys[key]?.contains(contextTransaction) ?: false
+    protected fun anyoneWriting(key: K): Boolean = pendingKeys[key]?.isNotEmpty() ?: false
 
     // Indicate this database transaction is a writer of this key.
     private fun addPendingKey(key: K, databaseTransaction: DatabaseTransaction): Boolean {
         var added = true
-        pendingKeys.compute(key) { k, oldSet ->
+        pendingKeys.compute(key) { _, oldSet ->
             if (oldSet == null) {
                 val newSet = HashSet<DatabaseTransaction>(0)
                 newSet += databaseTransaction
@@ -167,7 +167,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 
     // Remove this database transaction as a writer of this key, because the transaction committed or rolled back.
     private fun removePendingKey(key: K, databaseTransaction: DatabaseTransaction) {
-        pendingKeys.compute(key) { k, oldSet ->
+        pendingKeys.compute(key) { _, oldSet ->
             if (oldSet == null) {
                 oldSet
             } else {
@@ -199,7 +199,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         }
 
         // No one can see it.
-        class Missing<T>() : Transactional<T>() {
+        class Missing<T> : Transactional<T>() {
             override val value: T
                 get() = throw NoSuchElementException("Not present")
             override val isPresent: Boolean
@@ -228,7 +228,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
 
             fun alsoWrite(_value: T) {
                 // Make the lazy loader the writers see actually just return the value that has been set.
-                writerValueLoader.set({ _value })
+                writerValueLoader.set { _value }
                 // We make all these vals so that the lambdas do not need a reference to this, and so the onCommit only has a weak ref to the value.
                 // We want this so that the cache could evict the value (due to memory constraints etc) without the onCommit callback
                 // retaining what could be a large memory footprint object.
@@ -242,10 +242,9 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
                     // and then stop saying the transaction is writing the key.
                     tx.onCommit {
                         if (strongComitted.compareAndSet(false, true)) {
-                            val dereferencedKey = strongKey
                             val dereferencedValue = weakValue.get()
                             if (dereferencedValue != null) {
-                                strongMap.cache.put(dereferencedKey, Committed(dereferencedValue))
+                                strongMap.cache.put(strongKey, Committed(dereferencedValue))
                             }
                         }
                         strongMap.removePendingKey(strongKey, tx)
@@ -262,7 +261,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
             private fun loadAsWriter(): T {
                 val _value = writerValueLoader.get()()
                 if (writerValueLoader.get() == _writerValueLoader) {
-                    writerValueLoader.set({ _value })
+                    writerValueLoader.set { _value }
                 }
                 return _value
             }
@@ -272,7 +271,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
             private fun loadAsReader(): T? {
                 val _value = readerValueLoader.get()()
                 if (readerValueLoader.get() == _readerValueLoader) {
-                    readerValueLoader.set({ _value })
+                    readerValueLoader.set { _value }
                 }
                 return _value
             }
@@ -310,7 +309,7 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
         toPersistentEntity,
         persistentEntityClass) {
     //TODO determine cacheBound based on entity class later or with node config allowing tuning, or using some heuristic based on heap size
-    override val cache = NonInvalidatingCache<K, Transactional<V>>(
+    override val cache = NonInvalidatingCache(
             bound = cacheBound,
             loadFunction = { key: K ->
                 // This gets called if a value is read and the cache has no Transactional for this key yet.
@@ -321,10 +320,10 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
                         // If someone is writing (but not us)
                         // For those not writing, the value cannot be seen.
                         // For those writing, they need to re-load the value from the database (which their database transaction CAN see).
-                        Transactional.InFlight<K, V>(this, key, { null }, { loadValue(key)!! })
+                        Transactional.InFlight(this, key, { null }, { loadValue(key)!! })
                     } else {
                         // If no one is writing, then the value does not exist.
-                        Transactional.Missing<V>()
+                        Transactional.Missing()
                     }
                 } else {
                     // A value was found
@@ -332,10 +331,10 @@ open class AppendOnlyPersistentMap<K, V, E, out EK>(
                         // If we are writing, it might not be globally visible, and was evicted from the cache.
                         // For those not writing, they need to check the database again.
                         // For those writing, they can see the value found.
-                        Transactional.InFlight<K, V>(this, key, { loadValue(key) }, { value })
+                        Transactional.InFlight(this, key, { loadValue(key) }, { value })
                     } else {
                         // If no one is writing, then make it globally visible.
-                        Transactional.Committed<V>(value)
+                        Transactional.Committed(value)
                     }
                 }
             })
@@ -354,26 +353,22 @@ class WeightBasedAppendOnlyPersistentMap<K, V, E, out EK>(
         fromPersistentEntity,
         toPersistentEntity,
         persistentEntityClass) {
-    override val cache = NonInvalidatingWeightBasedCache<K, Transactional<V>>(
+    override val cache = NonInvalidatingWeightBasedCache(
             maxWeight = maxWeight,
-            weigher = object : Weigher<K, Transactional<V>> {
-                override fun weigh(key: K, value: Transactional<V>): Int {
-                    return weighingFunc(key, value)
-                }
-            },
+            weigher = Weigher { key, value -> weighingFunc(key, value) },
             loadFunction = { key: K ->
                 val value: V? = loadValue(key)
                 if (value == null) {
                     if (anyoneWriting(key)) {
-                        Transactional.InFlight<K, V>(this, key, { null }, { loadValue(key)!! })
+                        Transactional.InFlight(this, key, { null }, { loadValue(key)!! })
                     } else {
-                        Transactional.Missing<V>()
+                        Transactional.Missing()
                     }
                 } else {
                     if (weAreWriting(key)) {
-                        Transactional.InFlight<K, V>(this, key, { loadValue(key) }, { value })
+                        Transactional.InFlight(this, key, { loadValue(key) }, { value })
                     } else {
-                        Transactional.Committed<V>(value)
+                        Transactional.Committed(value)
                     }
                 }
             })

@@ -5,11 +5,7 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.read
-import net.corda.core.internal.readAll
-import net.corda.core.internal.readFully
-import net.corda.core.internal.write
-import net.corda.core.internal.writeLines
+import net.corda.core.internal.*
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
@@ -59,7 +55,7 @@ class NodeAttachmentStorageTest {
     fun `insert and retrieve`() {
         val (testJar, expectedHash) = makeTestJar()
 
-        val id = testJar.read { storage.importAttachment(it) }
+        val id = testJar.read { storage.importAttachment(it, "test", null) }
         assertEquals(expectedHash, id)
 
         assertNull(storage.openAttachment(SecureHash.randomSHA256()))
@@ -84,7 +80,7 @@ class NodeAttachmentStorageTest {
         val (testJar, expectedHash) = makeTestJar()
         val (jarB, hashB) = makeTestJar(listOf(Pair("file", "content")))
 
-        val id = testJar.read { storage.importAttachment(it) }
+        val id = testJar.read { storage.importAttachment(it, "test", null) }
         assertEquals(expectedHash, id)
 
 
@@ -99,7 +95,7 @@ class NodeAttachmentStorageTest {
 
         stream.close()
 
-        val idB = jarB.read { storage.importAttachment(it) }
+        val idB = jarB.read { storage.importAttachment(it, "test", null) }
         assertEquals(hashB, idB)
 
         storage.openAttachment(id)!!.openAsJAR().use {
@@ -119,6 +115,7 @@ class NodeAttachmentStorageTest {
         val (jarB, hashB) = makeTestJar(listOf(Pair("file", "content")))
         val (jarC, hashC) = makeTestJar(listOf(Pair("magic_file", "magic_content_puff")))
 
+        @Suppress("DEPRECATION")
         jarA.read { storage.importAttachment(it) }
         jarB.read { storage.importAttachment(it, "uploaderB", "fileB.zip") }
         jarC.read { storage.importAttachment(it, "uploaderC", "fileC.zip") }
@@ -186,11 +183,11 @@ class NodeAttachmentStorageTest {
     fun `duplicates not allowed`() {
         val (testJar, _) = makeTestJar()
         testJar.read {
-            storage.importAttachment(it)
+            storage.importAttachment(it, "test", null)
         }
         assertFailsWith<FileAlreadyExistsException> {
             testJar.read {
-                storage.importAttachment(it)
+                storage.importAttachment(it, "test", null)
             }
         }
     }
@@ -199,7 +196,7 @@ class NodeAttachmentStorageTest {
     fun `corrupt entry throws exception`() {
         val (testJar, _) = makeTestJar()
         val id = database.transaction {
-            val id = testJar.read { storage.importAttachment(it) }
+            val id = testJar.read { storage.importAttachment(it, "test", null) }
 
             // Corrupt the file in the store.
             val bytes = testJar.readAll()
@@ -227,7 +224,7 @@ class NodeAttachmentStorageTest {
         path.writeLines(listOf("Hey", "there!"))
         path.read {
             assertFailsWith<IllegalArgumentException>("either empty or not a JAR") {
-                storage.importAttachment(it)
+                storage.importAttachment(it, "test", null)
             }
         }
     }

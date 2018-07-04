@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.corda.test.spring
 
 import net.corda.core.concurrent.CordaFuture

@@ -1,4 +1,4 @@
-@file:Suppress("UNUSED_VARIABLE", "unused")
+@file:Suppress("UNUSED_VARIABLE", "unused", "DEPRECATION")
 
 package net.corda.docs
 

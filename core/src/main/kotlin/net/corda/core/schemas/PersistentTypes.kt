@@ -122,7 +122,7 @@ object MappedSchemaValidator {
          fieldsFromOtherMappedSchema(schema) + methodsFromOtherMappedSchema(schema)
 
     /** Returns true if [javax.persistence] annotation expect [javax.persistence.Transient] is found. */
-    private inline fun hasJpaAnnotation(annotations: Array<Annotation>) =
+    private fun hasJpaAnnotation(annotations: Array<Annotation>) =
             annotations.any { annotation -> annotation.toString().startsWith("@javax.persistence.") && annotation !is javax.persistence.Transient }
 
     class SchemaCrossReferenceReport(private val schema: String, private val entity: String, private val referencedSchema: String,

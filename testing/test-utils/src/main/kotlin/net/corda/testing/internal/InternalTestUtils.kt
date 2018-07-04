@@ -1,11 +1,14 @@
 package net.corda.testing.internal
 
+import net.corda.core.contracts.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.generateKeyPair
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
@@ -138,4 +141,16 @@ fun createNodeSslConfig(path: Path, name: CordaX500Name = CordaX500Name("MegaCor
     trustStore.save(sslConfig.trustStoreFile, sslConfig.trustStorePassword)
 
     return sslConfig
+}
+
+/** This is the same as the deprecated [WireTransaction] c'tor but avoids the deprecation warning. */
+fun createWireTransaction(inputs: List<StateRef>,
+                          attachments: List<SecureHash>,
+                          outputs: List<TransactionState<*>>,
+                          commands: List<Command<*>>,
+                          notary: Party?,
+                          timeWindow: TimeWindow?,
+                          privacySalt: PrivacySalt = PrivacySalt()): WireTransaction {
+    val componentGroups = WireTransaction.createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow)
+    return WireTransaction(componentGroups, privacySalt)
 }
