@@ -8,6 +8,7 @@ import picocli.CommandLine.Option
 import java.io.File
 
 open class CliParser {
+
     @Option(names = arrayOf("-n", "--network-name"), description = arrayOf("The resource grouping to use"))
     var name: String? = null
 
@@ -20,11 +21,11 @@ open class CliParser {
     @Option(names = arrayOf("-b", "--backend"), description = arrayOf("The backend to use when instantiating nodes"))
     var backendType: Backend.BackendType = Backend.BackendType.LOCAL_DOCKER
 
-    @Option(names = arrayOf("--nodes"), split = ":", description = arrayOf("The number of each node to create. NodeX:2 will create two instances of NodeX"))
-    var nodes: MutableMap<String, Int> = hashMapOf()
+    @Option(names = arrayOf("--add"), split = ":", description = arrayOf("The node to add. Format is <Name>:<X500>. Eg; \"Node1:O=Bank A, L=New York, C=US, OU=Org Unit, CN=Service Name\""))
+    var nodesToAdd: MutableMap<String, String> = hashMapOf()
 
-    @Option(names = arrayOf("--add", "-a"))
-    var nodesToAdd: MutableList<String> = arrayListOf()
+    @Option(names = arrayOf("-h", "--help"), usageHelp = true, description = arrayOf("display a help message"))
+    var helpRequested = false
 
     fun isNew(): Boolean {
         return nodesToAdd.isEmpty()

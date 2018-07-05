@@ -1,4 +1,5 @@
 @file:JvmName("Main")
+
 package net.corda.bootstrapper
 
 import javafx.application.Application
@@ -15,7 +16,13 @@ val baseArgs = CliParser()
 
 fun main(args: Array<String>) {
     SerializationEngine.init()
-    CommandLine(baseArgs).parse(*args)
+    val commandLine = CommandLine(baseArgs)
+    commandLine.parse(*args)
+
+    if (commandLine.isUsageHelpRequested) {
+        commandLine.usage(System.out)
+        return
+    }
 
     if (baseArgs.gui) {
         Application.launch(Gui::class.java)
