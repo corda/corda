@@ -17,4 +17,4 @@ if [ "$DEBUG" != 0 ]; then
     DEBUG_AGENT="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=$DEBUG_PORT"
 fi
 
-java $DEBUG_AGENT -cp "$CLASSPATH:.:tmp:$jar_file" net.corda.sandbox.tools.cli.Program "$@"
+java $DEBUG_AGENT -cp "$CLASSPATH:.:tmp:$jar_file" net.corda.djvm.tools.cli.Program "$@"

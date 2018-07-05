@@ -1,8 +1,8 @@
-package sandbox.net.corda.sandbox.costing
+package sandbox.net.corda.djvm.costing
 
-import net.corda.sandbox.SandboxRuntimeContext
-import net.corda.sandbox.costing.RuntimeCostSummary
-import net.corda.sandbox.costing.ThresholdViolationException
+import net.corda.djvm.SandboxRuntimeContext
+import net.corda.djvm.costing.RuntimeCostSummary
+import net.corda.djvm.costing.ThresholdViolationException
 
 /**
  * Class for keeping a tally on various runtime metrics, like number of jumps, allocations, invocations, etc. The
@@ -24,7 +24,7 @@ object RuntimeCostAccounter {
     /**
      * The type name of the [RuntimeCostAccounter] class; referenced from instrumentors.
      */
-    const val TYPE_NAME: String = "sandbox/net/corda/sandbox/costing/RuntimeCostAccounter"
+    const val TYPE_NAME: String = "sandbox/net/corda/djvm/costing/RuntimeCostAccounter"
 
     /**
      * Known / estimated allocation costs.

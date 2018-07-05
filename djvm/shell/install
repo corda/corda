@@ -14,4 +14,4 @@ ln -sf "$base_dir/djvm" /usr/local/bin/djvm
 # Generate auto-completion file for Bash and ZSH
 cd "$base_dir"
 java -cp "$base_dir/../build/libs/corda-djvm-$version-all.jar" picocli.AutoComplete \
-    -n djvm net.corda.sandbox.tools.cli.Commands -f
+    -n djvm net.corda.djvm.tools.cli.Commands -f

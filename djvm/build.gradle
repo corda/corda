@@ -46,8 +46,8 @@ repositories {
 jar {
     manifest {
         attributes(
-                'Main-Class': 'net.corda.sandbox.tools.cli.Program',
-                'Automatic-Module-Name': 'net.corda.sandbox',
+                'Main-Class': 'net.corda.djvm.tools.cli.Program',
+                'Automatic-Module-Name': 'net.corda.djvm',
                 'Build-Date': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         )
     }
