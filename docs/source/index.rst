@@ -28,6 +28,9 @@ application development please continue to refer to `the main project documentat
    :caption: Corda Enterprise
    :maxdepth: 1
 
+   release-notes.rst
+   version-compatibility.rst
+   platform-support-matrix.rst
    hot-cold-deployment
    database-management
    corda-firewall
@@ -65,7 +68,6 @@ application development please continue to refer to `the main project documentat
       :caption: Other documentation
 
       deterministic-modules.rst
-      release-notes.rst
       changelog.rst
 
 .. only:: htmlmode

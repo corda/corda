@@ -1,7 +1,7 @@
 .. highlight:: kotlin
 .. raw:: html
 
-Hot-cold deployment
+Hot-Cold Deployment
 ===================
 
 Overview
