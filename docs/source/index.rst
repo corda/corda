@@ -69,19 +69,3 @@ application development please continue to refer to `the main project documentat
 
       deterministic-modules.rst
       changelog.rst
-
-.. only:: htmlmode
-
-   .. toctree::
-      :caption: Design docs
-      :maxdepth: 2
-
-      design/design-review-process.md
-      design/certificate-hierarchies/design.md
-      design/failure-detection-master-election/design.md
-      design/float/design.md
-      design/hadr/design.md
-      design/kafka-notary/design.md
-      design/monitoring-management/design.md
-      design/sgx-integration/design.md
-

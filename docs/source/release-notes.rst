@@ -1,4 +1,4 @@
-Release Notes
+Release notes
 =============
 
 |release|
@@ -148,9 +148,9 @@ From a build perspective, switching CorDapps built using Corda 3.x to |release| 
 and simply requires making the Corda Enterprise binaries available to Gradle, and changing two variables in the build file:
 
 
-.. parsed-literal:: shell
+.. sourcecode:: shell
 
-    ext.corda_release_version = '|version|'
+    ext.corda_release_version = '3.0'
     ext.corda_release_distribution = 'com.r3.corda'
 
 ..

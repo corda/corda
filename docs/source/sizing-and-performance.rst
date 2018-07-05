@@ -1,4 +1,4 @@
-Sizing and Performance
+Sizing and performance
 ======================
 
 Overview

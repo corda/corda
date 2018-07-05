@@ -1,4 +1,4 @@
-Corda and Corda Enterprise Compatibility
+Corda and Corda Enterprise compatibility
 ========================================
 
 Corda Enterprise 3.0 provides a baseline for wire stability and compatibility with future versions of Corda Enterprise, and open-source releases of Corda starting from version 3.0.
