@@ -36,7 +36,7 @@ your own ``bridge.conf`` file will use these defaults:
 .. literalinclude:: ../../bridge/src/main/resources/bridgedefault.conf
     :language: javascript
    
-Bridge Operating Modes
+Bridge operating modes
 ----------------------
 .. note:: By default, the Corda node assumes that it will carry out the peer-to-peer functions of the bridge internally!
           Before running a dedicated bridge process, it is essential to turn off the dev mode component by setting the
@@ -212,8 +212,8 @@ absolute path to the bridge's base directory.
 
 :enableAMQPPacketTrace: Set this developer flag to true if very detailed logs are required for connectivity debugging. Note that the logging volume is substantial, so do not enable in production systems.
 
-Fully Worked Example
--------
+Complete example
+----------------
 As an example to show all features the following is a walk through of the configuration for a pair of HA hot-cold Nodes,
 connected to by a HA hot-warm set of ``BridgeInner`` and ``FloatOuter`` that use some simple certificates to secure the
 control tunnel and a SOCKS5 proxy for outgoing connectivity (see diagram).

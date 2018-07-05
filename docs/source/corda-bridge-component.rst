@@ -1,5 +1,5 @@
-Corda Bridge Component Overview
-===============================
+Bridge component overview
+=========================
 
 .. contents::
 
@@ -35,7 +35,7 @@ protocol will continue to be AMQP 1.0 over TLS.
 
 .. Note:: All deployment modes of the bridge, float, or all-in-one node are transparently interoperable, if correctly configured.
 
-Message Path Between Peer Nodes
+Message path between peer nodes
 -------------------------------
 When a flow within a node needs to send a message to a peer there is a carefully orchestrated sequence of steps to ensure
 correct secure routing based upon the network map information and to ensure safe, restartable delivery to the remote flow.

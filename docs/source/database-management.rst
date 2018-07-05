@@ -5,7 +5,7 @@
    <script type="text/javascript" src="_static/codesets.js"></script>
 
 
-Database Management
+Database management
 ===================
 
 Corda - the platform, and the installed third-party CorDapps store their data in a relational database (see

@@ -4,8 +4,8 @@
 
 .. role:: red
 
-Deterministic Corda Modules
-===========================
+Deterministic modules
+=====================
 
 A Corda contract's verify function should always produce the same results for the same input data. To that end,
 Corda provides the following modules:
@@ -21,7 +21,7 @@ contract verification should be compiled against these modules to prevent them c
 .. note:: These modules are only a development aid. They cannot guarantee determinism without also including
           deterministic versions of all their dependent libraries, e.g. ``kotlin-stdlib``.
 
-Generating the Deterministic Modules
+Generating the deterministic modules
 ------------------------------------
 
 JDK 8
@@ -92,7 +92,7 @@ The build generates each of Corda's deterministic JARs in six steps:
     This step will fail if ProGuard spots any Java API references that still cannot be satisfied by the deterministic
     ``rt.jar``, and hence it will break the build.
 
-Configuring IntelliJ with a Deterministic SDK
+Configuring IntelliJ with a deterministic SDK
 ---------------------------------------------
 
 We would like to configure IntelliJ so that it will highlight uses of non-deterministic Java APIs as :red:`not found`.
@@ -195,7 +195,7 @@ These steps will enable IntelliJ's presentation compiler to use the deterministi
 
 but still build everything using Gradle with the full JDK.
 
-Testing the Deterministic Modules
+Testing the deterministic modules
 ---------------------------------
 
 The ``core-deterministic:testing`` module executes some basic JUnit tests for the ``core-deterministic`` and

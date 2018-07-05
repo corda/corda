@@ -1,4 +1,4 @@
-Certificate Revocation List
+Certificate revocation list
 ===========================
 
 The certificate revocation list consists of certificate serial numbers of issued certificates that are no longer valid.
@@ -56,8 +56,8 @@ Submission of the certificate revocation requests expects the following fields t
 
 :reporter: Issuer of this certificate revocation request.
 
-Note: At least one of the three: certificateSerialNumber, csrRequestId or legalName needs to be specified.
-      Also, Corda AMQP serialization framework is used as the serialization framework.
+.. note::  At least one of the three: certificateSerialNumber, csrRequestId or legalName needs to be specified.
+           Also, Corda AMQP serialization framework is used as the serialization framework.
 
 Because of the proprietary serialization mechanism, it is assumed that those endpoints are used by dedicated tools that support this kind of data encoding.
 
