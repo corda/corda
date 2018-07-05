@@ -26,7 +26,7 @@ class FilterTransformer private constructor (
     private val unwantedFields: MutableSet<FieldElement>,
     private val deletedMethods: MutableSet<MethodElement>,
     private val stubbedMethods: MutableSet<MethodElement>
-) : KotlinAwareVisitor(ASM6, visitor, logger, kotlinMetadata), Repeatable<FilterTransformer> {
+) : KotlinAfterProcessor(ASM6, visitor, logger, kotlinMetadata), Repeatable<FilterTransformer> {
     constructor(
         visitor: ClassVisitor,
         logger: Logger,
@@ -47,8 +47,8 @@ class FilterTransformer private constructor (
         stubbedMethods = mutableSetOf()
     )
 
-    private var _className: String = "(unknown)"
-    val className: String get() = _className
+    var className: String = "(unknown)"
+        private set
 
     val isUnwantedClass: Boolean get() = isUnwantedClass(className)
     override val hasUnwantedElements: Boolean
@@ -76,7 +76,7 @@ class FilterTransformer private constructor (
     )
 
     override fun visit(version: Int, access: Int, clsName: String, signature: String?, superName: String?, interfaces: Array<String>?) {
-        _className = clsName
+        className = clsName
         logger.info("Class {}", clsName)
         super.visit(version, access, clsName, signature, superName, interfaces)
     }
@@ -172,7 +172,7 @@ class FilterTransformer private constructor (
     /**
      * Removes the deleted methods and fields from the Kotlin Class metadata.
      */
-    override fun transformClassMetadata(d1: List<String>, d2: List<String>): List<String> {
+    override fun processClassMetadata(d1: List<String>, d2: List<String>): List<String> {
         val partitioned = deletedMethods.groupBy(MethodElement::isConstructor)
         val prefix = "$className$"
         return ClassMetadataTransformer(
@@ -191,7 +191,7 @@ class FilterTransformer private constructor (
     /**
      * Removes the deleted methods and fields from the Kotlin Package metadata.
      */
-    override fun transformPackageMetadata(d1: List<String>, d2: List<String>): List<String> {
+    override fun processPackageMetadata(d1: List<String>, d2: List<String>): List<String> {
         return PackageMetadataTransformer(
                 logger = logger,
                 deletedFields = unwantedFields,

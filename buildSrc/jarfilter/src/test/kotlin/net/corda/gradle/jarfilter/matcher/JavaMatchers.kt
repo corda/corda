@@ -13,10 +13,12 @@ fun isMethod(name: Matcher<in String>, returnType: Matcher<in Class<*>>, vararg 
 }
 
 fun isMethod(name: String, returnType: Class<*>, vararg parameters: Class<*>): Matcher<Method> {
-    return isMethod(equalTo(name), equalTo(returnType), *parameters.map(::equalTo).toTypedArray())
+    return isMethod(equalTo(name), equalTo(returnType), *parameters.toMatchers())
 }
 
-val <T: Any> KClass<T>.javaDeclaredMethods: List<Method> get() = java.declaredMethods.toList()
+private fun Array<out Class<*>>.toMatchers() = map(::equalTo).toTypedArray()
+
+val KClass<*>.javaDeclaredMethods: List<Method> get() = java.declaredMethods.toList()
 
 /**
  * Matcher logic for a Java [Method] object. Also applicable to constructors.

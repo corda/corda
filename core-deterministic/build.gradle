@@ -103,6 +103,9 @@ task jarFilter(type: JarFilterTask) {
             "co.paralleluniverse.fibers.Suspendable",
             "org.hibernate.annotations.Immutable"
         ]
+        forSanitise = [
+            "net.corda.core.DeleteForDJVM"
+        ]
     }
 }
 
