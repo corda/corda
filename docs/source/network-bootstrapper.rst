@@ -45,8 +45,6 @@ will generate directories containing three nodes: ``notary``, ``partya`` and ``p
 that comes with the bootstrapper. If a different version of Corda is required then simply place that ``corda.jar`` file
 alongside the configuration files in the directory.
 
-The directory can also contain CorDapp JARs which will be copied to each node's ``cordapps`` directory.
-
 You can also have the node directories containing their "node.conf" files already laid out. The previous example would be:
 
 .. sourcecode:: none
@@ -101,20 +99,99 @@ For example:
     net.corda.finance.contracts.asset.Cash
     net.corda.finance.contracts.asset.CommercialPaper
 
-.. _network-bootstrapper-synchronisation:
+Modifying a bootstrapped network
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Synchronisation
-~~~~~~~~~~~~~~~
+The network bootstrapper is provided as a development tool for setting up Corda networks for development and testing.
+There is some limited functionality which can be used to make changes to a network, but for anything more complicated consider
+using a :doc:`network-map` server.
 
-This tool only bootstraps a network. It cannot dynamically update if a new node needs to join the network or if an existing
-one has changed something in their node-info, e.g. their P2P address. For this the new node-info file will need to be placed
-in the other nodes' ``additional-node-infos`` directory. A simple way to do this is to use `rsync <https://en.wikipedia.org/wiki/Rsync>`_.
+When running the Network Bootstrapper, all the node information needs to be gathered together in one file directory. If
+the nodes are being run on different machines you need to do the following:
+
+* Copy the node directories from each machine into one directory, on one machine
+* Depending on the modification being made (see below for more information), add any new files required to the root directory
+* Run the Network Bootstrapper from the root directory
+* Copy each individual node's directory back to the original machine
+
+Adding a new node to the network
+--------------------------------
+
+Running the bootstrapper again on the same network will allow a new node to be added and its
+node-info distributed to the existing nodes.
+
+As an example, if we have an existing bootstrapped network, with a Notary and PartyA and we want to add a PartyB, we
+can use the network bootstrapper on the following network structure:
+
+.. sourcecode:: none
+
+    .
+    ├── notary                      // existing node directories
+    │   ├── node.conf
+    │   ├── network-parameters
+    │   ├── node-info-notary
+    │   └── additional-node-infos
+    │       ├── node-info-notary
+    │       └── node-info-partya
+    ├── partya
+    │   ├── node.conf
+    │   ├── network-parameters
+    │   ├── node-info-partya
+    │   └── additional-node-infos
+    │       ├── node-info-notary
+    │       └── node-info-partya
+    └── partyb_node.conf            // the node.conf for the node to be added
+
+Then run the network bootstrapper again from the root dir:
+
+``java -jar network-bootstrapper-VERSION.jar --dir <nodes-root-dir>``
+
+Which will give the following:
+
+.. sourcecode:: none
+
+    .
+    ├── notary                      // the contents of the existing nodes (keys, db's etc...) are unchanged
+    │   ├── node.conf
+    │   ├── network-parameters
+    │   ├── node-info-notary
+    │   └── additional-node-infos
+    │       ├── node-info-notary
+    │       ├── node-info-partya
+    │       └── node-info-partyb
+    ├── partya
+    │   ├── node.conf
+    │   ├── network-parameters
+    │   ├── node-info-partya
+    │   └── additional-node-infos
+    │       ├── node-info-notary
+    │       ├── node-info-partya
+    │       └── node-info-partyb
+    └── partyb                      // a new node directory is created for PartyB
+        ├── node.conf
+        ├── network-parameters
+        ├── node-info-partyb
+        └── additional-node-infos
+            ├── node-info-notary
+            ├── node-info-partya
+            └── node-info-partyb
+
+The bootstrapper will generate a directory and the ``node-info`` file for PartyB, and will also make sure a copy of each
+nodes' ``node-info`` file is in the ``additional-node-info`` directory of every node. Any other files in the existing nodes,
+such a generated keys, will be unaffected.
+
+.. note:: The bootstrapper is provided for test deployments and can only generate information for nodes collected on
+    the same machine. If a network needs to be updated using the bootstrapper once deployed, the nodes will need
+    collecting back together.
+
+Modifying an existing node on the network
+-----------------------------------------
+
+The network bootstrapper cannot dynamically update the network if an existing node has changed something in their node-info,
+e.g. their P2P address. For this the new node-info file will need to be placed in the other nodes' ``additional-node-infos`` directory.
+A simple way to do this is to use `rsync <https://en.wikipedia.org/wiki/Rsync>`_.
 However, if it's known beforehand the set of nodes that will eventually form part of the network then all the node directories
 can be pre-generated in the bootstrap and only started when needed.
-
-Running the bootstrapper again on the same network will allow a new node to be added or an existing one to have its updated
-node-info re-distributed. However this comes at the expense of having to temporarily collect the node directories back
-together again under a common parent directory.
 
 Updating the contract whitelist for bootstrapped networks
 ---------------------------------------------------------
@@ -147,7 +224,7 @@ Then run the network bootstrapper again from the root dir:
 
 ``java -jar network-bootstrapper-VERSION.jar --dir <nodes-root-dir>``
 
-To give the following
+To give the following:
 
 .. sourcecode:: none
 
@@ -173,6 +250,3 @@ To give the following
 
 .. note:: The whitelist can only ever be appended to. Once added a contract implementation can never be removed.
 
-.. note:: The bootstrapper is provided for test deployments and can only generate information for nodes collected on
-    the same machine. If a network needs to be updated using the bootstrapper once deployed, the nodes will need
-    collecting back together.
