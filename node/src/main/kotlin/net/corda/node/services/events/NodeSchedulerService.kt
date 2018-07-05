@@ -11,13 +11,9 @@ import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.join
-import net.corda.core.internal.until
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -37,18 +33,9 @@ import net.corda.nodeapi.internal.persistence.contextTransaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.mina.util.ConcurrentHashSet
 import org.slf4j.Logger
-import java.io.Serializable
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.CancellationException
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CompletionStage
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.Executor
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
+import java.util.concurrent.*
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.Column
 import javax.persistence.EmbeddedId
@@ -149,7 +136,7 @@ class NodeSchedulerService(private val clock: CordaClock,
 
             @Column(name = "scheduled_at", nullable = false)
             var scheduledAt: Instant = Instant.now()
-    ) : Serializable
+    )
 
     private class InnerState {
         var rescheduled: GuavaSettableFuture<Boolean>? = null

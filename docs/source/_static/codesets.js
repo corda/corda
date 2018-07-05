@@ -1,8 +1,8 @@
 $(document).ready(function() {
     $(".codeset").each(function(index, el) {
-        var c = $("<div class='codesnippet-widgets'><span class='current'>Kotlin</span><span>Java</span></div>");
-        var kotlinButton = c.children()[0];
-        var javaButton = c.children()[1];
+        var c = $("<div class='codesnippet-widgets'><span class='current'>Java</span><span>Kotlin</span></div>");
+        var javaButton = c.children()[0];
+        var kotlinButton = c.children()[1];
         kotlinButton.onclick = function() {
             $(el).children(".highlight-java")[0].style.display = "none";
             $(el).children(".highlight-kotlin")[0].style.display = "block";
@@ -19,6 +19,8 @@ $(document).ready(function() {
         if ($(el).children(".highlight-java").length == 0) {
             // No Java for this example.
             javaButton.style.display = "none";
+            // In this case, display Kotlin by default
+            $(el).children(".highlight-kotlin")[0].style.display = "block";
         }
         c.insertBefore(el);
     });

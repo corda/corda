@@ -101,12 +101,12 @@ class NodeMonitorModel : AutoCloseable {
      * TODO provide an unsubscribe mechanism
      */
     fun register(nodeHostAndPort: NetworkHostAndPort, username: String, password: String) {
-
         // `retryableStateMachineUpdatesSubject` will change it's upstream subscriber in case of RPC connection failure, this `Observable` should
         // never produce an error.
         // `stateMachineUpdatesSubject` will stay firmly subscribed to `retryableStateMachineUpdatesSubject`
         retryableStateMachineUpdatesSubject.subscribe(stateMachineUpdatesSubject)
 
+        @Suppress("DEPRECATION")
         // Proxy may change during re-connect, ensure that subject wiring accurately reacts to this activity.
         proxyObservable.addListener { _, _, wrapper ->
             if (wrapper != null) {

@@ -45,9 +45,7 @@ class HospitalisingInterceptor(
 
             when (nextState.checkpoint.errorState) {
                 is ErrorState.Clean -> {
-                    if (hospitalisedFlows.remove(fiber.id) != null) {
-                        flowHospital.flowCleaned(fiber)
-                    }
+                    hospitalisedFlows.remove(fiber.id)
                 }
                 is ErrorState.Errored -> {
                     val exceptionsToHandle = nextState.checkpoint.errorState.errors.map { it.exception }

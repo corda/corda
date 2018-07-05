@@ -90,7 +90,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          * This field provides more intuitive access from Java.
          */
         @JvmField
-        val zeroHash: SHA256 = SecureHash.SHA256(ByteArray(32, { 0.toByte() }))
+        val zeroHash: SHA256 = SecureHash.SHA256(ByteArray(32) { 0.toByte() })
 
         /**
          * A SHA-256 hash value consisting of 32 0x00 bytes.
@@ -104,7 +104,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
          * This field provides more intuitive access from Java.
          */
         @JvmField
-        val allOnesHash: SHA256 = SecureHash.SHA256(ByteArray(32, { 255.toByte() }))
+        val allOnesHash: SHA256 = SecureHash.SHA256(ByteArray(32) { 255.toByte() })
 
         /**
          * A SHA-256 hash value consisting of 32 0xFF bytes.

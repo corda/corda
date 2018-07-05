@@ -8,19 +8,18 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.toFuture
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.CIPHER_SUITES
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
-import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.createDevKeyStores
 import net.corda.nodeapi.internal.crypto.*
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.testing.core.*
 import net.corda.testing.internal.createDevIntermediateCaCertPath
@@ -31,6 +30,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.security.KeyStore
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
@@ -388,18 +388,19 @@ class ProtonWrapperTests {
 
         val clientTruststore = clientConfig.loadTrustStore().internal
         val clientKeystore = clientConfig.loadSslKeyStore().internal
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = clientKeystore
+            override val keyStorePrivateKeyPassword: CharArray = clientConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = clientTruststore
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = maxMessageSize
+        }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
                         NetworkHostAndPort("localhost", serverPort2),
                         NetworkHostAndPort("localhost", artemisPort)),
                 setOf(ALICE_NAME, CHARLIE_NAME),
-                PEER_USER,
-                PEER_USER,
-                clientKeystore,
-                clientConfig.keyStorePassword,
-                clientTruststore,
-                true,
-                maxMessageSize = maxMessageSize)
+                amqpConfig)
     }
 
     private fun createSharedThreadsClient(sharedEventGroup: EventLoopGroup, id: Int, maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPClient {
@@ -414,17 +415,18 @@ class ProtonWrapperTests {
 
         val clientTruststore = clientConfig.loadTrustStore().internal
         val clientKeystore = clientConfig.loadSslKeyStore().internal
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = clientKeystore
+            override val keyStorePrivateKeyPassword: CharArray = clientConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = clientTruststore
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = maxMessageSize
+        }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort)),
                 setOf(ALICE_NAME),
-                PEER_USER,
-                PEER_USER,
-                clientKeystore,
-                clientConfig.keyStorePassword,
-                clientTruststore,
-                true,
-                sharedThreadPool = sharedEventGroup,
-                maxMessageSize = maxMessageSize)
+                amqpConfig,
+                sharedThreadPool = sharedEventGroup)
     }
 
     private fun createServer(port: Int, name: CordaX500Name = ALICE_NAME, maxMessageSize: Int = MAX_MESSAGE_SIZE): AMQPServer {
@@ -439,15 +441,16 @@ class ProtonWrapperTests {
 
         val serverTruststore = serverConfig.loadTrustStore().internal
         val serverKeystore = serverConfig.loadSslKeyStore().internal
+        val amqpConfig = object : AMQPConfiguration {
+            override val keyStore: KeyStore = serverKeystore
+            override val keyStorePrivateKeyPassword: CharArray = serverConfig.keyStorePassword.toCharArray()
+            override val trustStore: KeyStore = serverTruststore
+            override val trace: Boolean = true
+            override val maxMessageSize: Int = maxMessageSize
+        }
         return AMQPServer(
                 "0.0.0.0",
                 port,
-                PEER_USER,
-                PEER_USER,
-                serverKeystore,
-                serverConfig.keyStorePassword,
-                serverTruststore,
-                crlCheckSoftFail = true,
-                maxMessageSize = maxMessageSize)
+                amqpConfig)
     }
 }

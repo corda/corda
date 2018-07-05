@@ -29,6 +29,7 @@ import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -111,9 +112,9 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     fun loginToRPCAndGetClientQueue(): String {
-        loginToRPC(alice.internals.configuration.rpcOptions.address!!, rpcUser)
+        loginToRPC(alice.internals.configuration.rpcOptions.address, rpcUser)
         val clientQueueQuery = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.*")
-        val client = clientTo(alice.internals.configuration.rpcOptions.address!!)
+        val client = clientTo(alice.internals.configuration.rpcOptions.address)
         client.start(rpcUser.username, rpcUser.password, false)
         return client.session.addressQuery(clientQueueQuery).queueNames.single().toString()
     }
@@ -126,7 +127,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     fun assertTempQueueCreationAttackFails(queue: String) {
         assertAttackFails(queue, "CREATE_NON_DURABLE_QUEUE") {
-            attacker.session.createTemporaryQueue(queue, queue)
+            attacker.session.createTemporaryQueue(queue, RoutingType.MULTICAST, queue)
         }
         // Double-check
         assertThatExceptionOfType(ActiveMQNonExistentQueueException::class.java).isThrownBy {
@@ -143,7 +144,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     fun assertNonTempQueueCreationAttackFails(queue: String, durable: Boolean) {
         val permission = if (durable) "CREATE_DURABLE_QUEUE" else "CREATE_NON_DURABLE_QUEUE"
         assertAttackFails(queue, permission) {
-            attacker.session.createQueue(queue, queue, durable)
+            attacker.session.createQueue(queue, RoutingType.MULTICAST, queue, durable)
         }
         // Double-check
         assertThatExceptionOfType(ActiveMQNonExistentQueueException::class.java).isThrownBy {

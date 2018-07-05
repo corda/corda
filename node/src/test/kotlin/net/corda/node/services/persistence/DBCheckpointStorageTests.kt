@@ -190,7 +190,7 @@ class DBCheckpointStorageTests {
             override fun call() {}
         }
         val frozenLogic = logic.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT)
-        val checkpoint = Checkpoint.create(InvocationContext.shell(), FlowStart.Explicit, logic.javaClass, frozenLogic, ALICE, "", SubFlowVersion.CoreFlow(version)).getOrThrow()
+        val checkpoint = Checkpoint.create(InvocationContext.shell(), FlowStart.Explicit, logic.javaClass, frozenLogic, ALICE, SubFlowVersion.CoreFlow(version)).getOrThrow()
         return id to checkpoint.serialize(context = SerializationDefaults.CHECKPOINT_CONTEXT)
     }
 

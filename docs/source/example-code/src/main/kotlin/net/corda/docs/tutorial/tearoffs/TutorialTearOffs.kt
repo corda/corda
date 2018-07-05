@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_VARIABLE")
+
 package net.corda.docs.tutorial.tearoffs
 
 import net.corda.core.contracts.Command

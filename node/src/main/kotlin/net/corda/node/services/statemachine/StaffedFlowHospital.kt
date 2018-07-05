@@ -2,6 +2,7 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
@@ -99,12 +100,6 @@ class StaffedFlowHospital {
     }
 
     private data class ConsultationReport(val error: Throwable, val diagnosis: Diagnosis, val by: List<Staff>)
-
-    /**
-     * The flow running in [flowFiber] has cleaned, possibly as a result of a flow hospital resume.
-     */
-    // It's okay for flows to be cleaned... we fix them now!
-    fun flowCleaned(flowFiber: FlowFiber) = Unit
 
     /**
      * The flow has been removed from the state machine.
