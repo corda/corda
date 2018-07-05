@@ -76,7 +76,7 @@ buildscript {
     ext.selenium_version = '3.8.1'
     ext.ghostdriver_version = '2.1.0'
     ext.eaagentloader_version = '1.0.3'
-    ext.curator_version = '4.0.0'
+    ext.curator_version = '4.0.1'
     ext.proguard_version = constants.getProperty('proguardVersion')
     ext.jsch_version = '0.1.54'
     ext.protonj_version = '0.27.1'
