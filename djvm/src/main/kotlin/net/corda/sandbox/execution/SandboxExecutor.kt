@@ -50,6 +50,16 @@ open class SandboxExecutor<in TInput, out TOutput>(
             runnableClass: ClassSource,
             input: TInput
     ): ExecutionSummaryWithResult<TOutput?> {
+        // 1. We first do a breath first traversal of the class hierarchy, starting from the requested class.
+        //    The branching is defined by class references from referencesFromLocation.
+        // 2. For each class we run validation against defined rules.
+        // 3. Since this is hitting the class loader, we are also remapping and rewriting the classes using the provided
+        //    emitters and definition providers.
+        // 4. While traversing and validating, we build up another queue of references inside the reference validator.
+        // 5. We drain this queue by validating references, this time including member references.
+        // 6. For execution, we then load the top-level class, implementing the SandboxedRunnable interface, again and
+        //    and consequently hit the cache. Once loaded, we can execute the code on the spawned thread, i.e., in an
+        //    isolated environment.
         logger.trace("Executing {} with input {}...", runnableClass, input)
         val classSources = listOf(runnableClass)
         val context = AnalysisContext.fromConfiguration(configuration.analysisConfiguration, classSources)
