@@ -81,10 +81,10 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
             return
         }
         val tlsCrlIssuerCert = validateAndGetTlsCrlIssuerCert()
-        if (tlsCrlIssuerCert == null && !config.crlCheckSoftFail) {
-            logger.error("""tlsCrlIssuerCert neither matches the root certificate nor is present in the truststore.
-                | The SSL communication will fail if the `crlCheckSoftFail` is set to false
-                | and the CRL issuer's certificate is not in the truststore. Corda node will now terminate...""".trimMargin())
+        if (tlsCrlIssuerCert == null && isTlsCrlIssuerCertRequired()) {
+            System.err.println("""tlsCrlIssuerCert config does not match the root certificate issuer and nor is there any other certificate in the trust store with a matching issuer.
+                | Please make sure the config is correct or that the correct certificate for the CRL issuer is added to the node's trust store.
+                | The node will now terminate.""".trimMargin())
             return
         }
 
@@ -103,7 +103,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
         }
         validateCertificates(keyPair.public, certificates)
         storePrivateKeyWithCertificates(nodeKeyStore, keyPair, certificates, keyAlias)
-        onSuccess(keyPair, certificates, tlsCrlIssuerCert?.let { X500Name.getInstance(it.subjectX500Principal.encoded) })
+        onSuccess(keyPair, certificates, tlsCrlIssuerCert?.let { it.subjectX500Principal.toX500Name() })
         // All done, clean up temp files.
         requestIdStore.deleteIfExists()
     }
@@ -228,6 +228,8 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
     protected open fun onSuccess(nodeCAKeyPair: KeyPair, certificates: List<X509Certificate>, tlsCrlCertificateIssuer: X500Name?) {}
 
     protected open fun validateAndGetTlsCrlIssuerCert(): X509Certificate? = null
+
+    protected open fun isTlsCrlIssuerCertRequired(): Boolean = false
 }
 
 class UnableToRegisterNodeWithDoormanException : IOException()
@@ -291,6 +293,10 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
         } else {
             null
         }
+    }
+
+    override fun isTlsCrlIssuerCertRequired(): Boolean {
+        return !config.tlsCertCrlIssuer.isNullOrEmpty()
     }
 
     private fun findMatchingCertificate(principal: X500Principal, trustStore: X509KeyStore): X509Certificate? {
