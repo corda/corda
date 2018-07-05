@@ -19,7 +19,6 @@ import joptsimple.OptionParser
 import joptsimple.OptionSet
 import joptsimple.util.EnumConverter
 import net.corda.core.internal.MigrationHelpers
-import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.schemas.MappedSchema
@@ -46,7 +45,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.jar.JarFile
 import javax.sql.DataSource
 
 //command line arguments
@@ -82,16 +80,18 @@ private fun initOptionParser(): OptionParser = OptionParser().apply {
     accepts(CONFIG, "The name of the config file. By default 'node.conf' for a simple node and 'network-management.conf' for a doorman.")
             .withOptionalArg()
 
-    accepts(DOORMAN_JAR_PATH, "The path to the doorman fat jar")
+    accepts(DOORMAN_JAR_PATH, "The path to the doorman JAR")
             .withOptionalArg()
 
-    accepts(RUN_MIGRATION,
+    val runMig = accepts(RUN_MIGRATION,
             "This option will run the db migration on the configured database. This is the only command that will actually write to the database.")
 
-    accepts(DRY_RUN, """Output the database migration to the specified output file.
+    val dryRun = accepts(DRY_RUN, """Output the database migration to the specified output file.
         |The output directory is the base-directory.
         |You can specify a file name or 'CONSOLE' if you want to send the output to the console.""".trimMargin())
-            .withOptionalArg()
+
+    dryRun.withOptionalArg()
+    dryRun.availableUnless(runMig)
 
     accepts(CREATE_MIGRATION_CORDAPP, """Create migration files for a CorDapp.
         |You can specify the fully qualified name of the `MappedSchema` class. If not specified it will generate the migration for all schemas that don't have migrations.
@@ -140,11 +140,14 @@ private fun runCommand(options: OptionSet, parser: OptionParser) {
             handleCommand(options, baseDirectory, config, mode, cordappLoader.appClassLoader, schemaService.schemaOptions.keys)
         }
         mode == Mode.DOORMAN -> {
+            if (!options.has(DOORMAN_JAR_PATH)) {
+                errorAndExit("The $DOORMAN_JAR_PATH argument is required when running in doorman mode.")
+            }
             val fatJarPath = Paths.get(options.valueOf(DOORMAN_JAR_PATH) as String)
             if (!fatJarPath.exists()) {
                 errorAndExit("Could not find the doorman jar in location: '$fatJarPath'.")
             }
-            val doormanClassloader = classLoaderFromCapsuleFatJar(fatJarPath)
+            val doormanClassloader = classLoaderFromJar(fatJarPath)
             val doormanSchema = "com.r3.corda.networkmanage.common.persistence.NetworkManagementSchemaServices\$SchemaV1"
             val schema = loadMappedSchema(doormanSchema, doormanClassloader)
             handleCommand(options, baseDirectory(), configFile("network-management.conf"), mode, doormanClassloader, setOf(schema))
@@ -211,18 +214,7 @@ private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: P
     }
 }
 
-//only used for capsule
-private fun classLoaderFromCapsuleFatJar(fatJarPath: Path): ClassLoader {
-    val dir = createTempDir()
-    dir.deleteOnExit()
-    val jarFile = JarFile(fatJarPath.toFile())
-    val jars = jarFile.entries().toList().filter { !it.isDirectory && it.name.endsWith("jar", ignoreCase = true) }.map { entry ->
-        val dest = File(dir, entry.name).toPath()
-        jarFile.getInputStream(entry).copyTo(dest)
-        dest
-    }
-    return URLClassLoader(jars.map { it.toUri().toURL() }.toTypedArray())
-}
+private fun classLoaderFromJar(jarPath: Path): ClassLoader = URLClassLoader(listOf(jarPath.toUri().toURL()).toTypedArray())
 
 private fun loadMappedSchema(schemaName: String, classLoader: ClassLoader) = classLoader.loadClass(schemaName).kotlin.objectInstance as MappedSchema
 
