@@ -16,6 +16,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.hibernate.Session
+import org.hibernate.query.NativeQuery
 import java.io.Serializable
 import java.sql.SQLTransientConnectionException
 import java.time.Duration
@@ -132,7 +133,7 @@ class RunOnceService(private val database: CordaPersistence, private val machine
 
     private fun insertMutualExclusion(session: Session) {
         val query = session.createNativeQuery("INSERT INTO $TABLE VALUES ('X', :machineName, :pid, CURRENT_TIMESTAMP, :version)", MutualExclusion::class.java)
-        query.unwrap(org.hibernate.SQLQuery::class.java).addSynchronizedEntityClass(MutualExclusion::class.java)
+        query.unwrap(NativeQuery::class.java).addSynchronizedEntityClass(MutualExclusion::class.java)
         query.setParameter("pid", pid)
         query.setParameter("machineName", machineName)
         query.setParameter("version", 0)

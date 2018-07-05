@@ -11,19 +11,19 @@
 package net.corda.behave.network
 
 import net.corda.behave.database.DatabaseType
-import net.corda.behave.file.*
-import net.corda.behave.monitoring.PatternWatch
+import net.corda.behave.file.LogSource
+import net.corda.behave.file.currentDirectory
+import net.corda.behave.file.stagingRoot
+import net.corda.behave.file.tmpDirectory
 import net.corda.behave.node.Distribution
 import net.corda.behave.node.Node
 import net.corda.behave.node.configuration.NotaryType
 import net.corda.behave.process.Command
 import net.corda.behave.process.JarCommand
 import net.corda.core.CordaException
-import net.corda.core.CordaRuntimeException
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
-import net.corda.core.utilities.seconds
 import java.io.Closeable
 import java.nio.file.Files
 import java.nio.file.Path
@@ -147,116 +147,8 @@ class Network private constructor(
      * using Local signing and "Auto Approval" mode
      */
     private fun bootstrapDoorman() {
-
         // TODO: rework how we use the Doorman/NMS (now these are a separate product / distribution)
         signalFailure("Bootstrapping a Corda Enterprise network using the Doorman is no longer supported; exiting ...")
-        return
-
-        // WARNING!! Need to use the correct bootstrapper
-        // only if using OS nodes (need to choose the latest version)
-        val r3node = nodes.values
-                .find { it.config.distribution.type == Distribution.Type.CORDA_ENTERPRISE } ?: throw CordaRuntimeException("Missing R3 distribution node")
-        val distribution = r3node.config.distribution
-
-        // Copy over reference configuration files used in bootstrapping
-        val source = doormanConfigDirectory
-        val doormanTargetDirectory = targetDirectory / "doorman"
-        source.toFile().copyRecursively(doormanTargetDirectory.toFile(), true)
-
-        // Use master version of Bootstrapper
-        val doormanJar = Distribution.R3_MASTER.doormanJar
-        log.info("DoormanJar URL: $doormanJar\n")
-
-        // 1. Create key stores for local signer
-
-        //  java -jar doorman-<version>.jar --mode ROOT_KEYGEN
-        log.info("Doorman target directory: $doormanTargetDirectory")
-        runCommand(JarCommand(doormanJar,
-                              arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf", "--mode", "ROOT_KEYGEN", "--trust-store-password", "password"),
-                              doormanTargetDirectory, timeout))
-
-        //  java -jar doorman-<version>.jar --mode CA_KEYGEN
-        runCommand(JarCommand(doormanJar,
-                              arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf", "--mode", "CA_KEYGEN"),
-                              doormanTargetDirectory, timeout))
-
-        // 2. Start the doorman service for notary registration
-        doormanNMS = JarCommand(doormanJar,
-                                        arrayOf("--config-file", "$doormanConfigDirectory/node-init.conf"),
-                                        doormanTargetDirectory, timeout)
-
-        val doormanCommand = runCommand(doormanNMS, noWait = true)
-        log.info("Waiting for DoormanNMS to be alive")
-
-        PatternWatch(doormanCommand.output, "Network management web services started on").await(30.seconds)
-        log.info("DoormanNMS up and running")
-
-        // Notary Nodes
-        val notaryNodes = nodes.values.filter { it.config.notary.notaryType != NotaryType.NONE }
-        notaryNodes.forEach { notaryNode ->
-            val notaryTargetDirectory = targetDirectory / notaryNode.config.name
-            log.info("Notary target directory: $notaryTargetDirectory")
-
-            // 3. Create notary node and register with the doorman
-            runCommand(JarCommand(distribution.cordaJar,
-                    arrayOf("--initial-registration",
-                            "--base-directory", "$notaryTargetDirectory",
-                            "--network-root-truststore", "../doorman/certificates/distribute-nodes/network-root-truststore.jks",
-                            "--network-root-truststore-password", "password"),
-                    notaryTargetDirectory, timeout))
-
-            // 4. Generate node info files for notary nodes
-            runCommand(JarCommand(distribution.cordaJar,
-                    arrayOf("--just-generate-node-info",
-                            "--base-directory", "$notaryTargetDirectory"),
-                    notaryTargetDirectory, timeout))
-
-            // cp (or ln -s) nodeInfo* notary-node-info
-            val nodeInfoFile = notaryTargetDirectory.toFile().listFiles { _, filename -> filename.matches("nodeInfo-.+".toRegex()) }.firstOrNull() ?: throw CordaRuntimeException("Missing notary nodeInfo file")
-
-            Files.copy(nodeInfoFile.toPath(), (notaryTargetDirectory / "notary-node-info"), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
-        }
-
-        // exit Doorman process
-        doormanCommand.interrupt()
-        doormanCommand.waitFor()
-
-        // 5. Add notary identities to the network parameters
-
-        // 6. Load initial network parameters file for network map service
-        val networkParamsConfig = if (notaryNodes.isEmpty()) "network-parameters-without-notary.conf" else "network-parameters.conf"
-        val updateNetworkParams = JarCommand(doormanJar,
-                                             arrayOf("--config-file", "$doormanTargetDirectory/node.conf", "--set-network-parameters", "$doormanTargetDirectory/$networkParamsConfig"),
-                                             doormanTargetDirectory, timeout)
-        runCommand(updateNetworkParams)
-
-        // 7. Start a fully configured Doorman / NMS
-        doormanNMS = JarCommand(doormanJar,
-                            arrayOf("--config-file", "$doormanConfigDirectory/node.conf"),
-                            doormanTargetDirectory, timeout)
-
-        val doormanNMSCommand = runCommand(doormanNMS, noWait = true)
-        log.info("Waiting for DoormanNMS to be alive")
-
-        PatternWatch(doormanNMSCommand.output, "Network management web services started on").await(30.seconds)
-        log.info("DoormanNMS up and running")
-
-        // 8. Register other participant nodes
-        val partyNodes = nodes.values.filter { it.config.notary.notaryType == NotaryType.NONE }
-        partyNodes.forEach { partyNode ->
-            val partyTargetDirectory = targetDirectory / partyNode.config.name
-            log.info("Party target directory: $partyTargetDirectory")
-
-            // 3. Create notary node and register with the doorman
-            runCommand(JarCommand(distribution.cordaJar,
-                    arrayOf("--initial-registration",
-                            "--network-root-truststore", "../doorman/certificates/distribute-nodes/network-root-truststore.jks",
-                            "--network-root-truststore-password", "password",
-                            "--base-directory", "$partyTargetDirectory"),
-                            partyTargetDirectory, timeout))
-        }
-
-        isDoormanNMSRunning = true
     }
 
     private fun runCommand(command: Command, noWait: Boolean = false): Command {
@@ -446,7 +338,7 @@ class Network private constructor(
                     val rpcProxyPortNo = node.config.nodeInterface.rpcProxy
                     val pid = Files.lines(tmpDirectory / "rpcProxy-pid-$rpcProxyPortNo").findFirst().get()
                     // TODO: consider generic implementation to support non *nix platforms
-                    Command(listOf("kill", "-9", "$pid")).run()
+                    Command(listOf("kill", "-9", pid)).run()
                     (tmpDirectory / "rpcProxy-pid-$rpcProxyPortNo").deleteIfExists()
                 }
                 catch (e: Exception) {

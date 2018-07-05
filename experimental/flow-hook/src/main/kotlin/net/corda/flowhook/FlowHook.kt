@@ -12,7 +12,7 @@ package net.corda.flowhook
 
 import java.lang.instrument.Instrumentation
 
-@Suppress("UNUSED")
+@Suppress("UNUSED", "UNUSED_PARAMETER")
 class FlowHookAgent {
     companion object {
         @JvmStatic
@@ -22,4 +22,3 @@ class FlowHookAgent {
         }
     }
 }
-

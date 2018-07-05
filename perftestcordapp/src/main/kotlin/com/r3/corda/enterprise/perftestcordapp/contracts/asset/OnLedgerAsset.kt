@@ -237,27 +237,6 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
          * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
          * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
          * the responsibility of the caller to check that they do not attempt to exit funds held by others.
-         * @return the public keys which must sign the transaction for it to be valid.
-         */
-        @Throws(InsufficientBalanceException::class)
-        @JvmStatic
-        @Deprecated("Replaced with generateExit() which takes in a party to pay change to")
-        fun <S : FungibleAsset<T>, T: Any> generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                                                        assetStates: List<StateAndRef<S>>,
-                                                        deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
-                                                        generateMoveCommand: () -> CommandData,
-                                                        generateExitCommand: (Amount<Issued<T>>) -> CommandData): Set<PublicKey> {
-            val owner = assetStates.map { it.state.data.owner }.toSet().firstOrNull() ?: throw InsufficientBalanceException(amountIssued)
-            return generateExit(tx, amountIssued, assetStates, owner, deriveState, generateMoveCommand, generateExitCommand)
-        }
-
-        /**
-         * Generate an transaction exiting fungible assets from the ledger.
-         *
-         * @param tx transaction builder to add states and commands to.
-         * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
-         * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
-         * the responsibility of the caller to check that they do not attempt to exit funds held by others.
          * @param payChangeTo party to pay any change to; this is normally a confidential identity of the calling
          * party.
          * @return the public keys which must sign the transaction for it to be valid.
@@ -330,31 +309,6 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
      * the responsibility of the caller to check that they do not exit funds held by others.
-     * @param payChangeTo party to pay any change to; this is normally a confidential identity of the calling
-     * party.
-     * @return the public keys which must sign the transaction for it to be valid.
-     */
-    @Throws(InsufficientBalanceException::class)
-    @Deprecated("Replaced with generateExit() which takes in a party to pay change to")
-    fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                     assetStates: List<StateAndRef<S>>): Set<PublicKey> {
-        return generateExit(
-                tx,
-                amountIssued,
-                assetStates,
-                deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
-                generateMoveCommand = { -> generateMoveCommand() },
-                generateExitCommand = { amount -> generateExitCommand(amount) }
-        )
-    }
-
-    /**
-     * Generate an transaction exiting assets from the ledger.
-     *
-     * @param tx transaction builder to add states and commands to.
-     * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
-     * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
-     * the responsibility of the caller to check that they do not exit funds held by others.
      * @return the public keys which must sign the transaction for it to be valid.
      */
     @Throws(InsufficientBalanceException::class)
@@ -367,8 +321,8 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
                 assetStates,
                 payChangeTo,
                 deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
-                generateMoveCommand = { -> generateMoveCommand() },
-                generateExitCommand = { amount -> generateExitCommand(amount) }
+                generateMoveCommand = { generateMoveCommand() },
+                generateExitCommand = { generateExitCommand(it) }
         )
     }
 

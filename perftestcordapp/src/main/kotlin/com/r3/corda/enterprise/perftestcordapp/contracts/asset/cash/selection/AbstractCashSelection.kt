@@ -14,22 +14,18 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.*
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
+import net.corda.core.internal.uncheckedCast
 import java.sql.*
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 /**
  * Pluggable interface to allow for different cash selection provider implementations
@@ -41,17 +37,17 @@ import kotlin.concurrent.withLock
 abstract class AbstractCashSelection(private val maxRetries: Int = 8, private val retrySleep: Int = 100,
                                      private val retryCap: Int = 2000) {
     companion object {
-        val instance = AtomicReference<AbstractCashSelection>()
+        private val instance = AtomicReference<AbstractCashSelection>()
 
         fun getInstance(metadata: () -> java.sql.DatabaseMetaData): AbstractCashSelection {
             return instance.get() ?: {
-                val _metadata = metadata()
+                val metadataResult = metadata()
                 val cashSelectionAlgos = ServiceLoader.load(AbstractCashSelection::class.java).toList()
-                val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(_metadata) }
+                val cashSelectionAlgo = cashSelectionAlgos.firstOrNull { it.isCompatible(metadataResult) }
                 cashSelectionAlgo?.let {
                     instance.set(cashSelectionAlgo)
                     cashSelectionAlgo
-                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($_metadata)." +
+                } ?: throw ClassNotFoundException("\nUnable to load compatible cash selection algorithm implementation for JDBC driver ($metadataResult)." +
                         "\nPlease specify an implementation in META-INF/services/${AbstractCashSelection::class.java}")
             }.invoke()
         }
@@ -84,7 +80,7 @@ abstract class AbstractCashSelection(private val maxRetries: Int = 8, private va
     abstract fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
                               onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean
 
-    override abstract fun toString(): String
+    abstract override fun toString(): String
 
     /**
      * Query to gather Cash states that are available and retry if they are temporarily unavailable.
@@ -149,7 +145,7 @@ abstract class AbstractCashSelection(private val maxRetries: Int = 8, private va
 
                 if (stateRefs.isNotEmpty()) {
                     // TODO: future implementation to retrieve contract states from a Vault BLOB store
-                    stateAndRefs.addAll(services.loadStates(stateRefs) as Collection<StateAndRef<Cash.State>>)
+                    stateAndRefs.addAll(uncheckedCast(services.loadStates(stateRefs)))
                 }
 
                 val success = stateAndRefs.isNotEmpty() && totalPennies >= amount.quantity

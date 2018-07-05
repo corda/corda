@@ -13,6 +13,9 @@ package com.r3.corda.enterprise.perftestcordapp.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.cash.selection.AbstractCashSelection
+import com.r3.corda.enterprise.perftestcordapp.flows.AbstractCashFlow.Companion.FINALISING_TX
+import com.r3.corda.enterprise.perftestcordapp.flows.AbstractCashFlow.Companion.GENERATING_TX
+import com.r3.corda.enterprise.perftestcordapp.flows.AbstractCashFlow.Companion.SIGNING_TX
 import com.r3.corda.enterprise.perftestcordapp.issuedBy
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
@@ -60,10 +63,13 @@ class CashExitFlow(private val amount: Amount<Currency>,
                 .getInstance { serviceHub.jdbcSession().metaData }
                 .unconsumedCashStatesForSpending(serviceHub, amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         val signers = try {
+            val changeOwner = exitStates.map { it.state.data.owner }.toSet().firstOrNull() ?: throw InsufficientBalanceException(amount)
             Cash().generateExit(
                     builder,
                     amount.issuedBy(issuer),
-                    exitStates)
+                    exitStates,
+                    changeOwner
+            )
         } catch (e: InsufficientBalanceException) {
             throw CashException("Exiting more cash than exists", e)
         }

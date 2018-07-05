@@ -25,13 +25,13 @@ import net.corda.testing.node.MockServices
 import org.apache.commons.io.FileUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.lang.reflect.Method
 import java.math.BigInteger
 import java.net.URL
 import javax.persistence.*
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
-
 
 class SchemaMigrationTest {
 
@@ -82,7 +82,7 @@ class SchemaMigrationTest {
 
         // check that the file was picked up
         val nrOfChangesOnDiscoveredFile = db.dataSource.connection.use {
-            it.createStatement().executeQuery("select count(*) from DATABASECHANGELOG where filename ='migration/${fileName}'").use { rs ->
+            it.createStatement().executeQuery("select count(*) from DATABASECHANGELOG where filename ='migration/$fileName'").use { rs ->
                 rs.next()
                 rs.getInt(1)
             }
@@ -102,9 +102,11 @@ class SchemaMigrationTest {
     }
 
     //hacky way to add a folder to the classpath
-    fun addToClassPath(file: Path) = URLClassLoader::class.java.getDeclaredMethod("addURL", URL::class.java).apply {
-        isAccessible = true
-        invoke(ClassLoader.getSystemClassLoader(), file.toFile().toURL())
+    private fun addToClassPath(file: Path): Method {
+        return URLClassLoader::class.java.getDeclaredMethod("addURL", URL::class.java).apply {
+            isAccessible = true
+            invoke(ClassLoader.getSystemClassLoader(), file.toUri().toURL())
+        }
     }
 
     object DummyTestSchema
@@ -116,9 +118,9 @@ class SchemaMigrationTest {
 
                 @ElementCollection
                 @Column(name = "participants")
-                @CollectionTable(name = "dummy_test_states_parts", joinColumns = arrayOf(
+                @CollectionTable(name = "dummy_test_states_parts", joinColumns = [
                         JoinColumn(name = "output_index", referencedColumnName = "output_index"),
-                        JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")))
+                        JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")])
                 override var participants: MutableSet<AbstractParty>? = null,
 
                 @Transient

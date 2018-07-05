@@ -14,12 +14,17 @@ import co.paralleluniverse.fibers.Suspendable
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.Cash
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.OnLedgerAsset
 import com.r3.corda.enterprise.perftestcordapp.contracts.asset.PartyAndAmount
+import com.r3.corda.enterprise.perftestcordapp.flows.AbstractCashFlow.Companion.FINALISING_TX
+import com.r3.corda.enterprise.perftestcordapp.flows.AbstractCashFlow.Companion.GENERATING_ID
+import com.r3.corda.enterprise.perftestcordapp.flows.AbstractCashFlow.Companion.GENERATING_TX
+import com.r3.corda.enterprise.perftestcordapp.flows.AbstractCashFlow.Companion.SIGNING_TX
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.*
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
@@ -51,7 +56,7 @@ class CashIssueAndDuplicatePayment(val amount: Amount<Currency>,
                 = txState.copy(data = txState.data.copy(amount = amt, owner = owner))
 
         val issueResult = subFlow(CashIssueFlow(amount, issueRef, notary))
-        val cashStateAndRef = serviceHub.loadStates(setOf(StateRef(issueResult.id, 0))).single() as StateAndRef<Cash.State>
+        val cashStateAndRef: StateAndRef<Cash.State> = uncheckedCast(serviceHub.loadStates(setOf(StateRef(issueResult.id, 0))).single())
 
         progressTracker.currentStep = GENERATING_ID
         val txIdentities = if (anonymous) {
@@ -74,7 +79,7 @@ class CashIssueAndDuplicatePayment(val amount: Amount<Currency>,
         val tx = serviceHub.signInitialTransaction(spendTx, keysForSigning)
 
         progressTracker.currentStep = FINALISING_TX
-        val notarised1 = finaliseTx(tx, setOf(recipient), "Unable to notarise spend first time")
+        finaliseTx(tx, setOf(recipient), "Unable to notarise spend first time")
         val notarised2 = finaliseTx(tx, setOf(recipient), "Unable to notarise spend second time")
 
         return Result(notarised2.id, recipient)

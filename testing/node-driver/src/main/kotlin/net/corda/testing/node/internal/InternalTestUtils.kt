@@ -146,16 +146,16 @@ internal interface InternalMockMessagingService : MessagingService {
  * @param nodeName Reflects the "instance" of the in-memory database or database username/schema.
  * Defaults to a random string. Passed to [configSupplier] and [fallBackConfigSupplier] methods.
  * @param nodeNameExtension Provides additional name extension for [configSupplier] and [fallBackConfigSupplier].
- * @param configSupplier Returns [Config] with dataSourceProperties, invoked with [nodeName] and [nodeNameExtension] parameters.
+ * @param configSupplier Returns [Config] with dataSourceProperties, invoked with [nodeName].
  * Defaults to configuration created when 'databaseProvider' system property is set.
  * @param fallBackConfigSupplier Returns [Config] with dataSourceProperties, invoked with [nodeName] and [nodeNameExtension] parameters.
  * Defaults to configuration of in-memory H2 instance.
  */
-fun makeTestDataSourceProperties(nodeName: String? = SecureHash.randomSHA256().toString(),
-                                 nodeNameExtension: String? = null,
-                                 configSupplier: (String?, String?) -> Config = ::databaseProviderDataSourceConfig,
-                                 fallBackConfigSupplier: (String?, String?) -> Config = ::inMemoryH2DataSourceConfig): Properties {
-    val config = configSupplier(nodeName, nodeNameExtension)
+fun makeInternalTestDataSourceProperties(nodeName: String? = SecureHash.randomSHA256().toString(),
+                                         nodeNameExtension: String? = null,
+                                         configSupplier: (String?) -> Config = ::databaseProviderDataSourceConfig,
+                                         fallBackConfigSupplier: (String?, String?) -> Config = ::inMemoryH2DataSourceConfig): Properties {
+    val config = configSupplier(nodeName)
             .withFallback(fallBackConfigSupplier(nodeName, nodeNameExtension))
             .resolve()
 
@@ -175,8 +175,8 @@ fun makeTestDataSourceProperties(nodeName: String? = SecureHash.randomSHA256().t
  * @param configSupplier Returns [Config] with databaseProperties, invoked with [nodeName] parameter.
  */
 fun makeTestDatabaseProperties(nodeName: String? = null,
-                               configSupplier: (String?, String?) -> Config = ::databaseProviderDataSourceConfig): DatabaseConfig {
-    val config = configSupplier(nodeName, null)
+                               configSupplier: (String?) -> Config = ::databaseProviderDataSourceConfig): DatabaseConfig {
+    val config = configSupplier(nodeName)
     val transactionIsolationLevel = if (config.hasPath(DatabaseConstants.TRANSACTION_ISOLATION_LEVEL))
         TransactionIsolationLevel.valueOf(config.getString(DatabaseConstants.TRANSACTION_ISOLATION_LEVEL))
     else TransactionIsolationLevel.READ_COMMITTED
@@ -188,11 +188,9 @@ fun makeTestDatabaseProperties(nodeName: String? = null,
  * Reads database and dataSource configuration from a file denoted by 'databaseProvider' system property,
  * overwritten by system properties and defaults to H2 in memory db.
  * @param nodeName Reflects the "instance" of the database username/schema, the value will be used to replace ${custom.nodeOrganizationName} placeholder
- * @param notUsed Not uses, required for API backward compatibility.
  * if the placeholder is present in config.
  */
-fun databaseProviderDataSourceConfig(nodeName: String? = null, notUsed: String? = null): Config {
-
+fun databaseProviderDataSourceConfig(nodeName: String? = null): Config {
     val parseOptions = ConfigParseOptions.defaults()
 
     val keys = listOf(DatabaseConstants.DATA_SOURCE_URL, DatabaseConstants.DATA_SOURCE_CLASSNAME,
@@ -218,11 +216,11 @@ fun databaseProviderDataSourceConfig(nodeName: String? = null, notUsed: String? 
 
 /**
  * Creates data source configuration for in memory H2 as it would be specified in reference.conf 'datasource' snippet.
- * @param nodeName Reflects the "instance" of the database username/schema
+ * @param providedNodeName Reflects the "instance" of the database username/schema
  * @param postfix Additional postix added to database "instance" name to add uniqueness when running integration tests.
  */
-fun inMemoryH2DataSourceConfig(nodeName: String? = null, postfix: String? = null) : Config {
-    val nodeName = nodeName ?: SecureHash.randomSHA256().toString()
+fun inMemoryH2DataSourceConfig(providedNodeName: String? = null, postfix: String? = null) : Config {
+    val nodeName = providedNodeName ?: SecureHash.randomSHA256().toString()
     val h2InstanceName = if (postfix != null) nodeName + "_" + postfix else nodeName
 
     return ConfigFactory.parseMap(mapOf(

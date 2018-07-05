@@ -21,7 +21,7 @@ import org.apache.activemq.artemis.core.io.buffer.TimedBuffer
 import java.sql.Connection
 import java.util.concurrent.TimeUnit
 
-@Suppress("UNUSED")
+@Suppress("UNUSED", "UNUSED_PARAMETER")
 object FlowHookContainer {
 
     @JvmStatic

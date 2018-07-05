@@ -246,7 +246,6 @@ class RunOnceServiceTest {
         assertEquals('X', result.id)
         assertEquals("machine1", result.machineName)
         assertEquals("123", result.pid)
-        assertTrue(result.timestamp is LocalDateTime)
         return result
     }
 
@@ -256,7 +255,6 @@ class RunOnceServiceTest {
         assertEquals('X', result.id)
         assertEquals("machine2", result.machineName)
         assertEquals("789", result.pid)
-        assertTrue(result.timestamp is LocalDateTime)
         return result
     }
 }

@@ -14,7 +14,6 @@ import net.corda.behave.database.DatabaseConnection
 import net.corda.behave.database.DatabaseType
 import net.corda.behave.file.LogSource
 import net.corda.behave.file.currentDirectory
-import net.corda.behave.file.stagingRoot
 import net.corda.behave.monitoring.PatternWatch
 import net.corda.behave.node.configuration.*
 import net.corda.behave.process.JarCommand
@@ -31,8 +30,8 @@ import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.minutes
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import org.apache.commons.io.FileUtils
 import java.net.InetAddress
@@ -45,7 +44,7 @@ import java.util.concurrent.CountDownLatch
  */
 class Node(
         val config: Configuration,
-        val rootDirectory: Path = currentDirectory,
+        private val rootDirectory: Path = currentDirectory,
         private val settings: ServiceSettings = ServiceSettings(),
         val rpcProxy: Boolean = false,
         val networkType: Distribution.Type
@@ -76,18 +75,6 @@ class Node(
     private var haveDependenciesStarted = false
 
     private var haveDependenciesStopped = false
-
-    fun describe(): String {
-        val network = config.nodeInterface
-        val database = config.database
-        return """
-            |Node Information: ${config.name}
-            | - P2P: ${network.host}:${network.p2pPort}
-            | - RPC: ${network.host}:${network.rpcPort}
-            | - SSH: ${network.host}:${network.sshPort}
-            | - DB:  ${network.host}:${database.port} (${database.type})
-            |""".trimMargin()
-    }
 
     fun configure() {
         if (isConfigured) { return }
@@ -162,10 +149,6 @@ class Node(
             e.printStackTrace()
             false
         }
-    }
-
-    val nodeInfoGenerationOutput: LogSource by lazy {
-        LogSource(logDirectory, "node-info-gen.log")
     }
 
     val logOutput: LogSource by lazy {
@@ -387,10 +370,11 @@ class Node(
             val name = name ?: error("Node name not set")
             val directory = directory ?: error("Runtime directory not set")
             // TODO: rework how we use the Doorman/NMS (now these are a separate product / distribution)
-            val compatibilityZoneURL = null
-                    if (networkType == Distribution.Type.CORDA_ENTERPRISE && System.getProperty("USE_NETWORK_SERVICES") != null)
-                        "http://localhost:1300"         // TODO: add additional USE_NETWORK_SERVICES_URL to specify location of existing operational environment to use.
-                    else null
+            val compatibilityZoneURL = if (networkType == Distribution.Type.CORDA_ENTERPRISE && System.getProperty("USE_NETWORK_SERVICES") != null) {
+                "http://localhost:1300"         // TODO: add additional USE_NETWORK_SERVICES_URL to specify location of existing operational environment to use.
+            } else {
+                null
+            }
             return Node(
                     Configuration(
                             name,

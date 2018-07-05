@@ -12,6 +12,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.openHttpConnection
 import net.corda.core.internal.responseAs
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
@@ -29,7 +30,6 @@ import java.time.Instant
 import javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM
 
 class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : CordaRPCOps {
-
     companion object {
         val log = contextLogger()
     }
@@ -47,7 +47,7 @@ class CordaRPCProxyClient(private val targetHostAndPort: NetworkHostAndPort) : C
         log.info("Corda RPC Proxy client calling: $flowName with values: $argList")
         val response = doPost<Any>(targetHostAndPort, "start-flow", argList.serialize().bytes)
         val result = doneFuture(response)
-        return FlowHandleImpl(StateMachineRunId.createRandom(), result) as FlowHandle<T>
+        return uncheckedCast(FlowHandleImpl(StateMachineRunId.createRandom(), result))
     }
 
     override fun nodeInfo(): NodeInfo {

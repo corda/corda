@@ -72,7 +72,7 @@ class ScenarioState {
 
     inline fun <T> withNetwork(action: ScenarioState.() -> T): T {
         ensureNetworkIsRunning()
-        return action()
+        return this.action()
     }
 
     inline fun <T> withClient(nodeName: String, crossinline action: (CordaRPCOps) -> T): T {

@@ -54,6 +54,12 @@
       <module name="contracts-states_test" target="1.8" />
       <module name="corda-core_integrationTest" target="1.8" />
       <module name="corda-core_smokeTest" target="1.8" />
+      <module name="corda-enterprise-testing_main" target="1.8" />
+      <module name="corda-enterprise-testing_test" target="1.8" />
+      <module name="corda-enterprise-tools_main" target="1.8" />
+      <module name="corda-enterprise-tools_test" target="1.8" />
+      <module name="corda-enterprise_main" target="1.8" />
+      <module name="corda-enterprise_test" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />
       <module name="corda-project-testing_main" target="1.8" />
       <module name="corda-project-testing_test" target="1.8" />
@@ -93,6 +99,7 @@
       <module name="demobench_main" target="1.8" />
       <module name="demobench_test" target="1.8" />
       <module name="dist_binFiles" target="1.8" />
+      <module name="dist_installerFiles" target="1.8" />
       <module name="dist_licenseFiles" target="1.8" />
       <module name="dist_main" target="1.8" />
       <module name="dist_readmeFiles" target="1.8" />

@@ -136,7 +136,7 @@ class IntegrationTestingTutorial : IntegrationTest() {
                         // move to Bob
                         parallel(
                                 (1..numberOfStates).map { i ->
-                                    expect(match = { it.moved() == i * 100 }) { update: Vault.Update<Cash.State> ->
+                                    expect(match = { it.moved() == i * 100 }) { _: Vault.Update<Cash.State> ->
                                     }
                                 }
                         ),
@@ -154,7 +154,7 @@ class IntegrationTestingTutorial : IntegrationTest() {
         }
     }
 
-    fun Vault.Update<Cash.State>.moved(): Int {
+    private fun Vault.Update<Cash.State>.moved(): Int {
         val consumedSum = consumed.sumBy { it.state.data.amount.quantity.toInt() }
         val producedSum = produced.sumBy { it.state.data.amount.quantity.toInt() }
         return consumedSum - producedSum

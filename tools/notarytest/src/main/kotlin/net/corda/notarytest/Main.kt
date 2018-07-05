@@ -16,9 +16,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.notarytest.service.JDBCLoadTestFlow
-import java.io.File
-import java.io.PrintWriter
-import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 /** The number of test flows to run on each notary node */
@@ -43,7 +40,7 @@ fun main(args: Array<String>) {
         CordaRPCClient(it).start(notaryDemoUser.username, notaryDemoUser.password).use {
             println(it.proxy.nodeInfo())
             val totalTime = Stopwatch.createStarted()
-            val durations = run(it.proxy, 1)
+            run(it.proxy, 1)
             totalTime.stop()
 
             val totalTx = TEST_RUNS * TRANSACTION_COUNT
@@ -64,14 +61,4 @@ private fun run(rpc: CordaRPCOps, inputStateCount: Int? = null): List<Long> {
         println("#$i: Duration: $flowDuration ms, commit duration: $commitDuration ms")
         flowDuration
     }
-}
-
-private fun printCSV(node: NetworkHostAndPort, durations: List<Long>, testRuns: Int, batchSize: Int) {
-    val pw = PrintWriter(File("notarytest-${Instant.now()}-${node.host}${node.port}-${testRuns}x$batchSize.csv"))
-    val sb = StringBuilder()
-    sb.append("$testRuns, $batchSize")
-    sb.append('\n')
-    sb.append(durations.joinToString())
-    pw.write(sb.toString())
-    pw.close()
 }

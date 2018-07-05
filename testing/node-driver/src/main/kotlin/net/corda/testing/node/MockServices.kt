@@ -11,9 +11,6 @@
 package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
@@ -34,9 +31,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.configureDatabase
 import net.corda.node.internal.cordapp.CordappLoader
-import net.corda.node.services.api.SchemaService
-import net.corda.node.services.api.VaultServiceInternal
-import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.schema.HibernateObserver
@@ -89,7 +83,7 @@ open class MockServices private constructor(
          */
         @JvmStatic
         fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
-            return makeTestDataSourceProperties(nodeName, null, ::databaseProviderDataSourceConfig, ::inMemoryH2DataSourceConfig)
+            return makeInternalTestDataSourceProperties(nodeName)
         }
 
         /**
@@ -109,7 +103,7 @@ open class MockServices private constructor(
                                             networkParameters: NetworkParameters = testNetworkParameters(),
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
             val cordappLoader = CordappLoader.createWithTestPackages(cordappPackages)
-            val dataSourceProps = makeTestDataSourceProperties(initialIdentity.name.organisation, SecureHash.randomSHA256().toString())
+            val dataSourceProps = makeInternalTestDataSourceProperties(initialIdentity.name.organisation, SecureHash.randomSHA256().toString())
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(initialIdentity.name.organisation), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
             val mockService = database.transaction {

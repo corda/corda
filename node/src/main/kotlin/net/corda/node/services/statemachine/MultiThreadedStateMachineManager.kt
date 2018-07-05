@@ -70,7 +70,7 @@ class MultiThreadedStateMachineManager(
         val checkpointStorage: CheckpointStorage,
         val executor: ExecutorService,
         val database: CordaPersistence,
-        val secureRandom: SecureRandom,
+        private val secureRandom: SecureRandom,
         private val unfinishedFibers: ReusableLatch = ReusableLatch(),
         private val classloader: ClassLoader = MultiThreadedStateMachineManager::class.java.classLoader
 ) : StateMachineManager, StateMachineManagerInternal {
@@ -158,7 +158,7 @@ class MultiThreadedStateMachineManager(
         }
         serviceHub.networkMapCache.nodeReady.then {
             resumeRestoredFlows(fibers)
-            flowMessaging.start { receivedMessage, deduplicationHandler ->
+            flowMessaging.start { _, deduplicationHandler ->
                 lifeCycle.requireState(State.STARTED, StateMachineStoppedException("Flow cannot be started. State machine is stopped.")) {
                     deliverExternalEvent(deduplicationHandler.externalCause)
                 }
@@ -306,10 +306,10 @@ class MultiThreadedStateMachineManager(
     }
 
     private fun checkQuasarJavaAgentPresence() {
-        check(SuspendableHelper.isJavaAgentActive(), {
+        check(SuspendableHelper.isJavaAgentActive()) {
             """Missing the '-javaagent' JVM argument. Make sure you run the tests with the Quasar java agent attached to your JVM.
                #See https://docs.corda.net/troubleshooting.html - 'Fiber classes not instrumented' for more details.""".trimMargin("#")
-        })
+        }
     }
 
     private fun decrementLiveFibers() {
@@ -324,8 +324,7 @@ class MultiThreadedStateMachineManager(
         return checkpointStorage.getAllCheckpoints().map { (id, serializedCheckpoint) ->
             // If a flow is added before start() then don't attempt to restore it
             if (concurrentBox.content.flows.containsKey(id)) return@map null
-            val checkpoint = deserializeCheckpoint(serializedCheckpoint)
-            if (checkpoint == null) return@map null
+            val checkpoint = deserializeCheckpoint(serializedCheckpoint) ?: return@map null
             createFlowFromCheckpoint(
                     id = id,
                     checkpoint = checkpoint,
@@ -440,7 +439,7 @@ class MultiThreadedStateMachineManager(
             val flowId = sessionToFlow[recipientId]
             if (flowId == null) {
                 deduplicationHandler.afterDatabaseTransaction()
-                if (sessionMessage.payload is EndSessionMessage) {
+                if (sessionMessage.payload === EndSessionMessage) {
                     logger.debug {
                         "Got ${EndSessionMessage::class.java.simpleName} for " +
                                 "unknown session $recipientId, discarding..."
@@ -537,12 +536,6 @@ class MultiThreadedStateMachineManager(
             isStartIdempotent: Boolean
     ): CordaFuture<FlowStateMachine<A>> {
         val flowId = StateMachineRunId.createRandom()
-        val deduplicationSeed = when (flowStart) {
-            FlowStart.Explicit -> flowId.uuid.toString()
-            is FlowStart.Initiated ->
-                "${flowStart.initiatingMessage.initiatorSessionId.toLong}-" +
-                        "${flowStart.initiatingMessage.initiationEntropy}"
-        }
 
         // Before we construct the state machine state by freezing the FlowLogic we need to make sure that lazy properties
         // have access to the fiber (and thereby the service hub)
@@ -553,7 +546,7 @@ class MultiThreadedStateMachineManager(
         val frozenFlowLogic = (flowLogic as FlowLogic<*>).serialize(context = checkpointSerializationContext!!)
 
         val flowCorDappVersion = FlowStateMachineImpl.createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
-        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, deduplicationSeed, flowCorDappVersion).getOrThrow()
+        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, flowCorDappVersion).getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
                 checkpoint = initialCheckpoint,
@@ -721,7 +714,7 @@ class MultiThreadedStateMachineManager(
     private fun addAndStartFlow(id: StateMachineRunId, flow: Flow) {
         val checkpoint = flow.fiber.snapshot().checkpoint
         for (sessionId in getFlowSessionIds(checkpoint)) {
-            sessionToFlow.put(sessionId, id)
+            sessionToFlow[sessionId] = id
         }
         concurrentBox.concurrent {
             val oldFlow = flows.put(id, flow)

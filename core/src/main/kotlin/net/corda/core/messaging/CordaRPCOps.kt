@@ -52,7 +52,7 @@ data class StateMachineInfo @JvmOverloads constructor(
          * An object representing information about the initiator of the flow. Note that this field is
          * superceded by the [invocationContext] property, which has more detail.
          */
-        @Deprecated("There is more info available using 'context'") val initiator: FlowInitiator,
+        @Deprecated("There is more info available using 'invocationContext'") val initiator: FlowInitiator,
         /** A [DataFeed] of the current progress step as a human readable string, and updates to that string. */
         val progressTrackerStepAndUpdates: DataFeed<String, String>?,
         /** An [InvocationContext] describing why and by whom the flow was started. */

@@ -40,7 +40,6 @@ class LinearStateBatchNotariseContract : Contract {
     }
 
     override fun verify(tx: LedgerTransaction) {
-        val command = tx.commands.requireSingleCommand<Commands>()
-        val timeWindow: TimeWindow? = tx.timeWindow
+        tx.commands.requireSingleCommand<Commands>()
     }
 }
