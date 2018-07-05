@@ -37,7 +37,7 @@ class NodeStatePersistenceTests {
     fun `persistent state survives node restart`() {
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(),
+        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(),
                 portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
@@ -70,7 +70,7 @@ class NodeStatePersistenceTests {
 
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
-        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
+        val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(isDebug = true, inMemoryDB = false, startNodesInProcess = isQuasarAgentSpecified(), portAllocation = RandomFree, extraCordappPackagesToScan = listOf(MessageState::class.packageName))) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
