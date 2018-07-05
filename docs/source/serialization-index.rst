@@ -2,7 +2,6 @@ Serialization
 =============
 
 .. toctree::
-
    :caption: Other docs
    :maxdepth: 1
 

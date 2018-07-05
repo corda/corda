@@ -12,6 +12,9 @@ Unreleased
   and within that file the ``bridgeMode`` propety has been modified to ``firewallMode`` for overall consistency.
   This will be a breaking change for early adopters and their deployments, but hopefully will be more future proof.
 
+* The Corda JPA entities no longer implement java.io.Serializable, as this was causing persistence errors in obscure cases.
+  Java serialization is disabled globally in the node, but in the unlikely event you were relying on these types being Java serializable please contact us.
+
 * Remove all references to the out-of-process transaction verification.
 
 * Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems related to database migrations before exiting with a non-zero code.

@@ -180,7 +180,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
 
     @Test
     fun `InputStream serialisation`() {
-        val rubbish = ByteArray(12345, { (it * it * 0.12345).toByte() })
+        val rubbish = ByteArray(12345) { (it * it * 0.12345).toByte() }
         val readRubbishStream: InputStream = rubbish.inputStream().serialize(factory, context).deserialize(factory, context)
         for (i in 0..12344) {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())
@@ -218,7 +218,7 @@ class KryoTests(private val compression: CordaSerializationEncoding?) {
 
     @Test
     fun `HashCheckingStream (de)serialize`() {
-        val rubbish = ByteArray(12345, { (it * it * 0.12345).toByte() })
+        val rubbish = ByteArray(12345) { (it * it * 0.12345).toByte() }
         val readRubbishStream: InputStream = NodeAttachmentService.HashCheckingStream(
                 SecureHash.sha256(rubbish),
                 rubbish.size,

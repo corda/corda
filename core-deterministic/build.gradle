@@ -86,7 +86,7 @@ task predeterminise(type: ProGuardTask) {
 
     keepattributes '*'
     keepdirectories
-    dontwarn '**$1$1'
+    dontwarn '**$1$1,org.hibernate.annotations.*'
     dontpreverify
     dontobfuscate
     dontoptimize
@@ -112,7 +112,11 @@ task jarFilter(type: JarFilterTask) {
             "net.corda.core.StubOutForDJVM"
         ]
         forRemove = [
-            "co.paralleluniverse.fibers.Suspendable"
+            "co.paralleluniverse.fibers.Suspendable",
+            "org.hibernate.annotations.Immutable"
+        ]
+        forSanitise = [
+            "net.corda.core.DeleteForDJVM"
         ]
     }
 }

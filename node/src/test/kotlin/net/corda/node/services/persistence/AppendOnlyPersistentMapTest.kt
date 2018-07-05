@@ -6,14 +6,12 @@ import net.corda.node.internal.configureDatabase
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import java.io.Serializable
 import java.util.concurrent.CountDownLatch
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -270,7 +268,7 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
 
             @Column(name = "value", length = 16)
             var value: String = ""
-    ) : Serializable
+    )
 
     class TestMap : AppendOnlyPersistentMap<Long, String, PersistentMapEntry, Long>(
             toPersistentEntityKey = { it },

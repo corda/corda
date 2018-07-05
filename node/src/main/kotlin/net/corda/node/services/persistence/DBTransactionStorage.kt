@@ -18,11 +18,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.SerializationDefaults
-import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
 import net.corda.core.toFuture
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -37,12 +33,7 @@ import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.subjects.PublishSubject
-import java.io.Serializable
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
-import javax.persistence.Table
+import javax.persistence.*
 
 // cache value type to just store the immutable bits of a signed transaction plus conversion helpers
 typealias TxCacheValue = Pair<SerializedBytes<CoreTransaction>, List<TransactionSignature>>
@@ -62,7 +53,7 @@ class DBTransactionStorage(cacheSizeBytes: Long, private val database: CordaPers
             @Lob
             @Column(name = "transaction_value", nullable = false)
             var transaction: ByteArray = EMPTY_BYTE_ARRAY
-    ) : Serializable
+    )
 
     private companion object {
         fun createTransactionsMap(maxSizeInBytes: Long)

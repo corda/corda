@@ -157,10 +157,6 @@ allprojects {
     apply plugin: 'org.owasp.dependencycheck'
     apply plugin: 'kotlin-allopen'
 
-    // This line works around a serious performance regression in the Kotlin 1.2.50 gradle plugin, it's fixed in 1.2.51
-    // TODO: Remove when we upgrade past Kotlin 1.2.51
-    inspectClassesForKotlinIC.enabled = false
-
     allOpen {
         annotations(
                 "javax.persistence.Entity",

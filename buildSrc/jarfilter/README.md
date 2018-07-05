@@ -59,6 +59,72 @@ task jarFilter(type: JarFilterTask) {
 You can specify as many annotations for each role as you like. The only constraint is that a given
 annotation cannot be assigned to more than one role.
 
+#### Removing unwanted default parameter values
+It is possible to assign non-deterministic expressions as default values for Kotlin constructors and functions. For
+example:
+```kotlin
+data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.randomUUID())
+```
+
+The Kotlin compiler will generate _two_ constructors in this case:
+```
+UniqueIdentifier(String?, UUID)
+UniqueIdentifier(String?, UUID, Int, DefaultConstructorMarker)
+```
+
+The first constructor is the primary constructor that we would expect (and which we'd like to keep), whereas the
+second is a public synthetic constructor that Kotlin applications invoke to handle the different combinations of
+default parameter values. Unfortunately, this synthetic constructor is therefore also part of the Kotlin ABI and
+so we _cannot_ rewrite the class like this to remove the default values:
+```kotlin
+// THIS REFACTOR WOULD BREAK THE KOTLIN ABI!
+data class UniqueIdentifier(val externalId: String?, val id: UUID) {
+    constructor(externalId: String?) : this(externalId, UUID.randomUUID())
+    constructor() : this(null)
+}
+```
+
+The refactored class would have the following constructors, and would require client applications to be recompiled:
+```
+UniqueIdentifier(String?, UUID)
+UniqueIdentifier(String?)
+UniqueIdentifier()
+```
+
+We therefore need to keep the default constructor parameters in order to preserve the ABI for the unfiltered code,
+which in turn means that `JarFilter` will need to delete only the synthetic constructor and leave the primary
+constructor intact. However, Kotlin does not currently allow us to annotate _specific_ constructors - see
+[KT-22524](https://youtrack.jetbrains.com/issue/KT-22524). Until it does, `JarFilter` will perform an initial
+"sanitising" pass over the JAR file to remove any unwanted annotations from the primary constructors. These unwanted
+annotations are configured in the `JarFilter` task definition:
+```gradle
+task jarFilter(type: JarFilterTask) {
+    ...
+    annotations {
+        ...
+        forSanitise = [
+            "org.testing.DeleteMe"
+        ]
+    }
+}
+```
+
+This allows us to annotate the `UniqueIdentifier` class like this:
+```kotlin
+data class UniqueIdentifier @DeleteMe constructor(val externalId: String? = null, val id: UUID = UUID.randomUUID())
+```
+
+to generate these constructors:
+```
+UniqueIdentifier(String?, UUID)
+@DeleteMe UniqueIdentifier(String?, UUID, Int, DefaultConstructorMarker)
+```
+
+We currently **do not** sanitise annotations from functions with default parameter values, although (in theory) these
+may also be non-deterministic. We will need to extend the sanitation pass to include such functions if/when the need
+arises. At the moment, deleting such functions _entirely_ is enough, whereas also deleting a primary constructor means
+that we can no longer create instances of that class either.
+
 ### The `MetaFixer` task
 The `MetaFixer` task updates the `@kotlin.Metadata` annotations by removing references to any functions,
 constructors, properties or nested classes that no longer exist in the byte-code. This is primarily to

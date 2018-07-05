@@ -12,6 +12,7 @@ Nodes
    clientrpc
    shell
    node-database
+   node-database-access-h2
    node-administration
    node-operations-upgrading
    node-operations-upgrade-cordapps

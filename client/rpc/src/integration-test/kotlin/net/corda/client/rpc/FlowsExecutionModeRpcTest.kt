@@ -54,7 +54,7 @@ class FlowsExecutionModeRpcTest : IntegrationTest() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"))
 
         val user = User("mark", "dadada", setOf(invokeRpc("setFlowsDrainingModeEnabled"), invokeRpc("isFlowsDrainingModeEnabled")))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = true)) {
+        driver(DriverParameters(isDebug = true, inMemoryDB = false, startNodesInProcess = true)) {
             val nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.chooseIdentity().name

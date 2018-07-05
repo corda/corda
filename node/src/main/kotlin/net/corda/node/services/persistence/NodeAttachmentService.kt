@@ -30,11 +30,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationToken
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SerializeAsTokenContext
-import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
@@ -48,22 +44,12 @@ import net.corda.nodeapi.internal.withContractsInJar
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
-import java.io.Serializable
 import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.CollectionTable
-import javax.persistence.Column
-import javax.persistence.ElementCollection
-import javax.persistence.Entity
-import javax.persistence.ForeignKey
-import javax.persistence.Id
-import javax.persistence.Index
-import javax.persistence.JoinColumn
-import javax.persistence.Lob
-import javax.persistence.Table
+import javax.persistence.*
 
 /**
  * Stores attachments using Hibernate to database.
@@ -125,7 +111,7 @@ class NodeAttachmentService(
             @CollectionTable(name = "${NODE_DATABASE_PREFIX}attachments_contracts", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
                     foreignKey = ForeignKey(name = "FK__ctr_class__attachments"))
             var contractClassNames: List<ContractClassName>? = null
-    ) : Serializable
+    )
 
     @VisibleForTesting
     var checkAttachmentsOnLoad = true
