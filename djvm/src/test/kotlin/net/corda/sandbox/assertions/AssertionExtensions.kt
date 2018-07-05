@@ -5,7 +5,7 @@ import net.corda.sandbox.code.Instruction
 import net.corda.sandbox.costing.RuntimeCostSummary
 import net.corda.sandbox.messages.MessageCollection
 import net.corda.sandbox.messages.Message
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.ClassHierarchy
 import net.corda.sandbox.references.Member
 import net.corda.sandbox.references.ReferenceMap
@@ -36,7 +36,7 @@ object AssertionExtensions {
     fun assertThat(references: ReferenceMap) =
             AssertiveReferenceMap(references)
 
-    inline fun <reified T> IterableAssert<Class>.hasClass(): IterableAssert<Class> = this
+    inline fun <reified T> IterableAssert<ClassRepresentation>.hasClass(): IterableAssert<ClassRepresentation> = this
             .`as`("HasClass(${T::class.java.name})")
             .anySatisfy {
                 assertThat(it.name).isEqualTo(TestBase.nameOf<T>())

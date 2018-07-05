@@ -175,7 +175,7 @@ class ClassHierarchyTest {
     private inline fun <reified T> clazz() =
             T::class.java.let {
                 val className = classModule.getBinaryClassName(it.name)
-                Class(0, 0, className, sourceFile = "${it.simpleName}.kt")
+                ClassRepresentation(0, 0, className, sourceFile = "${it.simpleName}.kt")
             }
 
     private inline fun <reified T, reified TSuper> clazzWithSuper() =
@@ -186,10 +186,10 @@ class ClassHierarchyTest {
                 val superClassName = TSuper::class.java.let {
                     classModule.getBinaryClassName(it.name)
                 }
-                Class(apiVersion, access, className, superClassName, sourceFile = "${it.simpleName}.kt")
+                ClassRepresentation(apiVersion, access, className, superClassName, sourceFile = "${it.simpleName}.kt")
             }
 
-    private fun Class.withMember(memberName: String, signature: String, generics: String = "") = this.apply {
+    private fun ClassRepresentation.withMember(memberName: String, signature: String, generics: String = "") = this.apply {
         memberModule.addToClass(this, Member(0, this.name, memberName, signature, generics))
     }
 

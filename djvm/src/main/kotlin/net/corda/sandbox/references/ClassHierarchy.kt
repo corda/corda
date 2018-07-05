@@ -8,11 +8,11 @@ import net.corda.sandbox.utilities.loggerFor
 class ClassHierarchy(
         private val classModule: ClassModule = ClassModule(),
         private val memberModule: MemberModule = MemberModule()
-) : Iterable<Class> {
+) : Iterable<ClassRepresentation> {
 
-    private val classMap = mutableMapOf<String, Class>()
+    private val classMap = mutableMapOf<String, ClassRepresentation>()
 
-    private val ancestorMap = mutableMapOf<String, List<Class>>()
+    private val ancestorMap = mutableMapOf<String, List<ClassRepresentation>>()
 
     /**
      * Add class to the class hierarchy. If the class already exists in the class hierarchy, the existing record will
@@ -20,7 +20,7 @@ class ClassHierarchy(
      *
      * @param clazz The class to add to the class hierarchy.
      */
-    fun add(clazz: Class) {
+    fun add(clazz: ClassRepresentation) {
         logger.trace("Adding type {} to hierarchy...", clazz)
         ancestorMap.clear()
         classMap[clazz.name] = clazz
@@ -92,7 +92,7 @@ class ClassHierarchy(
     /**
      * Get all ancestors of a class.
      */
-    private fun findAncestors(clazz: Class?): List<Class> {
+    private fun findAncestors(clazz: ClassRepresentation?): List<ClassRepresentation> {
         if (clazz == null) {
             return emptyList()
         }

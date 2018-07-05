@@ -54,15 +54,4 @@ class RuntimeCostSummary private constructor(
         "Sandbox [${it.name}] terminated due to excessive exception throwing"
     }
 
-    /**
-     * Get a summary of the accumulated costs.
-     */
-    val summary: Map<String, Long>
-        get() = mapOf(
-                "allocations" to allocationCost.value,
-                "invocations" to invocationCost.value,
-                "jumps" to jumpCost.value,
-                "throws" to throwCost.value
-        )
-
 }

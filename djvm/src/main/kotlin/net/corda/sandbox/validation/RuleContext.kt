@@ -3,7 +3,7 @@ package net.corda.sandbox.validation
 import net.corda.sandbox.analysis.AnalysisRuntimeContext
 import net.corda.sandbox.analysis.SourceLocation
 import net.corda.sandbox.analysis.Whitelist
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.ClassModule
 import net.corda.sandbox.references.Member
 import net.corda.sandbox.references.MemberModule
@@ -21,7 +21,7 @@ open class RuleContext(
     /**
      * The class currently being analysed.
      */
-    val clazz: Class
+    val clazz: ClassRepresentation
         get() = analysisContext.clazz
 
     /**

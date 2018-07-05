@@ -1,6 +1,6 @@
 package net.corda.sandbox.rules.implementation
 
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.rules.ClassRule
 import net.corda.sandbox.validation.RuleContext
 import org.objectweb.asm.Opcodes.*
@@ -11,7 +11,7 @@ import org.objectweb.asm.Opcodes.*
 @Suppress("unused")
 class DisallowUnsupportedApiVersions : ClassRule() {
 
-    override fun validate(context: RuleContext, clazz: Class) = context.validate {
+    override fun validate(context: RuleContext, clazz: ClassRepresentation) = context.validate {
         fail("Unsupported API version '${versionString(clazz.apiVersion)}'") given
                 (clazz.apiVersion !in supportedVersions)
     }

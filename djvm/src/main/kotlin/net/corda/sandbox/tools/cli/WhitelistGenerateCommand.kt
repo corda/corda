@@ -3,7 +3,7 @@ package net.corda.sandbox.tools.cli
 import net.corda.sandbox.analysis.AnalysisConfiguration
 import net.corda.sandbox.analysis.AnalysisContext
 import net.corda.sandbox.analysis.ClassAndMemberVisitor
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.Member
 import net.corda.sandbox.source.ClassSource
 import picocli.CommandLine.Command
@@ -27,22 +27,22 @@ class WhitelistGenerateCommand : CommandBase() {
     override fun handleCommand(): Boolean {
         val entries = mutableListOf<String>()
         val visitor = object : ClassAndMemberVisitor() {
-            override fun visitClass(clazz: Class): Class {
+            override fun visitClass(clazz: ClassRepresentation): ClassRepresentation {
                 entries.add(clazz.name)
                 return super.visitClass(clazz)
             }
 
-            override fun visitMethod(clazz: Class, method: Member): Member {
+            override fun visitMethod(clazz: ClassRepresentation, method: Member): Member {
                 visitMember(clazz, method)
                 return super.visitMethod(clazz, method)
             }
 
-            override fun visitField(clazz: Class, field: Member): Member {
+            override fun visitField(clazz: ClassRepresentation, field: Member): Member {
                 visitMember(clazz, field)
                 return super.visitField(clazz, field)
             }
 
-            private fun visitMember(clazz: Class, member: Member) {
+            private fun visitMember(clazz: ClassRepresentation, member: Member) {
                 entries.add("${clazz.name}.${member.memberName}:${member.signature}")
             }
         }

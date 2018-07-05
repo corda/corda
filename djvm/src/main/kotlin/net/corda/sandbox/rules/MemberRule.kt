@@ -1,7 +1,7 @@
 package net.corda.sandbox.rules
 
 import net.corda.sandbox.code.Instruction
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.Member
 import net.corda.sandbox.validation.RuleContext
 
@@ -18,7 +18,7 @@ abstract class MemberRule : Rule {
      */
     abstract fun validate(context: RuleContext, member: Member)
 
-    override fun validate(context: RuleContext, clazz: Class?, member: Member?, instruction: Instruction?) {
+    override fun validate(context: RuleContext, clazz: ClassRepresentation?, member: Member?, instruction: Instruction?) {
         // Only run validation step if applied to the class member itself.
         if (clazz != null && member != null && instruction == null) {
             validate(context, member)

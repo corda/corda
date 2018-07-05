@@ -4,7 +4,7 @@ import net.corda.sandbox.analysis.AnalysisConfiguration
 import net.corda.sandbox.analysis.ClassAndMemberVisitor
 import net.corda.sandbox.code.EmitterModule
 import net.corda.sandbox.code.Instruction
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.Member
 import net.corda.sandbox.rules.ClassRule
 import net.corda.sandbox.rules.InstructionRule
@@ -28,7 +28,7 @@ class RuleValidator(
     /**
      * Apply the set of rules to the traversed class and record any violations.
      */
-    override fun visitClass(clazz: Class): Class {
+    override fun visitClass(clazz: ClassRepresentation): ClassRepresentation {
         if (shouldBeProcessed(clazz.name)) {
             val context = RuleContext(currentAnalysisContext())
             Processor.processEntriesOfType<ClassRule>(rules, analysisContext.messages) {
@@ -41,7 +41,7 @@ class RuleValidator(
     /**
      * Apply the set of rules to the traversed method and record any violations.
      */
-    override fun visitMethod(clazz: Class, method: Member): Member {
+    override fun visitMethod(clazz: ClassRepresentation, method: Member): Member {
         if (shouldBeProcessed(clazz.name) && shouldBeProcessed(method.reference)) {
             val context = RuleContext(currentAnalysisContext())
             Processor.processEntriesOfType<MemberRule>(rules, analysisContext.messages) {
@@ -54,7 +54,7 @@ class RuleValidator(
     /**
      * Apply the set of rules to the traversed field and record any violations.
      */
-    override fun visitField(clazz: Class, field: Member): Member {
+    override fun visitField(clazz: ClassRepresentation, field: Member): Member {
         if (shouldBeProcessed(clazz.name) && shouldBeProcessed(field.reference)) {
             val context = RuleContext(currentAnalysisContext())
             Processor.processEntriesOfType<MemberRule>(rules, analysisContext.messages) {

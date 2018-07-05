@@ -62,7 +62,7 @@ class ClassModuleTest {
     private inline fun <reified T> clazz() =
             T::class.java.let {
                 val className = module.getBinaryClassName(it.name)
-                Class(0, 0, className, className, sourceFile = "${it.simpleName}.kt")
+                ClassRepresentation(0, 0, className, className, sourceFile = "${it.simpleName}.kt")
             }
 
 }

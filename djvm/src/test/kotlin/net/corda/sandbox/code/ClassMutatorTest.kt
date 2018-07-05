@@ -2,7 +2,7 @@ package net.corda.sandbox.code
 
 import net.corda.sandbox.TestBase
 import net.corda.sandbox.analysis.AnalysisRuntimeContext
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.Member
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -15,7 +15,7 @@ class ClassMutatorTest : TestBase() {
     fun `can mutate class definition`() {
         var hasProvidedDefinition = false
         val definitionProvider = object : ClassDefinitionProvider {
-            override fun define(context: AnalysisRuntimeContext, clazz: Class): Class {
+            override fun define(context: AnalysisRuntimeContext, clazz: ClassRepresentation): ClassRepresentation {
                 hasProvidedDefinition = true
                 return clazz.copy(access = clazz.access or ACC_STRICT)
             }

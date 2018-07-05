@@ -13,7 +13,7 @@ package net.corda.sandbox.references
  * @property members The set of fields and methods implemented in the class.
  * @property annotations The set of annotations applied to the class.
  */
-data class Class(
+data class ClassRepresentation(
         val apiVersion: Int,
         override val access: Int,
         val name: String,

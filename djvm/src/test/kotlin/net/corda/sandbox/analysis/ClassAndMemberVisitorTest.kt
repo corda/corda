@@ -10,7 +10,7 @@ import net.corda.sandbox.code.Instruction
 import net.corda.sandbox.code.instructions.MemberAccessInstruction
 import net.corda.sandbox.code.instructions.TryFinallyBlock
 import net.corda.sandbox.code.instructions.TypeInstruction
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.Member
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -20,9 +20,9 @@ class ClassAndMemberVisitorTest : TestBase() {
 
     @Test
     fun `can traverse classes`() {
-        val classesVisited = mutableSetOf<Class>()
+        val classesVisited = mutableSetOf<ClassRepresentation>()
         val visitor = object : ClassAndMemberVisitor() {
-            override fun visitClass(clazz: Class): Class {
+            override fun visitClass(clazz: ClassRepresentation): ClassRepresentation {
                 classesVisited.add(clazz)
                 return clazz
             }
@@ -48,7 +48,7 @@ class ClassAndMemberVisitorTest : TestBase() {
     fun `can traverse fields`() {
         val membersVisited = mutableSetOf<Member>()
         val visitor = object : ClassAndMemberVisitor() {
-            override fun visitField(clazz: Class, field: Member): Member {
+            override fun visitField(clazz: ClassRepresentation, field: Member): Member {
                 membersVisited.add(field)
                 return field
             }
@@ -78,7 +78,7 @@ class ClassAndMemberVisitorTest : TestBase() {
     fun `can traverse methods`() {
         val membersVisited = mutableSetOf<Member>()
         val visitor = object : ClassAndMemberVisitor() {
-            override fun visitMethod(clazz: Class, method: Member): Member {
+            override fun visitMethod(clazz: ClassRepresentation, method: Member): Member {
                 membersVisited.add(method)
                 return method
             }
@@ -103,7 +103,7 @@ class ClassAndMemberVisitorTest : TestBase() {
     fun `can traverse class annotations`() {
         val annotations = mutableSetOf<String>()
         val visitor = object : ClassAndMemberVisitor() {
-            override fun visitClassAnnotation(clazz: Class, descriptor: String) {
+            override fun visitClassAnnotation(clazz: ClassRepresentation, descriptor: String) {
                 annotations.add(descriptor)
             }
         }
@@ -121,7 +121,7 @@ class ClassAndMemberVisitorTest : TestBase() {
     fun `can traverse member annotations`() {
         val annotations = mutableSetOf<String>()
         val visitor = object : ClassAndMemberVisitor() {
-            override fun visitMemberAnnotation(clazz: Class, member: Member, descriptor: String) {
+            override fun visitMemberAnnotation(clazz: ClassRepresentation, member: Member, descriptor: String) {
                 annotations.add("${member.memberName}:$descriptor")
             }
         }
@@ -147,7 +147,7 @@ class ClassAndMemberVisitorTest : TestBase() {
     fun `can traverse class sources`() {
         val sources = mutableSetOf<String>()
         val visitor = object : ClassAndMemberVisitor() {
-            override fun visitSource(clazz: Class, source: String) {
+            override fun visitSource(clazz: ClassRepresentation, source: String) {
                 sources.add(source)
             }
         }

@@ -119,7 +119,7 @@ class ReferenceValidator(
     /**
      * Get a class from the class hierarchy by its binary name.
      */
-    private fun getClass(state: State, className: String): Class? {
+    private fun getClass(state: State, className: String): ClassRepresentation? {
         val name = if (configuration.classModule.isArray(className)) {
             val arrayType = arrayTypeExtractor.find(className)?.groupValues?.get(1)
             when (arrayType) {
@@ -168,13 +168,13 @@ class ReferenceValidator(
     /**
      * Check if a top-level class definition is considered safe or not.
      */
-    private fun isNonDeterministic(clazz: Class) =
+    private fun isNonDeterministic(clazz: ClassRepresentation) =
             getReasonFromEntity(clazz) != null
 
     /**
      * Derive what reason to give to the end-user for an invalid class.
      */
-    private fun getReasonFromEntity(clazz: Class): Reason? = when {
+    private fun getReasonFromEntity(clazz: ClassRepresentation): Reason? = when {
         configuration.whitelist.matches(clazz.name) -> null
         configuration.whitelist.inNamespace(clazz.name) -> Reason(Reason.Code.NOT_WHITELISTED)
         configuration.classModule.isNonDeterministic(clazz) -> Reason(Reason.Code.ANNOTATED)

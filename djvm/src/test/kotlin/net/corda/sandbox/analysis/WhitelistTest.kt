@@ -1,9 +1,10 @@
 package net.corda.sandbox.analysis
 
+import net.corda.sandbox.TestBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class WhitelistTest {
+class WhitelistTest : TestBase() {
 
     @Test
     fun `can determine when a class is whitelisted when namespace is covered`() {
@@ -24,7 +25,7 @@ class WhitelistTest {
 
     @Test
     fun `can determine when a class is whitelisted when namespace is not covered`() {
-        val whitelist = Whitelist.TEST
+        val whitelist = TEST_WHITELIST
         assertThat(whitelist.matches("org/junit/Test")).isTrue()
         assertThat(whitelist.matches("org/assertj/core/api/Assertions")).isTrue()
         assertThat(whitelist.matches("net/foo/bar/Baz")).isFalse()

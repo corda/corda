@@ -1,7 +1,7 @@
 package net.corda.sandbox.analysis
 
 import net.corda.sandbox.messages.MessageCollection
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.Member
 
 /**
@@ -14,7 +14,7 @@ import net.corda.sandbox.references.Member
  * @property configuration The configuration used in the analysis.
  */
 data class AnalysisRuntimeContext(
-        val clazz: Class,
+        val clazz: ClassRepresentation,
         val member: Member?,
         val location: SourceLocation,
         val messages: MessageCollection,

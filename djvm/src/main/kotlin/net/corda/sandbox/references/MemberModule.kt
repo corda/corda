@@ -9,7 +9,7 @@ class MemberModule : AnnotationModule() {
     /**
      * Add member definition to class.
      */
-    fun addToClass(clazz: Class, member: Member): Member {
+    fun addToClass(clazz: ClassRepresentation, member: Member): Member {
         clazz.members[getQualifyingIdentifier(member)] = member
         return member
     }
@@ -17,7 +17,7 @@ class MemberModule : AnnotationModule() {
     /**
      * Get member definition for class. Return `null` if the member does not exist.
      */
-    fun getFromClass(clazz: Class, memberName: String, signature: String): Member? {
+    fun getFromClass(clazz: ClassRepresentation, memberName: String, signature: String): Member? {
         return clazz.members[getQualifyingIdentifier(memberName, signature)]
     }
 

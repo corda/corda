@@ -1,7 +1,7 @@
 package net.corda.sandbox.code
 
 import net.corda.sandbox.analysis.AnalysisRuntimeContext
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 
 /**
  * A class definition provider is a hook for [ClassMutator], from where one can modify the name and meta-data of
@@ -17,6 +17,6 @@ interface ClassDefinitionProvider : DefinitionProvider {
      *
      * @return The updated class definition, or [clazz] if no changes are desired.
      */
-    fun define(context: AnalysisRuntimeContext, clazz: Class): Class
+    fun define(context: AnalysisRuntimeContext, clazz: ClassRepresentation): ClassRepresentation
 
 }

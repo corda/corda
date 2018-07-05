@@ -1,7 +1,7 @@
 package net.corda.sandbox.rules
 
 import net.corda.sandbox.code.Instruction
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.Member
 import net.corda.sandbox.validation.RuleContext
 
@@ -18,6 +18,6 @@ interface Rule {
      * @param member The class member to apply and validate this rule against, if any.
      * @param instruction The instruction to apply and validate this rule against, if any.
      */
-    fun validate(context: RuleContext, clazz: Class?, member: Member?, instruction: Instruction?)
+    fun validate(context: RuleContext, clazz: ClassRepresentation?, member: Member?, instruction: Instruction?)
 
 }

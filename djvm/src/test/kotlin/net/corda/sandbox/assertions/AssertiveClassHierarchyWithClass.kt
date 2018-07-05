@@ -1,6 +1,6 @@
 package net.corda.sandbox.assertions
 
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.ClassHierarchy
 import org.assertj.core.api.Assertions
 
@@ -9,7 +9,7 @@ open class AssertiveClassHierarchyWithClass(
         private val className: String
 ) : AssertiveClassHierarchy(hierarchy) {
 
-    private val clazz: Class
+    private val clazz: ClassRepresentation
         get() = hierarchy[className]!!
 
     fun withInterfaceCount(count: Int): AssertiveClassHierarchyWithClass {

@@ -112,22 +112,15 @@ open class Whitelist private constructor(
         /**
          * Default whitelist.
          */
-        val DEFAULT: Whitelist by lazy {
-            // TODO This is a snapshot of what's currently in our deterministic rt.jar build
-            // The plan is to strip down this to [Whitelist.MINIMAL] and fully rely on sandbox rule verification and
-            // runtime instrumentation.
-            val jdk = Whitelist.fromResource("jdk8-deterministic.dat.gz")
-            val kotlin = Whitelist.fromResource("kotlin-deterministic.dat.gz")
-            jdk + kotlin
-        }
-
-        /**
-         * Default whitelist used for testing.
-         */
-        val TEST = Whitelist.DEFAULT + setOf(
-                "^org/assertj/.*$".toRegex(),
-                "^org/junit/.*$".toRegex()
-        )
+        val DEFAULT: Whitelist
+            get() {
+                // TODO This is a snapshot of what's currently in our deterministic rt.jar build
+                // The plan is to strip down this to [Whitelist.MINIMAL] and fully rely on sandbox rule verification and
+                // runtime instrumentation.
+                val jdk = Whitelist.fromResource("jdk8-deterministic.dat.gz")
+                val kotlin = Whitelist.fromResource("kotlin-deterministic.dat.gz")
+                return jdk + kotlin
+            }
 
         /**
          * Classes and packages that should be left untouched.

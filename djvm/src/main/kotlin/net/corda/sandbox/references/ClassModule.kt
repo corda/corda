@@ -16,21 +16,21 @@ class ClassModule : AnnotationModule() {
     /**
      * Check if class is marked to be deterministic.
      */
-    fun isDeterministic(clazz: Class): Boolean {
+    fun isDeterministic(clazz: ClassRepresentation): Boolean {
         return isDeterministic(clazz.annotations)
     }
 
     /**
      * Check if class is marked to be non-deterministic.
      */
-    fun isNonDeterministic(clazz: Class): Boolean {
+    fun isNonDeterministic(clazz: ClassRepresentation): Boolean {
         return isNonDeterministic(clazz.annotations)
     }
 
     /**
      * Get the full source location for a class based on the package name and the source file.
      */
-    fun getFullSourceLocation(clazz: Class, source: String? = null): String {
+    fun getFullSourceLocation(clazz: ClassRepresentation, source: String? = null): String {
         val sourceFile = source ?: clazz.sourceFile
         return if ('/' in clazz.name) {
             "${clazz.name.substring(0, clazz.name.lastIndexOf('/'))}/$sourceFile"
@@ -150,7 +150,7 @@ class ClassModule : AnnotationModule() {
     /**
      * Get all classes referenced from a class definition.
      */
-    fun getClassReferencesFromClass(clazz: Class, derive: Boolean): List<String> {
+    fun getClassReferencesFromClass(clazz: ClassRepresentation, derive: Boolean): List<String> {
         val classes = (clazz.interfaces + clazz.superClass).filter(String::isNotBlank) +
                 getClassReferencesFromAnnotations(clazz.annotations, derive) +
                 getClassReferencesFromGenericsSignature(clazz.genericsDetails) +

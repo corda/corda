@@ -2,7 +2,7 @@ package net.corda.sandbox.code
 
 import net.corda.sandbox.analysis.AnalysisConfiguration
 import net.corda.sandbox.analysis.ClassAndMemberVisitor
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.Member
 import net.corda.sandbox.utilities.Processor
 import net.corda.sandbox.utilities.loggerFor
@@ -32,7 +32,7 @@ class ClassMutator(
      * Apply definition providers to a class. This can be used to update the name or definition (pertinent meta-data)
      * of the class itself.
      */
-    override fun visitClass(clazz: Class): Class {
+    override fun visitClass(clazz: ClassRepresentation): ClassRepresentation {
         var resultingClass = clazz
         Processor.processEntriesOfType<ClassDefinitionProvider>(definitionProviders, analysisContext.messages) {
             resultingClass = it.define(currentAnalysisContext(), resultingClass)
@@ -48,7 +48,7 @@ class ClassMutator(
      * Apply definition providers to a method. This can be used to update the name or definition (pertinent meta-data)
      * of a class member.
      */
-    override fun visitMethod(clazz: Class, method: Member): Member {
+    override fun visitMethod(clazz: ClassRepresentation, method: Member): Member {
         var resultingMethod = method
         Processor.processEntriesOfType<MemberDefinitionProvider>(definitionProviders, analysisContext.messages) {
             resultingMethod = it.define(currentAnalysisContext(), resultingMethod)
@@ -64,7 +64,7 @@ class ClassMutator(
      * Apply definition providers to a field. This can be used to update the name or definition (pertinent meta-data)
      * of a class member.
      */
-    override fun visitField(clazz: Class, field: Member): Member {
+    override fun visitField(clazz: ClassRepresentation, field: Member): Member {
         var resultingField = field
         Processor.processEntriesOfType<MemberDefinitionProvider>(definitionProviders, analysisContext.messages) {
             resultingField = it.define(currentAnalysisContext(), resultingField)

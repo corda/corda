@@ -42,6 +42,14 @@ open class TestBase {
         )
 
         /**
+         * Default whitelist used for testing.
+         */
+        val TEST_WHITELIST = Whitelist.DEFAULT + setOf(
+                "^org/assertj/.*$".toRegex(),
+                "^org/junit/.*$".toRegex()
+        )
+
+        /**
          * Get the full name of type [T].
          */
         inline fun <reified T> nameOf(prefix: String = "") =
@@ -102,7 +110,7 @@ open class TestBase {
         val definitionProviders = mutableListOf<DefinitionProvider>()
         val classSources = mutableListOf<ClassSource>()
         var executionProfile = ExecutionProfile.UNLIMITED
-        var whitelist = Whitelist.TEST
+        var whitelist = TEST_WHITELIST
         for (option in options) {
             when (option) {
                 is Rule -> rules.add(option)

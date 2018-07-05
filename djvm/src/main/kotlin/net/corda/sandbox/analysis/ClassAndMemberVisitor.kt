@@ -4,8 +4,8 @@ import net.corda.sandbox.code.EmitterModule
 import net.corda.sandbox.code.Instruction
 import net.corda.sandbox.code.instructions.*
 import net.corda.sandbox.messages.Message
-import net.corda.sandbox.references.Class
 import net.corda.sandbox.references.ClassReference
+import net.corda.sandbox.references.ClassRepresentation
 import net.corda.sandbox.references.Member
 import net.corda.sandbox.references.MemberReference
 import net.corda.sandbox.source.SourceClassLoader
@@ -32,7 +32,7 @@ open class ClassAndMemberVisitor(
     /**
      * Holds a link to the class currently being traversed.
      */
-    private var currentClass: Class? = null
+    private var currentClass: ClassRepresentation? = null
 
     /**
      * Holds a link to the member currently being traversed.
@@ -92,37 +92,37 @@ open class ClassAndMemberVisitor(
     /**
      * Extract information about the traversed class.
      */
-    open fun visitClass(clazz: Class): Class = clazz
+    open fun visitClass(clazz: ClassRepresentation): ClassRepresentation = clazz
 
     /**
      * Process class after it has been fully traversed and analyzed.
      */
-    open fun visitClassEnd(clazz: Class) {}
+    open fun visitClassEnd(clazz: ClassRepresentation) {}
 
     /**
      * Extract the meta-data indicating the source file of the traversed class (i.e., where it is compiled from).
      */
-    open fun visitSource(clazz: Class, source: String) {}
+    open fun visitSource(clazz: ClassRepresentation, source: String) {}
 
     /**
      * Extract information about the traversed class annotation.
      */
-    open fun visitClassAnnotation(clazz: Class, descriptor: String) {}
+    open fun visitClassAnnotation(clazz: ClassRepresentation, descriptor: String) {}
 
     /**
      * Extract information about the traversed member annotation.
      */
-    open fun visitMemberAnnotation(clazz: Class, member: Member, descriptor: String) {}
+    open fun visitMemberAnnotation(clazz: ClassRepresentation, member: Member, descriptor: String) {}
 
     /**
      * Extract information about the traversed method.
      */
-    open fun visitMethod(clazz: Class, method: Member): Member = method
+    open fun visitMethod(clazz: ClassRepresentation, method: Member): Member = method
 
     /**
      * Extract information about the traversed field.
      */
-    open fun visitField(clazz: Class, field: Member): Member = field
+    open fun visitField(clazz: ClassRepresentation, field: Member): Member = field
 
     /**
      * Extract information about the traversed instruction.
@@ -155,7 +155,7 @@ open class ClassAndMemberVisitor(
      */
     private fun visitMemberAnnotation(
             descriptor: String,
-            referencedClass: Class? = null,
+            referencedClass: ClassRepresentation? = null,
             referencedMember: Member? = null
     ) {
         val clazz = (referencedClass ?: currentClass) ?: return
@@ -226,7 +226,7 @@ open class ClassAndMemberVisitor(
         ) {
             val superClassName = superName ?: ""
             val interfaceNames = interfaces?.toMutableList() ?: mutableListOf()
-            Class(version, access, name, superClassName, interfaceNames, genericsDetails = signature ?: "").also {
+            ClassRepresentation(version, access, name, superClassName, interfaceNames, genericsDetails = signature ?: "").also {
                 currentClass = it
                 currentMember = null
                 sourceLocation = SourceLocation(
@@ -292,7 +292,6 @@ open class ClassAndMemberVisitor(
                 access: Int, name: String, desc: String, signature: String?, exceptions: Array<out String>?
         ): MethodVisitor? {
             var visitedMember: Member? = null
-            var processMember = true
             val clazz = currentClass!!
             val member = Member(access, clazz.name, name, desc, signature ?: "")
             currentMember = member
@@ -301,7 +300,7 @@ open class ClassAndMemberVisitor(
                     signature = desc,
                     lineNumber = 0
             )
-            processMember = captureExceptions {
+            val processMember = captureExceptions {
                 visitedMember = visitMethod(clazz, member)
             }
             configuration.memberModule.addToClass(clazz, visitedMember ?: member)
@@ -327,7 +326,6 @@ open class ClassAndMemberVisitor(
                 access: Int, name: String, desc: String, signature: String?, value: Any?
         ): FieldVisitor? {
             var visitedMember: Member? = null
-            var processMember = true
             val clazz = currentClass!!
             val member = Member(access, clazz.name, name, desc, "", value = value)
             currentMember = member
@@ -336,7 +334,7 @@ open class ClassAndMemberVisitor(
                     signature = desc,
                     lineNumber = 0
             )
-            processMember = captureExceptions {
+            val processMember = captureExceptions {
                 visitedMember = visitField(clazz, member)
             }
             configuration.memberModule.addToClass(clazz, visitedMember ?: member)

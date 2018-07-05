@@ -7,7 +7,7 @@ import net.corda.sandbox.code.EmitterContext
 import net.corda.sandbox.code.Instruction
 import net.corda.sandbox.code.instructions.MemberAccessInstruction
 import net.corda.sandbox.code.instructions.TypeInstruction
-import net.corda.sandbox.references.Class
+import net.corda.sandbox.references.ClassRepresentation
 import org.objectweb.asm.Opcodes
 import java.lang.reflect.Modifier
 
@@ -18,7 +18,7 @@ import java.lang.reflect.Modifier
 @Suppress("unused")
 class AlwaysInheritFromSandboxedObject : ClassDefinitionProvider, Emitter {
 
-    override fun define(context: AnalysisRuntimeContext, clazz: Class) = when {
+    override fun define(context: AnalysisRuntimeContext, clazz: ClassRepresentation) = when {
         isDirectSubClassOfObject(context.clazz) -> clazz.copy(superClass = SANDBOX_OBJECT_NAME)
         else -> clazz
     }
@@ -42,7 +42,7 @@ class AlwaysInheritFromSandboxedObject : ClassDefinitionProvider, Emitter {
         }
     }
 
-    private fun isDirectSubClassOfObject(clazz: Class): Boolean {
+    private fun isDirectSubClassOfObject(clazz: ClassRepresentation): Boolean {
         // Check if the super class is java.lang.Object and that current class is not sandbox.java.lang.Object.
         val isClass = !Modifier.isInterface(clazz.access)
         return isClass && isObject(clazz.superClass) && clazz.name != SANDBOX_OBJECT_NAME
