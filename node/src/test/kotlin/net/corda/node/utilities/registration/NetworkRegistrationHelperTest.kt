@@ -61,6 +61,7 @@ class NetworkRegistrationHelperTest {
             doReturn("").whenever(it).emailAddress
             doReturn(null).whenever(it).tlsCertCrlDistPoint
             doReturn(null).whenever(it).tlsCertCrlIssuer
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
     }
 

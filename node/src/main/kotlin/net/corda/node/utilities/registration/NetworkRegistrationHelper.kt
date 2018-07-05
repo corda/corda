@@ -82,8 +82,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
         }
         val tlsCrlIssuerCert = validateAndGetTlsCrlIssuerCert()
         if (tlsCrlIssuerCert == null && !config.crlCheckSoftFail) {
-            logger.error("""The CRL issuer for the TLS certificate neither matches the root certificate nor
-                | is present in the truststore.
+            logger.error("""tlsCrlIssuerCert neither matches the root certificate nor is present in the truststore.
                 | The SSL communication will fail if the `crlCheckSoftFail` is set to false
                 | and the CRL issuer's certificate is not in the truststore. Corda node will now terminate...""".trimMargin())
             return
@@ -282,6 +281,7 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
     }
 
     override fun validateAndGetTlsCrlIssuerCert(): X509Certificate? {
+        config.tlsCertCrlIssuer ?: return null
         val tlsCertCrlIssuerPrincipal = X500Principal(config.tlsCertCrlIssuer)
         if (principalMatchesCertificatePrincipal(tlsCertCrlIssuerPrincipal, rootCert)) {
             return rootCert

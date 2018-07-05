@@ -3,7 +3,7 @@ package net.corda.core.identity
 import com.google.common.collect.ImmutableSet
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.LegalNameValidator
-import net.corda.core.internal.attributesMap
+import net.corda.core.internal.toAttributesMap
 import net.corda.core.internal.unspecifiedCountry
 import net.corda.core.internal.x500Name
 import net.corda.core.serialization.CordaSerializable
@@ -83,16 +83,13 @@ data class CordaX500Name(val commonName: String?,
 
         @JvmStatic
         fun build(principal: X500Principal): CordaX500Name {
-            val attrsMap = principal.attributesMap(supportedAttributes)
+            val attrsMap = principal.toAttributesMap(supportedAttributes)
             val CN = attrsMap[BCStyle.CN]?.toString()
             val OU = attrsMap[BCStyle.OU]?.toString()
-            val O = attrsMap[BCStyle.O]?.toString()
-                    ?: throw IllegalArgumentException("Corda X.500 names must include an O attribute")
-            val L = attrsMap[BCStyle.L]?.toString()
-                    ?: throw IllegalArgumentException("Corda X.500 names must include an L attribute")
+            val O = requireNotNull(attrsMap[BCStyle.O]?.toString()) { "Corda X.500 names must include an O attribute" }
+            val L = requireNotNull(attrsMap[BCStyle.L]?.toString()) { "Corda X.500 names must include an L attribute" }
             val ST = attrsMap[BCStyle.ST]?.toString()
-            val C = attrsMap[BCStyle.C]?.toString()
-                    ?: throw IllegalArgumentException("Corda X.500 names must include an C attribute")
+            val C = requireNotNull(attrsMap[BCStyle.C]?.toString()) { "Corda X.500 names must include an C attribute" }
             return CordaX500Name(CN, OU, O, L, ST, C)
         }
 

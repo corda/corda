@@ -29,6 +29,7 @@ val CordaX500Name.x500Name: X500Name
         ))
     }
 
+// The order of this list is fixed. Do NOT change it.
 private val X500_NAME_PARTS = listOf(
         BCStyle.C,
         BCStyle.ST,
@@ -63,9 +64,18 @@ private val X500_NAME_PARTS = listOf(
         BCStyle.TELEPHONE_NUMBER,
         BCStyle.NAME)
 
+/**
+ * Translates the X500Principal instance to the X500Name object. Additionally, it sorts the X500 name parts in the order
+ * imposed by the X500_NAME_PARTS list.
+ */
 fun X500Principal.toOrderedX500Name(supportedAttributes: Set<ASN1ObjectIdentifier> = emptySet()): X500Name {
-    return buildOrderedX500Name(this.attributesMap(supportedAttributes))
+    return buildOrderedX500Name(this.toAttributesMap(supportedAttributes))
 }
+
+/**
+ * Translates the X500Principal instance to the X500Name object.
+ */
+fun X500Principal.toX500Name() = X500Name.getInstance(this.encoded)
 
 private fun buildOrderedX500Name(attributes: Map<ASN1ObjectIdentifier, ASN1Encodable?>): X500Name {
     return X500NameBuilder(BCStyle.INSTANCE).apply {
@@ -78,7 +88,16 @@ private fun buildOrderedX500Name(attributes: Map<ASN1ObjectIdentifier, ASN1Encod
     }.build()
 }
 
-fun X500Principal.attributesMap(supportedAttributes: Set<ASN1ObjectIdentifier> = emptySet()): Map<ASN1ObjectIdentifier, ASN1Encodable> {
+/**
+ * Transforms the X500Principal to the attributes map.
+ *
+ * @param supportedAttributes list of supported attributes. If empty, it accepts all the attributes.
+ *
+ * @return attributes map for this principal
+ * @throws IllegalArgumentException if this principal consists of duplicated attributes or the attribute is not supported.
+ *
+ */
+fun X500Principal.toAttributesMap(supportedAttributes: Set<ASN1ObjectIdentifier> = emptySet()): Map<ASN1ObjectIdentifier, ASN1Encodable> {
     val x500Name = X500Name.getInstance(this.encoded)
     val attrsMap: Map<ASN1ObjectIdentifier, ASN1Encodable> = x500Name.rdNs
             .flatMap { it.typesAndValues.asList() }
@@ -98,7 +117,6 @@ fun X500Principal.attributesMap(supportedAttributes: Set<ASN1ObjectIdentifier> =
     return attrsMap
 }
 
-@Suppress("unused")
 @VisibleForTesting
 val CordaX500Name.Companion.unspecifiedCountry
     get() = "ZZ"
