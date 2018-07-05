@@ -17,4 +17,4 @@ data class BrokerAddresses(val primary: NetworkHostAndPort, private val adminArg
     val admin = adminArg ?: primary
 }
 
-fun Errors.NativeIoException.isBindingError() = message?.contains("Address already in use") ?: false
+fun java.io.IOException.isBindingError() = message?.contains("Address already in use") ?: false
