@@ -15,7 +15,6 @@ import org.junit.Test
 import rx.observers.TestSubscriber
 
 class CommandTests {
-
     @Test
     fun `successful command returns zero`() {
         val exitCode = Command(listOf("ls", "/")).run()

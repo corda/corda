@@ -16,7 +16,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.LazyPool
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import org.apache.jmeter.config.Argument
 import org.apache.jmeter.config.Arguments
 import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient
@@ -27,7 +27,7 @@ import java.util.*
 /**
  * Do most of the work for firing flow start requests via RPC at a Corda node.
  */
-abstract class BaseFlowSampler() : AbstractJavaSamplerClient() {
+abstract class BaseFlowSampler : AbstractJavaSamplerClient() {
     companion object {
         private data class RPCParams(val address: NetworkHostAndPort, val user: String, val password: String)
         private data class RPCClient(val rpcClient: CordaRPCClient, val rpcConnection: CordaRPCConnection, val ops: CordaRPCOps)
@@ -40,7 +40,7 @@ abstract class BaseFlowSampler() : AbstractJavaSamplerClient() {
 
         val allArgs = setOf(label, host, port, username, password)
 
-        val log = loggerFor<BaseFlowSampler>()
+        val log = contextLogger()
 
         private val rpcClientPools = Collections.synchronizedMap(mutableMapOf<RPCParams, LazyPool<RPCClient>>())
     }
@@ -48,7 +48,7 @@ abstract class BaseFlowSampler() : AbstractJavaSamplerClient() {
     private var rpcParams: RPCParams? = null
     private var rpcPool: LazyPool<RPCClient>? = null
 
-    var labelValue: String? = null
+    private var labelValue: String? = null
 
     override fun getDefaultParameters(): Arguments {
         // Add copies of all args, since they seem to be mutable.
@@ -70,7 +70,7 @@ abstract class BaseFlowSampler() : AbstractJavaSamplerClient() {
             labelValue = null
         }
         rpcPool = rpcClientPools.computeIfAbsent(rpcParams) {
-            LazyPool<RPCClient> {
+            LazyPool {
                 val rpcClient = CordaRPCClient(it.address)
                 val rpcConnection = rpcClient.start(it.user, it.password)
                 val rpcProxy = rpcConnection.proxy
@@ -98,14 +98,14 @@ abstract class BaseFlowSampler() : AbstractJavaSamplerClient() {
             try {
                 val flowResult = handle.returnValue.get()
                 result.sampleEnd()
-                return result.apply {
+                result.apply {
                     isSuccessful = true
                     additionalFlowResponseProcessing(context, this, flowResult)
                 }
             } catch (e: Exception) {
                 result.sampleEnd()
                 e.printStackTrace()
-                return result.apply {
+                result.apply {
                     isSuccessful = false
                     additionalFlowResponseProcessing(context, this, e)
                 }

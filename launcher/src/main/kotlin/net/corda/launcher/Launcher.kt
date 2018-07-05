@@ -8,7 +8,6 @@ import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
-
     if (args.isEmpty()) {
         println("Usage: launcher <main-class-name> [args]")
         exitProcess(0)
@@ -54,15 +53,14 @@ fun main(args: Array<String>) {
 @Suppress("unchecked")
 private fun fixBaseDirArg(args: Array<String>, nodeBaseDirFromArgs: Path): Array<String> {
     val baseDirIdx = args.indexOf("--base-directory")
-    if (baseDirIdx != -1){
-        args[baseDirIdx+1] = nodeBaseDirFromArgs.toString()
-        return args
+    return if (baseDirIdx != -1) {
+        // Replace the arg that follows, i.e. --base-directory X
+        // TODO This will not work for --base-directory=X
+        args[baseDirIdx + 1] = nodeBaseDirFromArgs.toString()
+        args
+    } else {
+        args + listOf("--base-directory", nodeBaseDirFromArgs.toString())
     }
-
-    val argsWithBaseDir = args.copyOf(args.size + 2)
-    argsWithBaseDir[argsWithBaseDir.lastIndex - 1] = "--base-directory"
-    argsWithBaseDir[argsWithBaseDir.lastIndex] = nodeBaseDirFromArgs.toString()
-    return argsWithBaseDir as Array<String>
 }
 
 private fun setupClassLoader(nodeBaseDir: Path): ClassLoader {

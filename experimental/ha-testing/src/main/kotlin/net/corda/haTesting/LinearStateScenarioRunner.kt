@@ -11,13 +11,11 @@ import java.util.concurrent.Callable
 
 // Responsible for executing test scenario for a single node executing `LinearStateBatchNotariseFlow` and verifying the results
 class LinearStateScenarioRunner(options: OptionSet) : AbstractScenarioRunner(options), Callable<Boolean> {
-
     companion object {
         private val logger = contextLogger()
     }
 
     override fun call(): Boolean {
-
         scenarioInitialized()
 
         try {
@@ -42,6 +40,7 @@ class LinearStateScenarioRunner(options: OptionSet) : AbstractScenarioRunner(opt
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun verifyResultsAndStatesTally(results: MutableList<LinearStateBatchNotariseFlow.Result>, states: Vault.Page<LinearStateBatchNotariseContract.State>): Boolean {
         // Unfortunately, there is absolutely nothing in `LinearStateBatchNotariseFlow.Result` which can link it to the original transaction
         return true

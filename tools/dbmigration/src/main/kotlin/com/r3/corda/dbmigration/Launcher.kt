@@ -179,7 +179,7 @@ private fun handleCommand(options: OptionSet, baseDirectory: Path, configFile: P
         options.has(DRY_RUN) -> {
             val writer = getMigrationOutput(baseDirectory, options)
             migrationLogger.info("Exporting the current db migrations ...")
-            runMigrationCommand { migration, dataSource ->
+            runMigrationCommand { migration, _ ->
                 migration.generateMigrationScript(writer)
             }
         }
@@ -232,7 +232,7 @@ private fun runWithDataSource(config: Configuration, baseDirectory: Path, classL
     val jarDirs = config.jarDirs.map { Paths.get(it) }
     for (jarDir in jarDirs) {
         if (!jarDir.exists()) {
-            errorAndExit("Could not find the configured JDBC driver directory: '${jarDir}'.")
+            errorAndExit("Could not find the configured JDBC driver directory: '$jarDir'.")
         }
     }
 
@@ -244,7 +244,7 @@ private fun runWithDataSource(config: Configuration, baseDirectory: Path, classL
         errorAndExit("""Failed to create datasource.
             |Please check that the correct JDBC driver is installed in one of the following folders:
             |${(driversFolder + jarDirs).joinToString("\n\t - ", "\t - ")}
-            |Caused By ${e}""".trimMargin(), e)
+            |Caused By $e""".trimMargin(), e)
     }
 }
 

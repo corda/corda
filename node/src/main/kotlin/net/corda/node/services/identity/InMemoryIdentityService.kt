@@ -34,7 +34,7 @@ import javax.annotation.concurrent.ThreadSafe
  */
 // TODO There is duplicated logic between this and PersistentIdentityService
 @ThreadSafe
-class InMemoryIdentityService(identities: List<out PartyAndCertificate> = emptyList(),
+class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(),
                               override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
     companion object {
         private val log = contextLogger()

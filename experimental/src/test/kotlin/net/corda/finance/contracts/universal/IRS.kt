@@ -24,13 +24,12 @@ class IRS {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 
-    val notional = 50.M
-    val currency = EUR
+    private val testTxTime1: Instant = Instant.parse("2017-09-02T12:00:00.00Z")
+    private val notional = 50.M
+    private val currency = EUR
 
-    val tradeDate: LocalDate = LocalDate.of(2016, 9, 1)
-
+    private val tradeDate: LocalDate = LocalDate.of(2016, 9, 1)
 
     /*
 
@@ -43,7 +42,7 @@ class IRS {
 
      */
 
-    val contractInitial = arrange {
+    private val contractInitial = arrange {
         rollOut("2016-09-01".ld, "2018-09-01".ld, Frequency.Quarterly) {
             actions {
                 (acmeCorp or highStreetBank) may {
@@ -62,7 +61,8 @@ class IRS {
             }
         }
     }
-    val contractAfterFixingFirst = arrange {
+
+    private val contractAfterFixingFirst = arrange {
         actions {
             (acmeCorp or highStreetBank) may {
                 val floating = interest(notional, "act/365", 1.0.bd, "2016-09-01", "2016-12-01")
@@ -93,15 +93,15 @@ class IRS {
                     rollOut("2016-12-01".ld, "2018-09-01".ld, Frequency.Quarterly) {
                         actions {
                             (acmeCorp or highStreetBank) may {
-                                val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
-                                val fixed = interest(notional, "act/365", 0.5.bd, start, end)
+                                val nextFloating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
+                                val nextFixed = interest(notional, "act/365", 0.5.bd, start, end)
 
                                 "pay floating" anytime {
-                                    highStreetBank.owes(acmeCorp, floating - fixed, currency)
+                                    highStreetBank.owes(acmeCorp, nextFloating - nextFixed, currency)
                                     next()
                                 }
                                 "pay fixed" anytime {
-                                    highStreetBank.owes(acmeCorp, fixed - floating, currency)
+                                    highStreetBank.owes(acmeCorp, nextFixed - nextFloating, currency)
                                     next()
                                 }
                             }
@@ -112,7 +112,7 @@ class IRS {
         }
     }
 
-    val contractAfterExecutionFirst = arrange {
+    private val contractAfterExecutionFirst = arrange {
         rollOut("2016-12-01".ld, "2018-09-01".ld, Frequency.Quarterly) {
             actions {
                 (acmeCorp or highStreetBank) may {
@@ -132,19 +132,20 @@ class IRS {
         }
     }
 
-    val paymentFirst = arrange { highStreetBank.owes(acmeCorp, 250.K, EUR) }
+    private val paymentFirst = arrange { highStreetBank.owes(acmeCorp, 250.K, EUR) }
 
-    val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY), contractInitial)
+    private val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY), contractInitial)
 
-    val stateAfterFixingFirst = UniversalContract.State(listOf(DUMMY_NOTARY), contractAfterFixingFirst)
-    val stateAfterExecutionFirst = UniversalContract.State(listOf(DUMMY_NOTARY), contractAfterExecutionFirst)
+    private val stateAfterFixingFirst = UniversalContract.State(listOf(DUMMY_NOTARY), contractAfterFixingFirst)
+    private val stateAfterExecutionFirst = UniversalContract.State(listOf(DUMMY_NOTARY), contractAfterExecutionFirst)
 
-    val statePaymentFirst = UniversalContract.State(listOf(DUMMY_NOTARY), paymentFirst)
+    private val statePaymentFirst = UniversalContract.State(listOf(DUMMY_NOTARY), paymentFirst)
+
     @Test
     fun issue() {
         transaction {
             output(UNIVERSAL_PROGRAM_ID, stateInitial)
-            timeWindow(TEST_TX_TIME_1)
+            timeWindow(testTxTime1)
 
             tweak {
                 command(acmeCorp.owningKey, UniversalContract.Commands.Issue())
@@ -160,7 +161,7 @@ class IRS {
         transaction {
             input(UNIVERSAL_PROGRAM_ID, stateInitial)
             output(UNIVERSAL_PROGRAM_ID, stateAfterFixingFirst)
-            timeWindow(TEST_TX_TIME_1)
+            timeWindow(testTxTime1)
 
             tweak {
                 command(highStreetBank.owningKey, UniversalContract.Commands.Action("some undefined name"))
@@ -200,7 +201,7 @@ class IRS {
             input(UNIVERSAL_PROGRAM_ID, stateAfterFixingFirst)
             output(UNIVERSAL_PROGRAM_ID, stateAfterExecutionFirst)
             output(UNIVERSAL_PROGRAM_ID, statePaymentFirst)
-            timeWindow(TEST_TX_TIME_1)
+            timeWindow(testTxTime1)
 
             tweak {
                 command(highStreetBank.owningKey, UniversalContract.Commands.Action("some undefined name"))

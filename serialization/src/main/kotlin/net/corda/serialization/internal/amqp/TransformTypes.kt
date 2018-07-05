@@ -80,6 +80,7 @@ enum class TransformTypes(val build: (Annotation) -> Transform) : DescribedType 
          * @param constants The list of enum constants on the type the transforms are being applied to
          */
         override fun validate(list: List<Transform>, constants: Map<String, Int>) {
+            @KeepForDJVM
             data class Node(val transform: RenameSchemaTransform, var next: Node?, var prev: Node?, var visitedBy: Node? = null) {
                 fun visit(visitedBy: Node) {
                     this.visitedBy = visitedBy

@@ -40,6 +40,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -134,7 +135,7 @@ public class FlowCookbookJava {
             // We retrieve a notary from the network map.
             // DOCSTART 01
             CordaX500Name notaryName = new CordaX500Name("Notary Service", "London", "GB");
-            Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(notaryName);
+            Party specificNotary = Objects.requireNonNull(getServiceHub().getNetworkMapCache().getNotary(notaryName));
             // Alternatively, we can pick an arbitrary notary from the notary
             // list. However, it is always preferable to specify the notary
             // explicitly, as the notary list might change when new notaries are
@@ -378,7 +379,7 @@ public class FlowCookbookJava {
             // Or we can add the output state as a ``TransactionState``, which already specifies
             // the output's contract and notary.
             // DOCSTART 51
-            TransactionState txState = new TransactionState(ourOutputState, DummyContract.PROGRAM_ID, specificNotary);
+            TransactionState txState = new TransactionState<>(ourOutputState, DummyContract.PROGRAM_ID, specificNotary);
             // DOCEND 51
 
             // Commands can be added as ``Command``s.
@@ -662,7 +663,7 @@ public class FlowCookbookJava {
                 }
 
                 @Override
-                protected void checkTransaction(SignedTransaction stx) {
+                protected void checkTransaction(@NotNull SignedTransaction stx) {
                     requireThat(require -> {
                         // Any additional checking we see fit...
                         DummyState outputState = (DummyState) stx.getTx().getOutputs().get(0).getData();

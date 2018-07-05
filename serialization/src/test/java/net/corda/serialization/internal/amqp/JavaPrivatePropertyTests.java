@@ -17,6 +17,7 @@ import java.io.NotSerializableException;
 import java.lang.reflect.Field;
 import java.util.Map;
 
+import static net.corda.core.internal.InternalUtils.uncheckedCast;
 import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
 import static org.junit.Assert.*;
 
@@ -40,6 +41,7 @@ public class JavaPrivatePropertyTests {
 
         B(Boolean b) { this.b = b; }
 
+        @SuppressWarnings("unused")
         public Boolean isB() {
             return this.b;
         }
@@ -48,6 +50,7 @@ public class JavaPrivatePropertyTests {
     static class B2 {
         private Boolean b;
 
+        @SuppressWarnings("unused")
         public Boolean isB() {
             return this.b;
         }
@@ -60,6 +63,7 @@ public class JavaPrivatePropertyTests {
     static class B3 {
         private Boolean b;
 
+        @SuppressWarnings("unused")
         // break the BEAN format explicitly (i.e. it's not isB)
         public Boolean isb() {
             return this.b;
@@ -77,6 +81,7 @@ public class JavaPrivatePropertyTests {
             return this.a;
         }
 
+        @SuppressWarnings("unused")
         public Boolean isA() {
             return this.a > 0;
         }
@@ -155,7 +160,7 @@ public class JavaPrivatePropertyTests {
         Field f = SerializerFactory.class.getDeclaredField("serializersByDescriptor");
         f.setAccessible(true);
 
-        Map<?, AMQPSerializer<?>> serializersByDescriptor = (Map<?, AMQPSerializer<?>>) f.get(factory);
+        Map<?, AMQPSerializer<?>> serializersByDescriptor = uncheckedCast(f.get(factory));
 
         assertEquals(1, serializersByDescriptor.size());
         ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);
@@ -182,7 +187,7 @@ public class JavaPrivatePropertyTests {
         //
         Field f = SerializerFactory.class.getDeclaredField("serializersByDescriptor");
         f.setAccessible(true);
-        Map<?, AMQPSerializer<?>> serializersByDescriptor = (Map<?, AMQPSerializer<?>>) f.get(factory);
+        Map<?, AMQPSerializer<?>> serializersByDescriptor = uncheckedCast(f.get(factory));
 
         assertEquals(1, serializersByDescriptor.size());
         ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);

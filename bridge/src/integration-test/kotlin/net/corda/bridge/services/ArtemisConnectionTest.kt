@@ -17,7 +17,6 @@ import net.corda.bridge.createBridgeKeyStores
 import net.corda.bridge.createNetworkParams
 import net.corda.bridge.services.artemis.BridgeArtemisConnectionServiceImpl
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.EnterpriseConfiguration
 import net.corda.node.services.config.MutualExclusionConfiguration
 import net.corda.node.services.config.NodeConfiguration
@@ -102,7 +101,6 @@ class ArtemisConnectionTest {
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(NetworkHostAndPort("localhost", 11005)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
-            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration
         }
         val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 11005), MAX_MESSAGE_SIZE)

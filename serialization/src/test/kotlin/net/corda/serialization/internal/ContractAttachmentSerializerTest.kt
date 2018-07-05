@@ -27,7 +27,6 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class ContractAttachmentSerializerTest {
-
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
@@ -61,7 +60,7 @@ class ContractAttachmentSerializerTest {
     fun `write contract attachment and read it back using token context`() {
         val attachment = GeneratedAttachment("test".toByteArray())
 
-        mockServices.attachments.importAttachment(attachment.open())
+        mockServices.attachments.importAttachment(attachment.open(), "test", null)
 
         val contractAttachment = ContractAttachment(attachment, DummyContract.PROGRAM_ID)
         val serialized = contractAttachment.serialize(factory, contextWithToken)
@@ -78,7 +77,7 @@ class ContractAttachmentSerializerTest {
         val largeAttachmentSize = 1024 * 1024
         val attachment = GeneratedAttachment(ByteArray(largeAttachmentSize))
 
-        mockServices.attachments.importAttachment(attachment.open())
+        mockServices.attachments.importAttachment(attachment.open(), "test", null)
 
         val contractAttachment = ContractAttachment(attachment, DummyContract.PROGRAM_ID)
         val serialized = contractAttachment.serialize(factory, contextWithToken)

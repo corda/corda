@@ -13,6 +13,7 @@ package net.corda.docs.java.tutorial.contract;
 import net.corda.core.contracts.*;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.LedgerTransaction.InOutGroup;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
 import java.util.Currency;
@@ -22,6 +23,7 @@ import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 import static net.corda.finance.utils.StateSumming.sumCashBy;
 
+@SuppressWarnings("unused")
 public class CommercialPaper implements Contract {
     // DOCSTART 1
     public static final String IOU_CONTRACT_ID = "com.example.contract.IOUContract";
@@ -29,7 +31,7 @@ public class CommercialPaper implements Contract {
 
     // DOCSTART 3
     @Override
-    public void verify(LedgerTransaction tx) {
+    public void verify(@NotNull LedgerTransaction tx) {
         List<InOutGroup<State, State>> groups = tx.groupStates(State.class, State::withoutOwner);
         CommandWithParties<Commands> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
         // DOCEND 3
@@ -37,7 +39,7 @@ public class CommercialPaper implements Contract {
         // DOCSTART 4
         TimeWindow timeWindow = tx.getTimeWindow();
 
-        for (InOutGroup group : groups) {
+        for (InOutGroup<State, State> group : groups) {
             List<State> inputs = group.getInputs();
             List<State> outputs = group.getOutputs();
 
@@ -57,6 +59,7 @@ public class CommercialPaper implements Contract {
                 Amount<Issued<Currency>> received = sumCashBy(tx.getOutputStates(), input.getOwner());
                 if (timeWindow == null) throw new IllegalArgumentException("Redemptions must be timestamped");
                 Instant time = timeWindow.getFromTime();
+                if (time == null) throw new IllegalArgumentException("Redemptions must have a from time");
                 requireThat(require -> {
                     require.using("the paper must have matured", time.isAfter(input.getMaturityDate()));
                     require.using("the received amount equals the face value", received == input.getFaceValue());
@@ -68,6 +71,7 @@ public class CommercialPaper implements Contract {
                 State output = outputs.get(0);
                 if (timeWindow == null) throw new IllegalArgumentException("Issuances must have a time-window");
                 Instant time = timeWindow.getUntilTime();
+                if (time == null) throw new IllegalArgumentException("Issuances must have an until time");
                 requireThat(require -> {
                     // Don't allow people to issue commercial paper under other entities identities.
                     require.using("output states are issued by a command signer", cmd.getSigners().contains(output.getIssuance().getParty().getOwningKey()));

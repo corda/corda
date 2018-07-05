@@ -63,6 +63,7 @@ class AuthDBTests : NodeBasedTest() {
     private lateinit var client: CordaRPCClient
     private lateinit var db: UsersDB
 
+    @Suppress("MemberVisibilityCanBePrivate")
     @Parameterized.Parameter
     lateinit var passwordEncryption: PasswordEncryption
 
@@ -110,7 +111,7 @@ class AuthDBTests : NodeBasedTest() {
         )
 
         node = startNode(ALICE_NAME, rpcUsers = emptyList(), configOverrides = securityConfig)
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!)
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address)
     }
 
     @Test
@@ -243,9 +244,8 @@ private data class RoleAndPermissions(val role: String, val permissions: List<St
 /*
  * Manage in-memory DB mocking a users database with the schema expected by Node's security manager
  */
-private class UsersDB : AutoCloseable {
-
-    val jdbcUrl: String
+private class UsersDB(name: String, users: List<UserAndRoles> = emptyList(), roleAndPermissions: List<RoleAndPermissions> = emptyList()) : AutoCloseable {
+    val jdbcUrl = "jdbc:h2:mem:$name;DB_CLOSE_DELAY=-1"
 
     companion object {
         const val DB_CREATE_SCHEMA = """
@@ -295,11 +295,7 @@ private class UsersDB : AutoCloseable {
         }
     }
 
-    constructor(name: String,
-                users: List<UserAndRoles> = emptyList(),
-                roleAndPermissions: List<RoleAndPermissions> = emptyList()) {
-
-        jdbcUrl = "jdbc:h2:mem:$name;DB_CLOSE_DELAY=-1"
+    init {
         dataSource = DataSourceFactory.createDataSource(Properties().apply {
             put("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
             put("dataSource.url", jdbcUrl)
@@ -307,11 +303,9 @@ private class UsersDB : AutoCloseable {
         session {
             it.execute(DB_CREATE_SCHEMA)
         }
-
         require(users.map { it.username }.toSet().size == users.size) {
             "Duplicate username in input"
         }
-
         users.forEach { insert(it) }
         roleAndPermissions.forEach { insert(it) }
     }

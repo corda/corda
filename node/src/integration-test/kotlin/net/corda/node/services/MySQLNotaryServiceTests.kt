@@ -257,7 +257,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
     }
 
     private fun createNotaryNode(): InternalMockNetwork.MockNode {
-        val dataStoreProperties = makeTestDataSourceProperties(configSupplier = { _, _ -> ConfigFactory.empty() }, fallBackConfigSupplier = ::inMemoryH2DataSourceConfig).apply {
+        val dataStoreProperties = makeInternalTestDataSourceProperties(configSupplier = { ConfigFactory.empty() }).apply {
             setProperty("autoCommit", "false")
         }
         return mockNet.createUnstartedNode(

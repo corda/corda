@@ -114,7 +114,6 @@ object FiberMonitor {
         thread {
             while (true) {
                 Thread.sleep(1000)
-                this
             }
         }
     }

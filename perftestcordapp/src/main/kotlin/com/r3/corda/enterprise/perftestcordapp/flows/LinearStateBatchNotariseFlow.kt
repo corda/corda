@@ -104,8 +104,7 @@ class LinearStateBatchNotariseFlow(private val notary: Party,
         }
         builder.addCommand(LinearStateBatchNotariseContract.Commands.Evolve(), us.owningKey)
         builder.setTimeWindow(TimeWindow.fromOnly(serviceHub.clock.instant()))
-        val tx = serviceHub.signInitialTransaction(builder, us.owningKey)
-        return tx
+        return serviceHub.signInitialTransaction(builder, us.owningKey)
     }
 
     @Suspendable
@@ -117,17 +116,16 @@ class LinearStateBatchNotariseFlow(private val notary: Party,
     @Suspendable
     private fun assembleInitialTx(us: Party): SignedTransaction {
         val builder = TransactionBuilder(notary)
-        (0 until n).forEach { outputIndex ->
+        (0 until n).forEach {
             builder.addOutputState(TransactionState(LinearStateBatchNotariseContract.State(UniqueIdentifier(), us, serviceHub.clock.instant()), LinearStateBatchNotariseContract.CP_PROGRAM_ID, notary))
         }
         builder.addCommand(LinearStateBatchNotariseContract.Commands.Create(), us.owningKey)
         builder.setTimeWindow(TimeWindow.fromOnly(serviceHub.clock.instant()))
-        val tx = serviceHub.signInitialTransaction(builder, us.owningKey)
-        return tx
+        return serviceHub.signInitialTransaction(builder, us.owningKey)
     }
 
     @Suspendable
-    protected fun finaliseTx(tx: SignedTransaction, message: String): SignedTransaction {
+    private fun finaliseTx(tx: SignedTransaction, message: String): SignedTransaction {
         try {
             return subFlow(FinalityFlow(tx))
         } catch (e: NotaryException) {

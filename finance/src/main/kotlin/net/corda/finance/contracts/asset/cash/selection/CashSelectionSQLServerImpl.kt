@@ -16,7 +16,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.toBase58String
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
@@ -32,8 +31,8 @@ class CashSelectionSQLServerImpl : AbstractCashSelection(maxRetries = 16, retryS
         private val log = contextLogger()
     }
 
-    override fun isCompatible(metaData: DatabaseMetaData): Boolean {
-        return metaData.driverName.startsWith(JDBC_DRIVER_NAME, ignoreCase = true)
+    override fun isCompatible(metadata: DatabaseMetaData): Boolean {
+        return metadata.driverName.startsWith(JDBC_DRIVER_NAME, ignoreCase = true)
     }
 
     override fun toString() = "${this::class.qualifiedName} for '$JDBC_DRIVER_NAME'"

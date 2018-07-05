@@ -7,12 +7,10 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.EnterpriseConfiguration
 import net.corda.node.services.config.MutualExclusionConfiguration
 import net.corda.node.services.config.NodeConfiguration
@@ -102,7 +100,7 @@ class BridgeSmokeTest {
         bridgeJar.copyToDirectory(testDir)
     }
 
-    fun createNetworkParams(baseDirectory: Path) {
+    private fun createNetworkParams(baseDirectory: Path) {
         val dummyNotaryParty = TestIdentity(DUMMY_NOTARY_NAME)
         val notaryInfo = NotaryInfo(dummyNotaryParty.party, false)
         val copier = NetworkParametersCopier(NetworkParameters(
@@ -112,18 +110,18 @@ class BridgeSmokeTest {
                 maxMessageSize = 10485760,
                 maxTransactionSize = 40000,
                 epoch = 1,
-                whitelistedContractImplementations = emptyMap<String, List<AttachmentId>>()
+                whitelistedContractImplementations = emptyMap()
         ), overwriteFile = true)
         copier.install(baseDirectory)
     }
 
-    fun SSLConfiguration.createBridgeKeyStores(legalName: CordaX500Name,
-                                               rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                               intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA) {
+    private fun SSLConfiguration.createBridgeKeyStores(legalName: CordaX500Name,
+                                                       rootCert: X509Certificate = DEV_ROOT_CA.certificate,
+                                                       intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA) {
 
         certificatesDirectory.createDirectories()
         if (!trustStoreFile.exists()) {
-            loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/${DEV_CA_TRUST_STORE_FILE}"), DEV_CA_TRUST_STORE_PASS).save(trustStoreFile, trustStorePassword)
+            loadKeyStore(javaClass.classLoader.getResourceAsStream("certificates/$DEV_CA_TRUST_STORE_FILE"), DEV_CA_TRUST_STORE_PASS).save(trustStoreFile, trustStorePassword)
         }
 
         val (nodeCaCert, nodeCaKeyPair) = createDevNodeCa(intermediateCa, legalName)
@@ -189,13 +187,13 @@ class BridgeSmokeTest {
         }
     }
 
-    fun serverListening(host: String, port: Int): Boolean {
+    private fun serverListening(host: String, port: Int): Boolean {
         var s: Socket? = null
-        try {
+        return try {
             s = Socket(host, port)
-            return true
+            true
         } catch (e: Exception) {
-            return false
+            false
         } finally {
             try {
                 s?.close()
@@ -212,7 +210,6 @@ class BridgeSmokeTest {
             doReturn("cordacadevpass").whenever(it).keyStorePassword
             doReturn(NetworkHostAndPort("localhost", 11005)).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
-            doReturn(emptyList<CertChainPolicyConfig>()).whenever(it).certificateChainCheckPolicies
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration
         }
         val artemisServer = ArtemisMessagingServer(artemisConfig, NetworkHostAndPort("0.0.0.0", 11005), MAX_MESSAGE_SIZE)

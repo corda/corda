@@ -84,14 +84,12 @@ class FlowsExecutionModeTests : NodeBasedTest(listOf("net.corda.finance.contract
 
     @Before
     fun setup() {
-
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        client = CordaRPCClient(node.internals.configuration.rpcOptions.address!!)
+        client = CordaRPCClient(node.internals.configuration.rpcOptions.address)
     }
 
     @Test
     fun `flows draining mode can be enabled and queried`() {
-
         asALoggerUser { rpcOps ->
             val newValue = true
             rpcOps.setFlowsDrainingModeEnabled(true)
@@ -104,7 +102,6 @@ class FlowsExecutionModeTests : NodeBasedTest(listOf("net.corda.finance.contract
 
     @Test
     fun `flows draining mode can be disabled and queried`() {
-
         asALoggerUser { rpcOps ->
             rpcOps.setFlowsDrainingModeEnabled(true)
             val newValue = false
@@ -118,7 +115,6 @@ class FlowsExecutionModeTests : NodeBasedTest(listOf("net.corda.finance.contract
 
     @Test
     fun `node starts with flows draining mode disabled`() {
-
         asALoggerUser { rpcOps ->
             val defaultStartingMode = rpcOps.isFlowsDrainingModeEnabled()
 
@@ -127,12 +123,10 @@ class FlowsExecutionModeTests : NodeBasedTest(listOf("net.corda.finance.contract
     }
 
     private fun login(username: String, password: String, externalTrace: Trace? = null, impersonatedActor: Actor? = null): CordaRPCConnection {
-
         return client.start(username, password, externalTrace, impersonatedActor)
     }
 
     private fun asALoggerUser(action: (CordaRPCOps) -> Unit) {
-
         login(rpcUser.username, rpcUser.password).use {
             action(it.proxy)
         }

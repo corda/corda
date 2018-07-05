@@ -23,7 +23,6 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.Closeable
 import java.util.*
-import kotlin.test.fail
 
 class ObservablesTests {
     private fun isInDatabaseTransaction() = contextTransactionOrNull != null
@@ -68,7 +67,7 @@ class ObservablesTests {
         assertThat(secondEvent.get()).isEqualTo(0 to false)
     }
 
-    class TestException : Exception("Synthetic exception for tests") {}
+    class TestException : Exception("Synthetic exception for tests")
 
     @Test
     fun `bufferUntilDatabaseCommit swallows if transaction rolled back`() {
@@ -93,7 +92,6 @@ class ObservablesTests {
                 assertThat(secondEvent.isDone).isFalse()
                 throw TestException()
             }
-            fail("Should not have successfully completed transaction")
         } catch (e: TestException) {
         }
         assertThat(secondEvent.isDone).isFalse()
@@ -125,7 +123,6 @@ class ObservablesTests {
                 assertThat(secondEvent.isDone).isFalse()
                 throw TestException()
             }
-            fail("Should not have successfully completed transaction")
         } catch (e: TestException) {
         }
         assertThat(secondEvent.isDone).isTrue()

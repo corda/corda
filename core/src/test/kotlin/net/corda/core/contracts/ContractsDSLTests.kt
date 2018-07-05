@@ -41,7 +41,8 @@ class ContractsDSLTests {
     }
 
     @RunWith(Parameterized::class)
-    class RequireSingleCommandTests(private val testFunction: (Collection<CommandWithParties<CommandData>>) -> CommandWithParties<CommandData>, description: String) {
+    class RequireSingleCommandTests(private val testFunction: (Collection<CommandWithParties<CommandData>>) -> CommandWithParties<CommandData>,
+                                    @Suppress("UNUSED_PARAMETER") description: String) {
         companion object {
             @JvmStatic
             @Parameterized.Parameters(name = "{1}")
@@ -74,7 +75,8 @@ class ContractsDSLTests {
     }
 
     @RunWith(Parameterized::class)
-    class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandWithParties<CommandData>>, PublicKey?, AbstractParty?) -> Iterable<CommandWithParties<CommandData>>, description: String) {
+    class SelectWithSingleInputsTests(private val testFunction: (Collection<CommandWithParties<CommandData>>, PublicKey?, AbstractParty?) -> Iterable<CommandWithParties<CommandData>>,
+                                      @Suppress("UNUSED_PARAMETER") description: String) {
         companion object {
             @JvmStatic
             @Parameterized.Parameters(name = "{1}")
@@ -122,7 +124,8 @@ class ContractsDSLTests {
     }
 
     @RunWith(Parameterized::class)
-    class SelectWithMultipleInputsTests(private val testFunction: (Collection<CommandWithParties<CommandData>>, Collection<PublicKey>?, Collection<Party>?) -> Iterable<CommandWithParties<CommandData>>, description: String) {
+    class SelectWithMultipleInputsTests(private val testFunction: (Collection<CommandWithParties<CommandData>>, Collection<PublicKey>?, Collection<Party>?) -> Iterable<CommandWithParties<CommandData>>,
+                                        @Suppress("UNUSED_PARAMETER") description: String) {
         companion object {
             @JvmStatic
             @Parameterized.Parameters(name = "{1}")

@@ -46,9 +46,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import rx.Observable;
 
-import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.cert.CertificateException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -80,7 +77,7 @@ public class VaultQueryJavaTests {
     private CordaPersistence database;
 
     @Before
-    public void setUp() throws CertificateException, InvalidAlgorithmParameterException {
+    public void setUp() {
         List<String> cordappPackages = asList(
                 "net.corda.testing.internal.vault",
                 "net.corda.finance.contracts.asset",
@@ -101,13 +98,9 @@ public class VaultQueryJavaTests {
     }
 
     @After
-    public void cleanUp() throws IOException {
+    public void cleanUp() {
         database.close();
     }
-
-    /**
-     * Sample Vault Query API tests
-     */
 
     /**
      * Static queryBy() tests
@@ -119,6 +112,7 @@ public class VaultQueryJavaTests {
         FieldInfo currency = getField("currency", SampleCashSchemaV2.PersistentCashState.class);
 
         CriteriaExpression.AggregateFunctionExpression<Object, Boolean> expression = sum(quantity, singletonList(currency), Sort.Direction.ASC);
+        @SuppressWarnings("unchecked")
         VaultCustomQueryCriteria<SampleCashSchemaV2.PersistentCashState> criteria = new VaultCustomQueryCriteria(expression, Vault.StateStatus.UNCONSUMED, null);
 
         database.transaction(tx -> vaultService.queryBy(FungibleAsset.class, criteria));
@@ -131,13 +125,14 @@ public class VaultQueryJavaTests {
         FieldInfo stateRef = getField("stateRef", SampleCashSchemaV2.PersistentCashState.class);
 
         CriteriaExpression.AggregateFunctionExpression<Object, Boolean> expression = sum(quantity, asList(currency, stateRef), Sort.Direction.ASC);
+        @SuppressWarnings("unchecked")
         VaultCustomQueryCriteria<SampleCashSchemaV2.PersistentCashState> criteria = new VaultCustomQueryCriteria(expression, Vault.StateStatus.UNCONSUMED, null);
 
         database.transaction(tx -> vaultService.queryBy(FungibleAsset.class, criteria));
     }
 
     @Test
-    public void unconsumedLinearStates() throws VaultQueryException {
+    public void unconsumedLinearStates() {
         database.transaction(tx -> {
             vaultFiller.fillWithSomeTestLinearStates(3);
             return tx;
@@ -209,7 +204,7 @@ public class VaultQueryJavaTests {
     }
 
     @Test
-    public void consumedDealStatesPagedSorted() throws VaultQueryException {
+    public void consumedDealStatesPagedSorted() {
         List<String> dealIds = asList("123", "456", "789");
         @SuppressWarnings("unchecked")
         Triple<StateAndRef<LinearState>, UniqueIdentifier, Vault<DealState>> ids =
@@ -320,7 +315,6 @@ public class VaultQueryJavaTests {
             DataFeed<Vault.Page<ContractState>, Vault.Update<ContractState>> results = vaultService.trackBy(ContractState.class, criteria);
 
             Vault.Page<ContractState> snapshot = results.getSnapshot();
-            Observable<Vault.Update<ContractState>> updates = results.getUpdates();
 
             // DOCEND VaultJavaQueryExample4
             assertThat(snapshot.getStates()).hasSize(3);
@@ -374,7 +368,6 @@ public class VaultQueryJavaTests {
     @SuppressWarnings("unchecked")
     public void aggregateFunctionsWithoutGroupClause() {
         database.transaction(tx -> {
-
             Amount<Currency> dollars100 = new Amount<>(100, Currency.getInstance("USD"));
             Amount<Currency> dollars200 = new Amount<>(200, Currency.getInstance("USD"));
             Amount<Currency> dollars300 = new Amount<>(300, Currency.getInstance("USD"));
@@ -420,7 +413,6 @@ public class VaultQueryJavaTests {
     @SuppressWarnings("unchecked")
     public void aggregateFunctionsWithSingleGroupClause() {
         database.transaction(tx -> {
-
             Amount<Currency> dollars100 = new Amount<>(100, Currency.getInstance("USD"));
             Amount<Currency> dollars200 = new Amount<>(200, Currency.getInstance("USD"));
             Amount<Currency> dollars300 = new Amount<>(300, Currency.getInstance("USD"));

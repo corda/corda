@@ -58,7 +58,7 @@ data class PartiallyResolvedTransaction(
             return PartiallyResolvedTransaction(
                     transaction = transaction,
                     inputs = transaction.inputs.map { stateRef ->
-                        val tx = inputTransactions.get(stateRef)
+                        val tx = inputTransactions[stateRef]
                         if (tx == null) {
                             InputResolution.Unresolved(stateRef)
                         } else {
@@ -74,7 +74,7 @@ data class PartiallyResolvedTransaction(
                         val outputCount = transaction.coreTransaction.inputs.size
                         val stateRefs = (0 until outputCount).map { StateRef(transaction.id, it) }
                         stateRefs.map { stateRef ->
-                            val tx = inputTransactions.get(stateRef)
+                            val tx = inputTransactions[stateRef]
                             if (tx == null) {
                                 OutputResolution.Unresolved(stateRef)
                             } else {
@@ -94,6 +94,7 @@ class TransactionDataModel {
     private val collectedTransactions = transactions.recordInSequence().distinctBy { it.id }
     private val rpcProxy by observableValue(NodeMonitorModel::proxyObservable)
 
+    @Suppress("DEPRECATION")
     val partiallyResolvedTransactions = collectedTransactions.map {
         PartiallyResolvedTransaction.fromSignedTransaction(it,
                 it.inputs.map { stateRef ->

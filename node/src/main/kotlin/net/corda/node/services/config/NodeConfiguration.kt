@@ -14,11 +14,10 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
+import net.corda.core.internal.TimedFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
-import net.corda.node.internal.artemis.CertificateChainCheckPolicy
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.NodeSSLConfiguration
@@ -51,6 +50,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val devModeOptions: DevModeOptions?
     val compatibilityZoneURL: URL?
     val networkServices: NetworkServicesConfig?
+    @Suppress("DEPRECATION")
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
     val flowTimeout: FlowTimeoutConfiguration
@@ -237,6 +237,7 @@ data class NodeConfigurationImpl(
         override val messagingServerExternal: Boolean = (messagingServerAddress != null),
         override val enterpriseConfiguration: EnterpriseConfiguration,
         override val notary: NotaryConfig?,
+        @Suppress("DEPRECATION")
         @Deprecated("Do not configure")
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig> = emptyList(),
         override val devMode: Boolean = false,
@@ -413,6 +414,7 @@ data class NodeConfigurationImpl(
         }
 
         // Check for usage of deprecated config
+        @Suppress("DEPRECATION")
         if(certificateChainCheckPolicies.isNotEmpty()) {
             logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
                 |Please contact the R3 team on the public slack to discuss your use case.
@@ -467,18 +469,7 @@ enum class CertChainPolicyType {
 }
 
 @Deprecated("Do not use")
-data class CertChainPolicyConfig(val role: String, private val policy: CertChainPolicyType, private val trustedAliases: Set<String>) {
-    val certificateChainCheckPolicy: CertificateChainCheckPolicy
-        get() {
-            return when (policy) {
-                CertChainPolicyType.Any -> CertificateChainCheckPolicy.Any
-                CertChainPolicyType.RootMustMatch -> CertificateChainCheckPolicy.RootMustMatch
-                CertChainPolicyType.LeafMustMatch -> CertificateChainCheckPolicy.LeafMustMatch
-                CertChainPolicyType.MustContainOneOf -> CertificateChainCheckPolicy.MustContainOneOf(trustedAliases)
-                CertChainPolicyType.UsernameMustMatch -> CertificateChainCheckPolicy.UsernameMustMatchCommonName
-            }
-        }
-}
+data class CertChainPolicyConfig(val role: String, private val policy: CertChainPolicyType, private val trustedAliases: Set<String>)
 
 // Supported types of authentication/authorization data providers
 enum class AuthDataSourceType {
@@ -515,8 +506,6 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
             }
         }
 
-        fun copyWithAdditionalUser(user: User) = AuthService(dataSource.copyWithAdditionalUser(user), id, options)
-
         // Optional components: cache
         data class Options(val cache: Options.Cache?) {
 
@@ -543,12 +532,6 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                     AuthDataSourceType.INMEMORY -> require(users != null && connection == null)
                     AuthDataSourceType.DB -> require(users == null && connection != null)
                 }
-            }
-
-            fun copyWithAdditionalUser(user: User): DataSource {
-                val extendedList = this.users?.toMutableList() ?: mutableListOf()
-                extendedList.add(user)
-                return DataSource(this.type, this.passwordEncryption, this.connection, listOf(*extendedList.toTypedArray()))
             }
         }
 

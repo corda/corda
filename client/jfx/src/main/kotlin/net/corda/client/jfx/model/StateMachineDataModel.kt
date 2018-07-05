@@ -57,14 +57,16 @@ class StateMachineDataModel {
     private val progressTracking by observable(NodeMonitorModel::progressTracking)
     private val progressEvents = progressTracking.recordAsAssociation(ProgressTrackingEvent::stateMachineId)
 
-    val counter = Counter()
+    private val counter = Counter()
 
     private val stateMachineIndexMap = HashMap<StateMachineRunId, Int>()
     private val stateMachineStatus = stateMachineUpdates.fold(FXCollections.observableArrayList<SimpleObjectProperty<StateMachineStatus>>()) { list, update ->
         when (update) {
             is StateMachineUpdate.Added -> {
                 counter.addSmm()
-                val flowInitiator= update.stateMachineInfo.initiator
+                // TODO Use invocationContext instead
+                @Suppress("DEPRECATION")
+                val flowInitiator = update.stateMachineInfo.initiator
                 val added: SimpleObjectProperty<StateMachineStatus> =
                         SimpleObjectProperty(StateMachineStatus.Added(update.id, update.stateMachineInfo.flowLogicClassName, flowInitiator))
                 list.add(added)
@@ -83,7 +85,7 @@ class StateMachineDataModel {
     private val stateMachineDataList = stateMachineStatus.map {
         val smStatus = it.value as StateMachineStatus.Added
         val id = smStatus.id
-        val progress = SimpleObjectProperty(progressEvents.get(id))
+        val progress = SimpleObjectProperty(progressEvents[id])
         StateMachineData(id, smStatus.stateMachineName, smStatus.flowInitiator,
                 Pair(it, EasyBind.map(progress) { ProgressStatus(it?.message) }))
     }

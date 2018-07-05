@@ -248,7 +248,7 @@ class TransactionViewer : CordaView("Transactions") {
                         }
                         override fun computeValue(): SecureHash {
                             return if (hashList.isEmpty()) SecureHash.zeroHash
-                            else hashList.fold(hashList[0], { one, another -> one.hashConcat(another) })
+                            else hashList.fold(hashList[0], SecureHash::hashConcat)
                         }
                     }
                     graphicProperty().bind(hashBinding.map { identicon(it, 30.0) })
@@ -325,7 +325,7 @@ class TransactionViewer : CordaView("Transactions") {
                             }
                         }
                      is IOUState -> {
-                         fun Pane.partyLabel(party: Party) = label(party.nameOrNull().let { PartyNameFormatter.short.format(it) } ?: "Anonymous") {
+                         fun Pane.partyLabel(party: Party) = label(party.nameOrNull().let { PartyNameFormatter.short.format(it) }) {
                              tooltip(party.owningKey.toBase58String())
                          }
                          row {
@@ -363,8 +363,7 @@ private fun calculateTotalEquiv(myIdentity: Party?,
                                 outputs: List<ContractState>): AmountDiff<Currency> {
     val (reportingCurrency, exchange) = reportingCurrencyExchange
     fun List<ContractState>.sum(): Long {
-        val cashSum: Long  = map { it as? Cash.State }
-                .filterNotNull()
+        val cashSum: Long  = mapNotNull { it as? Cash.State }
                 .filter { it.owner.owningKey.toKnownParty().value == myIdentity }
                 .map { exchange(it.amount.withoutIssuer()).quantity }
                 .sum()

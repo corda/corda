@@ -34,7 +34,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.finance.DOLLARS
 import net.corda.finance.GBP
-import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
@@ -167,6 +166,7 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `issue and move`() {
+        @Suppress("DEPRECATION")
         withPermissions(invokeRpc(CordaRPCOps::stateMachinesFeed),
                 invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
                 invokeRpc("vaultTrackBy"),
@@ -178,11 +178,7 @@ class CordaRPCOpsImplTest {
                 vaultTrackCash = rpc.vaultTrackBy<Cash.State>().updates
             }
 
-            val result = rpc.startFlow(::CashIssueFlow,
-                    100.DOLLARS,
-                    OpaqueBytes(ByteArray(1, { 1 })),
-                    notary
-            )
+            val result = rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notary)
 
             mockNet.runNetwork()
 
@@ -257,7 +253,7 @@ class CordaRPCOpsImplTest {
     fun `cash command by user not permissioned for cash`() {
         withoutAnyPermissions {
             assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
-                rpc.startFlow(::CashIssueFlow, Amount(100, USD), OpaqueBytes(ByteArray(1, { 1 })), notary)
+                rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), notary)
             }
         }
     }

@@ -11,6 +11,7 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
@@ -20,6 +21,7 @@ import net.corda.core.node.ServiceHub
 import org.slf4j.Logger
 
 /** This is an internal interface that is implemented by code in the node module. You should look at [FlowLogic]. */
+@DeleteForDJVM
 @DoNotImplement
 interface FlowStateMachine<FLOWRETURN> {
     @Suspendable

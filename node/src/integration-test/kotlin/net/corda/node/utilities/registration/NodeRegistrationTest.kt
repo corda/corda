@@ -32,7 +32,6 @@ import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.internal.CompatibilityZoneParams
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
@@ -64,7 +63,6 @@ class NodeRegistrationTest : IntegrationTest() {
         private val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
         private val aliceName = CordaX500Name("Alice", "London", "GB")
         private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
-        private val log = contextLogger()
     }
 
     @Rule
@@ -82,7 +80,7 @@ class NodeRegistrationTest : IntegrationTest() {
                 pollInterval = 1.seconds,
                 hostAndPort = portAllocation.nextHostAndPort(),
                 myHostNameValue = "localhost",
-                additionalServices = registrationHandler)
+                additionalServices = *arrayOf(registrationHandler))
         serverHostAndPort = server.start()
     }
 

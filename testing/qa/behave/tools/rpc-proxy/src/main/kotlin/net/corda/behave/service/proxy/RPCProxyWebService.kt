@@ -25,6 +25,7 @@ import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.status
 
+@Suppress("UNUSED_PARAMETER")
 @Path(RPC_PROXY_PATH)
 class RPCProxyWebService(targetHostAndPort: NetworkHostAndPort) {
 
@@ -108,7 +109,7 @@ class RPCProxyWebService(targetHostAndPort: NetworkHostAndPort) {
     fun vaultQuery(input: InputStream): Response {
         log.info("vaultQuery")
         val contractStateType =  input.readBytes().deserialize<String>()
-        val clazz = Class.forName(contractStateType) as Class<ContractState>
+        val clazz = Class.forName(contractStateType).asSubclass(ContractState::class.java)
         return use {
             log.info("Calling vaultQuery with: $clazz")
             it.vaultQuery(clazz)
@@ -125,7 +126,7 @@ class RPCProxyWebService(targetHostAndPort: NetworkHostAndPort) {
             for (i in argsList.indices) {
                 log.info("$i: ${argsList[i]}")
             }
-            val flowClass = Class.forName(argsList[0] as String) as Class<FlowLogic<*>>
+            val flowClass = Class.forName(argsList[0] as String).asSubclass(FlowLogic::class.java)
             val flowArgs = argsList.drop(1).toTypedArray()
             log.info("Calling flow: $flowClass with arguments: ${flowArgs.asList()}")
             rpcClient.startFlowDynamic(flowClass, *flowArgs).returnValue.getOrThrow()
