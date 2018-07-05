@@ -83,13 +83,13 @@ internal class PrioritizedLeaderLatch(client: CuratorFramework,
     fun start() {
         Preconditions.checkState(state.compareAndSet(State.CLOSED, State.STARTED),
                 "Cannot be started more than once.")
-        startTask.set(AfterConnectionEstablished.execute(watchedClient, {
+        startTask.set(AfterConnectionEstablished.execute(watchedClient) {
             try {
                 internalStart()
             } finally {
                 startTask.set(null)
             }
-        }))
+        })
     }
 
     /**
