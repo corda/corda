@@ -11,7 +11,7 @@ class PrivacySaltTest {
 
     @Test
     fun testValidSalt() {
-        PrivacySalt(ByteArray(SALT_SIZE, { 0x14 }))
+        PrivacySalt(ByteArray(SALT_SIZE) { 0x14 })
     }
 
     @Test
@@ -22,13 +22,13 @@ class PrivacySaltTest {
 
     @Test
     fun testTooShortPrivacySalt() {
-        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE - 1, { 0x7f })) }
+        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE - 1) { 0x7f }) }
         assertEquals("Privacy salt should be 32 bytes.", ex.message)
     }
 
     @Test
     fun testTooLongPrivacySalt() {
-        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE + 1, { 0x7f })) }
+        val ex = assertFailsWith<IllegalArgumentException> { PrivacySalt(ByteArray(SALT_SIZE + 1) { 0x7f }) }
         assertEquals("Privacy salt should be 32 bytes.", ex.message)
     }
 }

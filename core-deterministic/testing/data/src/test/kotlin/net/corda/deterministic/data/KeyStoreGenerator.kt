@@ -5,7 +5,6 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import java.io.OutputStream
-import java.math.BigInteger
 import java.math.BigInteger.TEN
 import java.security.KeyPairGenerator
 import java.security.KeyStore
