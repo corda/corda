@@ -10,7 +10,7 @@
 
 package net.corda.bridge
 
-import net.corda.bridge.services.api.BridgeConfiguration
+import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
@@ -51,7 +51,7 @@ fun createNetworkParams(baseDirectory: Path): Int {
 }
 
 
-fun createAndLoadConfigFromResource(baseDirectory: Path, configResource: String): BridgeConfiguration {
+fun createAndLoadConfigFromResource(baseDirectory: Path, configResource: String): FirewallConfiguration {
     val workspaceFolder = baseDirectory.normalize().toAbsolutePath()
     val args = arrayOf("--base-directory", workspaceFolder.toString())
     val argsParser = ArgsParser()

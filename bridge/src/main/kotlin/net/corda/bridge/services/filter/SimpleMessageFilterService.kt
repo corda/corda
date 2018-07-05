@@ -24,8 +24,8 @@ import org.apache.activemq.artemis.api.core.client.ClientProducer
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import rx.Subscription
 
-class SimpleMessageFilterService(val conf: BridgeConfiguration,
-                                 val auditService: BridgeAuditService,
+class SimpleMessageFilterService(val conf: FirewallConfiguration,
+                                 val auditService: FirewallAuditService,
                                  val artemisConnectionService: BridgeArtemisConnectionService,
                                  val bridgeSenderService: BridgeSenderService,
                                  private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : IncomingMessageFilterService, ServiceStateSupport by stateHelper {

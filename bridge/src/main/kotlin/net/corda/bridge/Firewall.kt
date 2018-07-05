@@ -8,13 +8,13 @@
  * Distribution of this file or any portion thereof via any medium without the express permission of R3 is strictly prohibited.
  */
 
-@file:JvmName("Bridge")
+@file:JvmName("Firewall")
 
 package net.corda.bridge
 
-import net.corda.bridge.internal.BridgeStartup
+import net.corda.bridge.internal.FirewallStartup
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
-    exitProcess(if (BridgeStartup(args).run()) 0 else 1)
+    exitProcess(if (FirewallStartup(args).run()) 0 else 1)
 }

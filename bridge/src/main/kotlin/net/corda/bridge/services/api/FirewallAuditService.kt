@@ -18,7 +18,7 @@ import java.net.InetSocketAddress
  * Currently the simple implementation just records events to log file, but future implementations may need to post
  * security data to an enterprise service.
  */
-interface BridgeAuditService : ServiceLifecycleSupport {
+interface FirewallAuditService : ServiceLifecycleSupport {
     fun successfulConnectionEvent(inbound: Boolean, sourceIP: InetSocketAddress, certificateSubject: String, msg: String)
     fun failedConnectionEvent(inbound: Boolean, sourceIP: InetSocketAddress?, certificateSubject: String?, msg: String)
     fun packetDropEvent(packet: ReceivedMessage?, msg: String)

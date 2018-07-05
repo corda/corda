@@ -11,8 +11,8 @@
 package net.corda.bridge.services.receiver
 
 import net.corda.bridge.services.api.BridgeAMQPListenerService
-import net.corda.bridge.services.api.BridgeAuditService
-import net.corda.bridge.services.api.BridgeConfiguration
+import net.corda.bridge.services.api.FirewallAuditService
+import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.api.ServiceStateSupport
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
@@ -30,9 +30,9 @@ import java.io.ByteArrayInputStream
 import java.security.KeyStore
 import java.util.*
 
-class BridgeAMQPListenerServiceImpl(val conf: BridgeConfiguration,
+class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
                                     val maximumMessageSize: Int,
-                                    val auditService: BridgeAuditService,
+                                    val auditService: FirewallAuditService,
                                     private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeAMQPListenerService, ServiceStateSupport by stateHelper {
     companion object {
         val log = contextLogger()

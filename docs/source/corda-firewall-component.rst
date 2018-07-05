@@ -1,12 +1,12 @@
-Bridge component overview
-=========================
+Firewall Component Overview
+===============================
 
 .. contents::
 
 Introduction
 ------------
-The Corda bridge/float component is designed for enterprise deployments and acts as an application level
-firewall and protocol break on all internet facing endpoints. The ``corda-bridgeserver.jar`` encapsulates the peer
+The Corda Firewall (bridge/float) component is designed for enterprise deployments and acts as an application level
+firewall and protocol break on all internet facing endpoints. The ``corda-firewall.jar`` encapsulates the peer
 network functionality of the basic Corda Enterprise node, so that this can be operated separately from the security sensitive
 JVM runtime of the node. This gives separation of functionality and ensures that the legal identity keys are not
 used in the same process as the internet TLS connections. Also, it adds support for enterprise deployment requirements,
@@ -20,13 +20,13 @@ The component referred to here as the *bridge* is the library of code responsibl
 nodes and implements the AMQP 1.0 protocol over TLS 1.0 between peers to provide reliable flow message delivery. This
 component can be run as a simple integrated feature of the node. However, for enhanced security and features in Corda
 Enterprise, the in-node version should be turned off and a standalone and HA version can be run from the
-``corda-bridgeserver.jar``, possibly integrating with a SOCKS proxy.
+``corda-firewall.jar``, possibly integrating with a SOCKS proxy.
 
 The *float* component refers to the inbound socket listener, packet filtering and DMZ compatible component. In the
 simple all-in-one node all inbound peer connections terminate directly onto an embedded Artemis broker component
 hosted within the node. The connection authentication and packet the filtering is managed directly via Artemis
 permission controls managed directly inside the node JVM. For Corda Enterprise deployments we provide a more
-secure and configurable isolation component that is available using code inside ``corda-bridgeserver.jar``. This
+secure and configurable isolation component that is available using code inside ``corda-firewall.jar``. This
 component is designed to provide a clear protocol break and thus prevents the node and Artemis server ever being
 directly exposed to peers. For simpler deployments with no DMZ the float and bridge logic can also be run as a
 single application behind the firewall, but still protecting the node and hosted Artemis. In future we may also host
@@ -119,9 +119,10 @@ Operating modes of the Bridge and Float
 Embedded Developer Node (node + artemis + internal bridge, no float, no DMZ)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The simplest development deployment of the bridge is to just use the embedded Peer-to-Peer Artemis with the node as TLS endpoint
-and to have the outgoing packets use the internal bridge functionality. Typically this should only be used for easy development,
-or for organisations evaluating on Open Source Corda, where this is the only available option:
+The simplest development deployment of the node is without firewall and thus just use the embedded bridge and Peer-to-Peer
+Artemis with the node as TLS endpoint and to have the outgoing packets use the internal bridge functionality.
+Typically this should only be used for easy development, or for organisations evaluating on Open Source Corda,
+where this is the only available option:
 
 .. image:: resources/bridge/node_embedded_bridge.png
      :scale: 100%
@@ -131,13 +132,13 @@ Node + Bridge (no float, no DMZ)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The next simplest deployment is to turn off the built in bridge using the ``externalBridge`` enterprise config property
-and to run a single combined bridge/float process. This might be suitable for a test environment, to conserve VM's.
+and to run a single combined firewall process. This might be suitable for a test environment, to conserve VMs.
 
- .. note::  Note that to run the bridge and the node on the same machine there could be a port conflict with a naive setup,
+ .. note::  Note that to run the firewall and the node on the same machine there could be a port conflict with a naive ``node.conf`` setup,
             but by using the ``messagingServerAddress`` property to specify the bind address and port plus setting
             ``messagingServerExternal = false``
             the embedded Artemis P2P broker can be set to listen on a different port rather than the advertised ``p2paddress`` port.
-            Then configure an all-in-one bridge to point at this node:
+            Then configure an all-in-one bridge to point at this node's ``messagingServerAddress``:
 
 .. image:: resources/bridge/simple_bridge.png
      :scale: 100%
@@ -147,9 +148,10 @@ DMZ ready (node + bridge + float)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To familiarize oneself with the a more complete deployment including a DMZ and separated inbound and outbound paths
-the ``bridgeMode`` property in the ``bridge.conf`` should be set to ``BridgeInner`` for the bridge and
-``FloatOuter`` for the DMZ float. The diagram below shows such a non-HA deployment. This would not be recommended
-for production, unless used as part of a cold DR type standby.
+the ``firewallMode`` property in the ``firewall.conf`` should be set to ``BridgeInner`` for the bridge and
+``FloatOuter`` for the DMZ float. These mode names were chosen to remind users that the ``bridge`` should run in the trusted
+*inner* network zone and the ``float`` should run in the less trusted *outer* zone.
+The diagram below shows such a non-HA deployment. This would not be recommended for production, unless used as part of a cold DR type standby.
 
 .. note::  Note that whilst the bridge needs access to the official TLS private
         key, the tunnel link should use a private set of link specific keys and certificates. The float will be provisioned

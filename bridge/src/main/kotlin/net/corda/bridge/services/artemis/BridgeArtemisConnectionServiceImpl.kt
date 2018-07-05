@@ -28,9 +28,9 @@ import rx.Subscription
 import java.lang.Long.min
 import java.util.concurrent.CountDownLatch
 
-class BridgeArtemisConnectionServiceImpl(val conf: BridgeConfiguration,
+class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
                                          val maxMessageSize: Int,
-                                         val auditService: BridgeAuditService,
+                                         val auditService: FirewallAuditService,
                                          private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeArtemisConnectionService, ServiceStateSupport by stateHelper {
     companion object {
         val log = contextLogger()

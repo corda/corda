@@ -6,6 +6,12 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+
+* The ``corda-bridgserver.jar`` has been renamed to ``corda-firewall.jar`` to be more consistent
+  with marketing materials and purpose of the jar. Further to this we have also renamed ``bridge.conf`` to ``firewall.conf``
+  and within that file the ``bridgeMode`` propety has been modified to ``firewallMode`` for overall consistency.
+  This will be a breaking change for early adopters and their deployments, but hopefully will be more future proof.
+
 * Remove all references to the out-of-process transaction verification.
 
 * Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems related to database migrations before exiting with a non-zero code.

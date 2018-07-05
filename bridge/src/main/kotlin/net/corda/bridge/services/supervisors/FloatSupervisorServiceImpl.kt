@@ -19,9 +19,9 @@ import net.corda.core.utilities.contextLogger
 import org.slf4j.LoggerFactory
 import rx.Subscription
 
-class FloatSupervisorServiceImpl(val conf: BridgeConfiguration,
+class FloatSupervisorServiceImpl(val conf: FirewallConfiguration,
                                  val maxMessageSize: Int,
-                                 val auditService: BridgeAuditService,
+                                 val auditService: FirewallAuditService,
                                  private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : FloatSupervisorService, ServiceStateSupport by stateHelper {
     companion object {
         val log = contextLogger()
@@ -35,7 +35,7 @@ class FloatSupervisorServiceImpl(val conf: BridgeConfiguration,
 
     init {
         amqpListenerService = BridgeAMQPListenerServiceImpl(conf, maxMessageSize, auditService)
-        floatControlService = if (conf.bridgeMode == BridgeMode.FloatOuter) {
+        floatControlService = if (conf.firewallMode == FirewallMode.FloatOuter) {
             require(conf.haConfig == null) { "Float process should not have HA config, that is controlled via the bridge." }
             FloatControlListenerService(conf, maxMessageSize, auditService, amqpListenerService)
         } else {

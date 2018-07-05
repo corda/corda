@@ -17,7 +17,7 @@ import java.security.KeyStore
 
 /**
  * This service when activated via [provisionKeysAndActivate] installs an AMQP listening socket,
- * which listens on the port specified in the [BridgeConfiguration.inboundConfig] section.
+ * which listens on the port specified in the [FirewallConfiguration.inboundConfig] section.
  * The service technically runs inside the 'float' portion of the bridge, so that it can be run remotely inside the DMZ.
  * As a result it reports as active, whilst not actually listening. Only when the TLS [KeyStore]s are passed to it
  * does the service become [running].

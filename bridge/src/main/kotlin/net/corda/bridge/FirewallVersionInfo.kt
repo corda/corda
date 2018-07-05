@@ -12,17 +12,17 @@ package net.corda.bridge
 
 
 /**
- * Encapsulates various pieces of version information of the bridge.
+ * Encapsulates various pieces of version information of the firewall.
  */
-data class BridgeVersionInfo(
+data class FirewallVersionInfo(
         /**
-         * Platform version of the bridge which is an integer value which increments on any release where any of the public
-         * API of the entire Corda platform changes. This includes messaging, serialisation, bridge APIs, etc.
+         * Platform version of the firewall which is an integer value which increments on any release where any of the public
+         * API of the entire Corda platform changes. This includes messaging, serialisation, firewall APIs, etc.
          */
         val platformVersion: Int,
-        /** Release version string of the bridge. */
+        /** Release version string of the firewall. */
         val releaseVersion: String,
-        /** The exact version control commit ID of the bridge build. */
+        /** The exact version control commit ID of the firewall build. */
         val revision: String,
-        /** The bridge vendor */
+        /** The firewall vendor */
         val vendor: String)

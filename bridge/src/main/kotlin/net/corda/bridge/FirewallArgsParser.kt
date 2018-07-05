@@ -12,9 +12,9 @@ package net.corda.bridge
 
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
-import net.corda.bridge.services.api.BridgeConfiguration
+import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.config.BridgeConfigHelper
-import net.corda.bridge.services.config.parseAsBridgeConfiguration
+import net.corda.bridge.services.config.parseAsFirewallConfiguration
 import net.corda.core.internal.div
 import org.slf4j.event.Level
 import java.io.PrintStream
@@ -27,13 +27,13 @@ class ArgsParser {
     // The intent of allowing a command line configurable directory and config path is to allow deployment flexibility.
     // Other general configuration should live inside the config file unless we regularly need temporary overrides on the command line
     private val baseDirectoryArg = optionParser
-            .accepts("base-directory", "The bridge working directory where all the files are kept")
+            .accepts("base-directory", "The firewall working directory where all the files are kept")
             .withRequiredArg()
             .defaultsTo(".")
     private val configFileArg = optionParser
             .accepts("config-file", "The path to the config file")
             .withRequiredArg()
-            .defaultsTo("bridge.conf")
+            .defaultsTo("firewall.conf")
     private val loggerLevel = optionParser
             .accepts("logging-level", "Enable logging at this level and higher")
             .withRequiredArg()
@@ -71,8 +71,8 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val loggingLevel: Level,
                           val logToConsole: Boolean,
                           val isVersion: Boolean) {
-    fun loadConfig(): BridgeConfiguration {
-        val config = BridgeConfigHelper.loadConfig(baseDirectory, configFile).parseAsBridgeConfiguration()
+    fun loadConfig(): FirewallConfiguration {
+        val config = BridgeConfigHelper.loadConfig(baseDirectory, configFile).parseAsFirewallConfiguration()
         return config
     }
 }

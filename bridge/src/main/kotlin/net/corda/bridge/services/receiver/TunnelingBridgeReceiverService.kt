@@ -36,9 +36,9 @@ import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-class TunnelingBridgeReceiverService(val conf: BridgeConfiguration,
+class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
                                      val maximumMessageSize: Int,
-                                     val auditService: BridgeAuditService,
+                                     val auditService: FirewallAuditService,
                                      haService: BridgeMasterService,
                                      val filterService: IncomingMessageFilterService,
                                      private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeReceiverService, ServiceStateSupport by stateHelper {

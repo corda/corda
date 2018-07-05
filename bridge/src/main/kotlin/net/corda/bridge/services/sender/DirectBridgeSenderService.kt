@@ -20,9 +20,9 @@ import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import rx.Subscription
 
-class DirectBridgeSenderService(val conf: BridgeConfiguration,
+class DirectBridgeSenderService(val conf: FirewallConfiguration,
                                 val maxMessageSize: Int,
-                                val auditService: BridgeAuditService,
+                                val auditService: FirewallAuditService,
                                 haService: BridgeMasterService,
                                 val artemisConnectionService: BridgeArtemisConnectionService,
                                 private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeSenderService, ServiceStateSupport by stateHelper {

@@ -10,8 +10,8 @@
 
 package net.corda.bridge.services.audit
 
-import net.corda.bridge.services.api.BridgeAuditService
-import net.corda.bridge.services.api.BridgeConfiguration
+import net.corda.bridge.services.api.FirewallAuditService
+import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.api.ServiceStateSupport
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
@@ -19,8 +19,8 @@ import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import java.net.InetSocketAddress
 
-class LoggingBridgeAuditService(val conf: BridgeConfiguration,
-                                private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeAuditService, ServiceStateSupport by stateHelper {
+class LoggingFirewallAuditService(val conf: FirewallConfiguration,
+                                  private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : FirewallAuditService, ServiceStateSupport by stateHelper {
     companion object {
         val log = contextLogger()
     }

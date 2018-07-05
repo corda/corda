@@ -10,7 +10,7 @@
 
 package net.corda.bridge
 
-import net.corda.bridge.services.api.BridgeMode
+import net.corda.bridge.services.api.FirewallMode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
@@ -35,9 +35,9 @@ class ConfigTest {
 
     @Test
     fun `Load simple config`() {
-        val configResource = "/net/corda/bridge/singleprocess/bridge.conf"
+        val configResource = "/net/corda/bridge/singleprocess/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(BridgeMode.SenderReceiver, config.bridgeMode)
+        assertEquals(FirewallMode.SenderReceiver, config.firewallMode)
         assertEquals(NetworkHostAndPort("localhost", 11005), config.outboundConfig!!.artemisBrokerAddress)
         assertEquals(NetworkHostAndPort("0.0.0.0", 10005), config.inboundConfig!!.listeningAddress)
         assertNull(config.bridgeInnerConfig)
@@ -46,9 +46,9 @@ class ConfigTest {
 
     @Test
     fun `Load simple bridge config`() {
-        val configResource = "/net/corda/bridge/withfloat/bridge/bridge.conf"
+        val configResource = "/net/corda/bridge/withfloat/bridge/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(BridgeMode.BridgeInner, config.bridgeMode)
+        assertEquals(FirewallMode.BridgeInner, config.firewallMode)
         assertEquals(NetworkHostAndPort("localhost", 11005), config.outboundConfig!!.artemisBrokerAddress)
         assertNull(config.inboundConfig)
         assertEquals(listOf(NetworkHostAndPort("localhost", 12005)), config.bridgeInnerConfig!!.floatAddresses)
@@ -58,9 +58,9 @@ class ConfigTest {
 
     @Test
     fun `Load simple float config`() {
-        val configResource = "/net/corda/bridge/withfloat/float/bridge.conf"
+        val configResource = "/net/corda/bridge/withfloat/float/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(BridgeMode.FloatOuter, config.bridgeMode)
+        assertEquals(FirewallMode.FloatOuter, config.firewallMode)
         assertNull(config.outboundConfig)
         assertEquals(NetworkHostAndPort("0.0.0.0", 10005), config.inboundConfig!!.listeningAddress)
         assertNull(config.bridgeInnerConfig)
@@ -70,7 +70,7 @@ class ConfigTest {
 
     @Test
     fun `Load overridden cert config`() {
-        val configResource = "/net/corda/bridge/custombasecerts/bridge.conf"
+        val configResource = "/net/corda/bridge/custombasecerts/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         assertEquals(Paths.get("customcerts/mysslkeystore.jks"), config.sslKeystore)
         assertEquals(Paths.get("customcerts/mytruststore.jks"), config.trustStoreFile)
@@ -78,7 +78,7 @@ class ConfigTest {
 
     @Test
     fun `Load custom inner certificate config`() {
-        val configResource = "/net/corda/bridge/separatedwithcustomcerts/bridge/bridge.conf"
+        val configResource = "/net/corda/bridge/separatedwithcustomcerts/bridge/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         assertEquals(Paths.get("outboundcerts/outboundkeys.jks"), config.outboundConfig!!.customSSLConfiguration!!.sslKeystore)
         assertEquals(Paths.get("outboundcerts/outboundtrust.jks"), config.outboundConfig!!.customSSLConfiguration!!.trustStoreFile)
@@ -94,7 +94,7 @@ class ConfigTest {
 
     @Test
     fun `Load custom outer certificate config`() {
-        val configResource = "/net/corda/bridge/separatedwithcustomcerts/float/bridge.conf"
+        val configResource = "/net/corda/bridge/separatedwithcustomcerts/float/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         assertEquals(Paths.get("inboundcerts/inboundkeys.jks"), config.inboundConfig!!.customSSLConfiguration!!.sslKeystore)
         assertEquals(Paths.get("inboundcerts/inboundtrust.jks"), config.inboundConfig!!.customSSLConfiguration!!.trustStoreFile)
@@ -110,7 +110,7 @@ class ConfigTest {
 
     @Test
     fun `Load config withsocks support`() {
-        val configResource = "/net/corda/bridge/withsocks/bridge.conf"
+        val configResource = "/net/corda/bridge/withsocks/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         assertEquals(SocksProxyVersion.SOCKS5, config.outboundConfig!!.socksProxyConfig!!.version)
         assertEquals(NetworkHostAndPort("localhost", 12345), config.outboundConfig!!.socksProxyConfig!!.proxyAddress)

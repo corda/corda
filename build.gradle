@@ -397,7 +397,7 @@ bintrayConfig {
             'corda-tools-blob-inspector',
             'corda-tools-explorer',
             'corda-tools-network-bootstrapper',
-            'corda-bridgeserver',
+            'corda-firewall',
             'corda-ptflows',
             'jmeter-corda',
             'tools-database-manager',

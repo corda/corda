@@ -49,7 +49,7 @@ class AMQPListenerTest {
 
     @Test
     fun `Basic AMPQListenerService lifecycle test`() {
-        val configResource = "/net/corda/bridge/singleprocess/bridge.conf"
+        val configResource = "/net/corda/bridge/singleprocess/firewall.conf"
         val maxMessageSize = createNetworkParams(tempFolder.root.toPath())
         val bridgeConfig = createAndLoadConfigFromResource(tempFolder.root.toPath() / "listener", configResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
@@ -136,7 +136,7 @@ class AMQPListenerTest {
 
     @Test
     fun `Bad certificate audit check`() {
-        val configResource = "/net/corda/bridge/singleprocess/bridge.conf"
+        val configResource = "/net/corda/bridge/singleprocess/firewall.conf"
         val maxMessageSize = createNetworkParams(tempFolder.root.toPath())
         val bridgeConfig = createAndLoadConfigFromResource(tempFolder.root.toPath() / "listener", configResource)
         bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)

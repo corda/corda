@@ -30,11 +30,11 @@ object BridgeConfigHelper {
 
     private val log = LoggerFactory.getLogger(javaClass)
     fun loadConfig(baseDirectory: Path,
-                   configFile: Path = baseDirectory / "bridge.conf",
+                   configFile: Path = baseDirectory / "firewall.conf",
                    allowMissingConfig: Boolean = false,
                    configOverrides: Config = ConfigFactory.empty()): Config {
         val parseOptions = ConfigParseOptions.defaults()
-        val defaultConfig = ConfigFactory.parseResources("bridgedefault.conf", parseOptions.setAllowMissing(false))
+        val defaultConfig = ConfigFactory.parseResources("firewalldefault.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
         val systemOverrides = systemProperties().bridgeEntriesOnly()
         val environmentOverrides = systemEnvironment().bridgeEntriesOnly()

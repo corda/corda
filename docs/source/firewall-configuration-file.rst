@@ -1,25 +1,25 @@
-Bridge configuration
+Firewall configuration
 ====================
 
 .. contents::
 
 File location
 -------------
-When starting a standalone bridge, or float, the ``corda-bridgeserver.jar`` file defaults to reading the bridge's configuration from a ``bridge.conf`` file in
+When starting a standalone firewall (in bridge, or float mode), the ``corda-firewall.jar`` file defaults to reading the firewall's configuration from a ``firewall.conf`` file in
 the directory from which the command to launch the process is executed. There are two command-line options to override this
 behaviour:
 
 * The ``--config-file`` command line option allows you to specify a configuration file with a different name, or at
   different file location. Paths are relative to the current working directory
 
-* The ``--base-directory`` command line option allows you to specify the bridge's workspace location. A ``bridge.conf``
+* The ``--base-directory`` command line option allows you to specify the firewall's workspace location. A ``firewall.conf``
   configuration file is then expected in the root of this workspace
 
-If you specify both command line arguments at the same time, the bridge will fail to start.
+If you specify both command line arguments at the same time, the firewall will fail to start.
 
 Format
 ------
-The Bridge configuration file uses the HOCON format which is superset of JSON. Please visit
+The firewall configuration file uses the HOCON format which is superset of JSON. Please visit
 `<https://github.com/typesafehub/config/blob/master/HOCON.md>`_ for further details.
 
 .. warning::  Please do NOT use double quotes (``"``) in configuration keys.
@@ -31,40 +31,40 @@ The Bridge configuration file uses the HOCON format which is superset of JSON. P
 Defaults
 --------
 A set of default configuration options are loaded from the built-in resource file. Any options you do not specify in
-your own ``bridge.conf`` file will use these defaults:
+your own ``firewall.conf`` file will use these defaults:
 
-.. literalinclude:: ../../bridge/src/main/resources/bridgedefault.conf
+.. literalinclude:: ../../bridge/src/main/resources/firewalldefault.conf
     :language: javascript
    
 Bridge operating modes
 ----------------------
-.. note:: By default, the Corda node assumes that it will carry out the peer-to-peer functions of the bridge internally!
-          Before running a dedicated bridge process, it is essential to turn off the dev mode component by setting the
+.. note:: By default, the Corda node assumes that it will carry out the peer-to-peer functions of the ``bridge`` internally!
+          Before running a dedicated firewall process, it is essential to turn off the dev mode component by setting the
           ``enterpriseConfiguration.externalBridge`` property of the ``node.conf`` file to ``true``.
           If the ``externalBridge`` flag is not ``true``, there will be unexpected behaviour as the node will try to send peer-to-peer messages directly!
 
-Assuming that an external bridge is to be used, the ``corda-bridgeserver.jar`` operates in one of three basic operating modes.
-The particular mode is selected via the required ``bridgeMode`` configuration property inside ``bridge.conf``:
+Assuming that an external firewall is to be used, the ``corda-firewall.jar`` operates in one of three basic operating modes.
+The particular mode is selected via the required ``firewallMode`` configuration property inside ``firewall.conf``:
 
-:SenderReceiver: selects a single process bridge solution to isolate the node and Artemis broker from direct Internet contact.
-  It is still assumed that the bridge process is behind a firewall, but both the message sending and receiving paths will pass via the ``bridge``.
-  In this mode the ``outboundConfig`` and ``inboundConfig`` configuration sections of ``bridge.conf`` must be provided,
+:SenderReceiver: selects a single process firewall solution to isolate the node and Artemis broker from direct Internet contact.
+  It is still assumed that the firewall process is behind a firewall, but both the message sending and receiving paths will pass via the ``bridge``.
+  In this mode the ``outboundConfig`` and ``inboundConfig`` configuration sections of ``firewall.conf`` must be provided,
   the ``bridgeInnerConfig`` and ``floatOuterConfig`` sections should not be present.
 
-:BridgeInner: mode runs this instance of the ``corda-bridgeserver.jar`` as the trusted portion of the peer-to-peer firewall float.
+:BridgeInner: mode runs this instance of the ``corda-firewall.jar`` as the trusted portion of the peer-to-peer firewall float.
   Specifically, this process runs the complete outbound message processing. For the inbound path it operates only the filtering and durable storing portions of the message processing.
   The process expects to connect through a firewall to a matched ``FloatOuter`` instance running in the DMZ as the actual ``TLS/AMQP 1.0`` termination point.
 
-:FloatOuter: causes this instance of the ``corda-bridgeserver.jar`` to run as a protocol break proxy for inbound message path. The process
+:FloatOuter: causes this instance of the ``corda-firewall.jar`` to run as a protocol break proxy for inbound message path. The process
   will initialise a ``TLS`` control port and await connection from the ``BridgeInner``. Once the control connection is successful the ``BridgeInner`` will securely provision
   the ``TLS`` socket server key and certificates into the ``FloatOuter``. The process will then start listening for inbound connection from peer nodes.
 
 Fields
 ------
 The available config fields are listed below. ``baseDirectory`` is available as a substitution value and contains the
-absolute path to the bridge's base directory.
+absolute path to the firewall's base directory.
 
-:bridgeMode: Determines operating mode of the bridge. See above.
+:firewallMode: Determines operating mode of the firewall. See above.
 
 :keyStorePassword: The password to unlock the TLS KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the
     node certificate and private key. The private key password must be the same due to limitations in the Artemis libraries.
@@ -194,7 +194,7 @@ absolute path to the bridge's base directory.
         In future it intended that other schemes such as ``etcd`` are supported.
 
     :haPriority: The implementation uses a prioritise leader election algorithm, so that a preferred master instance can be set. The highest priority is 0 and larger integers have lower priority.
-        At the same level of priority, it is random which instance wins the leader election. If a bridge instance dies another will have the opportunity to become master in instead.
+        At the same level of priority, it is random which instance wins the leader election. If a ``bridge`` instance dies another will have the opportunity to become master in instead.
 
     :haTopic: Sets the zookeeper topic prefix that the nodes used in resolving the election and must be the same for all ``bridge``
         instances competing for master status. This is available to allow a single zookeeper cluster to be reused with multiple
@@ -357,11 +357,11 @@ Typical configuration for ``nodeserver2`` would be a ``node.conf`` files contain
     devMode = false // Turn off things like key autogeneration and require proper doorman registration.
 
 
-Configuration in ``bridge.conf`` for ``bridgeserver1``:
+Configuration in ``firewall.conf`` for ``bridgeserver1``:
 
 ..  code-block:: javascript
     
-    bridgeMode = BridgeInner // Set the mode the  corda-bridgeserver.jar runs as appropriately.
+    firewallMode = BridgeInner // Set the mode the  corda-firewall.jar runs as appropriately.
     outboundConfig { // Required section
         artemisBrokerAddress = "nodeserver1:11005" // point at primary Artemis address in the node
         alternateArtemisBrokerAddresses = [ "nodeserver2:11005" ] // List any other HA Artemis addresses
@@ -388,11 +388,11 @@ Configuration in ``bridge.conf`` for ``bridgeserver1``:
     }
     networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node after registration and here is expected in the workspace folder.
 
-Configuration in ``bridge.conf`` for ``bridgeserver2``:
+Configuration in ``firewall.conf`` for ``bridgeserver2``:
 
 ..  code-block:: javascript  
 
-    bridgeMode = BridgeInner // Set the mode the  corda-bridgeserver.jar runs as appropriately.
+    firewallMode = BridgeInner // Set the mode the  corda-firewall.jar runs as appropriately.
     outboundConfig { // Required section
         artemisBrokerAddress = "nodeserver2:11005" // point at primary Artemis address in the node
         alternateArtemisBrokerAddresses = [ "nodeserver1:11005" ] // List any other HA Artemis addresses
@@ -420,11 +420,11 @@ Configuration in ``bridge.conf`` for ``bridgeserver2``:
     networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node after registration and here is expected in the workspace folder.
 
     
-Configuration in ``bridge.conf`` for ``floatserver1``:
+Configuration in ``firewall.conf`` for ``floatserver1``:
 
 ..  code-block:: javascript  
 
-    bridgeMode = FloatOuter // Set the mode the  corda-bridgeserver.jar runs as appropriately.
+    firewallMode = FloatOuter // Set the mode the  corda-firewall.jar runs as appropriately.
     inboundConfig { // Required section
         listeningAddress = "dmzexternal1:10005" // expose the listening port on the out NIC
     }
@@ -441,11 +441,11 @@ Configuration in ``bridge.conf`` for ``floatserver1``:
     }
     networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node after registration and here is expected in the workspace folder.
     
-Configuration in ``bridge.conf`` for ``floatserver2``:
+Configuration in ``firewall.conf`` for ``floatserver2``:
 
 ..  code-block:: javascript  
 
-    bridgeMode = FloatOuter // Set the mode the  corda-bridgeserver.jar runs as appropriately.
+    firewallMode = FloatOuter // Set the mode the  corda-firewall.jar runs as appropriately.
     inboundConfig { // Required section
         listeningAddress = "dmzexternal2:10005" // expose the listening port on the out NIC
     }
