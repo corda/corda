@@ -33,9 +33,11 @@ class SandboxRuntimeContext(
      * Run a set of actions within the provided sandbox context.
      */
     fun use(action: SandboxRuntimeContext.() -> Unit) {
-        this.apply {
-            SandboxRuntimeContext.INSTANCE = this
-            action()
+        SandboxRuntimeContext.instance = this
+        try {
+            this.action()
+        } finally {
+            threadLocalContext.remove()
         }
     }
 
@@ -45,13 +47,14 @@ class SandboxRuntimeContext(
             override fun initialValue(): SandboxRuntimeContext? = null
         }
 
+
         /**
          * When called from within a sandbox, this returns the context for the current sandbox thread.
          */
-        var INSTANCE: SandboxRuntimeContext
+        var instance: SandboxRuntimeContext
             get() = threadLocalContext.get()
-                    ?: throw NullPointerException("SandboxContext has not been initialized before use")
-            set(value) {
+                    ?: throw IllegalStateException("SandboxContext has not been initialized before use")
+            private set(value) {
                 threadLocalContext.set(value)
             }
 

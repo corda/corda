@@ -20,7 +20,7 @@ import net.corda.sandbox.references.MemberModule
 open class EmitterContext(
         private val analysisContext: AnalysisRuntimeContext,
         private val configuration: AnalysisConfiguration,
-        private val emitterModule: EmitterModule
+        val emitterModule: EmitterModule
 ) {
 
     /**
@@ -69,7 +69,7 @@ open class EmitterContext(
     /**
      * Set up and execute an emitter block for a particular member.
      */
-    fun emit(action: EmitterModule.() -> Unit) {
+    inline fun emit(action: EmitterModule.() -> Unit) {
         action(emitterModule)
     }
 

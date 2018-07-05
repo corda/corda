@@ -30,28 +30,28 @@ class RuntimeCostSummary private constructor(
      * Accumulated cost of memory allocations.
      */
     val allocationCost = RuntimeCost(allocationCostThreshold) {
-        "Contract [${it.name}] terminated due to over-allocation"
+        "Sandbox [${it.name}] terminated due to over-allocation"
     }
 
     /**
      * Accumulated cost of jump operations.
      */
     val jumpCost = RuntimeCost(jumpCostThreshold) {
-        "Contract [${it.name}] terminated due to excessive use of looping"
+        "Sandbox [${it.name}] terminated due to excessive use of looping"
     }
 
     /**
      * Accumulated cost of method invocations.
      */
     val invocationCost = RuntimeCost(invocationCostThreshold) {
-        "Contract [${it.name}] terminated due to excessive method calling"
+        "Sandbox [${it.name}] terminated due to excessive method calling"
     }
 
     /**
      * Accumulated cost of throw operations.
      */
     val throwCost = RuntimeCost(throwCostThreshold) {
-        "Contract [${it.name}] terminated due to excessive exception throwing"
+        "Sandbox [${it.name}] terminated due to excessive exception throwing"
     }
 
     /**

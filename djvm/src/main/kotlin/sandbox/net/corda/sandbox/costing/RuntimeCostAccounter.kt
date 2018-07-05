@@ -19,7 +19,7 @@ object RuntimeCostAccounter {
      * A static instance of the sandbox context which is used to keep track of the costs.
      */
     private val context: SandboxRuntimeContext
-        get() = SandboxRuntimeContext.INSTANCE
+        get() = SandboxRuntimeContext.instance
 
     /**
      * The type name of the [RuntimeCostAccounter] class; referenced from instrumentors.

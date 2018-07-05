@@ -39,7 +39,12 @@ class IsolatedRunnable(
                     exception = ex
                     null
                 }
-                costs = runtimeCosts.summary
+                costs = mapOf(
+                        "allocations" to runtimeCosts.allocationCost.value,
+                        "invocations" to runtimeCosts.invocationCost.value,
+                        "jumps" to runtimeCosts.jumpCost.value,
+                        "throws" to runtimeCosts.throwCost.value
+                )
             }
             logger.trace("Exiting isolated runtime environment...")
             completionLatch.countDown()
@@ -85,7 +90,7 @@ class IsolatedRunnable(
      * The class loader to use for loading the [SandboxedRunnable] and any referenced code in [SandboxExecutor.run].
      */
     val classLoader: SandboxClassLoader
-        get() = SandboxRuntimeContext.INSTANCE.classLoader
+        get() = SandboxRuntimeContext.instance.classLoader
 
     private companion object {
 

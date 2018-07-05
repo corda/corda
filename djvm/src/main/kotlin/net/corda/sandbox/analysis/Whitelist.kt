@@ -31,21 +31,18 @@ open class Whitelist private constructor(
      * Check if name falls within the namespace of the whitelist.
      */
     fun inNamespace(name: String): Boolean {
-        return when (namespace) {
-            null -> false
-            else -> namespace.matches(name)
-        }
+        return namespace != null && namespace.matches(name)
     }
 
     /**
      * Check if a name is covered by the whitelist.
      */
     fun matches(name: String): Boolean {
-        if (seenNames.contains(name)) {
+        if (name in seenNames) {
             return true
         }
         return when {
-            textEntries.contains(name) -> {
+            name in textEntries -> {
                 seenNames.add(name)
                 true
             }
@@ -96,7 +93,6 @@ open class Whitelist private constructor(
         get() = textEntries + entries.map { it.pattern }
 
     companion object {
-
         private val everythingRegex = setOf(".*".toRegex())
 
         /**
@@ -210,11 +206,8 @@ open class Whitelist private constructor(
         }
 
         private const val SECTION_SEPARATOR = "---"
-
         private const val GZIP_MAGIC_FIRST_BYTE = GZIPInputStream.GZIP_MAGIC.toByte()
-
         private const val GZIP_MAGIC_SECOND_BYTE = (GZIPInputStream.GZIP_MAGIC shr 8).toByte()
-
     }
 
 }

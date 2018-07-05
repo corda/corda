@@ -10,7 +10,6 @@ import java.nio.file.Path
  *
  * @property whitelist The whitelist of class names.
  * @property pinnedClasses Classes and packages to leave untouched (in addition to the whitelist).
- * @property sandboxPrefix The package name prefix to use for classes loaded into a sandbox.
  * @property classResolver Functionality used to resolve the qualified name and relevant information about a class.
  * @property minimumSeverityLevel The minimum severity level to log and report.
  * @property classPath The extended class path to use for the analysis.
@@ -24,8 +23,7 @@ import java.nio.file.Path
 class AnalysisConfiguration(
         val whitelist: Whitelist = Whitelist.MINIMAL,
         val pinnedClasses: Whitelist = Whitelist.PINNED_CLASSES,
-        private val sandboxPrefix: String = "sandbox/",
-        val classResolver: ClassResolver = ClassResolver(whitelist, pinnedClasses, sandboxPrefix),
+        val classResolver: ClassResolver = ClassResolver(whitelist, pinnedClasses, SANDBOX_PREFIX),
         val minimumSeverityLevel: Severity = Severity.WARNING,
         val classPath: List<Path> = emptyList(),
         val analyzePinnedClasses: Boolean = false,
@@ -33,4 +31,13 @@ class AnalysisConfiguration(
         val prefixFilters: List<String> = emptyList(),
         val classModule: ClassModule = ClassModule(),
         val memberModule: MemberModule = MemberModule()
-)
+) {
+
+    companion object {
+        /**
+         * The package name prefix to use for classes loaded into a sandbox.
+         */
+        private const val SANDBOX_PREFIX: String = "sandbox/"
+    }
+
+}

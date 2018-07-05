@@ -1,6 +1,5 @@
 package net.corda.sandbox.analysis
 
-import com.sun.org.apache.xml.internal.serializer.utils.Utils.messages
 import net.corda.sandbox.code.EmitterModule
 import net.corda.sandbox.code.Instruction
 import net.corda.sandbox.code.instructions.*
@@ -93,7 +92,7 @@ open class ClassAndMemberVisitor(
     /**
      * Extract information about the traversed class.
      */
-    open fun visitClass(clazz: Class) = clazz
+    open fun visitClass(clazz: Class): Class = clazz
 
     /**
      * Process class after it has been fully traversed and analyzed.
@@ -118,12 +117,12 @@ open class ClassAndMemberVisitor(
     /**
      * Extract information about the traversed method.
      */
-    open fun visitMethod(clazz: Class, method: Member) = method
+    open fun visitMethod(clazz: Class, method: Member): Member = method
 
     /**
      * Extract information about the traversed field.
      */
-    open fun visitField(clazz: Class, field: Member) = field
+    open fun visitField(clazz: Class, field: Member): Member = field
 
     /**
      * Extract information about the traversed instruction.
@@ -133,30 +132,36 @@ open class ClassAndMemberVisitor(
     /**
      * Get the analysis context to pass on to method and field visitors.
      */
-    protected fun currentAnalysisContext() = AnalysisRuntimeContext(
-            currentClass!!,
-            currentMember,
-            sourceLocation,
-            analysisContext.messages,
-            configuration
-    )
+    protected fun currentAnalysisContext(): AnalysisRuntimeContext {
+        return AnalysisRuntimeContext(
+                currentClass!!,
+                currentMember,
+                sourceLocation,
+                analysisContext.messages,
+                configuration
+        )
+    }
 
     /**
      * Check if a class should be processed or not.
      */
-    protected fun shouldBeProcessed(className: String) =
-            !configuration.whitelist.inNamespace(className) && !configuration.pinnedClasses.matches(className)
+    protected fun shouldBeProcessed(className: String): Boolean {
+        return !configuration.whitelist.inNamespace(className) &&
+                !configuration.pinnedClasses.matches(className)
+    }
 
     /**
      * Extract information about the traversed member annotation.
      */
     private fun visitMemberAnnotation(
-            descriptor: String, referencedClass: Class? = null, referencedMember: Member? = null
+            descriptor: String,
+            referencedClass: Class? = null,
+            referencedMember: Member? = null
     ) {
         val clazz = (referencedClass ?: currentClass) ?: return
         val member = (referencedMember ?: currentMember) ?: return
         member.annotations.add(descriptor)
-        withGuard {
+        captureExceptions {
             visitMemberAnnotation(clazz, member, descriptor)
         }
     }
@@ -164,12 +169,14 @@ open class ClassAndMemberVisitor(
     /**
      * Run action with a guard that populates [messages] based on the output.
      */
-    private inline fun withGuard(action: () -> Unit) = try {
-        action()
-        true
-    } catch (exception: Throwable) {
-        recordMessage(exception, currentAnalysisContext())
-        false
+    private inline fun captureExceptions(action: () -> Unit): Boolean {
+        return try {
+            action()
+            true
+        } catch (exception: Throwable) {
+            recordMessage(exception, currentAnalysisContext())
+            false
+        }
     }
 
     /**
@@ -182,7 +189,7 @@ open class ClassAndMemberVisitor(
     /**
      * Record a reference to a class.
      */
-    private fun addReferenceToType(type: String) {
+    private fun recordTypeReference(type: String) {
         val typeName = configuration.classModule
                 .normalizeClassName(type)
                 .replace("[]", "")
@@ -195,9 +202,9 @@ open class ClassAndMemberVisitor(
     /**
      * Record a reference to a class member.
      */
-    private fun addReferenceToMember(owner: String, name: String, desc: String) {
+    private fun recordMemberReference(owner: String, name: String, desc: String) {
         if (shouldBeProcessed(currentClass!!.name)) {
-            addReferenceToType(owner)
+            recordTypeReference(owner)
             val memberReference = MemberReference(owner, name, desc)
             analysisContext.references.add(memberReference, sourceLocation)
         }
@@ -215,25 +222,25 @@ open class ClassAndMemberVisitor(
          */
         override fun visit(
                 version: Int, access: Int, name: String, signature: String?, superName: String?,
-                interfaces: Array<out String>?
+                interfaces: Array<String>?
         ) {
             val superClassName = superName ?: ""
             val interfaceNames = interfaces?.toMutableList() ?: mutableListOf()
-            Class(version, access, name, superClassName, interfaceNames, genericsDetails = signature ?: "").apply {
-                currentClass = this
+            Class(version, access, name, superClassName, interfaceNames, genericsDetails = signature ?: "").also {
+                currentClass = it
                 currentMember = null
                 sourceLocation = SourceLocation(
                         className = name
                 )
             }
-            withGuard {
+            captureExceptions {
                 currentClass = visitClass(currentClass!!)
             }
             val visitedClass = currentClass!!
             analysisContext.classes.add(visitedClass)
             super.visit(
                     version, access, visitedClass.name, signature,
-                    visitedClass.superClass.let { return@let if (it.isEmpty()) null else it },
+                    visitedClass.superClass.nullIfEmpty(),
                     visitedClass.interfaces.toTypedArray()
             )
         }
@@ -244,8 +251,8 @@ open class ClassAndMemberVisitor(
         override fun visitEnd() {
             configuration.classModule
                     .getClassReferencesFromClass(currentClass!!, configuration.analyzeAnnotations)
-                    .forEach { addReferenceToType(it) }
-            withGuard {
+                    .forEach { recordTypeReference(it) }
+            captureExceptions {
                 visitClassEnd(currentClass!!)
             }
             super.visitEnd()
@@ -255,10 +262,10 @@ open class ClassAndMemberVisitor(
          * Extract the meta-data indicating the source file of the traversed class (i.e., where it is compiled from).
          */
         override fun visitSource(source: String?, debug: String?) {
-            currentClass?.apply {
+            currentClass!!.apply {
                 sourceFile = configuration.classModule.getFullSourceLocation(this, source)
                 sourceLocation = sourceLocation.copy(sourceFile = sourceFile)
-                withGuard {
+                captureExceptions {
                     visitSource(this, sourceFile)
                 }
             }
@@ -269,9 +276,9 @@ open class ClassAndMemberVisitor(
          * Extract information about provided annotations.
          */
         override fun visitAnnotation(desc: String, visible: Boolean): AnnotationVisitor? {
-            currentClass?.apply {
+            currentClass!!.apply {
                 annotations.add(desc)
-                withGuard {
+                captureExceptions {
                     visitClassAnnotation(this, desc)
                 }
             }
@@ -286,27 +293,26 @@ open class ClassAndMemberVisitor(
         ): MethodVisitor? {
             var visitedMember: Member? = null
             var processMember = true
-            currentClass?.apply {
-                val member = Member(access, this.name, name, desc, signature ?: "")
-                currentMember = member
-                sourceLocation = sourceLocation.copy(
-                        memberName = name,
-                        signature = desc,
-                        lineNumber = 0
-                )
-                processMember = withGuard {
-                    visitedMember = visitMethod(this, member)
-                }
-                configuration.memberModule.addToClass(this, visitedMember ?: member)
+            val clazz = currentClass!!
+            val member = Member(access, clazz.name, name, desc, signature ?: "")
+            currentMember = member
+            sourceLocation = sourceLocation.copy(
+                    memberName = name,
+                    signature = desc,
+                    lineNumber = 0
+            )
+            processMember = captureExceptions {
+                visitedMember = visitMethod(clazz, member)
             }
+            configuration.memberModule.addToClass(clazz, visitedMember ?: member)
             return if (processMember) {
-                val member = visitedMember ?: currentMember!!
+                val derivedMember = visitedMember ?: member
                 val targetVisitor = super.visitMethod(
-                        member.access,
-                        member.memberName,
-                        member.signature,
+                        derivedMember.access,
+                        derivedMember.memberName,
+                        derivedMember.signature,
                         signature,
-                        member.exceptions.toTypedArray()
+                        derivedMember.exceptions.toTypedArray()
                 )
                 MethodVisitorImpl(targetVisitor)
             } else {
@@ -322,27 +328,26 @@ open class ClassAndMemberVisitor(
         ): FieldVisitor? {
             var visitedMember: Member? = null
             var processMember = true
-            currentClass?.apply {
-                val member = Member(access, this.name, name, desc, "", value = value)
-                currentMember = member
-                sourceLocation = sourceLocation.copy(
-                        memberName = name,
-                        signature = desc,
-                        lineNumber = 0
-                )
-                processMember = withGuard {
-                    visitedMember = visitField(this, member)
-                }
-                configuration.memberModule.addToClass(this, visitedMember ?: member)
+            val clazz = currentClass!!
+            val member = Member(access, clazz.name, name, desc, "", value = value)
+            currentMember = member
+            sourceLocation = sourceLocation.copy(
+                    memberName = name,
+                    signature = desc,
+                    lineNumber = 0
+            )
+            processMember = captureExceptions {
+                visitedMember = visitField(clazz, member)
             }
+            configuration.memberModule.addToClass(clazz, visitedMember ?: member)
             return if (processMember) {
-                val member = visitedMember ?: currentMember!!
+                val derivedMember = visitedMember ?: member
                 val targetVisitor = super.visitField(
-                        member.access,
-                        member.memberName,
-                        member.signature,
+                        derivedMember.access,
+                        derivedMember.memberName,
+                        derivedMember.signature,
                         signature,
-                        member.value
+                        derivedMember.value
                 )
                 FieldVisitorImpl(targetVisitor)
             } else {
@@ -388,7 +393,7 @@ open class ClassAndMemberVisitor(
          * Extract information about provided field access instruction.
          */
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
-            addReferenceToMember(owner, name, desc)
+            recordMemberReference(owner, name, desc)
             visit(MemberAccessInstruction(opcode, owner, name, desc, isMethod = false)) {
                 super.visitFieldInsn(opcode, owner, name, desc)
             }
@@ -398,7 +403,7 @@ open class ClassAndMemberVisitor(
          * Extract information about provided method invocation instruction.
          */
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            addReferenceToMember(owner, name, desc)
+            recordMemberReference(owner, name, desc)
             visit(MemberAccessInstruction(opcode, owner, name, desc, itf, isMethod = true)) {
                 super.visitMethodInsn(opcode, owner, name, desc, itf)
             }
@@ -448,7 +453,7 @@ open class ClassAndMemberVisitor(
          * [Opcodes.INSTANCEOF] and [Opcodes.CHECKCAST]).
          */
         override fun visitTypeInsn(opcode: Int, type: String) {
-            addReferenceToType(type)
+            recordTypeReference(type)
             visit(TypeInstruction(opcode, type)) {
                 try {
                     super.visitTypeInsn(opcode, type)
@@ -462,11 +467,12 @@ open class ClassAndMemberVisitor(
          * Extract information about provided try-catch/finally block.
          */
         override fun visitTryCatchBlock(start: Label, end: Label, handler: Label, type: String?) {
-            visit(if (type != null) {
+            val block = if (type != null) {
                 TryCatchBlock(type, handler)
             } else {
                 TryFinallyBlock(handler)
-            }) {
+            }
+            visit(block) {
                 super.visitTryCatchBlock(start, end, handler, type)
             }
         }
@@ -497,7 +503,7 @@ open class ClassAndMemberVisitor(
             if (defaultFirst) {
                 defaultAction()
             }
-            val success = withGuard {
+            val success = captureExceptions {
                 visitInstruction(currentMember!!, emitterModule, instruction)
             }
             if (!defaultFirst) {
@@ -533,7 +539,11 @@ open class ClassAndMemberVisitor(
         /**
          * The API version of ASM.
          */
-        const val API_VERSION = Opcodes.ASM6
+        const val API_VERSION: Int = Opcodes.ASM6
+
+        private fun String.nullIfEmpty(): String? {
+            return if (this.isEmpty()) { null } else { this }
+        }
 
     }
 

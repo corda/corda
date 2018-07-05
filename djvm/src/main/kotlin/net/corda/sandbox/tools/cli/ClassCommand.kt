@@ -10,6 +10,7 @@ import net.corda.sandbox.source.SourceClassLoader
 import net.corda.sandbox.tools.Utilities.find
 import net.corda.sandbox.tools.Utilities.onEmpty
 import net.corda.sandbox.tools.Utilities.userClassPath
+import net.corda.sandbox.utilities.Discovery
 import org.objectweb.asm.ClassReader
 import picocli.CommandLine.Option
 import java.nio.file.Files
@@ -192,9 +193,9 @@ abstract class ClassCommand : CommandBase() {
     private fun getConfiguration(whitelist: Whitelist): SandboxConfiguration {
         return SandboxConfiguration.of(
                 profile = profile,
-                rules = ignoreRules.emptyListIfTrueOtherwiseNull(),
+                rules = if (ignoreRules) { emptyList() } else { Discovery.find() },
                 emitters = ignoreEmitters.emptyListIfTrueOtherwiseNull(),
-                definitionProviders = ignoreDefinitionProviders.emptyListIfTrueOtherwiseNull(),
+                definitionProviders = if(ignoreDefinitionProviders) { emptyList() } else { Discovery.find() },
                 enableTracing = !disableTracing,
                 analysisConfiguration = AnalysisConfiguration(
                         whitelist = whitelist,

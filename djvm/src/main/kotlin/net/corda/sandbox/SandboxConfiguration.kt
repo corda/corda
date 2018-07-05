@@ -24,9 +24,7 @@ class SandboxConfiguration private constructor(
         val executionProfile: ExecutionProfile,
         val analysisConfiguration: AnalysisConfiguration
 ) {
-
     companion object {
-
         /**
          * Default configuration for the deterministic sandbox.
          */
@@ -43,22 +41,20 @@ class SandboxConfiguration private constructor(
          * Create a sandbox configuration where one or more properties deviates from the default.
          */
         fun of(
-                profile: ExecutionProfile? = null,
-                rules: List<Rule>? = null,
+                profile: ExecutionProfile = ExecutionProfile.DEFAULT,
+                rules: List<Rule> = Discovery.find(),
                 emitters: List<Emitter>? = null,
-                definitionProviders: List<DefinitionProvider>? = null,
+                definitionProviders: List<DefinitionProvider> = Discovery.find(),
                 enableTracing: Boolean = true,
-                analysisConfiguration: AnalysisConfiguration? = null
+                analysisConfiguration: AnalysisConfiguration = AnalysisConfiguration()
         ) = SandboxConfiguration(
-                executionProfile = profile ?: ExecutionProfile.DEFAULT,
-                rules = rules ?: Discovery.find(),
+                executionProfile = profile,
+                rules = rules,
                 emitters = (emitters ?: Discovery.find()).filter {
                     enableTracing || !it.isTracer
                 },
-                definitionProviders = definitionProviders ?: Discovery.find(),
-                analysisConfiguration = analysisConfiguration ?: AnalysisConfiguration()
+                definitionProviders = definitionProviders,
+                analysisConfiguration = analysisConfiguration
         )
-
     }
-
 }

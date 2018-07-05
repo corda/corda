@@ -13,8 +13,6 @@ class ClassResolver(
         private val sandboxPrefix: String
 ) {
 
-    private val complexArrayTypeRegex = "^(\\[+)L(.*);$".toRegex()
-
     /**
      * Classes and packages that are either pinned or already in the sandbox.
      */
@@ -96,10 +94,12 @@ class ClassResolver(
     /**
      * Resolve class name from a fully qualified name.
      */
-    private fun resolveName(name: String) = if (name.isBlank() || isPinnedClass(name)) {
-        name
-    } else {
-        "$sandboxPrefix$name"
+    private fun resolveName(name: String): String {
+        return if (name.isBlank() || isPinnedClass(name)) {
+            name
+        } else {
+            "$sandboxPrefix$name"
+        }
     }
 
     /**
@@ -107,5 +107,9 @@ class ClassResolver(
      */
     private fun isPinnedClass(name: String): Boolean =
             pinnedClassesAndSandbox.matches(name)
+
+    companion object {
+        private val complexArrayTypeRegex = "^(\\[+)L(.*);$".toRegex()
+    }
 
 }
