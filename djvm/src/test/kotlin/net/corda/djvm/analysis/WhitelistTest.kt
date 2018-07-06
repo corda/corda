@@ -25,7 +25,10 @@ class WhitelistTest : TestBase() {
 
     @Test
     fun `can determine when a class is whitelisted when namespace is not covered`() {
-        val whitelist = TEST_WHITELIST
+        val whitelist = Whitelist.DEFAULT + setOf(
+                "^org/assertj/.*$".toRegex(),
+                "^org/junit/.*$".toRegex()
+        )
         assertThat(whitelist.matches("org/junit/Test")).isTrue()
         assertThat(whitelist.matches("org/assertj/core/api/Assertions")).isTrue()
         assertThat(whitelist.matches("net/foo/bar/Baz")).isFalse()

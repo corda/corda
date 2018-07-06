@@ -22,7 +22,7 @@ import java.nio.file.Path
  */
 class AnalysisConfiguration(
         val whitelist: Whitelist = Whitelist.MINIMAL,
-        val pinnedClasses: Whitelist = Whitelist.PINNED_CLASSES,
+        val pinnedClasses: Whitelist = whitelist + Whitelist.PINNED_CLASSES,
         val classResolver: ClassResolver = ClassResolver(whitelist, pinnedClasses, SANDBOX_PREFIX),
         val minimumSeverityLevel: Severity = Severity.WARNING,
         val classPath: List<Path> = emptyList(),

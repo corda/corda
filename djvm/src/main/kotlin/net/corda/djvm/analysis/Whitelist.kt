@@ -125,8 +125,7 @@ open class Whitelist private constructor(
         /**
          * Classes and packages that should be left untouched.
          */
-        // TODO The set of pinned classes should eventually be reduced to Whitelist.MINIMAL + <extra>
-        val PINNED_CLASSES = Whitelist.DEFAULT + setOf(
+        val PINNED_CLASSES = setOf(
                 "^sandbox/java/lang/Object$".toRegex(),
                 "^${RuntimeCostAccounter.TYPE_NAME}$".toRegex()
         )
