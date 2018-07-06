@@ -108,7 +108,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
 
         try {
             activeMQServer.start()
-        } catch (e: Errors.NativeIoException) {
+        } catch (e: java.io.IOException) {
             if (e.isBindingError()) {
                 throw AddressBindingException(config.p2pAddress)
             }
