@@ -133,6 +133,14 @@ here to a minimum, without resorting to any extreme measures, by keeping them in
 databases separated from the node with increased latency (high single digit, low double digit millisecond - effectively cross region) and it
 significantly impacts performance, with flows taking much longer to complete and overall throughput reduced accordingly.
 
+Database storage
+~~~~~~~~~~~~~~~~
+
+In our performance tests, on **Microsoft SQL Server 2017**, we see database table space usage of around 10KB per state with an additional 10KB per transaction.  So a transaction with
+3 output states would use 10KB + (3 x 10KB) = 40KB of storage.  This will obviously vary dependent on the complexity of the states and the extent to which they
+implement vault schema mappings, and is something that is likely to be changed in future releases as we finesse transaction storage in the light of
+performance and privacy requirements.
+
 Scaling with CPU core count
 ---------------------------
 
