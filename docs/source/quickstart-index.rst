@@ -12,12 +12,13 @@ Quickstart
 
 Welcome to the Corda Quickstart Guide. Follow the links below to help get going quickly with Corda.
 
-I want to...
-Learn_ about Corda for the first time
-Develop_ a CorDapp
-Run_ and test a CorDapp on a local Corda network
-Add_ a node to an existing test Corda network
-Add a node to an existing production_ network
+I want to:
+
+* Learn_ about Corda for the first time
+* Develop_ a CorDapp
+* Run_ and test a CorDapp on a local Corda network
+* Add_ a node to an existing test Corda network
+* Add a node to an existing production_ network
 
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 | I want to...                                   | Useful links                               | Description                                                                                             |
@@ -38,7 +39,7 @@ Add a node to an existing production_ network
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`corda-api`                           | A guide to the CorDapp API                                                                              |
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| .. _Run                                        | :doc:`generating-a-node`                   | Guidance on creating Corda nodes for development and testing locally and on Docker                      |
+| .. _Run:                                       | :doc:`generating-a-node`                   | Guidance on creating Corda nodes for development and testing locally and on Docker                      |
 + Run and test a CorDapp on local Corda network  +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`node-structure`                      | The Corda node folder structure and how to name your node                                               |
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
@@ -54,7 +55,7 @@ Add a node to an existing production_ network
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`node-explorer`                       | A GUI-based tool to view transactional data and transactional history for a node                        |
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| .. _Add                                        | :doc:`node-structure`                      | The Corda node folder structure and how to name your node                                               |
+| .. _Add:                                       | :doc:`node-structure`                      | The Corda node folder structure and how to name your node                                               |
 + Add a node to an existing test Corda network   +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`corda-configuration-file`            | A detailed description of the Corda node configuration file with examples                               |
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
@@ -72,6 +73,6 @@ Add a node to an existing production_ network
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`blob-inspector`                      | A troubleshooting tool allowing you to read the contents of a binary blob file                          |
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| .. _production                                 |                                            | Contact R3 Solutions Engineering at support@r3.com                                                      |
+| .. _production:                                |                                            | Contact R3 Solutions Engineering at support@r3.com                                                      |
 | Add a node to an existing production network   |                                            |                                                                                                         |
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
