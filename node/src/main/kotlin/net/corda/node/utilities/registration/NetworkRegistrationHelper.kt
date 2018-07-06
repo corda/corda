@@ -85,7 +85,7 @@ open class NetworkRegistrationHelper(private val config: SSLConfiguration,
             System.err.println("""tlsCrlIssuerCert config does not match the root certificate issuer and nor is there any other certificate in the trust store with a matching issuer.
                 | Please make sure the config is correct or that the correct certificate for the CRL issuer is added to the node's trust store.
                 | The node will now terminate.""".trimMargin())
-            return
+            throw IllegalArgumentException("TLS CRL issuer certificate not found in the trust store.")
         }
 
         val keyPair = nodeKeyStore.loadOrCreateKeyPair(SELF_SIGNED_PRIVATE_KEY)
