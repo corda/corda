@@ -14,24 +14,31 @@ Welcome to the Corda Quickstart Guide. Follow the links below to help get going 
 
 I want to:
 
-* Learn_ about Corda for the first time
+* :ref:`Learn <quickstart-learn>` about Corda for the first time
 * Develop_ a CorDapp
 * Run_ and test a CorDapp on a local Corda network
 * Add_ a node to an existing test Corda network
 * Add a node to an existing production_ network
 
-.. _Learn:                                    
-Learn about Corda for the first time  
+.. _quickstart-learn:
 
-+------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| I want to...                                   | Useful links                               | Description                                                                                             |
-+================================================+============================================+=========================================================================================================+
-|                                                | :doc:`key-concepts`                        | The key concepts and features of the Corda Platform                                                     |
-+ Learn about Corda for the first time           +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
-|                                                | :doc:`getting-set-up`                      | Set up your machine for running and developing CorDapps                                                 |
-+                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+                                           
-|                                                | :doc:`tutorial-cordapp`                    | A guide to running a simple CorDapp                                                                     |
-+------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
+Learn about Corda for the first time
+------------------------------------
+
++--------------------------------------------+---------------------------------------------------------------------------------------------------------+
+| Useful links                               | Description                                                                                             |
++============================================+=========================================================================================================+
+| :doc:`key-concepts`                        | The key concepts and features of the Corda Platform                                                     |
++--------------------------------------------+---------------------------------------------------------------------------------------------------------+
+| :doc:`getting-set-up`                      | Set up your machine for running and developing CorDapps                                                 |
++--------------------------------------------+---------------------------------------------------------------------------------------------------------+
+| :doc:`tutorial-cordapp`                    | A guide to running a simple CorDapp                                                                     |
++--------------------------------------------+---------------------------------------------------------------------------------------------------------+
+
+
+
+
+
 | .. _Develop:                                   | :doc:`hello-world-introduction`            | A coding walk-through of a basic CorDapp                                                                |
 + Develop a CorDapp                              +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`cordapp-overview`                    | An introduction to CordApps                                                                             |
