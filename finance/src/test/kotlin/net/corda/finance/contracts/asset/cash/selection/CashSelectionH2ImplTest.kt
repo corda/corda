@@ -27,7 +27,7 @@ import java.util.Collections.nCopies
 import kotlin.test.assertNotNull
 
 class CashSelectionH2ImplTest {
-    private val mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance", "net.corda.core.schemas", "net.corda.finance.sampleschemas"))
+    private val mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance"))
 
     @After
     fun cleanUp() {
