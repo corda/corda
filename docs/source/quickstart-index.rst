@@ -35,7 +35,7 @@ Learn about Corda for the first time
 | :doc:`tutorial-cordapp`                    | A guide to running a simple CorDapp                                                                     |
 +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 
-.. _quickstart-develop
+.. _quickstart-develop:
 
 Develop a CorDapp
 -----------------
@@ -54,7 +54,7 @@ Develop a CorDapp
 | :doc:`corda-api`                           | A guide to the CorDapp API                                                                              |
 +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 
-_quickstart-run
+_quickstart-run:
 
 Run and test a CorDapp on local Corda network
 ---------------------------------------------
@@ -77,7 +77,7 @@ Run and test a CorDapp on local Corda network
 | :doc:`node-explorer`                       | A GUI-based tool to view transactional data and transactional history for a node                        |
 +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 
-_quickstart-add
+_quickstart-add:
 
 Add a node to an existing test Corda network
 --------------------------------------------
@@ -102,7 +102,7 @@ Add a node to an existing test Corda network
 | :doc:`blob-inspector`                      | A troubleshooting tool allowing you to read the contents of a binary blob file                          |
 +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 
-_quickstart-production
+_quickstart-production:
 
 Add a node to an existing production network
 --------------------------------------------
