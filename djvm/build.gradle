@@ -1,6 +1,9 @@
 buildscript {
+    // TODO: Update ASM version in master project to be consistent with this module.
+    // Note that ASM 5.0.4 is a transitive dependency of Kryo. ClassCarpenter also uses ASM.
     ext.asm_version = '6.2'
-    ext.picocli_version = '3.0.0-beta-2'
+    ext.deterministic_rt_version = '1.0-20180625.120901-7'
+
     repositories {
         mavenCentral()
         jcenter()
@@ -32,6 +35,9 @@ dependencies {
 
     // CLI utilities
     compile "info.picocli:picocli:$picocli_version"
+
+    // Deterministic runtime - used in whitelist generation
+    runtime "net.corda:deterministic-rt:$deterministic_rt_version:api"
 
     // Test utilities
     testCompile "junit:junit:$junit_version"
