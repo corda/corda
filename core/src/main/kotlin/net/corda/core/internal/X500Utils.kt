@@ -16,17 +16,16 @@ import javax.security.auth.x500.X500Principal
  * Return the underlying X.500 name from this Corda-safe X.500 name. These are guaranteed to have a consistent
  * ordering, such that their `toString()` function returns the same value every time for the same [CordaX500Name].
  */
-val CordaX500Name.x500Name: X500Name
-    get() {
-        return X500NameBuilder(BCStyle.INSTANCE).apply {
-            addRDN(BCStyle.C, country)
-            state?.let { addRDN(BCStyle.ST, it) }
-            addRDN(BCStyle.L, locality)
-            addRDN(BCStyle.O, organisation)
-            organisationUnit?.let { addRDN(BCStyle.OU, it) }
-            commonName?.let { addRDN(BCStyle.CN, it) }
-        }.build()
-    }
+fun CordaX500Name.toX500Name(): X500Name {
+    return X500NameBuilder(BCStyle.INSTANCE).apply {
+        addRDN(BCStyle.C, country)
+        state?.let { addRDN(BCStyle.ST, it) }
+        addRDN(BCStyle.L, locality)
+        addRDN(BCStyle.O, organisation)
+        organisationUnit?.let { addRDN(BCStyle.OU, it) }
+        commonName?.let { addRDN(BCStyle.CN, it) }
+    }.build()
+}
 
 /**
  * Converts the X500Principal instance to the X500Name object.
@@ -62,7 +61,10 @@ fun X500Principal.toAttributesMap(supportedAttributes: Set<ASN1ObjectIdentifier>
     return attrsMap
 }
 
-fun X500Principal.equalX500NameParts(other: X500Principal): Boolean {
+/**
+ * Checks equality between the two X500Principal instances ignoring the ordering of the X500Name parts.
+ */
+fun X500Principal.isEquivalentTo(other: X500Principal): Boolean {
     return toAttributesMap() == other.toAttributesMap()
 }
 

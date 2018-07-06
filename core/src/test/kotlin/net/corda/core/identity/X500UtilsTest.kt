@@ -1,6 +1,6 @@
 package net.corda.core.identity
 
-import net.corda.core.internal.equalX500NameParts
+import net.corda.core.internal.isEquivalentTo
 import org.junit.Test
 import javax.security.auth.x500.X500Principal
 import kotlin.test.assertTrue
@@ -20,7 +20,7 @@ class X500UtilsTest {
         val principalC = X500Principal(orderingC)
 
         // then
-        assertTrue { principalA.equalX500NameParts(principalB) }
-        assertTrue { principalB.equalX500NameParts(principalC) }
+        assertTrue { principalA.isEquivalentTo(principalB) }
+        assertTrue { principalB.isEquivalentTo(principalC) }
     }
 }

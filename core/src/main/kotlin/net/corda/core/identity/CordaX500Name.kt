@@ -5,7 +5,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.internal.LegalNameValidator
 import net.corda.core.internal.toAttributesMap
 import net.corda.core.internal.unspecifiedCountry
-import net.corda.core.internal.x500Name
+import net.corda.core.internal.toX500Name
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.x500.style.BCStyle
 import java.util.*
@@ -103,7 +103,7 @@ data class CordaX500Name(val commonName: String?,
     /** Return the [X500Principal] equivalent of this name. */
     val x500Principal: X500Principal
         get() {
-            return _x500Principal ?: X500Principal(this.x500Name.encoded).also { _x500Principal = it }
+            return _x500Principal ?: X500Principal(this.toX500Name().encoded).also { _x500Principal = it }
         }
 
     override fun toString(): String = x500Principal.toString()
