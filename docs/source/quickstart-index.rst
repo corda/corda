@@ -12,17 +12,24 @@ Quickstart
 
 Welcome to the Corda Quickstart Guide. Follow the links below to help get going quickly with Corda.
 
+I want to...
+Learn_ about Corda for the first time
+Develop_ a CorDapp
+Run_ and test a CorDapp on a local Corda network
+Add_ a node to an existing test Corda network
+Add a node to an existing production_ network
+
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 | I want to...                                   | Useful links                               | Description                                                                                             |
 +================================================+============================================+=========================================================================================================+
-| Learn about Corda for the first time           | :doc:`key-concepts`                        | The key concepts and features of the Corda Platform                                                     |
-+                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
+| .. _Learn:                                     | :doc:`key-concepts`                        | The key concepts and features of the Corda Platform                                                     |
++ Learn about Corda for the first time           +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`getting-set-up`                      | Set up your machine for running and developing CorDapps                                                 |
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+                                           
 |                                                | :doc:`tutorial-cordapp`                    | A guide to running a simple CorDapp                                                                     |
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| Develop a CorDapp                              | :doc:`hello-world-introduction`            | A coding walk-through of a basic CorDapp                                                                |
-+                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
+| .. _Develop:                                   | :doc:`hello-world-introduction`            | A coding walk-through of a basic CorDapp                                                                |
++ Develop a CorDapp                              +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`cordapp-overview`                    | An introduction to CordApps                                                                             |
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`writing-a-cordapp`                   | How to structure a CorDapp project                                                                      |
@@ -31,8 +38,8 @@ Welcome to the Corda Quickstart Guide. Follow the links below to help get going 
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`corda-api`                           | A guide to the CorDapp API                                                                              |
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| Run and test a CorDapp on local Corda network  | :doc:`generating-a-node`                   | Guidance on creating Corda nodes for development and testing locally and on Docker                      |
-+                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
+| .. _Run                                        | :doc:`generating-a-node`                   | Guidance on creating Corda nodes for development and testing locally and on Docker                      |
++ Run and test a CorDapp on local Corda network  +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`node-structure`                      | The Corda node folder structure and how to name your node                                               |
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`corda-configuration-file`            | A detailed description of the Corda node configuration file with examples                               |
@@ -47,8 +54,8 @@ Welcome to the Corda Quickstart Guide. Follow the links below to help get going 
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`node-explorer`                       | A GUI-based tool to view transactional data and transactional history for a node                        |
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| Add a node to an existing test Corda network   | :doc:`node-structure`                      | The Corda node folder structure and how to name your node                                               |
-+                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
+| .. _Add                                        | :doc:`node-structure`                      | The Corda node folder structure and how to name your node                                               |
++ Add a node to an existing test Corda network   +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`corda-configuration-file`            | A detailed description of the Corda node configuration file with examples                               |
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`deploying-a-node`                    | A step-by-step guide on deploying a Corda node to your own server                                       |
@@ -65,5 +72,6 @@ Welcome to the Corda Quickstart Guide. Follow the links below to help get going 
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`blob-inspector`                      | A troubleshooting tool allowing you to read the contents of a binary blob file                          |
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
-| Add a node to an existing production network   |                                            | Contact R3 Solutions Engineering at support@r3.com                                                      |
+| .. _production                                 |                                            | Contact R3 Solutions Engineering at support@r3.com                                                      |
+| Add a node to an existing production network   |                                            |                                                                                                         |
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
