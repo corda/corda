@@ -65,6 +65,13 @@ class WhitelistGenerateCommand : CommandBase() {
             Files.newOutputStream(output, StandardOpenOption.CREATE).use {
                 GZIPOutputStream(it).use {
                     PrintStream(it).use {
+                        it.println("""
+                            |java/.*
+                            |javax/.*
+                            |jdk/.*
+                            |sun/.*
+                            |---
+                            """.trimMargin().trim())
                         printEntries(it, entries)
                     }
                 }

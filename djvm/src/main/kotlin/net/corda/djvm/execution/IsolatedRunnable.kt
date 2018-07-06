@@ -63,6 +63,8 @@ class IsolatedRunnable(
                         else -> null
                     }
                 }
+                is StackOverflowError -> throw StackOverflowError("Stack overflow")
+                is OutOfMemoryError -> throw OutOfMemoryError("Out of memory")
                 else -> null
             }
         } ?: MessageCollection()

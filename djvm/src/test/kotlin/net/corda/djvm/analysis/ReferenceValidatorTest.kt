@@ -1,5 +1,6 @@
 package net.corda.djvm.analysis
 
+import com.sun.beans.WeakCache
 import net.corda.djvm.TestBase
 import net.corda.djvm.assertions.AssertionExtensions.withMessage
 import net.corda.djvm.execution.SandboxedRunnable
@@ -52,11 +53,7 @@ class ReferenceValidatorTest : TestBase() {
         analyze<Random>(context)
         val (_, messages) = validator(Whitelist.DEFAULT).validate(context, this)
         assertThat(messages.sorted())
-                .hasSize(4)
-                .withMessage("Invalid reference to class java.net.URLClassLoader, entity is not whitelisted")
-                .withMessage("Invalid reference to constructor java.net.URLClassLoader(URL[]), entity is not whitelisted")
-                .withMessage("Invalid reference to method java.net.URLClassLoader.getURLs(), entity is not whitelisted")
-                .withMessage("Invalid reference to class java.net.URL, entity is not whitelisted")
+                .withMessage("Invalid reference to class java.util.WeakHashMap, entity is not whitelisted")
     }
 
     private class RunnableWithTransientReferences : SandboxedRunnable<Int, Int> {
@@ -67,8 +64,8 @@ class ReferenceValidatorTest : TestBase() {
 
     private class ReferencedClass {
         fun test(): Int {
-            val classLoader = URLClassLoader(emptyArray())
-            return classLoader.urLs.size
+            val cache = WeakCache<String, Int>()
+            return cache.hashCode()
         }
     }
 

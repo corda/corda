@@ -74,6 +74,7 @@ open class SandboxExecutor<in TInput, out TOutput>(
             } catch (ex: InvocationTargetException) {
                 when (ex.targetException) {
                     is StackOverflowError -> throw StackOverflowError("Stack overflow")
+                    is OutOfMemoryError -> throw OutOfMemoryError("Out of memory")
                     else -> throw ex.targetException
                 }
             }

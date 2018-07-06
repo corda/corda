@@ -101,7 +101,7 @@ class SandboxExecutorTest : TestBase() {
     @Test
     fun `can detect stack overflow`() = sandbox(DEFAULT) {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
-        assertThatExceptionOfType(SandboxException::class.java)
+        assertThatExceptionOfType(StackOverflowError::class.java)
                 .isThrownBy { contractExecutor.run<TestStackOverflow>(0) }
                 .withMessageContaining("Stack overflow")
     }
@@ -212,11 +212,28 @@ class SandboxExecutorTest : TestBase() {
     fun `cannot catch ThreadDeath`() = sandbox(DEFAULT) {
         val contractExecutor = DeterministicSandboxExecutor<Int, Int>(configuration)
         assertThatExceptionOfType(SandboxException::class.java)
-                .isThrownBy { contractExecutor.run<TestCatchThrowableAndError>(3) }
-                .withCauseInstanceOf(ThreadDeath::class.java)
+                .isThrownBy { contractExecutor.run<TestCatchThrowableErrorAndThreadDeath>(3) }
+                .withCauseInstanceOf(SandboxClassLoadingException::class.java)
+                .withMessageContaining("Invalid reference to class java.lang.ThreadDeath, entity is not whitelisted")
     }
 
     class TestCatchThrowableAndError : SandboxedRunnable<Int, Int> {
+        override fun run(input: Int): Int? {
+            return try {
+                when (input) {
+                    1 -> throw Throwable()
+                    2 -> throw Error()
+                    else -> 0
+                }
+            } catch (exception: Error) {
+                2
+            } catch (exception: Throwable) {
+                1
+            }
+        }
+    }
+
+    class TestCatchThrowableErrorAndThreadDeath : SandboxedRunnable<Int, Int> {
         override fun run(input: Int): Int? {
             return try {
                 when (input) {
