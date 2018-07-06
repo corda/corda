@@ -240,7 +240,8 @@ These are the steps:
    In case you don't specify the actual ``MappedSchema`` name, the tool will generate one SQL file for each schema defined in the CorDapp
 4. Inspect the file(s) to make sure it is correct. This is a standard SQL file with some Liquibase metadata as comments.
 5. Create a jar with the ``migration`` folder (by convention it could be named: ``originalCorDappName-migration.jar``),
-   and deploy this jar together with the CorDapp.
+   and deploy this jar together with the CorDapp, e.g. run the following command in the node base directory
+   ``jar cvf /path/to/node/cordapps/MyCordapp-migration.jar migration``.
 6. To make sure that the new migration will be used, do a dry run with the database management tool and inspect the output file.
 
 
