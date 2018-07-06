@@ -6,10 +6,12 @@ import net.corda.djvm.analysis.ClassAndMemberVisitor
 import net.corda.djvm.references.ClassRepresentation
 import net.corda.djvm.references.Member
 import net.corda.djvm.source.ClassSource
-import picocli.CommandLine.Command
-import picocli.CommandLine.Parameters
+import picocli.CommandLine.*
 import java.io.PrintStream
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
+import java.util.zip.GZIPOutputStream
 
 @Command(
         name = "generate",
@@ -21,6 +23,12 @@ class WhitelistGenerateCommand : CommandBase() {
 
     @Parameters(description = ["The paths of the JARs that the whitelist is to be generated from."])
     var paths: Array<Path> = emptyArray()
+
+    @Option(
+            names = ["-o", "--output"],
+            description = ["The file to which the whitelist will be written. If not provided, STDOUT will be used."]
+    )
+    var output: Path? = null
 
     override fun validateArguments() = paths.isNotEmpty()
 
@@ -52,7 +60,18 @@ class WhitelistGenerateCommand : CommandBase() {
                 visitor.analyze(it, context)
             }
         }
-        printEntries(System.out, entries)
+        val output = output
+        if (output != null) {
+            Files.newOutputStream(output, StandardOpenOption.CREATE).use {
+                GZIPOutputStream(it).use {
+                    PrintStream(it).use {
+                        printEntries(it, entries)
+                    }
+                }
+            }
+        } else {
+            printEntries(System.out, entries)
+        }
         return true
     }
 

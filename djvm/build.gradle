@@ -47,6 +47,20 @@ dependencies {
 repositories {
     mavenLocal()
     mavenCentral()
+    maven {
+        url "$artifactory_contextUrl/corda-dev"
+    }
+}
+
+task generateWhitelist(type: JavaExec) {
+    def jars = configurations.runtime.collect {
+        it.toString()
+    }.findAll {
+        it.toString().contains("deterministic-rt")
+    }
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'net.corda.djvm.tools.cli.Program'
+    args = ['whitelist', 'generate', '-o', 'src/main/resources/jdk8-deterministic.dat.gz'] + jars
 }
 
 jar {
@@ -61,4 +75,5 @@ jar {
 
 shadowJar {
     baseName = "corda-djvm"
+    exclude 'deterministic-rt*.jar'
 }
