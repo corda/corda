@@ -20,10 +20,13 @@ I want to:
 * Add_ a node to an existing test Corda network
 * Add a node to an existing production_ network
 
+.. _Learn:                                    
+Learn about Corda for the first time  
+
 +------------------------------------------------+--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 | I want to...                                   | Useful links                               | Description                                                                                             |
 +================================================+============================================+=========================================================================================================+
-| .. _Learn:                                     | :doc:`key-concepts`                        | The key concepts and features of the Corda Platform                                                     |
+|                                                | :doc:`key-concepts`                        | The key concepts and features of the Corda Platform                                                     |
 + Learn about Corda for the first time           +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 |                                                | :doc:`getting-set-up`                      | Set up your machine for running and developing CorDapps                                                 |
 +                                                +--------------------------------------------+---------------------------------------------------------------------------------------------------------+                                           
