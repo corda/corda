@@ -42,7 +42,6 @@ import net.corda.nodeapi.internal.config.NodeSSLConfiguration
 import net.corda.nodeapi.internal.config.SSLConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import java.io.Serializable
 import java.nio.file.Path
 import java.time.Clock
 import java.util.concurrent.CompletableFuture
@@ -104,7 +103,7 @@ class RaftUniquenessProvider(
             var value: String? = "",
             @Column(name = "raft_log_index", nullable = false)
             var index: Long = 0
-    ) : Serializable
+    )
 
     /** Directory storing the Raft log and state machine snapshots */
     private val storagePath: Path = transportConfiguration.baseDirectory

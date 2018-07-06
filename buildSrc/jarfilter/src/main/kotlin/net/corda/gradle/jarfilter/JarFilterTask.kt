@@ -46,6 +46,9 @@ open class JarFilterTask : DefaultTask() {
     @get:Input
     protected var forRemove: Set<String> = emptySet()
 
+    @get:Input
+    protected var forSanitise: Set<String> = emptySet()
+
     fun annotations(assign: Closure<List<String>>) {
         assign.call()
     }
@@ -89,6 +92,9 @@ open class JarFilterTask : DefaultTask() {
         }
         if (forRemove.isNotEmpty()) {
             logger.info("- Annotations '{}' will be removed entirely", forRemove.joinToString())
+        }
+        if (forSanitise.isNotEmpty()) {
+            logger.info("- Annotations '{}' will be removed from primary constructors", forSanitise.joinToString())
         }
         checkDistinctAnnotations()
         try {
@@ -136,6 +142,11 @@ open class JarFilterTask : DefaultTask() {
         private val source: Path = inFile.toPath()
         private val target: Path = toFiltered(inFile).toPath()
 
+        private val descriptorsForRemove = toDescriptors(forRemove)
+        private val descriptorsForDelete = toDescriptors(forDelete)
+        private val descriptorsForStub = toDescriptors(forStub)
+        private val descriptorsForSanitising = toDescriptors(forSanitise)
+
         init {
             Files.deleteIfExists(target)
         }
@@ -145,10 +156,14 @@ open class JarFilterTask : DefaultTask() {
             var input = source
 
             try {
+                if (descriptorsForSanitising.isNotEmpty() && SanitisingPass(input).use { it.run() }) {
+                    input = target.moveToInput()
+                }
+
                 var passes = 1
                 while (true) {
                     verbose("Pass {}", passes)
-                    val isModified = Pass(input).use { it.run() }
+                    val isModified = FilterPass(input).use { it.run() }
 
                     if (!isModified) {
                         logger.info("No changes after latest pass - exiting.")
@@ -157,9 +172,7 @@ open class JarFilterTask : DefaultTask() {
                         break
                     }
 
-                    input = Files.move(
-                        target, Files.createTempFile(target.parent, "filter-", ".tmp"), REPLACE_EXISTING)
-                    verbose("New input JAR: {}", input)
+                    input = target.moveToInput()
                 }
             } catch (e: Exception) {
                 logger.error("Error filtering '{}' elements from {}", ArrayList(forRemove).apply { addAll(forDelete); addAll(forStub) }, input)
@@ -167,14 +180,20 @@ open class JarFilterTask : DefaultTask() {
             }
         }
 
-        private inner class Pass(input: Path): Closeable {
+        private fun Path.moveToInput(): Path {
+            return Files.move(this, Files.createTempFile(parent, "filter-", ".tmp"), REPLACE_EXISTING).also {
+                verbose("New input JAR: {}", it)
+            }
+        }
+
+        private abstract inner class Pass(input: Path): Closeable {
             /**
              * Use [ZipFile] instead of [java.util.jar.JarInputStream] because
              * JarInputStream consumes MANIFEST.MF when it's the first or second entry.
              */
-            private val inJar = ZipFile(input.toFile())
-            private val outJar = ZipOutputStream(Files.newOutputStream(target))
-            private var isModified = false
+            protected val inJar = ZipFile(input.toFile())
+            protected val outJar = ZipOutputStream(Files.newOutputStream(target))
+            protected var isModified = false
 
             @Throws(IOException::class)
             override fun close() {
@@ -182,6 +201,8 @@ open class JarFilterTask : DefaultTask() {
                     outJar.close()
                 }
             }
+
+            abstract fun transform(inBytes: ByteArray): ByteArray
 
             fun run(): Boolean {
                 outJar.setLevel(BEST_COMPRESSION)
@@ -207,16 +228,29 @@ open class JarFilterTask : DefaultTask() {
                 }
                 return isModified
             }
+        }
 
-            private fun transform(inBytes: ByteArray): ByteArray {
+        private inner class SanitisingPass(input: Path) : Pass(input) {
+            override fun transform(inBytes: ByteArray): ByteArray {
+                return ClassWriter(0).let { writer ->
+                    val transformer = SanitisingTransformer(writer, logger, descriptorsForSanitising)
+                    ClassReader(inBytes).accept(transformer, 0)
+                    isModified = isModified or transformer.isModified
+                    writer.toByteArray()
+                }
+            }
+        }
+
+        private inner class FilterPass(input: Path) : Pass(input) {
+            override fun transform(inBytes: ByteArray): ByteArray {
                 var reader = ClassReader(inBytes)
                 var writer = ClassWriter(COMPUTE_MAXS)
                 var transformer = FilterTransformer(
                     visitor = writer,
                     logger = logger,
-                    removeAnnotations = toDescriptors(forRemove),
-                    deleteAnnotations = toDescriptors(forDelete),
-                    stubAnnotations = toDescriptors(forStub),
+                    removeAnnotations = descriptorsForRemove,
+                    deleteAnnotations = descriptorsForDelete,
+                    stubAnnotations = descriptorsForStub,
                     unwantedClasses = unwantedClasses
                 )
 

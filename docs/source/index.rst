@@ -60,6 +60,7 @@ application development please continue to refer to `the main project documentat
    azure-vm.rst
    aws-vm.rst
    certificate-revocation
+   loadtesting.rst
 
 .. Documentation is not included in the pdf unless it is included in a toctree somewhere
 .. only:: pdfmode

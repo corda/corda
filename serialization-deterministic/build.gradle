@@ -104,6 +104,9 @@ task jarFilter(type: JarFilterTask) {
         forRemove = [
             "co.paralleluniverse.fibers.Suspendable"
         ]
+        forSanitise = [
+            "net.corda.core.DeleteForDJVM"
+        ]
     }
 }
 

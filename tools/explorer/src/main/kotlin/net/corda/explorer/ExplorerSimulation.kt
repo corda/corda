@@ -194,7 +194,7 @@ class ExplorerSimulation(private val options: OptionSet) {
             for (ref in 0..1) {
                 for ((currency, issuer) in issuers) {
                     val amount = Amount(1_000_000, currency)
-                    issuer.startFlow(::CashIssueAndPaymentFlow, amount, OpaqueBytes(ByteArray(1, { ref.toByte() })),
+                    issuer.startFlow(::CashIssueAndPaymentFlow, amount, OpaqueBytes.of( ref.toByte() ),
                             it, anonymous, notary).returnValue.getOrThrow()
                 }
             }

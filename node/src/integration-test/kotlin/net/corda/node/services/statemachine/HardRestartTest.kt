@@ -70,7 +70,7 @@ class HardRestartTest : IntegrationTest() {
     @Test
     fun restartShortPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = false, inMemoryDB = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
             val (a, b) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:30000")),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
@@ -102,7 +102,7 @@ class HardRestartTest : IntegrationTest() {
     @Test
     fun restartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = false, inMemoryDB = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
             val (a, b) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:30000")),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
@@ -134,7 +134,7 @@ class HardRestartTest : IntegrationTest() {
     @Test
     fun softRestartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = false, inMemoryDB = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
             val (a, b) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:30000")),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
@@ -210,7 +210,7 @@ class HardRestartTest : IntegrationTest() {
     @Test
     fun restartRecursiveFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<RecursiveA>(), Permissions.all()))
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
+        driver(DriverParameters(isDebug = true, startNodesInProcess = false, inMemoryDB = false, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))) {
             val (a, b) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:30000")),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))

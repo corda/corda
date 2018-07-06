@@ -46,7 +46,7 @@ class DBCheckpointStorage : CheckpointStorage {
             @Lob
             @Column(name = "checkpoint_value", nullable = false)
             var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
-    ) : Serializable
+    )
 
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
         currentDBSession().saveOrUpdate(DBCheckpoint().apply {

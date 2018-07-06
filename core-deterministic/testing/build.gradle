@@ -23,3 +23,6 @@ dependencies {
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile "junit:junit:$junit_version"
 }
+
+// This module has no artifact and only contains tests.
+jar.enabled = false

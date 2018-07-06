@@ -33,8 +33,10 @@ with the node using RPC calls.
 The shell via the local terminal
 --------------------------------
 
-In development mode, the shell will display in the node's terminal window.
-The shell connects to the node as 'shell' user with password 'shell' which is only available in dev mode.
+.. note::  Local terminal shell works only in development mode!
+
+The shell will display in the node's terminal window. It connects to the node as 'shell' user with password 'shell'
+(which is only available in dev mode).
 It may be disabled by passing the ``--no-local-shell`` flag when running the node.
 
 .. _ssh_server:

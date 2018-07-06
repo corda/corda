@@ -17,7 +17,7 @@ class MetaFixerVisitor private constructor(
     private val fields: MutableSet<FieldElement>,
     private val methods: MutableSet<String>,
     private val nestedClasses: MutableSet<String>
-) : KotlinAwareVisitor(ASM6, visitor, logger, kotlinMetadata), Repeatable<MetaFixerVisitor> {
+) : KotlinAfterProcessor(ASM6, visitor, logger, kotlinMetadata), Repeatable<MetaFixerVisitor> {
     constructor(visitor: ClassVisitor, logger: Logger, classNames: Set<String>)
         : this(visitor, logger, mutableMapOf(), classNames, mutableSetOf(), mutableSetOf(), mutableSetOf())
 
@@ -52,7 +52,7 @@ class MetaFixerVisitor private constructor(
         return super.visitInnerClass(clsName, outerName, innerName, access)
     }
 
-    override fun transformClassMetadata(d1: List<String>, d2: List<String>): List<String> {
+    override fun processClassMetadata(d1: List<String>, d2: List<String>): List<String> {
         return ClassMetaFixerTransformer(
                 logger = logger,
                 actualFields = fields,
@@ -64,7 +64,7 @@ class MetaFixerVisitor private constructor(
             .transform()
     }
 
-    override fun transformPackageMetadata(d1: List<String>, d2: List<String>): List<String> {
+    override fun processPackageMetadata(d1: List<String>, d2: List<String>): List<String> {
         return PackageMetaFixerTransformer(
                 logger = logger,
                 actualFields = fields,

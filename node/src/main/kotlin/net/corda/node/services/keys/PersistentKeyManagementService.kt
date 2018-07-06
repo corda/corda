@@ -21,7 +21,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
-import java.io.Serializable
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -54,7 +53,7 @@ class PersistentKeyManagementService(val identityService: IdentityService,
             @Lob
             @Column(name = "private_key", nullable = false)
             var privateKey: ByteArray = EMPTY_BYTE_ARRAY
-    ) : Serializable {
+    ) {
         constructor(publicKey: PublicKey, privateKey: PrivateKey)
             : this(publicKey.toStringShort(), publicKey.encoded, privateKey.encoded)
     }

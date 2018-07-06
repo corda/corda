@@ -73,17 +73,20 @@ internal val String.descriptor: String get() = "L$toPathFormat;"
 internal fun <T> ByteArray.execute(visitor: (ClassVisitor) -> T, flags: Int = 0, passes: Int = 2): ByteArray
     where T : ClassVisitor,
           T : Repeatable<T> {
-    var reader = ClassReader(this)
+    var bytecode = this
     var writer = ClassWriter(flags)
-    val transformer = visitor(writer)
+    var transformer = visitor(writer)
     var count = max(passes, 1)
 
-    reader.accept(transformer, 0)
-    while (transformer.hasUnwantedElements && --count > 0) {
-        reader = ClassReader(writer.toByteArray())
+    while (--count >= 0) {
+        ClassReader(bytecode).accept(transformer, 0)
+        bytecode = writer.toByteArray()
+
+        if (!transformer.hasUnwantedElements) break
+
         writer = ClassWriter(flags)
-        reader.accept(transformer.recreate(writer), 0)
+        transformer = transformer.recreate(writer)
     }
 
-    return writer.toByteArray()
+    return bytecode
 }
