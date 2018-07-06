@@ -18,74 +18,20 @@ import javax.security.auth.x500.X500Principal
  */
 val CordaX500Name.x500Name: X500Name
     get() {
-        return buildOrderedX500Name(mapOf(
-                BCStyle.C to BCStyle.INSTANCE.stringToValue(BCStyle.C, country),
-                BCStyle.ST to state?.let { BCStyle.INSTANCE.stringToValue(BCStyle.ST, it) },
-                BCStyle.L to BCStyle.INSTANCE.stringToValue(BCStyle.L, locality),
-                BCStyle.O to BCStyle.INSTANCE.stringToValue(BCStyle.O, organisation),
-                BCStyle.OU to organisationUnit?.let { BCStyle.INSTANCE.stringToValue(BCStyle.OU, it) },
-                BCStyle.CN to commonName?.let { BCStyle.INSTANCE.stringToValue(BCStyle.CN, it) }
-        ))
+        return X500NameBuilder(BCStyle.INSTANCE).apply {
+            addRDN(BCStyle.C, country)
+            state?.let { addRDN(BCStyle.ST, it) }
+            addRDN(BCStyle.L, locality)
+            addRDN(BCStyle.O, organisation)
+            organisationUnit?.let { addRDN(BCStyle.OU, it) }
+            commonName?.let { addRDN(BCStyle.CN, it) }
+        }.build()
     }
-
-// The order of this list is fixed. Do NOT change it.
-private val X500_NAME_PARTS = listOf(
-        BCStyle.C,
-        BCStyle.ST,
-        BCStyle.L,
-        BCStyle.O,
-        BCStyle.OU,
-        BCStyle.CN,
-        BCStyle.T,
-        BCStyle.SN,
-        BCStyle.EmailAddress,
-        BCStyle.DC,
-        BCStyle.UID,
-        BCStyle.STREET,
-        BCStyle.SURNAME,
-        BCStyle.GIVENNAME,
-        BCStyle.INITIALS,
-        BCStyle.GENERATION,
-        BCStyle.UnstructuredAddress,
-        BCStyle.UnstructuredName,
-        BCStyle.UNIQUE_IDENTIFIER,
-        BCStyle.DN_QUALIFIER,
-        BCStyle.PSEUDONYM,
-        BCStyle.POSTAL_ADDRESS,
-        BCStyle.NAME_AT_BIRTH,
-        BCStyle.COUNTRY_OF_CITIZENSHIP,
-        BCStyle.COUNTRY_OF_RESIDENCE,
-        BCStyle.GENDER,
-        BCStyle.PLACE_OF_BIRTH,
-        BCStyle.DATE_OF_BIRTH,
-        BCStyle.POSTAL_CODE,
-        BCStyle.BUSINESS_CATEGORY,
-        BCStyle.TELEPHONE_NUMBER,
-        BCStyle.NAME)
-
-/**
- * Converts the X500Principal instance to the X500Name object. Additionally, it sorts the X500 name parts in the order
- * imposed by the X500_NAME_PARTS list.
- */
-fun X500Principal.toOrderedX500Name(supportedAttributes: Set<ASN1ObjectIdentifier> = emptySet()): X500Name {
-    return buildOrderedX500Name(this.toAttributesMap(supportedAttributes))
-}
 
 /**
  * Converts the X500Principal instance to the X500Name object.
  */
 fun X500Principal.toX500Name(): X500Name = X500Name.getInstance(this.encoded)
-
-private fun buildOrderedX500Name(attributes: Map<ASN1ObjectIdentifier, ASN1Encodable?>): X500Name {
-    return X500NameBuilder(BCStyle.INSTANCE).apply {
-        X500_NAME_PARTS.forEach {
-            val key = it
-            attributes[it]?.let {
-                addRDN(key, it)
-            }
-        }
-    }.build()
-}
 
 /**
  * Transforms the X500Principal to the attributes map.
@@ -114,6 +60,10 @@ fun X500Principal.toAttributesMap(supportedAttributes: Set<ASN1ObjectIdentifier>
         }
     }
     return attrsMap
+}
+
+fun X500Principal.equalX500NameParts(other: X500Principal): Boolean {
+    return toAttributesMap() == other.toAttributesMap()
 }
 
 @VisibleForTesting

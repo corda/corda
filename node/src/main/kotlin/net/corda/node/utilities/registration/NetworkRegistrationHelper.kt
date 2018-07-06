@@ -310,9 +310,7 @@ class NodeRegistrationHelper(private val config: NodeConfiguration, certService:
     }
 
     private fun principalMatchesCertificatePrincipal(principal: X500Principal, certificate: X509Certificate): Boolean {
-        val subjectX500Name = certificate.subjectX500Principal.toOrderedX500Name()
-        val principalX500Name = principal.toOrderedX500Name()
-        return subjectX500Name == principalX500Name
+        return certificate.subjectX500Principal.equalX500NameParts(principal)
     }
 }
 
