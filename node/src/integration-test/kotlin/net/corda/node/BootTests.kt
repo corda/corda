@@ -14,6 +14,7 @@ import net.corda.node.internal.NodeStartup
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -36,7 +37,7 @@ class BootTests {
 
     @Test
     fun `double node start doesn't write into log file`() {
-        driver(DriverParameters(isDebug = true, notarySpecs = emptyList())) {
+        driver(DriverParameters(isDebug = true, notarySpecs = emptyList(), portAllocation = PortAllocation.Incremental(30_000))) {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }
