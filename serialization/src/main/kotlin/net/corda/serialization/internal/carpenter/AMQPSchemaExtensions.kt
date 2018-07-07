@@ -63,7 +63,7 @@ fun CompositeType.carpenterSchema(classloader: ClassLoader,
         }
 
         try {
-            providesList.add(classloader.loadClass(it))
+            providesList.add(classloader.loadClass(it.stripGenerics()))
         } catch (e: ClassNotFoundException) {
             carpenterSchemas.addDepPair(this, name, it)
             isCreatable = false

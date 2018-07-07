@@ -62,7 +62,7 @@ DemoBench writes a log file to the following location:
 Building the Installers
 -----------------------
 
-Gradle defines tasks that build DemoBench installers using JavaPackager. There are three scripts in the ``tools/demobench`` directory to execute these tasks:
+Gradle defines tasks that build DemoBench installers using JavaPackager. There are three scripts in the `tools/demobench <https://github.com/corda/corda/tree/master/tools/demobench>`_ directory of the `Corda repository <https://github.com/corda/corda>`_ to execute these tasks:
 
  #. ``package-demobench-exe.bat`` (Windows)
  #. ``package-demobench-dmg.sh`` (MacOS)

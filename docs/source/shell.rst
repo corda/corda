@@ -33,8 +33,10 @@ with the node using RPC calls.
 The shell via the local terminal
 --------------------------------
 
-In development mode, the shell will display in the node's terminal window.
-The shell connects to the node as 'shell' user with password 'shell' which is only available in dev mode.
+.. note::  Local terminal shell works only in development mode!
+
+The shell will display in the node's terminal window. It connects to the node as 'shell' user with password 'shell'
+(which is only available in dev mode).
 It may be disabled by passing the ``--no-local-shell`` flag when running the node.
 
 The shell via SSH
@@ -106,7 +108,7 @@ Linux and MacOS
 
 .. code:: bash
 
-    ./shell [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+    java -jar corda-tools-shell-cli-VERSION_NUMBER.jar [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
              --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
              --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
 
@@ -115,7 +117,7 @@ Windows
 
 .. code:: bash
 
-    shell.bat [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
+    java -jar corda-tools-shell-cli-VERSION_NUMBER.jar [--config-file PATH | --cordpass-directory PATH --commands-directory PATH --host HOST --port PORT
              --user USER --password PASSWORD --sshd-port PORT --sshd-hostkey-directory PATH --keystore-password PASSWORD
              --keystore-file FILE --truststore-password PASSWORD --truststore-file FILE | --help]
 

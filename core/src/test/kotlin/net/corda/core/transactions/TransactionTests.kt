@@ -8,6 +8,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
+import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.internal.rigorousMock
 import org.junit.Rule
 import org.junit.Test
@@ -53,7 +54,7 @@ class TransactionTests {
         val cpub = ck.public
         val c1 = CompositeKey.Builder().addKeys(apub, bpub).build(2)
         val compKey = CompositeKey.Builder().addKeys(c1, cpub).build(1)
-        val wtx = WireTransaction(
+        val wtx = createWireTransaction(
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
@@ -79,7 +80,7 @@ class TransactionTests {
 
     @Test
     fun `signed transaction missing signatures`() {
-        val wtx = WireTransaction(
+        val wtx = createWireTransaction(
                 inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
                 attachments = emptyList(),
                 outputs = emptyList(),
@@ -119,8 +120,8 @@ class TransactionTests {
         }, DummyContract.PROGRAM_ID))
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
-        val privacySalt: PrivacySalt = PrivacySalt()
-        val transaction: LedgerTransaction = LedgerTransaction(
+        val privacySalt = PrivacySalt()
+        val transaction = LedgerTransaction(
                 inputs,
                 outputs,
                 commands,
@@ -137,7 +138,7 @@ class TransactionTests {
     @Test
     fun `transaction cannot have duplicate inputs`() {
         val stateRef = StateRef(SecureHash.randomSHA256(), 0)
-        fun buildTransaction() = WireTransaction(
+        fun buildTransaction() = createWireTransaction(
                 inputs = listOf(stateRef, stateRef),
                 attachments = emptyList(),
                 outputs = emptyList(),
@@ -160,7 +161,7 @@ class TransactionTests {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
-        val privacySalt: PrivacySalt = PrivacySalt()
+        val privacySalt = PrivacySalt()
         fun buildTransaction() = LedgerTransaction(
                 inputs,
                 outputs,
@@ -178,7 +179,7 @@ class TransactionTests {
     @Test
     fun `transactions with identical contents must have different ids`() {
         val outputState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DummyContract.PROGRAM_ID, DUMMY_NOTARY)
-        fun buildTransaction() = WireTransaction(
+        fun buildTransaction() = createWireTransaction(
                 inputs = emptyList(),
                 attachments = emptyList(),
                 outputs = listOf(outputState),

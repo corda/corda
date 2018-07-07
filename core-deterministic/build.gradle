@@ -74,10 +74,11 @@ task predeterminise(type: ProGuardTask) {
 
     keepattributes '*'
     keepdirectories
-    dontwarn '**$1$1'
+    dontwarn '**$1$1,org.hibernate.annotations.*'
     dontpreverify
     dontobfuscate
     dontoptimize
+    dontnote
     printseeds
     verbose
 
@@ -99,7 +100,11 @@ task jarFilter(type: JarFilterTask) {
             "net.corda.core.StubOutForDJVM"
         ]
         forRemove = [
-            "co.paralleluniverse.fibers.Suspendable"
+            "co.paralleluniverse.fibers.Suspendable",
+            "org.hibernate.annotations.Immutable"
+        ]
+        forSanitise = [
+            "net.corda.core.DeleteForDJVM"
         ]
     }
 }
@@ -121,6 +126,7 @@ task determinise(type: ProGuardTask) {
     keepattributes '*'
     keepdirectories
     dontobfuscate
+    dontnote
     printseeds
     verbose
 
@@ -166,7 +172,6 @@ task checkDeterminism(type: ProGuardTask, dependsOn: jdkTask) {
 defaultTasks "determinise"
 determinise.finalizedBy metafix
 metafix.finalizedBy checkDeterminism
-assemble.dependsOn checkDeterminism
 
 def deterministicJar = metafix.outputs.files.singleFile
 artifacts {

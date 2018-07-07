@@ -22,9 +22,6 @@ buildscript {
     }
 }
 
-apply plugin: 'maven'
-apply plugin: 'java'
-
 repositories {
     mavenLocal()
     mavenCentral()
@@ -51,12 +48,13 @@ allprojects {
     }
 }
 
-dependencies {
-    // Add the top-level projects ONLY to the host project.
-    runtime project.childProjects.values().collect {
-        project(it.path)
-    }
+configurations {
+    runtime
 }
 
-// Don't create an empty jar. The plugins are now in child projects.
-jar.enabled = false
+dependencies {
+    // Add the top-level projects ONLY to the host project.
+    runtime project.childProjects.collect { n, p ->
+        project(p.path)
+    }
+}

@@ -62,15 +62,16 @@ The build generates each of Corda's deterministic JARs in six steps:
 
         @CordaSerializable
         @KeepForDJVM
-        data class UniqueIdentifier(val externalId: String?, val id: UUID) : Comparable<UniqueIdentifier> {
-            @DeleteForDJVM constructor(externalId: String?) : this(externalId, UUID.randomUUID())
-            @DeleteForDJVM constructor() : this(null)
+        data class UniqueIdentifier @JvmOverloads @DeleteForDJVM constructor(
+            val externalId: String? = null,
+            val id: UUID = UUID.randomUUID()
+        ) : Comparable<UniqueIdentifier> {
             ...
         }
 
     ..
 
-    While CorDapps will definitely need to handle ``UniqueIdentifier`` objects, both of the secondary constructors
+    While CorDapps will definitely need to handle ``UniqueIdentifier`` objects, all of the secondary constructors
     generate a new random ``UUID`` and so are non-deterministic. Hence the next "determinising" step is to pass the
     classes to the ``JarFilter`` tool, which strips out all of the elements which have been annotated as
     ``@DeleteForDJVM`` and stubs out any functions annotated with ``@StubOutForDJVM``. (Stub functions that
@@ -104,54 +105,60 @@ This is possible, but slightly tricky to configure because IntelliJ will not rec
 Gradle be configured to use the Project's SDK.
 
 Creating the Deterministic SDK
-    #. Create a JDK Home directory with the following contents:
+    Gradle creates a suitable JDK image in the project's ``jdk8u-deterministic/jdk`` directory, and you can
+    configure IntelliJ to use this location for this SDK. However, you should also be aware that IntelliJ SDKs
+    are available for *all* projects to use.
 
-        ``jre/lib/rt.jar``
+    To create this JDK image, execute the following:
 
-       where ``rt.jar`` here is this renamed artifact:
+    .. code-block:: bash
 
-       .. code-block:: xml
+        $ gradlew jdk8u-deterministic:copyJdk
 
-           <dependency>
-               <groupId>net.corda</groupId>
-               <artifactId>deterministic-rt</artifactId>
-               <classifier>api</classifier>
-           </dependency>
+    ..
 
-       ..
+    Now select ``File/Project Structure/Platform Settings/SDKs`` and add a new JDK SDK with the
+    ``jdk8u-deterministic/jdk`` directory as its home. Rename this SDK to something like "1.8 (Deterministic)".
 
-       .. note:: Gradle already creates this JDK in the project's ``jdk8u-deterministic/jdk`` directory, and you could
-                 configure IntelliJ to use this location as well. However, you should also be aware that IntelliJ SDKs
-                 are available for *all* projects to use.
+    This *should* be sufficient for IntelliJ. However, if IntelliJ realises that this SDK does not contain a
+    full JDK then you will need to configure the new SDK by hand:
 
-                 To create this deterministic JDK image, execute the following:
+        #. Create a JDK Home directory with the following contents:
 
-                 .. code-block:: bash
+            ``jre/lib/rt.jar``
 
-                     $ gradlew jdk8u-deterministic:copyJdk
+           where ``rt.jar`` here is this renamed artifact:
 
-                 ..
+           .. code-block:: xml
 
-    #. While IntelliJ is *not* running, locate the ``config/options/jdk.table.xml`` file in IntelliJ's configuration
-       directory. Add an empty ``<jdk>`` section to this file:
+               <dependency>
+                   <groupId>net.corda</groupId>
+                   <artifactId>deterministic-rt</artifactId>
+                   <classifier>api</classifier>
+               </dependency>
 
-       .. code-block:: xml
+           ..
 
-           <jdk version="2">
-               <name value="1.8 (Deterministic)"/>
-               <type value="JavaSDK"/>
-               <version value="java version &quot;1.8.0&quot;"/>
-               <homePath value=".. path to the deterministic JDK directory .."/>
-               <roots>
-               </roots>
-           </jdk>
+        #. While IntelliJ is *not* running, locate the ``config/options/jdk.table.xml`` file in IntelliJ's configuration
+           directory. Add an empty ``<jdk>`` section to this file:
 
-       ..
+           .. code-block:: xml
 
-    #. Open IntelliJ and select ``File/Project Structure/Platform Settings/SDKs``. The "1.8 (Deterministic)" SDK should
-       now be present. Select it and then click on the ``Classpath`` tab. Press the "Add" / "Plus" button to add
-       ``rt.jar`` to the SDK's classpath. Then select the ``Annotations`` tab and include the same JAR(s) as the other
-       SDKs.
+               <jdk version="2">
+                   <name value="1.8 (Deterministic)"/>
+                   <type value="JavaSDK"/>
+                   <version value="java version &quot;1.8.0&quot;"/>
+                   <homePath value=".. path to the deterministic JDK directory .."/>
+                   <roots>
+                   </roots>
+               </jdk>
+
+           ..
+
+        #. Open IntelliJ and select ``File/Project Structure/Platform Settings/SDKs``. The "1.8 (Deterministic)" SDK
+           should now be present. Select it and then click on the ``Classpath`` tab. Press the "Add" / "Plus" button to
+           add ``rt.jar`` to the SDK's classpath. Then select the ``Annotations`` tab and include the same JAR(s) as
+           the other SDKs.
 
 Configuring the Corda Project
     #. Open the root ``build.gradle`` file and define this property:
@@ -264,11 +271,34 @@ Non-Deterministic Elements
     ..
 
     You must also ensure that a deterministic class's primary constructor does not reference any classes that are
-    not available in the deterministic ``rt.jar``, nor have any non-deterministic default parameter values such as
-    ``UUID.randomUUID()``. The biggest risk here would be that ``JarFilter`` would delete the primary constructor
-    and that the class could no longer be instantiated, although ``JarFilter`` will print a warning in this case.
-    However, it is also likely that the "determinised" class would have a different serialisation signature than
-    its non-deterministic version and so become unserialisable on the deterministic JVM.
+    not available in the deterministic ``rt.jar``. The biggest risk here would be that ``JarFilter`` would delete the
+    primary constructor and that the class could no longer be instantiated, although ``JarFilter`` will print a warning
+    in this case. However, it is also likely that the "determinised" class would have a different serialisation
+    signature than its non-deterministic version and so become unserialisable on the deterministic JVM.
+
+    Primary constructors that have non-deterministic default parameter values must still be annotated as
+    ``@DeleteForDJVM`` because they cannot be refactored without breaking Corda's binary interface. The Kotlin compiler
+    will automatically apply this ``@DeleteForDJVM`` annotation - along with any others - to all of the class's
+    secondary constructors too. The ``JarFilter`` plugin can then remove the ``@DeleteForDJVM`` annotation from the
+    primary constructor so that it can subsequently delete only the secondary constructors.
+
+    The annotations that ``JarFilter`` will "sanitise" from primary constructors in this way are listed in the plugin's
+    configuration block, e.g.
+
+    .. sourcecode:: groovy
+
+        task jarFilter(type: JarFilterTask) {
+            ...
+            annotations {
+                ...
+
+                forSanitise = [
+                    "net.corda.core.DeleteForDJVM"
+                ]
+            }
+        }
+
+    ..
 
     Be aware that package-scoped Kotlin properties are all initialised within a common ``<clinit>`` block inside
     their host ``.class`` file. This means that when ``JarFilter`` deletes these properties, it cannot also remove

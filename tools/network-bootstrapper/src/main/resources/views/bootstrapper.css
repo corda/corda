@@ -1,0 +1,13 @@
+.top-pane {
+    -fx-background-color: white;
+}
+
+.top-pane > .button, .top-pane .toggle-button {
+    -fx-padding: 15px;
+    -fx-base: white;
+}
+
+.top-pane > .choice-box {
+    -fx-padding: 10px;
+    -fx-base: white;
+}

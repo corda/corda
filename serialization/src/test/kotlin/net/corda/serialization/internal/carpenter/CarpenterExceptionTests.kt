@@ -89,7 +89,7 @@ class CarpenterExceptionTests {
         // carpent that class up. However, when looking at the fields specified as properties of that class
         // we set the class loader of the ClassCarpenter to reject one of them, resulting in a CarpentryError
         // which we then  want the code to wrap in a NotSerializeableException
-        val cc = ClassCarpenterImpl(TestClassLoader(listOf(C2::class.jvmName)), AllWhitelist)
+        val cc = ClassCarpenterImpl(AllWhitelist, TestClassLoader(listOf(C2::class.jvmName)))
         val factory = TestFactory(cc)
 
         Assertions.assertThatThrownBy {

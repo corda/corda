@@ -10,13 +10,17 @@ Identity
 
 Identities in Corda can represent:
 
-* Legal identity of an organisation
-* Service identity of a network service
+* The legal identity of an organisation
+* The service identity of a network service
 
-Legal identities are used for parties in a transaction, such as the owner of a cash state. Service identities are used
-for those providing transaction-related services, such as notary, or oracle. Service identities are distinct to legal
-identities so that distributed services can exist on nodes owned by different organisations. Such distributed service
-identities are based on ``CompositeKeys``, which describe the valid sets of signers for a signature from the service.
+These identities are distinct from the RPC users that are able to connect to the node via RPC.
+
+Identity types
+--------------
+
+Whereas legal identities are used to represent parties in transactions, such as the owner of a cash state, service identities 
+are used for entities providing transaction-related services, such as notaries or oracles. Service identities are distinct 
+from legal identities so that distributed services can exist on nodes owned by different organisations. Such distributed service identities are based on ``CompositeKeys``, which describe the valid sets of signers for a signature from the service.
 See :doc:`api-core-types` for more technical detail on composite keys.
 
 Identities are either well known or confidential, depending on whether their X.509 certificate (and corresponding

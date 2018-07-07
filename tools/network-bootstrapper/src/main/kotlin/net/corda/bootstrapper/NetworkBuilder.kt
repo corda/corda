@@ -7,7 +7,6 @@ import net.corda.bootstrapper.notaries.NotaryCopier
 import net.corda.bootstrapper.notaries.NotaryFinder
 import java.io.File
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
 
 interface NetworkBuilder {
 
@@ -23,13 +22,16 @@ interface NetworkBuilder {
     fun onNodePushed(callback: (PushedNode) -> Unit): NetworkBuilder
     fun onNodeInstance(callback: (NodeInstance) -> Unit): NetworkBuilder
 
-    fun withNodeCounts(map: Map<String, Int>): NetworkBuilder
     fun withNetworkName(networtName: String): NetworkBuilder
     fun withBasedir(baseDir: File): NetworkBuilder
     fun withBackend(backendType: Backend.BackendType): NetworkBuilder
     fun withBackendOptions(options: Map<String, String>): NetworkBuilder
 
     fun build(): CompletableFuture<Pair<List<NodeInstance>, Context>>
+    fun onNodeStartBuild(callback: (FoundNode) -> Unit): NetworkBuilder
+    fun onNodePushStart(callback: (BuiltNode) -> Unit): NetworkBuilder
+    fun onNodeInstancesRequested(callback: (List<NodeInstanceRequest>) -> Unit): NetworkBuilder
+
 }
 
 private class NetworkBuilderImpl : NetworkBuilder {
@@ -40,11 +42,18 @@ private class NetworkBuilderImpl : NetworkBuilder {
     @Volatile
     private var onNodeCopiedCallback: ((CopiedNode) -> Unit) = {}
     @Volatile
+    private var onNodeBuildStartCallback: (FoundNode) -> Unit = {}
+    @Volatile
     private var onNodeBuiltCallback: ((BuiltNode) -> Unit) = {}
+    @Volatile
+    private var onNodePushStartCallback: ((BuiltNode) -> Unit) = {}
     @Volatile
     private var onNodePushedCallback: ((PushedNode) -> Unit) = {}
     @Volatile
+    private var onNodeInstanceRequestedCallback: (List<NodeInstanceRequest>) -> Unit = {}
+    @Volatile
     private var onNodeInstanceCallback: ((NodeInstance) -> Unit) = {}
+
     @Volatile
     private var nodeCounts = mapOf<String, Int>()
     @Volatile
@@ -67,6 +76,12 @@ private class NetworkBuilderImpl : NetworkBuilder {
         return this
     }
 
+
+    override fun onNodeStartBuild(callback: (FoundNode) -> Unit): NetworkBuilder {
+        this.onNodeBuildStartCallback = callback
+        return this;
+    }
+
     override fun onNodeBuild(callback: (BuiltNode) -> Unit): NetworkBuilder {
         this.onNodeBuiltCallback = callback
         return this
@@ -77,13 +92,13 @@ private class NetworkBuilderImpl : NetworkBuilder {
         return this
     }
 
-    override fun onNodeInstance(callback: (NodeInstance) -> Unit): NetworkBuilder {
-        this.onNodeInstanceCallback = callback;
+    override fun onNodeInstancesRequested(callback: (List<NodeInstanceRequest>) -> Unit): NetworkBuilder {
+        this.onNodeInstanceRequestedCallback = callback
         return this
     }
 
-    override fun withNodeCounts(map: Map<String, Int>): NetworkBuilder {
-        nodeCounts = ConcurrentHashMap(map.entries.map { it.key.toLowerCase() to it.value }.toMap())
+    override fun onNodeInstance(callback: (NodeInstance) -> Unit): NetworkBuilder {
+        this.onNodeInstanceCallback = callback;
         return this
     }
 
@@ -106,6 +121,12 @@ private class NetworkBuilderImpl : NetworkBuilder {
         this.backendOptions = HashMap(options)
         return this
     }
+
+    override fun onNodePushStart(callback: (BuiltNode) -> Unit): NetworkBuilder {
+        this.onNodePushStartCallback = callback;
+        return this;
+    }
+
 
     override fun build(): CompletableFuture<Pair<List<NodeInstance>, Context>> {
         val cacheDir = File(workingDir, cacheDirName)
@@ -132,6 +153,7 @@ private class NetworkBuilderImpl : NetworkBuilder {
         val notaryDiscoveryFuture = CompletableFuture.supplyAsync {
             val copiedNotaries = notaryFinder.findNotaries()
                     .map { foundNode: FoundNode ->
+                        onNodeBuildStartCallback.invoke(foundNode)
                         notaryCopier.copyNotary(foundNode)
                     }
             volume.notariesForNetworkParams(copiedNotaries)
@@ -141,14 +163,15 @@ private class NetworkBuilderImpl : NetworkBuilder {
         val notariesFuture = notaryDiscoveryFuture.thenCompose { copiedNotaries ->
             copiedNotaries
                     .map { copiedNotary ->
-                        nodeBuilder.buildNode(copiedNotary)
+                        nodeBuilder.buildNode(copiedNotary).also(onNodeBuiltCallback)
                     }.map { builtNotary ->
-                        nodePusher.pushNode(builtNotary)
+                        onNodePushStartCallback(builtNotary)
+                        nodePusher.pushNode(builtNotary).thenApply { it.also(onNodePushedCallback) }
                     }.map { pushedNotary ->
-                        pushedNotary.thenApplyAsync { nodeInstantiator.createInstanceRequest(it) }
+                        pushedNotary.thenApplyAsync { nodeInstantiator.createInstanceRequest(it).also { onNodeInstanceRequestedCallback.invoke(listOf(it)) } }
                     }.map { instanceRequest ->
                         instanceRequest.thenComposeAsync { request ->
-                            nodeInstantiator.instantiateNotaryInstance(request)
+                            nodeInstantiator.instantiateNotaryInstance(request).thenApply { it.also(onNodeInstanceCallback) }
                         }
                     }.toSingleFuture()
         }
@@ -161,6 +184,7 @@ private class NetworkBuilderImpl : NetworkBuilder {
                             it
                         }
                     }.map { copiedNode: CopiedNode ->
+                        onNodeBuildStartCallback.invoke(copiedNode)
                         nodeBuilder.buildNode(copiedNode).let {
                             onNodeBuiltCallback.invoke(it)
                             it
@@ -172,7 +196,8 @@ private class NetworkBuilderImpl : NetworkBuilder {
                         }
                     }.map { pushedNode ->
                         pushedNode.thenApplyAsync {
-                            nodeInstantiator.createInstanceRequests(it, nodeCount)
+                            nodeInstantiator.createInstanceRequests(it, nodeCount).also(onNodeInstanceRequestedCallback)
+
                         }
                     }.map { instanceRequests ->
                         instanceRequests.thenComposeAsync { requests ->

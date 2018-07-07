@@ -4359,7 +4359,7 @@ public interface net.corda.core.schemas.QueryableState extends net.corda.core.co
   @NotNull
   public abstract Iterable<net.corda.core.schemas.MappedSchema> supportedSchemas()
 ##
-public interface net.corda.core.schemas.StatePersistable extends java.io.Serializable
+public interface net.corda.core.schemas.StatePersistable
 ##
 public interface net.corda.core.serialization.ClassWhitelist
   public abstract boolean hasListed(Class<?>)
@@ -6328,7 +6328,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public final net.corda.testing.services.MockAttachmentStorage getAttachments()
   @NotNull
-  public java.time.Clock getClock()
+  public net.corda.testing.node.TestClock getClock()
   @NotNull
   public net.corda.core.node.services.ContractUpgradeService getContractUpgradeService()
   @NotNull
