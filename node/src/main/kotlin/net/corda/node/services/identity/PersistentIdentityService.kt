@@ -9,8 +9,6 @@ import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.node.services.identity.IdentityServiceUtil.Companion.partiesFromName
-import net.corda.node.services.identity.IdentityServiceUtil.Companion.verifyIdentity
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.x509Certificates
@@ -130,7 +128,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
         }
     }
 
-    private fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
+    override fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         val identityCertChain = identity.certPath.x509Certificates
         log.debug { "Registering identity $identity" }
         val key = mapToKey(identity)
@@ -157,7 +155,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
 
     override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = certificateFromCordaX500Name(name)?.party
 
-    override fun wellKnownPartyFromAnonymous(party: AbstractParty) = database.transaction { super.wellKnownPartyFromAnonymous(party) }
+    override fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? = database.transaction { super.wellKnownPartyFromAnonymous(party) }
 
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {

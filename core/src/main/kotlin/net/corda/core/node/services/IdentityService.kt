@@ -71,7 +71,7 @@ interface IdentityService {
      * @param key The owning [PublicKey] of the [Party].
      * @return Returns a [Party] with a matching owningKey if known, else returns null.
      */
-    fun partyFromKey(key: PublicKey) = certificateFromKey(key)?.party
+    fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
 
     /**
      * Resolves a party name to the well known identity [Party] instance for this name. Where possible well known identity
@@ -115,7 +115,7 @@ interface IdentityService {
      * @param partyRef identity (and reference, which is unused) to determine well known identity for.
      * @return the well known identity, or null if unknown.
      */
-    fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference) = wellKnownPartyFromAnonymous(partyRef.party)
+    fun wellKnownPartyFromAnonymous(partyRef: PartyAndReference): Party? = wellKnownPartyFromAnonymous(partyRef.party)
 
     /**
      * Resolve the well known identity of a party. Throws an exception if the party cannot be identified.
@@ -124,8 +124,10 @@ interface IdentityService {
      * @return the well known identity.
      * @throws IllegalArgumentException
      */
-    fun requireWellKnownPartyFromAnonymous(party: AbstractParty) = wellKnownPartyFromAnonymous(party)
-            ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
+    fun requireWellKnownPartyFromAnonymous(party: AbstractParty): Party {
+        return wellKnownPartyFromAnonymous(party)
+                ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
+    }
 
     /**
      * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may

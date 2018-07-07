@@ -3,12 +3,10 @@ package net.corda.node.services.identity
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
-import net.corda.node.services.identity.IdentityServiceUtil.Companion.partiesFromName
-import net.corda.node.services.identity.IdentityServiceUtil.Companion.verifyIdentity
+import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.nodeapi.internal.crypto.x509Certificates
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
@@ -23,7 +21,7 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(),
-                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityService {
+                              override val trustRoot: X509Certificate) : SingletonSerializeAsToken(), IdentityServiceInternal {
     companion object {
         private val log = contextLogger()
     }
@@ -48,7 +46,7 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
         return registerIdentity(identity)
     }
 
-    private fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
+    override fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         val identityCertChain = identity.certPath.x509Certificates
         log.trace { "Registering identity $identity" }
         keyToParties[identity.owningKey] = identity
