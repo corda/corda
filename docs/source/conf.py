@@ -28,7 +28,7 @@ import sphinx_rtd_theme
 extensions = ['rst2pdf.pdfbuilder', 'm2r']
 
 # PDF configuration
-pdf_documents = [('index', u'corda-developer-site', u'Corda Developer Documentation', u'R3')]
+pdf_documents = [('index', u'corda-developer-site', u'Corda Enterprise Documentation', u'R3')]
 pdf_stylesheets = ['sphinx', 'kerning', 'a4', 'murphy', 'tenpoint']
 pdf_compressed = True
 pdf_fit_mode = "shrink"
@@ -216,7 +216,7 @@ htmlhelp_basename = 'R3doc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
-latex_documents = [('index', u'corda-developer-site.tex', u'Corda Developer Documentation', u'R3', 'manual', False)]
+latex_documents = [('index', u'corda-developer-site.tex', u'Corda Enterprise Documentation', u'R3', 'manual', False)]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
