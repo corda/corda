@@ -7,6 +7,8 @@ import net.corda.serialization.internal.amqp.SerializerFactory.Companion.nameFor
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
+import java.lang.reflect.Constructor
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaConstructor
 
@@ -29,8 +31,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
 
     private val typeName = nameForType(clazz)
 
-    override val typeDescriptor = Symbol.valueOf(
-            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")!!
+    override val typeDescriptor: Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
 
     // We restrict to only those annotated or whitelisted
     private val interfaces = interfacesForSerialization(clazz, factory)
@@ -119,7 +120,7 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
             context: SerializationContext): Any = ifThrowsAppend({ clazz.typeName }) {
         logger.trace { "Calling setter based construction for ${clazz.typeName}" }
 
-        val instance: Any = javaConstructor?.newInstance() ?: throw NotSerializableException(
+        val instance: Any = javaConstructor?.newInstanceUnwrapped() ?: throw NotSerializableException(
                 "Failed to instantiate instance of object $clazz")
 
         // read the properties out of the serialised form, since we're invoking the setters the order we
@@ -153,7 +154,15 @@ open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPS
                     + "serialized properties.")
         }
 
-        return javaConstructor?.newInstance(*properties.toTypedArray())
+        return javaConstructor?.newInstanceUnwrapped(*properties.toTypedArray())
                 ?: throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
+    }
+
+    private fun <T> Constructor<T>.newInstanceUnwrapped(vararg args: Any?): T {
+        try {
+            return newInstance(*args)
+        } catch (e: InvocationTargetException) {
+            throw e.cause!!
+        }
     }
 }

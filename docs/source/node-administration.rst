@@ -1,9 +1,6 @@
 Node administration
 ===================
 
-When a node is running, it exposes an RPC interface that lets you monitor it, upload and download attachments, and so
-on.
-
 Logging
 -------
 
@@ -59,44 +56,18 @@ Node can be configured to run SSH server. See :doc:`shell` for details.
 
 Database access
 ---------------
-The node can be configured to expose its internal database over socket which can be browsed using any tool that can use JDBC drivers.
-The JDBC URL is printed during node startup to the log and will typically look like this:
+When running a node backed with a H2 database, the node can be configured to expose the database over a socket
+(see :doc:`node-database-access-h2`).
 
-     ``jdbc:h2:tcp://localhost:31339/node``
-
-The username and password can be altered in the :doc:`corda-configuration-file` but default to username "sa" and a blank
-password.
-
-Any database browsing tool that supports JDBC can be used, but if you have IntelliJ Ultimate edition then there is
-a tool integrated with your IDE. Just open the database window and add an H2 data source with the above details.
-You will now be able to browse the tables and row data within them.
-
-By default the node will expose its database on the localhost network interface. This behaviour can be
-overridden by specifying the full network address (interface and port), using the new h2Settings
-syntax in the node configuration:
-
-.. sourcecode:: groovy
-  h2Settings {
-      address: "localhost:12345"
-  }
-
-The configuration above will restrict the H2 service to run on localhost. If remote access is required, the address
-can be changed to 0.0.0.0. However it is recommended to change the default username and password
-before doing so.
+Note that in production, exposing the database via the node is not recommended.
 
 Monitoring your node
 --------------------
 
 Like most Java servers, the node can be configured to export various useful metrics and management operations via the industry-standard
 `JMX infrastructure <https://en.wikipedia.org/wiki/Java_Management_Extensions>`_. JMX is a standard API
-for registering so-called *MBeans* ... objects whose properties and methods are intended for server management. It does
-not require any particular network protocol for export. So this data can be exported from the node in various ways:
-some monitoring systems provide a "Java Agent", which is essentially a JVM plugin that finds all the MBeans and sends
-them out to a statistics collector over the network. For those systems, follow the instructions provided by the vendor.
-
-.. warning:: As of Corda M11, Java serialisation in the Corda node has been restricted, meaning MBeans access via the JMX
-             port will no longer work. Please use java agents instead, you can find details on how to use Jolokia JVM
-             agent `here <https://jolokia.org/agent/jvm.html>`_.
+for registering so-called *MBeans* ... objects whose properties and methods are intended for server management. As Java
+serialization in the node has been restricted for security reasons, the metrics can only be exported via a Jolokia agent.
 
 `Jolokia <https://jolokia.org/>`_ allows you to access the raw data and operations without connecting to the JMX port
 directly. Nodes can be configured to export the data over HTTP on the ``/jolokia`` HTTP endpoint, Jolokia defines the JSON and REST
@@ -104,7 +75,7 @@ formats for accessing MBeans, and provides client libraries to work with that pr
 
 Here are a few ways to build dashboards and extract monitoring data for a node:
 
-* `hawtio <https://hawt.io>`_ is a web based console that connects directly to JVM's that have been instrumented with a
+* `hawtio <http://hawt.io>`_ is a web based console that connects directly to JVM's that have been instrumented with a
   jolokia agent. This tool provides a nice JMX dashboard very similar to the traditional JVisualVM / JConsole MBbeans original.
 * `JMX2Graphite <https://github.com/logzio/jmx2graphite>`_ is a tool that can be pointed to /monitoring/json and will
   scrape the statistics found there, then insert them into the Graphite monitoring tool on a regular basis. It runs
@@ -126,7 +97,24 @@ The following JMX statistics are exported:
 * Corda specific metrics: flow information (total started, finished, in-flight; flow duration by flow type), attachments (count)
 * Apache Artemis metrics: queue information for P2P and RPC services
 * JVM statistics: classloading, garbage collection, memory, runtime, threading, operating system
-* Hibernate statistics (only when node is started-up in `devMode` due to to expensive run-time costs)
+
+Notes for production use
+++++++++++++++++++++++++
+
+When using Jolokia monitoring in production, it is recommended to use a Jolokia agent that reads the metrics from the node
+and pushes them to the metrics storage, rather than exposing a port on the production machine/process to the internet.
+
+Also ensure to have restrictive Jolokia access policy in place for access to production nodes. The Jolokia access is controlled
+via a file called ``jolokia-access.xml``.
+Several Jolokia policy based security configuration files (``jolokia-access.xml``) are available for dev, test, and prod
+environments under ``/config/<env>``.
+
+Notes for development use
++++++++++++++++++++++++++
+
+When running in dev mode, Hibernate statistics are also available via the Jolkia interface. These are disabled otherwise
+due to expensive run-time costs. They can be turned on and off explicitly regardless of dev mode via the
+``exportHibernateJMXStatistics`` flag on the :ref:`database configuration <databaseConfiguration>`.
 
 When starting Corda nodes using Cordformation runner (see :doc:`running-a-node`), you should see a startup message similar to the following:
 **Jolokia: Agent started with URL http://127.0.0.1:7005/jolokia/**
@@ -134,8 +122,6 @@ When starting Corda nodes using Cordformation runner (see :doc:`running-a-node`)
 When starting Corda nodes using the `DriverDSL`, you should see a startup message in the logs similar to the following:
 **Starting out-of-process Node USA Bank Corp, debug port is not enabled, jolokia monitoring port is 7005 {}**
 
-Several Jolokia policy based security configuration files (``jolokia-access.xml``) are available for dev, test, and prod
-environments under ``/config/<env>``.
 
 The following diagram illustrates Corda flow metrics visualized using `hawtio <https://hawt.io>`_ :
 

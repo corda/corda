@@ -60,7 +60,7 @@ dependencies {
     // Manifests: for reading stuff from the manifest file.
     compile "com.jcabi:jcabi-manifests:1.1"
     
-    // For logging.
+    // For logging, required for ANSIProgressRenderer.
     compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
 
     // Unit testing helpers.

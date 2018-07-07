@@ -23,6 +23,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.node.NodeRegistrationOption
+import net.corda.node.VersionInfo
 import net.corda.node.internal.ConfigurationException
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
@@ -72,6 +73,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.concurrent.thread
@@ -91,7 +93,8 @@ class DriverDSLImpl(
         val notarySpecs: List<NotarySpec>,
         val compatibilityZone: CompatibilityZoneParams?,
         val networkParameters: NetworkParameters,
-        val notaryCustomOverrides: Map<String, Any?>
+        val notaryCustomOverrides: Map<String, Any?>,
+        val inMemoryDB: Boolean
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -110,6 +113,9 @@ class DriverDSLImpl(
     private lateinit var _notaries: CordaFuture<List<NotaryHandle>>
     override val notaryHandles: List<NotaryHandle> get() = _notaries.getOrThrow()
 
+    // While starting with inProcess mode, we need to have different names to avoid clashes
+    private val inMemoryCounter = AtomicInteger()
+
     interface Waitable {
         @Throws(InterruptedException::class)
         fun waitFor()
@@ -125,6 +131,16 @@ class DriverDSLImpl(
     private val quasarJarPath: String by lazy { resolveJar(".*quasar.*\\.jar$") }
 
     private val jolokiaJarPath: String by lazy { resolveJar(".*jolokia-jvm-.*-agent\\.jar$") }
+
+    private fun NodeConfig.checkAndOverrideForInMemoryDB(): NodeConfig = this.run {
+        if (inMemoryDB && corda.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")) {
+            val jdbcUrl = "jdbc:h2:mem:persistence${inMemoryCounter.getAndIncrement()};DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100"
+            corda.dataSourceProperties.setProperty("dataSource.url", jdbcUrl)
+            NodeConfig(typesafe = typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)), corda = corda)
+        } else {
+            this
+        }
+    }
 
     private fun resolveJar(jarNamePattern: String): String {
         return try {
@@ -233,7 +249,7 @@ class DriverDSLImpl(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
                 configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
-        ))
+        )).checkAndOverrideForInMemoryDB()
         return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap)
     }
 
@@ -251,8 +267,9 @@ class DriverDSLImpl(
                                 "adminAddress" to portAllocation.nextHostAndPort().toString()
                         ),
                         "devMode" to false)
-        ))
+        )).checkAndOverrideForInMemoryDB()
 
+        val versionInfo = VersionInfo(1, "1", "1", "1")
         config.corda.certificatesDirectory.createDirectories()
         // Create network root truststore.
         val rootTruststorePath = config.corda.certificatesDirectory / "network-root-truststore.jks"
@@ -266,7 +283,7 @@ class DriverDSLImpl(
             executorService.fork {
                 NodeRegistrationHelper(
                         config.corda,
-                        HTTPNetworkRegistrationService(compatibilityZoneURL),
+                        HTTPNetworkRegistrationService(compatibilityZoneURL, versionInfo),
                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
                 ).buildKeystore()
                 config
@@ -373,7 +390,7 @@ class DriverDSLImpl(
                 configOverrides = rawConfig.toNodeOnly()
         )
         val cordaConfig = typesafe.parseAsNodeConfiguration()
-        val config = NodeConfig(rawConfig, cordaConfig)
+        val config = NodeConfig(rawConfig, cordaConfig).checkAndOverrideForInMemoryDB()
         return startNodeInternal(config, webAddress, null, "512m", localNetworkMap)
     }
 
@@ -1054,7 +1071,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     notarySpecs = defaultParameters.notarySpecs,
                     compatibilityZone = null,
                     networkParameters = defaultParameters.networkParameters,
-                    notaryCustomOverrides = defaultParameters.notaryCustomOverrides
+                    notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
+                    inMemoryDB = defaultParameters.inMemoryDB
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1133,6 +1151,7 @@ fun <A> internalDriver(
         networkParameters: NetworkParameters = DriverParameters().networkParameters,
         compatibilityZone: CompatibilityZoneParams? = null,
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
+        inMemoryDB: Boolean = DriverParameters().inMemoryDB,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1150,7 +1169,8 @@ fun <A> internalDriver(
                     jmxPolicy = jmxPolicy,
                     compatibilityZone = compatibilityZone,
                     networkParameters = networkParameters,
-                    notaryCustomOverrides = notaryCustomOverrides
+                    notaryCustomOverrides = notaryCustomOverrides,
+                    inMemoryDB = inMemoryDB
             ),
             coerce = { it },
             dsl = dsl,

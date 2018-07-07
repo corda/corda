@@ -63,7 +63,7 @@ class P2PMessagingTest {
         }
         assertThat(participatingNodes).containsOnlyElementsOf(participatingServiceNodes.map { it.services.myInfo })
     }
-    
+
     private fun InProcess.respondWith(message: Any) {
         internalServices.networkService.addMessageHandler("test.request") { netMessage, _, handler ->
             val request = netMessage.data.deserialize<TestRequest>()

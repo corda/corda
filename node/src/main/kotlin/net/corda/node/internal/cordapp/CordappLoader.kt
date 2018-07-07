@@ -50,7 +50,7 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         cordapps.flatMap { corDapp -> corDapp.allFlows.map { flow -> flow to corDapp } }
                 .groupBy { it.first }
                 .mapValues {
-                    require(it.value.size == 1) { "There are multiple CorDapp jars on the classpath for flow ${it.value.first().first.name}: ${it.value.map { it.second.name }.joinToString()}." }
+                    if(it.value.size > 1) { throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow ${it.value.first().first.name}: [ ${it.value.joinToString { it.second.name }} ].")  }
                     it.value.single().second
                 }
     }
@@ -135,7 +135,9 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             return this::class.java.classLoader.getResources(resource)
                     .asSequence()
                     // This is to only scan classes from test folders.
-                    .filter { url -> listOf("main", "production").none { url.toString().contains("$it/$resource") } || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { scanPackage.startsWith(it) } }
+                    .filter { url ->
+                         !url.toString().contains("main/$resource")  || listOf("net.corda.core", "net.corda.node", "net.corda.finance").none { scanPackage.startsWith(it) }
+                    }
                     .map { url ->
                         if (url.protocol == "jar") {
                             // When running tests from gradle this may be a corda module jar, so restrict to scanPackage:
@@ -361,3 +363,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
         }
     }
 }
+
+/**
+ * Thrown when scanning CorDapps.
+ */
+class MultipleCordappsForFlowException(message: String) : Exception(message)

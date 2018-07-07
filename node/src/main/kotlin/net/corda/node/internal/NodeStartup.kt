@@ -2,6 +2,7 @@ package net.corda.node.internal
 
 import com.jcabi.manifests.Manifests
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import io.netty.channel.unix.Errors
 import net.corda.core.crypto.Crypto
@@ -15,6 +16,7 @@ import net.corda.node.NodeRegistrationOption
 import net.corda.node.SerialFilter
 import net.corda.node.VersionInfo
 import net.corda.node.defaultSerialFilter
+import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.shouldStartLocalShell
@@ -105,8 +107,16 @@ open class NodeStartup(val args: Array<String>) {
         } catch (e: UnknownConfigurationKeysException) {
             logger.error(e.message)
             return false
+        } catch (e: ConfigException.IO) {
+            println("""
+                Unable to load the node config file from '${cmdlineOptions.configFile}'.
+
+                Try experimenting with the --base-directory flag to change which directory the node
+                is looking in, or use the --config-file flag to specify it explicitly.
+            """.trimIndent())
+            return false
         } catch (e: Exception) {
-            logger.error("Exception during node configuration", e)
+            logger.error("Unexpected error whilst reading node configuration", e)
             return false
         }
         val errors = conf.validate()
@@ -120,7 +130,7 @@ open class NodeStartup(val args: Array<String>) {
             preNetworkRegistration(conf)
             if (cmdlineOptions.nodeRegistrationOption != null) {
                 // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-                registerWithNetwork(conf, cmdlineOptions.nodeRegistrationOption)
+                registerWithNetwork(conf, versionInfo, cmdlineOptions.nodeRegistrationOption)
                 return true
             }
             logStartupInfo(versionInfo, cmdlineOptions, conf)
@@ -135,6 +145,9 @@ open class NodeStartup(val args: Array<String>) {
         try {
             cmdlineOptions.baseDirectory.createDirectories()
             startNode(conf, versionInfo, startTime, cmdlineOptions)
+        } catch (e: MultipleCordappsForFlowException) {
+            logger.error(e.message)
+            return false
         } catch (e: CouldNotCreateDataSourceException) {
             logger.error(e.message, e.cause)
             return false
@@ -287,7 +300,7 @@ open class NodeStartup(val args: Array<String>) {
         logger.info("Starting as node on ${conf.p2pAddress}")
     }
 
-    protected open fun registerWithNetwork(conf: NodeConfiguration, nodeRegistrationConfig: NodeRegistrationOption) {
+    protected open fun registerWithNetwork(conf: NodeConfiguration, versionInfo: VersionInfo, nodeRegistrationConfig: NodeRegistrationOption) {
         val compatibilityZoneURL = conf.networkServices?.doormanURL ?: throw RuntimeException(
                 "compatibilityZoneURL or networkServices must be configured!")
 
@@ -297,7 +310,14 @@ open class NodeStartup(val args: Array<String>) {
         println("*       Registering as a new participant with Corda network      *")
         println("*                                                                *")
         println("******************************************************************")
-        NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL), nodeRegistrationConfig).buildKeystore()
+        NodeRegistrationHelper(conf, HTTPNetworkRegistrationService(compatibilityZoneURL, versionInfo), nodeRegistrationConfig).buildKeystore()
+
+        // Minimal changes to make registration tool create node identity.
+        // TODO: Move node identity generation logic from node to registration helper.
+        createNode(conf, getVersionInfo()).generateAndSaveNodeInfo()
+
+        println("Successfully registered Corda node with compatibility zone, node identity keys and certificates are stored in '${conf.certificatesDirectory}', it is advised to backup the private keys and certificates.")
+        println("Corda node will now terminate.")
     }
 
     protected open fun loadConfigFile(cmdlineOptions: CmdLineOptions): Pair<Config, Try<NodeConfiguration>> = cmdlineOptions.loadConfig()

@@ -11,8 +11,7 @@ import net.corda.testing.node.NotarySpec
 import java.nio.file.Path
 
 enum class VerifierType {
-    InMemory,
-    OutOfProcess
+    InMemory
 }
 
 /**

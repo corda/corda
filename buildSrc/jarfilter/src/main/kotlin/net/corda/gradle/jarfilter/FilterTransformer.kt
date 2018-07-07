@@ -15,7 +15,7 @@ import org.objectweb.asm.Opcodes.*
  * This Visitor is applied to the byte-code repeatedly until it has removed
  * everything that is no longer wanted.
  */
-class ClassTransformer private constructor (
+class FilterTransformer private constructor (
     visitor: ClassVisitor,
     logger: Logger,
     kotlinMetadata: MutableMap<String, List<String>>,
@@ -26,7 +26,7 @@ class ClassTransformer private constructor (
     private val unwantedFields: MutableSet<FieldElement>,
     private val deletedMethods: MutableSet<MethodElement>,
     private val stubbedMethods: MutableSet<MethodElement>
-) : KotlinAwareVisitor(ASM6, visitor, logger, kotlinMetadata), Repeatable<ClassTransformer> {
+) : KotlinAfterProcessor(ASM6, visitor, logger, kotlinMetadata), Repeatable<FilterTransformer> {
     constructor(
         visitor: ClassVisitor,
         logger: Logger,
@@ -47,8 +47,8 @@ class ClassTransformer private constructor (
         stubbedMethods = mutableSetOf()
     )
 
-    private var _className: String = "(unknown)"
-    val className: String get() = _className
+    var className: String = "(unknown)"
+        private set
 
     val isUnwantedClass: Boolean get() = isUnwantedClass(className)
     override val hasUnwantedElements: Boolean
@@ -62,7 +62,7 @@ class ClassTransformer private constructor (
         name.startsWith("$className\$${method.visibleName}\$")
     }
 
-    override fun recreate(visitor: ClassVisitor) = ClassTransformer(
+    override fun recreate(visitor: ClassVisitor) = FilterTransformer(
         visitor = visitor,
         logger = logger,
         kotlinMetadata = kotlinMetadata,
@@ -76,7 +76,7 @@ class ClassTransformer private constructor (
     )
 
     override fun visit(version: Int, access: Int, clsName: String, signature: String?, superName: String?, interfaces: Array<String>?) {
-        _className = clsName
+        className = clsName
         logger.info("Class {}", clsName)
         super.visit(version, access, clsName, signature, superName, interfaces)
     }
@@ -172,7 +172,7 @@ class ClassTransformer private constructor (
     /**
      * Removes the deleted methods and fields from the Kotlin Class metadata.
      */
-    override fun transformClassMetadata(d1: List<String>, d2: List<String>): List<String> {
+    override fun processClassMetadata(d1: List<String>, d2: List<String>): List<String> {
         val partitioned = deletedMethods.groupBy(MethodElement::isConstructor)
         val prefix = "$className$"
         return ClassMetadataTransformer(
@@ -191,7 +191,7 @@ class ClassTransformer private constructor (
     /**
      * Removes the deleted methods and fields from the Kotlin Package metadata.
      */
-    override fun transformPackageMetadata(d1: List<String>, d2: List<String>): List<String> {
+    override fun processPackageMetadata(d1: List<String>, d2: List<String>): List<String> {
         return PackageMetadataTransformer(
                 logger = logger,
                 deletedFields = unwantedFields,

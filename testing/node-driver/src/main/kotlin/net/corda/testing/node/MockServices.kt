@@ -230,7 +230,7 @@ open class MockServices private constructor(
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
-    override val clock: Clock get() = Clock.systemUTC()
+    override val clock: TestClock get() = TestClock(Clock.systemUTC())
     override val myInfo: NodeInfo
         get() {
             return NodeInfo(listOf(NetworkHostAndPort("mock.node.services", 10000)), listOf(initialIdentity.identity), 1, serial = 1L)
@@ -242,7 +242,7 @@ open class MockServices private constructor(
     protected val servicesForResolution: ServicesForResolution get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParameters, validatedTransactions)
 
     internal fun makeVaultService(hibernateConfig: HibernateConfiguration, schemaService: SchemaService, database: CordaPersistence): VaultServiceInternal {
-        val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, hibernateConfig, database)
+        val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, hibernateConfig, database)
         HibernateObserver.install(vaultService.rawUpdates, hibernateConfig, schemaService)
         return vaultService
     }

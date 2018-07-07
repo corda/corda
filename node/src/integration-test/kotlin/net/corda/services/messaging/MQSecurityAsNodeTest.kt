@@ -68,7 +68,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
     @Test
     fun `login to a non ssl port as a node user`() {
-        val attacker = clientTo(alice.internals.configuration.rpcOptions.address!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcOptions.address, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(NODE_P2P_USER, NODE_P2P_USER, enableSSL = false)
         }
@@ -76,7 +76,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
     @Test
     fun `login to a non ssl port as a peer user`() {
-        val attacker = clientTo(alice.internals.configuration.rpcOptions.address!!, sslConfiguration = null)
+        val attacker = clientTo(alice.internals.configuration.rpcOptions.address, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER, enableSSL = false)  // Login as a peer
         }

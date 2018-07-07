@@ -36,7 +36,7 @@ class DeleteConstructorTest {
 
     @Test
     fun deleteConstructorWithLongParameter() {
-        val longConstructor = isConstructor(SECONDARY_CONSTRUCTOR_CLASS, hasParam(Long::class))
+        val longConstructor = isConstructor(SECONDARY_CONSTRUCTOR_CLASS, Long::class)
 
         classLoaderFor(testProject.sourceJar).use { cl ->
             cl.load<HasLong>(SECONDARY_CONSTRUCTOR_CLASS).apply {
@@ -58,7 +58,7 @@ class DeleteConstructorTest {
 
     @Test
     fun deleteConstructorWithStringParameter() {
-        val stringConstructor = isConstructor(SECONDARY_CONSTRUCTOR_CLASS, hasParam(String::class))
+        val stringConstructor = isConstructor(SECONDARY_CONSTRUCTOR_CLASS, String::class)
 
         classLoaderFor(testProject.sourceJar).use { cl ->
             cl.load<HasString>(SECONDARY_CONSTRUCTOR_CLASS).apply {
@@ -80,7 +80,7 @@ class DeleteConstructorTest {
 
     @Test
     fun showUnannotatedConstructorIsUnaffected() {
-        val intConstructor = isConstructor(SECONDARY_CONSTRUCTOR_CLASS, hasParam(Int::class))
+        val intConstructor = isConstructor(SECONDARY_CONSTRUCTOR_CLASS, Int::class)
         classLoaderFor(testProject.filteredJar).use { cl ->
             cl.load<HasAll>(SECONDARY_CONSTRUCTOR_CLASS).apply {
                 getDeclaredConstructor(Int::class.java).newInstance(NUMBER).also {
@@ -96,7 +96,7 @@ class DeleteConstructorTest {
 
     @Test
     fun deletePrimaryConstructorWithStringParameter() {
-        val stringConstructor = isConstructor(STRING_PRIMARY_CONSTRUCTOR_CLASS, hasParam(String::class))
+        val stringConstructor = isConstructor(STRING_PRIMARY_CONSTRUCTOR_CLASS, String::class)
 
         classLoaderFor(testProject.sourceJar).use { cl ->
             cl.load<HasString>(STRING_PRIMARY_CONSTRUCTOR_CLASS).apply {
@@ -119,7 +119,7 @@ class DeleteConstructorTest {
 
     @Test
     fun deletePrimaryConstructorWithLongParameter() {
-        val longConstructor = isConstructor(LONG_PRIMARY_CONSTRUCTOR_CLASS, hasParam(Long::class))
+        val longConstructor = isConstructor(LONG_PRIMARY_CONSTRUCTOR_CLASS, Long::class)
 
         classLoaderFor(testProject.sourceJar).use { cl ->
             cl.load<HasLong>(LONG_PRIMARY_CONSTRUCTOR_CLASS).apply {
@@ -142,7 +142,7 @@ class DeleteConstructorTest {
 
     @Test
     fun deletePrimaryConstructorWithIntParameter() {
-        val intConstructor = isConstructor(INT_PRIMARY_CONSTRUCTOR_CLASS, hasParam(Int::class))
+        val intConstructor = isConstructor(INT_PRIMARY_CONSTRUCTOR_CLASS, Int::class)
 
         classLoaderFor(testProject.sourceJar).use { cl ->
             cl.load<HasInt>(INT_PRIMARY_CONSTRUCTOR_CLASS).apply {

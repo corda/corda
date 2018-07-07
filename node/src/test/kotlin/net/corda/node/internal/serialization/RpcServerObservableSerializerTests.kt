@@ -8,13 +8,12 @@ import net.corda.node.internal.serialization.testutils.TestObservableContext
 import net.corda.node.internal.serialization.testutils.serializationContext
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.node.services.messaging.ObservableSubscription
+import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.SerializationOutput
 import net.corda.serialization.internal.amqp.SerializerFactory
-import net.corda.serialization.internal.AllWhitelist
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Test
 import rx.Observable
-import rx.Subscription
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -28,7 +27,7 @@ class RpcServerObservableSerializerTests {
                 .maximumSize(100)
                 .build()
 
-        subMap.put(Trace.InvocationId("test1", Instant.now()), ObservableSubscription(mock<Subscription>()))
+        subMap.put(Trace.InvocationId("test1", Instant.now()), ObservableSubscription(mock()))
 
         return subMap
     }
@@ -72,7 +71,7 @@ class RpcServerObservableSerializerTests {
             register(RpcServerObservableSerializer())
         }
 
-        val obs = Observable.create<Int>({ 12 })
+        val obs = Observable.create<Int> { Math.random() }
         val newContext = RpcServerObservableSerializer.createContext(serializationContext, observable)
 
         try {

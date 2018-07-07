@@ -4,7 +4,8 @@ import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 
 class RoundTripTests {
@@ -16,20 +17,15 @@ class RoundTripTests {
         val bytes = SerializationOutput(factory).serialize(C(mutableListOf("a", "b", "c")))
         val newC = DeserializationInput(factory).deserialize(bytes)
 
-        Assertions.assertThatThrownBy {
+        assertThatThrownBy {
             newC.l.add("d")
         }.isInstanceOf(UnsupportedOperationException::class.java)
     }
 
     @Test
     fun mutableStillMutable() {
-        class C {
-            val l: MutableList<String>
-
-            @Suppress("Unused")
-            constructor (l: MutableList<String>) {
-                this.l = l.toMutableList()
-            }
+        class C(l: MutableList<String>) {
+            val l: MutableList<String> = l.toMutableList()
         }
 
         val factory = testDefaultFactoryNoEvolution()
@@ -37,6 +33,7 @@ class RoundTripTests {
         val newC = DeserializationInput(factory).deserialize(bytes)
 
         newC.l.add("d")
+        assertThat(newC.l).containsExactly("a", "b", "c", "d")
     }
 
     @Test
@@ -52,6 +49,7 @@ class RoundTripTests {
         val newC = DeserializationInput(factory).deserialize(bytes)
 
         newC.l.add("d")
+        assertThat(newC.l).containsExactly("a", "b", "c", "d")
     }
 
     @Test
@@ -61,6 +59,6 @@ class RoundTripTests {
         val factory = testDefaultFactoryNoEvolution()
         val bytes = SerializationOutput(factory).serialize(C(listOf("a", "b", "c")))
         val newC = DeserializationInput(factory).deserialize(bytes)
-        val newC2 = newC.copy(l = (newC.l + "d"))
+        newC.copy(l = (newC.l + "d"))
     }
 }

@@ -227,6 +227,36 @@ class ConfigParsingTest {
         }
     }
 
+    @Test
+    fun `parse with provided parser`() {
+        val type1Config = mapOf("type" to "1", "value" to "type 1 value")
+        val type2Config = mapOf("type" to "2", "value" to "type 2 value")
+
+        val configuration = config("values" to listOf(type1Config, type2Config))
+        val objects = configuration.parseAs<TestObjects>()
+
+        assertThat(objects.values).containsExactly(TestObject.Type1("type 1 value"), TestObject.Type2("type 2 value"))
+    }
+
+    class TestParser : ConfigParser<TestObject> {
+        override fun parse(config: Config): TestObject {
+            val type = config.getInt("type")
+            return when (type) {
+                1 -> config.parseAs<TestObject.Type1>(onUnknownKeys = UnknownConfigKeysPolicy.IGNORE::handle)
+                2 -> config.parseAs<TestObject.Type2>(onUnknownKeys = UnknownConfigKeysPolicy.IGNORE::handle)
+                else -> throw IllegalArgumentException("Unsupported Object type : '$type'")
+            }
+        }
+    }
+
+    data class TestObjects(val values: List<TestObject>)
+
+    @CustomConfigParser(TestParser::class)
+    sealed class TestObject {
+        data class Type1(val value: String) : TestObject()
+        data class Type2(val value: String) : TestObject()
+    }
+
     private inline fun <reified S : SingleData<V>, reified L : ListData<V>, V : Any> testPropertyType(
             value1: V,
             value2: V,
@@ -310,6 +340,7 @@ class ConfigParsingTest {
             require(positive > 0) { "$positive is not positive" }
         }
     }
+
     data class OldData(
             @OldConfig("oldValue")
             val newValue: String)

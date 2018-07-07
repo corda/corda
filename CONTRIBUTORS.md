@@ -28,7 +28,7 @@ see changes to this list.
 * Arnaud Stevens (Natixis)
 * Arun Battu (BNY Mellon)
 * Austin Moothart (R3)
-* balajimore
+* Balaji Bhanudas More (Synechron)
 * Barry Childe (HSBC)
 * Barry Flower (Westpac)
 * Bart van den Bosch (KBC)
@@ -40,6 +40,7 @@ see changes to this list.
 * BMO
 * Bob Crozier (AIA)
 * Bogdan Paunescu (R3)
+* Bruno dos Santos Carvalhal (Ordina Nederland)
 * C-Otto
 * Cais Manai (R3)
 * Carl Worrall (BCS)
@@ -66,6 +67,7 @@ see changes to this list.
 * Dave Hudson (R3)
 * David John Grundy (Dankse Bank)
 * David Lee (BCS)
+* Dinesh Rivankar (Persistent Systems Limited)
 * Dirk Hermans (KBC)
 * Edward Greenwood (State Street)
 * Elendu Uche (APPZONE)
