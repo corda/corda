@@ -356,23 +356,23 @@ To add support for another database to a Corda node, the following JAR files mus
 * Hibernate dialect
 * Liquibase extension for the database management (https://www.liquibase.org)
 * Implementation of database specific Cash Selection SQL query.
-  Class with SQL query needs to extend the ``net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection` class:
+  Class with SQL query needs to extend the ``net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection`` class:
 
   .. sourcecode:: kotlin
 
       package net.corda.finance.contracts.asset.cash.selection
-      [...]
+      //...
       class CashSelectionCustomDatabaseImpl : AbstractCashSelection() {
-            [...]
+            //...
       }
 
-  The ``corda-finance`` module contains ``AbstractCashSelection` class, so it needs to be added to your project, e.g. when using Gradle:
+  The ``corda-finance`` module contains ``AbstractCashSelection`` class, so it needs to be added to your project, e.g. when using Gradle:
 
   .. sourcecode:: groovy
 
       compile "com.r3.corda:corda-finance:$corda_version"
 
-  The compiled JAR needs to contain a `resources/META-INF/net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection` file
+  The compiled JAR needs to contain a ``resources/META-INF/net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection`` file
   with a class entry to inform the Corda node about the class at startup:
 
   .. sourcecode:: none
