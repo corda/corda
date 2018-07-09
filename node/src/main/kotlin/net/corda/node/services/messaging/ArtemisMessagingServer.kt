@@ -93,7 +93,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
 
     // TODO: Maybe wrap [IOException] on a key store load error so that it's clearly splitting key store loading from
     // Artemis IO errors
-    @Throws(IOException::class, KeyStoreException::class)
+    @Throws(IOException::class, AddressBindingException::class, KeyStoreException::class)
     private fun configureAndStartServer() {
         val artemisConfig = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
@@ -110,9 +110,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             activeMQServer.start()
         } catch (e: java.io.IOException) {
             if (e.isBindingError()) {
-                // TODO sollecitom re-enable
-                throw e
-//                throw AddressBindingException(config.p2pAddress)
+                throw AddressBindingException(config.p2pAddress)
             } else {
                 throw e
             }
