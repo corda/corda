@@ -26,7 +26,7 @@ def originalJar = configurations.proguard.files.find { it.name.startsWith("kotli
 
 import proguard.gradle.ProGuardTask
 task metadata(type: ProGuardTask) {
-    injars originalJar, filter: '!META-INF/native/**'
+    injars originalJar, filter: 'META-INF/MANIFEST.MF,META-INF/metadata*.kotlin_module,**.class'
     outjars "$buildDir/libs/${project.name}-${kotlin_version}.jar"
 
     libraryjars "$javaHome/lib/rt.jar"
@@ -49,7 +49,10 @@ task metadata(type: ProGuardTask) {
     dontnote
 
     keep 'class org.jetbrains.kotlin.load.java.JvmAnnotationNames { *; }'
-    keep 'class org.jetbrains.kotlin.metadata.** { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.metadata.ProtoBuf { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.metadata.ProtoBuf$* { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.metadata.deserialization.** { *; }', includedescriptorclasses: true
+    keep 'class org.jetbrains.kotlin.metadata.jvm.** { *; }', includedescriptorclasses: true
     keep 'class org.jetbrains.kotlin.protobuf.** { *; }', includedescriptorclasses: true
 }
 def metadataJar = metadata.outputs.files.singleFile
