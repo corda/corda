@@ -52,21 +52,5 @@ class AddressBindingFailureTests {
         }
     }
 
-    @Test
-    fun `H2 address`() {
-
-        ServerSocket(0).use { socket ->
-
-            val address = InetSocketAddress(socket.localPort).toNetworkHostAndPort()
-            val overrides = mapOf("h2Settings" to mapOf("address" to address.toString()))
-            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), inMemoryDB = false)) {
-
-                assertThatThrownBy { startNode(customOverrides = overrides).getOrThrow() }.isInstanceOfSatisfying(AddressBindingException::class.java) { exception ->
-                    assertThat(exception.addresses).containsExactly(address).withFailMessage("Expected addresses to contain exactly $address but was ${exception.addresses}.")
-                }
-            }
-        }
-    }
-
     private fun InetSocketAddress.toNetworkHostAndPort() = NetworkHostAndPort(hostName, port)
 }
