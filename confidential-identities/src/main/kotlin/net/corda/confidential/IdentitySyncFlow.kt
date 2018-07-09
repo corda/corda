@@ -20,9 +20,9 @@ object IdentitySyncFlow {
      * recipient, enabling them to verify that identity.
      */
     // TODO: Can this be triggered automatically from [SendTransactionFlow]?
-    class Send(val otherSideSessions: Set<FlowSession>,
+    class Send @JvmOverloads constructor(val otherSideSessions: Set<FlowSession>,
                val tx: WireTransaction,
-               override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
+               override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
         constructor(otherSide: FlowSession, tx: WireTransaction) : this(setOf(otherSide), tx, tracker())
 
         companion object {
