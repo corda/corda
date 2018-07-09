@@ -1,4 +1,4 @@
-Network Map
+Network map
 ===========
 
 .. contents::
