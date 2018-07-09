@@ -26,7 +26,6 @@ class AddressBindingFailureTests {
                     assertThat(exception.addresses).containsExactly(address).withFailMessage("Expected addresses to contain exactly $address but was ${exception.addresses}.")
                 }
             }
-            socket.close()
         }
     }
 
@@ -50,7 +49,6 @@ class AddressBindingFailureTests {
                     }
                 }
             }
-            socket.close()
         }
     }
 
@@ -61,13 +59,12 @@ class AddressBindingFailureTests {
 
             val address = InetSocketAddress(socket.localPort).toNetworkHostAndPort()
             val overrides = mapOf("h2Settings" to mapOf("address" to address.toString()))
-            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
+            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), inMemoryDB = false)) {
 
                 assertThatThrownBy { startNode(customOverrides = overrides).getOrThrow() }.isInstanceOfSatisfying(AddressBindingException::class.java) { exception ->
                     assertThat(exception.addresses).containsExactly(address).withFailMessage("Expected addresses to contain exactly $address but was ${exception.addresses}.")
                 }
             }
-            socket.close()
         }
     }
 
