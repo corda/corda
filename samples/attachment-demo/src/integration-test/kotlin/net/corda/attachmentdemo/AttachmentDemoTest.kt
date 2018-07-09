@@ -17,7 +17,7 @@ class AttachmentDemoTest {
     @Test
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
-        driver(DriverParameters(isDebug = true, portAllocation = PortAllocation.Incremental(20000))) {
+        driver(DriverParameters(portAllocation = PortAllocation.Incremental(20000))) {
             val demoUser = listOf(User("demo", "demo", setOf(all())))
             val (nodeA, nodeB) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = demoUser, maximumHeapSize = "1g"),

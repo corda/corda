@@ -76,7 +76,7 @@ class TraderDemoTest {
 
     @Test
     fun `Tudor test`() {
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false, inMemoryDB = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(startNodesInProcess = false, inMemoryDB = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
             val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))
             val bankUser = User("user1", "test", permissions = setOf(all()))
             val (nodeA, nodeB, bankNode) = listOf(

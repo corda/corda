@@ -24,7 +24,7 @@ class RpcFlowsDrainingModeTest {
     @Test
     fun `flows draining mode rejects start flows commands through rpc`() {
 
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false, portAllocation = portAllocation)) {
+        driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation)) {
 
             startNode(rpcUsers = users).getOrThrow().rpc.apply {
 
