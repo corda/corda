@@ -28,11 +28,10 @@ data class BridgeHandle(
 )
 
 fun startBridgeProcess(bridgePath: Path, debugPort: Int?): Process {
-    return ProcessUtilities.startCordaProcess(
+    return ProcessUtilities.startJavaProcess(
             className = "net.corda.bridge.Firewall",
             arguments = listOf("--base-directory", bridgePath.toString()),
             jdwpPort = debugPort,
-            extraJvmArguments = listOf(),
             workingDirectory = bridgePath,
             maximumHeapSize = "200m"
     )
