@@ -4,6 +4,7 @@ import io.netty.channel.unix.Errors
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.internal.LifecycleSupport
 import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
+import java.net.BindException
 
 interface ArtemisBroker : LifecycleSupport, AutoCloseable {
     val addresses: BrokerAddresses
@@ -17,4 +18,4 @@ data class BrokerAddresses(val primary: NetworkHostAndPort, private val adminArg
     val admin = adminArg ?: primary
 }
 
-fun java.io.IOException.isBindingError() = message?.contains("Address already in use") ?: false
+fun java.io.IOException.isBindingError() = this is BindException || this is Errors.NativeIoException && message?.contains("Address already in use") == true

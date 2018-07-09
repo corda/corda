@@ -50,10 +50,10 @@ internal class ArtemisRpcBroker internal constructor(
             server.start()
         } catch (e: java.io.IOException) {
             if (e.isBindingError()) {
-                throw AddressBindingException(adminAddressOptional?.let { setOf(it, addresses.primary) }
-                        ?: setOf(addresses.primary))
+                throw AddressBindingException(adminAddressOptional?.let { setOf(it, addresses.primary) } ?: setOf(addresses.primary))
+            } else {
+                throw e
             }
-            throw e
         }
         logger.debug("Artemis RPC broker is started.")
     }

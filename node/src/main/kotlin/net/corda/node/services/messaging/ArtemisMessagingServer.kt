@@ -111,8 +111,9 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
         } catch (e: java.io.IOException) {
             if (e.isBindingError()) {
                 throw AddressBindingException(config.p2pAddress)
+            } else {
+                throw e
             }
-            throw e
         }
         activeMQServer.remotingService.addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
         activeMQServer.remotingService.addIncomingInterceptor(AmqpMessageSizeChecksInterceptor(maxMessageSize))

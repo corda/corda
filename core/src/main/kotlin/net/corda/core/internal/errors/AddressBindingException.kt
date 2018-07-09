@@ -1,9 +1,9 @@
 package net.corda.core.internal.errors
 
+import net.corda.core.CordaRuntimeException
 import net.corda.core.utilities.NetworkHostAndPort
-import java.net.BindException
 
-class AddressBindingException(val addresses: Set<NetworkHostAndPort>) : BindException(message(addresses)) {
+class AddressBindingException(val addresses: Set<NetworkHostAndPort>) : CordaRuntimeException(message(addresses)) {
 
     constructor(address: NetworkHostAndPort) : this(setOf(address))
 

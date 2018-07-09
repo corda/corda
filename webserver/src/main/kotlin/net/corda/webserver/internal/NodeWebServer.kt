@@ -1,6 +1,7 @@
 package net.corda.webserver.internal
 
 import com.google.common.html.HtmlEscapers.htmlEscaper
+import io.netty.channel.unix.Errors
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.RPCException
@@ -10,18 +11,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.webserver.WebServerConfig
 import net.corda.webserver.converters.CordaConverterProvider
 import net.corda.webserver.services.WebServerPluginRegistry
-import net.corda.webserver.servlets.AttachmentDownloadServlet
-import net.corda.webserver.servlets.CorDappInfoServlet
-import net.corda.webserver.servlets.DataUploadServlet
-import net.corda.webserver.servlets.ObjectMapperConfig
-import net.corda.webserver.servlets.ResponseFilter
-import org.eclipse.jetty.server.Connector
-import org.eclipse.jetty.server.HttpConfiguration
-import org.eclipse.jetty.server.HttpConnectionFactory
-import org.eclipse.jetty.server.SecureRequestCustomizer
-import org.eclipse.jetty.server.Server
-import org.eclipse.jetty.server.ServerConnector
-import org.eclipse.jetty.server.SslConnectionFactory
+import net.corda.webserver.servlets.*
+import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.ErrorHandler
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.DefaultServlet
@@ -99,8 +90,12 @@ class NodeWebServer(val config: WebServerConfig) {
         server.handler = handlerCollection
         try {
             server.start()
-        } catch (e: BindException) {
-            throw AddressBindingException(address)
+        } catch (e: IOException) {
+            if (e is BindException || e is Errors.NativeIoException && e.message?.contains("Address already in use") == true) {
+                throw AddressBindingException(address)
+            } else {
+                throw e
+            }
         }
         log.info("Starting webserver on address $address")
         return server
