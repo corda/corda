@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import com.google.common.reflect.TypeToken
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -85,6 +86,6 @@ class CorDappCustomSerializer(
     ) = uncheckedCast<SerializationCustomSerializer<*, *>, SerializationCustomSerializer<Any?, Any?>>(
             serializer).fromProxy(uncheckedCast(proxySerializer.readObject(obj, schemas, input, context)))!!
 
-    override fun isSerializerFor(clazz: Class<*>) = clazz == type
+    override fun isSerializerFor(clazz: Class<*>) = type.asClass()?.isAssignableFrom(clazz) ?: false
 }
 
