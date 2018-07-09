@@ -4,6 +4,7 @@ package net.corda.webserver
 
 import com.typesafe.config.ConfigException
 import net.corda.core.internal.div
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.internal.location
 import net.corda.core.internal.rootCause
 import net.corda.webserver.internal.NodeWebServer
@@ -66,6 +67,9 @@ fun main(args: Array<String>) {
         val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
         println("Webserver started up in $elapsed sec")
         server.run()
+    } catch (e: AddressBindingException) {
+        log.error(e.message)
+        exitProcess(1)
     } catch (e: Exception) {
         log.error("Exception during node startup", e)
         exitProcess(1)

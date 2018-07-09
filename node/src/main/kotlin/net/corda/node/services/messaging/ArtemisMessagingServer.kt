@@ -1,5 +1,6 @@
 package net.corda.node.services.messaging
 
+import io.netty.channel.unix.Errors
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.div
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -9,6 +10,7 @@ import net.corda.core.utilities.debug
 import net.corda.node.internal.artemis.*
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.NODE_P2P_ROLE
 import net.corda.node.internal.artemis.BrokerJaasLoginModule.Companion.PEER_ROLE
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.p2pAcceptorTcpTransport
 import net.corda.nodeapi.internal.AmqpMessageSizeChecksInterceptor
@@ -91,7 +93,7 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
 
     // TODO: Maybe wrap [IOException] on a key store load error so that it's clearly splitting key store loading from
     // Artemis IO errors
-    @Throws(IOException::class, KeyStoreException::class)
+    @Throws(IOException::class, AddressBindingException::class, KeyStoreException::class)
     private fun configureAndStartServer() {
         val artemisConfig = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
@@ -104,7 +106,15 @@ class ArtemisMessagingServer(private val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
 
-        activeMQServer.start()
+        try {
+            activeMQServer.start()
+        } catch (e: java.io.IOException) {
+            if (e.isBindingError()) {
+                throw AddressBindingException(config.p2pAddress)
+            } else {
+                throw e
+            }
+        }
         activeMQServer.remotingService.addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
         activeMQServer.remotingService.addIncomingInterceptor(AmqpMessageSizeChecksInterceptor(maxMessageSize))
         // Config driven switch between legacy CORE bridges and the newer AMQP protocol bridges.
