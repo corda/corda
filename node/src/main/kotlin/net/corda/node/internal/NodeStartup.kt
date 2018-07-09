@@ -10,12 +10,7 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
-import net.corda.node.CmdLineOptions
-import net.corda.node.NodeArgsParser
-import net.corda.node.NodeRegistrationOption
-import net.corda.node.SerialFilter
-import net.corda.node.VersionInfo
-import net.corda.node.defaultSerialFilter
+import net.corda.node.*
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
@@ -25,9 +20,9 @@ import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.utilities.createKeyPairAndSelfSignedTLSCertificate
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
+import net.corda.node.utilities.registration.UnableToRegisterNodeWithDoormanException
 import net.corda.node.utilities.saveToKeyStore
 import net.corda.node.utilities.saveToTrustStore
-import net.corda.node.utilities.registration.UnableToRegisterNodeWithDoormanException
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
@@ -152,6 +147,9 @@ open class NodeStartup(val args: Array<String>) {
             logger.error(e.message, e.cause)
             return false
         } catch (e: CheckpointIncompatibleException) {
+            logger.error(e.message)
+            return false
+        } catch (e: NetworkParametersReader.Error) {
             logger.error(e.message)
             return false
         } catch (e: Exception) {

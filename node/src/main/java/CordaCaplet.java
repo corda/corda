@@ -4,6 +4,7 @@
 
 import com.typesafe.config.*;
 import sun.misc.Signal;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -38,7 +39,7 @@ public class CordaCaplet extends Capsule {
             Config nodeConfig = ConfigFactory.parseFile(configFile, parseOptions);
             return baseDirectoryConfig.withFallback(nodeConfig).withFallback(defaultConfig).resolve();
         } catch (ConfigException e) {
-            log(LOG_QUIET, e);
+            log(LOG_DEBUG, e);
             return ConfigFactory.empty();
         }
     }
