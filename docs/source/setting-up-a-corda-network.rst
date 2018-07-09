@@ -3,6 +3,8 @@
 Setting up a Corda network
 ==========================
 
+.. contents::
+
 A Corda network consists of a number of machines running nodes. These nodes communicate using persistent protocols in
 order to create and validate transactions.
 
