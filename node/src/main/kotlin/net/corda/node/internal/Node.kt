@@ -344,9 +344,11 @@ open class Node(configuration: NodeConfiguration,
                     server.start().url
                 } catch (e: JdbcSQLException) {
                     if (e.cause is BindException) {
-                        throw AddressBindingException(effectiveH2Settings.address)
+                        // TODO sollecitom re-enable
+//                        throw AddressBindingException(effectiveH2Settings.address)
+                    } else {
+                        throw e
                     }
-                    throw e
                 }
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
