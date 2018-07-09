@@ -4,6 +4,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.internal.errors.AddressBindingException
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -12,6 +13,10 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 
 class AddressBindingFailureTests {
+
+    companion object {
+        private val portAllocation = PortAllocation.Incremental(20_000)
+    }
 
     @Test
     fun `p2p address`() = assertBindExceptionForOverrides { address -> mapOf("p2pAddress" to address.toString()) }
@@ -30,7 +35,7 @@ class AddressBindingFailureTests {
         ServerSocket(0).use { socket ->
 
             val address = InetSocketAddress(socket.localPort).toNetworkHostAndPort()
-            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), inMemoryDB = false)) {
+            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), inMemoryDB = false, portAllocation = portAllocation)) {
 
                 assertThatThrownBy { startNode(customOverrides = overrides(address)).getOrThrow() }.isInstanceOfSatisfying(AddressBindingException::class.java) { exception ->
                     assertThat(exception.addresses).contains(address).withFailMessage("Expected addresses to contain $address but was ${exception.addresses}.")
