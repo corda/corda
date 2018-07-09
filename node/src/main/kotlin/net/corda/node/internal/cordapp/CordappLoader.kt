@@ -155,8 +155,8 @@ class CordappLoader private constructor(private val cordappJarPaths: List<Restri
             return generatedCordapps.computeIfAbsent(url) {
                 // TODO Using the driver in out-of-process mode causes each node to have their own copy of the same dev CorDapps
                 val cordappDir = (Paths.get("build") / "tmp" / "generated-test-cordapps").createDirectories()
-                val cordappJar = if (scanPackage == "net.test.cordapp" || scanPackage == "net.test.cordapp.v1" ) {
-                    cordappDir /  "myjar.jar"
+                val cordappJar = if (scanPackage == "net.test.cordapp" || scanPackage == "net.test.cordapp.v1" ) { //TODO hack to test the test
+                    cordappDir / "myjar.jar"
                 } else {
                     cordappDir / "$scanPackage-${UUID.randomUUID()}.jar"
                 }
