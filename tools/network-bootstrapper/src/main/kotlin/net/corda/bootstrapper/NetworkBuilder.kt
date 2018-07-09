@@ -7,7 +7,6 @@ import net.corda.bootstrapper.notaries.NotaryCopier
 import net.corda.bootstrapper.notaries.NotaryFinder
 import java.io.File
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
 
 interface NetworkBuilder {
 
@@ -23,7 +22,6 @@ interface NetworkBuilder {
     fun onNodePushed(callback: (PushedNode) -> Unit): NetworkBuilder
     fun onNodeInstance(callback: (NodeInstance) -> Unit): NetworkBuilder
 
-    fun withNodeCounts(map: Map<String, Int>): NetworkBuilder
     fun withNetworkName(networtName: String): NetworkBuilder
     fun withBasedir(baseDir: File): NetworkBuilder
     fun withBackend(backendType: Backend.BackendType): NetworkBuilder
@@ -101,11 +99,6 @@ private class NetworkBuilderImpl : NetworkBuilder {
 
     override fun onNodeInstance(callback: (NodeInstance) -> Unit): NetworkBuilder {
         this.onNodeInstanceCallback = callback;
-        return this
-    }
-
-    override fun withNodeCounts(map: Map<String, Int>): NetworkBuilder {
-        nodeCounts = ConcurrentHashMap(map.entries.map { it.key.toLowerCase() to it.value }.toMap())
         return this
     }
 
