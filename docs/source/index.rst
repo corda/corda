@@ -22,51 +22,68 @@ Corda Enterprise is binary compatible with apps developed for the open source no
 administrators and advanced users who wish to learn how to install and configure an enterprise deployment. For
 application development please continue to refer to `the main project documentation website <https://docs.corda.net/>`_.
 
-------------
-
-.. toctree::
-   :caption: Corda Enterprise
-   :maxdepth: 1
-
-   release-notes.rst
-   version-compatibility.rst
-   platform-support-matrix.rst
-   hot-cold-deployment
-   database-management
-   corda-firewall
-   sizing-and-performance
-
-.. toctree::
-   :caption: Development
-   :maxdepth: 1
-
-   quickstart-index.rst
-   key-concepts.rst
-   building-a-cordapp-index.rst
-   tutorials-index.rst
-   tools-index.rst
-   node-internals-index.rst
-   component-library-index.rst
-   serialization-index.rst
-   json.rst
-   troubleshooting.rst
-
-.. toctree::
-   :caption: Operations
-   :maxdepth: 2
-
-   corda-nodes-index.rst
-   corda-networks-index.rst
-   azure-vm.rst
-   aws-vm.rst
-   certificate-revocation
-   loadtesting.rst
-
 .. Documentation is not included in the pdf unless it is included in a toctree somewhere
+
 .. only:: pdfmode
 
-   .. toctree::
-      :caption: Other documentation
+    .. toctree::
+       :caption: Contents
+       :maxdepth: 2
 
-      deterministic-modules.rst
-      changelog.rst
+       release-notes.rst
+       key-concepts.rst
+       quickstart-index.rst
+       tutorials-index.rst
+       building-a-cordapp-index.rst
+       component-library-index.rst
+       corda-nodes-index.rst
+       corda-networks-index.rst
+       tools-index.rst
+       corda-firewall
+       database-management
+       hot-cold-deployment
+       running-a-notary-cluster/toctree
+       certificate-revocation
+       node-internals-index.rst
+       json.rst
+       troubleshooting.rst
+
+.. only:: htmlmode
+
+    .. toctree::
+       :caption: Corda Enterprise
+       :maxdepth: 1
+
+       release-notes.rst
+       version-compatibility.rst
+       platform-support-matrix.rst
+       hot-cold-deployment
+       database-management
+       corda-firewall
+       sizing-and-performance
+       running-a-notary-cluster/toctree
+
+    .. toctree::
+       :caption: Development
+       :maxdepth: 1
+
+       quickstart-index.rst
+       key-concepts.rst
+       building-a-cordapp-index.rst
+       tutorials-index.rst
+       tools-index.rst
+       node-internals-index.rst
+       component-library-index.rst
+       serialization-index.rst
+       json.rst
+       troubleshooting.rst
+
+    .. toctree::
+       :caption: Operations
+       :maxdepth: 2
+
+       corda-nodes-index.rst
+       corda-networks-index.rst
+       azure-vm.rst
+       aws-vm.rst
+       certificate-revocation
