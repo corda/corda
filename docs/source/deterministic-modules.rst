@@ -62,15 +62,16 @@ The build generates each of Corda's deterministic JARs in six steps:
 
         @CordaSerializable
         @KeepForDJVM
-        data class UniqueIdentifier(val externalId: String?, val id: UUID) : Comparable<UniqueIdentifier> {
-            @DeleteForDJVM constructor(externalId: String?) : this(externalId, UUID.randomUUID())
-            @DeleteForDJVM constructor() : this(null)
+        data class UniqueIdentifier @JvmOverloads @DeleteForDJVM constructor(
+            val externalId: String? = null,
+            val id: UUID = UUID.randomUUID()
+        ) : Comparable<UniqueIdentifier> {
             ...
         }
 
     ..
 
-    While CorDapps will definitely need to handle ``UniqueIdentifier`` objects, both of the secondary constructors
+    While CorDapps will definitely need to handle ``UniqueIdentifier`` objects, all of the secondary constructors
     generate a new random ``UUID`` and so are non-deterministic. Hence the next "determinising" step is to pass the
     classes to the ``JarFilter`` tool, which strips out all of the elements which have been annotated as
     ``@DeleteForDJVM`` and stubs out any functions annotated with ``@StubOutForDJVM``. (Stub functions that
@@ -270,11 +271,34 @@ Non-Deterministic Elements
     ..
 
     You must also ensure that a deterministic class's primary constructor does not reference any classes that are
-    not available in the deterministic ``rt.jar``, nor have any non-deterministic default parameter values such as
-    ``UUID.randomUUID()``. The biggest risk here would be that ``JarFilter`` would delete the primary constructor
-    and that the class could no longer be instantiated, although ``JarFilter`` will print a warning in this case.
-    However, it is also likely that the "determinised" class would have a different serialisation signature than
-    its non-deterministic version and so become unserialisable on the deterministic JVM.
+    not available in the deterministic ``rt.jar``. The biggest risk here would be that ``JarFilter`` would delete the
+    primary constructor and that the class could no longer be instantiated, although ``JarFilter`` will print a warning
+    in this case. However, it is also likely that the "determinised" class would have a different serialisation
+    signature than its non-deterministic version and so become unserialisable on the deterministic JVM.
+
+    Primary constructors that have non-deterministic default parameter values must still be annotated as
+    ``@DeleteForDJVM`` because they cannot be refactored without breaking Corda's binary interface. The Kotlin compiler
+    will automatically apply this ``@DeleteForDJVM`` annotation - along with any others - to all of the class's
+    secondary constructors too. The ``JarFilter`` plugin can then remove the ``@DeleteForDJVM`` annotation from the
+    primary constructor so that it can subsequently delete only the secondary constructors.
+
+    The annotations that ``JarFilter`` will "sanitise" from primary constructors in this way are listed in the plugin's
+    configuration block, e.g.
+
+    .. sourcecode:: groovy
+
+        task jarFilter(type: JarFilterTask) {
+            ...
+            annotations {
+                ...
+
+                forSanitise = [
+                    "net.corda.core.DeleteForDJVM"
+                ]
+            }
+        }
+
+    ..
 
     Be aware that package-scoped Kotlin properties are all initialised within a common ``<clinit>`` block inside
     their host ``.class`` file. This means that when ``JarFilter`` deletes these properties, it cannot also remove

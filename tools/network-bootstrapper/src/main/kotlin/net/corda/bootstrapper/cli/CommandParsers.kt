@@ -20,11 +20,9 @@ open class CliParser {
     @Option(names = ["-b", "--backend"], description = ["The backend to use when instantiating nodes"])
     var backendType: Backend.BackendType = Backend.BackendType.LOCAL_DOCKER
 
-    @Option(names = ["--nodes"], split = ":", description = ["The number of each node to create. NodeX:2 will create two instances of NodeX"])
-    var nodes: MutableMap<String, Int> = hashMapOf()
 
-    @Option(names = ["--add", "-a"])
-    var nodesToAdd: MutableList<String> = arrayListOf()
+    @Option(names = ["--add"], split = ":", description = ["The node to add. Format is <Name>:<X500>. Eg; \"Node1:O=Bank A, L=New York, C=US, OU=Org Unit, CN=Service Name\""])
+    var nodesToAdd: MutableMap<String, String> = hashMapOf()
 
     fun isNew(): Boolean {
         return nodesToAdd.isEmpty()

@@ -16,12 +16,7 @@ import net.corda.core.internal.location
 import net.corda.core.internal.randomOrNull
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
-import net.corda.node.CmdLineOptions
-import net.corda.node.NodeArgsParser
-import net.corda.node.NodeRegistrationOption
-import net.corda.node.SerialFilter
-import net.corda.node.VersionInfo
-import net.corda.node.defaultSerialFilter
+import net.corda.node.*
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.NodeConfigurationImpl
@@ -161,6 +156,9 @@ open class NodeStartup(val args: Array<String>) {
             logger.error(e.message)
             return false
         } catch (e: AddressBindingException) {
+            logger.error(e.message)
+            return false
+        } catch (e: NetworkParametersReader.Error) {
             logger.error(e.message)
             return false
         } catch (e: Exception) {

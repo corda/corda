@@ -21,10 +21,10 @@ open class NodeBuilder {
         val copiedNodeConfig = copiedNode.copiedNodeConfig
         val nodeDir = copiedNodeConfig.parentFile
         if (!copiedNodeConfig.exists()) {
-            throw IllegalStateException("There is no nodeConfig for dir: " + copiedNodeConfig)
+            throw IllegalStateException("There is no nodeConfig for dir: $copiedNodeConfig")
         }
         val nodeConfig = ConfigFactory.parseFile(copiedNodeConfig)
-        LOG.info("starting to build docker image for: " + nodeDir)
+        LOG.info("starting to build docker image for: $nodeDir")
         val nodeImageId = localDockerClient.buildImageCmd()
                 .withDockerfile(File(nodeDir, "Dockerfile"))
                 .withBaseDirectory(nodeDir)

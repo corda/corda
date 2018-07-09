@@ -11,7 +11,6 @@ import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.*
 import net.corda.core.transactions.LedgerTransaction
@@ -20,9 +19,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.slf4j.Logger
 import org.slf4j.MDC
 import rx.Observable
@@ -476,27 +472,6 @@ Trust anchor:
 $trustAnchor""", e, this, e.index)
     }
 }
-
-/**
- * Return the underlying X.500 name from this Corda-safe X.500 name. These are guaranteed to have a consistent
- * ordering, such that their `toString()` function returns the same value every time for the same [CordaX500Name].
- */
-val CordaX500Name.x500Name: X500Name
-    get() {
-        return X500NameBuilder(BCStyle.INSTANCE).apply {
-            addRDN(BCStyle.C, country)
-            state?.let { addRDN(BCStyle.ST, it) }
-            addRDN(BCStyle.L, locality)
-            addRDN(BCStyle.O, organisation)
-            organisationUnit?.let { addRDN(BCStyle.OU, it) }
-            commonName?.let { addRDN(BCStyle.CN, it) }
-        }.build()
-    }
-
-@Suppress("unused")
-@VisibleForTesting
-val CordaX500Name.Companion.unspecifiedCountry
-    get() = "ZZ"
 
 inline fun <T : Any> T.signWithCert(signer: (SerializedBytes<T>) -> DigitalSignatureWithCert): SignedDataWithCert<T> {
     val serialised = serialize()
