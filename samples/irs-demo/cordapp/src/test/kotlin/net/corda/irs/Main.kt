@@ -12,7 +12,7 @@ import net.corda.testing.driver.driver
  * Do not use in a production environment.
  */
 fun main(args: Array<String>) {
-    driver(DriverParameters(useTestClock = true, isDebug = true, waitForAllNodesToFinish = true)) {
+    driver(DriverParameters(useTestClock = true, waitForAllNodesToFinish = true)) {
         val (nodeA, nodeB) = listOf(
                 startNode(providedName = DUMMY_BANK_A_NAME),
                 startNode(providedName = DUMMY_BANK_B_NAME),

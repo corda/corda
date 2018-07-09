@@ -103,7 +103,6 @@ class DriverTests {
         val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(DriverParameters(
-                isDebug = true,
                 notarySpecs = emptyList(),
                 systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())
         )) {
