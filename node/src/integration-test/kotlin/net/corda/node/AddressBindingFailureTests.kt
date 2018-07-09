@@ -26,6 +26,7 @@ class AddressBindingFailureTests {
                     assertThat(exception.addresses).containsExactly(address).withFailMessage("Expected addresses to contain exactly $address but was ${exception.addresses}.")
                 }
             }
+            socket.close()
         }
     }
 
@@ -49,6 +50,7 @@ class AddressBindingFailureTests {
                     }
                 }
             }
+            socket.close()
         }
     }
 
@@ -65,6 +67,7 @@ class AddressBindingFailureTests {
                     assertThat(exception.addresses).containsExactly(address).withFailMessage("Expected addresses to contain exactly $address but was ${exception.addresses}.")
                 }
             }
+            socket.close()
         }
     }
 
