@@ -6,14 +6,20 @@ Release notes
 Release 3.2
 -----------
 
-As Corda deployments move toward production this minor release of the open sauce platform brings
-several fixes that address issues with a node's interactions with the defined compatibility zone.
-This will ensure Corda nodes will be free to interact with the upcoming network platforms from
-R3 and any other privately deployed compatibility zone.
+As we see more Corda deployments in production this minor release of the open sorce platform brings
+several fixes that make it easier for a node to to join Corda Networks broader than those used when
+operating as part of an internal testing deployment. This will ensure Corda nodes will be free to interact
+with with upcoming network offerings from R3 and others who may make broad-access Corda networks available
+
+* **Split Compatibility Zone**
+
+* **The Network Bootstrapper**
 
 To support the ongoing move toward usability, testing, and deployment, 3.2 is releasing the
 Network Bootstrapper <docs ref> to facilitate the simple creation of more dynamic ad-hoc testing
 environments.
+
+* **The Blob Inspector**
 
 Finally, the Blob Inspector <docs ref> brings the ability to inspect serializes Corda Blobs at the
 command line, meaning those serialized Network Parameters and Node Info files are suddenly a lot
