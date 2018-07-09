@@ -33,11 +33,11 @@ class SIMMValuation(state: ScenarioState) : Substeps(state) {
         }
     }
 
-    fun runValuation(node: String) {
+    fun runValuation(@Suppress("UNUSED_PARAMETER") node: String) {
         TODO("not implemented")
     }
 
-    fun checkValuation(value: Long) {
+    fun checkValuation(@Suppress("UNUSED_PARAMETER") value: Long) {
         TODO("not implemented")
     }
 }
