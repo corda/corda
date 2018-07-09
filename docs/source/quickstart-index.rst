@@ -18,7 +18,7 @@ I want to:
 * :ref:`Develop <quickstart-develop>` a CorDapp
 * :ref:`Run <quickstart-run>` and test a CorDapp on a local Corda network
 * :ref:`Add <quickstart-add>` a node to an existing test Corda network
-* Add a node to an existing :ref:`production <quickstart-production>` network
+* :ref:`Add <quickstart-production>` a node to an existing production network
 
 .. _quickstart-learn:
 
@@ -60,6 +60,8 @@ Run and test a CorDapp on local Corda network
 ---------------------------------------------
 
 +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
+| Useful links                               | Description                                                                                             |
++============================================+=========================================================================================================++--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 | :doc:`generating-a-node`                   | Guidance on creating Corda nodes for development and testing locally and on Docker                      |
 +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 | :doc:`node-structure`                      | The Corda node folder structure and how to name your node                                               |
@@ -83,6 +85,8 @@ Add a node to an existing test Corda network
 --------------------------------------------
 
 +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
+| Useful links                               | Description                                                                                             |
++============================================+=========================================================================================================++--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 | :doc:`node-structure`                      | The Corda node folder structure and how to name your node                                               |
 +--------------------------------------------+---------------------------------------------------------------------------------------------------------+
 | :doc:`corda-configuration-file`            | A detailed description of the Corda node configuration file with examples                               |
