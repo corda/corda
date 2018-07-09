@@ -23,7 +23,7 @@ fun main(args: Array<String>) {
             startFlow<SellerFlow>(),
             all())
     val demoUser = listOf(User("demo", "demo", permissions))
-    driver(DriverParameters(driverDirectory = "build" / "trader-demo-nodes", isDebug = true, waitForAllNodesToFinish = true)) {
+    driver(DriverParameters(driverDirectory = "build" / "trader-demo-nodes", waitForAllNodesToFinish = true)) {
         val user = User("user1", "test", permissions = setOf(startFlow<CashIssueFlow>(),
                 startFlow<CommercialPaperIssueFlow>(),
                 startFlow<SellerFlow>()))

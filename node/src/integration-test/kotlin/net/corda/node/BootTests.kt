@@ -36,7 +36,7 @@ class BootTests {
 
     @Test
     fun `double node start doesn't write into log file`() {
-        driver(DriverParameters(isDebug = true)) {
+        driver {
             val alice = startNode(providedName = ALICE_NAME).get()
             val logFolder = alice.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }

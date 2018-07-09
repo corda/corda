@@ -53,7 +53,7 @@ class P2PFlowsDrainingModeTest {
     @Test
     fun `flows draining mode suspends consumption of initial session messages`() {
 
-        driver(DriverParameters(isDebug = true, startNodesInProcess = false, portAllocation = portAllocation)) {
+        driver(DriverParameters(startNodesInProcess = false, portAllocation = portAllocation)) {
 
             val initiatedNode = startNode(providedName = ALICE_NAME).getOrThrow()
             val initiating = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow().rpc
@@ -85,7 +85,7 @@ class P2PFlowsDrainingModeTest {
     @Test
     fun `clean shutdown by draining`() {
 
-        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = portAllocation)) {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = portAllocation)) {
 
             val nodeA = startNode(providedName = ALICE_NAME, rpcUsers = users).getOrThrow()
             val nodeB = startNode(providedName = BOB_NAME, rpcUsers = users).getOrThrow()

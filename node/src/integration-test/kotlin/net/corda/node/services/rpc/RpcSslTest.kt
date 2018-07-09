@@ -46,7 +46,7 @@ class RpcSslTest {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
             val node = startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
             val client = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions)
             val connection = client.start(user.username, user.password)
@@ -84,7 +84,7 @@ class RpcSslTest {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert1)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
             val node = startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
             Assertions.assertThatThrownBy {
                 val connection = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password)
@@ -104,7 +104,7 @@ class RpcSslTest {
     fun `RPC client not using ssl can run commands`() {
         val user = User("mark", "dadada", setOf(all()))
         var successful = false
-        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
             val node = startNode(rpcUsers = listOf(user)).getOrThrow()
             val connection = CordaRPCClient(node.rpcAddress).start(user.username, user.password)
             connection.proxy.apply {
@@ -124,7 +124,7 @@ class RpcSslTest {
         val trustStorePath = saveToTrustStore(tempFolder.root.toPath() / "truststore.jks", cert)
         val clientSslOptions = ClientRpcSslOptions(trustStorePath, "password")
 
-        driver(DriverParameters(isDebug = true, startNodesInProcess = true, portAllocation = RandomFree)) {
+        driver(DriverParameters(startNodesInProcess = true, portAllocation = RandomFree)) {
             val node = startNode(customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
             val client = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions)
 
