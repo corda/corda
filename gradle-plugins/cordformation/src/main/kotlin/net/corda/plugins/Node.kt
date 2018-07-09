@@ -158,13 +158,13 @@ class Node(private val project: Project) : CordformNode() {
      */
     private fun installAgentJar() {
         // TODO: improve how we re-use existing declared external variables from root gradle.build
-        val jolokiaVersion = try { project.rootProject.ext<String>("jolokia_version") } catch (e: Exception) { "1.3.7" }
+        val jolokiaVersion = try { project.rootProject.ext<String>("jolokia_version") } catch (e: Exception) { "1.6.0" }
         val agentJar = project.configuration("runtime").files {
             (it.group == "org.jolokia") &&
                     (it.name == "jolokia-jvm") &&
                     (it.version == jolokiaVersion)
             // TODO: revisit when classifier attribute is added. eg && (it.classifier = "agent")
-        }.first()  // should always be the jolokia agent fat jar: eg. jolokia-jvm-1.3.7-agent.jar
+        }.first()  // should always be the jolokia agent fat jar: eg. jolokia-jvm-1.6.0-agent.jar
         project.logger.info("Jolokia agent jar: $agentJar")
         if (agentJar.isFile) {
             val driversDir = File(nodeDir, "drivers")
