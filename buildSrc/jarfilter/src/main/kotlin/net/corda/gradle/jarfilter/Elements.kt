@@ -2,15 +2,20 @@
 package net.corda.gradle.jarfilter
 
 import org.jetbrains.kotlin.metadata.ProtoBuf
+import org.jetbrains.kotlin.metadata.deserialization.Flags.*
 import org.jetbrains.kotlin.metadata.deserialization.NameResolver
 import org.jetbrains.kotlin.metadata.deserialization.TypeTable
 import org.jetbrains.kotlin.metadata.deserialization.returnType
 import org.jetbrains.kotlin.metadata.jvm.JvmProtoBuf
 import org.jetbrains.kotlin.metadata.jvm.deserialization.ClassMapperLite
+import org.jetbrains.kotlin.metadata.jvm.deserialization.JvmProtoBufUtil
 import org.objectweb.asm.Opcodes.ACC_SYNTHETIC
 import java.util.*
 
+private const val DEFAULT_CONSTRUCTOR_MARKER = "ILkotlin/jvm/internal/DefaultConstructorMarker;"
 private const val DUMMY_PASSES = 1
+
+private val DECLARES_DEFAULT_VALUE_MASK: Int = DECLARES_DEFAULT_VALUE.toFlags(true).inv()
 
 internal abstract class Element(val name: String, val descriptor: String) {
     private var lifetime: Int = DUMMY_PASSES
@@ -36,6 +41,7 @@ internal class MethodElement(name: String, descriptor: String, val access: Int =
 
     private val suffix: String
     val visibleName: String
+    val signature: String = name + descriptor
 
     init {
         val idx = name.indexOf('$')
@@ -44,6 +50,14 @@ internal class MethodElement(name: String, descriptor: String, val access: Int =
     }
 
     fun isKotlinSynthetic(vararg tags: String): Boolean = (access and ACC_SYNTHETIC) != 0 && tags.contains(suffix)
+    fun asKotlinNonDefaultConstructor(): MethodElement? {
+        val markerIdx = descriptor.indexOf(DEFAULT_CONSTRUCTOR_MARKER)
+        return if (markerIdx >= 0) {
+            MethodElement(name, descriptor.removeRange(markerIdx, markerIdx + DEFAULT_CONSTRUCTOR_MARKER.length))
+        } else {
+            null
+        }
+    }
 }
 
 
@@ -107,4 +121,24 @@ internal fun JvmProtoBuf.JvmPropertySignature.toFieldElement(property: ProtoBuf.
     }
 
     return FieldElement(nameResolver.getString(nameId), descriptor)
+}
+
+/**
+ * Rewrites metadata for constructor parameters.
+ */
+internal fun ProtoBuf.Constructor.Builder.updateValueParameters(
+    updater: (ProtoBuf.ValueParameter) -> ProtoBuf.ValueParameter
+): ProtoBuf.Constructor.Builder {
+    for (idx in 0 until valueParameterList.size) {
+        setValueParameter(idx, updater(valueParameterList[idx]))
+    }
+    return this
+}
+
+internal fun ProtoBuf.ValueParameter.clearDeclaresDefaultValue(): ProtoBuf.ValueParameter {
+    return if (DECLARES_DEFAULT_VALUE.get(flags)) {
+        toBuilder().setFlags(flags and DECLARES_DEFAULT_VALUE_MASK).build()
+    } else {
+        this
+    }
 }

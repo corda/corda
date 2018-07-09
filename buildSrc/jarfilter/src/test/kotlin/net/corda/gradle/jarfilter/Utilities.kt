@@ -14,6 +14,8 @@ import java.nio.file.Paths
 import java.util.stream.Collectors.*
 import java.util.zip.ZipFile
 import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
+import kotlin.reflect.KParameter
 
 const val DEFAULT_MESSAGE = "<default-value>"
 const val MESSAGE = "Goodbye, Cruel World!"
@@ -64,6 +66,9 @@ fun arrayOfJunk(size: Int) = ByteArray(size).apply {
         this[i] = (i and 0xFF).toByte()
     }
 }
+
+val <T : Any> KClass<T>.noArgConstructor: KFunction<T>?
+    get() = constructors.firstOrNull { it.parameters.all(KParameter::isOptional) }
 
 @Throws(MalformedURLException::class)
 fun classLoaderFor(jar: Path) = URLClassLoader(arrayOf(jar.toUri().toURL()), classLoader)

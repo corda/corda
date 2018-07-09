@@ -19,6 +19,19 @@ class HasOverloadedIntConstructorToDelete @JvmOverloads @DeleteMe constructor(pr
     override fun intData(): Int = data
 }
 
+/**
+ * This case is complex because:
+ *  - The primary constructor has two parameters.
+ *  - The first constructor parameter has a default value.
+ *  - The second constructor parameter is mandatory.
+ */
+class HasOverloadedComplexConstructorToDelete @JvmOverloads @DeleteMe constructor(private val data: Int = 0, private val message: String)
+    : HasInt, HasString
+{
+    override fun stringData(): String = message
+    override fun intData(): Int = data
+}
+
 class HasMultipleStringConstructorsToDelete(private val message: String) : HasString {
     @DeleteMe constructor() : this(DEFAULT_MESSAGE)
     override fun stringData(): String = message
