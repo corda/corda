@@ -6,8 +6,6 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
-* Removed IdentityServiceUtil and added extra default functions to the IdentityServiceInternal interface.
-
 * Docs for IdentityService. assertOwnership updated to correctly state that an UnknownAnonymousPartyException is thrown
   rather than IllegalStateException.
 

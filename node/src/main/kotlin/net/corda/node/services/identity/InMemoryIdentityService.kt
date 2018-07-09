@@ -40,11 +40,7 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
-        // Validate the chain first, before we do anything clever with it
-        verifyIdentity(trustAnchor, identity)
-        return registerIdentity(identity)
-    }
+    override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? = verifyAndRegisterIdentity(trustAnchor, identity)
 
     override fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         val identityCertChain = identity.certPath.x509Certificates

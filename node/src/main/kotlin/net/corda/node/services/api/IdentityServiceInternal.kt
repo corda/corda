@@ -50,7 +50,8 @@ interface IdentityServiceInternal : IdentityService {
      * @param identity The identity to verify
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun verifyIdentity(trustAnchor: TrustAnchor, identity: PartyAndCertificate) {
+    fun verifyAndRegisterIdentity(trustAnchor: TrustAnchor, identity: PartyAndCertificate): PartyAndCertificate? {
+        // Validate the chain first, before we do anything clever with it
         val identityCertChain = identity.certPath.x509Certificates
         try {
             identity.verify(trustAnchor)
@@ -68,8 +69,9 @@ interface IdentityServiceInternal : IdentityService {
         if (wellKnownCert != identity.certificate) {
             val idx = identityCertChain.lastIndexOf(wellKnownCert)
             val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
-            verifyIdentity(trustAnchor, PartyAndCertificate(firstPath))
+            verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath))
         }
+        return registerIdentity(identity)
     }
 
     fun registerIdentity(identity: PartyAndCertificate): PartyAndCertificate?

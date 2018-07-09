@@ -122,9 +122,7 @@ class PersistentIdentityService(override val trustRoot: X509Certificate,
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun verifyAndRegisterIdentity(identity: PartyAndCertificate): PartyAndCertificate? {
         return database.transaction {
-            // Validate the chain first, before we do anything clever with it
-            verifyIdentity(trustAnchor, identity)
-            registerIdentity(identity)
+            verifyAndRegisterIdentity(trustAnchor, identity)
         }
     }
 
