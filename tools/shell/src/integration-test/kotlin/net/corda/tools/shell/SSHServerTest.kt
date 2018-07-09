@@ -117,7 +117,7 @@ class SSHServerTest : IntegrationTest() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>(),
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name)))
         // The driver will automatically pick up the annotated flows below
-        driver(DriverParameters(isDebug = true)) {
+        driver {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()
@@ -146,7 +146,7 @@ class SSHServerTest : IntegrationTest() {
     fun `ssh runs flows`() {
         val user = User("u", "p", setOf(startFlow<FlowICanRun>()))
         // The driver will automatically pick up the annotated flows below
-        driver(DriverParameters(isDebug = true)) {
+        driver {
             val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user),
                     customOverrides = mapOf("sshd" to mapOf("port" to 2222)))
             node.getOrThrow()

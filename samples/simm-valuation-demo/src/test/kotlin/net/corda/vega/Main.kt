@@ -23,7 +23,7 @@ import net.corda.testing.driver.driver
  * via the web api.
  */
 fun main(args: Array<String>) {
-    driver(DriverParameters(isDebug = true, waitForAllNodesToFinish = true)) {
+    driver(DriverParameters(waitForAllNodesToFinish = true)) {
         val (nodeA, nodeB, nodeC) = listOf(
                 startNode(providedName = DUMMY_BANK_A_NAME),
                 startNode(providedName = DUMMY_BANK_B_NAME),

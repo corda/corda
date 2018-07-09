@@ -69,7 +69,6 @@ class SimmValuationTest : IntegrationTest() {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(DriverParameters(
-                isDebug = true,
                 extraCordappPackagesToScan = listOf("net.corda.vega.contracts", "net.corda.vega.plugin.customserializers"),
                 systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
         ) {

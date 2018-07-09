@@ -38,7 +38,7 @@ class NodeUnloadHandlerTests : IntegrationTest() {
 
     @Test
     fun `should be able to register run on stop lambda`() {
-        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.node"), isDebug = true)) {
+        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.node"))) {
             startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow()
             // just want to fall off the end of this for the mo...
         }
