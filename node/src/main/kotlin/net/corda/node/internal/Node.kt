@@ -330,7 +330,7 @@ open class Node(configuration: NodeConfiguration,
         if (databaseUrl != null && databaseUrl.startsWith(h2Prefix)) {
             val effectiveH2Settings = configuration.effectiveH2Settings
 
-            if(effectiveH2Settings?.address != null) {
+            if (effectiveH2Settings?.address != null) {
                 val databaseName = databaseUrl.removePrefix(h2Prefix).substringBefore(';')
                 val server = org.h2.tools.Server.createTcpServer(
                         "-tcpPort", effectiveH2Settings.address.port.toString(),
@@ -344,9 +344,7 @@ open class Node(configuration: NodeConfiguration,
                     server.start().url
                 } catch (e: JdbcSQLException) {
                     if (e.cause is BindException) {
-                        // TODO sollecitom re-enable
-//                        throw AddressBindingException(effectiveH2Settings.address)
-                        throw e
+                        throw AddressBindingException(effectiveH2Settings.address)
                     } else {
                         throw e
                     }
