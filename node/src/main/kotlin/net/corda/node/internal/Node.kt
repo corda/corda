@@ -346,6 +346,7 @@ open class Node(configuration: NodeConfiguration,
                     if (e.cause is BindException) {
                         // TODO sollecitom re-enable
 //                        throw AddressBindingException(effectiveH2Settings.address)
+                        throw e
                     } else {
                         throw e
                     }
