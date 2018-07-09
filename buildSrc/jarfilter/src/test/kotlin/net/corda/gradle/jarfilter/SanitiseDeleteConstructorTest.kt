@@ -16,12 +16,12 @@ import kotlin.jvm.kotlin
 import kotlin.reflect.full.primaryConstructor
 import kotlin.test.assertFailsWith
 
-class SanitiseConstructorTest {
+class SanitiseDeleteConstructorTest {
     companion object {
         private const val COUNT_INITIAL_OVERLOADED = 1
         private const val COUNT_INITIAL_MULTIPLE = 2
         private val testProjectDir = TemporaryFolder()
-        private val testProject = JarFilterProject(testProjectDir, "sanitise-constructor")
+        private val testProject = JarFilterProject(testProjectDir, "sanitise-delete-constructor")
 
         @ClassRule
         @JvmField
@@ -32,13 +32,13 @@ class SanitiseConstructorTest {
 
     @Test
     fun deleteOverloadedLongConstructor() = checkClassWithLongParameter(
-        "net.corda.gradle.HasOverloadedLongConstructor",
+        "net.corda.gradle.HasOverloadedLongConstructorToDelete",
         COUNT_INITIAL_OVERLOADED
     )
 
     @Test
     fun deleteMultipleLongConstructor() = checkClassWithLongParameter(
-        "net.corda.gradle.HasMultipleLongConstructors",
+        "net.corda.gradle.HasMultipleLongConstructorsToDelete",
         COUNT_INITIAL_MULTIPLE
     )
 
@@ -82,13 +82,13 @@ class SanitiseConstructorTest {
 
     @Test
     fun deleteOverloadedIntConstructor() = checkClassWithIntParameter(
-        "net.corda.gradle.HasOverloadedIntConstructor",
+        "net.corda.gradle.HasOverloadedIntConstructorToDelete",
         COUNT_INITIAL_OVERLOADED
     )
 
     @Test
     fun deleteMultipleIntConstructor() = checkClassWithIntParameter(
-        "net.corda.gradle.HasMultipleIntConstructors",
+        "net.corda.gradle.HasMultipleIntConstructorsToDelete",
         COUNT_INITIAL_MULTIPLE
     )
 
@@ -107,7 +107,6 @@ class SanitiseConstructorTest {
                 val primary = kotlin.primaryConstructor ?: throw AssertionError("primary constructor missing")
                 assertThat(primary.call(NUMBER).intData()).isEqualTo(NUMBER)
 
-                //assertThat("", constructors, hasItem(isConstructor(""))
                 newInstance().also {
                     assertEquals(0, it.intData())
                 }
@@ -133,13 +132,13 @@ class SanitiseConstructorTest {
 
     @Test
     fun deleteOverloadedStringConstructor() = checkClassWithStringParameter(
-        "net.corda.gradle.HasOverloadedStringConstructor",
+        "net.corda.gradle.HasOverloadedStringConstructorToDelete",
         COUNT_INITIAL_OVERLOADED
     )
 
     @Test
     fun deleteMultipleStringConstructor() = checkClassWithStringParameter(
-        "net.corda.gradle.HasMultipleStringConstructors",
+        "net.corda.gradle.HasMultipleStringConstructorsToDelete",
         COUNT_INITIAL_MULTIPLE
     )
 
