@@ -23,23 +23,19 @@ class ClassSerializer(
     }
 
     override fun toProxy(obj: Class<*>): ClassProxy  {
-        logger.trace { "serializer=custom type=ClassSerializer name=${obj.name} action=toProxy" }
+        logger.trace { "serializer=custom, type=ClassSerializer, name=\"${obj.name}\", action=toProxy" }
         return ClassProxy(obj.name)
     }
 
     override fun fromProxy(proxy: ClassProxy): Class<*> {
-        logger.trace { "serializer=custom type=ClassSerializer name=${proxy.className} action=fromProxy" }
+        logger.trace { "serializer=custom, type=ClassSerializer, name=\"${proxy.className}\", action=fromProxy" }
 
         return try {
             Class.forName(proxy.className, true, factory.classloader)
         } catch (e: ClassNotFoundException) {
-            logger.error (
-                    "name=${proxy.className} error=\"class does not exist on the Classpath\" " +
-                    "serializer=custom type=ClassSerializer action=fromProxy mitigation="  +
-                    "\"check deployed CorDapp Jars\"")
             throw AMQPNotSerializableException(
                     type,
-                    "Could not instantiate ${proxy.className} - not on Classpath",
+                    "Could not instantiate ${proxy.className} - not on the classpath",
                     "${proxy.className} was not found by the node, check the Node containing the CorDapp that " +
                             "implements ${proxy.className} is loaded and on the Classpath",
                     mutableListOf(proxy.className))
