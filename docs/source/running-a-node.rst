@@ -130,7 +130,13 @@ To create nodes locally and run on a remote machine perform the following steps:
 
 2. Copy the generated directory structure to a remote machine using e.g. Secure Copy.
 
-3. Optionally, bootstrap the network on the remote machine.
+3. Optionally, add database configuration settings if they weren't specified in the first step.
+
+   This step needs to be performed if the local machine doesn't have access to the remote database (a database couldn't be configured in the first step).
+   In each top level ``[NODE NAME]_node.conf`` configuration file add the database settings and copy the JDBC driver JAR (if required).
+   Edit the top level ``[NODE NAME]_node.conf`` files only and not the files (``node.conf``) inside the node subdirectories.
+
+4. Optionally, bootstrap the network on the remote machine.
 
    This is optional step when a remote machine doesn't accept ``localhost`` addresses, or the generated nodes are configured to run on another host's IP address.
 
@@ -140,7 +146,7 @@ To create nodes locally and run on a remote machine perform the following steps:
 
    ``java -jar corda-tools-network-bootstrapper-Master.jar --dir <nodes-root-dir>``
 
-4. Run nodes on the remote machine using :ref:`runnodes command <starting-all-nodes-at-once>`.
+5. Run nodes on the remote machine using :ref:`runnodes command <starting-all-nodes-at-once>`.
 
 The above steps create a test deployment as ``deployNodes`` Gradle task would do on a local machine.
 
