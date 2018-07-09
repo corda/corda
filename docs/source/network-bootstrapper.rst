@@ -106,13 +106,18 @@ The network bootstrapper is provided as a development tool for setting up Corda 
 There is some limited functionality which can be used to make changes to a network, but for anything more complicated consider
 using a :doc:`network-map` server.
 
-When running the Network Bootstrapper, all the node information needs to be gathered together in one file directory. If
+When running the Network Bootstrapper, each ``node-info`` file needs to be gathered together in one directory. If
 the nodes are being run on different machines you need to do the following:
 
 * Copy the node directories from each machine into one directory, on one machine
 * Depending on the modification being made (see below for more information), add any new files required to the root directory
 * Run the Network Bootstrapper from the root directory
 * Copy each individual node's directory back to the original machine
+
+The network bootstrapper cannot dynamically update the network if an existing node has changed something in their node-info,
+e.g. their P2P address. For this the new node-info file will need to be placed in the other nodes' ``additional-node-infos`` directory.
+If the nodes are located on different machines, then a utility such as `rsync <https://en.wikipedia.org/wiki/Rsync>`_ can be used
+so that the nodes can share node-infos.
 
 Adding a new node to the network
 --------------------------------
@@ -183,15 +188,6 @@ such a generated keys, will be unaffected.
 .. note:: The bootstrapper is provided for test deployments and can only generate information for nodes collected on
     the same machine. If a network needs to be updated using the bootstrapper once deployed, the nodes will need
     collecting back together.
-
-Modifying an existing node on the network
------------------------------------------
-
-The network bootstrapper cannot dynamically update the network if an existing node has changed something in their node-info,
-e.g. their P2P address. For this the new node-info file will need to be placed in the other nodes' ``additional-node-infos`` directory.
-A simple way to do this is to use `rsync <https://en.wikipedia.org/wiki/Rsync>`_.
-However, if it's known beforehand the set of nodes that will eventually form part of the network then all the node directories
-can be pre-generated in the bootstrap and only started when needed.
 
 Updating the contract whitelist for bootstrapped networks
 ---------------------------------------------------------
