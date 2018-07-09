@@ -15,7 +15,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.exists
-import net.corda.core.internal.x500Name
+import net.corda.core.internal.toX500Name
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEER_USER
@@ -109,7 +109,7 @@ class MQSecurityAsNodeTest : P2PMQSecurityTest() {
 
                 val clientKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
                 // Set name constrain to the legal name.
-                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.x500Name))), arrayOf())
+                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName.toX500Name()))), arrayOf())
                 val clientCACert = X509Utilities.createCertificate(
                         CertificateType.INTERMEDIATE_CA,
                         DEV_INTERMEDIATE_CA.certificate,

@@ -46,7 +46,7 @@ class FlowRetryTest : IntegrationTest() {
         val numSessions = 2
         val numIterations = 10
         val user = User("mark", "dadada", setOf(Permissions.startFlow<InitiatorFlow>()))
-        val result: Any? = driver(DriverParameters(isDebug = true, startNodesInProcess = isQuasarAgentSpecified(),
+        val result: Any? = driver(DriverParameters(startNodesInProcess = isQuasarAgentSpecified(),
                 portAllocation = RandomFree)) {
 
             val nodeAHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()

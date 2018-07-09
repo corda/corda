@@ -67,7 +67,6 @@ class CordformNodeRunner(val cordformDefinition: CordformDefinition) {
                 .mapNotNull { address -> address?.let { NetworkHostAndPort.parse(it).port } }
                 .max()!!
         internalDriver(
-                isDebug = true,
                 jmxPolicy = JmxPolicy(true),
                 driverDirectory = cordformDefinition.nodesDirectory,
                 extraCordappPackagesToScan = extraPackagesToScan,
