@@ -35,7 +35,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import rx.subjects.PublishSubject
-import java.io.File.pathSeparator
 import java.net.URLClassLoader
 import java.nio.file.Paths
 import java.util.*
@@ -231,15 +230,12 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
     @Test
     fun `additional class loader used by WireTransaction when it deserialises its components`() {
         val financeLocation = Cash::class.java.location.toPath().toString()
-        val classpathWithoutFinance = ProcessUtilities.defaultClassPath
-                .split(pathSeparator)
-                .filter { financeLocation !in it }
-                .joinToString(pathSeparator)
+        val classPathWithoutFinance = ProcessUtilities.defaultClassPath.filter { financeLocation !in it }
 
         // Create a Cash.State object for the StandaloneCashRpcClient to get
         node.services.startFlow(CashIssueFlow(100.POUNDS, OpaqueBytes.of(1), identity), InvocationContext.shell()).flatMap { it.resultFuture }.getOrThrow()
         val outOfProcessRpc = ProcessUtilities.startJavaProcess<StandaloneCashRpcClient>(
-                classpath = classpathWithoutFinance,
+                classPath = classPathWithoutFinance,
                 arguments = listOf(node.internals.configuration.rpcOptions.address.toString(), financeLocation)
         )
         assertThat(outOfProcessRpc.waitFor()).isZero()  // i.e. no exceptions were thrown

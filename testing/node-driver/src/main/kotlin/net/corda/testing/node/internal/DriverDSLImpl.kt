@@ -24,7 +24,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.VersionInfo
-import net.corda.node.internal.ConfigurationException
 import net.corda.node.internal.Node
 import net.corda.node.internal.StartedNode
 import net.corda.node.services.Permissions
@@ -838,7 +837,7 @@ class DriverDSLImpl(
                 it += extraCmdLineFlag
             }.toList()
 
-            return ProcessUtilities.startCordaProcess(
+            return ProcessUtilities.startJavaProcess(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
@@ -851,13 +850,12 @@ class DriverDSLImpl(
         private fun startWebserver(handle: NodeHandleInternal, debugPort: Int?, maximumHeapSize: String): Process {
             val className = "net.corda.webserver.WebServer"
             writeConfig(handle.baseDirectory, "web-server.conf", handle.toWebServerConfig())
-            return ProcessUtilities.startCordaProcess(
+            return ProcessUtilities.startJavaProcess(
                     className = className, // cannot directly get class for this, so just use string
                     arguments = listOf("--base-directory", handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
                     extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver") +
                             inheritFromParentProcess().map { "-D${it.first}=${it.second}" },
-                    workingDirectory = null,
                     maximumHeapSize = maximumHeapSize
             )
         }
