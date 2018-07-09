@@ -26,21 +26,19 @@ Please do NOT use double quotes (``"``) in configuration keys.
 
 Node setup will log `Config files should not contain \" in property names. Please fix: [key]` as an error
 when it finds double quotes around keys.
-This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them
-e.g.:
-The property `"dataSourceProperties.dataSourceClassName" = "val"` in ``reference.conf``
-would be not overwritten by the property `dataSourceProperties.dataSourceClassName = "val2"` in ``node.conf``.
 
-By default the node will fail to start in presence of unknown property keys. To alter this behaviour, program line argument
-``on-unknown-config-keys`` can be set to ``WARN`` or ``IGNORE``. Default is ``FAIL`` if unspecified.
+This prevents configuration errors when mixing keys that are wrapped in double quotes and contain a dot (.) with keys that don't, e.g.:
+If there was a property ``"dataSourceProperties.dataSourceClassName" = "val1"`` in ``node.conf``, it would not overwrite the property ``dataSourceProperties.dataSourceClassName = "val2"`` in ``reference.conf``, potentially leading to an error that would be hard to spot.
+
+By default the node will fail to start in presence of unknown property keys. To alter this behaviour, the command line argument ``on-unknown-config-keys`` can be set to ``WARN`` or ``IGNORE``. Default is ``FAIL`` if unspecified.
 
 Defaults
 --------
-A set of default configuration options are loaded from the built-in resource file ``/node/src/main/resources/reference.conf``.
-This file can be found in the ``:node`` gradle module of the `Corda repository <https://github.com/corda/corda>`_. Any
+
+A set of default configuration options are loaded from the built-in resource file ``reference.conf``. Any
 options you do not specify in your own ``node.conf`` file will use these defaults.
 
-Here are the contents of the ``reference.conf`` file:
+Here are the contents of the ``reference.conf`` file for Corda Enterprise:
 
 .. literalinclude:: ../../node/src/main/resources/reference.conf
     :language: javascript
@@ -93,11 +91,11 @@ absolute path to the node's base directory.
     :hibernateDialect: (optional) for explicit definition of ``hibernate.dialect`` property, for most cases Hibernate properly detect
                        the correct value
 
-:dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
+:dataSourceProperties: This section is used to configure the JDBC connection and database driver used for the nodes persistence.
     By default the node starts with an embedded H2 database instance.
-    The configuration defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example.
-    :ref:`Node database <standalone_database_config_examples_ref>` contains example configurations for other Database Providers.
-    To add additional data source properties (for a specific JDBC driver settings) use ``dataSource.`` prefix with property name (e.g. `dataSource.customProperty = value`).
+    The configuration defaults are as shown in the example above.
+    :ref:`Node database <standalone_database_config_examples_ref>` contains example configurations for other database providers.
+    To add additional data source properties (for a specific JDBC driver) use the ``dataSource.`` prefix with the property name (e.g. `dataSource.customProperty = value`).
 
     :dataSourceClassName: JDBC Data Source class name.
     :dataSource.url:      JDBC database URL.
@@ -231,7 +229,7 @@ absolute path to the node's base directory.
     for including JDBC drivers and the like. e.g. ``jarDirs = [ '${baseDirectory}/lib' ]`` (Note that you have to use the ``baseDirectory``
     substitution value when pointing to a relative path).
 
-    .. note:: The property is available for Corda distributed with Capsule only, for Corda tarball distribution the option is unavailable.
+    .. note:: This property is only available for Corda distributed with Capsule. For the Corda tarball distribution this option is unavailable.
               It's advisable to copy any required JAR files to the 'drivers' subdirectory of the node base directory.
 
 :sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials and permissions as RPC subsystem. It has one required parameter.
